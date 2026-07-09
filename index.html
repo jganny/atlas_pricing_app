@@ -422,6 +422,21 @@
                 <label for="air-pivot-weight">Pivot Weight (Kg)</label>
                 <input type="number" id="air-pivot-weight" placeholder="Enter Pivot Weight (optional)..." min="0" step="0.1">
               </div>
+              <div class="form-group">
+                <label for="air-routing">Routing Details</label>
+                <input type="text" id="air-routing" placeholder="e.g. Direct / via SIN" required>
+              </div>
+              <div class="form-group">
+                <label for="air-tt">Transit Time (TT)</label>
+                <input type="text" id="air-tt" placeholder="e.g. 3-5 Days" required>
+              </div>
+            </div>
+
+            <div class="form-grid-3" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label for="air-validity">Quote Validity</label>
+                <input type="text" id="air-validity" placeholder="e.g. Valid till 31st July" required>
+              </div>
             </div>
 
             <!-- Dimensions Calculator Table -->
@@ -708,6 +723,18 @@
               <span class="result-label">Total Volume (CBM)</span>
               <span class="result-value" id="res-air-vol">0.000 CBM</span>
             </div>
+            <div class="result-row">
+              <span class="result-label">Routing</span>
+              <span class="result-value" id="res-air-routing-val" style="color: #38bdf8;">-</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Transit Time (TT)</span>
+              <span class="result-value" id="res-air-tt-val" style="color: #38bdf8;">-</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Validity</span>
+              <span class="result-value" id="res-air-validity-val" style="color: #38bdf8;">-</span>
+            </div>
             
             <div class="result-row" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
               <span class="result-label">Base Air Freight Cost</span>
@@ -801,6 +828,21 @@
               <div class="form-group">
                 <label for="sea-pkg-qty">Total Package Quantity</label>
                 <input type="number" id="sea-pkg-qty" placeholder="e.g. 25" min="0" value="0">
+              </div>
+            </div>
+
+            <div class="form-grid-3" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label for="sea-routing">Routing Details</label>
+                <input type="text" id="sea-routing" placeholder="e.g. Direct / via Singapore" required>
+              </div>
+              <div class="form-group">
+                <label for="sea-tt">Transit Time (TT)</label>
+                <input type="text" id="sea-tt" placeholder="e.g. 25-30 Days" required>
+              </div>
+              <div class="form-group">
+                <label for="sea-validity">Quote Validity</label>
+                <input type="text" id="sea-validity" placeholder="e.g. Valid till 31st July" required>
               </div>
             </div>
 
@@ -992,6 +1034,18 @@
             <div class="result-row">
               <span class="result-label">Total Packages</span>
               <span class="result-value" id="res-sea-qty">0 Pkgs</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Routing</span>
+              <span class="result-value" id="res-sea-routing-val" style="color: #38bdf8;">-</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Transit Time (TT)</span>
+              <span class="result-value" id="res-sea-tt-val" style="color: #38bdf8;">-</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Validity</span>
+              <span class="result-value" id="res-sea-validity-val" style="color: #38bdf8;">-</span>
             </div>
             
             <div class="result-row" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">

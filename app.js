@@ -645,6 +645,9 @@ function setupAirFreightEvents() {
 
   document.getElementById("air-incoterm")?.addEventListener("change", calculateAirFreight);
   document.getElementById("air-pivot-weight")?.addEventListener("input", calculateAirFreight);
+  document.getElementById("air-routing")?.addEventListener("input", calculateAirFreight);
+  document.getElementById("air-tt")?.addEventListener("input", calculateAirFreight);
+  document.getElementById("air-validity")?.addEventListener("input", calculateAirFreight);
 
   setupSurchargesEvents("air-origin");
   setupSurchargesEvents("air-dest");
@@ -872,6 +875,17 @@ function calculateAirFreight() {
   }
 
   document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
+  
+  const routing = document.getElementById("air-routing")?.value || "";
+  const tt = document.getElementById("air-tt")?.value || "";
+  const validity = document.getElementById("air-validity")?.value || "";
+  const resRouting = document.getElementById("res-air-routing-val");
+  const resTT = document.getElementById("res-air-tt-val");
+  const resValidity = document.getElementById("res-air-validity-val");
+  if (resRouting) resRouting.textContent = routing || "-";
+  if (resTT) resTT.textContent = tt || "-";
+  if (resValidity) resValidity.textContent = validity || "-";
+
   document.getElementById("res-air-base").textContent = `${curSymbol}${finalFreightCost.toFixed(2)}`;
   document.getElementById("res-air-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
   document.getElementById("res-air-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
@@ -892,6 +906,9 @@ function calculateAirFreight() {
   appState.currentAirFreight.usedBreak = usedBreakLabel;
   appState.currentAirFreight.appliedRate = finalBaseRate;
   appState.currentAirFreight.pivotWeight = pivotWeight;
+  appState.currentAirFreight.routing = routing;
+  appState.currentAirFreight.tt = tt;
+  appState.currentAirFreight.validity = validity;
 }
 
 // SEA FREIGHT CALCULATOR LOGIC
@@ -927,6 +944,9 @@ function setupSeaFreightEvents() {
   document.getElementById("sea-volume")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-pkg-qty")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-lcl-rate")?.addEventListener("input", calculateSeaFreight);
+  document.getElementById("sea-routing")?.addEventListener("input", calculateSeaFreight);
+  document.getElementById("sea-tt")?.addEventListener("input", calculateSeaFreight);
+  document.getElementById("sea-validity")?.addEventListener("input", calculateSeaFreight);
 
   // Bind dynamic container line appender
   document.getElementById("sea-add-container")?.addEventListener("click", () => {
@@ -1147,6 +1167,17 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-gw").textContent = `${weightKg.toFixed(2)} kg`;
   document.getElementById("res-sea-vol").textContent = `${cbm.toFixed(2)} CBM`;
   document.getElementById("res-sea-qty").textContent = `${pkgQty} Pkgs`;
+
+  const routing = document.getElementById("sea-routing")?.value || "";
+  const tt = document.getElementById("sea-tt")?.value || "";
+  const validity = document.getElementById("sea-validity")?.value || "";
+  const resRouting = document.getElementById("res-sea-routing-val");
+  const resTT = document.getElementById("res-sea-tt-val");
+  const resValidity = document.getElementById("res-sea-validity-val");
+  if (resRouting) resRouting.textContent = routing || "-";
+  if (resTT) resTT.textContent = tt || "-";
+  if (resValidity) resValidity.textContent = validity || "-";
+
   document.getElementById("res-sea-base").textContent = `${curSymbol}${baseFreight.toFixed(2)}`;
   document.getElementById("res-sea-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
   document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
@@ -1162,6 +1193,9 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.originSurcharges = originSurchargesList;
   appState.currentSeaFreight.destSurcharges = destSurchargesList;
   appState.currentSeaFreight.surchargesCalculated = surchargesList;
+  appState.currentSeaFreight.routing = routing;
+  appState.currentSeaFreight.tt = tt;
+  appState.currentSeaFreight.validity = validity;
 }
 
 function setupSurchargesEvents(freightType) {
@@ -1873,10 +1907,16 @@ function saveCurrentQuote() {
     const destVal = document.getElementById("air-dest").value.trim();
     const airlineVal = document.getElementById("air-airline").value.trim();
     const incoterm = document.getElementById("air-incoterm").value;
+    const routing = document.getElementById("air-routing").value.trim();
+    const tt = document.getElementById("air-tt").value.trim();
+    const validity = document.getElementById("air-validity").value.trim();
     
     if (!originVal) { alert("Please fill in Origin Airport."); return; }
     if (!destVal) { alert("Please fill in Destination Airport."); return; }
     if (!airlineVal) { alert("Please fill in Carrier / Airline."); return; }
+    if (!routing) { alert("Please fill in Routing Details."); return; }
+    if (!tt) { alert("Please fill in Transit Time (TT)."); return; }
+    if (!validity) { alert("Please fill in Quote Validity."); return; }
 
     const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
     if (rows.length === 0) {
@@ -1968,6 +2008,9 @@ function saveCurrentQuote() {
       surcharges: appState.currentAirFreight.surchargesCalculated,
       surchargeTotal: appState.currentAirFreight.surchargeTotal,
       pivotWeight: appState.currentAirFreight.pivotWeight,
+      routing: routing,
+      tt: tt,
+      validity: validity,
       cargoItems: cargoItems
     };
   } else {
@@ -1978,6 +2021,9 @@ function saveCurrentQuote() {
     const grossWeight = parseFloat(document.getElementById("sea-gross-weight").value) || 0;
     const volume = parseFloat(document.getElementById("sea-volume").value) || 0;
     const pkgQty = parseFloat(document.getElementById("sea-pkg-qty").value) || 0;
+    const routing = document.getElementById("sea-routing").value.trim();
+    const tt = document.getElementById("sea-tt").value.trim();
+    const validity = document.getElementById("sea-validity").value.trim();
 
     if (!originVal) { alert("Please fill in Port of Loading (POL)."); return; }
     if (!destVal) { alert("Please fill in Port of Discharge (POD)."); return; }
@@ -1985,6 +2031,9 @@ function saveCurrentQuote() {
     if (grossWeight <= 0) { alert("Please enter Total Gross Weight greater than zero."); return; }
     if (volume <= 0) { alert("Please enter Total Volume (CBM) greater than zero."); return; }
     if (pkgQty <= 0) { alert("Please enter Total Package Quantity greater than zero."); return; }
+    if (!routing) { alert("Please fill in Routing Details."); return; }
+    if (!tt) { alert("Please fill in Transit Time (TT)."); return; }
+    if (!validity) { alert("Please fill in Quote Validity."); return; }
 
     const origin = originVal.split(" - ")[0];
     const dest = destVal.split(" - ")[0];
@@ -2111,7 +2160,10 @@ function saveCurrentQuote() {
       lclRateApplied: parseFloat(document.getElementById("sea-lcl-rate").value) || 0,
       containerItems: containerItems,
       cargoItems: cargoItems,
-      dimUnit: appState.currentSeaFreight.dimUnit || 'cms'
+      dimUnit: appState.currentSeaFreight.dimUnit || 'cms',
+      routing: routing,
+      tt: tt,
+      validity: validity
     };
   }
 
@@ -2768,6 +2820,9 @@ window.viewSavedQuote = (id) => {
       <tr><td>Volume (CBM)</td><td>${(quote.details.cbm || 0).toFixed(3)} CBM</td></tr>
       <tr><td>Chargeable Weight</td><td>${(quote.details.chargeableWeight || 0).toFixed(2)} kg</td></tr>
       ${quote.details.pivotWeight ? `<tr><td>Pivot Weight</td><td>${quote.details.pivotWeight.toFixed(2)} kg</td></tr>` : ''}
+      <tr><td>Routing</td><td>${quote.details.routing || 'Direct'}</td></tr>
+      <tr><td>Transit Time (TT)</td><td>${quote.details.tt || 'N/A'}</td></tr>
+      <tr><td>Validity</td><td>${quote.details.validity || 'N/A'}</td></tr>
       <tr><td>Base Freight Rate</td><td>${currencySym}${(quote.details.appliedRate || 0).toFixed(2)} / kg</td></tr>
       <tr><td>Base Ocean/Air Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
     `;
@@ -2792,6 +2847,9 @@ window.viewSavedQuote = (id) => {
       <tr><td>Total Volume</td><td>${(quote.details.volumeCbm || 0).toFixed(2)} CBM</td></tr>
       <tr><td>Total Package Quantity</td><td>${quote.details.packagesQuantity || 'N/A'} Pkgs</td></tr>
       ${subDetails}
+      <tr><td>Routing</td><td>${quote.details.routing || 'Direct'}</td></tr>
+      <tr><td>Transit Time (TT)</td><td>${quote.details.tt || 'N/A'}</td></tr>
+      <tr><td>Validity</td><td>${quote.details.validity || 'N/A'}</td></tr>
       <tr><td>Base Ocean Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
     `;
   }
@@ -3294,6 +3352,9 @@ function amendQuote(id) {
     document.getElementById("air-airline").value = quote.details.airline || "";
     document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
     document.getElementById("air-pivot-weight").value = quote.details.pivotWeight || "";
+    document.getElementById("air-routing").value = quote.details.routing || "";
+    document.getElementById("air-tt").value = quote.details.tt || "";
+    document.getElementById("air-validity").value = quote.details.validity || "";
     
     // Cargo items
     const cargoBody = document.getElementById("air-cargo-body");
@@ -3336,6 +3397,9 @@ function amendQuote(id) {
     document.getElementById("sea-dest").value = quote.details.destination || "";
     document.getElementById("sea-line").value = quote.details.shippingLine || "";
     document.getElementById("sea-incoterm").value = quote.details.incoterm || "EXW";
+    document.getElementById("sea-routing").value = quote.details.routing || "";
+    document.getElementById("sea-tt").value = quote.details.tt || "";
+    document.getElementById("sea-validity").value = quote.details.validity || "";
     
     const mode = quote.details.mode || "fcl";
     const modeTabs = document.querySelectorAll(".mode-tab-btn");
