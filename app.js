@@ -390,6 +390,9 @@ function goHome() {
   document.querySelectorAll(".view-panel").forEach(panel => {
     panel.classList.remove("active");
   });
+  document.querySelectorAll(".modal-overlay").forEach(modal => {
+    modal.classList.remove("show");
+  });
   
   if (appState.currentUser === 'ganny') {
     document.getElementById("manager-panel").classList.add("active");

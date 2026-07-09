@@ -13,10 +13,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker registered!', reg))
-          .catch(err => console.log('Service Worker registration failed: ', err));
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for(let reg of regs) { reg.unregister(); }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(key) { caches.delete(key); });
       });
     }
   </script>
@@ -32,7 +35,7 @@
   <div id="login-overlay" class="login-overlay-screen">
     <div class="login-card">
       <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
-        <img src="logo.png" alt="Vertex Logo" style="height: 64px; width: 64px; object-fit: contain; border-radius: 50%;">
+        <img src="logo.png" alt="Vertex Logo" style="height: 76px; width: 76px; object-fit: contain; border-radius: 50%;">
         <div style="text-align: center;">
           <div style="font-size: 1.8rem; font-weight: 800; letter-spacing: 0.02em; color: var(--text-brand); line-height: 1.1;">Vertex</div>
           <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.02em;">Atlas Pricing</div>
@@ -69,7 +72,7 @@
     <header>
       <div class="header-content">
         <div class="logo-section" style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer;" onclick="goHome()">
-          <img src="logo.png" alt="Vertex Logo" style="height: 38px; width: 38px; object-fit: contain; border-radius: 50%;">
+          <img src="logo.png" alt="Vertex Logo" style="height: 48px; width: 48px; object-fit: contain; border-radius: 50%;">
           <div>
             <div class="logo-text" style="font-size: 1.25rem; font-weight: 800; color: var(--text-brand); line-height: 1.1;">Vertex</div>
             <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.02em;">Atlas Pricing</div>
