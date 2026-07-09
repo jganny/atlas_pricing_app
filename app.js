@@ -497,6 +497,8 @@ function resetSeaFreightDeskForm() {
 // Sub-navigation triggers for Calculators inside Member dashboard
 function openActiveCalculator(type) {
   document.getElementById("member-dashboard-panel").classList.remove("active");
+  const managerPanel = document.getElementById("manager-panel");
+  if (managerPanel) managerPanel.classList.remove("active");
   
   if (type === 'air') {
     resetAirFreightDeskForm();
@@ -510,8 +512,14 @@ function openActiveCalculator(type) {
 function returnToWorkspace() {
   document.getElementById("air-freight-panel").classList.remove("active");
   document.getElementById("sea-freight-panel").classList.remove("active");
-  document.getElementById("member-dashboard-panel").classList.add("active");
-  renderMemberDashboard(appState.currentUser);
+  if (appState.currentUser === 'ganny') {
+    const managerPanel = document.getElementById("manager-panel");
+    if (managerPanel) managerPanel.classList.add("active");
+    renderAdminDashboard();
+  } else {
+    document.getElementById("member-dashboard-panel").classList.add("active");
+    renderMemberDashboard(appState.currentUser);
+  }
 }
 
 // Autocomplete Engine
