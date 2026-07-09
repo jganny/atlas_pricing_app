@@ -21,11 +21,11 @@ const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
 
 // Pricing Team Desks
 const TEAM_ROLES = {
-  'ganny': { name: 'Ganny (Admin)', type: 'admin' },
-  'shashank': { name: 'Shashank (Air Nomination)', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-  'mahendra': { name: 'Mahendra (Sea Nomination)', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
-  'jaya': { name: 'Jaya (Free Hand Sales)', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
-  'cathrina': { name: 'Cathrina (NRS)', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
+  'ganny': { name: 'Pricing Team', type: 'admin' },
+  'shashank': { name: 'Air Nomination', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
+  'mahendra': { name: 'Sea Nomination', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+  'jaya': { name: 'Free Hand Sales', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
+  'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
 
 // Apply saved desk names from localStorage
@@ -280,8 +280,8 @@ function loginSuccess(roleId) {
   const root = document.documentElement;
   if (roleId === 'ganny') {
     document.getElementById("admin-role-selector").style.display = "flex";
-    root.style.setProperty('--accent-current', 'var(--accent-success)');
-    root.style.setProperty('--accent-current-glow', 'rgba(16, 185, 129, 0.3)');
+    root.style.setProperty('--accent-current', 'var(--sky)');
+    root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
     switchRole('manager');
   } else {
     document.getElementById("admin-role-selector").style.display = "none";
@@ -366,11 +366,11 @@ function switchRole(role) {
     root.style.setProperty('--accent-current', 'var(--accent-sea)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
   } else if (role === 'manager') {
-    root.style.setProperty('--accent-current', 'var(--accent-success)');
-    root.style.setProperty('--accent-current-glow', 'rgba(16, 185, 129, 0.3)');
+    root.style.setProperty('--accent-current', 'var(--sky)');
+    root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
   } else {
-    root.style.setProperty('--accent-current', 'var(--accent-success)');
-    root.style.setProperty('--accent-current-glow', 'rgba(16, 185, 129, 0.3)');
+    root.style.setProperty('--accent-current', 'var(--indigo)');
+    root.style.setProperty('--accent-current-glow', 'rgba(47, 49, 147, 0.2)');
   }
 
   // Currency Indicator rules based on Role
@@ -406,7 +406,7 @@ function goHome() {
       }
     });
     const root = document.documentElement;
-    root.style.setProperty('--accent-current', 'var(--accent-success)');
+    root.style.setProperty('--accent-current', 'var(--sky)');
     renderAdminDashboard();
   } else {
     document.getElementById("member-dashboard-panel").classList.add("active");

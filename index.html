@@ -37,7 +37,7 @@
       <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
         <img src="logo.png" alt="Vertex Logo" style="height: 76px; width: 76px; object-fit: contain; border-radius: 50%;">
         <div style="text-align: center;">
-          <div style="font-size: 1.8rem; font-weight: 800; letter-spacing: 0.02em; color: var(--text-brand); line-height: 1.1;">Vertex</div>
+          <div style="font-size: 1.9rem; font-weight: 900; letter-spacing: 0.05em; color: var(--text-brand); line-height: 1.1; font-family: Calibri, 'Segoe UI', Arial, sans-serif;">VERTEX</div>
           <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.02em;">Atlas Pricing</div>
         </div>
       </div>
@@ -58,10 +58,10 @@
       
       <div class="login-hint">
         <strong>Demo Credentials (Password: <code>password</code>):</strong><br>
-        • Admin/Manager (Ganny): <code>ganny</code><br>
-        • Category 1 (Air Nom): <code>shashank</code><br>
-        • Category 2 (Sea Nom): <code>mahendra</code><br>
-        • Category 3 (Free Hand): <code>jaya</code><br>
+        • Admin/Pricing Team (Ganny): <code>ganny</code><br>
+        • Category 1 (Air Nomination): <code>shashank</code><br>
+        • Category 2 (Sea Nomination): <code>mahendra</code><br>
+        • Category 3 (Free Hand Sales): <code>jaya</code><br>
         • Category 4 (NRS): <code>cathrina</code><br>
       </div>
     </div>
@@ -74,7 +74,7 @@
         <div class="logo-section" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" onclick="goHome()">
           <img src="logo.png" alt="Vertex Logo" style="height: 48px; width: 48px; object-fit: contain; border-radius: 50%;">
           <div style="display: flex; flex-direction: column; justify-content: center;">
-            <div class="logo-text" style="font-size: 1.35rem; font-weight: 850; color: var(--sky); line-height: 1.0; font-family: 'Outfit', sans-serif;">Vertex</div>
+            <div class="logo-text" style="font-size: 1.45rem; font-weight: 900; color: var(--sky); line-height: 1.0; font-family: Calibri, 'Segoe UI', Arial, sans-serif; letter-spacing: 0.05em;">VERTEX</div>
             <div style="font-size: 0.72rem; color: var(--t3); font-weight: 700; letter-spacing: 0.04em; margin-top: 0.15rem; text-transform: uppercase;">Atlas Pricing</div>
           </div>
         </div>
@@ -83,7 +83,7 @@
         <div class="user-badge-container" style="display: flex; align-items: center; gap: 0.8rem;">
           <div class="active-user-badge" id="active-user-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span id="active-user-name">Manager</span>
+            <span id="active-user-name">Pricing Team</span>
           </div>
           <button class="logout-btn" onclick="logoutUser()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -98,11 +98,11 @@
       <div class="subheader-content">
         <!-- Workspace Role Switcher (Visible to Admin only) -->
         <div class="role-selector-bar" id="admin-role-selector" style="display: none;">
-          <button class="role-btn active" data-role="manager">Admin Desk</button>
-          <button class="role-btn" data-role="shashank"><svg width="11" height="11" style="margin-right:3px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>Shashank (Air Nom)</button>
-          <button class="role-btn" data-role="mahendra"><svg width="11" height="11" style="margin-right:3px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>Mahendra (Sea Nom)</button>
-          <button class="role-btn" data-role="jaya">Jaya (Free Hand)</button>
-          <button class="role-btn" data-role="cathrina">Cathrina (NRS)</button>
+          <button class="role-btn active" data-role="manager">Pricing Team</button>
+          <button class="role-btn" data-role="shashank"><svg width="11" height="11" style="margin-right:3px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>Air Nomination</button>
+          <button class="role-btn" data-role="mahendra"><svg width="11" height="11" style="margin-right:3px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>Sea Nomination</button>
+          <button class="role-btn" data-role="jaya">Free Hand Sales</button>
+          <button class="role-btn" data-role="cathrina">NRS</button>
         </div>
 
         <!-- Live Exchange Rates Ticker (XE.COM reference) -->
@@ -220,22 +220,22 @@
 
             <!-- Desk Renaming Settings Panel -->
             <div class="glass-card">
-              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Desk Names Manager</h3>
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Desk Names Pricing Team</h3>
               <form id="desk-config-form" onsubmit="saveDeskNames(event)">
                 <div class="form-group">
-                  <label for="cfg-shashank">Category 1: AIR - NOMINATION (Shashank)</label>
+                  <label for="cfg-shashank">Category 1: AIR - NOMINATION</label>
                   <input type="text" id="cfg-shashank" placeholder="AIR - NOMINATION" required>
                 </div>
                 <div class="form-group">
-                  <label for="cfg-mahendra">Category 2: SEA - NOMINATION (Mahendra)</label>
+                  <label for="cfg-mahendra">Category 2: SEA - NOMINATION</label>
                   <input type="text" id="cfg-mahendra" placeholder="SEA - NOMINATION" required>
                 </div>
                 <div class="form-group">
-                  <label for="cfg-jaya">Category 3: FREE HAND SALES (Jaya)</label>
+                  <label for="cfg-jaya">Category 3: FREE HAND SALES</label>
                   <input type="text" id="cfg-jaya" placeholder="FREE HAND SALES (AIR/SEA)" required>
                 </div>
                 <div class="form-group">
-                  <label for="cfg-cathrina">Category 4: NRS (Cathrina)</label>
+                  <label for="cfg-cathrina">Category 4: NRS</label>
                   <input type="text" id="cfg-cathrina" placeholder="NRS (AIR/SEA)" required>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 0.5rem; background: var(--accent-success); color: #000;">

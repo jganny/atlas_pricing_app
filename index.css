@@ -38,14 +38,14 @@
   --teal-g:   rgba(13, 148, 136, 0.08);
   --teal-glow: 0 4px 20px rgba(13, 148, 136, 0.1);
 
-  --green:    #16a34a;
-  --green-g:  rgba(22, 163, 74, 0.08);
+  --green:    #15803d; /* Elegant Forest Green */
+  --green-g:  rgba(21, 128, 61, 0.08);
 
-  --amber:    #d97706;
-  --amber-g:  rgba(217, 119, 6, 0.08);
+  --amber:    #b45309; /* Elegant Golden Bronze */
+  --amber-g:  rgba(180, 83, 9, 0.08);
 
-  --rose:     #e11d48;
-  --rose-g:   rgba(225, 29, 72, 0.08);
+  --rose:     #be123c; /* Elegant Crimson Red */
+  --rose-g:   rgba(190, 18, 60, 0.08);
 
   /* Semantic */
   --accent:      var(--sky);
