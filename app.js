@@ -644,6 +644,7 @@ function setupAirFreightEvents() {
   }
 
   document.getElementById("air-incoterm")?.addEventListener("change", calculateAirFreight);
+  document.getElementById("air-pivot-weight")?.addEventListener("input", calculateAirFreight);
 
   setupSurchargesEvents("air-origin");
   setupSurchargesEvents("air-dest");
@@ -683,7 +684,11 @@ function calculateAirFreight() {
     }
   });
 
-  const chargeableWeight = Math.max(totalGrossWeight, totalVolumeWeight);
+  const pivotWeight = parseFloat(document.getElementById("air-pivot-weight")?.value) || 0;
+  let chargeableWeight = Math.max(totalGrossWeight, totalVolumeWeight);
+  if (pivotWeight > totalGrossWeight || pivotWeight > totalVolumeWeight) {
+    chargeableWeight = pivotWeight;
+  }
 
   const rateMin = parseFloat(document.getElementById("rate-min").value) || 0;
   const rateM45 = parseFloat(document.getElementById("rate-m45").value) || 0;
@@ -854,6 +859,18 @@ function calculateAirFreight() {
   document.getElementById("res-air-qty").textContent = `${totalPackageQty} Pkgs`;
   document.getElementById("res-air-vw").textContent = `${totalVolumeWeight.toFixed(2)} kg`;
   document.getElementById("res-air-chw").textContent = `${finalChargeableWeight.toFixed(2)} kg ${usedBreakLabel ? `(${usedBreakLabel})` : ''}`;
+  
+  const rowPivot = document.getElementById("row-air-pivot");
+  const resPivot = document.getElementById("res-air-pivot");
+  if (rowPivot && resPivot) {
+    if (pivotWeight > 0) {
+      rowPivot.style.display = "flex";
+      resPivot.textContent = `${pivotWeight.toFixed(2)} kg`;
+    } else {
+      rowPivot.style.display = "none";
+    }
+  }
+
   document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
   document.getElementById("res-air-base").textContent = `${curSymbol}${finalFreightCost.toFixed(2)}`;
   document.getElementById("res-air-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
@@ -874,6 +891,7 @@ function calculateAirFreight() {
   appState.currentAirFreight.surchargesCalculated = surchargesList;
   appState.currentAirFreight.usedBreak = usedBreakLabel;
   appState.currentAirFreight.appliedRate = finalBaseRate;
+  appState.currentAirFreight.pivotWeight = pivotWeight;
 }
 
 // SEA FREIGHT CALCULATOR LOGIC
@@ -1895,6 +1913,7 @@ function saveCurrentQuote() {
       destSurcharges: appState.currentAirFreight.destSurcharges,
       surcharges: appState.currentAirFreight.surchargesCalculated,
       surchargeTotal: appState.currentAirFreight.surchargeTotal,
+      pivotWeight: appState.currentAirFreight.pivotWeight,
       cargoItems: cargoItems
     };
   } else {
@@ -2615,6 +2634,7 @@ window.viewSavedQuote = (id) => {
       <tr><td>Volume Weight</td><td>${(quote.details.volumeWeight || 0).toFixed(2)} kg</td></tr>
       <tr><td>Volume (CBM)</td><td>${(quote.details.cbm || 0).toFixed(3)} CBM</td></tr>
       <tr><td>Chargeable Weight</td><td>${(quote.details.chargeableWeight || 0).toFixed(2)} kg</td></tr>
+      ${quote.details.pivotWeight ? `<tr><td>Pivot Weight</td><td>${quote.details.pivotWeight.toFixed(2)} kg</td></tr>` : ''}
       <tr><td>Base Freight Rate</td><td>${currencySym}${(quote.details.appliedRate || 0).toFixed(2)} / kg</td></tr>
       <tr><td>Base Ocean/Air Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
     `;
@@ -3140,6 +3160,7 @@ function amendQuote(id) {
     document.getElementById("air-dest").value = quote.details.destination || "";
     document.getElementById("air-airline").value = quote.details.airline || "";
     document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
+    document.getElementById("air-pivot-weight").value = quote.details.pivotWeight || "";
     
     // Cargo items
     const cargoBody = document.getElementById("air-cargo-body");
