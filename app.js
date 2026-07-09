@@ -3556,6 +3556,18 @@ document.addEventListener("keydown", (e) => {
   } else if (e.key === "Enter") {
     const target = e.target;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT')) {
+      if (target.classList.contains("cargo-gw") && appState.activeDesk === 'air') {
+        e.preventDefault();
+        setTimeout(() => {
+          const activeEl = document.querySelector(".break-input-wrapper.highlight-break input");
+          if (activeEl) {
+            activeEl.focus();
+            activeEl.select();
+          }
+        }, 50);
+        return;
+      }
+
       const container = target.closest(".autocomplete-container");
       const dropdown = container ? container.querySelector(".autocomplete-dropdown") : null;
       const hasActiveDropdown = dropdown && dropdown.classList.contains("show") && dropdown.querySelector(".autocomplete-item.active");
@@ -3568,6 +3580,19 @@ document.addEventListener("keydown", (e) => {
         setTimeout(() => { target._transitionScheduled = false; }, 300);
       }
     }
+  }
+});
+
+document.addEventListener("change", (e) => {
+  const target = e.target;
+  if (target && target.classList.contains("cargo-gw") && appState.activeDesk === 'air') {
+    setTimeout(() => {
+      const activeEl = document.querySelector(".break-input-wrapper.highlight-break input");
+      if (activeEl) {
+        activeEl.focus();
+        activeEl.select();
+      }
+    }, 50);
   }
 });
 
