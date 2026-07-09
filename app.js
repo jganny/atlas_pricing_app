@@ -3396,9 +3396,12 @@ window.viewSavedQuote = (id) => {
   
   printCard.innerHTML = `
     <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <img src="logo.png" alt="PRICING VERTEX Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
-        <div class="print-logo" style="font-size: 1.5rem; font-weight: 800; color: #0284c7; line-height: 50px;">PRICING VERTEX</div>
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
+        <div>
+          <div class="print-logo" style="font-size: 1.5rem; font-weight: 800; color: #0284c7; line-height: 1.1;">Vertex</div>
+          <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Atlas Pricing</div>
+        </div>
       </div>
       <div class="print-title">
         <h2>QUOTATION</h2>
