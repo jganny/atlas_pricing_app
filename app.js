@@ -2794,7 +2794,6 @@ function populateSeaSurcharges(mode) {
   setupSurchargesEvents("sea-origin");
   setupSurchargesEvents("sea-dest");
 }
-}
 
 function loadMemorizedSurcharges() {
   const categories = ["air-origin", "air-dest", "sea-origin", "sea-dest"];
