@@ -14,22 +14,22 @@
   --bg-input-focus: #ffffff;
 
   /* Borders */
-  --border-1: rgba(47, 49, 147, 0.08); /* Soft brand-tinted border line */
-  --border-2: rgba(47, 49, 147, 0.12); /* Structuring dividers */
-  --border-3: rgba(47, 49, 147, 0.28); /* Hover highlights */
+  --border-1: rgba(27, 28, 92, 0.08); /* Soft brand-tinted border line */
+  --border-2: rgba(27, 28, 92, 0.12); /* Structuring dividers */
+  --border-3: rgba(27, 28, 92, 0.3); /* Hover highlights */
 
   /* Text */
-  --t1: #0f172a; /* Deep slate slate-900 */
-  --t2: #475569; /* Slate-600 */
-  --t3: #94a3b8; /* Slate-400 */
+  --t1: #000000; /* Pure black text */
+  --t2: #1e293b; /* Slate-800 dark gray/black */
+  --t3: #475569; /* Slate-600 */
 
   /* Accents */
-  --sky:    #2f3193; /* Royal Blue from Atlas Logo */
-  --sky-g:  rgba(47, 49, 147, 0.08);
-  --sky-glow: 0 4px 20px rgba(47, 49, 147, 0.15);
+  --sky:    #1b1c5c; /* Deep Corporate Navy Blue from Atlas Logo */
+  --sky-g:  rgba(27, 28, 92, 0.08);
+  --sky-glow: 0 4px 20px rgba(27, 28, 92, 0.15);
 
-  --indigo:   #4f46e5;
-  --indigo-g: rgba(79, 70, 229, 0.08);
+  --indigo:   #2f3193; /* Royal Blue from Atlas Logo */
+  --indigo-g: rgba(47, 49, 147, 0.08);
 
   --violet:   #7c3aed;
   --violet-g: rgba(124, 58, 237, 0.08);
@@ -381,10 +381,10 @@ main {
   height: 2px;
 }
 
-.stat-card[data-type="air"]::after     { background: linear-gradient(90deg, var(--sky), var(--indigo)); box-shadow: 0 0 12px rgba(56,189,248,0.6); }
-.stat-card[data-type="sea"]::after     { background: linear-gradient(90deg, var(--indigo), var(--violet)); box-shadow: 0 0 12px rgba(129,140,248,0.6); }
-.stat-card[data-type="total"]::after   { background: linear-gradient(90deg, var(--teal), var(--green)); box-shadow: 0 0 12px rgba(45,212,191,0.6); }
-.stat-card[data-type="warning"]::after { background: linear-gradient(90deg, var(--amber), var(--rose)); box-shadow: 0 0 12px rgba(251,191,36,0.6); }
+.stat-card[data-type="air"]::after     { background: linear-gradient(90deg, var(--sky), var(--indigo), #eab308); box-shadow: 0 0 8px rgba(27,28,92,0.2); }
+.stat-card[data-type="sea"]::after     { background: linear-gradient(90deg, var(--indigo), var(--teal), #eab308); box-shadow: 0 0 8px rgba(47,49,147,0.2); }
+.stat-card[data-type="total"]::after   { background: linear-gradient(90deg, var(--sky), var(--green), #eab308); box-shadow: 0 0 8px rgba(27,28,92,0.2); }
+.stat-card[data-type="warning"]::after { background: linear-gradient(90deg, var(--amber), #eab308); box-shadow: 0 0 8px rgba(217,119,6,0.2); }
 
 .stat-title {
   font-size: 0.68rem;
