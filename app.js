@@ -1906,6 +1906,32 @@ function saveCurrentQuote() {
       return;
     }
 
+    const airOriginRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+    let hasEmptyAirOrigin = false;
+    airOriginRows.forEach(row => {
+      const rateInput = row.querySelector(".chg-rate");
+      if (rateInput && rateInput.value.trim() === "") {
+        hasEmptyAirOrigin = true;
+      }
+    });
+    if (hasEmptyAirOrigin) {
+      alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
+      return;
+    }
+
+    const airDestRows = document.querySelectorAll("#air-dest-surcharges-body tr");
+    let hasEmptyAirDest = false;
+    airDestRows.forEach(row => {
+      const rateInput = row.querySelector(".chg-rate");
+      if (rateInput && rateInput.value.trim() === "") {
+        hasEmptyAirDest = true;
+      }
+    });
+    if (hasEmptyAirDest) {
+      alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
+      return;
+    }
+
     const origin = originVal.split(" - ")[0];
     const dest = destVal.split(" - ")[0];
     const airline = airlineVal.split(" - ")[0];
@@ -2031,6 +2057,32 @@ function saveCurrentQuote() {
           cargoItems.push({ l, w, h, qty });
         }
       });
+    }
+
+    const seaOriginRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
+    let hasEmptySeaOrigin = false;
+    seaOriginRows.forEach(row => {
+      const rateInput = row.querySelector(".chg-rate");
+      if (rateInput && rateInput.value.trim() === "") {
+        hasEmptySeaOrigin = true;
+      }
+    });
+    if (hasEmptySeaOrigin) {
+      alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
+      return;
+    }
+
+    const seaDestRows = document.querySelectorAll("#sea-dest-surcharges-body tr");
+    let hasEmptySeaDest = false;
+    seaDestRows.forEach(row => {
+      const rateInput = row.querySelector(".chg-rate");
+      if (rateInput && rateInput.value.trim() === "") {
+        hasEmptySeaDest = true;
+      }
+    });
+    if (hasEmptySeaDest) {
+      alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
+      return;
     }
 
     quoteData.type = "sea";
