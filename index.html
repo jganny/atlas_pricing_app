@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRICING VERTEX - Logistics Pricing Terminal</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
+  <div id="login-overlay" class="login-overlay-screen">
+    <div class="login-card">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <img src="logo.png" alt="PRICING VERTEX Logo" style="height: 64px; width: 64px; object-fit: contain; border-radius: 50%;">
+        <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: 0.05em; color: #fff;">PRICING VERTEX</div>
+      </div>
+      <h2 style="font-weight: 800; margin-bottom: 0.25rem;">Pricing Desk Terminal</h2>
+      <div class="login-subtitle">Please authenticate to access your pricing desk</div>
+      
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group" style="text-align: left;">
+          <label for="login-username">Desk Username</label>
+          <input type="text" id="login-username" placeholder="e.g. air_nom" required>
+        </div>
+        <div class="form-group" style="text-align: left;">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="login-btn">Secure Login</button>
+      </form>
+      
+      <div class="login-hint">
+        <strong>Demo Credentials (Password: <code>password</code>):</strong><br>
+        • Admin/Manager (Ganny): <code>ganny</code><br>
+        • Category 1 (Air Nom): <code>shashank</code><br>
+        • Category 2 (Sea Nom): <code>mahendra</code><br>
+        • Category 3 (Free Hand): <code>jaya</code><br>
+        • Category 4 (NRS): <code>cathrina</code><br>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container" style="display: none;" id="app-workspace">
+    <!-- Header Area -->
+    <header>
+      <div class="header-content">
+        <div class="logo-section" style="display: flex; align-items: center; gap: 0.75rem;">
+          <img src="logo.png" alt="PRICING VERTEX Logo" style="height: 38px; width: 38px; object-fit: contain; border-radius: 50%;">
+          <div>
+            <div class="logo-text" style="font-size: 1.15rem; font-weight: 850; letter-spacing: 0.05em; color: #fff;">PRICING VERTEX</div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">Pricing Desk Terminal</div>
+          </div>
+        </div>
+        
+        <!-- Workspace Role Switcher (Visible to Admin only) -->
+        <div class="role-selector-bar" id="admin-role-selector" style="display: none;">
+          <button class="role-btn active" data-role="manager">Admin Desk</button>
+          <button class="role-btn" data-role="shashank">Shashank (Air Nom)</button>
+          <button class="role-btn" data-role="mahendra">Mahendra (Sea Nom)</button>
+          <button class="role-btn" data-role="jaya">Jaya (Free Hand)</button>
+          <button class="role-btn" data-role="cathrina">Cathrina (NRS)</button>
+        </div>
+
+        <!-- Active User Badge & Logout -->
+        <div class="user-badge-container">
+          <div class="active-user-badge" id="active-user-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span id="active-user-name">Manager</span>
+          </div>
+          <button class="logout-btn" onclick="logoutUser()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- ==================== ADMIN DASHBOARD PANEL ==================== -->
+      <div id="manager-panel" class="view-panel">
+        <div class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          ADMIN AUDIT & PERFORMANCE CONTROL
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="stats-grid">
+          <div class="glass-card stat-card" data-type="total">
+            <div class="stat-title">Total Quoted Revenue</div>
+            <div class="stat-value" id="admin-stat-revenue">₹0</div>
+            <div class="stat-subtitle">Calculated in INR equivalent</div>
+          </div>
+          <div class="glass-card stat-card" data-type="air">
+            <div class="stat-title">Total Enquiries Quoted</div>
+            <div class="stat-value" id="admin-stat-quotes">0</div>
+            <div class="stat-subtitle">All desks combined</div>
+          </div>
+          <div class="glass-card stat-card" data-type="sea">
+            <div class="stat-title">Total Conversions</div>
+            <div class="stat-value" id="admin-stat-conversions">0</div>
+            <div class="stat-subtitle">Enquiries marked Won</div>
+          </div>
+          <div class="glass-card stat-card" data-type="warning">
+            <div class="stat-title">Conversion Rate</div>
+            <div class="stat-value" id="admin-stat-rate">0.0%</div>
+            <div class="stat-subtitle">Overall conversion percentage</div>
+          </div>
+        </div>
+
+        <div class="admin-grid">
+          <!-- Leaderboard metrics -->
+          <div class="glass-card">
+            <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Staff Performance Leaderboard</h3>
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Pricing Officer / Desk</th>
+                  <th>Quotes</th>
+                  <th>Conversions</th>
+                  <th>Conv. Rate (%)</th>
+                  <th>Total Priced</th>
+                </tr>
+              </thead>
+              <tbody id="admin-leaderboard-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Settings & Reports Column -->
+          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Quick reporting filters and extractor -->
+            <div class="glass-card">
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Performance Report Generator</h3>
+              
+              <div class="form-group">
+                <label for="report-period">Reporting Timeframe</label>
+                <select id="report-period">
+                  <option value="daily">Daily (Today's performance)</option>
+                  <option value="monthly">Monthly (Active month)</option>
+                  <option value="quarterly">Quarterly (Active Q)</option>
+                  <option value="halfyearly">Half-Yearly (H1/H2)</option>
+                  <option value="annually" selected>Annually (2026 calendar)</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="report-user">Filter By Officer</label>
+                <select id="report-user">
+                  <option value="all">All Pricing Officers</option>
+                  <option value="shashank" id="opt-shashank">Shashank (Air Nomination)</option>
+                  <option value="mahendra" id="opt-mahendra">Mahendra (Sea Nomination)</option>
+                  <option value="jaya" id="opt-jaya">Jaya (Free Hand Sales)</option>
+                  <option value="cathrina" id="opt-cathrina">Cathrina (NRS)</option>
+                </select>
+              </div>
+              
+              <button class="btn-primary" style="background: var(--accent-sea); color: #fff; width: 100%; border-radius: 8px; margin-top: 1rem;" onclick="generatePerformanceReport()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Extract & View Performance Report
+              </button>
+            </div>
+
+            <!-- Desk Renaming Settings Panel -->
+            <div class="glass-card">
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Desk Names Manager</h3>
+              <form id="desk-config-form" onsubmit="saveDeskNames(event)">
+                <div class="form-group">
+                  <label for="cfg-shashank">Category 1: AIR - NOMINATION (Shashank)</label>
+                  <input type="text" id="cfg-shashank" placeholder="AIR - NOMINATION" required>
+                </div>
+                <div class="form-group">
+                  <label for="cfg-mahendra">Category 2: SEA - NOMINATION (Mahendra)</label>
+                  <input type="text" id="cfg-mahendra" placeholder="SEA - NOMINATION" required>
+                </div>
+                <div class="form-group">
+                  <label for="cfg-jaya">Category 3: FREE HAND SALES (Jaya)</label>
+                  <input type="text" id="cfg-jaya" placeholder="FREE HAND SALES (AIR/SEA)" required>
+                </div>
+                <div class="form-group">
+                  <label for="cfg-cathrina">Category 4: NRS (Cathrina)</label>
+                  <input type="text" id="cfg-cathrina" placeholder="NRS (AIR/SEA)" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 0.5rem; background: var(--accent-success); color: #000;">
+                  Save Desk Names
+                </button>
+              </form>
+            </div>
+
+            <!-- Dynamic User Registry (Admin Only) -->
+            <div class="glass-card" style="margin-top: 1.5rem;">
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--accent-success);">Register New User Profile</h3>
+              <form id="user-registry-form" onsubmit="registerNewUserProfile(event)">
+                <div class="form-group">
+                  <label for="reg-fullname">User Full Name</label>
+                  <input type="text" id="reg-fullname" placeholder="e.g. Ravi Kumar" required>
+                </div>
+                <div class="form-group">
+                  <label for="reg-username">Login Username</label>
+                  <input type="text" id="reg-username" placeholder="e.g. ravi" pattern="^[a-zA-Z0-9_]+$" title="Only letters, numbers, and underscores allowed" required>
+                </div>
+                <div class="form-group">
+                  <label for="reg-password">Login Password</label>
+                  <input type="password" id="reg-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 0.5rem; background: var(--accent-success); color: #000; font-weight: 700;">
+                  Register New User
+                </button>
+              </form>
+              <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.75rem; line-height: 1.3;">
+                💡 <em>New users will be granted access to the <strong>Local Free Hand Sales Category</strong> only, with no access to Nomination or NRS desks.</em>
+              </div>
+            </div>
+
+            <!-- Amendment Requests Approvals Panel (Admin Only) -->
+            <div class="glass-card" style="margin-top: 1.5rem;" id="admin-amendment-requests-panel">
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--accent-warning);">Admin Approvals Control Deck (Edit & Delete)</h3>
+              <div id="admin-amendment-requests-list" style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: #fff;">
+                <div style="color: var(--text-dim); font-style: italic;">No pending amendment requests.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts visualization -->
+        <div class="glass-card" style="margin-bottom: 2rem;">
+          <h3 style="font-weight: 700; margin-bottom: 1.5rem; font-size: 1.1rem; text-transform: uppercase;">Monthly Activity Charts</h3>
+          <div class="chart-container" id="admin-charts-container">
+            <!-- Populated by JS -->
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-sea);"></div>
+              <span>Total Enquiries Quoted</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-success);"></div>
+              <span>Conversions (Won)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master quotes view -->
+        <div class="glass-card">
+          <div class="table-header-row">
+            <h3 style="font-weight: 700;">Global Enquiry Database</h3>
+            <div class="search-box-container">
+              <input type="text" placeholder="Search customer, route, reference..." oninput="filterQuotes(this.value)">
+            </div>
+          </div>
+          
+          <div class="quotes-table-container">
+            <table class="quotes-table">
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Date</th>
+                  <th>Mode</th>
+                  <th>Customer & Route Details</th>
+                  <th>Quoted Amount</th>
+                  <th>Priced By Desk</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-quotes-body">
+                <!-- Quotes populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TEAM MEMBER WORKSPACE ==================== -->
+      <div id="member-dashboard-panel" class="view-panel">
+        <!-- NRS Alerts Panel -->
+        <div id="nrs-notifications-panel" class="glass-card" style="margin-bottom: 1.5rem; border: 1px solid var(--accent-air); display: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <h4 style="color: var(--accent-air); font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; text-transform: uppercase;">
+              <span style="height: 8px; width: 8px; background: var(--accent-air); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--accent-air);"></span>
+              Confirmation Intimation Alerts (NRS)
+            </h4>
+            <button type="button" class="btn-secondary" style="font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; cursor: pointer;" onclick="clearNrsNotifications()">Clear Alerts</button>
+          </div>
+          <div id="nrs-notifications-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 150px; overflow-y: auto; font-size: 0.85rem; color: #fff;">
+            <!-- Alert items added by JS -->
+          </div>
+        </div>
+        <!-- Personal desk metrics -->
+        <div class="stats-grid">
+          <div class="glass-card stat-card" data-type="total">
+            <div class="stat-title">My Quoted Total</div>
+            <div class="stat-value" id="user-stat-revenue">₹0</div>
+            <div class="stat-subtitle">In local equivalent currency</div>
+          </div>
+          <div class="glass-card stat-card" data-type="air">
+            <div class="stat-title">My Total Enquiries</div>
+            <div class="stat-value" id="user-stat-quotes">0</div>
+            <div class="stat-subtitle">Enquiries quoted this month</div>
+          </div>
+          <div class="glass-card stat-card" data-type="sea">
+            <div class="stat-title">My Conversions</div>
+            <div class="stat-value" id="user-stat-conversions">0</div>
+            <div class="stat-subtitle">Active bookings secured</div>
+          </div>
+          <div class="glass-card stat-card" data-type="warning">
+            <div class="stat-title">My Conversion Rate</div>
+            <div class="stat-value" id="user-stat-rate">0.0%</div>
+            <div class="stat-subtitle">Successful conversions</div>
+          </div>
+        </div>
+
+        <!-- Navigation triggers for active calculators -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+          <button class="btn-primary" onclick="openActiveCalculator('air')" id="btn-goto-air">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>
+            Price Air Freight Enquiry
+          </button>
+          <button class="btn-primary" style="background: var(--accent-sea);" onclick="openActiveCalculator('sea')" id="btn-goto-sea">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
+            Price Sea Freight Enquiry
+          </button>
+        </div>
+
+        <!-- Table of user's personal quotes -->
+        <div class="glass-card">
+          <div class="table-header-row">
+            <h3 style="font-weight: 700;">My Quotation Logs</h3>
+            <div class="search-box-container">
+              <input type="text" placeholder="Search customer, destination..." oninput="filterQuotes(this.value)">
+            </div>
+          </div>
+          
+          <div class="quotes-table-container">
+            <table class="quotes-table">
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Date</th>
+                  <th>Mode</th>
+                  <th>Customer & Route Details</th>
+                  <th>Quoted Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="user-quotes-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== AIR FREIGHT CALCULATOR ==================== -->
+      <div id="air-freight-panel" class="view-panel">
+        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
+          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;" onclick="returnToWorkspace()">← Back to Dashboard</button>
+        </div>
+        <div class="workspace">
+          <!-- Inputs section -->
+          <div class="glass-card">
+            <div class="section-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>
+              AIR FREIGHT DESK
+            </div>
+            
+            <div class="form-grid-3">
+              <div class="form-group autocomplete-container">
+                <label for="air-cust-name">Customer Name</label>
+                <input type="text" id="air-cust-name" placeholder="e.g. Zenith Electronics Ltd" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="air-currency">Quoting Currency</label>
+                <select id="air-currency">
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="INR">INR - Indian Rupee</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="air-incoterm">Incoterm</label>
+                <select id="air-incoterm">
+                  <option value="EXW" selected>EXW - Ex Works</option>
+                  <option value="FCA">FCA - Free Carrier</option>
+                  <option value="FOB">FOB - Free On Board</option>
+                  <option value="CIF">CIF - Cost, Insurance & Freight</option>
+                  <option value="DAP">DAP - Delivered At Place</option>
+                  <option value="DDU">DDU - Delivered Duty Unpaid</option>
+                  <option value="DDP">DDP - Delivered Duty Paid</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid-3">
+              <div class="form-group autocomplete-container">
+                <label for="air-origin">Origin Airport (IATA Code)</label>
+                <input type="text" id="air-origin" placeholder="Type Airport code or city..." autocomplete="off">
+              </div>
+              <div class="form-group autocomplete-container">
+                <label for="air-dest">Destination Airport (IATA Code)</label>
+                <input type="text" id="air-dest" placeholder="Type Airport code or city..." autocomplete="off">
+              </div>
+              <div class="form-group autocomplete-container">
+                <label for="air-airline">Carrier / Airline</label>
+                <input type="text" id="air-airline" placeholder="Type Airline code or name..." autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Dimensions Calculator Table -->
+            <div style="margin-top: 1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+              <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Cargo Dimensions Matrix</h4>
+              <!-- Unit Selector -->
+              <div class="toggle-group dim-unit-toggle" style="margin-bottom: 0; width: 180px;">
+                <div class="toggle-option active unit-active" data-unit="cms">CMS (LWH / 6000)</div>
+                <div class="toggle-option" data-unit="inches">INCHES (LWH / 360)</div>
+              </div>
+            </div>
+
+            <div class="cargo-table-container">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Length</th>
+                    <th>Width</th>
+                    <th>Height</th>
+                    <th>Quantity</th>
+                    <th>Total Gross Wt (Kg)</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="air-cargo-body">
+                  <tr class="cargo-item-row">
+                    <td><input type="number" class="cargo-len" min="1" placeholder="L" required></td>
+                    <td><input type="number" class="cargo-wid" min="1" placeholder="W" required></td>
+                    <td><input type="number" class="cargo-hei" min="1" placeholder="H" required></td>
+                    <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" required></td>
+                    <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required></td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <button type="button" class="add-row-btn" id="air-add-cargo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Cargo Line
+            </button>
+
+            <!-- Air freight weight breaks matrix -->
+            <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem;">Weight Break Tariffs (Rate per Kg)</h4>
+            <div class="breaks-grid">
+              <div class="break-input-wrapper">
+                <div class="break-label">Minimum</div>
+                <input type="number" id="rate-min" placeholder="Flat" min="0" step="0.1">
+              </div>
+              <div class="break-input-wrapper">
+                <div class="break-label">-45 kg</div>
+                <input type="number" id="rate-m45" placeholder="Rate" min="0" step="0.1">
+              </div>
+              <div class="break-input-wrapper">
+                <div class="break-label">+45 kg</div>
+                <input type="number" id="rate-p45" placeholder="Rate" min="0" step="0.1">
+              </div>
+              <div class="break-input-wrapper">
+                <div class="break-label">+100 kg</div>
+                <input type="number" id="rate-p100" placeholder="Rate" min="0" step="0.1">
+              </div>
+              <div class="break-input-wrapper">
+                <div class="break-label">+300 kg</div>
+                <input type="number" id="rate-p300" placeholder="Rate" min="0" step="0.1">
+              </div>
+              <div class="break-input-wrapper">
+                <div class="break-label">+500 kg</div>
+                <input type="number" id="rate-p500" placeholder="Rate" min="0" step="0.1">
+              </div>
+              <div class="break-input-wrapper">
+                <div class="break-label">+1000 kg</div>
+                <input type="number" id="rate-p1000" placeholder="Rate" min="0" step="0.1">
+              </div>
+            </div>
+
+            <!-- Split Surcharges (Origin vs Destination) -->
+            <!-- 1. Origin Surcharges & Airport Fees -->
+            <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem;">Origin Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Rate / Fee</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="air-origin-surcharges-body">
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Fuel Surcharge (MYC)" required></td>
+                    <td><input type="number" class="chg-rate" value="1.20" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="kg" selected>Per kg</option>
+                        <option value="flat">Flat</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Security Surcharge (SCC)" required></td>
+                    <td><input type="number" class="chg-rate" value="0.15" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="kg" selected>Per kg</option>
+                        <option value="flat">Flat</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="XRAY Surcharge (XRAY)" required></td>
+                    <td><input type="number" class="chg-rate" value="0.10" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="kg" selected>Per kg</option>
+                        <option value="flat">Flat</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="AMS fee (Per MAWB)" required></td>
+                    <td><input type="number" class="chg-rate" value="25.00" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="flat" selected>Flat</option>
+                        <option value="kg">Per kg</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="AMS fee (Per HAWB)" required></td>
+                    <td><input type="number" class="chg-rate" value="15.00" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="flat" selected>Flat</option>
+                        <option value="kg">Per kg</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="AWB fee (AWB)" required></td>
+                    <td><input type="number" class="chg-rate" value="35.00" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="flat" selected>Flat</option>
+                        <option value="kg">Per kg</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Miscellaneous Surcharge (MISC)" required></td>
+                    <td><input type="number" class="chg-rate" value="50.00" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="flat" selected>Flat</option>
+                        <option value="kg">Per kg</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button type="button" class="add-row-btn" id="add-air-origin-surcharge" style="margin-bottom: 2rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Origin Surcharge
+            </button>
+
+            <!-- 2. Destination Surcharges & Airport Fees -->
+            <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1rem; margin-bottom: 0.75rem;">Destination Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Rate / Fee</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="air-dest-surcharges-body">
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Miscellaneous Surcharge (MISC)" required></td>
+                    <td><input type="number" class="chg-rate" value="50.00" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="flat" selected>Flat</option>
+                        <option value="kg">Per kg</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button type="button" class="add-row-btn" id="add-air-dest-surcharge" style="margin-bottom: 1.5rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Destination Surcharge
+            </button>
+          </div>
+
+          <!-- Live Results Widget (Right Panel) -->
+          <div class="glass-card results-panel">
+            <div class="results-header">
+              <h3>Air Freight Pricing Results</h3>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Live updates upon value edits</div>
+            </div>
+
+            <!-- Optimization Card -->
+            <div id="air-opt-card" class="optimisation-card" style="display: none;">
+              <div class="optimisation-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                As-For Rating Optimizer
+              </div>
+              <div class="optimisation-text" id="opt-suggestion-text">
+                Optimization suggestions will show here.
+              </div>
+              <button type="button" class="apply-opt-btn" id="apply-opt">Apply Cost Savings</button>
+            </div>
+
+            <div class="result-row">
+              <span class="result-label">Actual Gross Weight</span>
+              <span class="result-value" id="res-air-gw">0.00 kg</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Total Packages / Pieces</span>
+              <span class="result-value" id="res-air-qty">0 Pkgs</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Volume Weight</span>
+              <span class="result-value" id="res-air-vw">0.00 kg</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Chargeable Weight</span>
+              <span class="result-value" id="res-air-chw" style="font-weight: 700; color: #fff;">0.00 kg</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Total Volume (CBM)</span>
+              <span class="result-value" id="res-air-vol">0.000 CBM</span>
+            </div>
+            
+            <div class="result-row" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+              <span class="result-label">Base Air Freight Cost</span>
+              <span class="result-value" id="res-air-base">$0.00</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Total Ancillary Surcharges</span>
+              <span class="result-value" id="res-air-sur">$0.00</span>
+            </div>
+            <div class="result-row" style="border-bottom: none;">
+              <span class="result-label">Estimated Grand Total</span>
+              <span class="result-value-highlight" id="res-air-total">$0.00</span>
+            </div>
+            
+            <div class="action-buttons">
+              <button class="btn-primary" onclick="saveCurrentQuote()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Quote to Database
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== SEA FREIGHT CALCULATOR ==================== -->
+      <div id="sea-freight-panel" class="view-panel">
+        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
+          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;" onclick="returnToWorkspace()">← Back to Dashboard</button>
+        </div>
+        <div class="workspace">
+          <!-- Inputs Column -->
+          <div class="glass-card">
+            <div class="section-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
+              SEA FREIGHT DESK
+            </div>
+            
+            <div class="form-grid-3">
+              <div class="form-group autocomplete-container">
+                <label for="sea-cust-name">Customer Name</label>
+                <input type="text" id="sea-cust-name" placeholder="e.g. Adani Enterprises" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="sea-currency">Quoting Currency</label>
+                <select id="sea-currency">
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="INR">INR - Indian Rupee</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sea-incoterm">Incoterm</label>
+                <select id="sea-incoterm">
+                  <option value="EXW" selected>EXW - Ex Works</option>
+                  <option value="FCA">FCA - Free Carrier</option>
+                  <option value="FOB">FOB - Free On Board</option>
+                  <option value="CIF">CIF - Cost, Insurance & Freight</option>
+                  <option value="DAP">DAP - Delivered At Place</option>
+                  <option value="DDU">DDU - Delivered Duty Unpaid</option>
+                  <option value="DDP">DDP - Delivered Duty Paid</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid-3">
+              <div class="form-group autocomplete-container">
+                <label for="sea-origin">Port of Loading (POL)</label>
+                <input type="text" id="sea-origin" placeholder="Type Port name or city..." autocomplete="off">
+              </div>
+              <div class="form-group autocomplete-container">
+                <label for="sea-dest">Port of Discharge (POD)</label>
+                <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
+              </div>
+              <div class="form-group autocomplete-container">
+                <label for="sea-line">Shipping Carrier (Line)</label>
+                <input type="text" id="sea-line" placeholder="e.g. Maersk, MSC, CMA CGM" autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Cargo details inputs (weight, volume, packages) -->
+            <div class="form-grid-3" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label for="sea-gross-weight">Total Gross Weight (Kg)</label>
+                <input type="number" id="sea-gross-weight" placeholder="e.g. 5000" min="0" value="0">
+              </div>
+              <div class="form-group">
+                <label for="sea-volume">Total Volume (CBM)</label>
+                <input type="number" id="sea-volume" placeholder="e.g. 12.5" min="0" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="sea-pkg-qty">Total Package Quantity</label>
+                <input type="number" id="sea-pkg-qty" placeholder="e.g. 25" min="0" value="0">
+              </div>
+            </div>
+
+            <!-- Sea Cargo Dimensions Calculator Table -->
+            <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+              <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--accent-sea);">Cargo Dimensions Calculator (LxWxH)</h4>
+              <!-- Unit Selector -->
+              <div class="toggle-group" id="sea-dim-unit-toggle" style="margin-bottom: 0; width: 180px;">
+                <div class="toggle-option active" data-unit="cms">CMS</div>
+                <div class="toggle-option" data-unit="inches">INCHES</div>
+              </div>
+            </div>
+
+            <div class="cargo-table-container" style="margin-bottom: 0.75rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Length</th>
+                    <th>Width</th>
+                    <th>Height</th>
+                    <th>Quantity (Pkgs)</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="sea-cargo-body">
+                  <tr class="sea-cargo-item-row">
+                    <td><input type="number" class="sea-cargo-len" min="1" placeholder="L"></td>
+                    <td><input type="number" class="sea-cargo-wid" min="1" placeholder="W"></td>
+                    <td><input type="number" class="sea-cargo-hei" min="1" placeholder="H"></td>
+                    <td><input type="number" class="sea-cargo-qty" min="1" placeholder="Qty"></td>
+                    <td>
+                      <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaVolumeFromDimensions();">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <button type="button" class="add-row-btn" id="sea-add-cargo-row" style="margin-bottom: 1.5rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Cargo Line
+            </button>
+
+            <!-- FCL vs LCL toggle tab -->
+            <div class="toggle-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+              <div class="toggle-option active" id="sea-tab-fcl">FCL (Full Container Load)</div>
+              <div class="toggle-option" id="sea-tab-lcl">LCL (Less Container Load)</div>
+            </div>
+
+            <!-- FCL Fields -->
+            <div id="sea-fcl-form">
+              <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">Ocean Freight Tariff Per Container</h4>
+              <div class="cargo-table-container">
+                <table class="cargo-table" style="min-width: unset;">
+                  <thead>
+                    <tr>
+                      <th>Container Type</th>
+                      <th>Quantity Needed</th>
+                      <th>Rate Per Container (<span class="curr-label">USD</span>)</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sea-fcl-body">
+                    <!-- Dynamic Rows populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn" id="sea-add-container" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Container Line
+              </button>
+            </div>
+
+            <!-- LCL Fields -->
+            <div id="sea-lcl-form" style="display: none;">
+              <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">LCL Freight Pricing</h4>
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="sea-lcl-rate">LCL Freight Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="65">
+                </div>
+              </div>
+            </div>
+
+            <!-- Split Surcharges (Origin vs Destination) -->
+            <!-- 1. Origin Surcharges & Port Fees -->
+            <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem;">Origin Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Cost (<span class="curr-label">USD</span>)</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="sea-origin-surcharges-body">
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
+                    <td><input type="number" class="chg-rate" value="250.00" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+                        <option value="flat">Flat Fee</option>
+                        <option value="container" selected>Per Container</option>
+                        <option value="rt">Per RT (Revenue Ton)</option>
+                        <option value="kg">Per Kg (Gross Weight)</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
+                    <td><input type="number" class="chg-rate" value="75.00" step="0.01" required></td>
+                    <td>
+                      <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+                        <option value="flat" selected>Flat Fee</option>
+                        <option value="container">Per Container</option>
+                        <option value="rt">Per RT (Revenue Ton)</option>
+                        <option value="kg">Per Kg (Gross Weight)</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button type="button" class="add-row-btn" id="add-sea-origin-surcharge" style="margin-bottom: 2rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Origin Surcharge
+            </button>
+
+            <!-- 2. Destination Surcharges & Port Fees -->
+            <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1rem; margin-bottom: 0.75rem;">Destination Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Cost (<span class="curr-label">USD</span>)</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="sea-dest-surcharges-body">
+                  <!-- Add destination charges dynamically -->
+                </tbody>
+              </table>
+            </div>
+            <button type="button" class="add-row-btn" id="add-sea-dest-surcharge" style="margin-bottom: 1.5rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Destination Surcharge
+            </button>
+          </div>
+
+          <!-- Live Results widget -->
+          <div class="glass-card results-panel">
+            <div class="results-header">
+              <h3>Sea Freight Pricing Results</h3>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Live updates upon value edits</div>
+            </div>
+
+            <div class="result-row">
+              <span class="result-label">Service Type</span>
+              <span class="result-value" id="res-sea-type">FCL (Full Container)</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Cargo Allocation Detail</span>
+              <span class="result-value" id="res-sea-details" style="font-weight: 700; color: #fff;">1 x 20'GP</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Gross Weight</span>
+              <span class="result-value" id="res-sea-gw">0.00 kg</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Total Volume</span>
+              <span class="result-value" id="res-sea-vol">0.00 CBM</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Total Packages</span>
+              <span class="result-value" id="res-sea-qty">0 Pkgs</span>
+            </div>
+            
+            <div class="result-row" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+              <span class="result-label">Base Ocean Freight</span>
+              <span class="result-value" id="res-sea-base">$0.00</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Surcharge Total Fees</span>
+              <span class="result-value" id="res-sea-sur">$0.00</span>
+            </div>
+            <div class="result-row" style="border-bottom: none;">
+              <span class="result-label">Estimated Grand Total</span>
+              <span class="result-value-highlight" id="res-sea-total">$0.00</span>
+            </div>
+            
+            <div class="action-buttons">
+              <button class="btn-primary" onclick="saveCurrentQuote()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Quote to Database
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== BRANDED PDF/PRINT VIEW MODAL ==================== -->
+  <div class="modal-overlay" id="quote-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-header-title">Quotation Official Preview</h3>
+        <button class="action-icon-btn" id="close-modal" onclick="hideQuoteModal()" style="color: var(--accent-error);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Rendered printable invoice card -->
+        <div id="quote-print-card" class="quote-print-card">
+          <!-- Inserted dynamically by JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="hideQuoteModal()">Close</button>
+        <button class="btn-primary" id="print-quote-btn" style="background: var(--accent-success); color: #000; box-shadow: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print / PDF Export
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Datalists for Surcharges dropdowns -->
+  <datalist id="air-origin-charges-list"></datalist>
+  <datalist id="air-dest-charges-list"></datalist>
+  <datalist id="sea-origin-charges-list"></datalist>
+  <datalist id="sea-dest-charges-list"></datalist>
+
+  <script src="app.js"></script>
+</body>
+</html>
