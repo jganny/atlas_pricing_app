@@ -58,10 +58,10 @@
       
       <div class="login-hint">
         <strong>Demo Credentials (Password: <code>password</code>):</strong><br>
-        • Admin/Pricing Team (Ganny): <code>ganny</code><br>
-        • Category 1 (Air Nomination): <code>shashank</code><br>
-        • Category 2 (Sea Nomination): <code>mahendra</code><br>
-        • Category 3 (Free Hand Sales): <code>jaya</code><br>
+        • Admin/Pricing Team: <code>ganny</code><br>
+        • Category 1 (Air Nom): <code>shashank</code><br>
+        • Category 2 (Sea Nom): <code>mahendra</code><br>
+        • Category 3 (Free Hand): <code>jaya</code><br>
         • Category 4 (NRS): <code>cathrina</code><br>
       </div>
     </div>
@@ -214,46 +214,8 @@
                 ACTIVE WORKFLOW DESK SUMMARY
               </div>
               
-              <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-weight: 800; font-size: 0.75rem; color: var(--sky);">AIR DESK: BOM ➔ JFK</span>
-                  <span style="font-size: 0.65rem; color: var(--green); font-weight: 700; display: flex; align-items: center; gap: 0.2rem;">
-                    <span style="width:5px; height:5px; background:var(--green); border-radius:50%; display:inline-block;"></span>
-                    Won Booking
-                  </span>
-                </div>
-                <div style="font-size: 0.68rem; color: var(--t3); display: flex; justify-content: space-between;">
-                  <span>Ref: #VTX-7201</span>
-                  <span style="font-weight: 600; color: var(--t2);">1,250 kg • via Singapore</span>
-                </div>
-              </div>
-
-              <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-weight: 800; font-size: 0.75rem; color: var(--sky);">SEA DESK: SIN ➔ BOM</span>
-                  <span style="font-size: 0.65rem; color: var(--amber); font-weight: 700; display: flex; align-items: center; gap: 0.2rem;">
-                    <span style="width:5px; height:5px; background:var(--amber); border-radius:50%; display:inline-block;"></span>
-                    Priced (Pending)
-                  </span>
-                </div>
-                <div style="font-size: 0.68rem; color: var(--t3); display: flex; justify-content: space-between;">
-                  <span>Ref: #VTX-4592</span>
-                  <span style="font-weight: 600; color: var(--t2);">22 CBM • via Direct Ocean</span>
-                </div>
-              </div>
-
-              <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-weight: 800; font-size: 0.75rem; color: var(--sky);">AIR DESK: DXB ➔ LHR</span>
-                  <span style="font-size: 0.65rem; color: var(--green); font-weight: 700; display: flex; align-items: center; gap: 0.2rem;">
-                    <span style="width:5px; height:5px; background:var(--green); border-radius:50%; display:inline-block;"></span>
-                    Won Booking
-                  </span>
-                </div>
-                <div style="font-size: 0.68rem; color: var(--t3); display: flex; justify-content: space-between;">
-                  <span>Ref: #VTX-6391</span>
-                  <span style="font-weight: 600; color: var(--t2);">450 kg • via Frankfurt</span>
-                </div>
+              <div id="control-tower-feed-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                <!-- Populated dynamically from appState.quotes -->
               </div>
             </div>
           </div>
@@ -361,8 +323,13 @@
                   <label for="cfg-cathrina">Category 4: NRS</label>
                   <input type="text" id="cfg-cathrina" placeholder="NRS (AIR/SEA)" required>
                 </div>
+                <div class="form-group" style="margin-top: 1rem; border-top: 1px solid var(--border-1); padding-top: 1rem;">
+                  <label for="cfg-gmaps-key" style="color: var(--sky); font-weight: 700;">Google Maps API Key (Optional)</label>
+                  <input type="text" id="cfg-gmaps-key" placeholder="AIzaSy...">
+                  <small style="color: var(--t3); font-size: 0.65rem; display: block; margin-top: 0.2rem;">Used to embed live airport and seaport maps inside calculators.</small>
+                </div>
                 <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 0.5rem; background: var(--accent-success); color: #000;">
-                  Save Desk Names
+                  Save Desk Names & API Settings
                 </button>
               </form>
             </div>
@@ -585,16 +552,39 @@
 
             <div class="form-grid-3">
               <div class="form-group autocomplete-container">
-                <label for="air-origin">Origin Airport (IATA Code)</label>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="air-origin">Origin Airport (IATA Code)</label>
+                  <button type="button" class="btn-text" style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;" onclick="toggleMapHelper('air', 'origin')">🔍 View Map</button>
+                </div>
                 <input type="text" id="air-origin" placeholder="Type Airport code or city..." autocomplete="off">
               </div>
               <div class="form-group autocomplete-container">
-                <label for="air-dest">Destination Airport (IATA Code)</label>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="air-dest">Destination Airport (IATA Code)</label>
+                  <button type="button" class="btn-text" style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;" onclick="toggleMapHelper('air', 'destination')">🔍 View Map</button>
+                </div>
                 <input type="text" id="air-dest" placeholder="Type Airport code or city..." autocomplete="off">
               </div>
               <div class="form-group autocomplete-container">
                 <label for="air-airline">Carrier / Airline</label>
                 <input type="text" id="air-airline" placeholder="Type Airline code or name..." autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Collapsible Google Map Helper for Air -->
+            <div id="air-map-helper-card" class="glass-card" style="margin-top: 1rem; display: none; padding: 1rem; border: 1px dashed var(--sky);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; color: var(--sky); text-transform: uppercase; display: flex; align-items: center; gap: 0.3rem;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/></svg>
+                  Google Map Directory: <span id="air-map-query-title" style="color: var(--t1); margin-left: 0.35rem; font-weight: 800;">India</span>
+                </span>
+                <button type="button" style="font-size: 0.68rem; color: var(--accent-error); background: transparent; border: none; cursor: pointer; font-weight: 700;" onclick="document.getElementById('air-map-helper-card').style.display = 'none';">Close Map</button>
+              </div>
+              <div id="air-map-iframe-wrapper" style="border: 1px solid var(--border-2); border-radius: 6px; overflow: hidden; height: 260px; background: rgba(27,28,92,0.02); display: flex; align-items: center; justify-content: center; position: relative;">
+                <!-- Dynamically populated iframe -->
+              </div>
+              <div style="font-size: 0.65rem; color: var(--t3); margin-top: 0.4rem; line-height: 1.4;">
+                * Notice: Google Maps Platform searches may incur usage fees. External links comply with standard Terms of Service (ToS).
               </div>
             </div>
 
@@ -951,16 +941,39 @@
 
             <div class="form-grid-3">
               <div class="form-group autocomplete-container">
-                <label for="sea-origin">Port of Loading (POL)</label>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="sea-origin">Port of Loading (POL)</label>
+                  <button type="button" class="btn-text" style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;" onclick="toggleMapHelper('sea', 'origin')">🔍 View Map</button>
+                </div>
                 <input type="text" id="sea-origin" placeholder="Type Port name or city..." autocomplete="off">
               </div>
               <div class="form-group autocomplete-container">
-                <label for="sea-dest">Port of Discharge (POD)</label>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="sea-dest">Port of Discharge (POD)</label>
+                  <button type="button" class="btn-text" style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;" onclick="toggleMapHelper('sea', 'destination')">🔍 View Map</button>
+                </div>
                 <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
               </div>
               <div class="form-group autocomplete-container">
                 <label for="sea-line">Shipping Carrier (Line)</label>
                 <input type="text" id="sea-line" placeholder="e.g. Maersk, MSC, CMA CGM" autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Collapsible Google Map Helper for Sea -->
+            <div id="sea-map-helper-card" class="glass-card" style="margin-top: 1rem; display: none; padding: 1rem; border: 1px dashed var(--sky);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; color: var(--sky); text-transform: uppercase; display: flex; align-items: center; gap: 0.3rem;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/></svg>
+                  Google Map Directory: <span id="sea-map-query-title" style="color: var(--t1); margin-left: 0.35rem; font-weight: 800;">India</span>
+                </span>
+                <button type="button" style="font-size: 0.68rem; color: var(--accent-error); background: transparent; border: none; cursor: pointer; font-weight: 700;" onclick="document.getElementById('sea-map-helper-card').style.display = 'none';">Close Map</button>
+              </div>
+              <div id="sea-map-iframe-wrapper" style="border: 1px solid var(--border-2); border-radius: 6px; overflow: hidden; height: 260px; background: rgba(27,28,92,0.02); display: flex; align-items: center; justify-content: center; position: relative;">
+                <!-- Dynamically populated iframe -->
+              </div>
+              <div style="font-size: 0.65rem; color: var(--t3); margin-top: 0.4rem; line-height: 1.4;">
+                * Notice: Google Maps Platform searches may incur usage fees. External links comply with standard Terms of Service (ToS).
               </div>
             </div>
 

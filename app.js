@@ -22,9 +22,9 @@ const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
 // Pricing Team Desks
 const TEAM_ROLES = {
   'ganny': { name: 'Pricing Team', type: 'admin' },
-  'shashank': { name: 'Air Nomination', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-  'mahendra': { name: 'Sea Nomination', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
-  'jaya': { name: 'Free Hand Sales', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
+  'shashank': { name: 'Air Nom', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
+  'mahendra': { name: 'Sea Nom', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+  'jaya': { name: 'Free Hand', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
 
@@ -1827,6 +1827,7 @@ window.deleteNrsAlert = deleteNrsAlert;
 
 // ADMIN DASHBOARD RENDERING
 function renderAdminDashboard() {
+  renderControlTowerFeed();
   const totalEnquiries = appState.quotes.length;
   let totalRevenueINR = 0;
   let conversions = 0;
@@ -1971,6 +1972,62 @@ function renderAdminDashboard() {
       reqList.innerHTML = `<div style="color: var(--text-dim); font-style: italic;">No pending approval requests.</div>`;
     }
   }
+}
+
+function renderControlTowerFeed() {
+  const container = document.getElementById("control-tower-feed-list");
+  if (!container) return;
+
+  const quotes = appState.quotes || [];
+  if (quotes.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--t3); font-size: 0.72rem; padding: 2rem 0; font-style: italic; border: 1px dashed var(--border-1); border-radius: var(--r-sm); background: rgba(27,28,92,0.01);">
+        No active shipments logged yet.<br>Create pricing enquiries to populate tracking.
+      </div>
+    `;
+    return;
+  }
+
+  // Get up to 3 most recent quotes
+  const recent = [...quotes].reverse().slice(0, 3);
+  
+  container.innerHTML = recent.map(quote => {
+    const isAir = quote.mode === 'air';
+    const modeLabel = isAir ? 'AIR DESK' : 'SEA DESK';
+    const originStr = (quote.origin || '').substring(0, 15);
+    const destStr = (quote.destination || '').substring(0, 15);
+    
+    // Status text & colors matching premium corporate timeline
+    const statusText = quote.status === 'converted' ? 'Won Booking' : 'Priced (Pending)';
+    const statusColor = quote.status === 'converted' ? 'var(--green)' : 'var(--amber)';
+    
+    // Chargeable parameter
+    let loadStr = '';
+    if (isAir) {
+      loadStr = `${(quote.chargeableWeight || 0).toLocaleString()} kg`;
+    } else {
+      loadStr = `${(quote.volume || 0).toLocaleString()} CBM`;
+    }
+    
+    // Routing description
+    const routingStr = quote.viaRoute ? `via ${quote.viaRoute}` : 'Direct Lane';
+    
+    return `
+      <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s; cursor: pointer;" onclick="viewSavedQuote('${quote.id}')">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 800; font-size: 0.75rem; color: var(--sky);">${modeLabel}: ${originStr} ➔ ${destStr}</span>
+          <span style="font-size: 0.65rem; color: ${statusColor}; font-weight: 700; display: flex; align-items: center; gap: 0.2rem;">
+            <span style="width:5px; height:5px; background:${statusColor}; border-radius:50%; display:inline-block;"></span>
+            ${statusText}
+          </span>
+        </div>
+        <div style="font-size: 0.68rem; color: var(--t3); display: flex; justify-content: space-between;">
+          <span>Ref: #${getQuoteRefId(quote)}</span>
+          <span style="font-weight: 600; color: var(--t2);">${loadStr} • ${routingStr}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function renderMonthlyCharts() {
@@ -3488,6 +3545,11 @@ function applyDeskNames() {
 
   const cfgCathrina = document.getElementById("cfg-cathrina");
   if (cfgCathrina) cfgCathrina.value = TEAM_ROLES['cathrina'].name;
+
+  const cfgGmapsKey = document.getElementById("cfg-gmaps-key");
+  if (cfgGmapsKey) {
+    cfgGmapsKey.value = localStorage.getItem("gl_gmaps_key") || "";
+  }
 }
 
 function saveDeskNames(e) {
@@ -3516,13 +3578,18 @@ function saveDeskNames(e) {
   };
   localStorage.setItem("gl_desk_names", JSON.stringify(names));
 
+  const gmapsKeyInput = document.getElementById("cfg-gmaps-key");
+  if (gmapsKeyInput) {
+    localStorage.setItem("gl_gmaps_key", gmapsKeyInput.value.trim());
+  }
+
   applyDeskNames();
 
   if (appState.currentUser === 'ganny') {
     renderAdminDashboard();
   }
 
-  alert("Desk names updated successfully!");
+  alert("Desk names & API Settings updated successfully!");
 }
 
 window.saveDeskNames = saveDeskNames;
@@ -4249,5 +4316,77 @@ function runCurrencyConversion() {
   resultDiv.textContent = `${sym}${finalAmt.toFixed(2)}`;
 }
 window.runCurrencyConversion = runCurrencyConversion;
+
+// ==================== GOOGLE MAPS DIRECTORY LOOKUP ====================
+
+function toggleMapHelper(mode, type) {
+  const helperCardId = `${mode}-map-helper-card`;
+  const titleId = `${mode}-map-query-title`;
+  const wrapperId = `${mode}-map-iframe-wrapper`;
+  const inputId = `${mode}-${type === 'origin' ? 'origin' : 'dest'}`;
+
+  const helperCard = document.getElementById(helperCardId);
+  const titleEl = document.getElementById(titleId);
+  const wrapperEl = document.getElementById(wrapperId);
+  const inputEl = document.getElementById(inputId);
+
+  if (!helperCard || !titleEl || !wrapperEl || !inputEl) return;
+
+  const rawVal = inputEl.value.trim();
+  let searchQuery = rawVal;
+  if (!searchQuery) {
+    searchQuery = mode === 'air' ? 'International Airports' : 'Cargo Seaports';
+  } else {
+    // If it's a 3-letter IATA code or short code, expand it
+    if (searchQuery.length === 3) {
+      searchQuery += mode === 'air' ? ' Airport' : ' Seaport';
+    }
+  }
+
+  // Update title text
+  titleEl.textContent = searchQuery;
+
+  // Read saved API key
+  const apiKey = localStorage.getItem("gl_gmaps_key") || "";
+
+  if (apiKey) {
+    // Render live Google Maps Embed API Search
+    const embedUrl = `https://www.google.com/maps/embed/v1/search?key=${apiKey}&q=${encodeURIComponent(searchQuery)}`;
+    wrapperEl.innerHTML = `
+      <iframe 
+        width="100%" 
+        height="100%" 
+        frameborder="0" 
+        style="border:0; display:block;" 
+        src="${embedUrl}" 
+        allowfullscreen>
+      </iframe>
+    `;
+  } else {
+    // Render static fallback layout with external map link
+    const externalUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
+    wrapperEl.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem; color: var(--t2); font-family: 'Outfit', sans-serif;">
+        <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--sky);">Interactive Map Ready</div>
+        <p style="font-size: 0.72rem; color: var(--t3); max-width: 320px; margin: 0 auto 1rem auto; line-height: 1.4;">
+          Please configure your Google Maps API Key in Ganny's settings panel under Pricing Team configurations to load interactive embeds.
+        </p>
+        <a href="${externalUrl}" target="_blank" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; padding: 0.45rem 1rem; border-radius: 6px; text-decoration: none; color: #000; background: var(--accent-success); font-weight: 700;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Search "${searchQuery}" on Google Maps
+        </a>
+      </div>
+    `;
+  }
+
+  // Toggle visibility
+  if (helperCard.style.display === 'none' || !helperCard.style.display) {
+    helperCard.style.display = 'block';
+  } else {
+    // If clicking the other input, keep visible but update contents
+    helperCard.style.display = 'block';
+  }
+}
+window.toggleMapHelper = toggleMapHelper;
 
 
