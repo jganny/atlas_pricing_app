@@ -1044,7 +1044,11 @@ function calculateAirFreight() {
   document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
   
   const routing = document.getElementById("air-routing")?.value || "";
-  const tt = document.getElementById("air-tt")?.value || "";
+  const rawTt = document.getElementById("air-tt")?.value || "";
+  let tt = rawTt.trim();
+  if (tt && !tt.toLowerCase().includes("day")) {
+    tt = `${tt} Days`;
+  }
   const validity = document.getElementById("air-validity")?.value || "";
   const resRouting = document.getElementById("res-air-routing-val");
   const resTT = document.getElementById("res-air-tt-val");
@@ -1385,7 +1389,11 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-qty").textContent = `${pkgQty} Pkgs`;
 
   const routing = document.getElementById("sea-routing")?.value || "";
-  const tt = document.getElementById("sea-tt")?.value || "";
+  const rawTt = document.getElementById("sea-tt")?.value || "";
+  let tt = rawTt.trim();
+  if (tt && !tt.toLowerCase().includes("day")) {
+    tt = `${tt} Days`;
+  }
   const validity = document.getElementById("sea-validity")?.value || "";
   const resRouting = document.getElementById("res-sea-routing-val");
   const resTT = document.getElementById("res-sea-tt-val");
