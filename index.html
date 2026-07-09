@@ -8,8 +8,26 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registered!', reg))
+          .catch(err => console.log('Service Worker registration failed: ', err));
+      });
+    }
+  </script>
 </head>
 <body>
+  <!-- Glowing Background Mesh Orbs -->
+  <div class="bg-orb-container">
+    <div class="bg-orb bg-orb-cyan"></div>
+    <div class="bg-orb bg-orb-indigo"></div>
+    <div class="bg-orb bg-orb-purple"></div>
+  </div>
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-overlay" class="login-overlay-screen">
     <div class="login-card">
