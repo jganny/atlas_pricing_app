@@ -1869,15 +1869,46 @@ function saveCurrentQuote() {
   };
 
   if (isAir) {
-    const origin = document.getElementById("air-origin").value.split(" - ")[0];
-    const dest = document.getElementById("air-dest").value.split(" - ")[0];
-    const airline = document.getElementById("air-airline").value.split(" - ")[0];
+    const originVal = document.getElementById("air-origin").value.trim();
+    const destVal = document.getElementById("air-dest").value.trim();
+    const airlineVal = document.getElementById("air-airline").value.trim();
     const incoterm = document.getElementById("air-incoterm").value;
     
-    if (!origin || !dest) {
-      alert("Please fill in Origin and Destination airport.");
+    if (!originVal) { alert("Please fill in Origin Airport."); return; }
+    if (!destVal) { alert("Please fill in Destination Airport."); return; }
+    if (!airlineVal) { alert("Please fill in Carrier / Airline."); return; }
+
+    const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
+    if (rows.length === 0) {
+      alert("Please add at least one Cargo Line in the Dimensions Matrix.");
       return;
     }
+    
+    let hasInvalidRow = false;
+    rows.forEach(row => {
+      const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
+      const w = parseFloat(row.querySelector(".cargo-wid").value) || 0;
+      const h = parseFloat(row.querySelector(".cargo-hei").value) || 0;
+      const qty = parseInt(row.querySelector(".cargo-qty").value) || 0;
+      const gw = parseFloat(row.querySelector(".cargo-gw").value) || 0;
+      if (l <= 0 || w <= 0 || h <= 0 || qty <= 0 || gw <= 0) {
+        hasInvalidRow = true;
+      }
+    });
+
+    if (hasInvalidRow) {
+      alert("Please fill in all cells (Length, Width, Height, Quantity, Gross Weight) with values greater than zero for all Cargo Lines.");
+      return;
+    }
+
+    if (appState.currentAirFreight.appliedRate <= 0) {
+      alert("Please enter a valid rate for the active weight break under Tariffs.");
+      return;
+    }
+
+    const origin = originVal.split(" - ")[0];
+    const dest = destVal.split(" - ")[0];
+    const airline = airlineVal.split(" - ")[0];
 
     quoteData.type = "air";
     quoteData.route = `${origin} → ${dest} via ${airline || 'Any'}`;
@@ -1885,16 +1916,13 @@ function saveCurrentQuote() {
     quoteData.amountINR = appState.currentAirFreight.grandTotalINR;
     quoteData.currency = appState.currentAirFreight.currency;
     const cargoItems = [];
-    const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
     rows.forEach(row => {
       const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
       const w = parseFloat(row.querySelector(".cargo-wid").value) || 0;
       const h = parseFloat(row.querySelector(".cargo-hei").value) || 0;
       const qty = parseInt(row.querySelector(".cargo-qty").value) || 0;
       const gw = parseFloat(row.querySelector(".cargo-gw").value) || 0;
-      if (l > 0 && w > 0 && h > 0 && qty > 0) {
-        cargoItems.push({ l, w, h, qty, gw });
-      }
+      cargoItems.push({ l, w, h, qty, gw });
     });
 
     quoteData.details = {
@@ -1917,40 +1945,93 @@ function saveCurrentQuote() {
       cargoItems: cargoItems
     };
   } else {
-    const origin = document.getElementById("sea-origin").value.split(" - ")[0];
-    const dest = document.getElementById("sea-dest").value.split(" - ")[0];
-    const shippingLine = document.getElementById("sea-line").value.trim();
+    const originVal = document.getElementById("sea-origin").value.trim();
+    const destVal = document.getElementById("sea-dest").value.trim();
+    const shippingLineVal = document.getElementById("sea-line").value.trim();
     const incoterm = document.getElementById("sea-incoterm").value;
+    const grossWeight = parseFloat(document.getElementById("sea-gross-weight").value) || 0;
+    const volume = parseFloat(document.getElementById("sea-volume").value) || 0;
+    const pkgQty = parseFloat(document.getElementById("sea-pkg-qty").value) || 0;
 
-    if (!origin || !dest) {
-      alert("Please fill in Origin and Destination port.");
-      return;
-    }
+    if (!originVal) { alert("Please fill in Port of Loading (POL)."); return; }
+    if (!destVal) { alert("Please fill in Port of Discharge (POD)."); return; }
+    if (!shippingLineVal) { alert("Please fill in Shipping Carrier (Line)."); return; }
+    if (grossWeight <= 0) { alert("Please enter Total Gross Weight greater than zero."); return; }
+    if (volume <= 0) { alert("Please enter Total Volume (CBM) greater than zero."); return; }
+    if (pkgQty <= 0) { alert("Please enter Total Package Quantity greater than zero."); return; }
+
+    const origin = originVal.split(" - ")[0];
+    const dest = destVal.split(" - ")[0];
+    const shippingLine = shippingLineVal;
 
     const containerItems = [];
     if (appState.currentSeaFreight.type === 'fcl') {
       const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
+      if (fclRows.length === 0) {
+        alert("Please add at least one Container Line for FCL ocean freight.");
+        return;
+      }
+      let hasInvalidFcl = false;
       fclRows.forEach(row => {
         const type = row.querySelector(".fcl-type").value;
         const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
         const rate = parseFloat(row.querySelector(".fcl-rate").value) || 0;
-        if (qty > 0 && rate > 0) {
+        if (qty <= 0 || rate <= 0) {
+          hasInvalidFcl = true;
+        } else {
           containerItems.push({ type, qty, rate });
         }
       });
+      if (hasInvalidFcl) {
+        alert("Please fill in Container Quantity and Rate per Container for all container rows.");
+        return;
+      }
     }
 
     const cargoItems = [];
     const rows = document.querySelectorAll("#sea-cargo-body .sea-cargo-item-row");
-    rows.forEach(row => {
-      const l = parseFloat(row.querySelector(".sea-cargo-len").value) || 0;
-      const w = parseFloat(row.querySelector(".sea-cargo-wid").value) || 0;
-      const h = parseFloat(row.querySelector(".sea-cargo-hei").value) || 0;
-      const qty = parseInt(row.querySelector(".sea-cargo-qty").value) || 0;
-      if (l > 0 && w > 0 && h > 0 && qty > 0) {
-        cargoItems.push({ l, w, h, qty });
+    if (appState.currentSeaFreight.type === 'lcl') {
+      const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
+      if (lclRate <= 0) {
+        alert("Please enter LCL Freight Rate per Revenue Ton (RT) greater than zero.");
+        return;
       }
-    });
+      if (rows.length === 0) {
+        alert("Please add at least one Cargo Line in the Dimensions Calculator.");
+        return;
+      }
+      let hasInvalidLcl = false;
+      rows.forEach(row => {
+        const l = parseFloat(row.querySelector(".sea-cargo-len").value) || 0;
+        const w = parseFloat(row.querySelector(".sea-cargo-wid").value) || 0;
+        const h = parseFloat(row.querySelector(".sea-cargo-hei").value) || 0;
+        const qty = parseInt(row.querySelector(".sea-cargo-qty").value) || 0;
+        if (l <= 0 || w <= 0 || h <= 0 || qty <= 0) {
+          hasInvalidLcl = true;
+        } else {
+          cargoItems.push({ l, w, h, qty });
+        }
+      });
+      if (hasInvalidLcl) {
+        alert("Please fill in Length, Width, Height, and Quantity for all Sea Cargo Lines.");
+        return;
+      }
+    } else {
+      // Collect cargo if FCL has dimensions filled
+      rows.forEach(row => {
+        const l = parseFloat(row.querySelector(".sea-cargo-len").value) || 0;
+        const w = parseFloat(row.querySelector(".sea-cargo-wid").value) || 0;
+        const h = parseFloat(row.querySelector(".sea-cargo-hei").value) || 0;
+        const qty = parseInt(row.querySelector(".sea-cargo-qty").value) || 0;
+        if (l > 0 || w > 0 || h > 0 || qty > 0) {
+          if (l <= 0 || w <= 0 || h <= 0 || qty <= 0) {
+            alert("Please complete or remove partially filled cargo dimension lines.");
+            return;
+          }
+          cargoItems.push({ l, w, h, qty });
+        }
+      });
+    }
 
     quoteData.type = "sea";
     quoteData.route = `${origin} → ${dest} (${appState.currentSeaFreight.type.toUpperCase()}) ${shippingLine ? `via ${shippingLine}` : ''}`;
