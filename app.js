@@ -386,6 +386,30 @@ function switchRole(role) {
   }
 }
 
+function goHome() {
+  document.querySelectorAll(".view-panel").forEach(panel => {
+    panel.classList.remove("active");
+  });
+  
+  if (appState.currentUser === 'ganny') {
+    document.getElementById("manager-panel").classList.add("active");
+    document.querySelectorAll(".role-btn").forEach(btn => {
+      if (btn.getAttribute("data-role") === 'manager') {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+    const root = document.documentElement;
+    root.style.setProperty('--accent-current', 'var(--accent-success)');
+    renderAdminDashboard();
+  } else {
+    document.getElementById("member-dashboard-panel").classList.add("active");
+    renderMemberDashboard(appState.currentUser);
+  }
+}
+window.goHome = goHome;
+
 function updateCurrencyRules(role) {
   const airCurSelect = document.getElementById("air-currency");
   const seaCurSelect = document.getElementById("sea-currency");
@@ -1160,7 +1184,7 @@ function calculateAirFreight() {
   const resRouting = document.getElementById("res-air-routing-val");
   const resTT = document.getElementById("res-air-tt-val");
   const resValidity = document.getElementById("res-air-validity-val");
-  if (resRouting) resRouting.textContent = routing || "-";
+  if (resRouting) resRouting.textContent = routing ? (routing.toLowerCase().startsWith('via') ? routing : 'via ' + routing) : "-";
   if (resTT) resTT.textContent = tt || "-";
   if (resValidity) resValidity.textContent = validity || "-";
 
@@ -1508,7 +1532,7 @@ function calculateSeaFreight() {
   const resRouting = document.getElementById("res-sea-routing-val");
   const resTT = document.getElementById("res-sea-tt-val");
   const resValidity = document.getElementById("res-sea-validity-val");
-  if (resRouting) resRouting.textContent = routing || "-";
+  if (resRouting) resRouting.textContent = routing ? (routing.toLowerCase().startsWith('via') ? routing : 'via ' + routing) : "-";
   if (resTT) resTT.textContent = tt || "-";
   if (resValidity) resValidity.textContent = validity || "-";
 
@@ -1698,7 +1722,11 @@ function renderMemberDashboard(userId) {
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
-      <td><span class="quote-type-badge ${quote.type}">${quote.type === 'air' ? (quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export') : (quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export')}</span></td>
+      <td><span class="quote-type-badge ${quote.type}">
+        ${quote.type === 'air' ? 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
@@ -1864,7 +1892,11 @@ function renderAdminDashboard() {
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
-      <td><span class="quote-type-badge ${quote.type}">${quote.type === 'air' ? (quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export') : (quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export')}</span></td>
+      <td><span class="quote-type-badge ${quote.type}">
+        ${quote.type === 'air' ? 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
@@ -3399,7 +3431,7 @@ window.viewSavedQuote = (id) => {
       <div style="display: flex; align-items: center; gap: 0.6rem;">
         <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
         <div>
-          <div class="print-logo" style="font-size: 1.5rem; font-weight: 800; color: #0284c7; line-height: 1.1;">Vertex</div>
+          <div class="print-logo" style="font-size: 1.5rem; font-weight: 800; color: #2f3193; line-height: 1.1;">Vertex</div>
           <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Atlas Pricing</div>
         </div>
       </div>
@@ -3606,8 +3638,8 @@ function applyDeskNames() {
   const switcher = document.getElementById("admin-role-selector");
   if (switcher) {
     let buttonsHtml = `<button class="role-btn active" data-role="manager">Admin Desk</button>`;
-    buttonsHtml += `<button class="role-btn" data-role="shashank">Shashank (Air Nom)</button>`;
-    buttonsHtml += `<button class="role-btn" data-role="mahendra">Mahendra (Sea Nom)</button>`;
+    buttonsHtml += `<button class="role-btn" data-role="shashank"><svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>Shashank (Air Nom)</button>`;
+    buttonsHtml += `<button class="role-btn" data-role="mahendra"><svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>Mahendra (Sea Nom)</button>`;
     buttonsHtml += `<button class="role-btn" data-role="jaya">Jaya (Free Hand)</button>`;
     buttonsHtml += `<button class="role-btn" data-role="cathrina">Cathrina (NRS)</button>`;
     

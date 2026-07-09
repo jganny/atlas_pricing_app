@@ -68,7 +68,7 @@
     <!-- Header Area -->
     <header>
       <div class="header-content">
-        <div class="logo-section" style="display: flex; align-items: center; gap: 0.6rem;">
+        <div class="logo-section" style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer;" onclick="goHome()">
           <img src="logo.png" alt="Vertex Logo" style="height: 38px; width: 38px; object-fit: contain; border-radius: 50%;">
           <div>
             <div class="logo-text" style="font-size: 1.25rem; font-weight: 800; color: var(--text-brand); line-height: 1.1;">Vertex</div>
@@ -79,8 +79,8 @@
         <!-- Workspace Role Switcher (Visible to Admin only) -->
         <div class="role-selector-bar" id="admin-role-selector" style="display: none;">
           <button class="role-btn active" data-role="manager">Admin Desk</button>
-          <button class="role-btn" data-role="shashank">Shashank (Air Nom)</button>
-          <button class="role-btn" data-role="mahendra">Mahendra (Sea Nom)</button>
+          <button class="role-btn" data-role="shashank"><svg width="11" height="11" style="margin-right:3px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>Shashank (Air Nom)</button>
+          <button class="role-btn" data-role="mahendra"><svg width="11" height="11" style="margin-right:3px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>Mahendra (Sea Nom)</button>
           <button class="role-btn" data-role="jaya">Jaya (Free Hand)</button>
           <button class="role-btn" data-role="cathrina">Cathrina (NRS)</button>
         </div>
@@ -131,21 +131,25 @@
         <!-- Metrics Grid -->
         <div class="stats-grid">
           <div class="glass-card stat-card" data-type="total">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
             <div class="stat-title">Total Quoted Revenue</div>
             <div class="stat-value" id="admin-stat-revenue">₹0</div>
             <div class="stat-subtitle">Calculated in INR equivalent</div>
           </div>
           <div class="glass-card stat-card" data-type="air">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
             <div class="stat-title">Total Enquiries Quoted</div>
             <div class="stat-value" id="admin-stat-quotes">0</div>
             <div class="stat-subtitle">All desks combined</div>
           </div>
           <div class="glass-card stat-card" data-type="sea">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <div class="stat-title">Total Conversions</div>
             <div class="stat-value" id="admin-stat-conversions">0</div>
             <div class="stat-subtitle">Enquiries marked Won</div>
           </div>
           <div class="glass-card stat-card" data-type="warning">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
             <div class="stat-title">Conversion Rate</div>
             <div class="stat-value" id="admin-stat-rate">0.0%</div>
             <div class="stat-subtitle">Overall conversion percentage</div>
@@ -334,21 +338,25 @@
         <!-- Personal desk metrics -->
         <div class="stats-grid">
           <div class="glass-card stat-card" data-type="total">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
             <div class="stat-title">My Quoted Total</div>
             <div class="stat-value" id="user-stat-revenue">₹0</div>
             <div class="stat-subtitle">In local equivalent currency</div>
           </div>
           <div class="glass-card stat-card" data-type="air">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
             <div class="stat-title">My Total Enquiries</div>
             <div class="stat-value" id="user-stat-quotes">0</div>
             <div class="stat-subtitle">Enquiries quoted this month</div>
           </div>
           <div class="glass-card stat-card" data-type="sea">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <div class="stat-title">My Conversions</div>
             <div class="stat-value" id="user-stat-conversions">0</div>
             <div class="stat-subtitle">Active bookings secured</div>
           </div>
           <div class="glass-card stat-card" data-type="warning">
+            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
             <div class="stat-title">My Conversion Rate</div>
             <div class="stat-value" id="user-stat-rate">0.0%</div>
             <div class="stat-subtitle">Successful conversions</div>

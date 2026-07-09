@@ -24,9 +24,9 @@
   --t3: #94a3b8; /* Slate-400 */
 
   /* Accents */
-  --sky:    #0284c7; /* Sky blue */
-  --sky-g:  rgba(2, 132, 199, 0.08);
-  --sky-glow: 0 4px 20px rgba(2, 132, 199, 0.15);
+  --sky:    #2f3193; /* Royal Blue from Atlas Logo */
+  --sky-g:  rgba(47, 49, 147, 0.08);
+  --sky-glow: 0 4px 20px rgba(47, 49, 147, 0.15);
 
   --indigo:   #4f46e5;
   --indigo-g: rgba(79, 70, 229, 0.08);
@@ -812,13 +812,13 @@ select option { background: #ffffff; color: var(--t1); }
 .quote-print-card th, .quote-print-card td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
 .quote-print-card th { background: #f8fafc; font-weight: 700; color: #374151; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .print-header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 1.2rem; margin-bottom: 1.4rem; align-items: flex-start; }
-.print-logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; font-weight: 700; color: #0284c7; letter-spacing: -0.02em; }
+.print-logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; font-weight: 700; color: #2f3193; letter-spacing: -0.02em; }
 .print-title { text-align: right; }
 .print-title h2 { font-size: 1.2rem; font-weight: 800; color: #0f172a; }
 .print-details { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem; }
 .print-section-title { font-weight: 700; font-size: 0.75rem; margin-top: 1.4rem; margin-bottom: 0.45rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; color: #374151; text-transform: uppercase; letter-spacing: 0.06em; }
 .total-summary-box { margin-top: 1.4rem; background: linear-gradient(135deg,#eff6ff,#f0fdf4); border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; }
-.total-summary-box span.val { font-family: 'Space Grotesk', sans-serif; font-size: 1.45rem; font-weight: 700; color: #0284c7; letter-spacing: -0.02em; }
+.total-summary-box span.val { font-family: 'Space Grotesk', sans-serif; font-size: 1.45rem; font-weight: 700; color: #2f3193; letter-spacing: -0.02em; }
 .footer-note { margin-top: 1.6rem; font-size: 0.68rem; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 0.9rem; line-height: 1.6; }
 
 /* ══════════════════════════════════════════════════
@@ -913,4 +913,21 @@ select option { background: #ffffff; color: var(--t1); }
   0% { transform: translate(0, 0) scale(0.9); }
   50% { transform: translate(-90px, 110px) scale(1.1); }
   100% { transform: translate(100px, -60px) scale(0.95); }
+}
+
+/* Stat card infographic styling */
+.stat-card {
+  position: relative;
+}
+.stat-infographic {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  color: var(--t2);
+  opacity: 0.25;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.stat-card:hover .stat-infographic {
+  opacity: 0.6;
+  transform: scale(1.1);
 }
