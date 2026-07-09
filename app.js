@@ -2694,6 +2694,25 @@ window.viewSavedQuote = (id) => {
     destSurchargeRows = `<tr><td colspan="2" style="color: #666; font-style: italic;">No destination charges</td></tr>`;
   }
 
+  let termsList = "";
+  if (isAir) {
+    termsList = `
+      <li>The above rates are NET NET.</li>
+      <li>Rates quoted are valid for General/ Non Haz/ Non Stackable, unless specified.</li>
+      <li>Quoted rates are subject to space and booking confirmation.</li>
+      <li>Transit Times are subject to the Service chosen.</li>
+      <li>Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.</li>
+    `;
+  } else {
+    termsList = `
+      <li>The Above rates are NET NET.</li>
+      <li>Rates are subject to Surcharges, if applicable at the time of shipment.</li>
+      <li>Rates are valid for Non Haz, Non Temp, Non Stackable, General cargo only.</li>
+      <li>Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.</li>
+      <li>Rates are subject to space, booking and onward confirmation.</li>
+    `;
+  }
+
   const printCard = document.getElementById("quote-print-card");
   document.getElementById("modal-header-title").textContent = "Quotation Official Preview";
   
@@ -2757,8 +2776,13 @@ window.viewSavedQuote = (id) => {
       <strong>GRAND TOTAL FREIGHT CHARGES (EXCLUDING LOCAL TAXES):</strong>
       <span class="val">${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
     </div>
+
+    <div class="print-section-title" style="margin-top: 1.5rem; font-size: 0.85rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem;">Standard Terms & Conditions</div>
+    <ol style="font-size: 0.72rem; color: #bbb; line-height: 1.5; padding-left: 1.2rem; margin: 0.5rem 0 1.5rem 0; font-family: sans-serif; text-align: left;">
+      ${termsList}
+    </ol>
     
-    <div class="footer-note">
+    <div class="footer-note" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem; font-size: 0.65rem; color: var(--text-dim); text-align: center;">
       This quote is valid for 15 days from the date of issue and is subject to space and equipment availability.
       Thank you for choosing Global Logistics!
     </div>
