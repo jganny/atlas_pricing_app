@@ -390,18 +390,7 @@ function setupAutocomplete(inputEl, type) {
     });
   };
 
-  function focusNextInput(el) {
-    setTimeout(() => {
-      const form = el.closest('form');
-      if (form) {
-        const inputs = Array.from(form.querySelectorAll('input, select, textarea')).filter(i => i.offsetParent !== null);
-        const index = inputs.indexOf(el);
-        if (index > -1 && index < inputs.length - 1) {
-          inputs[index + 1].focus();
-        }
-      }
-    }, 400);
-  }
+
 
   inputEl.addEventListener("keydown", (e) => {
     if (!dropdown.classList.contains("show")) return;
@@ -435,9 +424,6 @@ function setupAutocomplete(inputEl, type) {
         inputEl.dispatchEvent(inputEvent);
 
         activeIndex = -1;
-        
-        // Move focus to next input after 400ms
-        focusNextInput(inputEl);
       }
     } else if (e.key === "Escape") {
       dropdown.classList.remove("show");
@@ -572,9 +558,6 @@ function setupAutocomplete(inputEl, type) {
           inputEl.dispatchEvent(inputEvent);
 
           activeIndex = -1;
-          
-          // Move focus to next input after 400ms
-          focusNextInput(inputEl);
         });
         dropdown.appendChild(div);
       });
@@ -3588,33 +3571,4 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-document.addEventListener("change", (e) => {
-  const target = e.target;
-  if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT')) {
-    if (target._transitionScheduled) return;
-    target._transitionScheduled = true;
-    focusNextInput(target, 100); // Snap-fast transition (100ms delay, < 200ms) on Change!
-    setTimeout(() => { target._transitionScheduled = false; }, 300);
-  }
-});
 
-let typingTimer;
-document.addEventListener("input", (e) => {
-  const target = e.target;
-  if (target && target.tagName === 'INPUT' && target.type !== 'search') {
-    // Ignore if it is a customer filter search or logs search input
-    if (target.id === 'search-enquiry' || target.closest('.log-filters-container')) return;
-
-    clearTimeout(typingTimer);
-    
-    // If the input is empty, don't advance
-    if (!target.value.trim()) return;
-    
-    typingTimer = setTimeout(() => {
-      if (target._transitionScheduled) return;
-      target._transitionScheduled = true;
-      focusNextInput(target, 1500); // 1500ms transition delay as requested
-      setTimeout(() => { target._transitionScheduled = false; }, 1700);
-    }, 600); // 600ms of typing inactivity automatically advances
-  }
-});
