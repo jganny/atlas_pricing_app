@@ -6,17 +6,17 @@
 ══════════════════════════════════════════════════ */
 :root {
   /* Base palette */
-  --bg-void:      #f4f6fa; /* Light warm blue-gray canvas */
+  --bg-void:      #ffffff; /* Solid pure white canvas */
   --bg-deep:      #ffffff; /* Clean white */
-  --bg-surface:   rgba(255, 255, 255, 0.45); /* Frosted glass bubble card */
-  --bg-elevated:  rgba(255, 255, 255, 0.85); /* Frosty high elevated container */
-  --bg-input:     rgba(255, 255, 255, 0.85); /* Solid white input canvas */
+  --bg-surface:   #ffffff; /* Clean white card container */
+  --bg-elevated:  #ffffff; /* Clean white elevated popups */
+  --bg-input:     #f8fafc; /* Subtle light gray-blue input canvas */
   --bg-input-focus: #ffffff;
 
   /* Borders */
-  --border-1: rgba(255, 255, 255, 0.65); /* Highlight gloss borders */
-  --border-2: rgba(148, 163, 184, 0.15); /* Soft structure divider */
-  --border-3: rgba(148, 163, 184, 0.35); /* High contrast border on hover */
+  --border-1: rgba(47, 49, 147, 0.08); /* Soft brand-tinted border line */
+  --border-2: rgba(47, 49, 147, 0.12); /* Structuring dividers */
+  --border-3: rgba(47, 49, 147, 0.28); /* Hover highlights */
 
   /* Text */
   --t1: #0f172a; /* Deep slate slate-900 */
@@ -80,10 +80,10 @@
   --r-pill: 999px;
 
   /* Shadows */
-  --shadow-sm:  0 2px 10px rgba(15, 23, 42, 0.03);
-  --shadow-md:  0 8px 30px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(0,0,0,0.01);
-  --shadow-lg:  0 16px 40px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.02);
-  --shadow-xl:  0 24px 60px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.03);
+  --shadow-sm:  0 1px 3px rgba(47, 49, 147, 0.03);
+  --shadow-md:  0 4px 18px rgba(47, 49, 147, 0.04), 0 2px 4px rgba(47, 49, 147, 0.02);
+  --shadow-lg:  0 10px 25px rgba(47, 49, 147, 0.06), 0 4px 10px rgba(47, 49, 147, 0.03);
+  --shadow-xl:  0 20px 40px rgba(47, 49, 147, 0.08), 0 8px 16px rgba(47, 49, 147, 0.04);
 
   /* Custom Brand Accent */
   --text-brand: #0f172a;
@@ -284,50 +284,18 @@ main {
 .login-overlay-screen {
   position: fixed; inset: 0;
   background: var(--bg-void);
-  background-image:
-    radial-gradient(ellipse 800px 600px at 20% 20%, rgba(2, 132, 199, 0.08) 0%, transparent 55%),
-    radial-gradient(ellipse 700px 550px at 80% 80%, rgba(79, 70, 229, 0.08) 0%, transparent 55%),
-    radial-gradient(ellipse 400px 400px at 50% 50%, rgba(124, 58, 237, 0.04) 0%, transparent 60%);
   z-index: 10000;
   display: flex; align-items: center; justify-content: center;
   padding: 2rem;
 }
 
-/* Floating orbs background */
-.login-overlay-screen::before, .login-overlay-screen::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-}
-.login-overlay-screen::before {
-  width: 400px; height: 400px;
-  background: rgba(2, 132, 199, 0.12);
-  top: -100px; left: -100px;
-  animation: drift1 12s ease-in-out infinite alternate;
-}
-.login-overlay-screen::after {
-  width: 350px; height: 350px;
-  background: rgba(79, 70, 229, 0.12);
-  bottom: -80px; right: -80px;
-  animation: drift2 14s ease-in-out infinite alternate;
-}
-
-@keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(60px,40px); } }
-@keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-50px,-30px); } }
-
 .login-card {
   max-width: 440px; width: 100%;
   padding: 3rem 2.75rem 2.25rem;
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-3);
   border-radius: var(--r-xl);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  box-shadow:
-    0 20px 50px rgba(15, 23, 42, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-xl);
   text-align: center;
   animation: loginReveal 0.5s cubic-bezier(0.34,1.56,0.64,1);
   position: relative; z-index: 1;
@@ -448,7 +416,7 @@ main {
   margin-bottom: 2rem;
   align-items: start;
 }
-@media (max-width: 1024px) { .admin-grid { grid-template-columns: 1fr; } }
+
 
 /* ══════════════════════════════════════════════════
    LEADERBOARD TABLE
@@ -511,7 +479,7 @@ main {
    WORKSPACE / CALCULATOR LAYOUT
 ══════════════════════════════════════════════════ */
 .workspace { display: grid; grid-template-columns: 1.45fr 1fr; gap: 1.25rem; align-items: start; }
-@media (max-width: 1024px) { .workspace { grid-template-columns: 1fr; } }
+
 
 /* ══════════════════════════════════════════════════
    SECTION TITLE
@@ -833,12 +801,21 @@ select option { background: #ffffff; color: var(--t1); }
 }
 
 /* ══════════════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE (Auto-scaling & Fluid Layouts)
 ══════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .admin-grid { grid-template-columns: 1fr; }
+  .workspace { grid-template-columns: 1fr; }
+  .form-grid-3 { grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  main { padding: 1.25rem; }
+}
+
 @media (max-width: 768px) {
   .form-row, .form-grid-3, .print-details { grid-template-columns: 1fr; gap: 0.6rem; }
   .xe-ticker-container { display: none !important; }
-  main { padding: 1rem; }
+  .role-selector-bar { flex-wrap: wrap; border-radius: var(--r-md); padding: 0.4rem; }
+  main { padding: 0.85rem; }
+  header { padding: 0.8rem 1rem; }
 }
 
 /* ══════════════════════════════════════════════════
@@ -851,6 +828,7 @@ select option { background: #ffffff; color: var(--t1); }
 
 /* Glowing background orbs container and items */
 .bg-orb-container {
+  display: none;
   position: fixed;
   top: 0;
   left: 0;
