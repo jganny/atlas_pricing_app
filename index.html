@@ -37,7 +37,7 @@
       <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
         <img src="logo.png" alt="Vertex Logo" style="height: 76px; width: 76px; object-fit: contain; border-radius: 50%;">
         <div style="text-align: center;">
-          <div style="font-size: 1.9rem; font-weight: 900; letter-spacing: 0.05em; color: var(--text-brand); line-height: 1.1; font-family: Calibri, 'Segoe UI', Arial, sans-serif;">VERTEX</div>
+          <div style="font-size: 1.9rem; font-weight: 900; letter-spacing: 0.06em; color: var(--text-brand); line-height: 1.1; font-family: 'Outfit', 'Inter', system-ui, sans-serif;">VERTEX</div>
           <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.02em;">Atlas Pricing</div>
         </div>
       </div>
@@ -74,7 +74,7 @@
         <div class="logo-section" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" onclick="goHome()">
           <img src="logo.png" alt="Vertex Logo" style="height: 48px; width: 48px; object-fit: contain; border-radius: 50%;">
           <div style="display: flex; flex-direction: column; justify-content: center;">
-            <div class="logo-text" style="font-size: 1.45rem; font-weight: 900; color: var(--sky); line-height: 1.0; font-family: Calibri, 'Segoe UI', Arial, sans-serif; letter-spacing: 0.05em;">VERTEX</div>
+            <div class="logo-text" style="font-size: 1.45rem; font-weight: 900; color: var(--sky); line-height: 1.0; font-family: 'Outfit', 'Inter', system-ui, sans-serif; letter-spacing: 0.06em;">VERTEX</div>
             <div style="font-size: 0.72rem; color: var(--t3); font-weight: 700; letter-spacing: 0.04em; margin-top: 0.15rem; text-transform: uppercase;">Atlas Pricing</div>
           </div>
         </div>
@@ -134,6 +134,129 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
             Price Sea Freight Enquiry
           </button>
+        </div>
+
+        <!-- Control Tower Widescreen Dashboard Card -->
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div>
+              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Live Operations Monitor</div>
+              <h2 style="font-size: 1.25rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">GLOBAL CONTROL TOWER</h2>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; background: rgba(21, 128, 61, 0.06); border: 1px solid rgba(21, 128, 61, 0.12); padding: 0.35rem 0.75rem; border-radius: var(--r-pill); font-size: 0.68rem; color: var(--green); font-weight: 700;">
+              <span class="pulse-indicator" style="display: inline-block; width: 6px; height: 6px; background: var(--green); border-radius: 50%;"></span>
+              SYSTEMS ACTIVE • 6 DYNAMIC LANES
+            </div>
+          </div>
+          
+          <div class="control-tower-layout" style="display: grid; grid-template-columns: 3.2fr 1.8fr; gap: 1.5rem; min-height: 280px;">
+            <!-- Left Side: Interactive SVG Map Grid -->
+            <div class="map-container" style="background: rgba(27, 28, 92, 0.02); border: 1px solid var(--border-2); border-radius: var(--r-md); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; min-height: 280px; width: 100%;">
+              <svg width="100%" height="280" viewBox="0 0 600 280" style="display: block; width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <pattern id="dotGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="1" fill="rgba(27, 28, 92, 0.08)" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#dotGrid)" />
+                
+                <!-- Stylized world continent outline paths -->
+                <path d="M50 50 L120 40 L160 80 L130 110 L90 120 L70 90 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
+                <path d="M120 140 L150 160 L140 230 L110 250 L100 180 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
+                <path d="M230 40 L340 30 L460 50 L480 120 L400 140 L350 180 L290 180 L250 110 L220 80 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
+                <path d="M470 190 L520 180 L540 220 L490 230 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
+                
+                <!-- Route Paths (Bezier curves) -->
+                <path d="M110 80 Q 220 50 330 140" fill="none" stroke="var(--sky)" stroke-dasharray="5,5" stroke-width="1.5" opacity="0.4" />
+                <path d="M110 80 Q 220 50 330 140" fill="none" stroke="var(--indigo)" stroke-width="2" class="live-route-line" style="stroke-dasharray: 10, 150; animation: march 4s linear infinite;" />
+
+                <path d="M330 140 Q 380 150 430 180" fill="none" stroke="var(--sky)" stroke-dasharray="5,5" stroke-width="1.5" opacity="0.4" />
+                <path d="M330 140 Q 380 150 430 180" fill="none" stroke="var(--teal)" stroke-width="2" class="live-route-line" style="stroke-dasharray: 10, 100; animation: march 3s linear infinite;" />
+
+                <path d="M290 120 Q 260 90 230 60" fill="none" stroke="var(--sky)" stroke-dasharray="5,5" stroke-width="1.5" opacity="0.4" />
+                <path d="M290 120 Q 260 90 230 60" fill="none" stroke="var(--amber)" stroke-width="2" class="live-route-line" style="stroke-dasharray: 8, 80; animation: march 2.5s linear infinite;" />
+
+                <!-- Active Hub Nodes -->
+                <g transform="translate(110, 80)">
+                  <circle cx="0" cy="0" r="10" fill="var(--indigo)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite;" />
+                  <circle cx="0" cy="0" r="4" fill="var(--indigo)" stroke="#fff" stroke-width="1" />
+                </g>
+                <g transform="translate(230, 60)">
+                  <circle cx="0" cy="0" r="10" fill="var(--sky)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite; animation-delay: 0.5s;" />
+                  <circle cx="0" cy="0" r="4" fill="var(--sky)" stroke="#fff" stroke-width="1" />
+                </g>
+                <g transform="translate(290, 120)">
+                  <circle cx="0" cy="0" r="10" fill="var(--amber)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite; animation-delay: 1s;" />
+                  <circle cx="0" cy="0" r="4" fill="var(--amber)" stroke="#fff" stroke-width="1" />
+                </g>
+                <g transform="translate(330, 140)">
+                  <circle cx="0" cy="0" r="12" fill="var(--indigo)" opacity="0.2" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 1.8s infinite;" />
+                  <circle cx="0" cy="0" r="5" fill="var(--indigo)" stroke="#fff" stroke-width="1.5" />
+                </g>
+                <g transform="translate(430, 180)">
+                  <circle cx="0" cy="0" r="10" fill="var(--teal)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite; animation-delay: 0.7s;" />
+                  <circle cx="0" cy="0" r="4" fill="var(--teal)" stroke="#fff" stroke-width="1" />
+                </g>
+
+                <!-- Text Labels -->
+                <text x="95" y="70" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">JFK</text>
+                <text x="215" y="52" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">LHR</text>
+                <text x="268" y="115" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">DXB</text>
+                <text x="340" y="145" font-family="'Outfit', sans-serif" font-size="9" font-weight="800" fill="var(--sky)">BOM (HQ)</text>
+                <text x="440" y="180" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">SIN</text>
+              </svg>
+            </div>
+            
+            <!-- Right Side: High-End Live Timeline / Shipment Feed -->
+            <div style="display: flex; flex-direction: column; gap: 0.65rem; overflow-y: auto; max-height: 280px; padding-right: 0.25rem;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--t2); margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.4rem;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                ACTIVE WORKFLOW DESK SUMMARY
+              </div>
+              
+              <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 800; font-size: 0.75rem; color: var(--sky);">AIR DESK: BOM ➔ JFK</span>
+                  <span style="font-size: 0.65rem; color: var(--green); font-weight: 700; display: flex; align-items: center; gap: 0.2rem;">
+                    <span style="width:5px; height:5px; background:var(--green); border-radius:50%; display:inline-block;"></span>
+                    Won Booking
+                  </span>
+                </div>
+                <div style="font-size: 0.68rem; color: var(--t3); display: flex; justify-content: space-between;">
+                  <span>Ref: #VTX-7201</span>
+                  <span style="font-weight: 600; color: var(--t2);">1,250 kg • via Singapore</span>
+                </div>
+              </div>
+
+              <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 800; font-size: 0.75rem; color: var(--sky);">SEA DESK: SIN ➔ BOM</span>
+                  <span style="font-size: 0.65rem; color: var(--amber); font-weight: 700; display: flex; align-items: center; gap: 0.2rem;">
+                    <span style="width:5px; height:5px; background:var(--amber); border-radius:50%; display:inline-block;"></span>
+                    Priced (Pending)
+                  </span>
+                </div>
+                <div style="font-size: 0.68rem; color: var(--t3); display: flex; justify-content: space-between;">
+                  <span>Ref: #VTX-4592</span>
+                  <span style="font-weight: 600; color: var(--t2);">22 CBM • via Direct Ocean</span>
+                </div>
+              </div>
+
+              <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 800; font-size: 0.75rem; color: var(--sky);">AIR DESK: DXB ➔ LHR</span>
+                  <span style="font-size: 0.65rem; color: var(--green); font-weight: 700; display: flex; align-items: center; gap: 0.2rem;">
+                    <span style="width:5px; height:5px; background:var(--green); border-radius:50%; display:inline-block;"></span>
+                    Won Booking
+                  </span>
+                </div>
+                <div style="font-size: 0.68rem; color: var(--t3); display: flex; justify-content: space-between;">
+                  <span>Ref: #VTX-6391</span>
+                  <span style="font-weight: 600; color: var(--t2);">450 kg • via Frankfurt</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Metrics Grid -->
@@ -205,10 +328,10 @@
                 <label for="report-user">Filter By Officer</label>
                 <select id="report-user">
                   <option value="all">All Pricing Officers</option>
-                  <option value="shashank" id="opt-shashank">Shashank (Air Nomination)</option>
-                  <option value="mahendra" id="opt-mahendra">Mahendra (Sea Nomination)</option>
-                  <option value="jaya" id="opt-jaya">Jaya (Free Hand Sales)</option>
-                  <option value="cathrina" id="opt-cathrina">Cathrina (NRS)</option>
+                  <option value="shashank" id="opt-shashank">Air Nomination</option>
+                  <option value="mahendra" id="opt-mahendra">Sea Nomination</option>
+                  <option value="jaya" id="opt-jaya">Free Hand Sales</option>
+                  <option value="cathrina" id="opt-cathrina">NRS</option>
                 </select>
               </div>
               
@@ -220,7 +343,7 @@
 
             <!-- Desk Renaming Settings Panel -->
             <div class="glass-card">
-              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Desk Names Pricing Team</h3>
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Pricing Team</h3>
               <form id="desk-config-form" onsubmit="saveDeskNames(event)">
                 <div class="form-group">
                   <label for="cfg-shashank">Category 1: AIR - NOMINATION</label>

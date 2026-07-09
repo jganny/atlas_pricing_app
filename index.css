@@ -8,8 +8,8 @@
   /* Base palette */
   --bg-void:      #f8fafc; /* Beautiful soft corporate off-white background */
   --bg-deep:      #f1f5f9; /* Structured layout background */
-  --bg-surface:   #ffffff; /* Crisp pure white cards */
-  --bg-elevated:  #ffffff; /* Popups and modals */
+  --bg-surface:   rgba(255, 255, 255, 0.72); /* Frosted pure white cards */
+  --bg-elevated:  rgba(255, 255, 255, 0.82); /* Frosted elevated card container */
   --bg-input:     #f8fafc; /* Subtle light gray-blue input canvas */
   --bg-input-focus: #ffffff;
 
@@ -218,7 +218,9 @@ header {
 
 /* Sub-header Controls Bar */
 .subheader-bar {
-  background: #ffffff;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  background: rgba(255, 255, 255, 0.72);
   border-bottom: 1px solid var(--border-2);
   padding: 0.45rem 1.5rem;
   z-index: 99;
@@ -828,7 +830,7 @@ select option { background: #ffffff; color: var(--t1); }
 ══════════════════════════════════════════════════ */
 @media print {
   body { background: #fff !important; color: #000 !important; }
-  .app-container, .modal-header, .modal-footer, header { display: none !important; }
+  .app-container, .modal-header, .modal-footer, header, .no-print { display: none !important; }
   .modal-overlay { position: relative !important; background: transparent !important; padding: 0 !important; }
   .modal-content { border: none !important; box-shadow: none !important; }
   .quote-print-card { box-shadow: none !important; padding: 0 !important; }
@@ -944,4 +946,28 @@ select option { background: #ffffff; color: var(--t1); }
 .stat-card:hover .stat-infographic {
   opacity: 0.6;
   transform: scale(1.1);
+}
+
+/* Control Tower Operations Map Animations */
+@keyframes march {
+  to { stroke-dashoffset: -160; }
+}
+@keyframes pulse-radar {
+  0%   { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.live-route-line {
+  stroke-linecap: round;
+}
+.timeline-shipment-card {
+  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+.timeline-shipment-card:hover {
+  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.75) !important;
+  border-color: var(--border-3) !important;
+  box-shadow: var(--shadow-sm);
+}
+@media (max-width: 1024px) {
+  .control-tower-layout { grid-template-columns: 1fr !important; gap: 1rem; }
 }
