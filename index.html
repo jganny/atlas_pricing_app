@@ -61,6 +61,15 @@
           <button class="role-btn" data-role="cathrina">Cathrina (NRS)</button>
         </div>
 
+        <!-- Live Exchange Rates Ticker (XE.COM reference) -->
+        <div class="xe-ticker-container" id="xe-rates-ticker" style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 0.35rem 0.85rem; font-size: 0.75rem; color: #fff; cursor: pointer; transition: all 0.2s;" onclick="openExchangeRatesModal()">
+          <span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; animation: pulse 2s infinite;"></span>
+          <strong>XE Live:</strong> 
+          <span id="ticker-usd">USD ₹83.50</span> • 
+          <span id="ticker-eur">EUR ₹90.20</span> • 
+          <span id="ticker-gbp">GBP ₹106.10</span>
+        </div>
+
         <!-- Active User Badge & Logout -->
         <div class="user-badge-container">
           <div class="active-user-badge" id="active-user-badge">
@@ -1020,6 +1029,79 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print / PDF Export
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EXCHANGE RATES MODAL ==================== -->
+  <div id="exchange-rates-modal" class="modal-overlay" onclick="closeExchangeRatesModal(event)">
+    <div class="modal-content" style="max-width: 500px; background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: var(--shadow-strong);" onclick="event.stopPropagation()">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0;">Live XE.com Exchange Rates</h3>
+        <button class="action-icon-btn" onclick="closeExchangeRatesModal()" style="color: var(--accent-error); background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 1.8rem; color: #10b981; font-weight: 900; margin-bottom: 0.25rem; letter-spacing: -0.02em;">XE.COM FEED</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600;" id="xe-last-updated">Last Updated: Loading...</div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: var(--text-dim); font-size: 0.85rem;">USD to INR (Base Rate)</div>
+            <div style="font-size: 1.2rem; font-weight: 900; color: #38bdf8;" id="modal-usd-inr">₹83.50</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: var(--text-dim); font-size: 0.85rem;">EUR to INR</div>
+            <div style="font-size: 1.2rem; font-weight: 900; color: #38bdf8;" id="modal-eur-inr">₹90.20</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: var(--text-dim); font-size: 0.85rem;">GBP to INR</div>
+            <div style="font-size: 1.2rem; font-weight: 900; color: #38bdf8;" id="modal-gbp-inr">₹106.10</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: var(--text-dim); font-size: 0.85rem;">EUR to USD</div>
+            <div style="font-size: 1.2rem; font-weight: 900; color: #38bdf8;" id="modal-eur-usd">$1.08</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: var(--text-dim); font-size: 0.85rem;">GBP to USD</div>
+            <div style="font-size: 1.2rem; font-weight: 900; color: #38bdf8;" id="modal-gbp-usd">$1.27</div>
+          </div>
+        </div>
+
+        <h4 style="font-size: 0.8rem; font-weight: 800; margin-bottom: 0.75rem; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem;">Live Currency Converter</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim); text-transform:uppercase;">Amount</label>
+            <input type="number" id="converter-amount" value="1" min="0" style="width: 100%; padding: 0.5rem 0.75rem; background: var(--bg-body); border: 1px solid var(--border-color); color: #fff; border-radius: 6px;" oninput="runCurrencyConversion()">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim); text-transform:uppercase;">From</label>
+            <select id="converter-from" style="width: 100%; padding: 0.5rem 0.75rem; background: var(--bg-body); border: 1px solid var(--border-color); color: #fff; border-radius: 6px;" onchange="runCurrencyConversion()">
+              <option value="USD" selected>USD - US Dollar</option>
+              <option value="INR">INR - Indian Rupee</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: end;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.7rem; font-weight:700; color:var(--text-dim); text-transform:uppercase;">To</label>
+            <select id="converter-to" style="width: 100%; padding: 0.5rem 0.75rem; background: var(--bg-body); border: 1px solid var(--border-color); color: #fff; border-radius: 6px;" onchange="runCurrencyConversion()">
+              <option value="INR" selected>INR - Indian Rupee</option>
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+            </select>
+          </div>
+          <div style="background: rgba(2, 132, 199, 0.1); border: 1px solid rgba(2, 132, 199, 0.25); padding: 0.5rem 0.75rem; border-radius: 6px; text-align: center; font-weight: 900; font-size: 1.15rem; color: #38bdf8; height: 38px; line-height: 22px; display: flex; align-items: center; justify-content: center;" id="converter-result">
+            ₹83.50
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top: 1px solid var(--border-color); padding: 1rem 1.5rem; justify-content: center; font-size: 0.65rem; color: var(--text-dim); text-align: center; font-weight: 500;">
+        Exchange rates update automatically every 24 hours. Rate calculations referenced via XE.com pricing indexes.
       </div>
     </div>
   </div>

@@ -1,5 +1,5 @@
 // Exchange Rates
-const EXCHANGE_RATES = {
+let EXCHANGE_RATES = {
   USD_TO_INR: 83.50,
   EUR_TO_INR: 90.20,
   GBP_TO_INR: 106.10,
@@ -97,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSavedQuotes();
   loadMemorizedSurcharges();
   checkSession();
+  fetchExchangeRates();
 
   // Modal handlers
   document.getElementById("close-modal")?.addEventListener("click", hideQuoteModal);
@@ -3595,5 +3596,117 @@ document.addEventListener("change", (e) => {
     }, 50);
   }
 });
+
+async function fetchExchangeRates() {
+  try {
+    const res = await fetch("https://open.er-api.com/v6/latest/USD");
+    if (!res.ok) throw new Error("Rates API failed");
+    const data = await res.json();
+    if (data && data.rates) {
+      const r = data.rates;
+      EXCHANGE_RATES.USD_TO_INR = r.INR;
+      EXCHANGE_RATES.EUR_TO_INR = r.INR / r.EUR;
+      EXCHANGE_RATES.GBP_TO_INR = r.INR / r.GBP;
+      EXCHANGE_RATES.EUR_TO_USD = 1 / r.EUR;
+      EXCHANGE_RATES.GBP_TO_USD = 1 / r.GBP;
+      
+      // Update UI Ticker
+      const tickerUsd = document.getElementById("ticker-usd");
+      const tickerEur = document.getElementById("ticker-eur");
+      const tickerGbp = document.getElementById("ticker-gbp");
+      if (tickerUsd) tickerUsd.textContent = `USD ₹${r.INR.toFixed(2)}`;
+      if (tickerEur) tickerEur.textContent = `EUR ₹${(r.INR / r.EUR).toFixed(2)}`;
+      if (tickerGbp) tickerGbp.textContent = `GBP ₹${(r.INR / r.GBP).toFixed(2)}`;
+      
+      // Update Modal fields
+      const modUsdInr = document.getElementById("modal-usd-inr");
+      const modEurInr = document.getElementById("modal-eur-inr");
+      const modGbpInr = document.getElementById("modal-gbp-inr");
+      const modEurUsd = document.getElementById("modal-eur-usd");
+      const modGbpUsd = document.getElementById("modal-gbp-usd");
+      if (modUsdInr) modUsdInr.textContent = `₹${r.INR.toFixed(2)}`;
+      if (modEurInr) modEurInr.textContent = `₹${(r.INR / r.EUR).toFixed(2)}`;
+      if (modGbpInr) modGbpInr.textContent = `₹${(r.INR / r.GBP).toFixed(2)}`;
+      if (modEurUsd) modEurUsd.textContent = `$${(1 / r.EUR).toFixed(2)}`;
+      if (modGbpUsd) modGbpUsd.textContent = `$${(1 / r.GBP).toFixed(2)}`;
+      
+      // Last Updated Text
+      const d = new Date(data.time_last_update_utc);
+      const updatedText = document.getElementById("xe-last-updated");
+      if (updatedText) updatedText.textContent = `Last Updated: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} (UTC)`;
+      
+      // Trigger calculations update
+      if (typeof calculateAirFreight === 'function') calculateAirFreight();
+      if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
+    }
+  } catch (error) {
+    console.error("Failed to fetch exchange rates dynamically. Using static fallbacks.", error);
+    const d = new Date();
+    const updatedText = document.getElementById("xe-last-updated");
+    if (updatedText) updatedText.textContent = `Last Updated: ${d.toLocaleDateString()} (Static Fallback)`;
+  }
+}
+window.fetchExchangeRates = fetchExchangeRates;
+
+function openExchangeRatesModal() {
+  const modal = document.getElementById("exchange-rates-modal");
+  if (modal) {
+    modal.classList.add("show");
+    runCurrencyConversion();
+  }
+}
+window.openExchangeRatesModal = openExchangeRatesModal;
+
+function closeExchangeRatesModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  const modal = document.getElementById("exchange-rates-modal");
+  if (modal) modal.classList.remove("show");
+}
+window.closeExchangeRatesModal = closeExchangeRatesModal;
+
+function runCurrencyConversion() {
+  const amtInput = document.getElementById("converter-amount");
+  const fromSelect = document.getElementById("converter-from");
+  const toSelect = document.getElementById("converter-to");
+  const resultDiv = document.getElementById("converter-result");
+  
+  if (!amtInput || !fromSelect || !toSelect || !resultDiv) return;
+  
+  const amt = parseFloat(amtInput.value) || 0;
+  const from = fromSelect.value;
+  const to = toSelect.value;
+  
+  if (amt <= 0) {
+    resultDiv.textContent = "0.00";
+    return;
+  }
+  
+  let amountInUSD = amt;
+  if (from === 'INR') {
+    amountInUSD = amt / EXCHANGE_RATES.USD_TO_INR;
+  } else if (from === 'EUR') {
+    amountInUSD = amt * EXCHANGE_RATES.EUR_TO_USD;
+  } else if (from === 'GBP') {
+    amountInUSD = amt * EXCHANGE_RATES.GBP_TO_USD;
+  }
+  
+  let finalAmt = amountInUSD;
+  let sym = "$";
+  if (to === 'INR') {
+    finalAmt = amountInUSD * EXCHANGE_RATES.USD_TO_INR;
+    sym = "₹";
+  } else if (to === 'EUR') {
+    finalAmt = amountInUSD / EXCHANGE_RATES.EUR_TO_USD;
+    sym = "€";
+  } else if (to === 'GBP') {
+    finalAmt = amountInUSD / EXCHANGE_RATES.GBP_TO_USD;
+    sym = "£";
+  } else if (to === 'USD') {
+    sym = "$";
+  }
+  
+  resultDiv.textContent = `${sym}${finalAmt.toFixed(2)}`;
+}
+window.runCurrencyConversion = runCurrencyConversion;
 
 
