@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRICING VERTEX - Logistics Pricing Terminal</title>
+  <title>PRICING VERTEX — Logistics Pricing Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
@@ -550,7 +553,7 @@
                 <tbody id="air-origin-surcharges-body">
                   <tr>
                     <td><input type="text" class="chg-name" value="Fuel Surcharge (MYC)" required></td>
-                    <td><input type="number" class="chg-rate" value="1.20" step="0.01" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
                     <td>
                       <select class="chg-unit">
                         <option value="kg" selected>Per kg</option>
@@ -565,7 +568,7 @@
                   </tr>
                   <tr>
                     <td><input type="text" class="chg-name" value="Security Surcharge (SCC)" required></td>
-                    <td><input type="number" class="chg-rate" value="0.15" step="0.01" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
                     <td>
                       <select class="chg-unit">
                         <option value="kg" selected>Per kg</option>
@@ -580,7 +583,7 @@
                   </tr>
                   <tr>
                     <td><input type="text" class="chg-name" value="XRAY Surcharge (XRAY)" required></td>
-                    <td><input type="number" class="chg-rate" value="0.10" step="0.01" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
                     <td>
                       <select class="chg-unit">
                         <option value="kg" selected>Per kg</option>
@@ -595,7 +598,7 @@
                   </tr>
                   <tr>
                     <td><input type="text" class="chg-name" value="AMS fee (Per MAWB)" required></td>
-                    <td><input type="number" class="chg-rate" value="25.00" step="0.01" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
                     <td>
                       <select class="chg-unit">
                         <option value="flat" selected>Flat</option>
@@ -610,7 +613,7 @@
                   </tr>
                   <tr>
                     <td><input type="text" class="chg-name" value="Miscellaneous Surcharge (MISC)" required></td>
-                    <td><input type="number" class="chg-rate" value="50.00" step="0.01" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
                     <td>
                       <select class="chg-unit">
                         <option value="flat" selected>Flat</option>
@@ -883,6 +886,13 @@
 
             <!-- FCL Fields -->
             <div id="sea-fcl-form">
+              <div id="sea-fcl-stuffing-container" style="margin-bottom: 1.2rem; display: none;">
+                <label for="sea-fcl-stuffing">Stuffing Option</label>
+                <select id="sea-fcl-stuffing" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                  <option value="factory" selected>Factory Stuffing</option>
+                  <option value="cfs_icd">CFS/ICD Stuffing</option>
+                </select>
+              </div>
               <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">Ocean Freight Tariff Per Container</h4>
               <div class="cargo-table-container">
                 <table class="cargo-table" style="min-width: unset;">
@@ -911,7 +921,7 @@
               <div class="form-row">
                 <div class="form-group" style="margin-bottom: 0;">
                   <label for="sea-lcl-rate">LCL Freight Rate (Per Revenue Ton - RT)</label>
-                  <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="65">
+                  <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="0">
                 </div>
               </div>
             </div>
@@ -922,7 +932,7 @@
               <div class="form-row">
                 <div class="form-group" style="margin-bottom: 0;">
                   <label for="sea-bb-rate">Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
-                  <input type="number" id="sea-bb-rate" placeholder="Rate" min="0" value="120">
+                  <input type="number" id="sea-bb-rate" placeholder="Rate" min="0" value="0">
                 </div>
               </div>
             </div>
@@ -943,7 +953,7 @@
                 <tbody id="sea-origin-surcharges-body">
                   <tr>
                     <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
-                    <td><input type="number" class="chg-rate" value="250.00" step="0.01" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
                     <td>
                       <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
                         <option value="flat">Flat Fee</option>
@@ -960,7 +970,7 @@
                   </tr>
                   <tr>
                     <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
-                    <td><input type="number" class="chg-rate" value="75.00" step="0.01" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
                     <td>
                       <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
                         <option value="flat" selected>Flat Fee</option>

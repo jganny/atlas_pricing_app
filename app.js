@@ -101,6 +101,105 @@ let appState = {
   }
 };
 
+function getQuoteRefId(quote) {
+  let moduleCode = "XX";
+  const type = quote.type || "air";
+  const module = (quote.details && quote.details.module) || "export";
+  
+  if (type === "air") {
+    moduleCode = (module === "import") ? "AI" : "AE";
+  } else {
+    moduleCode = (module === "import") ? "SI" : "SE";
+  }
+  
+  const custName = (quote.customer || "XYZ").trim().replace(/[^a-zA-Z0-9]/g, "");
+  const custPart = custName.substring(0, 3).toUpperCase().padEnd(3, 'X');
+  
+  let datePart = "0000";
+  if (quote.date) {
+    const parts = quote.date.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parts[1];
+      datePart = month + year.substring(2);
+    } else {
+      const qDate = new Date(quote.date);
+      if (!isNaN(qDate.getTime())) {
+        const mm = String(qDate.getMonth() + 1).padStart(2, '0');
+        const yy = String(qDate.getFullYear()).substring(2);
+        datePart = mm + yy;
+      }
+    }
+  }
+  
+  const seqNum = quote.quoteNumber || 1;
+  return `${moduleCode}${custPart}${datePart}${seqNum}`;
+}
+window.getQuoteRefId = getQuoteRefId;
+
+function getQuoteRefIdById(id) {
+  const quote = appState.quotes.find(q => q.id === id);
+  return quote ? getQuoteRefId(quote) : id.substring(0, 7).toUpperCase();
+}
+window.getQuoteRefIdById = getQuoteRefIdById;
+
+function checkAndRequestEditPermission(quote, actionVerb = "modify") {
+  if (appState.currentUser === 'ganny' || quote.amendmentAllowed) {
+    return true;
+  }
+  let requests = [];
+  const stored = localStorage.getItem("gl_amendment_requests");
+  if (stored) {
+    try { requests = JSON.parse(stored); } catch(e) {}
+  }
+  const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'edit' && r.status === 'pending');
+  if (pending) {
+    alert(`You have already requested permission to edit/amend this quote. Please wait for Ganny's approval.`);
+    return false;
+  }
+  
+  if (confirm(`You do not have permission to ${actionVerb} this quotation. Request edit permission from Admin (Ganny)?`)) {
+    requests.push({
+      id: 'REQ' + Math.random().toString(36).substr(2, 9),
+      requestType: 'edit',
+      quoteId: quote.id,
+      customer: quote.customer,
+      creator: quote.creator,
+      creatorName: TEAM_ROLES[quote.creator]?.name || quote.creator,
+      date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+      status: 'pending',
+      acknowledged: false
+    });
+    localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+    alert("Edit/Amendment request submitted successfully to Ganny.");
+    
+    if (appState.currentUser === 'ganny') {
+      renderAdminDashboard();
+    } else {
+      renderMemberDashboard(appState.currentUser);
+    }
+  }
+  return false;
+}
+window.checkAndRequestEditPermission = checkAndRequestEditPermission;
+
+function updateSeaFclStuffingVisibility() {
+  const stuffingContainer = document.getElementById("sea-fcl-stuffing-container");
+  if (!stuffingContainer) return;
+
+  const isExport = appState.currentSeaFreight.module === 'export';
+  const isFcl = appState.currentSeaFreight.type === 'fcl';
+  const incoterm = document.getElementById("sea-incoterm")?.value || 'EXW';
+  const isExwOrFca = (incoterm === 'EXW' || incoterm === 'FCA');
+
+  if (isExport && isFcl && isExwOrFca) {
+    stuffingContainer.style.display = "block";
+  } else {
+    stuffingContainer.style.display = "none";
+  }
+}
+window.updateSeaFclStuffingVisibility = updateSeaFclStuffingVisibility;
+
 // Initialize Application
 document.addEventListener("DOMContentLoaded", () => {
   loadData();
@@ -433,8 +532,8 @@ function resetSeaFreightDeskForm() {
   document.getElementById("sea-routing").value = "";
   document.getElementById("sea-tt").value = "";
   document.getElementById("sea-validity").value = "";
-  document.getElementById("sea-lcl-rate").value = "65";
-  document.getElementById("sea-bb-rate").value = "120";
+  document.getElementById("sea-lcl-rate").value = "0";
+  document.getElementById("sea-bb-rate").value = "0";
   document.getElementById("sea-terms").value = DEFAULT_SEA_TERMS;
 
   // Reset module switcher
@@ -471,7 +570,7 @@ function resetSeaFreightDeskForm() {
   const fclBody = document.getElementById("sea-fcl-body");
   if (fclBody) {
     fclBody.innerHTML = "";
-    addFclContainerRow("20'GP", 1, 1800);
+    addFclContainerRow("20'GP", 1, 0);
   }
 
   // Reset tab to default FCL
@@ -1179,11 +1278,12 @@ function setupSeaFreightEvents() {
   }
 
   document.getElementById("sea-incoterm")?.addEventListener("change", calculateSeaFreight);
+  document.getElementById("sea-fcl-stuffing")?.addEventListener("change", calculateSeaFreight);
 
   // Populate first container line by default
   const fclBody = document.getElementById("sea-fcl-body");
   if (fclBody && fclBody.children.length === 0) {
-    addFclContainerRow("20'GP", 1, 1800);
+    addFclContainerRow("20'GP", 1, 0);
   }
 
   setupSurchargesEvents("sea-origin");
@@ -1235,7 +1335,7 @@ function setupSeaFreightEvents() {
   }
 }
 
-function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 1800) {
+function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
   const tbody = document.getElementById("sea-fcl-body");
   if (!tbody) return;
 
@@ -1282,10 +1382,12 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 1800) {
 window.addFclContainerRow = addFclContainerRow;
 
 function calculateSeaFreight() {
+  updateSeaFclStuffingVisibility();
   // Sync page currency labels and units
   updateCurrencyRules(appState.currentUser);
 
   const type = appState.currentSeaFreight.type; // 'fcl', 'lcl', or 'bb'
+  const isFcl = (type === 'fcl');
   const currency = document.getElementById("sea-currency").value;
   const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
   
@@ -1529,12 +1631,12 @@ function renderMemberDashboard(userId) {
         const reqTypeLabel = req.requestType === 'delete' ? 'DELETE' : 'AMEND/EDIT';
         if (req.status === 'approved') {
           if (req.requestType === 'delete') {
-            alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to DELETE quote #Q-${req.quoteId.substring(0, 5).toUpperCase()} for "${req.customer}".\n\nYou can now click the Delete (Trash) button next to the quote to delete it.`);
+            alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to DELETE quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".\n\nYou can now click the Delete (Trash) button next to the quote to delete it.`);
           } else {
-            alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to AMEND quote #Q-${req.quoteId.substring(0, 5).toUpperCase()} for "${req.customer}".\n\nYou can now click the Orange Edit/Amend button next to the quote to correct it!`);
+            alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to AMEND quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".\n\nYou can now click the Orange Edit/Amend button next to the quote to correct it!`);
           }
         } else {
-          alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request to ${reqTypeLabel} quote #Q-${req.quoteId.substring(0, 5).toUpperCase()} for "${req.customer}".`);
+          alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request to ${reqTypeLabel} quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".`);
         }
         req.acknowledged = true;
       });
@@ -1594,7 +1696,7 @@ function renderMemberDashboard(userId) {
     const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
     
     tr.innerHTML = `
-      <td><strong>#Q-${quote.id.substring(0, 5).toUpperCase()}</strong></td>
+      <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
       <td><span class="quote-type-badge ${quote.type}">${quote.type === 'air' ? (quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export') : (quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export')}</span></td>
       <td>
@@ -1611,17 +1713,17 @@ function renderMemberDashboard(userId) {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
         ${isQuoted ? `
-        <button class="action-icon-btn convert" title="Mark as Converted/Won" onclick="convertQuote('${quote.id}')">
+        <button class="action-icon-btn convert" style="background: ${quote.amendmentAllowed ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Converted/Won (Unlocked)' : 'Request Admin Permission to Convert/Won'}" onclick="convertQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
-        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.1); color: var(--accent-error);" title="Mark as Cancelled" onclick="markQuoteCancelled('${quote.id}')">
+        <button class="action-icon-btn delete" style="background: ${quote.amendmentAllowed ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </button>
-        <button class="action-icon-btn view" style="background: rgba(156, 163, 175, 0.1); color: var(--text-dim);" title="Mark as Lost" onclick="markQuoteLost('${quote.id}')">
+        <button class="action-icon-btn view" style="background: ${quote.amendmentAllowed ? 'rgba(156, 163, 175, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--t1)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost'}" onclick="markQuoteLost('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
         ` : `
-        <button class="action-icon-btn convert" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-success);" title="Revert to Original (Quoted)" onclick="revertQuoteToOriginal('${quote.id}')">
+        <button class="action-icon-btn convert" style="background: ${quote.amendmentAllowed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert'}" onclick="revertQuoteToOriginal('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
         </button>
         `}
@@ -1760,7 +1862,7 @@ function renderAdminDashboard() {
     const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     
     tr.innerHTML = `
-      <td><strong>#Q-${quote.id.substring(0, 5).toUpperCase()}</strong></td>
+      <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
       <td><span class="quote-type-badge ${quote.type}">${quote.type === 'air' ? (quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export') : (quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export')}</span></td>
       <td>
@@ -1819,7 +1921,7 @@ function renderAdminDashboard() {
         <div style="background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 6px; border-left: 3px solid ${req.requestType === 'delete' ? 'var(--accent-error)' : 'var(--accent-warning)'}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
           <div>
             <strong style="color: ${req.requestType === 'delete' ? 'var(--accent-error)' : 'var(--accent-warning)'};">[${req.requestType ? req.requestType.toUpperCase() : 'EDIT'}]</strong> 
-            <strong>Quote ID: #Q-${req.quoteId.substring(0, 5).toUpperCase()}</strong> (${req.customer})<br>
+            <strong>Quote ID: #${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer})<br>
             <span style="font-size: 0.75rem; color: var(--text-muted);">Requested by: ${req.creatorName} on ${req.date}</span>
           </div>
           <div style="display: flex; gap: 0.5rem;">
@@ -1885,9 +1987,12 @@ window.convertQuote = (id) => {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
 
+  if (!checkAndRequestEditPermission(quote, "convert")) return;
+
   if (confirm(`Mark quotation for "${quote.customer}" as CONVERTED (Won Booking)?`)) {
     quote.status = 'converted';
     quote.conversionDate = new Date().toISOString().split('T')[0];
+    quote.date = new Date().toISOString().split('T')[0]; // Update execution date
     localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
     
     // Confirmation intimation alert to Cathrina (NRS)
@@ -1995,7 +2100,7 @@ function generatePerformanceReport() {
       const curSym = q.currency === 'INR' ? '₹' : (q.currency === 'USD' ? '$' : (q.currency === 'EUR' ? '€' : '£'));
       detailRowsList += `
         <tr>
-          <td>#Q-${q.id.substring(0, 5).toUpperCase()}</td>
+          <td>#${getQuoteRefId(q)}</td>
           <td>${q.date}</td>
           <td><span style="text-transform:uppercase; font-size:0.8rem; font-weight:700;">${q.type}</span></td>
           <td>${q.customer}<br><span style="font-size:0.75rem; color:#666;">${q.route}</span></td>
@@ -2131,7 +2236,8 @@ function saveCurrentQuote() {
     date: new Date().toISOString().split('T')[0],
     customer: customerName,
     creator: appState.currentUser, // Logged in team member
-    status: 'quoted'
+    status: 'quoted',
+    quoteNumber: appState.quotes.length + 1
   };
 
   if (isAir) {
@@ -2426,7 +2532,8 @@ function saveCurrentQuote() {
       dimUnit: appState.currentSeaFreight.dimUnit || 'cms',
       routing: routing,
       tt: tt,
-      validity: validity
+      validity: validity,
+      stuffingOption: (document.getElementById("sea-fcl-stuffing-container")?.style.display !== 'none' && document.getElementById("sea-fcl-stuffing")) ? document.getElementById("sea-fcl-stuffing").value : null
     };
   }
 
@@ -2442,8 +2549,9 @@ function saveCurrentQuote() {
     if (existingIndex !== -1) {
       const originalQuote = appState.quotes[existingIndex];
       quoteData.id = originalQuote.id;
-      quoteData.date = originalQuote.date;
+      quoteData.date = new Date().toISOString().split('T')[0]; // Updated execution date
       quoteData.creator = originalQuote.creator;
+      quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
       quoteData.amendmentAllowed = false; // Lock it back!
       
       appState.quotes[existingIndex] = quoteData;
@@ -2490,11 +2598,12 @@ function saveCurrentQuote() {
     document.getElementById("sea-gross-weight").value = "0";
     document.getElementById("sea-volume").value = "0";
     document.getElementById("sea-pkg-qty").value = "0";
-    document.getElementById("sea-lcl-rate").value = "65";
+    document.getElementById("sea-lcl-rate").value = "0";
+    document.getElementById("sea-bb-rate").value = "0";
     const fclBody = document.getElementById("sea-fcl-body");
     if (fclBody) {
       fclBody.innerHTML = "";
-      addFclContainerRow("20'GP", 1, 1800);
+      addFclContainerRow("20'GP", 1, 0);
     }
   }
   
@@ -2510,7 +2619,7 @@ function resetSurchargesToDefaults() {
     airOriginBody.innerHTML = `
       <tr>
         <td><input type="text" class="chg-name" value="Fuel Surcharge (MYC)" required></td>
-        <td><input type="number" class="chg-rate" value="1.20" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit">
             <option value="kg" selected>Per kg</option>
@@ -2525,7 +2634,7 @@ function resetSurchargesToDefaults() {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Security Surcharge (SCC)" required></td>
-        <td><input type="number" class="chg-rate" value="0.15" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit">
             <option value="kg" selected>Per kg</option>
@@ -2540,7 +2649,7 @@ function resetSurchargesToDefaults() {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="XRAY Surcharge (XRAY)" required></td>
-        <td><input type="number" class="chg-rate" value="0.10" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit">
             <option value="kg" selected>Per kg</option>
@@ -2555,7 +2664,7 @@ function resetSurchargesToDefaults() {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="AMS fee (Per MAWB)" required></td>
-        <td><input type="number" class="chg-rate" value="25.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit">
             <option value="flat" selected>Flat</option>
@@ -2570,7 +2679,7 @@ function resetSurchargesToDefaults() {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="AWB fee (AWB)" required></td>
-        <td><input type="number" class="chg-rate" value="35.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit">
             <option value="flat" selected>Flat</option>
@@ -2612,7 +2721,7 @@ function populateSeaSurcharges(mode) {
     originRows = `
       <tr>
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
-        <td><input type="number" class="chg-rate" value="250.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -2629,7 +2738,7 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
-        <td><input type="number" class="chg-rate" value="75.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat" selected>Flat Fee</option>
@@ -2649,7 +2758,7 @@ function populateSeaSurcharges(mode) {
     originRows = `
       <tr>
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
-        <td><input type="number" class="chg-rate" value="35.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -2666,7 +2775,7 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
-        <td><input type="number" class="chg-rate" value="75.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat" selected>Flat Fee</option>
@@ -2683,7 +2792,7 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Port Handling Charges" required></td>
-        <td><input type="number" class="chg-rate" value="25.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -2703,7 +2812,7 @@ function populateSeaSurcharges(mode) {
     originRows = `
       <tr>
         <td><input type="text" class="chg-name" value="Lashing & Securing" required></td>
-        <td><input type="number" class="chg-rate" value="15.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -2720,7 +2829,7 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Stevedoring" required></td>
-        <td><input type="number" class="chg-rate" value="20.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -2737,7 +2846,7 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Port Handling" required></td>
-        <td><input type="number" class="chg-rate" value="25.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -2751,10 +2860,9 @@ function populateSeaSurcharges(mode) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
-      </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Wharfage" required></td>
-        <td><input type="number" class="chg-rate" value="10.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -2771,24 +2879,7 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Craneage" required></td>
-        <td><input type="number" class="chg-rate" value="30.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
-            <option value="flat">Flat Fee</option>
-            <option value="container">Per Container</option>
-            <option value="rt" selected>Per RT (Revenue Ton)</option>
-            <option value="kg">Per Kg (Gross Weight)</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="Port Delivery" required></td>
-        <td><input type="number" class="chg-rate" value="15.00" step="0.01" required></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
             <option value="flat">Flat Fee</option>
@@ -3171,9 +3262,12 @@ function loadSavedQuotes() {
     'air-local': 'jaya',
     'sea-local': 'jaya'
   };
-  appState.quotes.forEach(q => {
+  appState.quotes.forEach((q, idx) => {
     if (creatorMap[q.creator]) {
       q.creator = creatorMap[q.creator];
+    }
+    if (!q.quoteNumber) {
+      q.quoteNumber = idx + 1;
     }
   });
 }
@@ -3223,6 +3317,10 @@ window.viewSavedQuote = (id) => {
     let subDetails = "";
     if (quote.details.mode === 'fcl') {
       subDetails = `<tr><td>Containers Selected</td><td>${(quote.details.fclSummary || []).join(", ") || 'Containers'}</td></tr>`;
+      if (quote.details.stuffingOption) {
+        const stuffingLabel = quote.details.stuffingOption === 'factory' ? 'Factory Stuffing' : 'CFS/ICD Stuffing';
+        subDetails += `<tr><td>Stuffing Option</td><td><strong>${stuffingLabel}</strong></td></tr>`;
+      }
     } else if (quote.details.mode === 'lcl') {
       subDetails = `
         <tr><td>LCL Chargeable RT</td><td>${(quote.details.lclChargeable || 0).toFixed(2)} RT</td></tr>
@@ -3304,7 +3402,7 @@ window.viewSavedQuote = (id) => {
       </div>
       <div class="print-title">
         <h2>QUOTATION</h2>
-        <div>Quote Reference: #Q-${quote.id.substring(0, 5).toUpperCase()}</div>
+        <div>Quote Reference: #${getQuoteRefId(quote)}</div>
         <div>Date Issued: ${quote.date}</div>
       </div>
     </div>
@@ -3686,39 +3784,7 @@ function amendQuote(id) {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
 
-  // Enforce Ganny or amendmentAllowed permission check
-  if (appState.currentUser !== 'ganny' && !quote.amendmentAllowed) {
-    let requests = [];
-    const stored = localStorage.getItem("gl_amendment_requests");
-    if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
-    }
-    const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'edit' && r.status === 'pending');
-    if (pending) {
-      alert("You have already requested permission to amend this quote. Please wait for Ganny's approval.");
-      return;
-    }
-    
-    if (confirm("You do not have permission to correct/amend this quotation. Request permission from Admin (Ganny)?")) {
-      requests.push({
-        id: 'REQ' + Math.random().toString(36).substr(2, 9),
-        requestType: 'edit',
-        quoteId: quote.id,
-        customer: quote.customer,
-        creator: quote.creator,
-        creatorName: TEAM_ROLES[quote.creator]?.name || quote.creator,
-        date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-        status: 'pending',
-        acknowledged: false
-      });
-      localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-      alert("Amendment request submitted successfully to Ganny.");
-      
-      // Refresh user view
-      renderMemberDashboard(appState.currentUser);
-    }
-    return;
-  }
+  if (!checkAndRequestEditPermission(quote, "correct/amend")) return;
 
   // Load the quote back into the respective calculator
   appState.editingQuoteId = quote.id;
@@ -3786,7 +3852,7 @@ function amendQuote(id) {
     repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
     
     calculateAirFreight();
-    alert(`Editing Quote #Q-${quote.id.substring(0,5).toUpperCase()} in progress. Click "Save Quote" to confirm your amendments.`);
+    alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
     
   } else {
     document.getElementById("sea-freight-panel").classList.add("active");
@@ -3926,7 +3992,7 @@ function amendQuote(id) {
     repopulateSurchargesTable("sea-dest-surcharges-body", quote.details.destSurcharges);
     
     calculateSeaFreight();
-    alert(`Editing Quote #Q-${quote.id.substring(0,5).toUpperCase()} in progress. Click "Save Quote" to confirm your amendments.`);
+    alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
   }
 }
 window.amendQuote = amendQuote;
@@ -3953,7 +4019,7 @@ function approveAmendment(reqId) {
     
     localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
     localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
-    alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #Q-${req.quoteId.substring(0, 5).toUpperCase()} has been APPROVED.`);
+    alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been APPROVED.`);
     renderAdminDashboard();
   }
 }
@@ -3969,7 +4035,7 @@ function rejectAmendment(reqId) {
   if (req) {
     req.status = 'rejected';
     localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-    alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #Q-${req.quoteId.substring(0, 5).toUpperCase()} has been REJECTED.`);
+    alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been REJECTED.`);
     renderAdminDashboard();
   }
 }
@@ -4017,9 +4083,11 @@ window.calculateSeaVolumeFromDimensions = calculateSeaVolumeFromDimensions;
 function revertQuoteToOriginal(id) {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
+  if (!checkAndRequestEditPermission(quote, "revert")) return;
   if (confirm(`Revert status of quotation for "${quote.customer}" back to Original (Quoted)?`)) {
     quote.status = 'quoted';
     delete quote.conversionDate;
+    quote.date = new Date().toISOString().split('T')[0]; // Update execution date
     localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
     alert("Enquiry status reverted back to Original (Quoted)!");
     if (appState.currentUser === 'ganny') {
@@ -4034,8 +4102,10 @@ window.revertQuoteToOriginal = revertQuoteToOriginal;
 function markQuoteCancelled(id) {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
+  if (!checkAndRequestEditPermission(quote, "cancel")) return;
   if (confirm(`Mark quotation for "${quote.customer}" as CANCELLED?`)) {
     quote.status = 'cancelled';
+    quote.date = new Date().toISOString().split('T')[0]; // Update execution date
     localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
     alert("Enquiry status set to CANCELLED!");
     if (appState.currentUser === 'ganny') {
@@ -4050,8 +4120,10 @@ window.markQuoteCancelled = markQuoteCancelled;
 function markQuoteLost(id) {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
+  if (!checkAndRequestEditPermission(quote, "mark as lost")) return;
   if (confirm(`Mark quotation for "${quote.customer}" as LOST?`)) {
     quote.status = 'lost';
+    quote.date = new Date().toISOString().split('T')[0]; // Update execution date
     localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
     alert("Enquiry status set to LOST!");
     if (appState.currentUser === 'ganny') {
