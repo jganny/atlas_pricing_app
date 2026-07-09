@@ -269,6 +269,7 @@ function loginSuccess(roleId) {
   appState.currentUser = roleId;
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("app-workspace").style.display = "flex";
+  document.getElementById("subheader-controls").style.display = "flex";
 
   // Apply custom names to badge UI & dropdowns
   applyDeskNames();
@@ -300,6 +301,7 @@ function logoutUser() {
   appState.currentUser = null;
   document.getElementById("login-overlay").style.display = "flex";
   document.getElementById("app-workspace").style.display = "none";
+  document.getElementById("subheader-controls").style.display = "none";
 }
 
 // Load Airports & Airlines Data
