@@ -344,16 +344,131 @@ function updateCurrencyRules(role) {
   symbolElements.forEach(el => el.textContent = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£')));
 }
 
+function resetAirFreightDeskForm() {
+  appState.editingQuoteId = null;
+
+  // Clear inputs
+  document.getElementById("air-cust-name").value = "";
+  document.getElementById("air-origin").value = "";
+  document.getElementById("air-dest").value = "";
+  document.getElementById("air-airline").value = "";
+  document.getElementById("air-incoterm").value = "EXW";
+  document.getElementById("air-pivot-weight").value = "";
+  document.getElementById("air-routing").value = "";
+  document.getElementById("air-tt").value = "";
+  document.getElementById("air-validity").value = "";
+
+  // Clear weight break rates
+  const breaks = ["min", "n", "p45", "p100", "p250", "p300", "p500", "p1000"];
+  breaks.forEach(b => {
+    const el = document.getElementById(`rate-${b}`);
+    if (el) el.value = "";
+  });
+
+  // Reset cargo matrix with single empty row
+  const cargoBody = document.getElementById("air-cargo-body");
+  if (cargoBody) {
+    cargoBody.innerHTML = `
+      <tr class="cargo-item-row">
+        <td><input type="number" class="cargo-len" min="1" placeholder="L" required></td>
+        <td><input type="number" class="cargo-wid" min="1" placeholder="W" required></td>
+        <td><input type="number" class="cargo-hei" min="1" placeholder="H" required></td>
+        <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" required></td>
+        <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required></td>
+        <td>
+          <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateAirFreight();">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+    `;
+    cargoBody.querySelectorAll("input").forEach(inp => {
+      inp.addEventListener("input", calculateAirFreight);
+    });
+  }
+
+  // Surcharges reset to default
+  resetSurchargesToDefaults();
+  
+  // Recalculate to update results layout to 0/empty
+  calculateAirFreight();
+}
+
+function resetSeaFreightDeskForm() {
+  appState.editingQuoteId = null;
+
+  // Clear inputs
+  document.getElementById("sea-cust-name").value = "";
+  document.getElementById("sea-origin").value = "";
+  document.getElementById("sea-dest").value = "";
+  document.getElementById("sea-line").value = "";
+  document.getElementById("sea-incoterm").value = "EXW";
+  document.getElementById("sea-gross-weight").value = "0";
+  document.getElementById("sea-volume").value = "0";
+  document.getElementById("sea-pkg-qty").value = "0";
+  document.getElementById("sea-routing").value = "";
+  document.getElementById("sea-tt").value = "";
+  document.getElementById("sea-validity").value = "";
+  document.getElementById("sea-lcl-rate").value = "65";
+
+  // Reset cargo matrix with single empty row
+  const cargoBody = document.getElementById("sea-cargo-body");
+  if (cargoBody) {
+    cargoBody.innerHTML = `
+      <tr class="sea-cargo-item-row">
+        <td><input type="number" class="sea-cargo-len" min="1" placeholder="L"></td>
+        <td><input type="number" class="sea-cargo-wid" min="1" placeholder="W"></td>
+        <td><input type="number" class="sea-cargo-hei" min="1" placeholder="H"></td>
+        <td><input type="number" class="sea-cargo-qty" min="1" placeholder="Qty"></td>
+        <td>
+          <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaVolumeFromDimensions();">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+    `;
+    cargoBody.querySelectorAll("input").forEach(inp => {
+      inp.addEventListener("input", calculateSeaVolumeFromDimensions);
+    });
+  }
+
+  // Clear FCL container matrix and load default 20'GP
+  const fclBody = document.getElementById("sea-fcl-body");
+  if (fclBody) {
+    fclBody.innerHTML = "";
+    addFclContainerRow("20'GP", 1, 1800);
+  }
+
+  // Reset tab to default FCL
+  const tabFcl = document.getElementById("sea-tab-fcl");
+  const tabLcl = document.getElementById("sea-tab-lcl");
+  const fclForm = document.getElementById("sea-fcl-form");
+  const lclForm = document.getElementById("sea-lcl-form");
+  if (tabFcl && tabLcl && fclForm && lclForm) {
+    tabFcl.classList.add("active");
+    tabLcl.classList.remove("active");
+    fclForm.style.display = "block";
+    lclForm.style.display = "none";
+    appState.currentSeaFreight.type = "fcl";
+  }
+
+  // Surcharges reset to default
+  resetSurchargesToDefaults();
+
+  // Recalculate to update results layout to 0/empty
+  calculateSeaFreight();
+}
+
 // Sub-navigation triggers for Calculators inside Member dashboard
 function openActiveCalculator(type) {
   document.getElementById("member-dashboard-panel").classList.remove("active");
   
   if (type === 'air') {
+    resetAirFreightDeskForm();
     document.getElementById("air-freight-panel").classList.add("active");
-    calculateAirFreight();
   } else {
+    resetSeaFreightDeskForm();
     document.getElementById("sea-freight-panel").classList.add("active");
-    calculateSeaFreight();
   }
 }
 
