@@ -374,6 +374,12 @@
               AIR FREIGHT DESK
             </div>
             
+            <!-- Export/Import Toggle Tabs -->
+            <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+              <div class="toggle-option active" id="air-tab-export">Air Export</div>
+              <div class="toggle-option" id="air-tab-import">Air Import</div>
+            </div>
+            
             <div class="form-grid-3">
               <div class="form-group autocomplete-container">
                 <label for="air-cust-name">Customer Name</label>
@@ -591,36 +597,6 @@
                     </td>
                   </tr>
                   <tr>
-                    <td><input type="text" class="chg-name" value="AMS fee (Per HAWB)" required></td>
-                    <td><input type="number" class="chg-rate" value="15.00" step="0.01" required></td>
-                    <td>
-                      <select class="chg-unit">
-                        <option value="flat" selected>Flat</option>
-                        <option value="kg">Per kg</option>
-                      </select>
-                    </td>
-                    <td>
-                      <button type="button" class="delete-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><input type="text" class="chg-name" value="AWB fee (AWB)" required></td>
-                    <td><input type="number" class="chg-rate" value="35.00" step="0.01" required></td>
-                    <td>
-                      <select class="chg-unit">
-                        <option value="flat" selected>Flat</option>
-                        <option value="kg">Per kg</option>
-                      </select>
-                    </td>
-                    <td>
-                      <button type="button" class="delete-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
                     <td><input type="text" class="chg-name" value="Miscellaneous Surcharge (MISC)" required></td>
                     <td><input type="number" class="chg-rate" value="50.00" step="0.01" required></td>
                     <td>
@@ -656,21 +632,7 @@
                   </tr>
                 </thead>
                 <tbody id="air-dest-surcharges-body">
-                  <tr>
-                    <td><input type="text" class="chg-name" value="Miscellaneous Surcharge (MISC)" required></td>
-                    <td><input type="number" class="chg-rate" value="50.00" step="0.01" required></td>
-                    <td>
-                      <select class="chg-unit">
-                        <option value="flat" selected>Flat</option>
-                        <option value="kg">Per kg</option>
-                      </select>
-                    </td>
-                    <td>
-                      <button type="button" class="delete-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-                      </button>
-                    </td>
-                  </tr>
+                  <!-- Empty by default -->
                 </tbody>
               </table>
             </div>
@@ -678,6 +640,12 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Destination Surcharge
             </button>
+
+            <!-- Editable Terms & Conditions -->
+            <div style="margin-top: 1.5rem;">
+              <label for="air-terms" style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-air);">Editable Terms & Conditions</label>
+              <textarea id="air-terms" rows="6" style="width: 100%; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;" placeholder="Add custom terms..."></textarea>
+            </div>
           </div>
 
           <!-- Live Results Widget (Right Panel) -->
@@ -770,6 +738,12 @@
             <div class="section-title">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
               SEA FREIGHT DESK
+            </div>
+            
+            <!-- Sea Export/Import Toggle Tabs -->
+            <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+              <div class="toggle-option active" id="sea-tab-export">Sea Export</div>
+              <div class="toggle-option" id="sea-tab-import">Sea Import</div>
             </div>
             
             <div class="form-grid-3">
@@ -888,10 +862,11 @@
               Add Cargo Line
             </button>
 
-            <!-- FCL vs LCL toggle tab -->
+            <!-- FCL vs LCL vs Break Bulk toggle tab -->
             <div class="toggle-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
               <div class="toggle-option active" id="sea-tab-fcl">FCL (Full Container Load)</div>
               <div class="toggle-option" id="sea-tab-lcl">LCL (Less Container Load)</div>
+              <div class="toggle-option" id="sea-tab-bb">Break Bulk</div>
             </div>
 
             <!-- FCL Fields -->
@@ -925,6 +900,17 @@
                 <div class="form-group" style="margin-bottom: 0;">
                   <label for="sea-lcl-rate">LCL Freight Rate (Per Revenue Ton - RT)</label>
                   <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="65">
+                </div>
+              </div>
+            </div>
+
+            <!-- Break Bulk Fields -->
+            <div id="sea-bb-form" style="display: none;">
+              <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-sea);">Break Bulk Freight Pricing</h4>
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="sea-bb-rate">Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-bb-rate" placeholder="Rate" min="0" value="120">
                 </div>
               </div>
             </div>
@@ -1006,6 +992,12 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Destination Surcharge
             </button>
+
+            <!-- Editable Terms & Conditions -->
+            <div style="margin-top: 1.5rem;">
+              <label for="sea-terms" style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-sea);">Editable Terms & Conditions</label>
+              <textarea id="sea-terms" rows="6" style="width: 100%; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;" placeholder="Add custom terms..."></textarea>
+            </div>
           </div>
 
           <!-- Live Results widget -->

@@ -7,6 +7,18 @@ let EXCHANGE_RATES = {
   GBP_TO_USD: 1.27
 };
 
+const DEFAULT_AIR_TERMS = `1. The above rates are NET NET
+2. Rates quoted are valid for General/ Non Haz/ Non Stackable, unless specified.
+3. Quoted rates are subject to space and booking confirmation.
+4. Transit Times are subject to the Service chosen.
+5. Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.`;
+
+const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
+2. Rates are subject to Surcharges, if applicable at the time of shipment.
+3. Rates are valid for Non Haz, Non Temp, Non Stackable, General cargo only.
+4. Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.
+5. Rates are subject to space, booking and onward confirmation.`;
+
 // Pricing Team Desks
 const TEAM_ROLES = {
   'ganny': { name: 'Ganny (Admin)', type: 'admin' },
@@ -63,6 +75,7 @@ let appState = {
     destination: '',
     airline: '',
     dimUnit: 'cms',
+    module: 'export', // 'export' or 'import'
     cargoItems: [{ length: '', width: '', height: '', qty: '', grossWeight: '' }],
     rates: { min: '', minus45: '', plus45: '', plus100: '', plus300: '', plus500: '', plus1000: '' },
     surcharges: [{ name: 'Fuel Surcharge (MYC)', rate: 1.20, unit: 'kg' }, { name: 'Security Surcharge (SCC)', rate: 0.15, unit: 'kg' }, { name: 'Handling Charges', rate: 45.00, unit: 'flat' }],
@@ -73,7 +86,8 @@ let appState = {
     origin: '',
     destination: '',
     shippingLine: '',
-    type: 'fcl',
+    type: 'fcl', // 'fcl', 'lcl', or 'bb' (break bulk)
+    module: 'export', // 'export' or 'import'
     containers: [
       { type: "20'GP", qty: 1, rate: 1800 },
       { type: "40'GP", qty: 0, rate: 2600 },
@@ -357,6 +371,16 @@ function resetAirFreightDeskForm() {
   document.getElementById("air-routing").value = "";
   document.getElementById("air-tt").value = "";
   document.getElementById("air-validity").value = "";
+  document.getElementById("air-terms").value = DEFAULT_AIR_TERMS;
+
+  // Reset module switcher
+  appState.currentAirFreight.module = 'export';
+  const tabExp = document.getElementById("air-tab-export");
+  const tabImp = document.getElementById("air-tab-import");
+  if (tabExp && tabImp) {
+    tabExp.classList.add("active");
+    tabImp.classList.remove("active");
+  }
 
   // Clear weight break rates
   const breaks = ["min", "n", "p45", "p100", "p250", "p300", "p500", "p1000"];
@@ -410,6 +434,17 @@ function resetSeaFreightDeskForm() {
   document.getElementById("sea-tt").value = "";
   document.getElementById("sea-validity").value = "";
   document.getElementById("sea-lcl-rate").value = "65";
+  document.getElementById("sea-bb-rate").value = "120";
+  document.getElementById("sea-terms").value = DEFAULT_SEA_TERMS;
+
+  // Reset module switcher
+  appState.currentSeaFreight.module = 'export';
+  const tabExp = document.getElementById("sea-tab-export");
+  const tabImp = document.getElementById("sea-tab-import");
+  if (tabExp && tabImp) {
+    tabExp.classList.add("active");
+    tabImp.classList.remove("active");
+  }
 
   // Reset cargo matrix with single empty row
   const cargoBody = document.getElementById("sea-cargo-body");
@@ -697,6 +732,23 @@ function setupAirFreightEvents() {
   const addRowBtn = document.getElementById("air-add-cargo");
   const dimUnitOptions = document.querySelectorAll(".dim-unit-toggle .toggle-option");
   const currencySelect = document.getElementById("air-currency");
+
+  const airTabExport = document.getElementById("air-tab-export");
+  const airTabImport = document.getElementById("air-tab-import");
+  if (airTabExport && airTabImport) {
+    airTabExport.addEventListener("click", () => {
+      airTabExport.classList.add("active");
+      airTabImport.classList.remove("active");
+      appState.currentAirFreight.module = 'export';
+      calculateAirFreight();
+    });
+    airTabImport.addEventListener("click", () => {
+      airTabImport.classList.add("active");
+      airTabExport.classList.remove("active");
+      appState.currentAirFreight.module = 'import';
+      calculateAirFreight();
+    });
+  }
 
   if (addRowBtn) {
     addRowBtn.addEventListener("click", () => {
@@ -1034,22 +1086,60 @@ function setupSeaFreightEvents() {
   const lclForm = document.getElementById("sea-lcl-form");
   const currencySelect = document.getElementById("sea-currency");
 
-  if (tabFcl && tabLcl) {
+  const seaTabExport = document.getElementById("sea-tab-export");
+  const seaTabImport = document.getElementById("sea-tab-import");
+  if (seaTabExport && seaTabImport) {
+    seaTabExport.addEventListener("click", () => {
+      seaTabExport.classList.add("active");
+      seaTabImport.classList.remove("active");
+      appState.currentSeaFreight.module = 'export';
+      calculateSeaFreight();
+    });
+    seaTabImport.addEventListener("click", () => {
+      seaTabImport.classList.add("active");
+      seaTabExport.classList.remove("active");
+      appState.currentSeaFreight.module = 'import';
+      calculateSeaFreight();
+    });
+  }
+
+  const tabBb = document.getElementById("sea-tab-bb");
+  const bbForm = document.getElementById("sea-bb-form");
+
+  if (tabFcl && tabLcl && tabBb) {
     tabFcl.addEventListener("click", () => {
       tabFcl.classList.add("active");
       tabLcl.classList.remove("active");
+      tabBb.classList.remove("active");
       fclForm.style.display = "block";
       lclForm.style.display = "none";
+      if (bbForm) bbForm.style.display = "none";
       appState.currentSeaFreight.type = "fcl";
+      populateSeaSurcharges("fcl");
       calculateSeaFreight();
     });
 
     tabLcl.addEventListener("click", () => {
       tabLcl.classList.add("active");
       tabFcl.classList.remove("active");
+      tabBb.classList.remove("active");
       fclForm.style.display = "none";
       lclForm.style.display = "block";
+      if (bbForm) bbForm.style.display = "none";
       appState.currentSeaFreight.type = "lcl";
+      populateSeaSurcharges("lcl");
+      calculateSeaFreight();
+    });
+
+    tabBb.addEventListener("click", () => {
+      tabBb.classList.add("active");
+      tabFcl.classList.remove("active");
+      tabLcl.classList.remove("active");
+      fclForm.style.display = "none";
+      lclForm.style.display = "none";
+      if (bbForm) bbForm.style.display = "block";
+      appState.currentSeaFreight.type = "bb";
+      populateSeaSurcharges("bb");
       calculateSeaFreight();
     });
   }
@@ -1059,6 +1149,7 @@ function setupSeaFreightEvents() {
   document.getElementById("sea-volume")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-pkg-qty")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-lcl-rate")?.addEventListener("input", calculateSeaFreight);
+  document.getElementById("sea-bb-rate")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-routing")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-tt")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-validity")?.addEventListener("input", calculateSeaFreight);
@@ -1182,7 +1273,7 @@ function calculateSeaFreight() {
   // Sync page currency labels and units
   updateCurrencyRules(appState.currentUser);
 
-  const isFcl = appState.currentSeaFreight.type === 'fcl';
+  const type = appState.currentSeaFreight.type; // 'fcl', 'lcl', or 'bb'
   const currency = document.getElementById("sea-currency").value;
   const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
   
@@ -1199,25 +1290,29 @@ function calculateSeaFreight() {
   let detailsText = '';
   let totalContainersCount = 0;
 
-  if (isFcl) {
+  if (type === 'fcl') {
     const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
     let containerSummary = [];
     fclRows.forEach(row => {
-      const type = row.querySelector(".fcl-type").value;
+      const typeVal = row.querySelector(".fcl-type").value;
       const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
       const rate = parseFloat(row.querySelector(".fcl-rate").value) || 0;
       if (qty > 0 && rate > 0) {
         baseFreight += (qty * rate);
         totalContainersCount += qty;
-        containerSummary.push(`${qty} x ${type}`);
+        containerSummary.push(`${qty} x ${typeVal}`);
       }
     });
     detailsText = containerSummary.join(", ") || 'No Containers Selected';
     appState.currentSeaFreight.fclSummary = containerSummary;
-  } else {
+  } else if (type === 'lcl') {
     const rate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
     baseFreight = chargeableCbm * rate;
-    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons)`;
+    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
+  } else {
+    const rate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
+    baseFreight = chargeableCbm * rate;
+    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [Break Bulk]`;
   }
 
   let totalSurcharges = 0;
@@ -1277,7 +1372,13 @@ function calculateSeaFreight() {
     totalINR = grandTotal * EXCHANGE_RATES[`${currency}_TO_INR`];
   }
 
-  document.getElementById("res-sea-type").textContent = isFcl ? "FCL (Full Container)" : "LCL (Loose Cargo)";
+  let typeLabel = "FCL (Full Container)";
+  if (type === 'lcl') {
+    typeLabel = "LCL (Loose Cargo)";
+  } else if (type === 'bb') {
+    typeLabel = "Break Bulk (Loose Cargo)";
+  }
+  document.getElementById("res-sea-type").textContent = typeLabel;
   document.getElementById("res-sea-details").textContent = detailsText;
   document.getElementById("res-sea-gw").textContent = `${weightKg.toFixed(2)} kg`;
   document.getElementById("res-sea-vol").textContent = `${cbm.toFixed(2)} CBM`;
@@ -1479,7 +1580,7 @@ function renderMemberDashboard(userId) {
     tr.innerHTML = `
       <td><strong>#Q-${quote.id.substring(0, 5).toUpperCase()}</strong></td>
       <td>${quote.date}</td>
-      <td><span class="quote-type-badge ${quote.type}">${quote.type}</span></td>
+      <td><span class="quote-type-badge ${quote.type}">${quote.type === 'air' ? (quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export') : (quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export')}</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
@@ -1645,7 +1746,7 @@ function renderAdminDashboard() {
     tr.innerHTML = `
       <td><strong>#Q-${quote.id.substring(0, 5).toUpperCase()}</strong></td>
       <td>${quote.date}</td>
-      <td><span class="quote-type-badge ${quote.type}">${quote.type}</span></td>
+      <td><span class="quote-type-badge ${quote.type}">${quote.type === 'air' ? (quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export') : (quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export')}</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
@@ -2111,6 +2212,8 @@ function saveCurrentQuote() {
       destination: document.getElementById("air-dest").value,
       airline: document.getElementById("air-airline").value,
       incoterm: incoterm,
+      module: appState.currentAirFreight.module || 'export',
+      termsAndConditions: document.getElementById("air-terms").value.trim() || DEFAULT_AIR_TERMS,
       chargeableWeight: appState.currentAirFreight.chargeableWeight,
       grossWeight: appState.currentAirFreight.grossWeight,
       volumeWeight: appState.currentAirFreight.volumeWeight,
@@ -2206,6 +2309,32 @@ function saveCurrentQuote() {
         alert("Please fill in Length, Width, Height, and Quantity for all Sea Cargo Lines.");
         return;
       }
+    } else if (appState.currentSeaFreight.type === 'bb') {
+      const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
+      if (bbRate <= 0) {
+        alert("Please enter Break Bulk Ocean Rate per Revenue Ton (RT) greater than zero.");
+        return;
+      }
+      if (rows.length === 0) {
+        alert("Please add at least one Cargo Line in the Dimensions Calculator.");
+        return;
+      }
+      let hasInvalidBb = false;
+      rows.forEach(row => {
+        const l = parseFloat(row.querySelector(".sea-cargo-len").value) || 0;
+        const w = parseFloat(row.querySelector(".sea-cargo-wid").value) || 0;
+        const h = parseFloat(row.querySelector(".sea-cargo-hei").value) || 0;
+        const qty = parseInt(row.querySelector(".sea-cargo-qty").value) || 0;
+        if (l <= 0 || w <= 0 || h <= 0 || qty <= 0) {
+          hasInvalidBb = true;
+        } else {
+          cargoItems.push({ l, w, h, qty });
+        }
+      });
+      if (hasInvalidBb) {
+        alert("Please fill in Length, Width, Height, and Quantity for all Sea Cargo Lines.");
+        return;
+      }
     } else {
       // Collect cargo if FCL has dimensions filled
       rows.forEach(row => {
@@ -2260,6 +2389,8 @@ function saveCurrentQuote() {
       shippingLine: shippingLine,
       incoterm: incoterm,
       mode: appState.currentSeaFreight.type,
+      module: appState.currentSeaFreight.module || 'export',
+      termsAndConditions: document.getElementById("sea-terms").value.trim() || DEFAULT_SEA_TERMS,
       grossWeight: appState.currentSeaFreight.grossWeight,
       volumeCbm: appState.currentSeaFreight.volumeCbm,
       packagesQuantity: appState.currentSeaFreight.packagesQuantity,
@@ -2273,6 +2404,7 @@ function saveCurrentQuote() {
       lclWeight: appState.currentSeaFreight.grossWeight,
       lclChargeable: Math.max(appState.currentSeaFreight.volumeCbm, appState.currentSeaFreight.grossWeight / 1000),
       lclRateApplied: parseFloat(document.getElementById("sea-lcl-rate").value) || 0,
+      bbRateApplied: parseFloat(document.getElementById("sea-bb-rate").value) || 0,
       containerItems: containerItems,
       cargoItems: cargoItems,
       dimUnit: appState.currentSeaFreight.dimUnit || 'cms',
@@ -2416,21 +2548,6 @@ function resetSurchargesToDefaults() {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="AMS fee (Per HAWB)" required></td>
-        <td><input type="number" class="chg-rate" value="15.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit">
-            <option value="flat" selected>Flat</option>
-            <option value="kg">Per kg</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
@@ -2450,50 +2567,33 @@ function resetSurchargesToDefaults() {
           </button>
         </td>
       </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="Miscellaneous Surcharge (MISC)" required></td>
-        <td><input type="number" class="chg-rate" value="50.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit">
-            <option value="flat" selected>Flat</option>
-            <option value="kg">Per kg</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
     `;
     setupSurchargesEvents("air-origin");
   }
 
   const airDestBody = document.getElementById("air-dest-surcharges-body");
   if (airDestBody) {
-    airDestBody.innerHTML = `
-      <tr>
-        <td><input type="text" class="chg-name" value="Miscellaneous Surcharge (MISC)" required></td>
-        <td><input type="number" class="chg-rate" value="50.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit">
-            <option value="flat" selected>Flat</option>
-            <option value="kg">Per kg</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-    `;
+    airDestBody.innerHTML = "";
     setupSurchargesEvents("air-dest");
   }
 
   const seaOriginBody = document.getElementById("sea-origin-surcharges-body");
   if (seaOriginBody) {
-    seaOriginBody.innerHTML = `
+    populateSeaSurcharges(appState.currentSeaFreight.type || 'fcl');
+  }
+}
+
+function populateSeaSurcharges(mode) {
+  const originBody = document.getElementById("sea-origin-surcharges-body");
+  const destBody = document.getElementById("sea-dest-surcharges-body");
+  if (!originBody || !destBody) return;
+
+  originBody.innerHTML = "";
+  destBody.innerHTML = ""; // No Miscellaneous charges in destination local fees for all users
+
+  let originRows = "";
+  if (mode === 'fcl') {
+    originRows = `
       <tr>
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
         <td><input type="number" class="chg-rate" value="250.00" step="0.01" required></td>
@@ -2529,14 +2629,171 @@ function resetSurchargesToDefaults() {
         </td>
       </tr>
     `;
-    setupSurchargesEvents("sea-origin");
+  } else if (mode === 'lcl') {
+    originRows = `
+      <tr>
+        <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
+        <td><input type="number" class="chg-rate" value="35.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
+        <td><input type="number" class="chg-rate" value="75.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat" selected>Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt">Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="text" class="chg-name" value="Port Handling Charges" required></td>
+        <td><input type="number" class="chg-rate" value="25.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+    `;
+  } else if (mode === 'bb') {
+    originRows = `
+      <tr>
+        <td><input type="text" class="chg-name" value="Lashing & Securing" required></td>
+        <td><input type="number" class="chg-rate" value="15.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="text" class="chg-name" value="Stevedoring" required></td>
+        <td><input type="number" class="chg-rate" value="20.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="text" class="chg-name" value="Port Handling" required></td>
+        <td><input type="number" class="chg-rate" value="25.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="text" class="chg-name" value="Wharfage" required></td>
+        <td><input type="number" class="chg-rate" value="10.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="text" class="chg-name" value="Craneage" required></td>
+        <td><input type="number" class="chg-rate" value="30.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="text" class="chg-name" value="Port Delivery" required></td>
+        <td><input type="number" class="chg-rate" value="15.00" step="0.01" required></td>
+        <td>
+          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <option value="flat">Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt" selected>Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      </tr>
+    `;
   }
 
-  const seaDestBody = document.getElementById("sea-dest-surcharges-body");
-  if (seaDestBody) {
-    seaDestBody.innerHTML = "";
-    setupSurchargesEvents("sea-dest");
-  }
+  originBody.innerHTML = originRows;
+  setupSurchargesEvents("sea-origin");
+  setupSurchargesEvents("sea-dest");
+}
 }
 
 function loadMemorizedSurcharges() {
@@ -2547,12 +2804,10 @@ function loadMemorizedSurcharges() {
       "Security Surcharge (SCC)",
       "XRAY Surcharge (XRAY)",
       "AMS fee (Per MAWB)",
-      "AMS fee (Per HAWB)",
       "AWB fee (AWB)"
     ],
     "air-dest": [
-      "Cartage Surcharge (CTG)",
-      "Miscellaneous Surcharge (MISC)"
+      "Cartage Surcharge (CTG)"
     ],
     "sea-origin": [
       "Terminal Handling Charges (THC)",
@@ -2925,6 +3180,7 @@ window.viewSavedQuote = (id) => {
   let detailsRows = "";
   if (isAir) {
     detailsRows = `
+      <tr><td>Air Freight Desk Module</td><td><strong>Air ${quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
       <tr><td>Origin Airport</td><td>${quote.details.origin || 'BOM'}</td></tr>
       <tr><td>Destination Airport</td><td>${quote.details.destination || 'JFK'}</td></tr>
       <tr><td>Airline</td><td>${quote.details.airline || 'N/A'}</td></tr>
@@ -2942,17 +3198,29 @@ window.viewSavedQuote = (id) => {
       <tr><td>Base Ocean/Air Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
     `;
   } else {
-    const modeLabel = quote.details.mode === 'fcl' ? 'FCL (Containers)' : 'LCL (Loose Cargo)';
+    let modeLabel = 'FCL (Containers)';
+    if (quote.details.mode === 'lcl') {
+      modeLabel = 'LCL (Loose Cargo)';
+    } else if (quote.details.mode === 'bb') {
+      modeLabel = 'Break Bulk (Loose Cargo)';
+    }
+
     let subDetails = "";
     if (quote.details.mode === 'fcl') {
       subDetails = `<tr><td>Containers Selected</td><td>${(quote.details.fclSummary || []).join(", ") || 'Containers'}</td></tr>`;
-    } else {
+    } else if (quote.details.mode === 'lcl') {
       subDetails = `
         <tr><td>LCL Chargeable RT</td><td>${(quote.details.lclChargeable || 0).toFixed(2)} RT</td></tr>
         <tr><td>LCL Ocean Rate</td><td>${currencySym}${(quote.details.lclRateApplied || 0).toFixed(2)} / RT</td></tr>
       `;
+    } else {
+      subDetails = `
+        <tr><td>Break Bulk Chargeable RT</td><td>${(quote.details.lclChargeable || 0).toFixed(2)} RT</td></tr>
+        <tr><td>Break Bulk Rate</td><td>${currencySym}${(quote.details.bbRateApplied || 0).toFixed(2)} / RT</td></tr>
+      `;
     }
     detailsRows = `
+      <tr><td>Sea Freight Desk Module</td><td><strong>Sea ${quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
       <tr><td>Origin Port</td><td>${quote.details.origin || 'INNSA'}</td></tr>
       <tr><td>Destination Port</td><td>${quote.details.destination || 'Rotterdam'}</td></tr>
       <tr><td>Shipping Line</td><td>${quote.details.shippingLine || 'N/A'}</td></tr>
@@ -3005,23 +3273,10 @@ window.viewSavedQuote = (id) => {
   }
 
   let termsList = "";
-  if (isAir) {
-    termsList = `
-      <li>The above rates are NET NET.</li>
-      <li>Rates quoted are valid for General/ Non Haz/ Non Stackable, unless specified.</li>
-      <li>Quoted rates are subject to space and booking confirmation.</li>
-      <li>Transit Times are subject to the Service chosen.</li>
-      <li>Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.</li>
-    `;
-  } else {
-    termsList = `
-      <li>The Above rates are NET NET.</li>
-      <li>Rates are subject to Surcharges, if applicable at the time of shipment.</li>
-      <li>Rates are valid for Non Haz, Non Temp, Non Stackable, General cargo only.</li>
-      <li>Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.</li>
-      <li>Rates are subject to space, booking and onward confirmation.</li>
-    `;
-  }
+  const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : (isAir ? DEFAULT_AIR_TERMS : DEFAULT_SEA_TERMS);
+  rawTerms.split("\n").map(l => l.trim()).filter(l => l.length > 0).forEach(line => {
+    termsList += `<li>${line}</li>`;
+  });
 
   const printCard = document.getElementById("quote-print-card");
   document.getElementById("modal-header-title").textContent = "Quotation Official Preview";
@@ -3470,6 +3725,20 @@ function amendQuote(id) {
     document.getElementById("air-routing").value = quote.details.routing || "";
     document.getElementById("air-tt").value = quote.details.tt || "";
     document.getElementById("air-validity").value = quote.details.validity || "";
+    document.getElementById("air-terms").value = quote.details.termsAndConditions || DEFAULT_AIR_TERMS;
+    
+    appState.currentAirFreight.module = quote.details.module || 'export';
+    const tabExp = document.getElementById("air-tab-export");
+    const tabImp = document.getElementById("air-tab-import");
+    if (tabExp && tabImp) {
+      if (quote.details.module === 'import') {
+        tabImp.classList.add("active");
+        tabExp.classList.remove("active");
+      } else {
+        tabExp.classList.add("active");
+        tabImp.classList.remove("active");
+      }
+    }
     
     // Cargo items
     const cargoBody = document.getElementById("air-cargo-body");
@@ -3515,7 +3784,21 @@ function amendQuote(id) {
     document.getElementById("sea-routing").value = quote.details.routing || "";
     document.getElementById("sea-tt").value = quote.details.tt || "";
     document.getElementById("sea-validity").value = quote.details.validity || "";
+    document.getElementById("sea-terms").value = quote.details.termsAndConditions || DEFAULT_SEA_TERMS;
     
+    appState.currentSeaFreight.module = quote.details.module || 'export';
+    const tabExp = document.getElementById("sea-tab-export");
+    const tabImp = document.getElementById("sea-tab-import");
+    if (tabExp && tabImp) {
+      if (quote.details.module === 'import') {
+        tabImp.classList.add("active");
+        tabExp.classList.remove("active");
+      } else {
+        tabExp.classList.add("active");
+        tabImp.classList.remove("active");
+      }
+    }
+
     const mode = quote.details.mode || "fcl";
     const modeTabs = document.querySelectorAll(".mode-tab-btn");
     modeTabs.forEach(t => {
@@ -3525,10 +3808,15 @@ function amendQuote(id) {
         t.classList.remove("active");
       }
     });
+
+    const fclSection = document.getElementById("sea-fcl-section");
+    const lclSection = document.getElementById("sea-lcl-section");
+    const bbForm = document.getElementById("sea-bb-form");
     
     if (mode === 'fcl') {
-      document.getElementById("sea-fcl-section").style.display = "block";
-      document.getElementById("sea-lcl-section").style.display = "none";
+      if (fclSection) fclSection.style.display = "block";
+      if (lclSection) lclSection.style.display = "none";
+      if (bbForm) bbForm.style.display = "none";
       appState.currentSeaFreight.type = "fcl";
       
       const fclBody = document.getElementById("sea-fcl-body");
@@ -3565,14 +3853,20 @@ function amendQuote(id) {
           });
         });
       }
-    } else {
-      document.getElementById("sea-fcl-section").style.display = "none";
-      document.getElementById("sea-lcl-section").style.display = "block";
+    } else if (mode === 'lcl') {
+      if (fclSection) fclSection.style.display = "none";
+      if (lclSection) lclSection.style.display = "block";
+      if (bbForm) bbForm.style.display = "none";
       appState.currentSeaFreight.type = "lcl";
       
-      document.getElementById("sea-lcl-gw").value = quote.details.lclWeight || "";
-      document.getElementById("sea-lcl-cbm").value = quote.details.lclCbm || "";
       document.getElementById("sea-lcl-rate").value = quote.details.lclRateApplied || "";
+    } else {
+      if (fclSection) fclSection.style.display = "none";
+      if (lclSection) lclSection.style.display = "none";
+      if (bbForm) bbForm.style.display = "block";
+      appState.currentSeaFreight.type = "bb";
+      
+      document.getElementById("sea-bb-rate").value = quote.details.bbRateApplied || "";
     }
     
     // Repopulate cargo dimensions if exists
