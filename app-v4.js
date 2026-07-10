@@ -1649,6 +1649,7 @@ function setupSurchargesEvents(freightType) {
 
 // MEMBER DASHBOARD RENDERING
 function renderMemberDashboard(userId) {
+  renderNrsRegistry();
   if (!window._newsLoaded) {
     setTimeout(() => {
       loadLogisticsNews('global');
@@ -1838,6 +1839,7 @@ window.deleteNrsAlert = deleteNrsAlert;
 // ADMIN DASHBOARD RENDERING
 function renderAdminDashboard() {
   renderControlTowerFeed();
+  renderNrsRegistry();
   if (!window._newsLoaded) {
     setTimeout(() => {
       loadLogisticsNews('global');
@@ -2099,36 +2101,14 @@ window.convertQuote = (id) => {
 
   if (!checkAndRequestEditPermission(quote, "convert")) return;
 
-  if (confirm(`Mark quotation for "${quote.customer}" as CONVERTED (Won Booking)?`)) {
-    quote.status = 'converted';
-    quote.conversionDate = new Date().toISOString().split('T')[0];
-    quote.date = new Date().toISOString().split('T')[0]; // Update execution date
-    DB.saveQuote(quote);
-    
-    // Confirmation intimation alert to Cathrina (NRS)
-    if (quote.creator === 'shashank' || quote.creator === 'mahendra') {
-      let alerts = [];
-      const stored = localStorage.getItem("nrs_alerts");
-      if (stored) {
-        try { alerts = JSON.parse(stored); } catch (e) { alerts = []; }
-      }
-      alerts.push({
-        id: 'A' + Math.random().toString(36).substr(2, 9),
-        date: new Date().toLocaleTimeString() + " " + new Date().toLocaleDateString(),
-        message: `Booking Confirmed: Customer "${quote.customer}" (${quote.route}) prepared by ${TEAM_ROLES[quote.creator]?.name || quote.creator}.`
-      });
-      localStorage.setItem("nrs_alerts", JSON.stringify(alerts));
-    }
-    
-    alert("Enquiry status updated successfully!");
-    
-    // Refresh active panel
-    if (appState.currentUser === 'ganny') {
-      renderAdminDashboard();
-    } else {
-      renderMemberDashboard(appState.currentUser);
-    }
-  }
+  // Open modal to input Shipper / Consignee details
+  document.getElementById("won-quote-id").value = id;
+  document.getElementById("won-shipper-name").value = quote.shipperName || "";
+  document.getElementById("won-shipper-contact").value = quote.shipperContact || "";
+  document.getElementById("won-cnee-name").value = quote.consigneeName || "";
+  document.getElementById("won-cnee-contact").value = quote.consigneeContact || "";
+
+  document.getElementById("won-booking-modal").style.display = "flex";
 };
 
 // REPORT GENERATOR & PDF LAYOUT
@@ -4938,7 +4918,8 @@ document.addEventListener("keydown", (e) => {
       "admin-settings-modal", 
       "change-password-modal", 
       "xe-rates-modal", 
-      "print-preview-modal"
+      "print-preview-modal",
+      "won-booking-modal"
     ];
     let modalClosed = false;
     
@@ -4971,7 +4952,7 @@ document.addEventListener("keydown", (e) => {
       return;
     }
 
-    // 1. If inside change password modal and input is focused, submit it
+    // 1. If inside change password modal, submit it
     const cpModal = document.getElementById("change-password-modal");
     if (cpModal && cpModal.style.display === "flex") {
       const form = document.getElementById("change-password-form");
@@ -4982,7 +4963,18 @@ document.addEventListener("keydown", (e) => {
       return;
     }
 
-    // 2. If inside login overlay and username/password is focused, submit
+    // 2. If inside won booking details modal, submit it
+    const wbModal = document.getElementById("won-booking-modal");
+    if (wbModal && wbModal.style.display === "flex") {
+      const form = document.getElementById("won-booking-form");
+      if (form) {
+        form.requestSubmit();
+        e.preventDefault();
+      }
+      return;
+    }
+
+    // 3. If inside login overlay, submit it
     const loginOverlay = document.getElementById("login-overlay");
     if (loginOverlay && loginOverlay.style.display !== "none") {
       const form = document.getElementById("login-form");
@@ -4992,4 +4984,198 @@ document.addEventListener("keydown", (e) => {
       }
     }
   }
+  }
 });
+
+function closeWonBookingModal() {
+  const modal = document.getElementById("won-booking-modal");
+  if (modal) modal.style.display = "none";
+}
+window.closeWonBookingModal = closeWonBookingModal;
+
+async function submitWonBookingDetails(e) {
+  e.preventDefault();
+  const id = document.getElementById("won-quote-id").value;
+  const quote = appState.quotes.find(q => q.id === id);
+  if (!quote) return;
+
+  const shipperName = document.getElementById("won-shipper-name").value.trim();
+  const shipperContact = document.getElementById("won-shipper-contact").value.trim();
+  const consigneeName = document.getElementById("won-cnee-name").value.trim();
+  const consigneeContact = document.getElementById("won-cnee-contact").value.trim();
+
+  if (!shipperName || !shipperContact || !consigneeName || !consigneeContact) {
+    alert("Please fill all details to proceed.");
+    return;
+  }
+
+  quote.status = 'converted';
+  quote.shipperName = shipperName;
+  quote.shipperContact = shipperContact;
+  quote.consigneeName = consigneeName;
+  quote.consigneeContact = consigneeContact;
+  quote.conversionDate = new Date().toISOString().split('T')[0];
+  quote.date = new Date().toISOString().split('T')[0];
+
+  try {
+    // 1. Save quote update (updates Firestore dynamically)
+    await DB.saveQuote(quote);
+
+    // 2. NRS registry entry mapping
+    const nrsEntry = {
+      id: quote.id,
+      refId: getQuoteRefId(quote),
+      mode: quote.mode === 'air' ? 'Air Nomination' : 'Sea Nomination',
+      customer: quote.customer,
+      shipperName,
+      shipperContact,
+      consigneeName,
+      consigneeContact,
+      dateWon: quote.conversionDate
+    };
+
+    if (DB.firestoreRef) {
+      await DB.firestoreRef.collection("nrs_registry").doc(quote.id).set(nrsEntry);
+    } else {
+      let offlineRegistry = [];
+      const stored = localStorage.getItem("gl_nrs_registry");
+      if (stored) {
+        try { offlineRegistry = JSON.parse(stored); } catch(err) {}
+      }
+      const idx = offlineRegistry.findIndex(item => item.id === quote.id);
+      if (idx !== -1) {
+        offlineRegistry[idx] = nrsEntry;
+      } else {
+        offlineRegistry.push(nrsEntry);
+      }
+      localStorage.setItem("gl_nrs_registry", JSON.stringify(offlineRegistry));
+    }
+
+    // 3. Confirmation intimation alert to Cathrina (NRS)
+    if (quote.creator === 'shashank' || quote.creator === 'mahendra') {
+      let alerts = [];
+      const stored = localStorage.getItem("nrs_alerts");
+      if (stored) {
+        try { alerts = JSON.parse(stored); } catch (err) { alerts = []; }
+      }
+      alerts.push({
+        id: 'A' + Math.random().toString(36).substr(2, 9),
+        date: new Date().toLocaleTimeString() + " " + new Date().toLocaleDateString(),
+        message: `Booking Confirmed: Customer "${quote.customer}" (${quote.route}) prepared by ${TEAM_ROLES[quote.creator]?.name || quote.creator}.`
+      });
+      localStorage.setItem("nrs_alerts", JSON.stringify(alerts));
+    }
+
+    alert("🎉 Booking successfully converted to WON and registered in NRS module!");
+    closeWonBookingModal();
+
+    // Refresh active panel
+    if (appState.currentUser === 'ganny') {
+      renderAdminDashboard();
+    } else {
+      renderMemberDashboard(appState.currentUser);
+    }
+  } catch (err) {
+    alert("❌ Error converting booking: " + err.message);
+  }
+}
+window.submitWonBookingDetails = submitWonBookingDetails;
+
+async function renderNrsRegistry() {
+  const panel = document.getElementById("nrs-registry-panel");
+  const tbody = document.getElementById("nrs-registry-body");
+  if (!panel || !tbody) return;
+
+  const currentUser = appState.currentUser;
+  // Show only to Ganny (Admin) and Cathrina (NRS)
+  if (currentUser === 'ganny' || currentUser === 'cathrina') {
+    panel.style.display = "block";
+  } else {
+    panel.style.display = "none";
+    return;
+  }
+
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">Loading NRS directory...</td></tr>`;
+
+  try {
+    let registryList = [];
+    if (DB.firestoreRef) {
+      const snap = await DB.firestoreRef.collection("nrs_registry").get();
+      snap.forEach(doc => {
+        registryList.push(doc.data());
+      });
+    } else {
+      const stored = localStorage.getItem("gl_nrs_registry");
+      if (stored) {
+        try { registryList = JSON.parse(stored); } catch(e) {}
+      }
+    }
+
+    window._nrsRegistryCached = registryList;
+    displayNrsRegistryItems(registryList);
+  } catch (err) {
+    console.error("NRS: Failed to render registry database:", err);
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-error); padding: 2rem;">⚠️ Failed to load directory.</td></tr>`;
+  }
+}
+window.renderNrsRegistry = renderNrsRegistry;
+
+function displayNrsRegistryItems(list) {
+  const tbody = document.getElementById("nrs-registry-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
+    return;
+  }
+
+  // Sort by dateWon descending
+  const sorted = [...list].sort((a, b) => new Date(b.dateWon) - new Date(a.dateWon));
+
+  tbody.innerHTML = sorted.map(item => {
+    return `
+      <tr>
+        <td style="font-weight: 750; color: var(--sky); font-size: 0.72rem;">#${item.refId}</td>
+        <td>
+          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${item.mode.includes('Air') ? 'rgba(27,28,92,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${item.mode.includes('Air') ? 'var(--accent-air)' : 'var(--accent-sea)'};">
+            ${item.mode}
+          </span>
+        </td>
+        <td><div style="font-weight: 700; color: var(--t1); font-size: 0.72rem;">${item.customer}</div></td>
+        <td>
+          <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.shipperName}</div>
+          <div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.shipperContact}</div>
+        </td>
+        <td>
+          <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.consigneeName}</div>
+          <div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.consigneeContact}</div>
+        </td>
+        <td style="font-size: 0.68rem; color: var(--t3); font-weight: 600;">
+          ${new Date(item.dateWon).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function filterNrsRegistry(query) {
+  const list = window._nrsRegistryCached || [];
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    displayNrsRegistryItems(list);
+    return;
+  }
+
+  const filtered = list.filter(item => {
+    return (
+      item.refId.toLowerCase().includes(q) ||
+      item.customer.toLowerCase().includes(q) ||
+      item.shipperName.toLowerCase().includes(q) ||
+      item.consigneeName.toLowerCase().includes(q) ||
+      item.mode.toLowerCase().includes(q)
+    );
+  });
+  displayNrsRegistryItems(filtered);
+}
+window.filterNrsRegistry = filterNrsRegistry;
