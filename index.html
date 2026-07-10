@@ -28,26 +28,21 @@
   </script>
 </head>
 <body>
-  <!-- Glowing Background Mesh Orbs -->
-  <div class="bg-orb-container">
-    <div class="bg-orb bg-orb-cyan"></div>
-    <div class="bg-orb bg-orb-indigo"></div>
-    <div class="bg-orb bg-orb-purple"></div>
-  </div>
+  <!-- Dynamic Grid Overlay Wallpaper -->
+  <div class="grid-overlay"></div>
+  
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-overlay" class="login-overlay-screen">
     <div class="login-card">
       <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-        <svg class="globe-logo" style="width: 80px; height: 80px;" viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10" stroke="#1b1c5c" stroke-width="2.2" />
-          <path d="M2 12h20" stroke="#eab308" stroke-width="1.8" />
-          <path d="M3.6 9h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
-          <path d="M3.6 15h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#1b1c5c" stroke-width="1.8" />
-        </svg>
+        <!-- Original Authorized logo styled elegantly -->
+        <img src="logo.png" alt="Vertex Logo" style="height: 80px; width: 80px; object-fit: contain; border-radius: 50%; border: 2.5px solid var(--brand-gold); box-shadow: 0 4px 15px rgba(27, 28, 92, 0.18); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
         <div style="text-align: center;">
-          <div style="font-size: 2.1rem; font-weight: 900; letter-spacing: 0.06em; color: var(--text-brand); line-height: 1.1; font-family: 'Outfit', system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center;">VERTEX<span class="custom-brand-x" style="width: 18px; height: 26px; margin-left: 3px;"></span></div>
-          <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.02em;">Atlas Pricing</div>
+          <div style="color: var(--text-brand); font-family: 'Outfit', sans-serif; display: inline-flex; align-items: baseline; justify-content: center; line-height: 1.1;">
+            <span style="font-size: 1.7rem; font-weight: 700; letter-spacing: 0.04em;">VERTE</span>
+            <span class="custom-brand-x" style="font-size: 2.2rem; font-weight: 900; margin-left: 2px;"></span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.02em; margin-top: 0.15rem;">Atlas Pricing</div>
         </div>
       </div>
       <h2 style="font-weight: 800; margin-bottom: 0.25rem;">Pricing Desk</h2>
@@ -72,15 +67,12 @@
     <header>
       <div class="header-content">
         <div class="logo-section" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" onclick="goHome()">
-          <svg class="globe-logo" style="width: 52px; height: 52px;" viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#1b1c5c" stroke-width="2.2" />
-            <path d="M2 12h20" stroke="#eab308" stroke-width="1.8" />
-            <path d="M3.6 9h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
-            <path d="M3.6 15h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#1b1c5c" stroke-width="1.8" />
-          </svg>
+          <img src="logo.png" alt="Vertex Logo" style="height: 48px; width: 48px; object-fit: contain; border-radius: 50%; border: 2px solid var(--brand-gold); box-shadow: 0 3px 10px rgba(27, 28, 92, 0.12); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
           <div style="display: flex; flex-direction: column; justify-content: center;">
-            <div class="logo-text" style="font-size: 1.45rem; font-weight: 900; color: var(--sky); line-height: 1.0; font-family: 'Outfit', system-ui, sans-serif; letter-spacing: 0.06em; display: inline-flex; align-items: center;">VERTE<span class="custom-brand-x"></span></div>
+            <div class="logo-text" style="color: var(--sky); font-family: 'Outfit', sans-serif; display: inline-flex; align-items: baseline; line-height: 1.0;">
+              <span style="font-size: 1.25rem; font-weight: 700; letter-spacing: 0.04em;">VERTE</span>
+              <span class="custom-brand-x" style="font-size: 1.6rem; font-weight: 900; margin-left: 1px;"></span>
+            </div>
             <div style="font-size: 0.72rem; color: var(--t3); font-weight: 700; letter-spacing: 0.04em; margin-top: 0.15rem; text-transform: uppercase;">Atlas Pricing</div>
           </div>
         </div>
@@ -187,9 +179,29 @@
                 </div>
               </div>
               <!-- News Feed items list -->
-              <div id="logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 220px; padding-right: 0.25rem;">
-                <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 3rem;">
+              <div id="logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 140px; padding-right: 0.25rem;">
+                <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
                   Loading logistics news feed...
+                </div>
+              </div>
+
+              <!-- Animated Route Trackers Hub -->
+              <div style="background: rgba(27, 28, 92, 0.03); border: 1px dashed var(--border-2); border-radius: var(--r-sm); padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; position: relative;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: 0.68rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 4px;">
+                    <span style="position: relative; display: inline-block; width: 7px; height: 7px; background: var(--brand-gold); border-radius: 50%;">
+                      <span style="position: absolute; inset: -3px; background: rgba(254, 204, 0, 0.6); border-radius: 50%; animation: pulse-radar 2s infinite;"></span>
+                    </span>
+                    Live Shipping & Airline Telemetry
+                  </span>
+                </div>
+                <div style="display: flex; gap: 0.4rem; width: 100%;">
+                  <a href="https://www.marinetraffic.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
+                    🚢 MarineTraffic
+                  </a>
+                  <a href="https://www.flightradar24.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
+                    ✈️ FlightRadar24
+                  </a>
                 </div>
               </div>
             </div>
@@ -422,6 +434,26 @@
             <div id="member-logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 140px; padding-right: 0.25rem;">
               <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
                 Loading logistics news feed...
+              </div>
+            </div>
+
+            <!-- Animated Route Trackers Hub -->
+            <div style="background: rgba(27, 28, 92, 0.03); border: 1px dashed var(--border-2); border-radius: var(--r-sm); padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; position: relative; margin-top: 0.25rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.68rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="position: relative; display: inline-block; width: 7px; height: 7px; background: var(--brand-gold); border-radius: 50%;">
+                    <span style="position: absolute; inset: -3px; background: rgba(254, 204, 0, 0.6); border-radius: 50%; animation: pulse-radar 2s infinite;"></span>
+                  </span>
+                  Live Shipping & Airline Telemetry
+                </span>
+              </div>
+              <div style="display: flex; gap: 0.4rem; width: 100%;">
+                <a href="https://www.marinetraffic.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
+                  🚢 MarineTraffic
+                </a>
+                <a href="https://www.flightradar24.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
+                  ✈️ FlightRadar24
+                </a>
               </div>
             </div>
           </div>
@@ -1421,6 +1453,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=1.8"></script>
+  <script src="app-v4.js?v=1.9"></script>
 </body>
 </html>

@@ -135,7 +135,11 @@ html, body {
 
 body {
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  background: var(--bg-void);
+  background: radial-gradient(at 0% 0%, rgba(27, 28, 92, 0.04) 0px, transparent 50%),
+              radial-gradient(at 50% 0%, rgba(254, 204, 0, 0.03) 0px, transparent 50%),
+              radial-gradient(at 100% 0%, rgba(47, 49, 147, 0.04) 0px, transparent 50%),
+              #f8fafc;
+  background-attachment: fixed;
   color: var(--t1);
   min-height: 100vh;
   line-height: 1.65;
@@ -954,51 +958,31 @@ select.table-select:focus {
   50%      { transform: scale(1.5); opacity: 0.4; }
 }
 
-/* Glowing background orbs container and items */
-.bg-orb-container {
-  display: none;
+/* Dynamic Grid Overlay Wallpaper */
+.grid-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: -10;
-  overflow: hidden;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(27, 28, 92, 0.02) 1.2px, transparent 1.2px),
+    linear-gradient(90deg, rgba(27, 28, 92, 0.02) 1.2px, transparent 1.2px);
+  background-size: 50px 50px;
+  background-position: center;
+  mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0) 80%);
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0) 80%);
   pointer-events: none;
+  z-index: -1;
+  animation: grid-slow-drift 120s linear infinite;
 }
 
-.bg-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(140px);
-  opacity: 0.45;
-  mix-blend-mode: multiply;
-  pointer-events: none;
+@keyframes grid-slow-drift {
+  0% { background-position: 0px 0px; }
+  100% { background-position: 500px 500px; }
 }
 
-.bg-orb-cyan {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(186,230,253,0.6) 0%, rgba(186,230,253,0.1) 70%, transparent 100%);
-  top: -10%;
-  left: -10%;
-  animation: floatOrb1 32s infinite alternate ease-in-out;
+@keyframes pulse-radar {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(3.2); opacity: 0; }
 }
-
-.bg-orb-indigo {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(224,231,255,0.65) 0%, rgba(224,231,255,0.1) 70%, transparent 100%);
-  bottom: -15%;
-  right: -10%;
-  animation: floatOrb2 40s infinite alternate ease-in-out;
-}
-
-.bg-orb-purple {
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, rgba(243,232,255,0.6) 0%, rgba(243,232,255,0.1) 70%, transparent 100%);
-  top: 40%;
   left: 45%;
   animation: floatOrb3 28s infinite alternate ease-in-out;
 }
