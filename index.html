@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -103,6 +106,12 @@
           <button class="role-btn" data-role="mahendra"><svg width="11" height="11" style="margin-right:3px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>Sea Nomination</button>
           <button class="role-btn" data-role="jaya">Free Hand Sales</button>
           <button class="role-btn" data-role="cathrina">NRS</button>
+        </div>
+
+        <!-- Database Sync Connection Status Badge -->
+        <div id="db-connection-badge" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.65rem; border-radius: var(--r-pill); font-size: 0.68rem; font-weight: 700; background: rgba(27,28,92,0.04); border: 1px solid var(--border-2); color: var(--sky); transition: all 0.3s;">
+          <span id="db-connection-dot" style="display: inline-block; width: 6px; height: 6px; background: var(--sky); border-radius: 50%;"></span>
+          <span id="db-connection-text">LocalStorage (Offline)</span>
         </div>
 
         <!-- Live Exchange Rates Ticker (XE.COM reference) -->
@@ -327,6 +336,20 @@
                   <label for="cfg-gmaps-key" style="color: var(--sky); font-weight: 700;">Google Maps API Key (Optional)</label>
                   <input type="text" id="cfg-gmaps-key" placeholder="AIzaSy...">
                   <small style="color: var(--t3); font-size: 0.65rem; display: block; margin-top: 0.2rem;">Used to embed live airport and seaport maps inside calculators.</small>
+                </div>
+                <div class="form-group" style="margin-top: 1rem; border-top: 1px solid var(--border-1); padding-top: 1rem;">
+                  <label for="cfg-firebase-json" style="color: var(--sky); font-weight: 700;">Firebase Web Config JSON (Optional)</label>
+                  <textarea id="cfg-firebase-json" rows="4" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%; font-family: monospace; font-size: 0.72rem; resize: vertical;" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-app.firebaseapp.com",
+  "projectId": "your-project-id",
+  "storageBucket": "your-app.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:1234:web:abcd"
+}'></textarea>
+                  <small style="color: var(--t3); font-size: 0.65rem; display: block; margin-top: 0.2rem;">
+                    Paste your Firebase Web App Config JSON object to enable central cloud sync.
+                  </small>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 0.5rem; background: var(--accent-success); color: #000;">
                   Save Desk Names & API Settings

@@ -2087,7 +2087,7 @@ window.convertQuote = (id) => {
     quote.status = 'converted';
     quote.conversionDate = new Date().toISOString().split('T')[0];
     quote.date = new Date().toISOString().split('T')[0]; // Update execution date
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+    DB.saveQuote(quote);
     
     // Confirmation intimation alert to Cathrina (NRS)
     if (quote.creator === 'shashank' || quote.creator === 'mahendra') {
@@ -2648,16 +2648,14 @@ function saveCurrentQuote() {
       quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
       quoteData.amendmentAllowed = false; // Lock it back!
       
-      appState.quotes[existingIndex] = quoteData;
       appState.editingQuoteId = null; // Clear edit mode
+      DB.saveQuote(quoteData);
       alert("Quotation amended and locked successfully!");
     }
   } else {
-    appState.quotes.push(quoteData);
+    DB.saveQuote(quoteData);
     alert("Quotation saved successfully!");
   }
-  
-  localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
 
   // Clear inputs
   document.getElementById(isAir ? "air-cust-name" : "sea-cust-name").value = "";
@@ -3081,37 +3079,7 @@ window.memorizeSurchargeNames = memorizeSurchargeNames;
 
 
 function loadSavedQuotes() {
-  const saved = localStorage.getItem("logistics_quotes");
-  if (saved) {
-    try {
-      appState.quotes = JSON.parse(saved);
-      // Clean up legacy test quotes automatically so standard users start fresh
-      if (appState.quotes.some(q => typeof q.id === 'string' && q.id.startsWith("q"))) {
-        appState.quotes = [];
-        localStorage.setItem("logistics_quotes", JSON.stringify([]));
-      }
-    } catch (e) {
-      appState.quotes = [];
-    }
-  } else {
-    appState.quotes = [];
-    localStorage.setItem("logistics_quotes", JSON.stringify([]));
-  }
-
-  const creatorMap = {
-    'air-nom': 'shashank',
-    'sea-nom': 'mahendra',
-    'air-local': 'jaya',
-    'sea-local': 'jaya'
-  };
-  appState.quotes.forEach((q, idx) => {
-    if (creatorMap[q.creator]) {
-      q.creator = creatorMap[q.creator];
-    }
-    if (!q.quoteNumber) {
-      q.quoteNumber = idx + 1;
-    }
-  });
+  DB.init();
 }
 
 window.handleLogin = handleLogin;
@@ -3391,8 +3359,7 @@ window.deleteQuote = (id) => {
   }
 
   if (confirm(`Are you sure you want to delete quote for "${quote.customer}"?`)) {
-    appState.quotes = appState.quotes.filter(q => q.id !== id);
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+    DB.deleteQuote(id);
     
     // Remove related requests
     let requests = [];
@@ -3550,6 +3517,11 @@ function applyDeskNames() {
   if (cfgGmapsKey) {
     cfgGmapsKey.value = localStorage.getItem("gl_gmaps_key") || "";
   }
+
+  const cfgFirebaseJson = document.getElementById("cfg-firebase-json");
+  if (cfgFirebaseJson) {
+    cfgFirebaseJson.value = localStorage.getItem("gl_firebase_config") || "";
+  }
 }
 
 function saveDeskNames(e) {
@@ -3583,13 +3555,44 @@ function saveDeskNames(e) {
     localStorage.setItem("gl_gmaps_key", gmapsKeyInput.value.trim());
   }
 
+  const firebaseJsonInput = document.getElementById("cfg-firebase-json");
+  let firebaseConfigChanged = false;
+  if (firebaseJsonInput) {
+    const rawVal = firebaseJsonInput.value.trim();
+    const oldConfig = localStorage.getItem("gl_firebase_config") || "";
+    if (rawVal !== oldConfig) {
+      firebaseConfigChanged = true;
+    }
+    
+    if (rawVal) {
+      try {
+        const parsed = JSON.parse(rawVal);
+        if (!parsed.apiKey || !parsed.projectId) {
+          alert("Firebase Config JSON must contain at least 'apiKey' and 'projectId' fields.");
+          return;
+        }
+        localStorage.setItem("gl_firebase_config", rawVal);
+      } catch (err) {
+        alert("Invalid Firebase Web Config JSON. Please copy the complete JSON object from the Firebase console.");
+        return;
+      }
+    } else {
+      localStorage.removeItem("gl_firebase_config");
+    }
+  }
+
   applyDeskNames();
 
   if (appState.currentUser === 'ganny') {
     renderAdminDashboard();
   }
 
-  alert("Desk names & API Settings updated successfully!");
+  if (firebaseConfigChanged) {
+    alert("Settings saved successfully! Page will now reload to establish the Firebase Cloud connection.");
+    window.location.reload();
+  } else {
+    alert("Desk names & API Settings updated successfully!");
+  }
 }
 
 window.saveDeskNames = saveDeskNames;
@@ -3912,7 +3915,7 @@ function approveAmendment(reqId) {
     }
     
     localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+    if (quote) DB.saveQuote(quote);
     alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been APPROVED.`);
     renderAdminDashboard();
   }
@@ -3982,7 +3985,7 @@ function revertQuoteToOriginal(id) {
     quote.status = 'quoted';
     delete quote.conversionDate;
     quote.date = new Date().toISOString().split('T')[0]; // Update execution date
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+    DB.saveQuote(quote);
     alert("Enquiry status reverted back to Original (Quoted)!");
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
@@ -4000,7 +4003,7 @@ function markQuoteCancelled(id) {
   if (confirm(`Mark quotation for "${quote.customer}" as CANCELLED?`)) {
     quote.status = 'cancelled';
     quote.date = new Date().toISOString().split('T')[0]; // Update execution date
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+    DB.saveQuote(quote);
     alert("Enquiry status set to CANCELLED!");
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
@@ -4018,7 +4021,7 @@ function markQuoteLost(id) {
   if (confirm(`Mark quotation for "${quote.customer}" as LOST?`)) {
     quote.status = 'lost';
     quote.date = new Date().toISOString().split('T')[0]; // Update execution date
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+    DB.saveQuote(quote);
     alert("Enquiry status set to LOST!");
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
@@ -4388,5 +4391,162 @@ function toggleMapHelper(mode, type) {
   }
 }
 window.toggleMapHelper = toggleMapHelper;
+
+// ==================== DATABASE STORAGE REPOSITORY (LOCAL/FIREBASE) ====================
+
+const DB = {
+  isCloud: false,
+  firestoreRef: null,
+  
+  init() {
+    const configRaw = localStorage.getItem("gl_firebase_config");
+    const statusDot = document.getElementById("db-connection-dot");
+    const statusText = document.getElementById("db-connection-text");
+    
+    if (configRaw) {
+      try {
+        const config = JSON.parse(configRaw);
+        if (config && config.apiKey && config.projectId) {
+          // Initialize Firebase Compat
+          if (firebase.apps.length === 0) {
+            firebase.initializeApp(config);
+          }
+          this.firestoreRef = firebase.firestore();
+          this.isCloud = true;
+          
+          // Enable offline persistence
+          this.firestoreRef.enablePersistence().catch(err => {
+            console.warn("Firestore offline persistence failed:", err.code);
+          });
+          
+          if (statusDot) statusDot.style.background = "#10b981"; // green
+          if (statusText) statusText.textContent = "Firebase Cloud (Online)";
+          
+          // Listen to changes in real-time
+          this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
+            const list = [];
+            snapshot.forEach(doc => {
+              const q = doc.data();
+              this.sanitize(q, list.length);
+              list.push(q);
+            });
+            // Sort quotes chronologically (newest first)
+            list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            appState.quotes = list;
+            
+            // Refresh view
+            if (appState.currentUser) {
+              if (appState.currentUser === 'ganny') {
+                renderAdminDashboard();
+              } else {
+                renderWorkspace();
+              }
+            }
+          }, error => {
+            console.error("Firestore synchronization error:", error);
+            if (statusDot) statusDot.style.background = "#ef4444"; // red
+            if (statusText) statusText.textContent = "Firebase Error";
+          });
+          
+          // Check for migration from local to cloud
+          const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
+          if (localQuotes.length > 0) {
+            localQuotes.forEach(q => {
+              if (!q.timestamp) q.timestamp = Date.now();
+              this.firestoreRef.collection("quotes").doc(q.id).set(q);
+            });
+            localStorage.removeItem("logistics_quotes");
+          }
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse Firebase configuration:", e);
+      }
+    }
+    
+    // Fallback to local storage
+    this.isCloud = false;
+    if (statusDot) statusDot.style.background = "#38bdf8"; // sky blue
+    if (statusText) statusText.textContent = "LocalStorage (Offline)";
+    
+    // Load local storage quotes
+    const saved = localStorage.getItem("logistics_quotes");
+    if (saved) {
+      try {
+        appState.quotes = JSON.parse(saved);
+        if (appState.quotes.some(q => typeof q.id === 'string' && q.id.startsWith("q"))) {
+          appState.quotes = [];
+          localStorage.setItem("logistics_quotes", JSON.stringify([]));
+        }
+      } catch (e) {
+        appState.quotes = [];
+      }
+    } else {
+      appState.quotes = [];
+    }
+    
+    // Sanitize quotes array
+    appState.quotes.forEach((q, idx) => {
+      this.sanitize(q, idx);
+    });
+  },
+  
+  sanitize(q, idx) {
+    const creatorMap = {
+      'air-nom': 'shashank',
+      'sea-nom': 'mahendra',
+      'air-local': 'jaya',
+      'sea-local': 'jaya'
+    };
+    if (creatorMap[q.creator]) {
+      q.creator = creatorMap[q.creator];
+    }
+    if (!q.quoteNumber) {
+      q.quoteNumber = idx + 1;
+    }
+    if (!q.timestamp) {
+      q.timestamp = Date.now() - (idx * 60 * 1000);
+    }
+  },
+  
+  async saveQuote(quote) {
+    if (!quote.timestamp) quote.timestamp = Date.now();
+    
+    // Local memory update immediately so the local user doesn't see lag
+    const idx = appState.quotes.findIndex(q => q.id === quote.id);
+    if (idx !== -1) {
+      appState.quotes[idx] = quote;
+    } else {
+      appState.quotes.push(quote);
+    }
+    
+    if (this.isCloud && this.firestoreRef) {
+      await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
+    } else {
+      localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+      if (appState.currentUser === 'ganny') {
+        renderAdminDashboard();
+      } else {
+        renderWorkspace();
+      }
+    }
+  },
+  
+  async deleteQuote(quoteId) {
+    appState.quotes = appState.quotes.filter(q => q.id !== quoteId);
+    
+    if (this.isCloud && this.firestoreRef) {
+      await this.firestoreRef.collection("quotes").doc(quoteId).delete();
+    } else {
+      localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+      if (appState.currentUser === 'ganny') {
+        renderAdminDashboard();
+      } else {
+        renderWorkspace();
+      }
+    }
+  }
+};
+window.DB = DB;
 
 
