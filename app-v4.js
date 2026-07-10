@@ -235,34 +235,35 @@ function handleLogin(e) {
   const user = document.getElementById("login-username").value.trim().toLowerCase();
   const pass = document.getElementById("login-password").value;
 
-  let customUsersList = [];
-  const storedCustom = localStorage.getItem("gl_custom_users");
-  if (storedCustom) {
-    try {
-      const parsed = JSON.parse(storedCustom);
-      customUsersList = parsed;
-    } catch(e) {}
+  let dbUsers = window._firebaseUsers || [];
+  if (dbUsers.length === 0) {
+    const storedCustom = localStorage.getItem("gl_custom_users");
+    if (storedCustom) {
+      try { dbUsers = JSON.parse(storedCustom); } catch(err) {}
+    }
   }
 
-  const customUsernames = customUsersList.map(u => u.username.toLowerCase());
-  const validUsers = ["ganny", "shashank", "mahendra", "jaya", "cathrina", ...customUsernames];
+  const matched = dbUsers.find(u => u.username.toLowerCase() === user);
 
-  let expectedPassword = "password";
-  if (customUsernames.includes(user)) {
-    const match = customUsersList.find(u => u.username.toLowerCase() === user);
-    if (match) expectedPassword = match.password;
-  }
-
-  if (validUsers.includes(user) && pass === expectedPassword) {
-    sessionStorage.setItem("gl_pricing_session", user);
-    
-    // Reset login inputs
-    document.getElementById("login-username").value = "";
-    document.getElementById("login-password").value = "";
-    
-    loginSuccess(user);
+  if (matched) {
+    if (pass === matched.password) {
+      sessionStorage.setItem("gl_pricing_session", user);
+      document.getElementById("login-username").value = "";
+      document.getElementById("login-password").value = "";
+      loginSuccess(user);
+    } else {
+      alert("Invalid login credentials. Please check your password.");
+    }
   } else {
-    alert("Invalid login credentials. Please check your username/password.");
+    const validHardcoded = ["ganny", "shashank", "mahendra", "jaya", "cathrina"];
+    if (validHardcoded.includes(user) && pass === "password") {
+      sessionStorage.setItem("gl_pricing_session", user);
+      document.getElementById("login-username").value = "";
+      document.getElementById("login-password").value = "";
+      loginSuccess(user);
+    } else {
+      alert("Invalid login credentials. Please check your username/password.");
+    }
   }
 }
 
@@ -280,11 +281,13 @@ function loginSuccess(roleId) {
 
   const root = document.documentElement;
   if (roleId === 'ganny') {
+    document.getElementById("admin-settings-btn").style.display = "flex";
     document.getElementById("admin-role-selector").style.display = "flex";
     root.style.setProperty('--accent-current', 'var(--sky)');
     root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
     switchRole('manager');
   } else {
+    document.getElementById("admin-settings-btn").style.display = "none";
     document.getElementById("admin-role-selector").style.display = "none";
     if (roleId.startsWith('air')) {
       root.style.setProperty('--accent-current', 'var(--accent-air)');
@@ -1646,6 +1649,12 @@ function setupSurchargesEvents(freightType) {
 
 // MEMBER DASHBOARD RENDERING
 function renderMemberDashboard(userId) {
+  if (!window._newsLoaded) {
+    setTimeout(() => {
+      loadLogisticsNews('global');
+      window._newsLoaded = true;
+    }, 100);
+  }
   // Check for resolved amendment requests for this member
   let requestsList = [];
   const storedReqs = localStorage.getItem("gl_amendment_requests");
@@ -3627,7 +3636,7 @@ window.applyDeskNames = applyDeskNames;
 
 // ==================== NEW ADMIN / WORKFLOW ACTIONS ====================
 
-function registerNewUserProfile(e) {
+async function registerNewUserProfile(e) {
   e.preventDefault();
   const fullName = document.getElementById("reg-fullname").value.trim();
   const username = document.getElementById("reg-username").value.trim().toLowerCase();
@@ -3638,28 +3647,43 @@ function registerNewUserProfile(e) {
     return;
   }
   
-  let customUsers = [];
-  const stored = localStorage.getItem("gl_custom_users");
-  if (stored) {
-    try { customUsers = JSON.parse(stored); } catch(e) {}
-  }
-  
-  customUsers.push({ fullName, username, password });
-  localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
-  
-  // Register in current session roles
-  TEAM_ROLES[username] = {
-    name: `${fullName} (Free Hand)`,
-    type: 'member',
+  const newUser = {
+    username,
+    fullName,
+    password,
+    role: 'member',
     category: 'FREE HAND SALES (AIR/SEA)',
     currency: 'INR'
   };
-  
-  document.getElementById("reg-fullname").value = "";
-  document.getElementById("reg-username").value = "";
-  document.getElementById("reg-password").value = "";
-  
-  alert(`User Profile for "${fullName}" registered successfully! They can now log in using "${username}".`);
+
+  try {
+    if (DB.firestoreRef) {
+      await DB.firestoreRef.collection("users").doc(username).set(newUser);
+    } else {
+      let customUsers = [];
+      const stored = localStorage.getItem("gl_custom_users");
+      if (stored) {
+        try { customUsers = JSON.parse(stored); } catch(err) {}
+      }
+      customUsers.push(newUser);
+      localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+    }
+    
+    TEAM_ROLES[username] = {
+      name: `${fullName} (Free Hand)`,
+      type: 'member',
+      category: 'FREE HAND SALES (AIR/SEA)',
+      currency: 'INR'
+    };
+    
+    document.getElementById("reg-fullname").value = "";
+    document.getElementById("reg-username").value = "";
+    document.getElementById("reg-password").value = "";
+    
+    alert(`User Profile for "${fullName}" registered successfully! They can now log in using "${username}".`);
+  } catch (err) {
+    alert("❌ Error registering user: " + err.message);
+  }
 }
 window.registerNewUserProfile = registerNewUserProfile;
 
@@ -4488,6 +4512,9 @@ const DB = {
     
     console.log("DB: Registering Firestore snapshot listener...");
     
+    // Sync users list from Firestore
+    this.syncUsers();
+    
     // Unsubscribe from any existing listener if applicable
     if (this.snapshotUnsubscribe) {
       this.snapshotUnsubscribe();
@@ -4536,6 +4563,48 @@ const DB = {
       if (statusDot) statusDot.style.background = "#ef4444"; // red
       if (statusText) statusText.textContent = "Firebase: " + error.message;
     });
+  },
+  
+  async syncUsers() {
+    if (!this.firestoreRef) return;
+    try {
+      const snapshot = await this.firestoreRef.collection("users").get();
+      if (snapshot.empty) {
+        // Auto-populate default roles if empty
+        const defaultUsers = [
+          { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin' },
+          { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
+          { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+          { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
+          { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
+        ];
+        for (const u of defaultUsers) {
+          await this.firestoreRef.collection("users").doc(u.username).set(u);
+        }
+        console.log("DB: Auto-populated default users in Firestore");
+      }
+      
+      // Set listener on users collection
+      this.firestoreRef.collection("users").onSnapshot(snap => {
+        let customUsers = [];
+        snap.forEach(doc => {
+          const u = doc.data();
+          customUsers.push(u);
+          
+          // Update TEAM_ROLES dynamically
+          TEAM_ROLES[u.username] = {
+            name: u.fullName,
+            type: u.role || 'member',
+            category: u.category || 'FREE HAND SALES (AIR/SEA)',
+            currency: u.currency || 'INR'
+          };
+        });
+        window._firebaseUsers = customUsers;
+        console.log("DB: Synced users from Firestore count:", customUsers.length);
+      });
+    } catch (err) {
+      console.error("DB: Failed to sync users from Firestore:", err);
+    }
   },
   
   fallbackToLocal() {
@@ -4659,12 +4728,13 @@ const DB = {
 window.DB = DB;
 
 async function loadLogisticsNews(type = 'global') {
-  const container = document.getElementById("logistics-news-list");
-  if (!container) return;
+  const container1 = document.getElementById("logistics-news-list");
+  const container2 = document.getElementById("member-logistics-news-list");
+  if (!container1 && !container2) return;
 
+  // Update Admin tabs
   const tabGlobal = document.getElementById("news-tab-global");
   const tabIndia = document.getElementById("news-tab-india");
-  
   if (tabGlobal && tabIndia) {
     if (type === 'global') {
       tabGlobal.classList.add("active");
@@ -4683,12 +4753,35 @@ async function loadLogisticsNews(type = 'global') {
     }
   }
 
-  container.innerHTML = `
-    <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 3rem;">
+  // Update Member tabs
+  const mTabGlobal = document.getElementById("member-news-tab-global");
+  const mTabIndia = document.getElementById("member-news-tab-india");
+  if (mTabGlobal && mTabIndia) {
+    if (type === 'global') {
+      mTabGlobal.classList.add("active");
+      mTabGlobal.style.borderColor = "var(--sky)";
+      mTabGlobal.style.color = "var(--sky)";
+      mTabIndia.classList.remove("active");
+      mTabIndia.style.borderColor = "transparent";
+      mTabIndia.style.color = "var(--t3)";
+    } else {
+      mTabIndia.classList.add("active");
+      mTabIndia.style.borderColor = "var(--sky)";
+      mTabIndia.style.color = "var(--sky)";
+      mTabGlobal.classList.remove("active");
+      mTabGlobal.style.borderColor = "transparent";
+      mTabGlobal.style.color = "var(--t3)";
+    }
+  }
+
+  const loadingHtml = `
+    <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
       <span style="display:inline-block; width:6px; height:6px; background:var(--sky); border-radius:50%; margin-right:4px;"></span>
-      Fetching latest ${type === 'global' ? 'Global' : 'India'} logistics news...
+      Fetching latest ${type === 'global' ? 'Global' : 'India'} news...
     </div>
   `;
+  if (container1) container1.innerHTML = loadingHtml;
+  if (container2) container2.innerHTML = loadingHtml;
 
   const rssUrl = type === 'global' 
     ? "https://theloadstar.com/feed/" 
@@ -4700,7 +4793,7 @@ async function loadLogisticsNews(type = 'global') {
     const data = await res.json();
     
     if (data && data.status === 'ok' && data.items && data.items.length > 0) {
-      container.innerHTML = data.items.map(item => {
+      const itemsHtml = data.items.map(item => {
         let dateStr = "";
         try {
           const d = new Date(item.pubDate);
@@ -4725,16 +4818,114 @@ async function loadLogisticsNews(type = 'global') {
           </a>
         `;
       }).join("");
+
+      if (container1) container1.innerHTML = itemsHtml;
+      if (container2) container2.innerHTML = itemsHtml;
     } else {
       throw new Error("Invalid RSS feed response");
     }
   } catch (err) {
     console.error("Failed to load logistics news:", err);
-    container.innerHTML = `
-      <div style="font-size: 0.72rem; color: var(--accent-error); font-style: italic; text-align: center; margin-top: 3rem;">
-        ⚠️ Failed to load news feed. Check connection or try again.
+    const errorHtml = `
+      <div style="font-size: 0.72rem; color: var(--accent-error); font-style: italic; text-align: center; margin-top: 1.5rem;">
+        ⚠️ Failed to load news feed.
       </div>
     `;
+    if (container1) container1.innerHTML = errorHtml;
+    if (container2) container2.innerHTML = errorHtml;
   }
 }
 window.loadLogisticsNews = loadLogisticsNews;
+
+// MODAL & SECURITY HANDLERS
+function toggleAdminSettingsModal() {
+  const modal = document.getElementById("admin-settings-modal");
+  if (!modal) return;
+  
+  if (modal.style.display === "none" || !modal.style.display) {
+    // Populate configurations dynamically inside modal inputs
+    const savedNames = localStorage.getItem("gl_desk_names");
+    if (savedNames) {
+      try {
+        const parsed = JSON.parse(savedNames);
+        if (parsed["shashank"]) document.getElementById("cfg-shashank").value = parsed["shashank"];
+        if (parsed["mahendra"]) document.getElementById("cfg-mahendra").value = parsed["mahendra"];
+        if (parsed["jaya"]) document.getElementById("cfg-jaya").value = parsed["jaya"];
+        if (parsed["cathrina"]) document.getElementById("cfg-cathrina").value = parsed["cathrina"];
+      } catch(e) {}
+    }
+    
+    document.getElementById("cfg-gmaps-key").value = localStorage.getItem("gl_gmaps_key") || "";
+    document.getElementById("cfg-firebase-json").value = localStorage.getItem("gl_firebase_config_raw") || "";
+    
+    modal.style.display = "flex";
+  } else {
+    modal.style.display = "none";
+  }
+}
+window.toggleAdminSettingsModal = toggleAdminSettingsModal;
+
+function openChangePasswordModal() {
+  const modal = document.getElementById("change-password-modal");
+  if (modal) modal.style.display = "flex";
+}
+window.openChangePasswordModal = openChangePasswordModal;
+
+function closeChangePasswordModal() {
+  const modal = document.getElementById("change-password-modal");
+  if (modal) {
+    modal.style.display = "none";
+    document.getElementById("new-pass-val").value = "";
+  }
+}
+window.closeChangePasswordModal = closeChangePasswordModal;
+
+async function saveNewPassword(e) {
+  e.preventDefault();
+  const newPass = document.getElementById("new-pass-val").value;
+  if (!newPass || newPass.length < 6) {
+    alert("Password must be at least 6 characters long.");
+    return;
+  }
+
+  const currentUser = appState.currentUser;
+  if (!currentUser) return;
+
+  try {
+    if (DB.firestoreRef) {
+      // Find dynamic user document in Firestore and update
+      await DB.firestoreRef.collection("users").doc(currentUser).update({
+        password: newPass
+      });
+      alert("🎉 Password updated successfully in Cloud Database!");
+    } else {
+      // Offline local storage fallback
+      let customUsers = [];
+      const stored = localStorage.getItem("gl_custom_users");
+      if (stored) {
+        try { customUsers = JSON.parse(stored); } catch(err) {}
+      }
+      
+      const matched = customUsers.find(u => u.username.toLowerCase() === currentUser);
+      if (matched) {
+        matched.password = newPass;
+        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+        alert("🎉 Password updated successfully in local session!");
+      } else {
+        // Fallback for default hardcoded users
+        const mockCustomUser = {
+          username: currentUser,
+          fullName: TEAM_ROLES[currentUser].name,
+          password: newPass
+        };
+        customUsers.push(mockCustomUser);
+        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+        alert("🎉 Password created successfully for offline session!");
+      }
+    }
+    closeChangePasswordModal();
+  } catch (err) {
+    alert("❌ Error saving new password: " + err.message);
+  }
+}
+window.saveNewPassword = saveNewPassword;
