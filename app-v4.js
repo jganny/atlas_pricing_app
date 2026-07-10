@@ -4682,6 +4682,7 @@ const DB = {
           };
         });
         window._firebaseUsers = customUsers;
+        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
         console.log("DB: Synced users from Firestore count:", customUsers.length);
       });
     } catch (err) {
