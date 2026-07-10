@@ -49,6 +49,7 @@ function loadCustomUsers() {
     try {
       const users = JSON.parse(stored);
       users.forEach(u => {
+        if (!u || !u.username || typeof u.username !== 'string') return;
         const lowerUser = u.username.toLowerCase();
         TEAM_ROLES[lowerUser] = {
           name: `${u.fullName} (Free Hand)`,
@@ -310,7 +311,7 @@ function handleLogin(e) {
     }
   }
 
-  const matched = dbUsers.find(u => u.username.toLowerCase() === user);
+  const matched = dbUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === user);
   const validHardcoded = ["ganny", "shashank", "mahendra", "jaya", "cathrina"];
 
   if (matched) {
@@ -5087,7 +5088,7 @@ async function saveNewPassword(e) {
         try { customUsers = JSON.parse(stored); } catch(err) {}
       }
       
-      const matched = customUsers.find(u => u.username.toLowerCase() === currentUser);
+      const matched = customUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === currentUser);
       if (matched) {
         matched.password = newPass;
         localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
