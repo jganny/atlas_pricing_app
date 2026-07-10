@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap');
 
 /* ══════════════════════════════════════════════════
    DESIGN TOKENS
@@ -97,7 +97,7 @@
   width: 0.55em;
   height: 0.72em;
   margin-left: 2px;
-  vertical-align: middle;
+  vertical-align: baseline;
 }
 .custom-brand-x::before {
   content: '';
