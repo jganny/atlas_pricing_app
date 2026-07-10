@@ -2491,7 +2491,6 @@ function saveCurrentQuote() {
     quoteNumber: appState.quotes.length + 1
   };
 
-  const lowerCust = customerName.toLowerCase().trim();
   const ctrlCust = (window._customerControls && window._customerControls[lowerCust]) || {};
   if (uploadedFile) {
     quoteData.agencyAgreementName = uploadedFile.name;
