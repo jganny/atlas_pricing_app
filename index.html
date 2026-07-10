@@ -539,12 +539,26 @@
               <div class="toggle-option" id="air-tab-import">Air Import</div>
             </div>
             
-            <div class="form-grid-3">
-              <div class="form-group autocomplete-container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
+              <div class="form-group autocomplete-container" style="margin-bottom: 0;">
                 <label for="air-cust-name">Customer Name</label>
                 <input type="text" id="air-cust-name" placeholder="e.g. Zenith Electronics Ltd" autocomplete="off">
               </div>
-              <div class="form-group">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="air-agency-agreement" style="display: flex; align-items: center; justify-content: space-between;">
+                  <span>Agency Agreement</span>
+                  <span id="air-agreement-status" style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error);">[Required]</span>
+                </label>
+                <div style="display: flex; gap: 0.4rem; align-items: center; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; padding: 4px 8px; height: 38px;">
+                  <input type="file" id="air-agency-agreement" style="display: none;" onchange="handleAgreementUpload('air', this)">
+                  <button type="button" class="btn-secondary" onclick="document.getElementById('air-agency-agreement').click()" style="padding: 2px 8px; font-size: 0.65rem; margin: 0; display: inline-flex; align-items: center; gap: 3px; border-radius: 4px; border: 1px solid var(--border-2); height: 28px; background: rgba(27,28,92,0.05); color: var(--sky); cursor: pointer;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    Upload PDF
+                  </button>
+                  <span id="air-agreement-filename" style="font-size: 0.65rem; color: var(--t3); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 120px;">No file selected</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
                 <label for="air-currency">Quoting Currency</label>
                 <select id="air-currency">
                   <option value="USD">USD - US Dollar</option>
@@ -553,7 +567,7 @@
                   <option value="INR">INR - Indian Rupee</option>
                 </select>
               </div>
-              <div class="form-group">
+              <div class="form-group" style="margin-bottom: 0;">
                 <label for="air-incoterm">Incoterm</label>
                 <select id="air-incoterm">
                   <option value="EXW" selected>EXW - Ex Works</option>
@@ -928,12 +942,26 @@
               <div class="toggle-option" id="sea-tab-import">Sea Import</div>
             </div>
             
-            <div class="form-grid-3">
-              <div class="form-group autocomplete-container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
+              <div class="form-group autocomplete-container" style="margin-bottom: 0;">
                 <label for="sea-cust-name">Customer Name</label>
                 <input type="text" id="sea-cust-name" placeholder="e.g. Adani Enterprises" autocomplete="off">
               </div>
-              <div class="form-group">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="sea-agency-agreement" style="display: flex; align-items: center; justify-content: space-between;">
+                  <span>Agency Agreement</span>
+                  <span id="sea-agreement-status" style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error);">[Required]</span>
+                </label>
+                <div style="display: flex; gap: 0.4rem; align-items: center; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; padding: 4px 8px; height: 38px;">
+                  <input type="file" id="sea-agency-agreement" style="display: none;" onchange="handleAgreementUpload('sea', this)">
+                  <button type="button" class="btn-secondary" onclick="document.getElementById('sea-agency-agreement').click()" style="padding: 2px 8px; font-size: 0.65rem; margin: 0; display: inline-flex; align-items: center; gap: 3px; border-radius: 4px; border: 1px solid var(--border-2); height: 28px; background: rgba(27,28,92,0.05); color: var(--sky); cursor: pointer;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    Upload PDF
+                  </button>
+                  <span id="sea-agreement-filename" style="font-size: 0.65rem; color: var(--t3); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 120px;">No file selected</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
                 <label for="sea-currency">Quoting Currency</label>
                 <select id="sea-currency">
                   <option value="USD">USD - US Dollar</option>
@@ -942,7 +970,7 @@
                   <option value="INR">INR - Indian Rupee</option>
                 </select>
               </div>
-              <div class="form-group">
+              <div class="form-group" style="margin-bottom: 0;">
                 <label for="sea-incoterm">Incoterm</label>
                 <select id="sea-incoterm">
                   <option value="EXW" selected>EXW - Ex Works</option>
@@ -1451,6 +1479,30 @@
             💡 <em>New users will be granted access to the <strong>Local Free Hand Sales Category</strong> only, with no access to Nomination or NRS desks.</em>
           </div>
         </div>
+
+        <!-- Card 3: Credit Control & Document Compliance (Admin Only) -->
+        <div style="border-top: 1px solid var(--border-1); padding-top: 1.5rem;">
+          <h3 style="font-weight: 800; margin-bottom: 1rem; font-size: 0.95rem; text-transform: uppercase; color: var(--accent-warning); font-family: 'Outfit', sans-serif;">Customer Credit Control & Compliance</h3>
+          <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <input type="text" id="admin-cust-search" placeholder="Search customer directory..." oninput="filterAdminCustomerList(this.value)" style="max-width: 250px; font-size: 0.72rem; padding: 4px 8px; border-radius: 6px;">
+          </div>
+          <div class="quotes-table-container" style="max-height: 250px; overflow-y: auto;">
+            <table class="quotes-table" style="font-size: 0.72rem;">
+              <thead>
+                <tr>
+                  <th>Customer/Agent Name</th>
+                  <th>Credit Period</th>
+                  <th>Compliance Status</th>
+                  <th>Account Status</th>
+                  <th>Admin Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-customer-control-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1527,6 +1579,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=2.1"></script>
+  <script src="app-v4.js?v=2.2"></script>
 </body>
 </html>

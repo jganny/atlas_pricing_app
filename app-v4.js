@@ -2319,6 +2319,72 @@ function saveCurrentQuote() {
     return;
   }
 
+  // 1. Credit Control & Block Status Checks
+  const lowerCust = customerName.toLowerCase();
+  let control = (window._customerControls && window._customerControls[lowerCust]) || null;
+  if (!control) {
+    try {
+      const storedControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+      control = storedControls[lowerCust] || null;
+    } catch(e) {}
+  }
+
+  const creditDays = control ? (parseInt(control.creditDays) || 30) : 30;
+  const isBlocked = control ? !!control.blocked : false;
+  const waiveAgreement = control ? !!control.waiveAgreement : false;
+
+  if (isBlocked) {
+    alert(`❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" is currently blocked due to credit limit or compliance audit.\n\nQuote cannot be executed until released by the Admin (Ganny).`);
+    return;
+  }
+
+  const matchingQuotes = appState.quotes.filter(q => q.customer.trim().toLowerCase() === lowerCust && q.status === 'quoted');
+  let hasExceededCredit = false;
+  let oldestDays = 0;
+
+  matchingQuotes.forEach(q => {
+    const quoteDate = new Date(q.date);
+    const diffTime = Math.abs(new Date() - quoteDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays > creditDays) {
+      hasExceededCredit = true;
+      if (diffDays > oldestDays) oldestDays = diffDays;
+    }
+  });
+
+  if (hasExceededCredit) {
+    if (DB.firestoreRef) {
+      DB.firestoreRef.collection("customer_control").doc(lowerCust).set({
+        customer: customerName,
+        creditDays: creditDays,
+        blocked: true,
+        waiveAgreement: waiveAgreement
+      }, { merge: true });
+    } else {
+      try {
+        let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+        offlineControls[lowerCust] = {
+          customer: customerName,
+          creditDays: creditDays,
+          blocked: true,
+          waiveAgreement: waiveAgreement
+        };
+        localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+      } catch(e) {}
+    }
+    alert(`❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" has exceeded their assigned credit period of ${creditDays} days (oldest outstanding quote is ${oldestDays} days old).\n\nExecution blocked until released by the Admin.`);
+    return;
+  }
+
+  // 2. Agency Agreement Compliance Checks (Admin Ganny is exempt)
+  if (appState.currentUser !== 'ganny') {
+    const isUploaded = window._uploadedAgreements && window._uploadedAgreements[isAir ? 'air' : 'sea'];
+    if (!isUploaded && !waiveAgreement) {
+      alert(`❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to execute a quote for "${customerName}".\n\nPlease upload the agreement in the calculator page first, or contact the Admin to waive this requirement.`);
+      return;
+    }
+  }
+
   saveCustomCustomer(customerName);
 
   let quoteData = {
@@ -2697,6 +2763,27 @@ function saveCurrentQuote() {
   
   resetSurchargesToDefaults();
   
+  // Clear agreement variables
+  if (!window._uploadedAgreements) window._uploadedAgreements = {};
+  window._uploadedAgreements['air'] = null;
+  window._uploadedAgreements['sea'] = null;
+  
+  const airStatusLabel = document.getElementById("air-agreement-status");
+  if (airStatusLabel) {
+    airStatusLabel.textContent = "[Required]";
+    airStatusLabel.style.color = "var(--accent-error)";
+  }
+  const airFilenameLabel = document.getElementById("air-agreement-filename");
+  if (airFilenameLabel) airFilenameLabel.textContent = "No file selected";
+
+  const seaStatusLabel = document.getElementById("sea-agreement-status");
+  if (seaStatusLabel) {
+    seaStatusLabel.textContent = "[Required]";
+    seaStatusLabel.style.color = "var(--accent-error)";
+  }
+  const seaFilenameLabel = document.getElementById("sea-agreement-filename");
+  if (seaFilenameLabel) seaFilenameLabel.textContent = "No file selected";
+
   alert("Quotation successfully saved to database!");
   returnToWorkspace();
 }
@@ -4495,6 +4582,21 @@ const DB = {
     // Sync users list from Firestore
     this.syncUsers();
     
+    // Sync customer controls list from Firestore
+    if (this.firestoreRef) {
+      this.firestoreRef.collection("customer_control").onSnapshot(snap => {
+        let controls = {};
+        snap.forEach(doc => {
+          controls[doc.id] = doc.data();
+        });
+        window._customerControls = controls;
+        localStorage.setItem("gl_customer_controls", JSON.stringify(controls));
+        renderAdminCustomerControlList();
+      }, err => {
+        console.warn("Firestore: customer_control listen failed, using local/cached records:", err);
+      });
+    }
+    
     // Unsubscribe from any existing listener if applicable
     if (this.snapshotUnsubscribe) {
       this.snapshotUnsubscribe();
@@ -4838,6 +4940,7 @@ function toggleAdminSettingsModal() {
     document.getElementById("cfg-gmaps-key").value = localStorage.getItem("gl_gmaps_key") || "";
     document.getElementById("cfg-firebase-json").value = localStorage.getItem("gl_firebase_config_raw") || "";
     
+    renderAdminCustomerControlList();
     modal.style.display = "flex";
   } else {
     modal.style.display = "none";
@@ -5179,3 +5282,193 @@ function filterNrsRegistry(query) {
   displayNrsRegistryItems(filtered);
 }
 window.filterNrsRegistry = filterNrsRegistry;
+
+// CREDIT CONTROL & COMPLIANCE HANDLERS
+window._uploadedAgreements = { air: null, sea: null };
+function handleAgreementUpload(mode, input) {
+  if (!input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  
+  if (!window._uploadedAgreements) window._uploadedAgreements = {};
+  window._uploadedAgreements[mode] = {
+    name: file.name,
+    size: file.size
+  };
+
+  const statusLabel = document.getElementById(`${mode}-agreement-status`);
+  if (statusLabel) {
+    statusLabel.textContent = "[Uploaded]";
+    statusLabel.style.color = "var(--accent-success)";
+  }
+
+  const filenameLabel = document.getElementById(`${mode}-agreement-filename`);
+  if (filenameLabel) {
+    filenameLabel.textContent = file.name;
+    filenameLabel.title = file.name;
+  }
+}
+window.handleAgreementUpload = handleAgreementUpload;
+
+async function renderAdminCustomerControlList() {
+  const tbody = document.getElementById("admin-customer-control-body");
+  if (!tbody) return;
+
+  // Compile unique customers
+  const customers = Array.from(new Set(appState.quotes.map(q => q.customer.trim())));
+  const defaultCusts = ["Zenith Electronics Ltd", "Adani Enterprises", "Tata Motors", "Reliance Industries"];
+  defaultCusts.forEach(c => {
+    if (!customers.some(x => x.toLowerCase() === c.toLowerCase())) {
+      customers.push(c);
+    }
+  });
+
+  if (customers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No customers found.</td></tr>`;
+    return;
+  }
+
+  let controls = window._customerControls || {};
+  if (Object.keys(controls).length === 0) {
+    try {
+      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+    } catch(e) {}
+  }
+
+  window._adminCustomerListCached = customers.map(name => {
+    const lower = name.toLowerCase();
+    const ctrl = controls[lower] || {
+      customer: name,
+      creditDays: 30,
+      blocked: false,
+      waiveAgreement: false
+    };
+    return ctrl;
+  });
+
+  displayAdminCustomerControlList(window._adminCustomerListCached);
+}
+window.renderAdminCustomerControlList = renderAdminCustomerControlList;
+
+function displayAdminCustomerControlList(list) {
+  const tbody = document.getElementById("admin-customer-control-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  tbody.innerHTML = list.map(ctrl => {
+    const isBlocked = !!ctrl.blocked;
+    const waiveAgreement = !!ctrl.waiveAgreement;
+    const creditDays = ctrl.creditDays || 30;
+
+    return `
+      <tr>
+        <td style="font-weight: 700; color: var(--t1);">${ctrl.customer}</td>
+        <td>
+          <input type="number" value="${creditDays}" min="0" max="365" 
+            style="width: 60px; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" 
+            onchange="updateCustomerCreditLimit('${ctrl.customer}', this.value)">
+        </td>
+        <td>
+          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${waiveAgreement ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)'}; color: ${waiveAgreement ? 'var(--accent-success)' : 'var(--accent-error)'};">
+            ${waiveAgreement ? 'Agreement Waived' : 'Agreement Required'}
+          </span>
+        </td>
+        <td>
+          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isBlocked ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'}; color: ${isBlocked ? 'var(--accent-error)' : 'var(--accent-success)'};">
+            ${isBlocked ? 'Blocked (Held)' : 'Active (Released)'}
+          </span>
+        </td>
+        <td>
+          <div style="display: flex; gap: 0.3rem;">
+            <button class="btn-primary" onclick="toggleCustomerBlock('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 6px; margin: 0; background: ${isBlocked ? 'var(--accent-success)' : 'var(--accent-error)'}; color: #000; font-weight: 800; border-radius: 4px; cursor: pointer;">
+              ${isBlocked ? 'Release' : 'Block'}
+            </button>
+            <button class="btn-secondary" onclick="toggleCustomerAgreementWaiver('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 6px; margin: 0; font-weight: 700; border-radius: 4px; border: 1px solid var(--border-2); cursor: pointer; background: var(--bg-card); color: var(--t1);">
+              ${waiveAgreement ? 'Require Agreement' : 'Waive Agreement'}
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function updateCustomerCreditLimit(customerName, days) {
+  const val = parseInt(days);
+  if (isNaN(val) || val < 0) return;
+  const lower = customerName.toLowerCase();
+
+  let controls = window._customerControls || {};
+  if (!controls[lower]) {
+    controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
+  }
+  controls[lower].creditDays = val;
+  window._customerControls = controls;
+
+  // Save to database
+  if (DB.firestoreRef) {
+    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+  } else {
+    try {
+      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+      offlineControls[lower] = controls[lower];
+      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+    } catch(e) {}
+  }
+}
+window.updateCustomerCreditLimit = updateCustomerCreditLimit;
+
+async function toggleCustomerBlock(customerName) {
+  const lower = customerName.toLowerCase();
+  let controls = window._customerControls || {};
+  if (!controls[lower]) {
+    controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
+  }
+  controls[lower].blocked = !controls[lower].blocked;
+  window._customerControls = controls;
+
+  if (DB.firestoreRef) {
+    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+  } else {
+    try {
+      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+      offlineControls[lower] = controls[lower];
+      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+    } catch(e) {}
+    renderAdminCustomerControlList();
+  }
+}
+window.toggleCustomerBlock = toggleCustomerBlock;
+
+async function toggleCustomerAgreementWaiver(customerName) {
+  const lower = customerName.toLowerCase();
+  let controls = window._customerControls || {};
+  if (!controls[lower]) {
+    controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
+  }
+  controls[lower].waiveAgreement = !controls[lower].waiveAgreement;
+  window._customerControls = controls;
+
+  if (DB.firestoreRef) {
+    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+  } else {
+    try {
+      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+      offlineControls[lower] = controls[lower];
+      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+    } catch(e) {}
+    renderAdminCustomerControlList();
+  }
+}
+window.toggleCustomerAgreementWaiver = toggleCustomerAgreementWaiver;
+
+function filterAdminCustomerList(query) {
+  const list = window._adminCustomerListCached || [];
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    displayAdminCustomerControlList(list);
+    return;
+  }
+  const filtered = list.filter(c => c.customer.toLowerCase().includes(q));
+  displayAdminCustomerControlList(filtered);
+}
+window.filterAdminCustomerList = filterAdminCustomerList;
