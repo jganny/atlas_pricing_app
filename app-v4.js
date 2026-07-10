@@ -4929,3 +4929,67 @@ async function saveNewPassword(e) {
   }
 }
 window.saveNewPassword = saveNewPassword;
+
+// GLOBAL KEYBOARD ACCESSIBILITY
+document.addEventListener("keydown", (e) => {
+  // ESC key: Exit modals and return to home from calculators
+  if (e.key === "Escape") {
+    const modalIds = [
+      "admin-settings-modal", 
+      "change-password-modal", 
+      "xe-rates-modal", 
+      "print-preview-modal"
+    ];
+    let modalClosed = false;
+    
+    for (const id of modalIds) {
+      const modal = document.getElementById(id);
+      if (modal && (modal.style.display === "flex" || modal.style.display === "block")) {
+        modal.style.display = "none";
+        modalClosed = true;
+        
+        // Modal-specific cleanups
+        if (id === "change-password-modal") {
+          document.getElementById("new-pass-val").value = "";
+        }
+      }
+    }
+    
+    // If no modal was closed, but we are inside an active calculator desk, return back to main dashboard
+    if (!modalClosed) {
+      const activePanel = document.querySelector(".view-panel.active");
+      if (activePanel && activePanel.id !== "manager-panel" && activePanel.id !== "member-dashboard-panel") {
+        goHome();
+      }
+    }
+  }
+
+  // Enter key: Auto-proceed on forms
+  if (e.key === "Enter") {
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === "BUTTON" || activeEl.tagName === "TEXTAREA")) {
+      return;
+    }
+
+    // 1. If inside change password modal and input is focused, submit it
+    const cpModal = document.getElementById("change-password-modal");
+    if (cpModal && cpModal.style.display === "flex") {
+      const form = document.getElementById("change-password-form");
+      if (form) {
+        form.requestSubmit();
+        e.preventDefault();
+      }
+      return;
+    }
+
+    // 2. If inside login overlay and username/password is focused, submit
+    const loginOverlay = document.getElementById("login-overlay");
+    if (loginOverlay && loginOverlay.style.display !== "none") {
+      const form = document.getElementById("login-form");
+      if (form) {
+        form.requestSubmit();
+        e.preventDefault();
+      }
+    }
+  }
+});

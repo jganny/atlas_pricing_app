@@ -37,10 +37,16 @@
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-overlay" class="login-overlay-screen">
     <div class="login-card">
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
-        <img src="logo.png" alt="Vertex Logo" style="height: 76px; width: 76px; object-fit: contain; border-radius: 50%;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <svg class="globe-logo" style="width: 80px; height: 80px;" viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="#1b1c5c" stroke-width="2.2" />
+          <path d="M2 12h20" stroke="#eab308" stroke-width="1.8" />
+          <path d="M3.6 9h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
+          <path d="M3.6 15h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#1b1c5c" stroke-width="1.8" />
+        </svg>
         <div style="text-align: center;">
-          <div style="font-size: 1.9rem; font-weight: 900; letter-spacing: 0.06em; color: var(--text-brand); line-height: 1.1; font-family: 'Outfit', 'Inter', system-ui, sans-serif;">VERTEX</div>
+          <div style="font-size: 2.1rem; font-weight: 900; letter-spacing: 0.06em; color: var(--text-brand); line-height: 1.1; font-family: 'Outfit', system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center;">VERTEX<span class="custom-brand-x" style="width: 18px; height: 26px; margin-left: 3px;"></span></div>
           <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.02em;">Atlas Pricing</div>
         </div>
       </div>
@@ -66,9 +72,15 @@
     <header>
       <div class="header-content">
         <div class="logo-section" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" onclick="goHome()">
-          <img src="logo.png" alt="Vertex Logo" style="height: 48px; width: 48px; object-fit: contain; border-radius: 50%;">
+          <svg class="globe-logo" style="width: 52px; height: 52px;" viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="#1b1c5c" stroke-width="2.2" />
+            <path d="M2 12h20" stroke="#eab308" stroke-width="1.8" />
+            <path d="M3.6 9h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
+            <path d="M3.6 15h16.8" stroke="#eab308" stroke-width="1.5" opacity="0.85" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#1b1c5c" stroke-width="1.8" />
+          </svg>
           <div style="display: flex; flex-direction: column; justify-content: center;">
-            <div class="logo-text" style="font-size: 1.45rem; font-weight: 900; color: var(--sky); line-height: 1.0; font-family: 'Outfit', 'Inter', system-ui, sans-serif; letter-spacing: 0.06em;">VERTEX</div>
+            <div class="logo-text" style="font-size: 1.45rem; font-weight: 900; color: var(--sky); line-height: 1.0; font-family: 'Outfit', system-ui, sans-serif; letter-spacing: 0.06em; display: inline-flex; align-items: center;">VERTE<span class="custom-brand-x"></span></div>
             <div style="font-size: 0.72rem; color: var(--t3); font-weight: 700; letter-spacing: 0.04em; margin-top: 0.15rem; text-transform: uppercase;">Atlas Pricing</div>
           </div>
         </div>
@@ -79,23 +91,6 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span id="active-user-name">Pricing Team</span>
           </div>
-          <!-- Calculator Desk return button -->
-          <button id="calculator-desk-btn" class="calculator-desk-btn" onclick="goHome()" style="display: flex; align-items: center; gap: 0.4rem; background: none; border: 1px solid var(--border-1); color: var(--t2); padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
-              <line x1="8" y1="6" x2="16" y2="6"/>
-              <line x1="16" y1="14" x2="16" y2="14.01"/>
-              <line x1="8" y1="10" x2="8" y2="10.01"/>
-              <line x1="12" y1="10" x2="12" y2="10.01"/>
-              <line x1="16" y1="10" x2="16" y2="10.01"/>
-              <line x1="8" y1="14" x2="8" y2="14.01"/>
-              <line x1="12" y1="14" x2="12" y2="14.01"/>
-              <line x1="8" y1="18" x2="8" y2="18.01"/>
-              <line x1="12" y1="18" x2="12" y2="18.01"/>
-              <line x1="16" y1="18" x2="16" y2="18.01"/>
-            </svg>
-            Desk
-          </button>
           <!-- Admin settings button -->
           <button id="admin-settings-btn" class="admin-settings-btn" onclick="toggleAdminSettingsModal()" style="display: none; align-items: center; gap: 0.4rem; background: rgba(27, 28, 92, 0.05); border: 1px solid var(--border-1); color: var(--sky); padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1426,6 +1421,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=1.7"></script>
+  <script src="app-v4.js?v=1.8"></script>
 </body>
 </html>

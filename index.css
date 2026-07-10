@@ -87,6 +87,35 @@
 
   /* Custom Brand Accent */
   --text-brand: #0f172a;
+  --brand-gold: #eab308;
+}
+
+/* Custom Vector Brand X */
+.custom-brand-x {
+  position: relative;
+  display: inline-block;
+  width: 0.55em;
+  height: 0.72em;
+  margin-left: 2px;
+  vertical-align: middle;
+}
+.custom-brand-x::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0.22em;
+  width: 0.14em; height: 100%;
+  background: #1b1c5c; /* Navy Blue */
+  transform: rotate(32deg);
+  border-radius: 2px;
+}
+.custom-brand-x::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0.22em;
+  width: 0.14em; height: 100%;
+  background: #eab308; /* Yellow */
+  transform: rotate(-32deg);
+  border-radius: 2px;
 }
 
 /* ══════════════════════════════════════════════════
