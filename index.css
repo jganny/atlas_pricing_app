@@ -460,6 +460,38 @@ main {
   margin-bottom: 1.5rem;
 }
 
+.news-tab {
+  background: none;
+  border: 1px solid transparent;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--t3);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  transition: all 0.17s;
+}
+.news-tab.active {
+  color: var(--sky) !important;
+  border-color: var(--sky) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+.news-tab:hover:not(.active) {
+  color: var(--t1) !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.news-feed-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.news-feed-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--sky) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
 
 /* ══════════════════════════════════════════════════
    LEADERBOARD TABLE

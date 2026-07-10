@@ -1829,6 +1829,12 @@ window.deleteNrsAlert = deleteNrsAlert;
 // ADMIN DASHBOARD RENDERING
 function renderAdminDashboard() {
   renderControlTowerFeed();
+  if (!window._newsLoaded) {
+    setTimeout(() => {
+      loadLogisticsNews('global');
+      window._newsLoaded = true;
+    }, 100);
+  }
   const totalEnquiries = appState.quotes.length;
   let totalRevenueINR = 0;
   let conversions = 0;
@@ -4652,20 +4658,83 @@ const DB = {
 };
 window.DB = DB;
 
-async function confirmResetDatabase() {
-  if (confirm("⚠️ WARNING: Are you sure you want to delete ALL quotes from the cloud database? This action is permanent and cannot be undone.")) {
-    const statusText = document.getElementById("db-connection-text");
-    const originalText = statusText ? statusText.textContent : "Firebase";
-    if (statusText) statusText.textContent = "Resetting database...";
-    
-    try {
-      await DB.clearAllQuotes();
-      alert("🎉 Cloud database has been successfully reset! Page will reload now.");
-      location.reload();
-    } catch (err) {
-      alert("❌ Error resetting database: " + err.message);
-      if (statusText) statusText.textContent = originalText;
+async function loadLogisticsNews(type = 'global') {
+  const container = document.getElementById("logistics-news-list");
+  if (!container) return;
+
+  const tabGlobal = document.getElementById("news-tab-global");
+  const tabIndia = document.getElementById("news-tab-india");
+  
+  if (tabGlobal && tabIndia) {
+    if (type === 'global') {
+      tabGlobal.classList.add("active");
+      tabGlobal.style.borderColor = "var(--sky)";
+      tabGlobal.style.color = "var(--sky)";
+      tabIndia.classList.remove("active");
+      tabIndia.style.borderColor = "transparent";
+      tabIndia.style.color = "var(--t3)";
+    } else {
+      tabIndia.classList.add("active");
+      tabIndia.style.borderColor = "var(--sky)";
+      tabIndia.style.color = "var(--sky)";
+      tabGlobal.classList.remove("active");
+      tabGlobal.style.borderColor = "transparent";
+      tabGlobal.style.color = "var(--t3)";
     }
   }
+
+  container.innerHTML = `
+    <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 3rem;">
+      <span style="display:inline-block; width:6px; height:6px; background:var(--sky); border-radius:50%; margin-right:4px;"></span>
+      Fetching latest ${type === 'global' ? 'Global' : 'India'} logistics news...
+    </div>
+  `;
+
+  const rssUrl = type === 'global' 
+    ? "https://theloadstar.com/feed/" 
+    : "https://www.logisticsinsider.in/feed/";
+  const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+
+  try {
+    const res = await fetch(feedUrl);
+    const data = await res.json();
+    
+    if (data && data.status === 'ok' && data.items && data.items.length > 0) {
+      container.innerHTML = data.items.map(item => {
+        let dateStr = "";
+        try {
+          const d = new Date(item.pubDate);
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+          }
+        } catch(e) {}
+        
+        const title = item.title || "Logistics News Update";
+        const link = item.link || "#";
+        const author = item.author ? ` • By ${item.author}` : "";
+        
+        return `
+          <a href="${link}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block; margin-bottom: 0.5rem;">
+            <div class="news-feed-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.25rem; transition: all 0.2s; cursor: pointer;">
+              <div style="font-weight: 750; font-size: 0.75rem; color: var(--t1); line-height: 1.3;">${title}</div>
+              <div style="font-size: 0.62rem; color: var(--sky); font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
+                <span>${type === 'global' ? 'THE LOADSTAR' : 'LOGISTICS INSIDER INDIA'}${author}</span>
+                <span>${dateStr}</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join("");
+    } else {
+      throw new Error("Invalid RSS feed response");
+    }
+  } catch (err) {
+    console.error("Failed to load logistics news:", err);
+    container.innerHTML = `
+      <div style="font-size: 0.72rem; color: var(--accent-error); font-style: italic; text-align: center; margin-top: 3rem;">
+        ⚠️ Failed to load news feed. Check connection or try again.
+      </div>
+    `;
+  }
 }
-window.confirmResetDatabase = confirmResetDatabase;
+window.loadLogisticsNews = loadLogisticsNews;

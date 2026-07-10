@@ -149,71 +149,36 @@
         <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem; position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
             <div>
-              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Live Operations Monitor</div>
+              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Logistics & Supply Chain Intelligence</div>
               <h2 style="font-size: 1.25rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">GLOBAL CONTROL TOWER</h2>
             </div>
             <div style="display: flex; align-items: center; gap: 0.6rem; background: rgba(21, 128, 61, 0.06); border: 1px solid rgba(21, 128, 61, 0.12); padding: 0.35rem 0.75rem; border-radius: var(--r-pill); font-size: 0.68rem; color: var(--green); font-weight: 700;">
               <span class="pulse-indicator" style="display: inline-block; width: 6px; height: 6px; background: var(--green); border-radius: 50%;"></span>
-              SYSTEMS ACTIVE • 6 DYNAMIC LANES
+              LIVE LOGISTICS NEWS ACTIVE
             </div>
           </div>
           
           <div class="control-tower-layout" style="display: grid; grid-template-columns: 3.2fr 1.8fr; gap: 1.5rem; min-height: 280px;">
             <!-- Left Side: Interactive SVG Map Grid -->
-            <div class="map-container" style="background: rgba(27, 28, 92, 0.02); border: 1px solid var(--border-2); border-radius: var(--r-md); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; min-height: 280px; width: 100%;">
-              <svg width="100%" height="280" viewBox="0 0 600 280" style="display: block; width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern id="dotGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <circle cx="2" cy="2" r="1" fill="rgba(27, 28, 92, 0.08)" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#dotGrid)" />
-                
-                <!-- Stylized world continent outline paths -->
-                <path d="M50 50 L120 40 L160 80 L130 110 L90 120 L70 90 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
-                <path d="M120 140 L150 160 L140 230 L110 250 L100 180 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
-                <path d="M230 40 L340 30 L460 50 L480 120 L400 140 L350 180 L290 180 L250 110 L220 80 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
-                <path d="M470 190 L520 180 L540 220 L490 230 Z" fill="rgba(27, 28, 92, 0.015)" stroke="rgba(27, 28, 92, 0.04)" stroke-width="1.5" />
-                
-                <!-- Route Paths (Bezier curves) -->
-                <path d="M110 80 Q 220 50 330 140" fill="none" stroke="var(--sky)" stroke-dasharray="5,5" stroke-width="1.5" opacity="0.4" />
-                <path d="M110 80 Q 220 50 330 140" fill="none" stroke="var(--indigo)" stroke-width="2" class="live-route-line" style="stroke-dasharray: 10, 150; animation: march 4s linear infinite;" />
-
-                <path d="M330 140 Q 380 150 430 180" fill="none" stroke="var(--sky)" stroke-dasharray="5,5" stroke-width="1.5" opacity="0.4" />
-                <path d="M330 140 Q 380 150 430 180" fill="none" stroke="var(--teal)" stroke-width="2" class="live-route-line" style="stroke-dasharray: 10, 100; animation: march 3s linear infinite;" />
-
-                <path d="M290 120 Q 260 90 230 60" fill="none" stroke="var(--sky)" stroke-dasharray="5,5" stroke-width="1.5" opacity="0.4" />
-                <path d="M290 120 Q 260 90 230 60" fill="none" stroke="var(--amber)" stroke-width="2" class="live-route-line" style="stroke-dasharray: 8, 80; animation: march 2.5s linear infinite;" />
-
-                <!-- Active Hub Nodes -->
-                <g transform="translate(110, 80)">
-                  <circle cx="0" cy="0" r="10" fill="var(--indigo)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite;" />
-                  <circle cx="0" cy="0" r="4" fill="var(--indigo)" stroke="#fff" stroke-width="1" />
-                </g>
-                <g transform="translate(230, 60)">
-                  <circle cx="0" cy="0" r="10" fill="var(--sky)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite; animation-delay: 0.5s;" />
-                  <circle cx="0" cy="0" r="4" fill="var(--sky)" stroke="#fff" stroke-width="1" />
-                </g>
-                <g transform="translate(290, 120)">
-                  <circle cx="0" cy="0" r="10" fill="var(--amber)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite; animation-delay: 1s;" />
-                  <circle cx="0" cy="0" r="4" fill="var(--amber)" stroke="#fff" stroke-width="1" />
-                </g>
-                <g transform="translate(330, 140)">
-                  <circle cx="0" cy="0" r="12" fill="var(--indigo)" opacity="0.2" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 1.8s infinite;" />
-                  <circle cx="0" cy="0" r="5" fill="var(--indigo)" stroke="#fff" stroke-width="1.5" />
-                </g>
-                <g transform="translate(430, 180)">
-                  <circle cx="0" cy="0" r="10" fill="var(--teal)" opacity="0.15" class="pulse-node" style="transform-origin: 0 0; animation: pulse-radar 2s infinite; animation-delay: 0.7s;" />
-                  <circle cx="0" cy="0" r="4" fill="var(--teal)" stroke="#fff" stroke-width="1" />
-                </g>
-
-                <!-- Text Labels -->
-                <text x="95" y="70" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">JFK</text>
-                <text x="215" y="52" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">LHR</text>
-                <text x="268" y="115" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">DXB</text>
-                <text x="340" y="145" font-family="'Outfit', sans-serif" font-size="9" font-weight="800" fill="var(--sky)">BOM (HQ)</text>
-                <text x="440" y="180" font-family="'Outfit', sans-serif" font-size="9" font-weight="700" fill="var(--t2)">SIN</text>
-              </svg>
+            <!-- Left Side: Live Logistics & Supply Chain News Feed -->
+            <div class="news-container" style="background: rgba(255, 255, 255, 0.45); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1rem; min-height: 280px; width: 100%; display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem; margin-bottom: 0.25rem;">
+                <div style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 0.4rem;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 1 2 2v-1.5M20 7a2 2 0 0 0-2-2h-2m-4-3H9v4h6V4z"/></svg>
+                  Real-time Logistics News Feed
+                </div>
+                <!-- Tabs to switch between Global and India news -->
+                <div style="display: flex; gap: 0.45rem;">
+                  <button type="button" id="news-tab-global" class="news-tab active" onclick="loadLogisticsNews('global')" style="background: none; border: none; font-size: 0.65rem; font-weight: 800; color: var(--sky); cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--sky);">Global</button>
+                  <button type="button" id="news-tab-india" class="news-tab" onclick="loadLogisticsNews('india')" style="background: none; border: none; font-size: 0.65rem; font-weight: 800; color: var(--t3); cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent;">India</button>
+                </div>
+              </div>
+              <!-- News Feed items list -->
+              <div id="logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 220px; padding-right: 0.25rem;">
+                <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 3rem;">
+                  Loading logistics news feed...
+                </div>
+              </div>
             </div>
             
             <!-- Right Side: High-End Live Timeline / Shipment Feed -->
@@ -1391,6 +1356,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=1.3"></script>
+  <script src="app-v4.js?v=1.4"></script>
 </body>
 </html>
