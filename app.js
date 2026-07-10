@@ -3577,12 +3577,13 @@ function saveDeskNames(e) {
         } else if (cleaned.includes('{') && cleaned.includes('}')) {
           cleaned = cleaned.substring(cleaned.indexOf('{'), cleaned.lastIndexOf('}') + 1);
         }
-        cleaned = cleaned
-          .replace(/'/g, '"')
-          .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
-          .replace(/""/g, '"')
-          .replace(/,\s*([5}\]])/g, '$1') // Safe trailing comma fix
-          .replace(/,\s*([}\]])/g, '$1');
+        cleaned = cleaned.replace(/'/g, '"');
+        const keys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId', 'measurementId'];
+        keys.forEach(k => {
+          const regex = new RegExp(`['"]?${k}['"]?\\s*:`, 'g');
+          cleaned = cleaned.replace(regex, `"${k}":`);
+        });
+        cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
           
         const parsed = JSON.parse(cleaned);
         if (!parsed.apiKey || !parsed.projectId) {
