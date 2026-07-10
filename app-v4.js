@@ -4475,9 +4475,9 @@ function formatRoutingDisplay(routing) {
     return "DIRECT";
   }
   if (r.toLowerCase().startsWith("via ")) {
-    return "VIA " + r.substring(4).toUpperCase().trim();
+    return "via " + r.substring(4).toUpperCase().trim();
   }
-  return "VIA " + r.toUpperCase();
+  return "via " + r.toUpperCase();
 }
 window.formatRoutingDisplay = formatRoutingDisplay;
 
