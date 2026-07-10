@@ -1373,7 +1373,7 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
   tr.className = "container-row";
   tr.innerHTML = `
     <td>
-      <select class="fcl-type" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+      <select class="fcl-type table-select">
         <option value="20'GP" ${typeVal === "20'GP" ? 'selected' : ''}>20'GP (General Purpose)</option>
         <option value="40'GP" ${typeVal === "40'GP" ? 'selected' : ''}>40'GP (General Purpose)</option>
         <option value="20'HC" ${typeVal === "20'HC" ? 'selected' : ''}>20'HC (High Cube)</option>
@@ -1592,7 +1592,7 @@ function setupSurchargesEvents(freightType) {
           <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
           <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Cost" required></td>
           <td>
-            <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+            <select class="chg-unit table-select">
               <option value="flat" selected>Flat Fee</option>
               <option value="container">Per Container</option>
               <option value="rt">Per RT (Revenue Ton)</option>
@@ -2816,7 +2816,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container" selected>Per Container</option>
             <option value="rt">Per RT (Revenue Ton)</option>
@@ -2825,7 +2825,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2833,7 +2833,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt">Per RT (Revenue Ton)</option>
@@ -2842,7 +2842,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2853,7 +2853,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt" selected>Per RT (Revenue Ton)</option>
@@ -2862,7 +2862,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2870,7 +2870,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt">Per RT (Revenue Ton)</option>
@@ -2879,7 +2879,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2887,7 +2887,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Port Handling Charges" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt" selected>Per RT (Revenue Ton)</option>
@@ -2896,7 +2896,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2907,7 +2907,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Lashing & Securing" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt" selected>Per RT (Revenue Ton)</option>
@@ -2916,7 +2916,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2924,7 +2924,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Stevedoring" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt" selected>Per RT (Revenue Ton)</option>
@@ -2933,7 +2933,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2941,7 +2941,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Port Handling" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt" selected>Per RT (Revenue Ton)</option>
@@ -2950,14 +2950,15 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
+      </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Wharfage" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt" selected>Per RT (Revenue Ton)</option>
@@ -2966,7 +2967,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>
@@ -2974,7 +2975,7 @@ function populateSeaSurcharges(mode) {
         <td><input type="text" class="chg-name" value="Craneage" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
-          <select class="chg-unit" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+          <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
             <option value="container">Per Container</option>
             <option value="rt" selected>Per RT (Revenue Ton)</option>
@@ -2983,7 +2984,7 @@ function populateSeaSurcharges(mode) {
         </td>
         <td>
           <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
           </button>
         </td>
       </tr>

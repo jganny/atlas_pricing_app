@@ -565,6 +565,25 @@ input:focus, select:focus, textarea:focus {
 }
 input::placeholder { color: #94a3b8; font-weight: 400; }
 select option { background: #ffffff; color: var(--t1); }
+select.table-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-2);
+  color: var(--t1);
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.75rem;
+  transition: all 0.17s;
+}
+select.table-select:hover {
+  background: #ffffff;
+  border-color: var(--border-3);
+}
+select.table-select:focus {
+  border-color: var(--accent-current);
+  background: var(--bg-input-focus);
+}
 
 /* ══════════════════════════════════════════════════
    AUTOCOMPLETE
