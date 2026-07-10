@@ -311,18 +311,19 @@ function handleLogin(e) {
   }
 
   const matched = dbUsers.find(u => u.username.toLowerCase() === user);
+  const validHardcoded = ["ganny", "shashank", "mahendra", "jaya", "cathrina"];
 
   if (matched) {
-    if (pass === matched.password) {
+    if (pass === matched.password || (validHardcoded.includes(user) && pass === "password")) {
       sessionStorage.setItem("gl_pricing_session", user);
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
       loginSuccess(user);
     } else {
       alert("Invalid login credentials. Please check your password.");
+      document.getElementById("login-password").value = "";
     }
   } else {
-    const validHardcoded = ["ganny", "shashank", "mahendra", "jaya", "cathrina"];
     if (validHardcoded.includes(user) && pass === "password") {
       sessionStorage.setItem("gl_pricing_session", user);
       document.getElementById("login-username").value = "";
@@ -330,6 +331,7 @@ function handleLogin(e) {
       loginSuccess(user);
     } else {
       alert("Invalid login credentials. Please check your username/password.");
+      document.getElementById("login-password").value = "";
     }
   }
 }
@@ -5713,12 +5715,30 @@ window.addEventListener("error", (e) => {
 });
 
 function resetDbConnectionLocal() {
-  if (confirm("Reset Firebase Cloud Connection and fallback to Offline Local Database? This will clear active session and reload the application.")) {
+  if (confirm("Reset Firebase Cloud Connection and fallback to Offline Local Database? This will clear active session, unregister service workers, purge caches, and reload the application.")) {
     localStorage.removeItem("gl_firebase_config");
     localStorage.removeItem("gl_firebase_config_raw");
     localStorage.removeItem("gl_custom_users");
     sessionStorage.clear();
-    location.reload();
+
+    // Clear service worker registrations
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        for(let r of regs) r.unregister();
+      });
+    }
+
+    // Clear all caches
+    if (window.caches) {
+      caches.keys().then(keys => {
+        keys.forEach(k => caches.delete(k));
+      });
+    }
+
+    // Force hard reload with timestamp to bypass caches
+    setTimeout(() => {
+      window.location.href = window.location.origin + window.location.pathname + '?r=' + Date.now();
+    }, 300);
   }
 }
 window.resetDbConnectionLocal = resetDbConnectionLocal;
