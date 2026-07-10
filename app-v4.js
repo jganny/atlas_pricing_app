@@ -201,10 +201,45 @@ function updateSeaFclStuffingVisibility() {
 }
 window.updateSeaFclStuffingVisibility = updateSeaFclStuffingVisibility;
 
+function setupValidityDatePickerDismissal() {
+  const ids = ["air-validity", "sea-validity"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    // Dismiss calendar on change
+    el.addEventListener("change", () => {
+      el.blur();
+    });
+
+    // Dismiss calendar on double-click
+    el.addEventListener("dblclick", () => {
+      el.blur();
+    });
+
+    // Dismiss calendar on Enter key press
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        el.blur();
+      }
+    });
+  });
+
+  // Setup auto-select text on focus for rate inputs
+  document.addEventListener("focus", (e) => {
+    if (e.target && (e.target.classList.contains("chg-rate") || e.target.classList.contains("fcl-rate"))) {
+      setTimeout(() => {
+        try { e.target.select(); } catch(err) {}
+      }, 0);
+    }
+  }, true);
+}
+
 // Initialize Application
 document.addEventListener("DOMContentLoaded", () => {
   loadData();
   applyDeskNames();
+  setupValidityDatePickerDismissal();
   setupRoleSwitcher();
   setupAirFreightEvents();
   setupSeaFreightEvents();
@@ -530,7 +565,7 @@ function resetAirFreightDeskForm() {
         <td><input type="number" class="cargo-wid" min="1" placeholder="W" required></td>
         <td><input type="number" class="cargo-hei" min="1" placeholder="H" required></td>
         <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" required></td>
-        <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required></td>
+        <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required onkeydown="window.autoFocusWeightBreak(event)"></td>
         <td>
           <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateAirFreight();">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -880,13 +915,13 @@ function setupAirFreightEvents() {
       airTabExport.classList.add("active");
       airTabImport.classList.remove("active");
       appState.currentAirFreight.module = 'export';
-      calculateAirFreight();
+      resetCargoAndRatesForAir();
     });
     airTabImport.addEventListener("click", () => {
       airTabImport.classList.add("active");
       airTabExport.classList.remove("active");
       appState.currentAirFreight.module = 'import';
-      calculateAirFreight();
+      resetCargoAndRatesForAir();
     });
   }
 
@@ -899,7 +934,7 @@ function setupAirFreightEvents() {
         <td><input type="number" class="cargo-wid" min="1" placeholder="W" required></td>
         <td><input type="number" class="cargo-hei" min="1" placeholder="H" required></td>
         <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" required></td>
-        <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required></td>
+        <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required onkeydown="window.autoFocusWeightBreak(event)"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -1193,7 +1228,7 @@ function calculateAirFreight() {
   const resRouting = document.getElementById("res-air-routing-val");
   const resTT = document.getElementById("res-air-tt-val");
   const resValidity = document.getElementById("res-air-validity-val");
-  if (resRouting) resRouting.textContent = routing ? (routing.toLowerCase().startsWith('via') ? routing : 'via ' + routing) : "-";
+  if (resRouting) resRouting.textContent = formatRoutingDisplay(routing);
   if (resTT) resTT.textContent = tt || "-";
   if (resValidity) resValidity.textContent = validity || "-";
 
@@ -1237,13 +1272,13 @@ function setupSeaFreightEvents() {
       seaTabExport.classList.add("active");
       seaTabImport.classList.remove("active");
       appState.currentSeaFreight.module = 'export';
-      calculateSeaFreight();
+      resetCargoAndRatesForSea();
     });
     seaTabImport.addEventListener("click", () => {
       seaTabImport.classList.add("active");
       seaTabExport.classList.remove("active");
       appState.currentSeaFreight.module = 'import';
-      calculateSeaFreight();
+      resetCargoAndRatesForSea();
     });
   }
 
@@ -1541,7 +1576,7 @@ function calculateSeaFreight() {
   const resRouting = document.getElementById("res-sea-routing-val");
   const resTT = document.getElementById("res-sea-tt-val");
   const resValidity = document.getElementById("res-sea-validity-val");
-  if (resRouting) resRouting.textContent = routing ? (routing.toLowerCase().startsWith('via') ? routing : 'via ' + routing) : "-";
+  if (resRouting) resRouting.textContent = formatRoutingDisplay(routing);
   if (resTT) resTT.textContent = tt || "-";
   if (resValidity) resValidity.textContent = validity || "-";
 
@@ -1568,11 +1603,15 @@ function calculateSeaFreight() {
 function setupSurchargesEvents(freightType) {
   const body = document.getElementById(`${freightType}-surcharges-body`);
   const addBtn = document.getElementById(`add-${freightType}-surcharge`);
+  if (!addBtn || !body) return;
+
+  if (addBtn.dataset.listenerBound === "true") return;
+  addBtn.dataset.listenerBound = "true";
+
   const isAir = freightType.startsWith("air");
   const callback = isAir ? calculateAirFreight : calculateSeaFreight;
 
-  if (addBtn && body) {
-    addBtn.addEventListener("click", () => {
+  addBtn.addEventListener("click", () => {
       const row = document.createElement("tr");
       if (isAir) {
         row.innerHTML = `
@@ -2108,6 +2147,32 @@ window.convertQuote = (id) => {
   document.getElementById("won-cnee-name").value = quote.consigneeName || "";
   document.getElementById("won-cnee-contact").value = quote.consigneeContact || "";
 
+  // Check if customer already has a verified agency agreement
+  const customerName = quote.customer || "";
+  const lower = customerName.toLowerCase().trim();
+  const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+  const hasAgreement = !!(ctrl.hasAgreement || ctrl.waiveAgreement);
+
+  const container = document.getElementById("won-agreement-upload-container");
+  const fileInput = document.getElementById("won-agreement-file");
+  const statusEl = document.getElementById("won-agreement-status");
+
+  if (container && fileInput && statusEl) {
+    if (hasAgreement) {
+      container.style.display = "none";
+      fileInput.required = false;
+      fileInput.value = "";
+      statusEl.textContent = "Verified ✅";
+      statusEl.style.color = "var(--accent-success)";
+    } else {
+      container.style.display = "block";
+      fileInput.required = true;
+      fileInput.value = "";
+      statusEl.textContent = "Required";
+      statusEl.style.color = "var(--accent-error)";
+    }
+  }
+
   document.getElementById("won-booking-modal").style.display = "flex";
 };
 
@@ -2376,13 +2441,10 @@ function saveCurrentQuote() {
     return;
   }
 
-  // 2. Agency Agreement Compliance Checks (Admin Ganny is exempt)
-  if (appState.currentUser !== 'ganny') {
-    const isUploaded = window._uploadedAgreements && window._uploadedAgreements[isAir ? 'air' : 'sea'];
-    if (!isUploaded && !waiveAgreement) {
-      alert(`❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to execute a quote for "${customerName}".\n\nPlease upload the agreement in the calculator page first, or contact the Admin to waive this requirement.`);
-      return;
-    }
+  // 2. Capture Agency Agreement PDF if uploaded in the calculator page
+  const uploadedFile = window._uploadedAgreements ? window._uploadedAgreements[isAir ? 'air' : 'sea'] : null;
+  if (uploadedFile) {
+    saveCustomerAgreementRecord(customerName, uploadedFile.name, uploadedFile.data);
   }
 
   saveCustomCustomer(customerName);
@@ -2391,10 +2453,20 @@ function saveCurrentQuote() {
     id: 'Q' + Math.random().toString(36).substr(2, 9),
     date: new Date().toISOString().split('T')[0],
     customer: customerName,
-    creator: appState.currentUser, // Logged in team member
+    creator: appState.currentUser,
     status: 'quoted',
     quoteNumber: appState.quotes.length + 1
   };
+
+  const lowerCust = customerName.toLowerCase().trim();
+  const ctrlCust = (window._customerControls && window._customerControls[lowerCust]) || {};
+  if (uploadedFile) {
+    quoteData.agencyAgreementName = uploadedFile.name;
+    quoteData.agencyAgreementData = uploadedFile.data;
+  } else if (ctrlCust.agreementFile && ctrlCust.agreementData) {
+    quoteData.agencyAgreementName = ctrlCust.agreementFile;
+    quoteData.agencyAgreementData = ctrlCust.agreementData;
+  }
 
   if (isAir) {
     const originVal = document.getElementById("air-origin").value.trim();
@@ -2837,36 +2909,7 @@ function resetSurchargesToDefaults() {
           </button>
         </td>
       </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="AMS fee (Per MAWB)" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit">
-            <option value="flat" selected>Flat</option>
-            <option value="kg">Per kg</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="AWB fee (AWB)" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit">
-            <option value="flat" selected>Flat</option>
-            <option value="kg">Per kg</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
+
     `;
     setupSurchargesEvents("air-origin");
   }
@@ -3021,40 +3064,6 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Port Handling" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit table-select">
-            <option value="flat">Flat Fee</option>
-            <option value="container">Per Container</option>
-            <option value="rt" selected>Per RT (Revenue Ton)</option>
-            <option value="kg">Per Kg (Gross Weight)</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="Wharfage" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit table-select">
-            <option value="flat">Flat Fee</option>
-            <option value="container">Per Container</option>
-            <option value="rt" selected>Per RT (Revenue Ton)</option>
-            <option value="kg">Per Kg (Gross Weight)</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="Craneage" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit table-select">
@@ -4426,7 +4435,71 @@ function runCurrencyConversion() {
 }
 window.runCurrencyConversion = runCurrencyConversion;
 
+function formatRoutingDisplay(routing) {
+  if (!routing) return "-";
+  const r = routing.trim();
+  if (r.toLowerCase() === "direct") {
+    return "DIRECT";
+  }
+  if (r.toLowerCase().startsWith("via ")) {
+    return "VIA " + r.substring(4).toUpperCase().trim();
+  }
+  return "VIA " + r.toUpperCase();
+}
+window.formatRoutingDisplay = formatRoutingDisplay;
+
 // ==================== GOOGLE MAPS DIRECTORY LOOKUP ====================
+
+function getCountryFromPortValue(val, mode) {
+  const cleanVal = val.trim().toLowerCase();
+  if (!cleanVal) return null;
+
+  let code = cleanVal;
+  if (cleanVal.includes(" - ")) {
+    code = cleanVal.split(" - ")[0].trim();
+  }
+
+  if (mode === 'air') {
+    const matchedAp = appState.airports.find(ap => 
+      ap.code.toLowerCase() === code || 
+      ap.name.toLowerCase() === cleanVal ||
+      ap.name.toLowerCase().includes(cleanVal)
+    );
+    if (matchedAp && matchedAp.country) return matchedAp.country;
+  } else {
+    const majorSeaports = [
+      { code: "CNSHA", country: "China" },
+      { code: "SGPIN", country: "Singapore" },
+      { code: "NLRTM", country: "Netherlands" },
+      { code: "BEANR", country: "Belgium" },
+      { code: "AEDXB", country: "UAE" },
+      { code: "USLAX", country: "USA" },
+      { code: "GBFXT", country: "UK" },
+      { code: "INNSA", country: "India" },
+      { code: "INMAA", country: "India" },
+      { code: "LKCMB", country: "Sri Lanka" },
+      { code: "DEHAM", country: "Germany" }
+    ];
+    let customPorts = [];
+    try {
+      const stored = localStorage.getItem("gl_custom_seaports");
+      if (stored) customPorts = JSON.parse(stored) || [];
+    } catch(e) {}
+    const combined = [...majorSeaports, ...customPorts];
+    const matchedSp = combined.find(sp => 
+      sp.code.toLowerCase() === code || 
+      sp.name.toLowerCase() === cleanVal ||
+      sp.name.toLowerCase().includes(cleanVal)
+    );
+    if (matchedSp && matchedSp.country) return matchedSp.country;
+  }
+
+  const countries = ["india", "china", "singapore", "netherlands", "belgium", "uae", "usa", "uk", "sri lanka", "germany", "vietnam", "malaysia", "thailand", "japan", "korea"];
+  for (const c of countries) {
+    if (cleanVal.includes(c)) return c.charAt(0).toUpperCase() + c.slice(1);
+  }
+  return null;
+}
 
 function toggleMapHelper(mode, type) {
   const helperCardId = `${mode}-map-helper-card`;
@@ -4442,14 +4515,18 @@ function toggleMapHelper(mode, type) {
   if (!helperCard || !titleEl || !wrapperEl || !inputEl) return;
 
   const rawVal = inputEl.value.trim();
-  let searchQuery = rawVal;
-  if (!searchQuery) {
-    searchQuery = mode === 'air' ? 'International Airports' : 'Cargo Seaports';
-  } else {
-    // If it's a 3-letter IATA code or short code, expand it
+  let searchQuery = "";
+  const country = getCountryFromPortValue(rawVal, mode);
+  
+  if (country) {
+    searchQuery = mode === 'air' ? `Airports in ${country}` : `Seaports in ${country}`;
+  } else if (rawVal) {
+    searchQuery = rawVal;
     if (searchQuery.length === 3) {
       searchQuery += mode === 'air' ? ' Airport' : ' Seaport';
     }
+  } else {
+    searchQuery = mode === 'air' ? 'International Airports' : 'Cargo Seaports';
   }
 
   // Update title text
@@ -5100,6 +5177,44 @@ async function submitWonBookingDetails(e) {
     return;
   }
 
+  // Check agreement upload
+  const customerName = quote.customer || "";
+  const lower = customerName.toLowerCase().trim();
+  const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+  const hasAgreement = !!(ctrl.hasAgreement || ctrl.waiveAgreement);
+
+  const fileInput = document.getElementById("won-agreement-file");
+  let fileData = null;
+  let fileName = "";
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert("❌ COMPLIANCE ERROR: Only PDF files (.pdf) are allowed for Agency Agreements.");
+      return;
+    }
+    fileData = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+    fileName = file.name;
+  }
+
+  if (!hasAgreement && !fileData) {
+    alert("❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.");
+    return;
+  }
+
+  // Save agreement to database if uploaded
+  if (fileData) {
+    await saveCustomerAgreementRecord(customerName, fileName, fileData);
+    quote.agencyAgreementName = fileName;
+    quote.agencyAgreementData = fileData;
+  } else if (ctrl.agreementFile && ctrl.agreementData) {
+    quote.agencyAgreementName = ctrl.agreementFile;
+    quote.agencyAgreementData = ctrl.agreementData;
+  }
+
   quote.status = 'converted';
   quote.shipperName = shipperName;
   quote.shipperContact = shipperContact;
@@ -5122,7 +5237,9 @@ async function submitWonBookingDetails(e) {
       shipperContact,
       consigneeName,
       consigneeContact,
-      dateWon: quote.conversionDate
+      dateWon: quote.conversionDate,
+      agencyAgreementName: quote.agencyAgreementName || "",
+      agencyAgreementData: quote.agencyAgreementData || ""
     };
 
     if (DB.firestoreRef) {
@@ -5206,10 +5323,38 @@ async function renderNrsRegistry() {
     displayNrsRegistryItems(registryList);
   } catch (err) {
     console.error("NRS: Failed to render registry database:", err);
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-error); padding: 2rem;">⚠️ Failed to load directory.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-error); padding: 2rem;">⚠️ Failed to load directory.</td></tr>`;
   }
 }
 window.renderNrsRegistry = renderNrsRegistry;
+
+function downloadNrsAgreementPdf(id) {
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(x => x.id === id);
+  if (item && item.agencyAgreementData) {
+    const link = document.createElement("a");
+    link.href = item.agencyAgreementData;
+    link.download = item.agencyAgreementName || "agency_agreement.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else {
+    const customer = (item && item.customer) || "";
+    const lower = customer.toLowerCase().trim();
+    const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+    if (ctrl.agreementData) {
+      const link = document.createElement("a");
+      link.href = ctrl.agreementData;
+      link.download = ctrl.agreementFile || "agency_agreement.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      alert("No PDF document uploaded or found for this won booking/customer.");
+    }
+  }
+}
+window.downloadNrsAgreementPdf = downloadNrsAgreementPdf;
 
 function displayNrsRegistryItems(list) {
   const tbody = document.getElementById("nrs-registry-body");
@@ -5217,7 +5362,7 @@ function displayNrsRegistryItems(list) {
   tbody.innerHTML = "";
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
     return;
   }
 
@@ -5225,6 +5370,16 @@ function displayNrsRegistryItems(list) {
   const sorted = [...list].sort((a, b) => new Date(b.dateWon) - new Date(a.dateWon));
 
   tbody.innerHTML = sorted.map(item => {
+    const hasDoc = !!(item.agencyAgreementData || (window._customerControls && window._customerControls[item.customer.toLowerCase().trim()] && window._customerControls[item.customer.toLowerCase().trim()].agreementData));
+    const docName = item.agencyAgreementName || (window._customerControls && window._customerControls[item.customer.toLowerCase().trim()] && window._customerControls[item.customer.toLowerCase().trim()].agreementFile) || "agency_agreement.pdf";
+
+    const docCell = hasDoc 
+      ? `<div style="display: flex; align-items: center; gap: 0.3rem;">
+           <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${docName}">${docName}</span>
+           <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥 Download</button>
+         </div>`
+      : `<span style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</span>`;
+
     return `
       <tr>
         <td style="font-weight: 750; color: var(--sky); font-size: 0.72rem;">#${item.refId}</td>
@@ -5242,6 +5397,7 @@ function displayNrsRegistryItems(list) {
           <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.consigneeName}</div>
           <div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.consigneeContact}</div>
         </td>
+        <td>${docCell}</td>
         <td style="font-size: 0.68rem; color: var(--t3); font-weight: 600;">
           ${new Date(item.dateWon).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
         </td>
@@ -5337,6 +5493,48 @@ async function renderAdminCustomerControlList() {
 }
 window.renderAdminCustomerControlList = renderAdminCustomerControlList;
 
+function downloadAgreementPdf(customerName) {
+  const lower = customerName.toLowerCase().trim();
+  const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+  if (ctrl.agreementData) {
+    const link = document.createElement("a");
+    link.href = ctrl.agreementData;
+    link.download = ctrl.agreementFile || "agency_agreement.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else {
+    alert("No PDF data found for this customer.");
+  }
+}
+window.downloadAgreementPdf = downloadAgreementPdf;
+
+async function resetCustomerAgreement(customerName) {
+  if (!confirm(`Are you sure you want to cancel and delete the Agency Agreement for "${customerName}"?`)) return;
+
+  const lower = customerName.toLowerCase().trim();
+  let controls = window._customerControls || {};
+  if (controls[lower]) {
+    controls[lower].hasAgreement = false;
+    delete controls[lower].agreementFile;
+    delete controls[lower].agreementData;
+    
+    // Sync to database
+    if (DB.firestoreRef) {
+      await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower]);
+    } else {
+      try {
+        let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+        offlineControls[lower] = controls[lower];
+        localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+      } catch(e) {}
+    }
+    alert(`Successfully reset Agency Agreement for "${customerName}".`);
+    renderAdminCustomerControlList();
+  }
+}
+window.resetCustomerAgreement = resetCustomerAgreement;
+
 function displayAdminCustomerControlList(list) {
   const tbody = document.getElementById("admin-customer-control-body");
   if (!tbody) return;
@@ -5346,6 +5544,16 @@ function displayAdminCustomerControlList(list) {
     const isBlocked = !!ctrl.blocked;
     const waiveAgreement = !!ctrl.waiveAgreement;
     const creditDays = ctrl.creditDays || 30;
+    const hasAgreement = !!ctrl.hasAgreement;
+    const fileName = ctrl.agreementFile || "";
+    
+    const agreementCell = hasAgreement 
+      ? `<div style="display: flex; align-items: center; gap: 0.4rem;">
+           <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fileName}">${fileName}</span>
+           <button class="btn-text" onclick="downloadAgreementPdf('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥 Download</button>
+           <button class="btn-text" onclick="resetCustomerAgreement('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--accent-error); border: none; background: transparent; cursor: pointer; text-decoration: underline;">❌ Reset</button>
+         </div>`
+      : `<span style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</span>`;
 
     return `
       <tr>
@@ -5360,6 +5568,7 @@ function displayAdminCustomerControlList(list) {
             ${waiveAgreement ? 'Agreement Waived' : 'Agreement Required'}
           </span>
         </td>
+        <td>${agreementCell}</td>
         <td>
           <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isBlocked ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'}; color: ${isBlocked ? 'var(--accent-error)' : 'var(--accent-success)'};">
             ${isBlocked ? 'Blocked (Held)' : 'Active (Released)'}

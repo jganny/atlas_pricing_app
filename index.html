@@ -137,7 +137,7 @@
         </div>
 
         <!-- Database Sync Connection Status Badge -->
-        <div id="db-connection-badge" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.65rem; border-radius: var(--r-pill); font-size: 0.68rem; font-weight: 700; background: rgba(27,28,92,0.04); border: 1px solid var(--border-2); color: var(--sky); transition: all 0.3s;">
+        <div id="db-connection-badge" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.65rem; border-radius: var(--r-pill); font-size: 0.68rem; font-weight: 700; background: rgba(27,28,92,0.04); border: 1px solid var(--border-2); color: var(--sky); transition: all 0.3s; flex-shrink: 0;">
           <span id="db-connection-dot" style="display: inline-block; width: 6px; height: 6px; background: var(--sky); border-radius: 50%;"></span>
           <span id="db-connection-text">LocalStorage (Offline)</span>
         </div>
@@ -202,29 +202,9 @@
                 </div>
               </div>
               <!-- News Feed items list -->
-              <div id="logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 140px; padding-right: 0.25rem;">
+              <div id="logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 220px; padding-right: 0.25rem;">
                 <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
                   Loading logistics news feed...
-                </div>
-              </div>
-
-              <!-- Animated Route Trackers Hub -->
-              <div style="background: rgba(27, 28, 92, 0.03); border: 1px dashed var(--border-2); border-radius: var(--r-sm); padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; position: relative;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <span style="font-size: 0.68rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 4px;">
-                    <span style="position: relative; display: inline-block; width: 7px; height: 7px; background: var(--brand-gold); border-radius: 50%;">
-                      <span style="position: absolute; inset: -3px; background: rgba(254, 204, 0, 0.6); border-radius: 50%; animation: pulse-radar 2s infinite;"></span>
-                    </span>
-                    Live Shipping & Airline Telemetry
-                  </span>
-                </div>
-                <div style="display: flex; gap: 0.4rem; width: 100%;">
-                  <a href="https://www.marinetraffic.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
-                    🚢 MarineTraffic
-                  </a>
-                  <a href="https://www.flightradar24.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
-                    ✈️ FlightRadar24
-                  </a>
                 </div>
               </div>
             </div>
@@ -454,29 +434,9 @@
                 <button type="button" id="member-news-tab-india" class="news-tab" onclick="loadLogisticsNews('india')" style="background: none; border: none; font-size: 0.65rem; font-weight: 800; color: var(--t3); cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent;">India</button>
               </div>
             </div>
-            <div id="member-logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 140px; padding-right: 0.25rem;">
+            <div id="member-logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 220px; padding-right: 0.25rem;">
               <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
                 Loading logistics news feed...
-              </div>
-            </div>
-
-            <!-- Animated Route Trackers Hub -->
-            <div style="background: rgba(27, 28, 92, 0.03); border: 1px dashed var(--border-2); border-radius: var(--r-sm); padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; position: relative; margin-top: 0.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.68rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 4px;">
-                  <span style="position: relative; display: inline-block; width: 7px; height: 7px; background: var(--brand-gold); border-radius: 50%;">
-                    <span style="position: absolute; inset: -3px; background: rgba(254, 204, 0, 0.6); border-radius: 50%; animation: pulse-radar 2s infinite;"></span>
-                  </span>
-                  Live Shipping & Airline Telemetry
-                </span>
-              </div>
-              <div style="display: flex; gap: 0.4rem; width: 100%;">
-                <a href="https://www.marinetraffic.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
-                  🚢 MarineTraffic
-                </a>
-                <a href="https://www.flightradar24.com" target="_blank" rel="noopener noreferrer" class="btn-primary" style="flex: 1; text-align: center; font-size: 0.62rem; padding: 4px 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--sky); color: #fff; font-weight: 700; border-radius: 4px;">
-                  ✈️ FlightRadar24
-                </a>
               </div>
             </div>
           </div>
@@ -532,6 +492,7 @@
                   <th>Customer</th>
                   <th>Shipper Details</th>
                   <th>Consignee (Cnee) Details</th>
+                  <th>Agency Agreement</th>
                   <th>Date Won</th>
                 </tr>
               </thead>
@@ -564,16 +525,16 @@
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
               <div class="form-group autocomplete-container" style="margin-bottom: 0;">
-                <label for="air-cust-name">Customer Name</label>
+                <label for="air-cust-name" id="air-cust-label">Customer Name</label>
                 <input type="text" id="air-cust-name" placeholder="e.g. Zenith Electronics Ltd" autocomplete="off">
               </div>
-              <div class="form-group" style="margin-bottom: 0;">
+              <div class="form-group" id="air-agency-agreement-group" style="margin-bottom: 0;">
                 <label for="air-agency-agreement" style="display: flex; align-items: center; justify-content: space-between;">
                   <span>Agency Agreement</span>
                   <span id="air-agreement-status" style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error);">[Required]</span>
                 </label>
                 <div style="display: flex; gap: 0.4rem; align-items: center; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; padding: 4px 8px; height: 38px;">
-                  <input type="file" id="air-agency-agreement" style="display: none;" onchange="handleAgreementUpload('air', this)">
+                  <input type="file" id="air-agency-agreement" style="display: none;" accept=".pdf" onchange="handleAgreementUpload('air', this)">
                   <button type="button" class="btn-secondary" onclick="document.getElementById('air-agency-agreement').click()" style="padding: 2px 8px; font-size: 0.65rem; margin: 0; display: inline-flex; align-items: center; gap: 3px; border-radius: 4px; border: 1px solid var(--border-2); height: 28px; background: rgba(27,28,92,0.05); color: var(--sky); cursor: pointer;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                     Upload PDF
@@ -692,7 +653,7 @@
                     <td><input type="number" class="cargo-wid" min="1" placeholder="W" required></td>
                     <td><input type="number" class="cargo-hei" min="1" placeholder="H" required></td>
                     <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" required></td>
-                    <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required></td>
+                    <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" required onkeydown="window.autoFocusWeightBreak(event)"></td>
                     <td>
                       <button type="button" class="delete-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -967,16 +928,16 @@
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
               <div class="form-group autocomplete-container" style="margin-bottom: 0;">
-                <label for="sea-cust-name">Customer Name</label>
+                <label for="sea-cust-name" id="sea-cust-label">Customer Name</label>
                 <input type="text" id="sea-cust-name" placeholder="e.g. Adani Enterprises" autocomplete="off">
               </div>
-              <div class="form-group" style="margin-bottom: 0;">
+              <div class="form-group" id="sea-agency-agreement-group" style="margin-bottom: 0;">
                 <label for="sea-agency-agreement" style="display: flex; align-items: center; justify-content: space-between;">
                   <span>Agency Agreement</span>
                   <span id="sea-agreement-status" style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error);">[Required]</span>
                 </label>
                 <div style="display: flex; gap: 0.4rem; align-items: center; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; padding: 4px 8px; height: 38px;">
-                  <input type="file" id="sea-agency-agreement" style="display: none;" onchange="handleAgreementUpload('sea', this)">
+                  <input type="file" id="sea-agency-agreement" style="display: none;" accept=".pdf" onchange="handleAgreementUpload('sea', this)">
                   <button type="button" class="btn-secondary" onclick="document.getElementById('sea-agency-agreement').click()" style="padding: 2px 8px; font-size: 0.65rem; margin: 0; display: inline-flex; align-items: center; gap: 3px; border-radius: 4px; border: 1px solid var(--border-2); height: 28px; background: rgba(27,28,92,0.05); color: var(--sky); cursor: pointer;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                     Upload PDF
@@ -1516,6 +1477,7 @@
                   <th>Customer/Agent Name</th>
                   <th>Credit Period</th>
                   <th>Compliance Status</th>
+                  <th>Agency Agreement</th>
                   <th>Account Status</th>
                   <th>Admin Actions</th>
                 </tr>
@@ -1587,6 +1549,15 @@
             <label for="won-cnee-contact" style="font-weight: 700; font-size: 0.72rem; color: var(--sky);">Consignee Contact Details</label>
             <input type="text" id="won-cnee-contact" placeholder="Phone or email" required style="border-radius: 8px;">
           </div>
+        <div id="won-agreement-upload-container" style="border: 1px dashed var(--border-2); border-radius: 10px; padding: 0.8rem; margin-bottom: 1.25rem; background: rgba(27,28,92,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <label id="won-agreement-label" style="font-weight: 800; font-size: 0.72rem; color: var(--indigo); display: flex; align-items: center; gap: 4px;">
+              📁 Agency Agreement PDF *
+            </label>
+            <span id="won-agreement-status" style="font-size: 0.65rem; font-weight: 700; color: var(--accent-error);">Required</span>
+          </div>
+          <input type="file" id="won-agreement-file" accept=".pdf" style="font-size: 0.7rem; width: 100%; border: none; padding: 0; background: transparent;">
+          <small id="won-agreement-hint" style="font-size: 0.62rem; color: var(--t3); display: block; margin-top: 0.2rem;">Upload the PDF agreement for this customer to convert this quote.</small>
         </div>
 
         <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #000; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding: 0.6rem;">
