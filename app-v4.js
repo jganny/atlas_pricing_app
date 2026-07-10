@@ -5088,7 +5088,6 @@ document.addEventListener("keydown", (e) => {
       }
     }
   }
-  }
 });
 
 function closeWonBookingModal() {
