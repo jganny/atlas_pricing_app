@@ -4464,7 +4464,7 @@ const DB = {
           }, error => {
             console.error("Firestore synchronization error:", error);
             if (statusDot) statusDot.style.background = "#ef4444"; // red
-            if (statusText) statusText.textContent = "Firebase Error";
+            if (statusText) statusText.textContent = "Firebase: " + error.message;
           });
           
           // Check for migration from local to cloud
@@ -4540,7 +4540,12 @@ const DB = {
     }
     
     if (this.isCloud && this.firestoreRef) {
-      await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
+      try {
+        await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
+      } catch (err) {
+        console.error("Firestore write failed:", err);
+        alert("Cloud Database Write Error: " + err.message);
+      }
     } else {
       localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
       if (appState.currentUser === 'ganny') {
@@ -4555,7 +4560,12 @@ const DB = {
     appState.quotes = appState.quotes.filter(q => q.id !== quoteId);
     
     if (this.isCloud && this.firestoreRef) {
-      await this.firestoreRef.collection("quotes").doc(quoteId).delete();
+      try {
+        await this.firestoreRef.collection("quotes").doc(quoteId).delete();
+      } catch (err) {
+        console.error("Firestore delete failed:", err);
+        alert("Cloud Database Delete Error: " + err.message);
+      }
     } else {
       localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
       if (appState.currentUser === 'ganny') {
