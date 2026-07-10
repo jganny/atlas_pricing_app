@@ -4437,7 +4437,8 @@ const DB = {
             }
           }
           firebase.initializeApp(config);
-          const dbId = config.databaseId || '(default)';
+          const projIdStr = String(config.projectId || '').trim().toLowerCase();
+          const dbId = config.databaseId || (projIdStr.includes('vertex') ? 'default' : '(default)');
           console.log("DB: Initializing Firestore connection with database ID:", dbId);
           this.firestoreRef = firebase.firestore(firebase.app(), dbId);
           this.isCloud = true;
