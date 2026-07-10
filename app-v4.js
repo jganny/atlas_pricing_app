@@ -3542,18 +3542,6 @@ function applyDeskNames() {
     buttonsHtml += `<button class="role-btn" data-role="mahendra"><svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${TEAM_ROLES['mahendra'].name}</button>`;
     buttonsHtml += `<button class="role-btn" data-role="jaya">${TEAM_ROLES['jaya'].name}</button>`;
     buttonsHtml += `<button class="role-btn" data-role="cathrina">${TEAM_ROLES['cathrina'].name}</button>`;
-    
-    // Add custom registered users
-    let customUsers = [];
-    const stored = localStorage.getItem("gl_custom_users");
-    if (stored) {
-      try { customUsers = JSON.parse(stored); } catch(e) {}
-    }
-    customUsers.forEach(u => {
-      const lower = u.username.toLowerCase();
-      buttonsHtml += `<button class="role-btn" data-role="${lower}">${u.fullName.split(" ")[0]} (Free Hand)</button>`;
-    });
-    
     switcher.innerHTML = buttonsHtml;
     
     // Re-bind clicks
