@@ -4416,6 +4416,8 @@ window.toggleMapHelper = toggleMapHelper;
 const DB = {
   isCloud: false,
   firestoreRef: null,
+  triedDefaultFallback: false,
+  snapshotUnsubscribe: null,
   
   init() {
     const configRaw = localStorage.getItem("gl_firebase_config");
@@ -4430,7 +4432,7 @@ const DB = {
           if (firebase.apps.length === 0) {
             firebase.initializeApp(config);
           }
-          this.firestoreRef = firebase.firestore();
+          this.firestoreRef = firebase.firestore(firebase.app());
           this.isCloud = true;
           
           // Enable offline persistence
@@ -4441,33 +4443,7 @@ const DB = {
           if (statusDot) statusDot.style.background = "#10b981"; // green
           if (statusText) statusText.textContent = "Firebase Cloud (Online)";
           
-          // Listen to changes in real-time
-          console.log("DB: Registering Firestore snapshot listener...");
-          this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
-            console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
-            const list = [];
-            snapshot.forEach(doc => {
-              const q = doc.data();
-              this.sanitize(q, list.length);
-              list.push(q);
-            });
-            // Sort quotes chronologically (newest first)
-            list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-            appState.quotes = list;
-            
-            // Refresh view
-            if (appState.currentUser) {
-              if (appState.currentUser === 'ganny') {
-                renderAdminDashboard();
-              } else {
-                renderWorkspace();
-              }
-            }
-          }, error => {
-            console.error("Firestore synchronization error:", error);
-            if (statusDot) statusDot.style.background = "#ef4444"; // red
-            if (statusText) statusText.textContent = "Firebase: " + error.message;
-          });
+          this.registerSnapshotListener();
           
           // Check for migration from local to cloud
           const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
@@ -4486,6 +4462,69 @@ const DB = {
     }
     
     // Fallback to local storage
+    this.fallbackToLocal();
+  },
+  
+  registerSnapshotListener() {
+    const statusDot = document.getElementById("db-connection-dot");
+    const statusText = document.getElementById("db-connection-text");
+    
+    console.log("DB: Registering Firestore snapshot listener...");
+    
+    // Unsubscribe from any existing listener if applicable
+    if (this.snapshotUnsubscribe) {
+      this.snapshotUnsubscribe();
+    }
+    
+    this.snapshotUnsubscribe = this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
+      console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
+      const list = [];
+      snapshot.forEach(doc => {
+        const q = doc.data();
+        this.sanitize(q, list.length);
+        list.push(q);
+      });
+      // Sort quotes chronologically (newest first)
+      list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      appState.quotes = list;
+      
+      // Update badge status to show online
+      if (statusDot) statusDot.style.background = "#10b981"; // green
+      if (statusText) statusText.textContent = "Firebase Cloud (Online)";
+      
+      // Refresh view
+      if (appState.currentUser) {
+        if (appState.currentUser === 'ganny') {
+          renderAdminDashboard();
+        } else {
+          renderWorkspace();
+        }
+      }
+    }, error => {
+      console.error("Firestore synchronization error:", error);
+      
+      // Self-healing: check if default database is missing and redirect to named 'default' database ID
+      if (error.message && error.message.includes("(default) does not exist") && !this.triedDefaultFallback) {
+        console.log("DB: Default database not found. Self-healing to connect to named database 'default'...");
+        this.triedDefaultFallback = true;
+        try {
+          this.firestoreRef = firebase.firestore(firebase.app(), 'default');
+          this.registerSnapshotListener();
+          return;
+        } catch (fallbackErr) {
+          console.error("DB: Self-healing fallback failed:", fallbackErr);
+        }
+      }
+      
+      if (statusDot) statusDot.style.background = "#ef4444"; // red
+      if (statusText) statusText.textContent = "Firebase: " + error.message;
+    });
+  },
+  
+  fallbackToLocal() {
+    const statusDot = document.getElementById("db-connection-dot");
+    const statusText = document.getElementById("db-connection-text");
+    
     this.isCloud = false;
     if (statusDot) statusDot.style.background = "#38bdf8"; // sky blue
     if (statusText) statusText.textContent = "LocalStorage (Offline)";
@@ -4567,7 +4606,7 @@ const DB = {
       try {
         await this.firestoreRef.collection("quotes").doc(quoteId).delete();
       } catch (err) {
-        console.error("Firestore delete failed:", err);
+        console.error("DB: Firestore delete failed:", err);
         alert("Cloud Database Delete Error: " + err.message);
       }
     } else {
@@ -4581,5 +4620,3 @@ const DB = {
   }
 };
 window.DB = DB;
-
-
