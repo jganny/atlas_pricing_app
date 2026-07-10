@@ -240,20 +240,25 @@ function setupValidityDatePickerDismissal() {
     const el = document.getElementById(id);
     if (!el) return;
     
-    // Dismiss calendar on change
-    el.addEventListener("change", () => {
-      el.blur();
-    });
+    const dismiss = () => {
+      setTimeout(() => {
+        try {
+          el.blur();
+        } catch (e) {}
+      }, 50);
+    };
 
-    // Dismiss calendar on double-click
-    el.addEventListener("dblclick", () => {
-      el.blur();
-    });
+    // Dismiss on selection/change
+    el.addEventListener("change", dismiss);
+    el.addEventListener("input", dismiss);
 
-    // Dismiss calendar on Enter key press
+    // Dismiss on double-click
+    el.addEventListener("dblclick", dismiss);
+
+    // Dismiss on Enter key press
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
-        el.blur();
+        dismiss();
       }
     });
   });
