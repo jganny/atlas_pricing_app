@@ -25,6 +25,28 @@
         keys.forEach(function(key) { caches.delete(key); });
       });
     }
+    function resetDbConnectionLocal() {
+      if (confirm("Reset Firebase Connection and clear caches? This will unregister service workers, delete local storage config overrides, and reload the page.")) {
+        localStorage.removeItem("gl_firebase_config");
+        localStorage.removeItem("gl_firebase_config_raw");
+        localStorage.removeItem("gl_custom_users");
+        sessionStorage.clear();
+        if (navigator.serviceWorker) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for(let reg of regs) { reg.unregister(); }
+          });
+        }
+        if (window.caches) {
+          caches.keys().then(function(keys) {
+            keys.forEach(function(key) { caches.delete(key); });
+          });
+        }
+        setTimeout(function() {
+          window.location.href = window.location.origin + window.location.pathname + '?r=' + Date.now();
+        }, 300);
+      }
+    }
+    window.resetDbConnectionLocal = resetDbConnectionLocal;
   </script>
 </head>
 <body>
