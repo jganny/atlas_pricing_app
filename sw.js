@@ -1,8 +1,8 @@
-const CACHE_NAME = 'vertex-v1';
+const CACHE_NAME = 'vertex-v2';
 const ASSETS = [
   './index.html',
   './index.css',
-  './app.js',
+  './app-v3.js',
   './logo.png',
   './manifest.json'
 ];
@@ -17,8 +17,6 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('fetch', (e) => {
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request);
-    })
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
