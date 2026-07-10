@@ -1699,7 +1699,6 @@ function setupSurchargesEvents(freightType) {
       
       callback();
     });
-  }
 
   // Bind existing rows
   body.querySelectorAll("input, select").forEach(inp => {
