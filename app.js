@@ -3566,12 +3566,25 @@ function saveDeskNames(e) {
     
     if (rawVal) {
       try {
-        const parsed = JSON.parse(rawVal);
+        let cleaned = rawVal.trim();
+        // If they copied the whole <script> or const config = block, extract just the { ... } object part
+        if (cleaned.includes('{') && cleaned.includes('}')) {
+          cleaned = cleaned.substring(cleaned.indexOf('{'), cleaned.lastIndexOf('}') + 1);
+        }
+        // Normalize: turn single quotes into double quotes
+        // Turn unquoted keys into quoted keys to make it valid strict JSON
+        cleaned = cleaned
+          .replace(/'/g, '"') // Replace single quotes with double quotes
+          .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":') // Wrap keys in double quotes
+          .replace(/,\s*([}\]])/g, '$1'); // Remove trailing commas
+          
+        const parsed = JSON.parse(cleaned);
         if (!parsed.apiKey || !parsed.projectId) {
           alert("Firebase Config JSON must contain at least 'apiKey' and 'projectId' fields.");
           return;
         }
-        localStorage.setItem("gl_firebase_config", rawVal);
+        // Save the cleaned, valid strict JSON back to localStorage
+        localStorage.setItem("gl_firebase_config", JSON.stringify(parsed, null, 2));
       } catch (err) {
         alert("Invalid Firebase Web Config JSON. Please copy the complete JSON object from the Firebase console.");
         return;
