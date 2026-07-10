@@ -3567,8 +3567,15 @@ function saveDeskNames(e) {
     if (rawVal) {
       try {
         let cleaned = rawVal.trim();
-        // If they copied the whole <script> or const config = block, extract just the { ... } object part
-        if (cleaned.includes('{') && cleaned.includes('}')) {
+        // If they copied the whole block with imports/comments, find the opening brace of the config object
+        if (cleaned.includes('apiKey')) {
+          const apiIndex = cleaned.indexOf('apiKey');
+          const braceStart = cleaned.lastIndexOf('{', apiIndex);
+          const braceEnd = cleaned.indexOf('}', apiIndex);
+          if (braceStart !== -1 && braceEnd !== -1) {
+            cleaned = cleaned.substring(braceStart, cleaned.lastIndexOf('}') + 1);
+          }
+        } else if (cleaned.includes('{') && cleaned.includes('}')) {
           cleaned = cleaned.substring(cleaned.indexOf('{'), cleaned.lastIndexOf('}') + 1);
         }
         // Normalize: turn single quotes into double quotes
