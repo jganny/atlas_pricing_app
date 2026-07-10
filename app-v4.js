@@ -201,6 +201,38 @@ function updateSeaFclStuffingVisibility() {
 }
 window.updateSeaFclStuffingVisibility = updateSeaFclStuffingVisibility;
 
+function autoFocusWeightBreak(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    calculateAirFreight();
+    
+    const chgWeight = appState.currentAirFreight.chargeableWeight || 0;
+    if (chgWeight <= 0) return;
+
+    let targetInputId = "rate-m45";
+    if (chgWeight >= 45 && chgWeight < 100) {
+      targetInputId = "rate-p45";
+    } else if (chgWeight >= 100 && chgWeight < 300) {
+      targetInputId = "rate-p100";
+    } else if (chgWeight >= 300 && chgWeight < 500) {
+      targetInputId = "rate-p300";
+    } else if (chgWeight >= 500 && chgWeight < 1000) {
+      targetInputId = "rate-p500";
+    } else if (chgWeight >= 1000) {
+      targetInputId = "rate-p1000";
+    }
+
+    const inputEl = document.getElementById(targetInputId);
+    if (inputEl) {
+      inputEl.focus();
+      setTimeout(() => {
+        try { inputEl.select(); } catch(e) {}
+      }, 0);
+    }
+  }
+}
+window.autoFocusWeightBreak = autoFocusWeightBreak;
+
 function setupValidityDatePickerDismissal() {
   const ids = ["air-validity", "sea-validity"];
   ids.forEach(id => {
