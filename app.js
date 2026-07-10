@@ -3567,30 +3567,28 @@ function saveDeskNames(e) {
     if (rawVal) {
       try {
         let cleaned = rawVal.trim();
-        // If they copied the whole block with imports/comments, find the opening brace of the config object
+        cleaned = cleaned.replace(/\u00a0/g, ' '); // Strip non-breaking spaces
         if (cleaned.includes('apiKey')) {
           const apiIndex = cleaned.indexOf('apiKey');
           const braceStart = cleaned.lastIndexOf('{', apiIndex);
-          const braceEnd = cleaned.indexOf('}', apiIndex);
-          if (braceStart !== -1 && braceEnd !== -1) {
+          if (braceStart !== -1) {
             cleaned = cleaned.substring(braceStart, cleaned.lastIndexOf('}') + 1);
           }
         } else if (cleaned.includes('{') && cleaned.includes('}')) {
           cleaned = cleaned.substring(cleaned.indexOf('{'), cleaned.lastIndexOf('}') + 1);
         }
-        // Normalize: turn single quotes into double quotes
-        // Turn unquoted keys into quoted keys to make it valid strict JSON
         cleaned = cleaned
-          .replace(/'/g, '"') // Replace single quotes with double quotes
-          .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":') // Wrap keys in double quotes
-          .replace(/,\s*([}\]])/g, '$1'); // Remove trailing commas
+          .replace(/'/g, '"')
+          .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+          .replace(/""/g, '"')
+          .replace(/,\s*([5}\]])/g, '$1') // Safe trailing comma fix
+          .replace(/,\s*([}\]])/g, '$1');
           
         const parsed = JSON.parse(cleaned);
         if (!parsed.apiKey || !parsed.projectId) {
           alert("Firebase Config JSON must contain at least 'apiKey' and 'projectId' fields.");
           return;
         }
-        // Save the cleaned, valid strict JSON back to localStorage
         localStorage.setItem("gl_firebase_config", JSON.stringify(parsed, null, 2));
       } catch (err) {
         alert("Invalid Firebase Web Config JSON. Please copy the complete JSON object from the Firebase console.");
