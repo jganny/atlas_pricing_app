@@ -5473,3 +5473,77 @@ function filterAdminCustomerList(query) {
   displayAdminCustomerControlList(filtered);
 }
 window.filterAdminCustomerList = filterAdminCustomerList;
+
+// DIAGNOSTICS & RESET HANDLERS
+window._lastJsError = "None";
+window.addEventListener("error", (e) => {
+  window._lastJsError = `${e.message} (${e.filename}:${e.lineno})`;
+  const statusLabel = document.getElementById("diag-status");
+  if (statusLabel) {
+    statusLabel.textContent = `Error: ${e.message}`;
+    statusLabel.style.color = "var(--accent-error)";
+  }
+});
+
+function resetDbConnectionLocal() {
+  if (confirm("Reset Firebase Cloud Connection and fallback to Offline Local Database? This will clear active session and reload the application.")) {
+    localStorage.removeItem("gl_firebase_config");
+    localStorage.removeItem("gl_firebase_config_raw");
+    localStorage.removeItem("gl_custom_users");
+    sessionStorage.clear();
+    location.reload();
+  }
+}
+window.resetDbConnectionLocal = resetDbConnectionLocal;
+
+function toggleDiagnosticsDrawer() {
+  const drawer = document.getElementById("diagnostics-drawer");
+  if (!drawer) return;
+  
+  if (drawer.style.display === "none") {
+    drawer.style.display = "block";
+    updateDiagnosticsUI();
+  } else {
+    drawer.style.display = "none";
+  }
+}
+window.toggleDiagnosticsDrawer = toggleDiagnosticsDrawer;
+
+function updateDiagnosticsUI() {
+  const diagConn = document.getElementById("diag-conn");
+  const diagProj = document.getElementById("diag-project");
+  const diagUsers = document.getElementById("diag-users");
+  const diagStatus = document.getElementById("diag-status");
+
+  if (diagConn) diagConn.textContent = DB.isCloud ? "Cloud (Online) 🟢" : "Offline (Local) 🔵";
+  
+  let projectId = "None";
+  try {
+    const configRaw = localStorage.getItem("gl_firebase_config");
+    if (configRaw) {
+      const config = JSON.parse(configRaw);
+      if (config && config.projectId) projectId = config.projectId;
+    }
+  } catch(e) {}
+  if (diagProj) diagProj.textContent = projectId;
+
+  let dbUsers = window._firebaseUsers || [];
+  if (dbUsers.length === 0) {
+    try {
+      const stored = localStorage.getItem("gl_custom_users");
+      if (stored) dbUsers = JSON.parse(stored) || [];
+    } catch(e) {}
+  }
+  if (diagUsers) diagUsers.textContent = `${dbUsers.length} users`;
+
+  if (diagStatus) {
+    if (window._lastJsError && window._lastJsError !== "None") {
+      diagStatus.textContent = window._lastJsError;
+      diagStatus.style.color = "var(--accent-error)";
+    } else {
+      diagStatus.textContent = DB.isCloud ? "Connection established" : "Local fallback active";
+      diagStatus.style.color = DB.isCloud ? "var(--accent-success)" : "var(--sky)";
+    }
+  }
+}
+window.updateDiagnosticsUI = updateDiagnosticsUI;
