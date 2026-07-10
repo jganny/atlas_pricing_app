@@ -452,6 +452,13 @@ main {
   margin-bottom: 2rem;
   align-items: start;
 }
+.admin-flex-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
 
 
 /* ══════════════════════════════════════════════════
