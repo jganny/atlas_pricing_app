@@ -133,7 +133,8 @@ function getQuoteRefId(quote) {
   }
   
   const seqNum = quote.quoteNumber || 1;
-  return `${moduleCode}${custPart}${datePart}${seqNum}`;
+  const seqPart = String(seqNum).padStart(5, '0');
+  return `${moduleCode}${custPart}${datePart}IN${seqPart}`;
 }
 window.getQuoteRefId = getQuoteRefId;
 
@@ -1992,7 +1993,7 @@ function renderControlTowerFeed() {
   const recent = [...quotes].reverse().slice(0, 3);
   
   container.innerHTML = recent.map(quote => {
-    const isAir = quote.mode === 'air';
+    const isAir = quote.type === 'air';
     const modeLabel = isAir ? 'AIR DESK' : 'SEA DESK';
     const originStr = (quote.origin || '').substring(0, 15);
     const destStr = (quote.destination || '').substring(0, 15);
@@ -4626,6 +4627,44 @@ const DB = {
         renderWorkspace();
       }
     }
+  },
+  
+  async clearAllQuotes() {
+    if (this.isCloud && this.firestoreRef) {
+      try {
+        const snapshot = await this.firestoreRef.collection("quotes").get();
+        const promises = [];
+        snapshot.forEach(doc => {
+          promises.push(doc.ref.delete());
+        });
+        await Promise.all(promises);
+        console.log("DB: All quotes deleted from Firestore.");
+      } catch (err) {
+        console.error("DB: Failed to clear Firestore quotes:", err);
+        throw err;
+      }
+    } else {
+      localStorage.removeItem("logistics_quotes");
+    }
+    appState.quotes = [];
   }
 };
 window.DB = DB;
+
+async function confirmResetDatabase() {
+  if (confirm("⚠️ WARNING: Are you sure you want to delete ALL quotes from the cloud database? This action is permanent and cannot be undone.")) {
+    const statusText = document.getElementById("db-connection-text");
+    const originalText = statusText ? statusText.textContent : "Firebase";
+    if (statusText) statusText.textContent = "Resetting database...";
+    
+    try {
+      await DB.clearAllQuotes();
+      alert("🎉 Cloud database has been successfully reset! Page will reload now.");
+      location.reload();
+    } catch (err) {
+      alert("❌ Error resetting database: " + err.message);
+      if (statusText) statusText.textContent = originalText;
+    }
+  }
+}
+window.confirmResetDatabase = confirmResetDatabase;
