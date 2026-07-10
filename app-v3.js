@@ -4419,7 +4419,7 @@ const DB = {
   triedDefaultFallback: false,
   snapshotUnsubscribe: null,
   
-  init() {
+  async init() {
     const configRaw = localStorage.getItem("gl_firebase_config");
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
@@ -4429,9 +4429,14 @@ const DB = {
         const config = JSON.parse(configRaw);
         if (config && config.apiKey && config.projectId) {
           // Initialize Firebase Compat
-          if (firebase.apps.length === 0) {
-            firebase.initializeApp(config);
+          if (firebase.apps.length > 0) {
+            try {
+              await firebase.app().delete();
+            } catch (e) {
+              console.warn("DB: Error cleaning up existing Firebase App instance:", e);
+            }
           }
+          firebase.initializeApp(config);
           const dbId = config.databaseId || '(default)';
           console.log("DB: Initializing Firestore connection with database ID:", dbId);
           this.firestoreRef = firebase.firestore(firebase.app(), dbId);
