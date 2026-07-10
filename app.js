@@ -4442,7 +4442,9 @@ const DB = {
           if (statusText) statusText.textContent = "Firebase Cloud (Online)";
           
           // Listen to changes in real-time
+          console.log("DB: Registering Firestore snapshot listener...");
           this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
+            console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
             const list = [];
             snapshot.forEach(doc => {
               const q = doc.data();
@@ -4540,10 +4542,12 @@ const DB = {
     }
     
     if (this.isCloud && this.firestoreRef) {
+      console.log("DB: Attempting to write quote to Firestore...", quote.id);
       try {
         await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
+        console.log("DB: Firestore write succeeded!");
       } catch (err) {
-        console.error("Firestore write failed:", err);
+        console.error("DB: Firestore write failed:", err);
         alert("Cloud Database Write Error: " + err.message);
       }
     } else {
