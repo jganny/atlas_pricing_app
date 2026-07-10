@@ -4437,8 +4437,7 @@ const DB = {
             }
           }
           firebase.initializeApp(config);
-          const projIdStr = String(config.projectId || '').trim().toLowerCase();
-          const dbId = config.databaseId || (projIdStr.includes('vertex') ? 'default' : '(default)');
+          const dbId = config.databaseId || '(default)';
           console.log("DB: Stored Project ID in LocalStorage:", config.projectId);
           console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
           console.log("DB: Initializing Firestore connection with database ID:", dbId);
