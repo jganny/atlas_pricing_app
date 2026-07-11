@@ -2051,19 +2051,28 @@ function renderAdminDashboard() {
     const pending = requests.filter(r => r.status === 'pending');
     
     if (pending.length > 0) {
-      reqList.innerHTML = pending.map(req => `
-        <div style="background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 6px; border-left: 3px solid ${req.requestType === 'delete' ? 'var(--accent-error)' : 'var(--accent-warning)'}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-          <div>
-            <strong style="color: ${req.requestType === 'delete' ? 'var(--accent-error)' : 'var(--accent-warning)'};">[${req.requestType ? req.requestType.toUpperCase() : 'EDIT'}]</strong> 
-            <strong>Quote ID: #${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer})<br>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">Requested by: ${req.creatorName} on ${req.date}</span>
+      reqList.innerHTML = pending.map(req => {
+        const isOverride = req.requestType === 'credit_override';
+        const typeLabel = isOverride ? 'CREDIT OVERRIDE' : (req.requestType ? req.requestType.toUpperCase() : 'EDIT');
+        const color = isOverride ? 'var(--sky)' : (req.requestType === 'delete' ? 'var(--accent-error)' : 'var(--accent-warning)');
+        const details = isOverride 
+          ? `Customer: <strong>${req.customer}</strong>`
+          : `Quote ID: #<strong>${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer})`;
+
+        return `
+          <div style="background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 6px; border-left: 3px solid ${color}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div>
+              <strong style="color: ${color};">[${typeLabel}]</strong> 
+              ${details}<br>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Requested by: ${req.creatorName} on ${req.date}</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-success); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight:700;" onclick="approveAmendment('${req.id}')">Approve</button>
+              <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-error); color: #fff; border: none; border-radius: 4px; cursor: pointer;" onclick="rejectAmendment('${req.id}')">Reject</button>
+            </div>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-success); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight:700;" onclick="approveAmendment('${req.id}')">Approve</button>
-            <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-error); color: #fff; border: none; border-radius: 4px; cursor: pointer;" onclick="rejectAmendment('${req.id}')">Reject</button>
-          </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     } else {
       reqList.innerHTML = `<div style="color: var(--text-dim); font-style: italic;">No pending approval requests.</div>`;
     }
@@ -2420,7 +2429,7 @@ function saveCurrentQuote() {
     return;
   }
 
-  // 1. Credit Control & Block Status Checks
+  // 1. Fetch Customer Control Settings
   const lowerCust = customerName.toLowerCase();
   let control = (window._customerControls && window._customerControls[lowerCust]) || null;
   if (!control) {
@@ -2428,53 +2437,6 @@ function saveCurrentQuote() {
       const storedControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       control = storedControls[lowerCust] || null;
     } catch(e) {}
-  }
-
-  const creditDays = control ? (parseInt(control.creditDays) || 30) : 30;
-  const isBlocked = control ? !!control.blocked : false;
-  const waiveAgreement = control ? !!control.waiveAgreement : false;
-
-  if (isBlocked) {
-    alert(`❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" is currently blocked due to credit limit or compliance audit.\n\nQuote cannot be executed until released by the Admin (Ganny).`);
-    return;
-  }
-
-  const matchingQuotes = appState.quotes.filter(q => q.customer.trim().toLowerCase() === lowerCust && q.status === 'quoted');
-  let hasExceededCredit = false;
-  let oldestDays = 0;
-
-  matchingQuotes.forEach(q => {
-    const quoteDate = new Date(q.date);
-    const diffTime = Math.abs(new Date() - quoteDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays > creditDays) {
-      hasExceededCredit = true;
-      if (diffDays > oldestDays) oldestDays = diffDays;
-    }
-  });
-
-  if (hasExceededCredit) {
-    if (DB.firestoreRef) {
-      DB.firestoreRef.collection("customer_control").doc(lowerCust).set({
-        customer: customerName,
-        creditDays: creditDays,
-        blocked: true,
-        waiveAgreement: waiveAgreement
-      }, { merge: true });
-    } else {
-      try {
-        let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-        offlineControls[lowerCust] = {
-          customer: customerName,
-          creditDays: creditDays,
-          blocked: true,
-          waiveAgreement: waiveAgreement
-        };
-        localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-      } catch(e) {}
-    }
-    alert(`❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" has exceeded their assigned credit period of ${creditDays} days (oldest outstanding quote is ${oldestDays} days old).\n\nExecution blocked until released by the Admin.`);
-    return;
   }
 
   // 2. Capture Agency Agreement PDF if uploaded in the calculator page
@@ -2805,6 +2767,10 @@ function saveCurrentQuote() {
     const destVal = document.getElementById("sea-dest").value.trim();
     const lineVal = document.getElementById("sea-line").value.trim();
     saveCustomSeaAutocompletes(originVal, destVal, lineVal);
+  }
+
+  if (!validateCreditCompliance(quoteData)) {
+    return;
   }
 
   if (appState.editingQuoteId) {
@@ -4061,19 +4027,40 @@ function approveAmendment(reqId) {
   if (req) {
     req.status = 'approved';
     
-    // Unlock the quote
-    const quote = appState.quotes.find(q => q.id === req.quoteId);
-    if (quote) {
-      if (req.requestType === 'delete') {
-        quote.deletionAllowed = true;
-      } else {
-        quote.amendmentAllowed = true;
+    if (req.requestType === 'credit_override') {
+      const lower = req.customer.toLowerCase().trim();
+      let controls = window._customerControls || {};
+      if (!controls[lower]) {
+        controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
       }
+      controls[lower].creditOverride = true;
+      window._customerControls = controls;
+      
+      if (DB.firestoreRef) {
+        DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+      } else {
+        try {
+          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+          offlineControls[lower] = controls[lower];
+          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+        } catch(e) {}
+      }
+      alert(`Credit override request for customer "${req.customer}" has been APPROVED.`);
+    } else {
+      // Unlock the quote
+      const quote = appState.quotes.find(q => q.id === req.quoteId);
+      if (quote) {
+        if (req.requestType === 'delete') {
+          quote.deletionAllowed = true;
+        } else {
+          quote.amendmentAllowed = true;
+        }
+      }
+      if (quote) DB.saveQuote(quote);
+      alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been APPROVED.`);
     }
     
     localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-    if (quote) DB.saveQuote(quote);
-    alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been APPROVED.`);
     renderAdminDashboard();
   }
 }
@@ -4089,7 +4076,12 @@ function rejectAmendment(reqId) {
   if (req) {
     req.status = 'rejected';
     localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-    alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been REJECTED.`);
+    
+    if (req.requestType === 'credit_override') {
+      alert(`Credit override request for customer "${req.customer}" has been REJECTED.`);
+    } else {
+      alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been REJECTED.`);
+    }
     renderAdminDashboard();
   }
 }
@@ -4615,7 +4607,120 @@ function toggleMapHelper(mode, type) {
     helperCard.style.display = 'block';
   }
 }
-window.toggleMapHelper = toggleMapHelper;
+function convertAmountToUSD(amount, currency) {
+  if (!amount) return 0;
+  if (currency === 'USD') return amount;
+  if (currency === 'INR') return amount / (EXCHANGE_RATES.USD_TO_INR || 83);
+  if (currency === 'EUR') return amount * (EXCHANGE_RATES.EUR_TO_USD || 1.08);
+  if (currency === 'GBP') return amount * (EXCHANGE_RATES.GBP_TO_USD || 1.25);
+  return amount;
+}
+window.convertAmountToUSD = convertAmountToUSD;
+
+function validateCreditCompliance(quoteData) {
+  const customerName = quoteData.customer;
+  if (!customerName) return true;
+  const lowerCust = customerName.toLowerCase().trim();
+  let control = (window._customerControls && window._customerControls[lowerCust]) || null;
+  if (!control) {
+    try {
+      const storedControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+      control = storedControls[lowerCust] || null;
+    } catch(e) {}
+  }
+
+  const creditDays = control ? (parseInt(control.creditDays) || 30) : 30;
+  const creditLimit = control ? (parseFloat(control.creditLimit) || 0) : 0;
+  const isBlocked = control ? !!control.blocked : false;
+  const waiveAgreement = control ? !!control.waiveAgreement : false;
+  const creditOverride = control ? !!control.creditOverride : false;
+
+  const hasAdminBypass = appState.currentUser === 'ganny' || creditOverride;
+
+  if (isBlocked && !hasAdminBypass) {
+    alert(`❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" is currently blocked due to compliance audit or credit hold.\n\nQuote cannot be executed until released by the Admin (Ganny).`);
+    return false;
+  }
+
+  // 1. Check if credit period setting crosses 30 days
+  const creditPeriodCrossed30 = (creditDays > 30);
+
+  // 2. Check if outstanding quotes cross credit period or 30 days limit
+  const matchingQuotes = appState.quotes.filter(q => q.customer.trim().toLowerCase() === lowerCust && q.status === 'quoted');
+  let outstandingCrossedCredit = false;
+  let oldestDays = 0;
+
+  matchingQuotes.forEach(q => {
+    const quoteDate = new Date(q.date);
+    const diffTime = Math.abs(new Date() - quoteDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays > creditDays || diffDays > 30) {
+      outstandingCrossedCredit = true;
+      if (diffDays > oldestDays) oldestDays = diffDays;
+    }
+  });
+
+  // 3. Check if outstanding + current quote crosses credit limit
+  const currentUSD = convertAmountToUSD(quoteData.amount, quoteData.currency);
+  const outstandingUSD = matchingQuotes.reduce((sum, q) => sum + convertAmountToUSD(q.amount, q.currency), 0);
+  const newTotalUSD = outstandingUSD + currentUSD;
+  const limitExceeded = (newTotalUSD > creditLimit);
+
+  if (creditPeriodCrossed30 || outstandingCrossedCredit || limitExceeded) {
+    if (hasAdminBypass) {
+      // Clear override flag if used so it is a one-time bypass
+      if (control && control.creditOverride) {
+        control.creditOverride = false;
+        if (DB.firestoreRef) {
+          DB.firestoreRef.collection("customer_control").doc(lowerCust).set(control, { merge: true });
+        } else {
+          try {
+            let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+            offlineControls[lowerCust] = control;
+            localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+          } catch(e) {}
+        }
+      }
+      return true;
+    }
+
+    let blockReason = "";
+    if (creditPeriodCrossed30) blockReason += `• Customer credit period is set to ${creditDays} days (maximum allowed is 30 days).\n`;
+    if (outstandingCrossedCredit) blockReason += `• Customer has outstanding quotes older than their credit period or 30 days (oldest is ${oldestDays} days old).\n`;
+    if (limitExceeded) blockReason += `• Total outstanding with this quote ($${newTotalUSD.toFixed(2)}) exceeds credit limit of $${creditLimit.toFixed(2)}.\n`;
+
+    const msg = `❌ CREDIT CONTROL BLOCK:\n\n${blockReason}\nExecution is blocked. Request Admin (Ganny) override permission to execute?`;
+    if (confirm(msg)) {
+      let requests = [];
+      const stored = localStorage.getItem("gl_amendment_requests");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(e) {}
+      }
+      const pending = requests.find(r => r.customer.toLowerCase().trim() === lowerCust && r.requestType === 'credit_override' && r.status === 'pending');
+      if (pending) {
+        alert("A credit override request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
+      } else {
+        requests.push({
+          id: 'REQ' + Math.random().toString(36).substr(2, 9),
+          requestType: 'credit_override',
+          quoteId: 'N/A',
+          customer: customerName,
+          creator: appState.currentUser,
+          creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
+          date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+          status: 'pending',
+          acknowledged: false
+        });
+        localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+        alert("Credit override request submitted successfully to Ganny.");
+      }
+    }
+    return false;
+  }
+
+  return true;
+}
+window.validateCreditCompliance = validateCreditCompliance;
 
 // ==================== DATABASE STORAGE REPOSITORY (LOCAL/FIREBASE) ====================
 
@@ -5246,6 +5351,46 @@ async function submitWonBookingDetails(e) {
     return;
   }
 
+  // Check Commercial Invoice / Packing List PDF upload
+  const invoicePackingFile = document.getElementById("won-invoice-packing-file");
+  let hasInvoicePackingPdf = (invoicePackingFile && invoicePackingFile.files && invoicePackingFile.files.length > 0);
+  
+  if (!hasInvoicePackingPdf) {
+    // Validate Shipper & Consignee contact formats since no PDF is uploaded (must contain at least email and phone number)
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+    const phoneRegex = /[0-9+\-\s()]{7,}/; // at least 7 digits
+    
+    const sHasEmail = emailRegex.test(shipperContact);
+    const sHasPhone = phoneRegex.test(shipperContact);
+    const cHasEmail = emailRegex.test(consigneeContact);
+    const cHasPhone = phoneRegex.test(consigneeContact);
+    
+    if (!sHasEmail || !sHasPhone) {
+      alert("❌ COMPLIANCE ERROR: Shipper Contact Details must include both a valid Email ID and Contact Number (phone) since no Commercial Invoice & Packing List PDF is uploaded.");
+      return;
+    }
+    if (!cHasEmail || !cHasPhone) {
+      alert("❌ COMPLIANCE ERROR: Consignee Contact Details must include both a valid Email ID and Contact Number (phone) since no Commercial Invoice & Packing List PDF is uploaded.");
+      return;
+    }
+  }
+
+  let invoicePackingData = null;
+  let invoicePackingName = "";
+  if (hasInvoicePackingPdf) {
+    const file = invoicePackingFile.files[0];
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert("❌ COMPLIANCE ERROR: Only PDF files (.pdf) are allowed for Commercial Invoice & Packing List.");
+      return;
+    }
+    invoicePackingData = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+    invoicePackingName = file.name;
+  }
+
   // Check agreement upload
   const customerName = quote.customer || "";
   const lower = customerName.toLowerCase().trim();
@@ -5284,6 +5429,11 @@ async function submitWonBookingDetails(e) {
     quote.agencyAgreementData = ctrl.agreementData;
   }
 
+  if (invoicePackingData) {
+    quote.invoicePackingName = invoicePackingName;
+    quote.invoicePackingData = invoicePackingData;
+  }
+
   quote.status = 'converted';
   quote.shipperName = shipperName;
   quote.shipperContact = shipperContact;
@@ -5308,7 +5458,9 @@ async function submitWonBookingDetails(e) {
       consigneeContact,
       dateWon: quote.conversionDate,
       agencyAgreementName: quote.agencyAgreementName || "",
-      agencyAgreementData: quote.agencyAgreementData || ""
+      agencyAgreementData: quote.agencyAgreementData || "",
+      invoicePackingName: quote.invoicePackingName || "",
+      invoicePackingData: quote.invoicePackingData || ""
     };
 
     if (DB.firestoreRef) {
@@ -5425,6 +5577,22 @@ function downloadNrsAgreementPdf(id) {
 }
 window.downloadNrsAgreementPdf = downloadNrsAgreementPdf;
 
+function downloadNrsInvoicePackingPdf(id) {
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(x => x.id === id);
+  if (item && item.invoicePackingData) {
+    const link = document.createElement("a");
+    link.href = item.invoicePackingData;
+    link.download = item.invoicePackingName || "commercial_invoice_packing_list.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else {
+    alert("No Commercial Invoice & Packing List PDF uploaded for this booking.");
+  }
+}
+window.downloadNrsInvoicePackingPdf = downloadNrsInvoicePackingPdf;
+
 function displayNrsRegistryItems(list) {
   const tbody = document.getElementById("nrs-registry-body");
   if (!tbody) return;
@@ -5442,12 +5610,27 @@ function displayNrsRegistryItems(list) {
     const hasDoc = !!(item.agencyAgreementData || (window._customerControls && window._customerControls[item.customer.toLowerCase().trim()] && window._customerControls[item.customer.toLowerCase().trim()].agreementData));
     const docName = item.agencyAgreementName || (window._customerControls && window._customerControls[item.customer.toLowerCase().trim()] && window._customerControls[item.customer.toLowerCase().trim()].agreementFile) || "agency_agreement.pdf";
 
-    const docCell = hasDoc 
-      ? `<div style="display: flex; align-items: center; gap: 0.3rem;">
-           <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${docName}">${docName}</span>
-           <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥 Download</button>
-         </div>`
-      : `<span style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</span>`;
+    let docsHtml = "";
+    if (hasDoc) {
+      docsHtml += `
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 2px;">
+          <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Agreement: ${docName}">📜 ${docName}</span>
+          <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥</button>
+        </div>`;
+    } else {
+      docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic; margin-bottom: 2px;">No Agreement PDF</div>`;
+    }
+
+    if (item.invoicePackingData) {
+      const invName = item.invoicePackingName || "invoice_packing.pdf";
+      docsHtml += `
+        <div style="display: flex; align-items: center; gap: 0.3rem;">
+          <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Invoice/Packing: ${invName}">📦 ${invName}</span>
+          <button class="btn-text" onclick="downloadNrsInvoicePackingPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥</button>
+        </div>`;
+    } else {
+      docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Invoice/Packing PDF</div>`;
+    }
 
     return `
       <tr>
@@ -5466,7 +5649,7 @@ function displayNrsRegistryItems(list) {
           <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.consigneeName}</div>
           <div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.consigneeContact}</div>
         </td>
-        <td>${docCell}</td>
+        <td>${docsHtml}</td>
         <td style="font-size: 0.68rem; color: var(--t3); font-weight: 600;">
           ${new Date(item.dateWon).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
         </td>
@@ -5613,6 +5796,7 @@ function displayAdminCustomerControlList(list) {
     const isBlocked = !!ctrl.blocked;
     const waiveAgreement = !!ctrl.waiveAgreement;
     const creditDays = ctrl.creditDays || 30;
+    const creditLimit = ctrl.creditLimit || 0;
     const hasAgreement = !!ctrl.hasAgreement;
     const fileName = ctrl.agreementFile || "";
     
@@ -5629,8 +5813,13 @@ function displayAdminCustomerControlList(list) {
         <td style="font-weight: 700; color: var(--t1);">${ctrl.customer}</td>
         <td>
           <input type="number" value="${creditDays}" min="0" max="365" 
-            style="width: 60px; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" 
-            onchange="updateCustomerCreditLimit('${ctrl.customer}', this.value)">
+            style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" 
+            onchange="updateCustomerCreditPeriod('${ctrl.customer}', this.value)"> days
+        </td>
+        <td>
+          $<input type="number" value="${creditLimit}" min="0" 
+            style="width: 80px; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" 
+            onchange="updateCustomerCreditLimitValue('${ctrl.customer}', this.value)">
         </td>
         <td>
           <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${waiveAgreement ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)'}; color: ${waiveAgreement ? 'var(--accent-success)' : 'var(--accent-error)'};">
@@ -5658,19 +5847,18 @@ function displayAdminCustomerControlList(list) {
   }).join("");
 }
 
-async function updateCustomerCreditLimit(customerName, days) {
+async function updateCustomerCreditPeriod(customerName, days) {
   const val = parseInt(days);
   if (isNaN(val) || val < 0) return;
   const lower = customerName.toLowerCase();
 
   let controls = window._customerControls || {};
   if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
+    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
   }
   controls[lower].creditDays = val;
   window._customerControls = controls;
 
-  // Save to database
   if (DB.firestoreRef) {
     await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
   } else {
@@ -5681,7 +5869,31 @@ async function updateCustomerCreditLimit(customerName, days) {
     } catch(e) {}
   }
 }
-window.updateCustomerCreditLimit = updateCustomerCreditLimit;
+window.updateCustomerCreditPeriod = updateCustomerCreditPeriod;
+
+async function updateCustomerCreditLimitValue(customerName, limit) {
+  const val = parseFloat(limit);
+  if (isNaN(val) || val < 0) return;
+  const lower = customerName.toLowerCase();
+
+  let controls = window._customerControls || {};
+  if (!controls[lower]) {
+    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+  }
+  controls[lower].creditLimit = val;
+  window._customerControls = controls;
+
+  if (DB.firestoreRef) {
+    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+  } else {
+    try {
+      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+      offlineControls[lower] = controls[lower];
+      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+    } catch(e) {}
+  }
+}
+window.updateCustomerCreditLimitValue = updateCustomerCreditLimitValue;
 
 async function toggleCustomerBlock(customerName) {
   const lower = customerName.toLowerCase();

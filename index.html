@@ -514,7 +514,7 @@
                   <th>Customer</th>
                   <th>Shipper Details</th>
                   <th>Consignee (Cnee) Details</th>
-                  <th>Agency Agreement</th>
+                  <th>Documents</th>
                   <th>Date Won</th>
                 </tr>
               </thead>
@@ -1468,6 +1468,7 @@
                 <tr>
                   <th>Customer/Agent Name</th>
                   <th>Credit Period</th>
+                  <th>Credit Limit (USD)</th>
                   <th>Compliance Status</th>
                   <th>Agency Agreement</th>
                   <th>Account Status</th>
@@ -1528,7 +1529,7 @@
           </div>
           <div class="form-group">
             <label for="won-shipper-contact" style="font-weight: 700; font-size: 0.72rem; color: var(--sky);">Shipper Contact Details</label>
-            <input type="text" id="won-shipper-contact" placeholder="Phone or email" required style="border-radius: 8px;">
+            <input type="text" id="won-shipper-contact" placeholder="Email ID & Contact Number (Required if no PDF)" required style="border-radius: 8px;">
           </div>
         </div>
 
@@ -1539,9 +1540,11 @@
           </div>
           <div class="form-group">
             <label for="won-cnee-contact" style="font-weight: 700; font-size: 0.72rem; color: var(--sky);">Consignee Contact Details</label>
-            <input type="text" id="won-cnee-contact" placeholder="Phone or email" required style="border-radius: 8px;">
+            <input type="text" id="won-cnee-contact" placeholder="Email ID & Contact Number (Required if no PDF)" required style="border-radius: 8px;">
           </div>
-        <div id="won-agreement-upload-container" style="border: 1px dashed var(--border-2); border-radius: 10px; padding: 0.8rem; margin-bottom: 1.25rem; background: rgba(27,28,92,0.02);">
+        </div>
+
+        <div id="won-agreement-upload-container" style="border: 1px dashed var(--border-2); border-radius: 10px; padding: 0.8rem; margin-bottom: 1rem; background: rgba(27,28,92,0.02);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
             <label id="won-agreement-label" style="font-weight: 800; font-size: 0.72rem; color: var(--indigo); display: flex; align-items: center; gap: 4px;">
               📁 Agency Agreement PDF *
@@ -1550,6 +1553,17 @@
           </div>
           <input type="file" id="won-agreement-file" accept=".pdf" style="font-size: 0.7rem; width: 100%; border: none; padding: 0; background: transparent;">
           <small id="won-agreement-hint" style="font-size: 0.62rem; color: var(--t3); display: block; margin-top: 0.2rem;">Upload the PDF agreement for this customer to convert this quote.</small>
+        </div>
+
+        <div id="won-invoice-packing-upload-container" style="border: 1px dashed var(--border-2); border-radius: 10px; padding: 0.8rem; margin-bottom: 1.25rem; background: rgba(27,28,92,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <label style="font-weight: 800; font-size: 0.72rem; color: var(--indigo); display: flex; align-items: center; gap: 4px;">
+              📁 Commercial Invoice & Packing List (PDF)
+            </label>
+            <span id="won-invoice-packing-status" style="font-size: 0.65rem; font-weight: 700; color: var(--t3); font-style: italic;">Optional</span>
+          </div>
+          <input type="file" id="won-invoice-packing-file" accept=".pdf" style="font-size: 0.7rem; width: 100%; border: none; padding: 0; background: transparent;">
+          <small style="font-size: 0.62rem; color: var(--t3); display: block; margin-top: 0.2rem;">Upload PDF Commercial Invoice and Packing List if available.</small>
         </div>
 
         <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #000; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding: 0.6rem;">
@@ -1565,6 +1579,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=13.0"></script>
+  <script src="app-v4.js?v=14.0"></script>
 </body>
 </html>
