@@ -5494,8 +5494,10 @@ async function submitWonBookingDetails(e) {
     const nrsEntry = {
       id: quote.id,
       refId: getQuoteRefId(quote),
-      mode: quote.mode === 'air' ? 'Air Nomination' : 'Sea Nomination',
-      customer: quote.customer,
+      mode: quote.type === 'air' ? 'Air Nomination' : 'Sea Nomination',
+      agent: quote.customer,
+      pol: (quote.details && quote.details.origin) || '',
+      pod: (quote.details && quote.details.destination) || '',
       shipperName,
       shipperPhone,
       shipperEmail,
@@ -5773,7 +5775,7 @@ function displayNrsRegistryItems(list) {
   tbody.innerHTML = "";
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
     return;
   }
 
@@ -5781,8 +5783,9 @@ function displayNrsRegistryItems(list) {
   const sorted = [...list].sort((a, b) => new Date(b.dateWon) - new Date(a.dateWon));
 
   tbody.innerHTML = sorted.map(item => {
-    const hasDoc = !!(item.agencyAgreementData || (window._customerControls && window._customerControls[item.customer.toLowerCase().trim()] && window._customerControls[item.customer.toLowerCase().trim()].agreementData));
-    const docName = item.agencyAgreementName || (window._customerControls && window._customerControls[item.customer.toLowerCase().trim()] && window._customerControls[item.customer.toLowerCase().trim()].agreementFile) || "agency_agreement.pdf";
+    const agentKey = (item.agent || item.customer || "").toLowerCase().trim();
+    const hasDoc = !!(item.agencyAgreementData || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementData));
+    const docName = item.agencyAgreementName || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementFile) || "agency_agreement.pdf";
 
     let docsHtml = "";
     if (hasDoc) {
@@ -5824,11 +5827,19 @@ function displayNrsRegistryItems(list) {
       <tr>
         <td style="font-weight: 750; color: var(--sky); font-size: 0.72rem;">#${item.refId}</td>
         <td>
-          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${item.mode.includes('Air') ? 'rgba(27,28,92,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${item.mode.includes('Air') ? 'var(--accent-air)' : 'var(--accent-sea)'};">
+          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${item.mode.includes('Air') ? 'rgba(27,28,92,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${item.mode.includes('Air') ? 'var(--accent-air)' : 'var(--accent-sea)'}">
             ${item.mode}
           </span>
         </td>
-        <td><div style="font-weight: 700; color: var(--t1); font-size: 0.72rem;">${item.customer}</div></td>
+        <td><div style="font-weight: 700; color: var(--t1); font-size: 0.72rem;">${item.agent || item.customer || 'N/A'}</div></td>
+        <td>
+          <div style="font-size: 0.68rem; font-weight: 750; color: var(--t2);">
+            ${item.pol ? `<span title="Port of Loading">${item.pol}</span>` : '<span style="color:var(--t3);font-style:italic;">—</span>'}
+          </div>
+          <div style="font-size: 0.65rem; color: var(--t3); margin-top: 2px;">
+            ${item.pod ? `<span title="Port of Discharge">→ ${item.pod}</span>` : ''}
+          </div>
+        </td>
         <td>
           <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.shipperName}</div>
           ${shipperSubtext}
@@ -5862,7 +5873,10 @@ function filterNrsRegistry(query) {
   const filtered = list.filter(item => {
     return (
       item.refId.toLowerCase().includes(q) ||
-      item.customer.toLowerCase().includes(q) ||
+      (item.agent && item.agent.toLowerCase().includes(q)) ||
+      (item.customer && item.customer.toLowerCase().includes(q)) ||
+      (item.pol && item.pol.toLowerCase().includes(q)) ||
+      (item.pod && item.pod.toLowerCase().includes(q)) ||
       item.shipperName.toLowerCase().includes(q) ||
       (item.shipperPhone && item.shipperPhone.toLowerCase().includes(q)) ||
       (item.shipperEmail && item.shipperEmail.toLowerCase().includes(q)) ||
