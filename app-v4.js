@@ -5787,6 +5787,13 @@ function displayNrsRegistryItems(list) {
     const hasDoc = !!(item.agencyAgreementData || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementData));
     const docName = item.agencyAgreementName || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementFile) || "agency_agreement.pdf";
 
+    // Derive correct nomination from refId prefix — overrides any stale stored mode value
+    const prefix = (item.refId || "").substring(0, 2).toUpperCase();
+    const isAirByRef = prefix === 'AE' || prefix === 'AI';
+    const isSeaByRef = prefix === 'SE' || prefix === 'SI';
+    const nomMode = isAirByRef ? 'Air Nomination' : (isSeaByRef ? 'Sea Nomination' : (item.mode || 'Sea Nomination'));
+    const isAir = nomMode === 'Air Nomination';
+
     let docsHtml = "";
     if (hasDoc) {
       docsHtml += `
@@ -5827,8 +5834,8 @@ function displayNrsRegistryItems(list) {
       <tr>
         <td style="font-weight: 750; color: var(--sky); font-size: 0.72rem;">#${item.refId}</td>
         <td>
-          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${item.mode.includes('Air') ? 'rgba(27,28,92,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${item.mode.includes('Air') ? 'var(--accent-air)' : 'var(--accent-sea)'}">
-            ${item.mode}
+          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isAir ? 'rgba(27,28,92,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${isAir ? 'var(--accent-air)' : 'var(--accent-sea)'}">
+            ${nomMode}
           </span>
         </td>
         <td><div style="font-weight: 700; color: var(--t1); font-size: 0.72rem;">${item.agent || item.customer || 'N/A'}</div></td>
