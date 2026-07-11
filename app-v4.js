@@ -289,6 +289,39 @@ document.addEventListener("DOMContentLoaded", () => {
   // Modal handlers
   document.getElementById("close-modal")?.addEventListener("click", hideQuoteModal);
   document.getElementById("print-quote-btn")?.addEventListener("click", printQuote);
+
+  // File upload badge updates
+  const agreementFileInput = document.getElementById("won-agreement-file");
+  if (agreementFileInput) {
+    agreementFileInput.addEventListener("change", function() {
+      const statusEl = document.getElementById("won-agreement-status");
+      if (statusEl) {
+        if (this.files && this.files.length > 0) {
+          statusEl.textContent = "Selected ✅";
+          statusEl.style.color = "var(--accent-success)";
+        } else {
+          statusEl.textContent = "Required";
+          statusEl.style.color = "var(--accent-error)";
+        }
+      }
+    });
+  }
+
+  const invoiceFileInput = document.getElementById("won-invoice-packing-file");
+  if (invoiceFileInput) {
+    invoiceFileInput.addEventListener("change", function() {
+      const statusEl = document.getElementById("won-invoice-packing-status");
+      if (statusEl) {
+        if (this.files && this.files.length > 0) {
+          statusEl.textContent = "Selected ✅";
+          statusEl.style.color = "var(--accent-success)";
+        } else {
+          statusEl.textContent = "Optional";
+          statusEl.style.color = "var(--t3)";
+        }
+      }
+    });
+  }
 });
 
 // Authentication System
@@ -5799,6 +5832,37 @@ function downloadAgreementPdf(customerName) {
   }
 }
 window.downloadAgreementPdf = downloadAgreementPdf;
+
+async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
+  if (!customerName) return;
+  const lower = customerName.toLowerCase().trim();
+  let controls = window._customerControls || {};
+  if (!controls[lower]) {
+    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+  }
+  
+  controls[lower].hasAgreement = true;
+  controls[lower].agreementFile = fileName;
+  controls[lower].agreementData = fileData;
+  window._customerControls = controls;
+
+  // Save to Firestore/local storage
+  if (DB.firestoreRef) {
+    try {
+      await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+      console.log(`DB: Saved agency agreement for "${customerName}" to Firestore.`);
+    } catch(err) {
+      console.error("DB: Failed to save agency agreement to Firestore:", err);
+    }
+  } else {
+    try {
+      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+      offlineControls[lower] = controls[lower];
+      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+    } catch(e) {}
+  }
+}
+window.saveCustomerAgreementRecord = saveCustomerAgreementRecord;
 
 async function resetCustomerAgreement(customerName) {
   if (!confirm(`Are you sure you want to cancel and delete the Agency Agreement for "${customerName}"?`)) return;
