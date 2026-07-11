@@ -4681,11 +4681,18 @@ const DB = {
         // Check for migration from local to cloud
         const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
         if (localQuotes.length > 0) {
-          localQuotes.forEach(q => {
-            if (!q.timestamp) q.timestamp = Date.now();
-            this.firestoreRef.collection("quotes").doc(q.id).set(q);
-          });
-          localStorage.removeItem("logistics_quotes");
+          console.log(`DB: Found ${localQuotes.length} local quotes. Migrating to Firestore...`);
+          try {
+            const migrationPromises = localQuotes.map(async q => {
+              if (!q.timestamp) q.timestamp = Date.now();
+              return this.firestoreRef.collection("quotes").doc(q.id).set(q);
+            });
+            await Promise.all(migrationPromises);
+            console.log("DB: Local quotes migration succeeded!");
+            localStorage.removeItem("logistics_quotes");
+          } catch (err) {
+            console.error("DB: Migration of local quotes failed. Retaining local copy.", err);
+          }
         }
         return;
       } catch (e) {
