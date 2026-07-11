@@ -4615,6 +4615,16 @@ window.toggleMapHelper = toggleMapHelper;
 
 // ==================== DATABASE STORAGE REPOSITORY (LOCAL/FIREBASE) ====================
 
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBnS2173ew2VpxR7rOS0FfTpfsEmhj79Uc",
+  authDomain: "vertex-35d95.firebaseapp.com",
+  projectId: "vertex-35d95",
+  storageBucket: "vertex-35d95.firebasestorage.app",
+  messagingSenderId: "185189133669",
+  appId: "1:185189133669:web:e24a34f1ef33061e60458c",
+  measurementId: "G-BD2BQBRPZM"
+};
+
 const DB = {
   isCloud: false,
   firestoreRef: null,
@@ -4622,53 +4632,63 @@ const DB = {
   snapshotUnsubscribe: null,
   
   async init() {
-    const configRaw = localStorage.getItem("gl_firebase_config");
+    let configRaw = localStorage.getItem("gl_firebase_config");
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
     
+    let config = null;
     if (configRaw) {
       try {
-        const config = JSON.parse(configRaw);
-        if (config && config.apiKey && config.projectId) {
-          // Initialize Firebase Compat
-          if (firebase.apps.length > 0) {
-            try {
-              await firebase.app().delete();
-            } catch (e) {
-              console.warn("DB: Error cleaning up existing Firebase App instance:", e);
-            }
-          }
-          firebase.initializeApp(config);
-          const dbId = config.databaseId || '(default)';
-          console.log("DB: Stored Project ID in LocalStorage:", config.projectId);
-          console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
-          console.log("DB: Initializing Firestore connection with database ID:", dbId);
-          this.firestoreRef = firebase.firestore(firebase.app(), dbId);
-          this.isCloud = true;
-          
-          // Enable offline persistence
-          this.firestoreRef.enablePersistence().catch(err => {
-            console.warn("Firestore offline persistence failed:", err.code);
-          });
-          
-          if (statusDot) statusDot.style.background = "#10b981"; // green
-          if (statusText) statusText.textContent = "Firebase Cloud (Online)";
-          
-          this.registerSnapshotListener();
-          
-          // Check for migration from local to cloud
-          const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
-          if (localQuotes.length > 0) {
-            localQuotes.forEach(q => {
-              if (!q.timestamp) q.timestamp = Date.now();
-              this.firestoreRef.collection("quotes").doc(q.id).set(q);
-            });
-            localStorage.removeItem("logistics_quotes");
-          }
-          return;
-        }
+        config = JSON.parse(configRaw);
       } catch (e) {
-        console.error("Failed to parse Firebase configuration:", e);
+        console.error("Failed to parse stored Firebase configuration:", e);
+      }
+    }
+    
+    if (!config) {
+      config = DEFAULT_FIREBASE_CONFIG;
+    }
+    
+    if (config && config.apiKey && config.projectId) {
+      try {
+        // Initialize Firebase Compat
+        if (firebase.apps.length > 0) {
+          try {
+            await firebase.app().delete();
+          } catch (e) {
+            console.warn("DB: Error cleaning up existing Firebase App instance:", e);
+          }
+        }
+        firebase.initializeApp(config);
+        const dbId = config.databaseId || '(default)';
+        console.log("DB: Stored Project ID in LocalStorage:", config.projectId);
+        console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
+        console.log("DB: Initializing Firestore connection with database ID:", dbId);
+        this.firestoreRef = firebase.firestore(firebase.app(), dbId);
+        this.isCloud = true;
+        
+        // Enable offline persistence
+        this.firestoreRef.enablePersistence().catch(err => {
+          console.warn("Firestore offline persistence failed:", err.code);
+        });
+        
+        if (statusDot) statusDot.style.background = "#10b981"; // green
+        if (statusText) statusText.textContent = "Firebase Cloud (Online)";
+        
+        this.registerSnapshotListener();
+        
+        // Check for migration from local to cloud
+        const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
+        if (localQuotes.length > 0) {
+          localQuotes.forEach(q => {
+            if (!q.timestamp) q.timestamp = Date.now();
+            this.firestoreRef.collection("quotes").doc(q.id).set(q);
+          });
+          localStorage.removeItem("logistics_quotes");
+        }
+        return;
+      } catch (e) {
+        console.error("Failed to initialize Firebase:", e);
       }
     }
     
