@@ -1835,7 +1835,7 @@ function renderMemberDashboard(userId) {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
         ${isQuoted ? `
-        <button class="action-icon-btn convert" style="background: ${quote.amendmentAllowed ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Converted/Won (Unlocked)' : 'Request Admin Permission to Convert/Won'}" onclick="convertQuote('${quote.id}')">
+        <button class="action-icon-btn convert" style="background: rgba(74, 222, 128, 0.2); color: var(--accent-success);" title="Convert Quote to Won" onclick="convertQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
         <button class="action-icon-btn delete" style="background: ${quote.amendmentAllowed ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
@@ -2172,12 +2172,9 @@ function renderMonthlyCharts() {
   });
 }
 
-// CONVERT QUOTE ACTION
 window.convertQuote = (id) => {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
-
-  if (!checkAndRequestEditPermission(quote, "convert")) return;
 
   // Open modal to input Shipper / Consignee details
   document.getElementById("won-quote-id").value = id;
@@ -3443,9 +3440,13 @@ window.viewSavedQuote = (id) => {
       ${termsList}
     </ol>
     
-    <div class="footer-note" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem; font-size: 0.65rem; color: var(--text-dim); text-align: center;">
-      This quote is valid for 15 days from the date of issue and is subject to space and equipment availability.
-      Thank you for choosing Global Logistics!
+    <div class="footer-note" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; text-align: center; display: flex; justify-content: center; align-items: baseline; margin-top: 1.5rem;">
+      <span style="font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: #94a3b8; display: inline-flex; align-items: baseline; font-weight: 600;">
+        Thank you for Choosing&nbsp;
+        <span style="font-family: 'Cinzel', serif; font-weight: 700; letter-spacing: 0.04em; color: var(--text-brand); display: inline-flex; align-items: baseline;">
+          VERTE<span class="custom-brand-x" style="font-size: 0.85rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
+        </span>
+      </span>
     </div>
   `;
 
