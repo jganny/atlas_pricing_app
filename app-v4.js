@@ -3335,9 +3335,12 @@ window.viewSavedQuote = (id) => {
     <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
         <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
-        <div>
-          <div class="print-logo" style="font-size: 1.5rem; font-weight: 800; color: #2f3193; line-height: 1.1;">Vertex</div>
-          <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Atlas Pricing</div>
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+          <div style="color: #1b1c5c; font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; line-height: 1.0;">
+            <span style="font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em;">VERTE</span>
+            <span class="custom-brand-x" style="font-size: 2.0rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
+          </div>
+          <div style="font-size: 0.75rem; color: #64748b; font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.25rem;">Pricing, Simplified</div>
         </div>
       </div>
       <div class="print-title">
@@ -3444,7 +3447,7 @@ window.viewSavedQuote = (id) => {
       <span style="font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: #94a3b8; display: inline-flex; align-items: baseline; font-weight: 600;">
         Thank you for Choosing&nbsp;
         <span style="font-family: 'Cinzel', serif; font-weight: 700; letter-spacing: 0.04em; color: var(--text-brand); display: inline-flex; align-items: baseline;">
-          VERTE<span class="custom-brand-x" style="font-size: 0.85rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
+          VERTE<span class="custom-brand-x" style="font-size: 1.15rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
         </span>
       </span>
     </div>
