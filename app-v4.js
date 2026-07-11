@@ -4910,7 +4910,7 @@ const DB = {
         if (appState.currentUser === 'ganny') {
           renderAdminDashboard();
         } else {
-          renderWorkspace();
+          renderMemberDashboard(appState.currentUser);
         }
       }
     }, error => {
@@ -5050,7 +5050,7 @@ const DB = {
       if (appState.currentUser === 'ganny') {
         renderAdminDashboard();
       } else {
-        renderWorkspace();
+        renderMemberDashboard(appState.currentUser);
       }
     }
   },
@@ -5070,7 +5070,7 @@ const DB = {
       if (appState.currentUser === 'ganny') {
         renderAdminDashboard();
       } else {
-        renderWorkspace();
+        renderMemberDashboard(appState.currentUser);
       }
     }
   },
