@@ -4802,6 +4802,21 @@ const DB = {
             console.error("DB: Migration of local quotes failed. Retaining local copy.", err);
           }
         }
+        // Check for migration from local to cloud for NRS registry
+        const localNrs = JSON.parse(localStorage.getItem("gl_nrs_registry") || "[]");
+        if (localNrs.length > 0) {
+          console.log(`DB: Found ${localNrs.length} local NRS entries. Migrating to Firestore...`);
+          try {
+            const migrationPromises = localNrs.map(async entry => {
+              return this.firestoreRef.collection("nrs_registry").doc(entry.id).set(entry);
+            });
+            await Promise.all(migrationPromises);
+            console.log("DB: Local NRS registry migration succeeded!");
+            localStorage.removeItem("gl_nrs_registry");
+          } catch (err) {
+            console.error("DB: Migration of local NRS registry failed. Retaining local copy.", err);
+          }
+        }
         return;
       } catch (e) {
         console.error("Failed to initialize Firebase:", e);
@@ -5552,10 +5567,22 @@ window.renderNrsRegistry = renderNrsRegistry;
 function downloadNrsAgreementPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-  if (item && item.agencyAgreementData) {
+  
+  let agreementData = item ? item.agencyAgreementData : null;
+  let agreementName = item ? item.agencyAgreementName : null;
+  
+  if (!agreementData) {
+    const q = appState.quotes.find(x => x.id === id);
+    if (q) {
+      agreementData = q.agencyAgreementData;
+      agreementName = q.agencyAgreementName;
+    }
+  }
+
+  if (agreementData) {
     const link = document.createElement("a");
-    link.href = item.agencyAgreementData;
-    link.download = item.agencyAgreementName || "agency_agreement.pdf";
+    link.href = agreementData;
+    link.download = agreementName || "agency_agreement.pdf";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -5580,10 +5607,22 @@ window.downloadNrsAgreementPdf = downloadNrsAgreementPdf;
 function downloadNrsInvoicePackingPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-  if (item && item.invoicePackingData) {
+  
+  let invoicePackingData = item ? item.invoicePackingData : null;
+  let invoicePackingName = item ? item.invoicePackingName : null;
+  
+  if (!invoicePackingData) {
+    const q = appState.quotes.find(x => x.id === id);
+    if (q) {
+      invoicePackingData = q.invoicePackingData;
+      invoicePackingName = q.invoicePackingName;
+    }
+  }
+
+  if (invoicePackingData) {
     const link = document.createElement("a");
-    link.href = item.invoicePackingData;
-    link.download = item.invoicePackingName || "commercial_invoice_packing_list.pdf";
+    link.href = invoicePackingData;
+    link.download = invoicePackingName || "commercial_invoice_packing_list.pdf";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
