@@ -5597,6 +5597,109 @@ async function renderNrsRegistry() {
 }
 window.renderNrsRegistry = renderNrsRegistry;
 
+function previewPdfDataUrl(dataUrl, title = "Document Preview") {
+  try {
+    const parts = dataUrl.split(';base64,');
+    const contentType = parts[0].split(':')[1];
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i);
+    }
+    const blob = new Blob([uInt8Array], { type: contentType });
+    const blobUrl = URL.createObjectURL(blob);
+    
+    const win = window.open();
+    if (win) {
+      win.document.write(`
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              body { margin: 0; padding: 0; background: #0e0f30; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+              header { background: #111236; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #232560; }
+              iframe { border: none; width: 100%; height: calc(100vh - 50px); }
+              .btn-download { background: #10b981; color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 0.8rem; }
+            </style>
+          </head>
+          <body>
+            <header>
+              <span style="font-weight: bold;">${title}</span>
+              <a href="${blobUrl}" download="${title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.pdf" class="btn-download">Download PDF</a>
+            </header>
+            <iframe src="${blobUrl}"></iframe>
+          </body>
+        </html>
+      `);
+      win.document.close();
+    } else {
+      alert("Pop-up blocker active! Please allow pop-ups for this website to preview PDFs.");
+    }
+  } catch (err) {
+    console.error("PDF Preview failed:", err);
+    const win = window.open();
+    if (win) win.location.href = dataUrl;
+  }
+}
+window.previewPdfDataUrl = previewPdfDataUrl;
+
+function previewNrsAgreementPdf(id) {
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(x => x.id === id);
+  
+  let agreementData = item ? item.agencyAgreementData : null;
+  let agreementName = item ? item.agencyAgreementName : null;
+  
+  if (!agreementData) {
+    const q = appState.quotes.find(x => x.id === id);
+    if (q) {
+      agreementData = q.agencyAgreementData;
+      agreementName = q.agencyAgreementName;
+    }
+  }
+
+  if (!agreementData) {
+    const customer = (item && item.customer) || "";
+    const lower = customer.toLowerCase().trim();
+    const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+    if (ctrl.agreementData) {
+      agreementData = ctrl.agreementData;
+      agreementName = ctrl.agreementFile;
+    }
+  }
+
+  if (agreementData) {
+    previewPdfDataUrl(agreementData, agreementName || "Agency Agreement");
+  } else {
+    alert("No PDF document uploaded or found for this won booking/customer.");
+  }
+}
+window.previewNrsAgreementPdf = previewNrsAgreementPdf;
+
+function previewNrsInvoicePackingPdf(id) {
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(x => x.id === id);
+  
+  let invoicePackingData = item ? item.invoicePackingData : null;
+  let invoicePackingName = item ? item.invoicePackingName : null;
+  
+  if (!invoicePackingData) {
+    const q = appState.quotes.find(x => x.id === id);
+    if (q) {
+      invoicePackingData = q.invoicePackingData;
+      invoicePackingName = q.invoicePackingName;
+    }
+  }
+
+  if (invoicePackingData) {
+    previewPdfDataUrl(invoicePackingData, invoicePackingName || "Commercial Invoice & Packing List");
+  } else {
+    alert("No Commercial Invoice & Packing List PDF uploaded for this booking.");
+  }
+}
+window.previewNrsInvoicePackingPdf = previewNrsInvoicePackingPdf;
+
 function downloadNrsAgreementPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
@@ -5687,7 +5790,8 @@ function displayNrsRegistryItems(list) {
       docsHtml += `
         <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 2px;">
           <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Agreement: ${docName}">📜 ${docName}</span>
-          <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥</button>
+          <button class="btn-text" onclick="previewNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Preview PDF">👁️</button>
+          <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Download PDF">📥</button>
         </div>`;
     } else {
       docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic; margin-bottom: 2px;">No Agreement PDF</div>`;
@@ -5698,7 +5802,8 @@ function displayNrsRegistryItems(list) {
       docsHtml += `
         <div style="display: flex; align-items: center; gap: 0.3rem;">
           <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Invoice/Packing: ${invName}">📦 ${invName}</span>
-          <button class="btn-text" onclick="downloadNrsInvoicePackingPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥</button>
+          <button class="btn-text" onclick="previewNrsInvoicePackingPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Preview PDF">👁️</button>
+          <button class="btn-text" onclick="downloadNrsInvoicePackingPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Download PDF">📥</button>
         </div>`;
     } else {
       docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Invoice/Packing PDF</div>`;
