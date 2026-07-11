@@ -512,9 +512,10 @@
                   <th>Ref ID</th>
                   <th>Mode</th>
                   <th>Customer</th>
-                  <th>Shipper Details</th>
-                  <th>Consignee (Cnee) Details</th>
-                  <th>Documents</th>
+                  <th>Shipper (Exporter)</th>
+                  <th>Consignee (Importer)</th>
+                  <th>Commodity</th>
+                  <th>Agency Agreement</th>
                   <th>Date Won</th>
                 </tr>
               </thead>
@@ -1522,48 +1523,72 @@
       <form id="won-booking-form" onsubmit="submitWonBookingDetails(event)">
         <input type="hidden" id="won-quote-id">
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div class="form-group">
-            <label for="won-shipper-name" style="font-weight: 700; font-size: 0.72rem; color: var(--sky);">Shipper Name</label>
-            <input type="text" id="won-shipper-name" placeholder="Full company name" required style="border-radius: 8px;">
+        <div style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem; margin-bottom: 1rem;">
+          <!-- Shipper / Exporter Section -->
+          <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 0 0 0.8rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Exporter (Shipper) Details</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label for="won-shipper-name" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Company Name *</label>
+              <input type="text" id="won-shipper-name" placeholder="Full exporter company name" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="won-shipper-phone" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Contact Number *</label>
+              <input type="text" id="won-shipper-phone" placeholder="Phone or mobile number" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
           </div>
-          <div class="form-group">
-            <label for="won-shipper-contact" style="font-weight: 700; font-size: 0.72rem; color: var(--sky);">Shipper Contact Details</label>
-            <input type="text" id="won-shipper-contact" placeholder="Email ID & Contact Number (Required if no PDF)" required style="border-radius: 8px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label for="won-shipper-email" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Email ID *</label>
+              <input type="email" id="won-shipper-email" placeholder="exporter@email.com" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="won-shipper-address" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Office Address *</label>
+              <input type="text" id="won-shipper-address" placeholder="Full office address" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
           </div>
-        </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div class="form-group">
-            <label for="won-cnee-name" style="font-weight: 700; font-size: 0.72rem; color: var(--sky);">Consignee (Cnee) Name</label>
-            <input type="text" id="won-cnee-name" placeholder="Full company name" required style="border-radius: 8px;">
+          <!-- Consignee / Importer Section -->
+          <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 1.2rem 0 0.8rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Importer (Consignee) Details</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label for="won-cnee-name" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Company Name *</label>
+              <input type="text" id="won-cnee-name" placeholder="Full importer company name" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="won-cnee-phone" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Contact Number *</label>
+              <input type="text" id="won-cnee-phone" placeholder="Phone or mobile number" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
           </div>
-          <div class="form-group">
-            <label for="won-cnee-contact" style="font-weight: 700; font-size: 0.72rem; color: var(--sky);">Consignee Contact Details</label>
-            <input type="text" id="won-cnee-contact" placeholder="Email ID & Contact Number (Required if no PDF)" required style="border-radius: 8px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label for="won-cnee-email" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Email ID *</label>
+              <input type="email" id="won-cnee-email" placeholder="importer@email.com" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="won-cnee-address" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Office Address *</label>
+              <input type="text" id="won-cnee-address" placeholder="Full office address" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
           </div>
-        </div>
 
-        <div id="won-agreement-upload-container" style="border: 1px dashed var(--border-2); border-radius: 10px; padding: 0.8rem; margin-bottom: 1rem; background: rgba(27,28,92,0.02);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-            <label id="won-agreement-label" style="font-weight: 800; font-size: 0.72rem; color: var(--indigo); display: flex; align-items: center; gap: 4px;">
-              📁 Agency Agreement PDF *
-            </label>
-            <span id="won-agreement-status" style="font-size: 0.65rem; font-weight: 700; color: var(--accent-error);">Required</span>
+          <!-- Cargo & Commodity Details -->
+          <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 1.2rem 0 0.8rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Cargo & Commodity Details</h4>
+          <div class="form-group" style="margin-bottom: 1.2rem;">
+            <label for="won-commodity" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Commodity / Goods Description *</label>
+            <input type="text" id="won-commodity" placeholder="e.g. Garments, Auto Parts, Chemical Products" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
           </div>
-          <input type="file" id="won-agreement-file" accept=".pdf" style="font-size: 0.7rem; width: 100%; border: none; padding: 0; background: transparent;">
-          <small id="won-agreement-hint" style="font-size: 0.62rem; color: var(--t3); display: block; margin-top: 0.2rem;">Upload the PDF agreement for this customer to convert this quote.</small>
-        </div>
 
-        <div id="won-invoice-packing-upload-container" style="border: 1px dashed var(--border-2); border-radius: 10px; padding: 0.8rem; margin-bottom: 1.25rem; background: rgba(27,28,92,0.02);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-            <label style="font-weight: 800; font-size: 0.72rem; color: var(--indigo); display: flex; align-items: center; gap: 4px;">
-              📁 Commercial Invoice & Packing List (PDF)
-            </label>
-            <span id="won-invoice-packing-status" style="font-size: 0.65rem; font-weight: 700; color: var(--t3); font-style: italic;">Optional</span>
+          <!-- Agency Agreement -->
+          <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 1.2rem 0 0.8rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Compliance Upload</h4>
+          <div id="won-agreement-upload-container" style="border: 1px dashed var(--border-2); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.5rem; background: rgba(27,28,92,0.02);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label id="won-agreement-label" style="font-weight: 800; font-size: 0.72rem; color: var(--indigo); display: flex; align-items: center; gap: 4px;">
+                📁 Agency Agreement PDF *
+              </label>
+              <span id="won-agreement-status" style="font-size: 0.65rem; font-weight: 700; color: var(--accent-error);">Required</span>
+            </div>
+            <input type="file" id="won-agreement-file" accept=".pdf" style="font-size: 0.7rem; width: 100%; border: none; padding: 0; background: transparent;">
+            <small id="won-agreement-hint" style="font-size: 0.62rem; color: var(--t3); display: block; margin-top: 0.2rem;">Upload the PDF agreement for this customer to convert this quote.</small>
           </div>
-          <input type="file" id="won-invoice-packing-file" accept=".pdf" style="font-size: 0.7rem; width: 100%; border: none; padding: 0; background: transparent;">
-          <small style="font-size: 0.62rem; color: var(--t3); display: block; margin-top: 0.2rem;">Upload PDF Commercial Invoice and Packing List if available.</small>
         </div>
 
         <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #000; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding: 0.6rem;">
@@ -1579,6 +1604,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=18.0"></script>
+  <script src="app-v4.js?v=19.0"></script>
 </body>
 </html>

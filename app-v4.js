@@ -2221,9 +2221,16 @@ window.convertQuote = (id) => {
   // Open modal to input Shipper / Consignee details
   document.getElementById("won-quote-id").value = id;
   document.getElementById("won-shipper-name").value = quote.shipperName || "";
-  document.getElementById("won-shipper-contact").value = quote.shipperContact || "";
+  document.getElementById("won-shipper-phone").value = quote.shipperPhone || "";
+  document.getElementById("won-shipper-email").value = quote.shipperEmail || "";
+  document.getElementById("won-shipper-address").value = quote.shipperAddress || "";
+
   document.getElementById("won-cnee-name").value = quote.consigneeName || "";
-  document.getElementById("won-cnee-contact").value = quote.consigneeContact || "";
+  document.getElementById("won-cnee-phone").value = quote.consigneePhone || "";
+  document.getElementById("won-cnee-email").value = quote.consigneeEmail || "";
+  document.getElementById("won-cnee-address").value = quote.consigneeAddress || "";
+
+  document.getElementById("won-commodity").value = quote.commodity || "";
 
   // Check if customer already has a verified agency agreement
   const customerName = quote.customer || "";
@@ -5390,53 +5397,42 @@ async function submitWonBookingDetails(e) {
   if (!quote) return;
 
   const shipperName = document.getElementById("won-shipper-name").value.trim();
-  const shipperContact = document.getElementById("won-shipper-contact").value.trim();
-  const consigneeName = document.getElementById("won-cnee-name").value.trim();
-  const consigneeContact = document.getElementById("won-cnee-contact").value.trim();
+  const shipperPhone = document.getElementById("won-shipper-phone").value.trim();
+  const shipperEmail = document.getElementById("won-shipper-email").value.trim();
+  const shipperAddress = document.getElementById("won-shipper-address").value.trim();
 
-  if (!shipperName || !shipperContact || !consigneeName || !consigneeContact) {
-    alert("Please fill all details to proceed.");
+  const consigneeName = document.getElementById("won-cnee-name").value.trim();
+  const consigneePhone = document.getElementById("won-cnee-phone").value.trim();
+  const consigneeEmail = document.getElementById("won-cnee-email").value.trim();
+  const consigneeAddress = document.getElementById("won-cnee-address").value.trim();
+
+  const commodity = document.getElementById("won-commodity").value.trim();
+
+  if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress || 
+      !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
+    alert("Please fill all exporter, importer and cargo details to proceed.");
     return;
   }
 
-  // Check Commercial Invoice / Packing List PDF upload
-  const invoicePackingFile = document.getElementById("won-invoice-packing-file");
-  let hasInvoicePackingPdf = (invoicePackingFile && invoicePackingFile.files && invoicePackingFile.files.length > 0);
-  
-  if (!hasInvoicePackingPdf) {
-    // Validate Shipper & Consignee contact formats since no PDF is uploaded (must contain at least email and phone number)
-    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-    const phoneRegex = /[0-9+\-\s()]{7,}/; // at least 7 digits
-    
-    const sHasEmail = emailRegex.test(shipperContact);
-    const sHasPhone = phoneRegex.test(shipperContact);
-    const cHasEmail = emailRegex.test(consigneeContact);
-    const cHasPhone = phoneRegex.test(consigneeContact);
-    
-    if (!sHasEmail || !sHasPhone) {
-      alert("❌ COMPLIANCE ERROR: Shipper Contact Details must include both a valid Email ID and Contact Number (phone) since no Commercial Invoice & Packing List PDF is uploaded.");
-      return;
-    }
-    if (!cHasEmail || !cHasPhone) {
-      alert("❌ COMPLIANCE ERROR: Consignee Contact Details must include both a valid Email ID and Contact Number (phone) since no Commercial Invoice & Packing List PDF is uploaded.");
-      return;
-    }
-  }
+  // Validate contacts format
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const phoneRegex = /[0-9+\-\s()]{7,}/;
 
-  let invoicePackingData = null;
-  let invoicePackingName = "";
-  if (hasInvoicePackingPdf) {
-    const file = invoicePackingFile.files[0];
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      alert("❌ COMPLIANCE ERROR: Only PDF files (.pdf) are allowed for Commercial Invoice & Packing List.");
-      return;
-    }
-    invoicePackingData = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(file);
-    });
-    invoicePackingName = file.name;
+  if (!emailRegex.test(shipperEmail)) {
+    alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Exporter (Shipper).");
+    return;
+  }
+  if (!phoneRegex.test(shipperPhone)) {
+    alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Exporter (Shipper).");
+    return;
+  }
+  if (!emailRegex.test(consigneeEmail)) {
+    alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Importer (Consignee).");
+    return;
+  }
+  if (!phoneRegex.test(consigneePhone)) {
+    alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Importer (Consignee).");
+    return;
   }
 
   // Check agreement upload
@@ -5477,16 +5473,16 @@ async function submitWonBookingDetails(e) {
     quote.agencyAgreementData = ctrl.agreementData;
   }
 
-  if (invoicePackingData) {
-    quote.invoicePackingName = invoicePackingName;
-    quote.invoicePackingData = invoicePackingData;
-  }
-
   quote.status = 'converted';
   quote.shipperName = shipperName;
-  quote.shipperContact = shipperContact;
+  quote.shipperPhone = shipperPhone;
+  quote.shipperEmail = shipperEmail;
+  quote.shipperAddress = shipperAddress;
   quote.consigneeName = consigneeName;
-  quote.consigneeContact = consigneeContact;
+  quote.consigneePhone = consigneePhone;
+  quote.consigneeEmail = consigneeEmail;
+  quote.consigneeAddress = consigneeAddress;
+  quote.commodity = commodity;
   quote.conversionDate = new Date().toISOString().split('T')[0];
   quote.date = new Date().toISOString().split('T')[0];
 
@@ -5501,14 +5497,17 @@ async function submitWonBookingDetails(e) {
       mode: quote.mode === 'air' ? 'Air Nomination' : 'Sea Nomination',
       customer: quote.customer,
       shipperName,
-      shipperContact,
+      shipperPhone,
+      shipperEmail,
+      shipperAddress,
       consigneeName,
-      consigneeContact,
+      consigneePhone,
+      consigneeEmail,
+      consigneeAddress,
+      commodity,
       dateWon: quote.conversionDate,
       agencyAgreementName: quote.agencyAgreementName || "",
-      agencyAgreementData: quote.agencyAgreementData || "",
-      invoicePackingName: quote.invoicePackingName || "",
-      invoicePackingData: quote.invoicePackingData || ""
+      agencyAgreementData: quote.agencyAgreementData || ""
     };
 
     if (DB.firestoreRef) {
@@ -5788,25 +5787,37 @@ function displayNrsRegistryItems(list) {
     let docsHtml = "";
     if (hasDoc) {
       docsHtml += `
-        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 2px;">
+        <div style="display: flex; align-items: center; gap: 0.3rem;">
           <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Agreement: ${docName}">📜 ${docName}</span>
           <button class="btn-text" onclick="previewNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Preview PDF">👁️</button>
           <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Download PDF">📥</button>
         </div>`;
     } else {
-      docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic; margin-bottom: 2px;">No Agreement PDF</div>`;
+      docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</div>`;
     }
 
-    if (item.invoicePackingData) {
-      const invName = item.invoicePackingName || "invoice_packing.pdf";
-      docsHtml += `
-        <div style="display: flex; align-items: center; gap: 0.3rem;">
-          <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Invoice/Packing: ${invName}">📦 ${invName}</span>
-          <button class="btn-text" onclick="previewNrsInvoicePackingPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Preview PDF">👁️</button>
-          <button class="btn-text" onclick="downloadNrsInvoicePackingPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Download PDF">📥</button>
-        </div>`;
-    } else {
-      docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Invoice/Packing PDF</div>`;
+    // Format shipper contact
+    const sPhone = item.shipperPhone || "";
+    const sEmail = item.shipperEmail || "";
+    const sAddress = item.shipperAddress || "";
+    let shipperSubtext = "";
+    if (sPhone) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📞 ${sPhone}</div>`;
+    if (sEmail) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📧 ${sEmail}</div>`;
+    if (sAddress) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sAddress}">📍 ${sAddress}</div>`;
+    if (!shipperSubtext && item.shipperContact) {
+      shipperSubtext = `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.shipperContact}</div>`;
+    }
+
+    // Format consignee contact
+    const cPhone = item.consigneePhone || "";
+    const cEmail = item.consigneeEmail || "";
+    const cAddress = item.consigneeAddress || "";
+    let consigneeSubtext = "";
+    if (cPhone) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📞 ${cPhone}</div>`;
+    if (cEmail) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📧 ${cEmail}</div>`;
+    if (cAddress) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${cAddress}">📍 ${cAddress}</div>`;
+    if (!consigneeSubtext && item.consigneeContact) {
+      consigneeSubtext = `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.consigneeContact}</div>`;
     }
 
     return `
@@ -5820,11 +5831,16 @@ function displayNrsRegistryItems(list) {
         <td><div style="font-weight: 700; color: var(--t1); font-size: 0.72rem;">${item.customer}</div></td>
         <td>
           <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.shipperName}</div>
-          <div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.shipperContact}</div>
+          ${shipperSubtext}
         </td>
         <td>
           <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.consigneeName}</div>
-          <div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.consigneeContact}</div>
+          ${consigneeSubtext}
+        </td>
+        <td>
+          <div style="font-weight: 750; font-size: 0.68rem; color: var(--indigo); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.commodity || 'N/A'}">
+            ${item.commodity || 'N/A'}
+          </div>
         </td>
         <td>${docsHtml}</td>
         <td style="font-size: 0.68rem; color: var(--t3); font-weight: 600;">
@@ -5848,7 +5864,12 @@ function filterNrsRegistry(query) {
       item.refId.toLowerCase().includes(q) ||
       item.customer.toLowerCase().includes(q) ||
       item.shipperName.toLowerCase().includes(q) ||
+      (item.shipperPhone && item.shipperPhone.toLowerCase().includes(q)) ||
+      (item.shipperEmail && item.shipperEmail.toLowerCase().includes(q)) ||
       item.consigneeName.toLowerCase().includes(q) ||
+      (item.consigneePhone && item.consigneePhone.toLowerCase().includes(q)) ||
+      (item.consigneeEmail && item.consigneeEmail.toLowerCase().includes(q)) ||
+      (item.commodity && item.commodity.toLowerCase().includes(q)) ||
       item.mode.toLowerCase().includes(q)
     );
   });
