@@ -518,6 +518,7 @@
                   <th>Commodity</th>
                   <th>Agency Agreement</th>
                   <th>Date Won</th>
+                  <th>Follow-up</th>
                 </tr>
               </thead>
               <tbody id="nrs-registry-body">
@@ -1599,12 +1600,62 @@
     </div>
   </div>
 
+  <!-- ==================== NRS FOLLOW-UP TRACKER MODAL ==================== -->
+  <div id="nrs-followup-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2010; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div class="glass-card modal-card" style="width: 100%; max-width: 520px; background: rgba(255, 255, 255, 0.96); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">NRS Follow-up Tracker</div>
+          <h2 id="nrs-followup-title" style="font-size: 1.05rem; font-weight: 900; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">BOOKING FOLLOW-UPS</h2>
+        </div>
+        <button type="button" onclick="closeNrsFollowUpModal()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700;">×</button>
+      </div>
+
+      <!-- Booking Reference Summary -->
+      <div id="nrs-followup-summary" style="background: var(--bg-input); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.72rem; line-height: 1.5; border: 1px solid var(--border-1);">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Follow-up Log -->
+      <div style="margin-bottom: 1rem;">
+        <div style="font-size: 0.7rem; font-weight: 800; color: var(--t2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; font-family: 'Outfit', sans-serif;">Activity Log</div>
+        <div id="nrs-followup-log" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-1); border-radius: 10px; padding: 0.6rem; background: rgba(255,255,255,0.6);">
+          <div style="text-align: center; color: var(--t3); font-size: 0.68rem; font-style: italic; padding: 1rem;">No follow-ups recorded yet.</div>
+        </div>
+      </div>
+
+      <!-- Add Follow-up Form -->
+      <div style="border-top: 1px solid var(--border-1); padding-top: 1rem;">
+        <div style="font-size: 0.7rem; font-weight: 800; color: var(--accent-success); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; font-family: 'Outfit', sans-serif;">Add New Follow-up</div>
+        <input type="hidden" id="nrs-followup-item-id">
+        <div class="form-group" style="margin-bottom: 0.6rem;">
+          <label for="nrs-followup-status" style="font-size: 0.68rem; font-weight: 700;">Status</label>
+          <select id="nrs-followup-status" style="font-size: 0.72rem; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border-1); background: var(--bg-input); width: 100%;">
+            <option value="Awaiting Response">📞 Awaiting Response</option>
+            <option value="Documents Pending">📄 Documents Pending</option>
+            <option value="Booking Confirmed by Shipper">✅ Booking Confirmed by Shipper</option>
+            <option value="Shipment Dispatched">🚀 Shipment Dispatched</option>
+            <option value="Completed">🏁 Completed</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.6rem;">
+          <label for="nrs-followup-note" style="font-size: 0.68rem; font-weight: 700;">Note</label>
+          <textarea id="nrs-followup-note" placeholder="e.g. Called shipper, BL copy awaited..." rows="3" style="font-size: 0.72rem; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-1); background: var(--bg-input); width: 100%; resize: vertical; font-family: 'Inter', sans-serif;"></textarea>
+        </div>
+        <button type="button" onclick="addNrsFollowUp()" class="btn-primary" style="width: 100%; border-radius: 8px; background: var(--sky); color: #fff; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 0.55rem; letter-spacing: 0.05em;">
+          + Add Follow-up Entry
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Datalists for Surcharges dropdowns -->
   <datalist id="air-origin-charges-list"></datalist>
   <datalist id="air-dest-charges-list"></datalist>
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=21.0"></script>
+  <script src="app-v4.js?v=22.0"></script>
 </body>
 </html>

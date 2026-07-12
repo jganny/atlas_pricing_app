@@ -5775,7 +5775,7 @@ function displayNrsRegistryItems(list) {
   tbody.innerHTML = "";
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
     return;
   }
 
@@ -5864,6 +5864,30 @@ function displayNrsRegistryItems(list) {
         <td style="font-size: 0.68rem; color: var(--t3); font-weight: 600;">
           ${new Date(item.dateWon).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
         </td>
+        <td>
+          ${(() => {
+            const followUps = item.followUps || [];
+            const latest = followUps.length > 0 ? followUps[followUps.length - 1] : null;
+            const statusColors = {
+              'Awaiting Response': { bg: 'rgba(245,158,11,0.12)', color: '#d97706' },
+              'Documents Pending': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
+              'Booking Confirmed by Shipper': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
+              'Shipment Dispatched': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
+              'Completed': { bg: 'rgba(34,197,94,0.12)', color: '#15803d' }
+            };
+            const sc = latest ? (statusColors[latest.status] || { bg: 'rgba(0,0,0,0.05)', color: 'var(--t3)' }) : null;
+            let badgeHtml = '';
+            if (latest) {
+              badgeHtml = `<div style="font-size: 0.58rem; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: ${sc.bg}; color: ${sc.color}; margin-bottom: 3px; white-space: nowrap;">${latest.status}</div>`;
+            }
+            return `
+              ${badgeHtml}
+              <button onclick="openNrsFollowUpModal('${item.id}')" style="font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--sky); cursor: pointer; font-weight: 700; white-space: nowrap;" title="View / Add Follow-ups">
+                📋 ${followUps.length > 0 ? followUps.length + ' note' + (followUps.length > 1 ? 's' : '') : 'Track'}
+              </button>
+            `;
+          })()}
+        </td>
       </tr>
     `;
   }).join("");
@@ -5897,6 +5921,178 @@ function filterNrsRegistry(query) {
   displayNrsRegistryItems(filtered);
 }
 window.filterNrsRegistry = filterNrsRegistry;
+
+// ==================== NRS FOLLOW-UP TRACKER ====================
+function openNrsFollowUpModal(itemId) {
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(i => i.id === itemId);
+  if (!item) {
+    alert('Booking record not found.');
+    return;
+  }
+
+  document.getElementById('nrs-followup-item-id').value = itemId;
+
+  // Derive correct mode from refId
+  const prefix = (item.refId || '').substring(0, 2).toUpperCase();
+  const isAirByRef = prefix === 'AE' || prefix === 'AI';
+  const isSeaByRef = prefix === 'SE' || prefix === 'SI';
+  const nomMode = isAirByRef ? 'Air Nomination' : (isSeaByRef ? 'Sea Nomination' : (item.mode || 'N/A'));
+
+  // Set title
+  document.getElementById('nrs-followup-title').textContent = `#${item.refId} — FOLLOW-UPS`;
+
+  // Set summary
+  const agentName = item.agent || item.customer || 'N/A';
+  document.getElementById('nrs-followup-summary').innerHTML = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem;">
+      <div><strong>Agent:</strong> ${agentName}</div>
+      <div><strong>Mode:</strong> ${nomMode}</div>
+      <div><strong>Shipper:</strong> ${item.shipperName || 'N/A'}</div>
+      <div><strong>Consignee:</strong> ${item.consigneeName || 'N/A'}</div>
+      <div><strong>POL:</strong> ${item.pol || '—'}</div>
+      <div><strong>POD:</strong> ${item.pod || '—'}</div>
+      <div><strong>Commodity:</strong> ${item.commodity || 'N/A'}</div>
+      <div><strong>Date Won:</strong> ${item.dateWon ? new Date(item.dateWon).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}</div>
+    </div>
+  `;
+
+  // Render follow-up log
+  renderNrsFollowUpLog(item.followUps || []);
+
+  // Clear input
+  document.getElementById('nrs-followup-note').value = '';
+  document.getElementById('nrs-followup-status').selectedIndex = 0;
+
+  // Show modal
+  const modal = document.getElementById('nrs-followup-modal');
+  modal.style.display = 'flex';
+}
+window.openNrsFollowUpModal = openNrsFollowUpModal;
+
+function renderNrsFollowUpLog(followUps) {
+  const log = document.getElementById('nrs-followup-log');
+  if (!log) return;
+
+  if (!followUps || followUps.length === 0) {
+    log.innerHTML = `<div style="text-align: center; color: var(--t3); font-size: 0.68rem; font-style: italic; padding: 1rem;">No follow-ups recorded yet.</div>`;
+    return;
+  }
+
+  const statusIcons = {
+    'Awaiting Response': '📞',
+    'Documents Pending': '📄',
+    'Booking Confirmed by Shipper': '✅',
+    'Shipment Dispatched': '🚀',
+    'Completed': '🏁'
+  };
+
+  const statusColors = {
+    'Awaiting Response': '#d97706',
+    'Documents Pending': '#2563eb',
+    'Booking Confirmed by Shipper': '#059669',
+    'Shipment Dispatched': '#7c3aed',
+    'Completed': '#15803d'
+  };
+
+  // Show newest first
+  const sorted = [...followUps].reverse();
+
+  log.innerHTML = sorted.map((fu, idx) => {
+    const icon = statusIcons[fu.status] || '📝';
+    const color = statusColors[fu.status] || 'var(--t2)';
+    const dateStr = fu.date ? new Date(fu.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const timeStr = fu.time || '';
+    const byUser = fu.by ? (TEAM_ROLES[fu.by]?.name || fu.by) : '';
+
+    return `
+      <div style="padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border-1); ${idx === sorted.length - 1 ? 'border-bottom: none;' : ''}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <span style="font-size: 0.64rem; font-weight: 800; color: ${color};">${icon} ${fu.status}</span>
+          <span style="font-size: 0.58rem; color: var(--t3); font-weight: 600;">${dateStr} ${timeStr}</span>
+        </div>
+        <div style="font-size: 0.68rem; color: var(--t2); line-height: 1.4;">${fu.note || '<em style="color:var(--t3)">No note</em>'}</div>
+        ${byUser ? `<div style="font-size: 0.56rem; color: var(--t3); margin-top: 2px; font-weight: 600;">— ${byUser}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  // Scroll to top (latest)
+  log.scrollTop = 0;
+}
+
+async function addNrsFollowUp() {
+  const itemId = document.getElementById('nrs-followup-item-id').value;
+  const status = document.getElementById('nrs-followup-status').value;
+  const note = document.getElementById('nrs-followup-note').value.trim();
+
+  if (!note) {
+    alert('Please enter a follow-up note.');
+    return;
+  }
+
+  if (!itemId) {
+    alert('Booking reference not found.');
+    return;
+  }
+
+  const now = new Date();
+  const followUpEntry = {
+    date: now.toISOString().split('T')[0],
+    time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+    status: status,
+    note: note,
+    by: appState.currentUser || 'unknown'
+  };
+
+  // Update cached data
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(i => i.id === itemId);
+  if (!item) {
+    alert('Booking record not found in cache.');
+    return;
+  }
+
+  if (!item.followUps) item.followUps = [];
+  item.followUps.push(followUpEntry);
+
+  // Persist to Firestore
+  try {
+    if (DB.firestoreRef) {
+      await DB.firestoreRef.collection('nrs_registry').doc(itemId).set(
+        { followUps: item.followUps },
+        { merge: true }
+      );
+    } else {
+      // Offline fallback — save to localStorage
+      let offlineNrs = {};
+      try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch(e) {}
+      if (!offlineNrs[itemId]) offlineNrs[itemId] = {};
+      offlineNrs[itemId].followUps = item.followUps;
+      localStorage.setItem('gl_nrs_registry', JSON.stringify(offlineNrs));
+    }
+  } catch (err) {
+    console.error('Failed to save follow-up:', err);
+    alert('⚠️ Follow-up saved locally but Firestore sync failed.');
+  }
+
+  // Re-render the log
+  renderNrsFollowUpLog(item.followUps);
+
+  // Clear input
+  document.getElementById('nrs-followup-note').value = '';
+  document.getElementById('nrs-followup-status').selectedIndex = 0;
+
+  // Refresh the NRS table to show the updated badge
+  displayNrsRegistryItems(list);
+}
+window.addNrsFollowUp = addNrsFollowUp;
+
+function closeNrsFollowUpModal() {
+  const modal = document.getElementById('nrs-followup-modal');
+  if (modal) modal.style.display = 'none';
+}
+window.closeNrsFollowUpModal = closeNrsFollowUpModal;
 
 // CREDIT CONTROL & COMPLIANCE HANDLERS
 window._uploadedAgreements = { air: null, sea: null };
