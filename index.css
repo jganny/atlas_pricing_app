@@ -6,20 +6,20 @@
 ══════════════════════════════════════════════════ */
 :root {
   /* Base palette */
-  --bg-void:      #f8fafc; /* Beautiful soft corporate off-white background */
-  --bg-deep:      #f1f5f9; /* Structured layout background */
-  --bg-surface:   rgba(255, 255, 255, 0.72); /* Frosted pure white cards */
-  --bg-elevated:  rgba(255, 255, 255, 0.82); /* Frosted elevated card container */
-  --bg-input:     #f8fafc; /* Subtle light gray-blue input canvas */
-  --bg-input-focus: #ffffff;
+  --bg-void:      #eff3f8; /* Soft blue-gray liquid base */
+  --bg-deep:      #e2ebf3; /* Structured layout background */
+  --bg-surface:   rgba(255, 255, 255, 0.45); /* Frosted liquid glass card base */
+  --bg-elevated:  rgba(255, 255, 255, 0.68); /* Elevated frosted container */
+  --bg-input:     rgba(255, 255, 255, 0.38); /* Translucent input canvas */
+  --bg-input-focus: rgba(255, 255, 255, 0.85);
 
-  /* Borders */
-  --border-1: rgba(27, 28, 92, 0.08); /* Soft brand-tinted border line */
-  --border-2: rgba(27, 28, 92, 0.12); /* Structuring dividers */
-  --border-3: rgba(27, 28, 92, 0.3); /* Hover highlights */
+  /* Borders (Ultra clean glass border lines) */
+  --border-1: rgba(255, 255, 255, 0.48); /* Soft white reflecting border edge */
+  --border-2: rgba(27, 28, 92, 0.07); /* Standard dividing lines */
+  --border-3: rgba(27, 28, 92, 0.2); /* Hover border highlights */
 
   /* Text */
-  --t1: #000000; /* Pure black text */
+  --t1: #0b0f19; /* Deep Slate Charcoal (darker than pure black, looks cleaner) */
   --t2: #1e293b; /* Slate-800 dark gray/black */
   --t3: #475569; /* Slate-600 */
 
@@ -65,25 +65,25 @@
   --border-color:  var(--border-2);
   --text-muted:    var(--t2);
   --text-dim:      var(--t3);
-  --bg-dark:       #e2e8f0;
+  --bg-dark:       #cbd5e1;
   --bg-panel:      var(--bg-surface);
   --text-main:     var(--t1);
   --transition-fast:   0.17s cubic-bezier(.4,0,.2,1);
   --transition-normal: 0.27s cubic-bezier(.4,0,.2,1);
-  --border-radius: 14px;
+  --border-radius: 16px;
 
   /* Geometry */
-  --r-sm: 4px;
-  --r-md: 6px;
-  --r-lg: 8px;
-  --r-xl: 12px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 22px;
   --r-pill: 999px;
 
-  /* Shadows */
-  --shadow-sm:  0 1px 3px rgba(47, 49, 147, 0.03);
-  --shadow-md:  0 4px 18px rgba(47, 49, 147, 0.04), 0 2px 4px rgba(47, 49, 147, 0.02);
-  --shadow-lg:  0 10px 25px rgba(47, 49, 147, 0.06), 0 4px 10px rgba(47, 49, 147, 0.03);
-  --shadow-xl:  0 20px 40px rgba(47, 49, 147, 0.08), 0 8px 16px rgba(47, 49, 147, 0.04);
+  /* Shadows (Liquid Glass reflection shadows) */
+  --shadow-sm:  0 2px 6px rgba(27, 28, 92, 0.01), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --shadow-md:  0 8px 32px 0 rgba(31, 38, 135, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  --shadow-lg:  0 12px 40px 0 rgba(31, 38, 135, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  --shadow-xl:  0 20px 50px 0 rgba(31, 38, 135, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 
   /* Custom Brand Accent */
   --text-brand: #0f172a;
@@ -985,7 +985,39 @@ select.table-select:focus {
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(3.2); opacity: 0; }
 }
-  left: 45%;
+
+/* Liquid glass background blobs */
+.liquid-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  -webkit-filter: blur(80px);
+  z-index: -2;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(27, 28, 92, 0.42) 0%, rgba(47, 49, 147, 0.12) 70%, transparent 100%);
+  top: -10%;
+  left: -10%;
+  animation: floatOrb1 25s infinite alternate ease-in-out;
+}
+.orb-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(254, 204, 0, 0.22) 0%, rgba(254, 204, 0, 0.05) 70%, transparent 100%);
+  bottom: -15%;
+  right: -5%;
+  animation: floatOrb2 30s infinite alternate ease-in-out;
+}
+.orb-3 {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, rgba(13, 148, 136, 0.08) 70%, transparent 100%);
+  top: 35%;
+  left: 30%;
   animation: floatOrb3 28s infinite alternate ease-in-out;
 }
 

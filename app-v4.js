@@ -531,14 +531,31 @@ function updateCurrencyRules(role) {
   const airCurSelect = document.getElementById("air-currency");
   const seaCurSelect = document.getElementById("sea-currency");
   
-  const isLocal = role && (role.includes('local') || role === 'jaya' || TEAM_ROLES[role]?.category === 'FREE HAND SALES (AIR/SEA)');
-  const targetType = isLocal ? "local" : "nom";
+  let activeRole = role;
+  if (activeRole === 'ganny' || activeRole === 'manager') {
+    const activeBtn = document.querySelector(".role-btn.active");
+    const selectedRole = activeBtn ? activeBtn.getAttribute("data-role") : null;
+    if (selectedRole && selectedRole !== 'manager') {
+      activeRole = selectedRole;
+    }
+  }
+  if (!activeRole) activeRole = appState.currentUser || 'ganny';
+  
+  const isNrs = activeRole && (activeRole === 'cathrina' || TEAM_ROLES[activeRole]?.category === 'NRS (AIR/SEA)');
+  const isLocal = activeRole && (activeRole.includes('local') || activeRole === 'jaya' || TEAM_ROLES[activeRole]?.category === 'FREE HAND SALES (AIR/SEA)');
+  const targetType = isNrs ? "nrs" : (isLocal ? "local" : "nom");
   
   // Rebuild Air select if needed
   if (airCurSelect && airCurSelect.getAttribute("data-role-type") !== targetType) {
     const val = airCurSelect.value;
     airCurSelect.setAttribute("data-role-type", targetType);
-    if (isLocal) {
+    if (isNrs) {
+      airCurSelect.innerHTML = `
+        <option value="USD">USD - US Dollar</option>
+        <option value="INR">INR - Indian Rupee</option>
+      `;
+      airCurSelect.value = (val === 'USD' || val === 'INR') ? val : 'USD';
+    } else if (isLocal) {
       airCurSelect.innerHTML = `
         <option value="INR">INR - Indian Rupee</option>
         <option value="USD">USD - US Dollar</option>
@@ -559,7 +576,13 @@ function updateCurrencyRules(role) {
   if (seaCurSelect && seaCurSelect.getAttribute("data-role-type") !== targetType) {
     const val = seaCurSelect.value;
     seaCurSelect.setAttribute("data-role-type", targetType);
-    if (isLocal) {
+    if (isNrs) {
+      seaCurSelect.innerHTML = `
+        <option value="USD">USD - US Dollar</option>
+        <option value="INR">INR - Indian Rupee</option>
+      `;
+      seaCurSelect.value = (val === 'USD' || val === 'INR') ? val : 'USD';
+    } else if (isLocal) {
       seaCurSelect.innerHTML = `
         <option value="INR">INR - Indian Rupee</option>
         <option value="USD">USD - US Dollar</option>
@@ -587,7 +610,7 @@ function updateCurrencyRules(role) {
     currency = seaCurSelect.value;
   } else {
     // If on dashboard, default based on role
-    currency = (role && role.includes('nom')) ? 'USD' : 'INR';
+    currency = TEAM_ROLES[activeRole]?.currency || ((activeRole && activeRole.includes('nom')) ? 'USD' : 'INR');
   }
 
   // Update currency labels on forms
