@@ -4040,7 +4040,7 @@ window.viewSavedQuote = (id) => {
       return `
         <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
-            ${alt.name} ${alt.selected ? '<strong>(Quoted)</strong>' : ''}
+            ${alt.name}
           </td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.routing || '-'}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.tt || '-'}</td>
@@ -4135,10 +4135,6 @@ window.viewSavedQuote = (id) => {
       <tr><td>Volume (CBM)</td><td>${(quote.details.cbm || 0).toFixed(3)} CBM</td></tr>
       <tr><td>Chargeable Weight</td><td>${(quote.details.chargeableWeight || 0).toFixed(2)} kg</td></tr>
       ${quote.details.pivotWeight ? `<tr><td>Pivot Weight</td><td>${quote.details.pivotWeight.toFixed(2)} kg</td></tr>` : ''}
-      <tr><td>Routing</td><td>${quote.details.routing || 'Direct'}</td></tr>
-      <tr><td>Transit Time (TT)</td><td>${quote.details.tt || 'N/A'}</td></tr>
-      <tr><td>Validity</td><td>${quote.details.validity || 'N/A'}</td></tr>
-      <tr><td>Charges Breakup</td><td><button class="no-print" onclick="window.showSeaBreakup('${quote.id}')" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.65rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ View Breakup</button></td></tr>
     `;
   } else {
     let modeLabel = 'FCL (Containers)';
