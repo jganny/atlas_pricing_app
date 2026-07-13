@@ -2330,6 +2330,9 @@ function renderAdminDashboard() {
     }
     
     reqList.innerHTML = warningPrefix + listHtml;
+    
+    // Dynamically refresh customer controls list to update override/waiver badges
+    renderAdminCustomerControlList();
   }
 }
 
@@ -6840,7 +6843,15 @@ function displayAdminCustomerControlList(list) {
     const creditLimit = ctrl.creditLimit || 0;
     const hasAgreement = !!ctrl.hasAgreement;
     const fileName = ctrl.agreementFile || "";
-    
+    const lower = ctrl.customer.toLowerCase().trim();
+
+    // Check for pending requests and active override bypasses
+    const pendingReqs = window._amendmentRequests || [];
+    const hasPendingOverride = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'credit_override' && r.status === 'pending');
+    const hasPendingRelease = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'customer_release' && r.status === 'pending');
+    const hasPendingWaiver = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
+    const isOverrideActive = !!ctrl.creditOverride;
+
     const agreementCell = hasAgreement 
       ? `<div style="display: flex; align-items: center; gap: 0.4rem;">
            <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fileName}">${fileName}</span>
@@ -6848,6 +6859,44 @@ function displayAdminCustomerControlList(list) {
            <button class="btn-text" onclick="resetCustomerAgreement('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--accent-error); border: none; background: transparent; cursor: pointer; text-decoration: underline;">❌ Reset</button>
          </div>`
       : `<span style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</span>`;
+
+    let complianceHtml = `
+      <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${waiveAgreement ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)'}; color: ${waiveAgreement ? 'var(--accent-success)' : 'var(--accent-error)'};">
+        ${waiveAgreement ? 'Agreement Waived' : 'Agreement Required'}
+      </span>
+    `;
+    if (hasPendingWaiver) {
+      complianceHtml += `
+        <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(245,158,11,0.2); color: var(--accent-warning); margin-left: 4px; border: 1px solid rgba(245,158,11,0.3); text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Pending Waiver request submitted by user">
+          WAIVER REQ ⏳
+        </span>
+      `;
+    }
+
+    let statusHtml = `
+      <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isBlocked ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'}; color: ${isBlocked ? 'var(--accent-error)' : 'var(--accent-success)'};">
+        ${isBlocked ? 'Blocked (Held)' : 'Active (Released)'}
+      </span>
+    `;
+    if (hasPendingOverride) {
+      statusHtml += `
+        <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(245,158,11,0.2); color: var(--accent-warning); margin-left: 4px; border: 1px solid rgba(245,158,11,0.3); text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Pending Credit Override request submitted by user">
+          OVERRIDE REQ ⏳
+        </span>
+      `;
+    } else if (hasPendingRelease) {
+      statusHtml += `
+        <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(245,158,11,0.2); color: var(--accent-warning); margin-left: 4px; border: 1px solid rgba(245,158,11,0.3); text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Pending Compliance Release/Unblock request submitted by user">
+          RELEASE REQ ⏳
+        </span>
+      `;
+    } else if (isOverrideActive) {
+      statusHtml += `
+        <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.2); color: var(--sky); margin-left: 4px; border: 1px solid rgba(56,189,248,0.3);" title="Credit Override Approved (Bypass Active for next execution)">
+          BYPASS ACTIVE 🔓
+        </span>
+      `;
+    }
 
     return `
       <tr>
@@ -6862,17 +6911,9 @@ function displayAdminCustomerControlList(list) {
             style="width: 80px; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" 
             onchange="updateCustomerCreditLimitValue('${ctrl.customer}', this.value)">
         </td>
-        <td>
-          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${waiveAgreement ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)'}; color: ${waiveAgreement ? 'var(--accent-success)' : 'var(--accent-error)'};">
-            ${waiveAgreement ? 'Agreement Waived' : 'Agreement Required'}
-          </span>
-        </td>
+        <td>${complianceHtml}</td>
         <td>${agreementCell}</td>
-        <td>
-          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isBlocked ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'}; color: ${isBlocked ? 'var(--accent-error)' : 'var(--accent-success)'};">
-            ${isBlocked ? 'Blocked (Held)' : 'Active (Released)'}
-          </span>
-        </td>
+        <td>${statusHtml}</td>
         <td>
           <div style="display: flex; gap: 0.3rem;">
             <button class="btn-primary" onclick="toggleCustomerBlock('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 6px; margin: 0; background: ${isBlocked ? 'var(--accent-success)' : 'var(--accent-error)'}; color: #000; font-weight: 800; border-radius: 4px; cursor: pointer;">
