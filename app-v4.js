@@ -1584,22 +1584,34 @@ function calculateAirFreight() {
       let rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
       let unit = row.querySelector(".chg-unit").value;
 
+      const creatorRole = appState.currentUser;
+      const isFreeHandOrNrs = creatorRole && (
+        creatorRole === 'jaya' || 
+        creatorRole === 'cathrina' || 
+        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+      );
+
       if (surchargeNameLower === "cartage" || surchargeNameLower === "misc") {
-        if (airlineChargeableWeight < 500) {
-          if (airlineChargeableWeight <= 150) {
-            rate = 6.00;
-            unit = "flat";
+        if (!isFreeHandOrNrs) {
+          if (airlineChargeableWeight < 500) {
+            if (airlineChargeableWeight <= 150) {
+              rate = 6.00;
+              unit = "flat";
+            } else {
+              rate = 0.04;
+              unit = "kg";
+            }
           } else {
-            rate = 0.04;
-            unit = "kg";
+            rate = 0.00;
+            unit = "flat";
           }
-        } else {
-          rate = 0.00;
-          unit = "flat";
         }
       } else if (surchargeNameLower === "xray") {
-        if (airlineChargeableWeight >= 500) {
-          rate = 0.00;
+        if (!isFreeHandOrNrs) {
+          if (airlineChargeableWeight >= 500) {
+            rate = 0.00;
+          }
         }
       }
 
@@ -1676,6 +1688,14 @@ function calculateAirFreight() {
 
   // Update primary surcharges table input uneditable/zero status
   const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+  const creatorRole = appState.currentUser;
+  const isFreeHandOrNrs = creatorRole && (
+    creatorRole === 'jaya' || 
+    creatorRole === 'cathrina' || 
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+  );
+
   originRows.forEach(row => {
     const nameInput = row.querySelector(".chg-name");
     const name = nameInput.value.trim().toLowerCase();
@@ -1684,38 +1704,55 @@ function calculateAirFreight() {
       const rateInp = row.querySelector(".chg-rate");
       const unitSelect = row.querySelector(".chg-unit");
       
-      if (finalChargeableWeight < 500) {
-        if (finalChargeableWeight <= 150) {
-          rateInp.value = "6.00";
-          unitSelect.value = "flat";
-        } else {
-          rateInp.value = "0.04";
-          unitSelect.value = "kg";
+      if (isFreeHandOrNrs) {
+        rateInp.readOnly = false;
+        if (unitSelect) unitSelect.disabled = false;
+        rateInp.style.background = "";
+        rateInp.style.color = "";
+        if (unitSelect) {
+          unitSelect.style.background = "";
+          unitSelect.style.color = "";
         }
       } else {
-        rateInp.value = "0.00";
-        unitSelect.value = "flat";
-      }
-      
-      rateInp.readOnly = true;
-      if (unitSelect) unitSelect.disabled = true;
-      rateInp.style.background = "rgba(255,255,255,0.02)";
-      rateInp.style.color = "var(--text-dim)";
-      if (unitSelect) {
-        unitSelect.style.background = "rgba(0,0,0,0.2)";
-        unitSelect.style.color = "var(--text-dim)";
+        if (finalChargeableWeight < 500) {
+          if (finalChargeableWeight <= 150) {
+            rateInp.value = "6.00";
+            unitSelect.value = "flat";
+          } else {
+            rateInp.value = "0.04";
+            unitSelect.value = "kg";
+          }
+        } else {
+          rateInp.value = "0.00";
+          unitSelect.value = "flat";
+        }
+        
+        rateInp.readOnly = true;
+        if (unitSelect) unitSelect.disabled = true;
+        rateInp.style.background = "rgba(255,255,255,0.02)";
+        rateInp.style.color = "var(--text-dim)";
+        if (unitSelect) {
+          unitSelect.style.background = "rgba(0,0,0,0.2)";
+          unitSelect.style.color = "var(--text-dim)";
+        }
       }
     } else if (name === "xray") {
       const rateInp = row.querySelector(".chg-rate");
-      if (finalChargeableWeight >= 500) {
-        rateInp.value = "0.00";
-        rateInp.readOnly = true;
-        rateInp.style.background = "rgba(255,255,255,0.02)";
-        rateInp.style.color = "var(--text-dim)";
-      } else {
+      if (isFreeHandOrNrs) {
         rateInp.readOnly = false;
         rateInp.style.background = "";
         rateInp.style.color = "";
+      } else {
+        if (finalChargeableWeight >= 500) {
+          rateInp.value = "0.00";
+          rateInp.readOnly = true;
+          rateInp.style.background = "rgba(255,255,255,0.02)";
+          rateInp.style.color = "var(--text-dim)";
+        } else {
+          rateInp.readOnly = false;
+          rateInp.style.background = "";
+          rateInp.style.color = "";
+        }
       }
     }
   });
@@ -3558,53 +3595,111 @@ function saveCurrentQuote() {
 function resetSurchargesToDefaults() {
   const airOriginBody = document.getElementById("air-origin-surcharges-body");
   if (airOriginBody) {
-    airOriginBody.innerHTML = `
-      <tr>
-        <td><input type="text" class="chg-name" value="Xray" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-        <td>
-          <select class="chg-unit">
-            <option value="kg" selected>Per kg</option>
-            <option value="flat">Flat</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-        <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-        <td>
-          <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
-            <option value="kg">Per kg</option>
-            <option value="flat" selected>Flat</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="text" class="chg-name" value="Misc" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-        <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-        <td>
-          <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
-            <option value="kg">Per kg</option>
-            <option value="flat" selected>Flat</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      </tr>
-    `;
+    const creatorRole = appState.currentUser;
+    const isFreeHandOrNrs = creatorRole && (
+      creatorRole === 'jaya' || 
+      creatorRole === 'cathrina' || 
+      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+      TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+    );
+
+    if (isFreeHandOrNrs) {
+      airOriginBody.innerHTML = `
+        <tr>
+          <td><input type="text" class="chg-name" value="Xray" required></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td>
+            <select class="chg-unit">
+              <option value="kg" selected>Per kg</option>
+              <option value="flat">Flat</option>
+            </select>
+          </td>
+          <td>
+            <button type="button" class="delete-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <td><input type="text" class="chg-name" value="Cartage" required></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td>
+            <select class="chg-unit">
+              <option value="kg">Per kg</option>
+              <option value="flat" selected>Flat</option>
+            </select>
+          </td>
+          <td>
+            <button type="button" class="delete-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <td><input type="text" class="chg-name" value="Misc" required></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td>
+            <select class="chg-unit">
+              <option value="kg">Per kg</option>
+              <option value="flat" selected>Flat</option>
+            </select>
+          </td>
+          <td>
+            <button type="button" class="delete-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            </button>
+          </td>
+        </tr>
+      `;
+    } else {
+      airOriginBody.innerHTML = `
+        <tr>
+          <td><input type="text" class="chg-name" value="Xray" required></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td>
+            <select class="chg-unit">
+              <option value="kg" selected>Per kg</option>
+              <option value="flat">Flat</option>
+            </select>
+          </td>
+          <td>
+            <button type="button" class="delete-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td>
+            <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+              <option value="kg">Per kg</option>
+              <option value="flat" selected>Flat</option>
+            </select>
+          </td>
+          <td>
+            <button type="button" class="delete-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <td><input type="text" class="chg-name" value="Misc" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td>
+            <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+              <option value="kg">Per kg</option>
+              <option value="flat" selected>Flat</option>
+            </select>
+          </td>
+          <td>
+            <button type="button" class="delete-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            </button>
+          </td>
+        </tr>
+      `;
+    }
     setupSurchargesEvents("air-origin");
   }
 
