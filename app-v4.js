@@ -4273,6 +4273,10 @@ function amendQuote(id) {
 window.amendQuote = amendQuote;
 
 function approveAmendment(reqId) {
+  if (appState.currentUser !== 'ganny') {
+    alert("❌ Security Error: Only Admin (Ganny) can approve requests.");
+    return;
+  }
   let requests = window._amendmentRequests || [];
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
@@ -4330,6 +4334,10 @@ function approveAmendment(reqId) {
 window.approveAmendment = approveAmendment;
 
 function rejectAmendment(reqId) {
+  if (appState.currentUser !== 'ganny') {
+    alert("❌ Security Error: Only Admin (Ganny) can reject requests.");
+    return;
+  }
   let requests = window._amendmentRequests || [];
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
