@@ -149,10 +149,12 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
   if (appState.currentUser === 'ganny' || quote.amendmentAllowed) {
     return true;
   }
-  let requests = [];
-  const stored = localStorage.getItem("gl_amendment_requests");
-  if (stored) {
-    try { requests = JSON.parse(stored); } catch(e) {}
+  let requests = window._amendmentRequests || [];
+  if (requests.length === 0) {
+    const stored = localStorage.getItem("gl_amendment_requests");
+    if (stored) {
+      try { requests = JSON.parse(stored); } catch(e) {}
+    }
   }
   const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'edit' && r.status === 'pending');
   if (pending) {
@@ -161,7 +163,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
   }
   
   if (confirm(`You do not have permission to ${actionVerb} this quotation. Request edit permission from Admin (Ganny)?`)) {
-    requests.push({
+    const newReq = {
       id: 'REQ' + Math.random().toString(36).substr(2, 9),
       requestType: 'edit',
       quoteId: quote.id,
@@ -171,19 +173,50 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
       date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
       status: 'pending',
       acknowledged: false
-    });
-    localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-    alert("Edit/Amendment request submitted successfully to Ganny.");
-    
-    if (appState.currentUser === 'ganny') {
-      renderAdminDashboard();
+    };
+
+    if (DB.firestoreRef) {
+      DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+        .then(() => {
+          alert("Edit/Amendment request submitted successfully to Ganny.");
+        })
+        .catch(err => {
+          console.error("DB: failed to save edit request:", err);
+          alert("Failed to submit request to cloud. Saving locally...");
+          saveRequestLocallyFallback(newReq);
+        });
     } else {
-      renderMemberDashboard(appState.currentUser);
+      saveRequestLocallyFallback(newReq);
+      alert("Edit/Amendment request submitted successfully to Ganny (Offline).");
     }
   }
   return false;
 }
 window.checkAndRequestEditPermission = checkAndRequestEditPermission;
+
+function saveRequestLocallyFallback(newReq) {
+  let requests = [];
+  const stored = localStorage.getItem("gl_amendment_requests");
+  if (stored) {
+    try { requests = JSON.parse(stored); } catch(e) {}
+  }
+  requests.push(newReq);
+  localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+  
+  // Update local view
+  if (window._amendmentRequests) {
+    window._amendmentRequests.push(newReq);
+  } else {
+    window._amendmentRequests = [newReq];
+  }
+
+  if (appState.currentUser === 'ganny') {
+    renderAdminDashboard();
+  } else {
+    renderMemberDashboard(appState.currentUser);
+  }
+}
+window.saveRequestLocallyFallback = saveRequestLocallyFallback;
 
 function updateSeaFclStuffingVisibility() {
   const stuffingContainer = document.getElementById("sea-fcl-stuffing-container");
@@ -1813,10 +1846,12 @@ function renderMemberDashboard(userId) {
     }, 100);
   }
   // Check for resolved amendment requests for this member
-  let requestsList = [];
-  const storedReqs = localStorage.getItem("gl_amendment_requests");
-  if (storedReqs) {
-    try { requestsList = JSON.parse(storedReqs); } catch(e) {}
+  let requestsList = window._amendmentRequests || [];
+  if (requestsList.length === 0) {
+    const storedReqs = localStorage.getItem("gl_amendment_requests");
+    if (storedReqs) {
+      try { requestsList = JSON.parse(storedReqs); } catch(e) {}
+    }
   }
   const myResolved = requestsList.filter(r => r.creator === userId && !r.acknowledged && (r.status === 'approved' || r.status === 'rejected'));
   
@@ -1824,17 +1859,34 @@ function renderMemberDashboard(userId) {
     // Schedule a small delay to not block rendering
     setTimeout(() => {
       myResolved.forEach(req => {
-        const reqTypeLabel = req.requestType === 'delete' ? 'DELETE' : 'AMEND/EDIT';
+        let reqTypeLabel = "EDIT/AMEND";
+        if (req.requestType === 'delete') {
+          reqTypeLabel = "DELETE";
+        } else if (req.requestType === 'credit_override') {
+          reqTypeLabel = "CREDIT OVERRIDE";
+        }
+
         if (req.status === 'approved') {
           if (req.requestType === 'delete') {
             alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to DELETE quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".\n\nYou can now click the Delete (Trash) button next to the quote to delete it.`);
+          } else if (req.requestType === 'credit_override') {
+            alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request for CREDIT OVERRIDE for customer "${req.customer}".\n\nYou can now execute and save quotes for this customer.`);
           } else {
             alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to AMEND quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".\n\nYou can now click the Orange Edit/Amend button next to the quote to correct it!`);
           }
         } else {
-          alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request to ${reqTypeLabel} quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".`);
+          if (req.requestType === 'credit_override') {
+            alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request for CREDIT OVERRIDE for customer "${req.customer}".`);
+          } else {
+            alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request to ${reqTypeLabel} quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".`);
+          }
         }
         req.acknowledged = true;
+
+        if (DB.firestoreRef) {
+          DB.firestoreRef.collection("amendment_requests").doc(req.id).update({ acknowledged: true })
+            .catch(err => console.error("DB: failed to acknowledge request:", err));
+        }
       });
       localStorage.setItem("gl_amendment_requests", JSON.stringify(requestsList));
     }, 100);
@@ -2121,10 +2173,12 @@ function renderAdminDashboard() {
   const reqPanel = document.getElementById("admin-amendment-requests-panel");
   const reqList = document.getElementById("admin-amendment-requests-list");
   if (reqPanel && reqList) {
-    let requests = [];
-    const stored = localStorage.getItem("gl_amendment_requests");
-    if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
+    let requests = window._amendmentRequests || [];
+    if (requests.length === 0) {
+      const stored = localStorage.getItem("gl_amendment_requests");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(e) {}
+      }
     }
     const pending = requests.filter(r => r.status === 'pending');
     
@@ -4197,10 +4251,12 @@ function amendQuote(id) {
 window.amendQuote = amendQuote;
 
 function approveAmendment(reqId) {
-  let requests = [];
-  const stored = localStorage.getItem("gl_amendment_requests");
-  if (stored) {
-    try { requests = JSON.parse(stored); } catch(e) {}
+  let requests = window._amendmentRequests || [];
+  if (requests.length === 0) {
+    const stored = localStorage.getItem("gl_amendment_requests");
+    if (stored) {
+      try { requests = JSON.parse(stored); } catch(e) {}
+    }
   }
   const req = requests.find(r => r.id === reqId);
   if (req) {
@@ -4239,29 +4295,44 @@ function approveAmendment(reqId) {
       alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been APPROVED.`);
     }
     
-    localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-    renderAdminDashboard();
+    // Sync change to DB
+    if (DB.firestoreRef) {
+      DB.firestoreRef.collection("amendment_requests").doc(req.id).set(req, { merge: true })
+        .catch(err => console.error("DB: failed to update request status:", err));
+    } else {
+      localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+      renderAdminDashboard();
+    }
   }
 }
 window.approveAmendment = approveAmendment;
 
 function rejectAmendment(reqId) {
-  let requests = [];
-  const stored = localStorage.getItem("gl_amendment_requests");
-  if (stored) {
-    try { requests = JSON.parse(stored); } catch(e) {}
+  let requests = window._amendmentRequests || [];
+  if (requests.length === 0) {
+    const stored = localStorage.getItem("gl_amendment_requests");
+    if (stored) {
+      try { requests = JSON.parse(stored); } catch(e) {}
+    }
   }
   const req = requests.find(r => r.id === reqId);
   if (req) {
     req.status = 'rejected';
-    localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
     
     if (req.requestType === 'credit_override') {
       alert(`Credit override request for customer "${req.customer}" has been REJECTED.`);
     } else {
       alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been REJECTED.`);
     }
-    renderAdminDashboard();
+
+    // Sync change to DB
+    if (DB.firestoreRef) {
+      DB.firestoreRef.collection("amendment_requests").doc(req.id).set(req, { merge: true })
+        .catch(err => console.error("DB: failed to reject request status:", err));
+    } else {
+      localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+      renderAdminDashboard();
+    }
   }
 }
 window.rejectAmendment = rejectAmendment;
@@ -4870,16 +4941,18 @@ function validateCreditCompliance(quoteData) {
 
     const msg = `❌ CREDIT CONTROL BLOCK:\n\n${blockReason}\nExecution is blocked. Request Admin (Ganny) override permission to execute?`;
     if (confirm(msg)) {
-      let requests = [];
-      const stored = localStorage.getItem("gl_amendment_requests");
-      if (stored) {
-        try { requests = JSON.parse(stored); } catch(e) {}
+      let requests = window._amendmentRequests || [];
+      if (requests.length === 0) {
+        const stored = localStorage.getItem("gl_amendment_requests");
+        if (stored) {
+          try { requests = JSON.parse(stored); } catch(e) {}
+        }
       }
       const pending = requests.find(r => r.customer.toLowerCase().trim() === lowerCust && r.requestType === 'credit_override' && r.status === 'pending');
       if (pending) {
         alert("A credit override request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
       } else {
-        requests.push({
+        const newReq = {
           id: 'REQ' + Math.random().toString(36).substr(2, 9),
           requestType: 'credit_override',
           quoteId: 'N/A',
@@ -4889,9 +4962,22 @@ function validateCreditCompliance(quoteData) {
           date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
           status: 'pending',
           acknowledged: false
-        });
-        localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-        alert("Credit override request submitted successfully to Ganny.");
+        };
+
+        if (DB.firestoreRef) {
+          DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+            .then(() => {
+              alert("Credit override request submitted successfully to Ganny.");
+            })
+            .catch(err => {
+              console.error("DB: failed to save credit override request:", err);
+              alert("Failed to submit request to cloud. Saving locally...");
+              saveRequestLocallyFallback(newReq);
+            });
+        } else {
+          saveRequestLocallyFallback(newReq);
+          alert("Credit override request submitted successfully to Ganny (Offline).");
+        }
       }
     }
     return false;
@@ -4996,6 +5082,21 @@ const DB = {
             console.error("DB: Migration of local NRS registry failed. Retaining local copy.", err);
           }
         }
+        
+        // Check for migration from local to cloud for amendment requests
+        const localReqs = JSON.parse(localStorage.getItem("gl_amendment_requests") || "[]");
+        if (localReqs.length > 0) {
+          console.log(`DB: Found ${localReqs.length} local amendment requests. Migrating to Firestore...`);
+          try {
+            const migrationPromises = localReqs.map(async r => {
+              return this.firestoreRef.collection("amendment_requests").doc(r.id).set(r);
+            });
+            await Promise.all(migrationPromises);
+            console.log("DB: Local amendment requests migration succeeded!");
+          } catch (err) {
+            console.error("DB: Migration of local amendment requests failed:", err);
+          }
+        }
         return;
       } catch (e) {
         console.error("Failed to initialize Firebase:", e);
@@ -5027,6 +5128,27 @@ const DB = {
         renderAdminCustomerControlList();
       }, err => {
         console.warn("Firestore: customer_control listen failed, using local/cached records:", err);
+      });
+
+      // Sync amendment requests list from Firestore
+      this.firestoreRef.collection("amendment_requests").onSnapshot(snap => {
+        let reqs = [];
+        snap.forEach(doc => {
+          reqs.push(doc.data());
+        });
+        window._amendmentRequests = reqs;
+        localStorage.setItem("gl_amendment_requests", JSON.stringify(reqs));
+        
+        // Auto refresh dashboards dynamically
+        if (appState.currentUser) {
+          if (appState.currentUser === 'ganny') {
+            renderAdminDashboard();
+          } else {
+            renderMemberDashboard(appState.currentUser);
+          }
+        }
+      }, err => {
+        console.warn("Firestore: amendment_requests listen failed, using local/cached records:", err);
       });
     }
     
@@ -5145,6 +5267,18 @@ const DB = {
       }
     } else {
       appState.quotes = [];
+    }
+    
+    // Load local amendment requests cache
+    const storedReqs = localStorage.getItem("gl_amendment_requests");
+    if (storedReqs) {
+      try {
+        window._amendmentRequests = JSON.parse(storedReqs);
+      } catch (e) {
+        window._amendmentRequests = [];
+      }
+    } else {
+      window._amendmentRequests = [];
     }
     
     // Sanitize quotes array
