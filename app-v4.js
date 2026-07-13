@@ -1416,6 +1416,36 @@ function addAirlineCard(data = null) {
 }
 window.addAirlineCard = addAirlineCard;
 
+function getAirlineColor(name) {
+  const code = (name || "").toUpperCase().trim().substring(0, 2);
+  const mapping = {
+    'EK': '#2ecc71', // Emirates - Green
+    'QR': '#9b59b6', // Qatar - Maroon/Purple (using theme colors)
+    'EY': '#f1c40f', // Etihad - Gold/Yellow
+    'SQ': '#f39c12', // Singapore - Amber
+    'LH': '#e67e22', // Lufthansa - Orange
+    'BA': '#3498db', // British Airways - Blue
+    'AF': '#2980b9', // Air France - Dark Blue
+    'CX': '#1abc9c', // Cathay Pacific - Teal
+    'AI': '#e74c3c', // Air India - Red
+    '6E': '#3498db', // Indigo - Blue
+    'SG': '#e74c3c', // SpiceJet - Red
+  };
+  if (mapping[code]) return mapping[code];
+  
+  // Deterministic hash code to return a nice bright aesthetic color
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = [
+    '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#e74c3c', 
+    '#1abc9c', '#f1c40f', '#2980b9', '#e84393', '#00cec9'
+  ];
+  return colors[Math.abs(hash) % colors.length];
+}
+window.getAirlineColor = getAirlineColor;
+
 function calculateAirFreight() {
   updateCurrencyRules(appState.currentUser);
 
@@ -1797,28 +1827,34 @@ function calculateAirFreight() {
     const currency = document.getElementById("air-currency").value;
     const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
     
+    // Find cheapest grand total
+    const minGrandTotal = Math.min(...airlinesListData.map(alt => alt.grandTotal));
+    
     resultsContainer.innerHTML = airlinesListData.map(alt => {
+      const color = getAirlineColor(alt.name);
+      const isCheapest = (alt.grandTotal === minGrandTotal);
+      
       return `
         <div class="glass-card" style="padding: 1rem; border: 1px solid ${alt.selected ? 'var(--accent-success)' : 'var(--border-1)'}; relative; background: ${alt.selected ? 'rgba(46,204,113,0.04)' : 'rgba(255,255,255,0.01)'}; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <strong style="font-size: 0.85rem; color: var(--sky);">${alt.name || 'Unnamed Airline'}</strong>
-            ${alt.selected ? '<span style="font-size: 0.62rem; background: var(--accent-success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Quoted Option</span>' : ''}
+            <strong style="font-size: 0.85rem; color: ${color};">${alt.name || 'Unnamed Airline'}</strong>
+            ${isCheapest ? '<span style="font-size: 0.62rem; background: var(--accent-success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Cheapest Option</span>' : ''}
           </div>
           <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
             <span class="result-label" style="color: var(--t2);">Chargeable Weight</span>
-            <span class="result-value" style="color: #fff;">${alt.chargeableWeight.toFixed(2)} kg</span>
+            <span class="result-value" style="color: ${color}; font-weight: 700;">${alt.chargeableWeight.toFixed(2)} kg</span>
           </div>
           <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
             <span class="result-label" style="color: var(--t2);">Base Freight Cost</span>
-            <span class="result-value" style="color: #fff;">${curSymbol}${alt.baseFreight.toFixed(2)}</span>
+            <span class="result-value" style="color: ${color}; font-weight: 700;">${curSymbol}${alt.baseFreight.toFixed(2)}</span>
           </div>
           <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
             <span class="result-label" style="color: var(--t2);">Total Ancillary Surcharges</span>
-            <span class="result-value" style="color: #fff;">${curSymbol}${alt.surchargeTotal.toFixed(2)}</span>
+            <span class="result-value" style="color: ${color}; font-weight: 700;">${curSymbol}${alt.surchargeTotal.toFixed(2)}</span>
           </div>
           <div class="result-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.8rem; font-weight: bold; margin-top: 4px; border-bottom: none;">
             <span class="result-label" style="color: var(--t1);">Grand Total</span>
-            <span class="result-value" style="color: ${alt.selected ? 'var(--accent-success)' : 'var(--sky)'}; font-size: 0.85rem;">${curSymbol}${alt.grandTotal.toFixed(2)}</span>
+            <span class="result-value" style="color: ${color}; font-size: 0.85rem; font-weight: 800;">${curSymbol}${alt.grandTotal.toFixed(2)}</span>
           </div>
         </div>
       `;
@@ -3899,6 +3935,148 @@ window.openActiveCalculator = openActiveCalculator;
 window.returnToWorkspace = returnToWorkspace;
 window.generatePerformanceReport = generatePerformanceReport;
 
+window.showAirlineBreakup = (quoteId, airlineIndex) => {
+  const quote = appState.quotes.find(q => q.id === quoteId);
+  if (!quote) return;
+  const alt = quote.details.airlines[airlineIndex];
+  if (!alt) return;
+  
+  const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
+  
+  let originHtml = "";
+  (alt.originSurcharges || []).forEach(s => {
+    originHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${s.name} (${currencySym}${s.rate}/${s.unit})</span><strong>${currencySym}${s.calculatedCost.toFixed(2)}</strong></div>`;
+  });
+  if (!originHtml) originHtml = `<div style="color:#888; font-style:italic;">No origin surcharges</div>`;
+  
+  let destHtml = "";
+  (alt.destSurcharges || []).forEach(s => {
+    destHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${s.name} (${currencySym}${s.rate}/${s.unit})</span><strong>${currencySym}${s.calculatedCost.toFixed(2)}</strong></div>`;
+  });
+  if (!destHtml) destHtml = `<div style="color:#888; font-style:italic;">No destination surcharges</div>`;
+  
+  const breakupModal = document.createElement("div");
+  breakupModal.id = "breakup-submodal";
+  breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
+  breakupModal.innerHTML = `
+    <div style="background:#fff; border-radius:12px; width:450px; padding:1.5rem; box-shadow:0 10px 25px rgba(0,0,0,0.2); position:relative;">
+      <h3 style="margin-top:0; color:#1b1c5c; border-bottom:2px solid #eee; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span>📊 Cost Breakup: ${alt.name}</span>
+        <span onclick="document.getElementById('breakup-submodal').remove()" style="cursor:pointer; font-size:1.5rem; color:#888;">&times;</span>
+      </h3>
+      
+      <div style="margin-bottom:12px;">
+        <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">1. Base Freight</strong>
+        <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:0.85rem;">
+          <span>Freight Charge (${alt.chargeableWeight.toFixed(2)} kg at ${currencySym}${alt.appliedRate}/kg)</span>
+          <strong>${currencySym}${alt.baseFreight.toFixed(2)}</strong>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:12px; border-top:1px solid #f1f5f9; padding-top:8px;">
+        <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">2. Origin Local Surcharges</strong>
+        <div style="font-size:0.85rem; margin-top:4px;">
+          ${originHtml}
+        </div>
+      </div>
+      
+      <div style="margin-bottom:12px; border-top:1px solid #f1f5f9; padding-top:8px;">
+        <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">3. Destination Local Surcharges</strong>
+        <div style="font-size:0.85rem; margin-top:4px;">
+          ${destHtml}
+        </div>
+      </div>
+      
+      <div style="border-top:2px solid #eee; padding-top:10px; margin-top:15px; display:flex; justify-content:space-between; align-items:center; font-size:1.05rem; font-weight:bold; color:#1b1c5c;">
+        <span>Grand Total:</span>
+        <span>${currencySym}${alt.grandTotal.toFixed(2)}</span>
+      </div>
+      
+      <div style="text-align:right; margin-top:1.5rem;">
+        <button onclick="document.getElementById('breakup-submodal').remove()" style="background:#1b1c5c; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(breakupModal);
+};
+
+window.showSeaBreakup = (quoteId) => {
+  const quote = appState.quotes.find(q => q.id === quoteId);
+  if (!quote) return;
+  
+  const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
+  
+  let originHtml = "";
+  const originList = quote.details.originSurcharges || [];
+  if (originList.length > 0) {
+    originList.forEach(s => {
+      const cost = s.calculatedCost || s.cost;
+      const rateLabel = s.unit ? `(${currencySym}${s.rate}/${s.unit})` : '';
+      originHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;"><span>${s.name} ${rateLabel}</span><strong>${currencySym}${cost.toFixed(2)}</strong></div>`;
+    });
+  } else if (quote.details.surcharges && quote.details.surcharges.length > 0) {
+    quote.details.surcharges.forEach(s => {
+      const cost = s.calculatedCost || s.cost;
+      const rateLabel = s.unit ? `(${currencySym}${s.rate}/${s.unit})` : '';
+      originHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;"><span>${s.name} ${rateLabel}</span><strong>${currencySym}${cost.toFixed(2)}</strong></div>`;
+    });
+  }
+  if (!originHtml) originHtml = `<div style="color:#888; font-style:italic; font-size:0.85rem;">No origin surcharges</div>`;
+  
+  let destHtml = "";
+  const destList = quote.details.destSurcharges || [];
+  destList.forEach(s => {
+    const cost = s.calculatedCost || s.cost;
+    const rateLabel = s.unit ? `(${currencySym}${s.rate}/${s.unit})` : '';
+    destHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;"><span>${s.name} ${rateLabel}</span><strong>${currencySym}${cost.toFixed(2)}</strong></div>`;
+  });
+  if (!destHtml) destHtml = `<div style="color:#888; font-style:italic; font-size:0.85rem;">No destination surcharges</div>`;
+  
+  const breakupModal = document.createElement("div");
+  breakupModal.id = "breakup-submodal";
+  breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
+  breakupModal.innerHTML = `
+    <div style="background:#fff; border-radius:12px; width:450px; padding:1.5rem; box-shadow:0 10px 25px rgba(0,0,0,0.2); position:relative;">
+      <h3 style="margin-top:0; color:#1b1c5c; border-bottom:2px solid #eee; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span>📊 Cost Breakup: ${quote.details.shippingLine || quote.details.airline || 'Details'}</span>
+        <span onclick="document.getElementById('breakup-submodal').remove()" style="cursor:pointer; font-size:1.5rem; color:#888;">&times;</span>
+      </h3>
+      
+      <div style="margin-bottom:12px;">
+        <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">1. Base Freight</strong>
+        <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:0.85rem;">
+          <span>Freight Charge</span>
+          <strong>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</strong>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:12px; border-top:1px solid #f1f5f9; padding-top:8px;">
+        <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">2. Origin Local Surcharges</strong>
+        <div style="margin-top:4px;">
+          ${originHtml}
+        </div>
+      </div>
+      
+      <div style="margin-bottom:12px; border-top:1px solid #f1f5f9; padding-top:8px;">
+        <strong style="color:#64748b; font-size:0.75rem; text-transform:uppercase;">3. Destination Local Surcharges</strong>
+        <div style="margin-top:4px;">
+          ${destHtml}
+        </div>
+      </div>
+      
+      <div style="border-top:2px solid #eee; padding-top:10px; margin-top:15px; display:flex; justify-content:space-between; align-items:center; font-size:1.05rem; font-weight:bold; color:#1b1c5c;">
+        <span>Grand Total:</span>
+        <span>${currencySym}${quote.amount.toFixed(2)}</span>
+      </div>
+      
+      <div style="text-align:right; margin-top:1.5rem;">
+        <button onclick="document.getElementById('breakup-submodal').remove()" style="background:#1b1c5c; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(breakupModal);
+};
+
 window.viewSavedQuote = (id) => {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
@@ -3910,7 +4088,7 @@ window.viewSavedQuote = (id) => {
   
   let alternativesHtml = "";
   if (quote.details && quote.details.airlines && quote.details.airlines.length > 0) {
-    const altRows = quote.details.airlines.map(alt => {
+    const altRows = quote.details.airlines.map((alt, index) => {
       const chgWt = alt.chargeableWeight !== undefined ? alt.chargeableWeight : (quote.details.chargeableWeight || 0);
       const baseFr = alt.baseFreight !== undefined ? alt.baseFreight : (quote.details.baseFreight || 0);
       const surch = alt.surchargeTotal !== undefined ? alt.surchargeTotal : (quote.details.surchargeTotal || 0);
@@ -3928,7 +4106,12 @@ window.viewSavedQuote = (id) => {
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${chgWt.toFixed(2)} kg</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">${currencySym}${baseFr.toFixed(2)}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">${currencySym}${surch.toFixed(2)}</td>
-          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800; color: ${alt.selected ? 'var(--accent-success)' : '#1b1c5c'};">${currencySym}${gTotal.toFixed(2)}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+              <span style="color: ${alt.selected ? 'var(--accent-success)' : '#1b1c5c'};">${currencySym}${gTotal.toFixed(2)}</span>
+              <button class="no-print" onclick="window.showAirlineBreakup('${quote.id}', ${index})" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:2px 6px; font-size:0.6rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ Info</button>
+            </div>
+          </td>
         </tr>
       `;
     }).join("");
@@ -4007,6 +4190,7 @@ window.viewSavedQuote = (id) => {
       <tr><td>Validity</td><td>${quote.details.validity || 'N/A'}</td></tr>
       <tr><td>Base Freight Rate</td><td>${currencySym}${(quote.details.appliedRate || 0).toFixed(2)} / kg</td></tr>
       <tr><td>Base Ocean/Air Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
+      <tr><td>Charges Breakup</td><td><button class="no-print" onclick="window.showSeaBreakup('${quote.id}')" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.65rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ View Breakup</button></td></tr>
     `;
   } else {
     let modeLabel = 'FCL (Containers)';
@@ -4049,6 +4233,7 @@ window.viewSavedQuote = (id) => {
       <tr><td>Transit Time (TT)</td><td>${quote.details.tt || 'N/A'}</td></tr>
       <tr><td>Validity</td><td>${quote.details.validity || 'N/A'}</td></tr>
       <tr><td>Base Ocean Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
+      <tr><td>Charges Breakup</td><td><button class="no-print" onclick="window.showSeaBreakup('${quote.id}')" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.65rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ View Breakup</button></td></tr>
     `;
   }
 
@@ -4093,117 +4278,101 @@ window.viewSavedQuote = (id) => {
     termsList += `<li>${line}</li>`;
   });
 
-  const printCard = document.getElementById("quote-print-card");
-  document.getElementById("modal-header-title").textContent = "Quotation Official Preview";
-  
-  printCard.innerHTML = `
-    <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
-      <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
-        <div style="display: flex; flex-direction: column; justify-content: center;">
-          <div style="color: #1b1c5c; font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; line-height: 1.0;">
-            <span style="font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em;">VERTE</span>
-            <span class="custom-brand-x" style="font-size: 2.0rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
+    const isMultiCarrier = (quote.details.airlines && quote.details.airlines.length > 1) || 
+                           (quote.details.alternatives && quote.details.alternatives.length > 1);
+
+    const bottomTotalBox = isMultiCarrier ? "" : `
+      <div class="total-summary-box">
+        <strong>GRAND TOTAL FREIGHT CHARGES (EXCLUDING LOCAL TAXES):</strong>
+        <span class="val">${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </div>
+    `;
+
+    printCard.innerHTML = `
+      <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
+          <div style="display: flex; flex-direction: column; justify-content: center;">
+            <div style="color: #1b1c5c; font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; line-height: 1.0;">
+              <span style="font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em;">VERTE</span>
+              <span class="custom-brand-x" style="font-size: 2.0rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b; font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.25rem;">Pricing, Simplified</div>
           </div>
-          <div style="font-size: 0.75rem; color: #64748b; font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.25rem;">Pricing, Simplified</div>
+        </div>
+        <div class="print-title">
+          <h2>QUOTATION</h2>
+          <div>Quote Reference: #${getQuoteRefId(quote)}</div>
+          <div>Date Issued: ${quote.date}</div>
         </div>
       </div>
-      <div class="print-title">
-        <h2>QUOTATION</h2>
-        <div>Quote Reference: #${getQuoteRefId(quote)}</div>
-        <div>Date Issued: ${quote.date}</div>
-      </div>
-    </div>
-    
-    <div class="print-details">
-      <div>
-        <strong>Customer Details:</strong><br>
-        ${quote.customer}<br>
-        Inquiry Status: ${quote.status === 'converted' ? 'Won Booking' : 'Priced (Pending)'}
-      </div>
-      <div style="text-align: right;">
-        <strong>Issued By:</strong><br>
-        Pricing Desk: ${TEAM_ROLES[quote.creator]?.name || quote.creator}<br>
-        System: Antigravity Automated Pricing
-      </div>
-    </div>
-    
-    <!-- Sleek Horizontal Corporate Timeline -->
-    <div class="shipment-status-timeline no-print" style="display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0 2rem 0; padding: 1rem; background: rgba(27,28,92,0.02); border: 1px solid rgba(27,28,92,0.06); border-radius: 8px; position: relative;">
-      <!-- connecting line background -->
-      <div style="position: absolute; top: 50%; left: 10%; right: 10%; height: 3px; background: #e2e8f0; transform: translateY(-50%); z-index: 1;"></div>
-      <!-- active progress fill -->
-      <div style="position: absolute; top: 50%; left: 10%; width: ${quote.status === 'converted' ? '80%' : '40%'}; height: 3px; background: var(--green); transform: translateY(-50%); z-index: 2; transition: width 0.5s ease;"></div>
       
-      <!-- Step 1 -->
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
-        <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--green); border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px rgba(21,128,61,0.15);">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      <div class="print-details">
+        <div>
+          <strong>Customer Details:</strong><br>
+          ${quote.customer}<br>
+          Inquiry Status: ${quote.status === 'converted' ? 'Won Booking' : 'Priced (Pending)'}
         </div>
-        <span style="font-size: 0.65rem; font-weight: 700; color: var(--sky); text-transform: uppercase;">Enquiry</span>
-      </div>
-
-      <!-- Step 2 -->
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
-        <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--green); border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px rgba(21,128,61,0.15);">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        <div style="text-align: right;">
+          <strong>Issued By:</strong><br>
+          Pricing Desk: ${TEAM_ROLES[quote.creator]?.name || quote.creator}<br>
+          System: Antigravity Automated Pricing
         </div>
-        <span style="font-size: 0.65rem; font-weight: 700; color: var(--sky); text-transform: uppercase;">Priced</span>
       </div>
-
-      <!-- Step 3 -->
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
-        <div style="width: 20px; height: 20px; border-radius: 50%; background: ${quote.status === 'converted' ? 'var(--green)' : 'var(--amber)'}; border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px ${quote.status === 'converted' ? 'rgba(21,128,61,0.15)' : 'rgba(180,83,9,0.15)'};">
-          ${quote.status === 'converted' ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '<span style="width:6px; height:6px; background:#fff; border-radius:50%;"></span>'}
+      
+      <!-- Sleek Horizontal Corporate Timeline -->
+      <div class="shipment-status-timeline no-print" style="display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0 2rem 0; padding: 1rem; background: rgba(27,28,92,0.02); border: 1px solid rgba(27,28,92,0.06); border-radius: 8px; position: relative;">
+        <!-- connecting line background -->
+        <div style="position: absolute; top: 50%; left: 10%; right: 10%; height: 3px; background: #e2e8f0; transform: translateY(-50%); z-index: 1;"></div>
+        <!-- active progress fill -->
+        <div style="position: absolute; top: 50%; left: 10%; width: ${quote.status === 'converted' ? '80%' : '40%'}; height: 3px; background: var(--green); transform: translateY(-50%); z-index: 2; transition: width 0.5s ease;"></div>
+        
+        <!-- Step 1 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--green); border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px rgba(21,128,61,0.15);">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size: 0.65rem; font-weight: 700; color: var(--sky); text-transform: uppercase;">Enquiry</span>
         </div>
-        <span style="font-size: 0.65rem; font-weight: 700; color: var(--sky); text-transform: uppercase;">Approved</span>
-      </div>
-
-      <!-- Step 4 -->
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
-        <div style="width: 20px; height: 20px; border-radius: 50%; background: ${quote.status === 'converted' ? 'var(--green)' : '#cbd5e1'}; border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: ${quote.status === 'converted' ? '0 0 0 3px rgba(21,128,61,0.15)' : 'none'};">
-          ${quote.status === 'converted' ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+  
+        <!-- Step 2 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--green); border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px rgba(21,128,61,0.15);">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size: 0.65rem; font-weight: 700; color: var(--sky); text-transform: uppercase;">Priced</span>
         </div>
-        <span style="font-size: 0.65rem; font-weight: 700; color: ${quote.status === 'converted' ? 'var(--sky)' : 'var(--t3)'}; text-transform: uppercase;">Won Booking</span>
+  
+        <!-- Step 3 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: ${quote.status === 'converted' ? 'var(--green)' : 'var(--amber)'}; border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px ${quote.status === 'converted' ? 'rgba(21,128,61,0.15)' : 'rgba(180,83,9,0.15)'};">
+            ${quote.status === 'converted' ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '<span style="width:6px; height:6px; background:#fff; border-radius:50%;"></span>'}
+          </div>
+          <span style="font-size: 0.65rem; font-weight: 700; color: var(--sky); text-transform: uppercase;">Approved</span>
+        </div>
+  
+        <!-- Step 4 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; z-index: 3; position: relative;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: ${quote.status === 'converted' ? 'var(--green)' : '#cbd5e1'}; border: 4px stroke #fff; display: flex; align-items: center; justify-content: center; box-shadow: ${quote.status === 'converted' ? '0 0 0 3px rgba(21,128,61,0.15)' : 'none'};">
+            ${quote.status === 'converted' ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+          </div>
+          <span style="font-size: 0.65rem; font-weight: 700; color: ${quote.status === 'converted' ? 'var(--sky)' : 'var(--t3)'}; text-transform: uppercase;">Won Booking</span>
+        </div>
       </div>
-    </div>
-    
-    <div class="print-section-title">Freight Summary Details</div>
-    <table>
-      <thead>
-        <tr><th>Parameter</th><th>Value</th></tr>
-      </thead>
-      <tbody>
-        ${detailsRows}
-      </tbody>
-    </table>
-    
-    ${alternativesHtml}
-    
-    <div class="print-section-title">Origin Local Surcharges & Fees</div>
-    <table>
-      <thead>
-        <tr><th>Charge Element</th><th>Chargeable Amount</th></tr>
-      </thead>
-      <tbody>
-        ${originSurchargeRows}
-      </tbody>
-    </table>
-    
-    <div class="print-section-title">Destination Local Surcharges & Fees</div>
-    <table>
-      <thead>
-        <tr><th>Charge Element</th><th>Chargeable Amount</th></tr>
-      </thead>
-      <tbody>
-        ${destSurchargeRows}
-      </tbody>
-    </table>
-    
-    <div class="total-summary-box">
-      <strong>GRAND TOTAL FREIGHT CHARGES (EXCLUDING LOCAL TAXES):</strong>
-      <span class="val">${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-    </div>
+      
+      <div class="print-section-title">Freight Summary Details</div>
+      <table>
+        <thead>
+          <tr><th>Parameter</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+          ${detailsRows}
+        </tbody>
+      </table>
+      
+      ${alternativesHtml}
+      
+      ${bottomTotalBox}
 
     <div class="print-section-title" style="margin-top: 1.5rem; font-size: 0.85rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem;">Standard Terms & Conditions</div>
     <ol style="font-size: 0.72rem; color: #bbb; line-height: 1.5; padding-left: 1.2rem; margin: 0.5rem 0 1.5rem 0; font-family: sans-serif; text-align: left;">
