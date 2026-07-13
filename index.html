@@ -819,6 +819,31 @@
               Add Destination Surcharge
             </button>
 
+            <!-- Alternative Carrier Option Rates -->
+            <div style="margin-top: 1.5rem; margin-bottom: 1rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-air);">Alternative Carrier / Airline Option Rates</label>
+              <div class="cargo-table-container">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 25%;">Carrier Name</th>
+                      <th style="width: 25%;">Routing</th>
+                      <th style="width: 20%;">Transit Time</th>
+                      <th style="width: 20%;">Rate & Cost Details</th>
+                      <th style="width: 10%;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="air-alternatives-body">
+                    <!-- Dynamic alternative options rows -->
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn" id="air-add-alternative" style="margin-top: 0.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Alternative Carrier Option
+              </button>
+            </div>
+
             <!-- Editable Terms & Conditions -->
             <div style="margin-top: 1.5rem;">
               <label for="air-terms" style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-air);">Editable Terms & Conditions</label>
@@ -1214,6 +1239,31 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Destination Surcharge
             </button>
+
+            <!-- Alternative Carrier Option Rates -->
+            <div style="margin-top: 1.5rem; margin-bottom: 1rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-sea);">Alternative Carrier / Shipping Line / Co-loader / BB Option Rates</label>
+              <div class="cargo-table-container">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 25%;">Carrier Name</th>
+                      <th style="width: 25%;">Routing</th>
+                      <th style="width: 20%;">Transit Time</th>
+                      <th style="width: 20%;">Rate & Cost Details</th>
+                      <th style="width: 10%;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sea-alternatives-body">
+                    <!-- Dynamic alternative options rows -->
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn" id="sea-add-alternative" style="margin-top: 0.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Alternative Carrier Option
+              </button>
+            </div>
 
             <!-- Editable Terms & Conditions -->
             <div style="margin-top: 1.5rem;">
@@ -1659,6 +1709,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=23.0"></script>
+  <script src="app-v4.js?v=24.0"></script>
 </body>
 </html>

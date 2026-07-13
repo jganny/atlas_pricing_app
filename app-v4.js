@@ -677,6 +677,10 @@ function resetAirFreightDeskForm() {
   // Surcharges reset to default
   resetSurchargesToDefaults();
   
+  // Clear alternatives table
+  const airAltBody = document.getElementById("air-alternatives-body");
+  if (airAltBody) airAltBody.innerHTML = "";
+  
   // Recalculate to update results layout to 0/empty
   calculateAirFreight();
 }
@@ -752,6 +756,10 @@ function resetSeaFreightDeskForm() {
 
   // Surcharges reset to default
   resetSurchargesToDefaults();
+
+  // Clear alternatives table
+  const seaAltBody = document.getElementById("sea-alternatives-body");
+  if (seaAltBody) seaAltBody.innerHTML = "";
 
   // Recalculate to update results layout to 0/empty
   calculateSeaFreight();
@@ -1089,6 +1097,13 @@ function setupAirFreightEvents() {
 
   setupSurchargesEvents("air-origin");
   setupSurchargesEvents("air-dest");
+
+  const addAirAltBtn = document.getElementById("air-add-alternative");
+  if (addAirAltBtn) {
+    addAirAltBtn.addEventListener("click", () => {
+      addAlternativeOptionRow("air-alternatives-body");
+    });
+  }
 }
 
 function calculateAirFreight() {
@@ -1495,6 +1510,13 @@ function setupSeaFreightEvents() {
         appState.currentSeaFreight.dimUnit = e.target.getAttribute("data-unit");
         calculateSeaVolumeFromDimensions();
       });
+    });
+  }
+
+  const addSeaAltBtn = document.getElementById("sea-add-alternative");
+  if (addSeaAltBtn) {
+    addSeaAltBtn.addEventListener("click", () => {
+      addAlternativeOptionRow("sea-alternatives-body");
     });
   }
 }
@@ -2639,7 +2661,20 @@ function saveCurrentQuote() {
       routing: routing,
       tt: tt,
       validity: validity,
-      cargoItems: cargoItems
+      cargoItems: cargoItems,
+      alternatives: (() => {
+        const alts = [];
+        document.querySelectorAll("#air-alternatives-body tr").forEach(row => {
+          const carrier = row.querySelector(".alt-carrier")?.value.trim() || "";
+          const routingVal = row.querySelector(".alt-routing")?.value.trim() || "";
+          const ttVal = row.querySelector(".alt-tt")?.value.trim() || "";
+          const rateVal = row.querySelector(".alt-rate")?.value.trim() || "";
+          if (carrier) {
+            alts.push({ carrier, routing: routingVal, tt: ttVal, rate: rateVal });
+          }
+        });
+        return alts;
+      })()
     };
   } else {
     const originVal = document.getElementById("sea-origin").value.trim();
@@ -2821,7 +2856,20 @@ function saveCurrentQuote() {
       routing: routing,
       tt: tt,
       validity: validity,
-      stuffingOption: (document.getElementById("sea-fcl-stuffing-container")?.style.display !== 'none' && document.getElementById("sea-fcl-stuffing")) ? document.getElementById("sea-fcl-stuffing").value : null
+      stuffingOption: (document.getElementById("sea-fcl-stuffing-container")?.style.display !== 'none' && document.getElementById("sea-fcl-stuffing")) ? document.getElementById("sea-fcl-stuffing").value : null,
+      alternatives: (() => {
+        const alts = [];
+        document.querySelectorAll("#sea-alternatives-body tr").forEach(row => {
+          const carrier = row.querySelector(".alt-carrier")?.value.trim() || "";
+          const routingVal = row.querySelector(".alt-routing")?.value.trim() || "";
+          const ttVal = row.querySelector(".alt-tt")?.value.trim() || "";
+          const rateVal = row.querySelector(".alt-rate")?.value.trim() || "";
+          if (carrier) {
+            alts.push({ carrier, routing: routingVal, tt: ttVal, rate: rateVal });
+          }
+        });
+        return alts;
+      })()
     };
   }
 
@@ -3253,6 +3301,35 @@ window.viewSavedQuote = (id) => {
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
   
   let detailsRows = "";
+  
+  let alternativesHtml = "";
+  if (quote.details && quote.details.alternatives && quote.details.alternatives.length > 0) {
+    const altRows = quote.details.alternatives.map(alt => `
+      <tr>
+        <td style="font-weight: 700; color: #1b1c5c;">${alt.carrier}</td>
+        <td>${alt.routing}</td>
+        <td>${alt.tt}</td>
+        <td style="font-weight: 700; color: #2f3193;">${alt.rate}</td>
+      </tr>
+    `).join("");
+    
+    alternativesHtml = `
+      <div class="print-section-title" style="margin-top: 1.5rem;">Alternative Carrier & Routing Options</div>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem;">
+        <thead>
+          <tr style="background: #f8fafc;">
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Carrier / Operator</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Routing Details</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Transit Time (TT)</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Rate & Cost Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${altRows}
+        </tbody>
+      </table>
+    `;
+  }
   if (isAir) {
     detailsRows = `
       <tr><td>Air Freight Desk Module</td><td><strong>Air ${quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
@@ -3441,6 +3518,8 @@ window.viewSavedQuote = (id) => {
         ${detailsRows}
       </tbody>
     </table>
+    
+    ${alternativesHtml}
     
     <div class="print-section-title">Origin Local Surcharges & Fees</div>
     <table>
@@ -3863,6 +3942,37 @@ function repopulateSurchargesTable(tableBodyId, surchargesList) {
   });
 }
 
+function repopulateAlternativesTable(tableBodyId, alternatives) {
+  const tbody = document.getElementById(tableBodyId);
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  if (alternatives && alternatives.length > 0) {
+    alternatives.forEach(alt => {
+      addAlternativeOptionRow(tableBodyId, alt.carrier, alt.routing, alt.tt, alt.rate);
+    });
+  }
+}
+
+function addAlternativeOptionRow(tbodyId, carrier = "", routing = "", tt = "", rate = "") {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input type="text" class="alt-carrier" value="${carrier}" required placeholder="Carrier name..."></td>
+    <td><input type="text" class="alt-routing" value="${routing}" required placeholder="e.g. BOM-DXB-JFK"></td>
+    <td><input type="text" class="alt-tt" value="${tt}" required placeholder="e.g. 3-5 Days"></td>
+    <td><input type="text" class="alt-rate" value="${rate}" required placeholder="Rate / cost details..."></td>
+    <td>
+      <button type="button" class="delete-btn" onclick="this.closest('tr').remove();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+      </button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
+window.addAlternativeOptionRow = addAlternativeOptionRow;
+
 function amendQuote(id) {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
@@ -3933,6 +4043,9 @@ function amendQuote(id) {
     // Local surcharges
     repopulateSurchargesTable("air-origin-surcharges-body", quote.details.originSurcharges);
     repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
+    
+    // Alternative carrier options
+    repopulateAlternativesTable("air-alternatives-body", quote.details.alternatives);
     
     calculateAirFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
@@ -4073,6 +4186,9 @@ function amendQuote(id) {
 
     repopulateSurchargesTable("sea-origin-surcharges-body", quote.details.originSurcharges);
     repopulateSurchargesTable("sea-dest-surcharges-body", quote.details.destSurcharges);
+    
+    // Alternative carrier options
+    repopulateAlternativesTable("sea-alternatives-body", quote.details.alternatives);
     
     calculateSeaFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
