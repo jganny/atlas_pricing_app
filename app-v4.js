@@ -79,7 +79,8 @@ let appState = {
     module: 'export', // 'export' or 'import'
     cargoItems: [{ length: '', width: '', height: '', qty: '', grossWeight: '' }],
     rates: { min: '', minus45: '', plus45: '', plus100: '', plus300: '', plus500: '', plus1000: '' },
-    surcharges: [{ name: 'Fuel Surcharge (MYC)', rate: 1.20, unit: 'kg' }, { name: 'Security Surcharge (SCC)', rate: 0.15, unit: 'kg' }, { name: 'Handling Charges', rate: 45.00, unit: 'flat' }],
+    surcharges: [{ name: 'Xray', rate: 0.00, unit: 'kg' }, { name: 'Cartage', rate: 6.00, unit: 'flat' }, { name: 'Misc', rate: 6.00, unit: 'flat' }],
+    airlines: [],
     nominatedCurrency: 'USD',
     isOptimizedApplied: false
   },
@@ -1058,6 +1059,7 @@ function setupAutocomplete(inputEl, type) {
 }
 
 // AIR FREIGHT CALCULATOR LOGIC
+// AIR FREIGHT CALCULATOR LOGIC
 function setupAirFreightEvents() {
   const tableBody = document.getElementById("air-cargo-body");
   const addRowBtn = document.getElementById("air-add-cargo");
@@ -1129,11 +1131,6 @@ function setupAirFreightEvents() {
     });
   });
 
-  const rateInputs = document.querySelectorAll(".breaks-grid input");
-  rateInputs.forEach(inp => {
-    inp.addEventListener("input", calculateAirFreight);
-  });
-
   if (currencySelect) {
     currencySelect.addEventListener("change", () => {
       updateCurrencyRules(appState.currentUser);
@@ -1142,24 +1139,274 @@ function setupAirFreightEvents() {
   }
 
   document.getElementById("air-incoterm")?.addEventListener("change", calculateAirFreight);
-  document.getElementById("air-pivot-weight")?.addEventListener("input", calculateAirFreight);
-  document.getElementById("air-routing")?.addEventListener("input", calculateAirFreight);
-  document.getElementById("air-tt")?.addEventListener("input", calculateAirFreight);
-  document.getElementById("air-validity")?.addEventListener("input", calculateAirFreight);
+
+  const addAirlineBtn = document.getElementById("air-add-airline-btn");
+  if (addAirlineBtn) {
+    addAirlineBtn.addEventListener("click", () => {
+      addAirlineCard();
+      calculateAirFreight();
+    });
+  }
+
+  const commoditySelect = document.getElementById("air-commodity");
+  if (commoditySelect) {
+    commoditySelect.addEventListener("change", () => {
+      handleAirCommodityChange();
+      calculateAirFreight();
+    });
+  }
+
+  const tempTypeSelect = document.getElementById("air-temp-type");
+  if (tempTypeSelect) {
+    tempTypeSelect.addEventListener("change", () => {
+      handleAirTempTypeChange();
+      calculateAirFreight();
+    });
+  }
+
+  const tempRangeSelect = document.getElementById("air-temp-range");
+  if (tempRangeSelect) {
+    tempRangeSelect.addEventListener("change", calculateAirFreight);
+  }
+
+  const tiltSelect = document.getElementById("air-loadability-tilt");
+  if (tiltSelect) {
+    tiltSelect.addEventListener("change", calculateAirFreight);
+  }
+
+  const stackSelect = document.getElementById("air-loadability-stack");
+  if (stackSelect) {
+    stackSelect.addEventListener("change", calculateAirFreight);
+  }
 
   setupSurchargesEvents("air-origin");
   setupSurchargesEvents("air-dest");
 
-  const addAirAltBtn = document.getElementById("air-add-alternative");
-  if (addAirAltBtn) {
-    addAirAltBtn.addEventListener("click", () => {
-      addAlternativeOptionRow("air-alternatives-body");
-    });
+  const container = document.getElementById("air-airlines-list-container");
+  if (container && container.querySelectorAll(".airline-card").length === 0) {
+    addAirlineCard();
   }
 }
 
+function handleAirCommodityChange() {
+  const comm = document.getElementById("air-commodity")?.value;
+  const tempContainer = document.getElementById("air-commodity-temp-container");
+  if (tempContainer) {
+    if (comm === 'PERISHABLES' || comm === 'PHARMA') {
+      tempContainer.style.display = 'grid';
+    } else {
+      tempContainer.style.display = 'none';
+      const tempType = document.getElementById("air-temp-type");
+      if (tempType) {
+        tempType.value = "NON-TEMPERATURE";
+        handleAirTempTypeChange();
+      }
+    }
+  }
+}
+window.handleAirCommodityChange = handleAirCommodityChange;
+
+function handleAirTempTypeChange() {
+  const type = document.getElementById("air-temp-type")?.value;
+  const rangeGroup = document.getElementById("air-temp-range-group");
+  if (rangeGroup) {
+    if (type === 'TEMPERATURE') {
+      rangeGroup.style.display = 'block';
+    } else {
+      rangeGroup.style.display = 'none';
+    }
+  }
+}
+window.handleAirTempTypeChange = handleAirTempTypeChange;
+
+function getWeightBreakBracket(weight) {
+  if (weight < 45) return 'minus45';
+  if (weight >= 45 && weight < 100) return 'plus45';
+  if (weight >= 100 && weight < 300) return 'plus100';
+  if (weight >= 300 && weight < 500) return 'plus300';
+  if (weight >= 500 && weight < 1000) return 'plus500';
+  return 'plus1000';
+}
+window.getWeightBreakBracket = getWeightBreakBracket;
+
+function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
+  const container = card.querySelector(".airline-breaks-container");
+  if (!container) return;
+
+  let wrapper = container.querySelector(`.dynamic-break-wrapper[data-break-name="${breakName}"]`);
+  if (wrapper) {
+    if (isAuto) {
+      wrapper.setAttribute("data-is-auto", "true");
+      const removeBtn = wrapper.querySelector(".remove-break-btn");
+      if (removeBtn) removeBtn.style.display = "none";
+    }
+    return;
+  }
+
+  const labels = {
+    'min': 'Min (Flat)',
+    'minus45': '-45 kg',
+    'plus45': '+45 kg',
+    'plus100': '+100 kg',
+    'plus300': '+300 kg',
+    'plus500': '+500 kg',
+    'plus1000': '+1000 kg'
+  };
+
+  wrapper = document.createElement("div");
+  wrapper.className = "dynamic-break-wrapper";
+  wrapper.setAttribute("data-break-name", breakName);
+  wrapper.setAttribute("data-is-auto", isAuto ? "true" : "false");
+  wrapper.style.cssText = "background: rgba(255,255,255,0.05); border: 1px solid var(--border-2); border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;";
+
+  wrapper.innerHTML = `
+    <span style="font-size: 0.72rem; font-weight: 700; color: var(--t2);">${labels[breakName] || breakName}</span>
+    <input type="number" class="break-rate-input" placeholder="Rate" min="0" step="0.1" value="${rate > 0 ? rate : ''}" style="width: 60px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid var(--border-1); border-radius: 4px; background: var(--bg-input); color: #fff;">
+    <span class="remove-break-btn" style="cursor: pointer; color: var(--accent-error); font-size: 0.8rem; font-weight: 800; padding: 0 2px; ${isAuto ? 'display:none;' : ''}">×</span>
+  `;
+
+  container.appendChild(wrapper);
+
+  wrapper.querySelector(".break-rate-input").addEventListener("input", calculateAirFreight);
+  if (!isAuto) {
+    wrapper.querySelector(".remove-break-btn").addEventListener("click", () => {
+      wrapper.remove();
+      calculateAirFreight();
+    });
+  }
+}
+window.addWeightBreakRow = addWeightBreakRow;
+
+function addAirlineCard(data = null) {
+  const container = document.getElementById("air-airlines-list-container");
+  if (!container) return;
+
+  const airlineId = 'airline_' + Math.random().toString(36).substr(2, 9);
+  const card = document.createElement("div");
+  card.className = "airline-card glass-card";
+  card.id = airlineId;
+  card.style.cssText = "padding: 1rem; border: 1px solid var(--border-1); border-radius: 8px; margin-bottom: 1rem; position: relative;";
+
+  const count = container.querySelectorAll(".airline-card").length + 1;
+
+  const name = data ? data.name : "";
+  const routing = data ? data.routing : "";
+  const tt = data ? data.tt : "";
+  const validity = data ? data.validity : "";
+  const pivotWeight = data ? data.pivotWeight : "";
+  const isSelected = data ? !!data.selected : (count === 1);
+  const activeBreaks = data ? data.breaks : {};
+
+  card.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+      <span style="font-weight: 800; color: var(--accent-air); font-size: 0.85rem;">Airline Option #${count}</span>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--t1);">
+          <input type="radio" name="selected-airline" class="select-airline-radio" ${isSelected ? 'checked' : ''}> Select as Quoted
+        </label>
+        <button type="button" class="delete-btn remove-airline-btn" style="padding: 2px 4px; margin: 0;">Remove</button>
+      </div>
+    </div>
+    
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label>Carrier / Airline</label>
+        <input type="text" class="air-name" placeholder="Airline name or code..." value="${name}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+      </div>
+      <div class="form-group">
+        <label>Routing Details</label>
+        <input type="text" class="air-routing" placeholder="e.g. Direct / via SIN" value="${routing}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+      </div>
+      <div class="form-group">
+        <label>Transit Time (TT)</label>
+        <input type="text" class="air-tt" placeholder="e.g. 3-5 Days" value="${tt}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+      </div>
+    </div>
+
+    <div class="form-grid-2" style="margin-top: 0.5rem;">
+      <div class="form-group">
+        <label>Quote Validity</label>
+        <input type="date" class="air-validity" value="${validity}" required style="color-scheme: dark; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+      </div>
+      <div class="form-group">
+        <label>Pivot Weight (Kg)</label>
+        <input type="number" class="air-pivot-weight" placeholder="optional" min="0" step="0.1" value="${pivotWeight}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+      </div>
+    </div>
+
+    <div style="margin-top: 0.75rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--t2);">Weight Break Tariffs (Rate per KG)</span>
+        <button type="button" class="btn-text add-weight-break-btn" style="font-size: 0.7rem; color: var(--sky); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0;">+ Add Weight Break</button>
+      </div>
+      
+      <div class="airline-breaks-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        <!-- Dynamic breaks will be appended here -->
+      </div>
+    </div>
+  `;
+
+  container.appendChild(card);
+
+  card.querySelectorAll("input, select").forEach(inp => {
+    inp.addEventListener("input", calculateAirFreight);
+    if (inp.type === "radio") {
+      inp.addEventListener("change", calculateAirFreight);
+    }
+  });
+
+  card.querySelector(".remove-airline-btn").addEventListener("click", () => {
+    const isChecked = card.querySelector(".select-airline-radio").checked;
+    card.remove();
+    const remaining = container.querySelectorAll(".airline-card");
+    remaining.forEach((rcard, idx) => {
+      rcard.querySelector("span").textContent = `Airline Option #${idx + 1}`;
+    });
+    if (isChecked && remaining.length > 0) {
+      remaining[0].querySelector(".select-airline-radio").checked = true;
+    }
+    calculateAirFreight();
+  });
+
+  const addBreakBtn = card.querySelector(".add-weight-break-btn");
+  addBreakBtn.addEventListener("click", () => {
+    const breakOpts = {
+      'min': 'Minimum (Flat)',
+      'minus45': '-45 kg',
+      'plus45': '+45 kg',
+      'plus100': '+100 kg',
+      'plus300': '+300 kg',
+      'plus500': '+500 kg',
+      'plus1000': '+1000 kg'
+    };
+
+    const currentBreaks = Array.from(card.querySelectorAll(".dynamic-break-wrapper")).map(x => x.getAttribute("data-break-name"));
+    const available = Object.keys(breakOpts).filter(k => !currentBreaks.includes(k));
+
+    if (available.length === 0) {
+      alert("All weight breaks have already been added.");
+      return;
+    }
+
+    const availableLabels = available.map(k => `${k}: ${breakOpts[k]}`).join("\n");
+    const choice = prompt(`Enter the break code to add:\n\nAvailable:\n${availableLabels}`);
+    if (choice && available.includes(choice.trim().toLowerCase())) {
+      addWeightBreakRow(card, choice.trim().toLowerCase(), 0);
+      calculateAirFreight();
+    } else if (choice) {
+      alert("Invalid selection.");
+    }
+  });
+
+  if (data && Object.keys(activeBreaks).length > 0) {
+    for (const bName in activeBreaks) {
+      addWeightBreakRow(card, bName, activeBreaks[bName]);
+    }
+  }
+}
+window.addAirlineCard = addAirlineCard;
+
 function calculateAirFreight() {
-  // Sync page currency labels and units
   updateCurrencyRules(appState.currentUser);
 
   const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
@@ -1192,141 +1439,177 @@ function calculateAirFreight() {
     }
   });
 
-  const pivotWeight = parseFloat(document.getElementById("air-pivot-weight")?.value) || 0;
-  let chargeableWeight = Math.max(totalGrossWeight, totalVolumeWeight);
-  if (pivotWeight > totalGrossWeight || pivotWeight > totalVolumeWeight) {
-    chargeableWeight = pivotWeight;
-  }
-
-  const rateMin = parseFloat(document.getElementById("rate-min").value) || 0;
-  const rateM45 = parseFloat(document.getElementById("rate-m45").value) || 0;
-  const rateP45 = parseFloat(document.getElementById("rate-p45").value) || 0;
-  const rateP100 = parseFloat(document.getElementById("rate-p100").value) || 0;
-  const rateP300 = parseFloat(document.getElementById("rate-p300").value) || 0;
-  const rateP500 = parseFloat(document.getElementById("rate-p500").value) || 0;
-  const rateP1000 = parseFloat(document.getElementById("rate-p1000").value) || 0;
-
-  const rates = [
-    { breakName: 'min', limit: 0, rate: rateMin, label: 'Min' },
-    { breakName: 'minus45', limit: 0.1, rate: rateM45, label: '-45 kg' },
-    { breakName: 'plus45', limit: 45, rate: rateP45, label: '+45 kg' },
-    { breakName: 'plus100', limit: 100, rate: rateP100, label: '+100 kg' },
-    { breakName: 'plus300', limit: 300, rate: rateP300, label: '+300 kg' },
-    { breakName: 'plus500', limit: 500, rate: rateP500, label: '+500 kg' },
-    { breakName: 'plus1000', limit: 1000, rate: rateP1000, label: '+1000 kg' }
-  ];
-
-  let activeBreakIndex = -1;
-  let activeRate = 0;
-
-  if (chargeableWeight > 0) {
-    if (chargeableWeight < 45) {
-      activeBreakIndex = 1;
-      activeRate = rateM45;
-    } else if (chargeableWeight >= 45 && chargeableWeight < 100) {
-      activeBreakIndex = 2;
-      activeRate = rateP45;
-    } else if (chargeableWeight >= 100 && chargeableWeight < 300) {
-      activeBreakIndex = 3;
-      activeRate = rateP100;
-    } else if (chargeableWeight >= 300 && chargeableWeight < 500) {
-      activeBreakIndex = 4;
-      activeRate = rateP300;
-    } else if (chargeableWeight >= 500 && chargeableWeight < 1000) {
-      activeBreakIndex = 5;
-      activeRate = rateP500;
-    } else if (chargeableWeight >= 1000) {
-      activeBreakIndex = 6;
-      activeRate = rateP1000;
+  const commodity = document.getElementById("air-commodity")?.value || "GENERAL";
+  const tempType = document.getElementById("air-temp-type")?.value || "NON-TEMPERATURE";
+  const tempRange = document.getElementById("air-temp-range")?.value || "2-8";
+  
+  let commLabel = commodity;
+  if (commodity === 'PERISHABLES' || commodity === 'PHARMA') {
+    if (tempType === 'TEMPERATURE') {
+      commLabel += ` - Temp (${tempRange === '2-8' ? '2-8°C' : '15-25°C'})`;
+    } else {
+      commLabel += ` - Non-Temp`;
     }
   }
+  
+  const resComm = document.getElementById("res-air-commodity-val");
+  if (resComm) resComm.textContent = commLabel;
 
-  document.querySelectorAll(".break-input-wrapper").forEach(el => {
-    el.classList.remove("highlight-break", "suggested-break");
-  });
+  const loadTilt = document.getElementById("air-loadability-tilt")?.value || "TILTABLE";
+  const loadStack = document.getElementById("air-loadability-stack")?.value || "STACKABLE";
+  
+  const loadLabel = `${loadTilt === 'TILTABLE' ? 'Tiltable' : 'Non-Tiltable'} / ${loadStack === 'STACKABLE' ? 'Stackable' : 'Non-Stackable'}`;
+  const resLoad = document.getElementById("res-air-loadability-val");
+  if (resLoad) resLoad.textContent = loadLabel;
 
-  if (activeBreakIndex !== -1) {
-    const activeEl = document.querySelectorAll(".break-input-wrapper")[activeBreakIndex];
-    if (activeEl) activeEl.classList.add("highlight-break");
+  document.getElementById("res-air-gw").textContent = `${totalGrossWeight.toFixed(2)} kg`;
+  document.getElementById("res-air-qty").textContent = `${totalPackageQty} Pkgs`;
+  document.getElementById("res-air-vw").textContent = `${totalVolumeWeight.toFixed(2)} kg`;
+  document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
+
+  const airlineCards = document.querySelectorAll("#air-airlines-list-container .airline-card");
+  
+  if (airlineCards.length === 0) {
+    addAirlineCard();
+    return;
   }
 
-  let baseFreightCost = chargeableWeight * activeRate;
-  if (activeBreakIndex === 1 && rateMin > 0 && baseFreightCost < rateMin) {
-    baseFreightCost = rateMin;
-    document.querySelectorAll(".break-input-wrapper")[0].classList.add("highlight-break");
-  }
+  let selectedAirlineCard = null;
+  const airlinesResults = [];
 
-  let optBreakIndex = -1;
-  let optWeight = chargeableWeight;
-  let optRate = activeRate;
-  let optFreightCost = baseFreightCost;
-  let hasSavings = false;
+  airlineCards.forEach(card => {
+    const isSelected = card.querySelector(".select-airline-radio").checked;
+    const name = card.querySelector(".air-name").value.trim();
+    const routing = card.querySelector(".air-routing").value.trim();
+    const tt = card.querySelector(".air-tt").value.trim();
+    const validity = card.querySelector(".air-validity").value;
+    const pivotWeight = parseFloat(card.querySelector(".air-pivot-weight").value) || 0;
 
-  if (chargeableWeight > 0 && activeBreakIndex !== -1 && activeBreakIndex < rates.length - 1) {
-    for (let i = activeBreakIndex + 1; i < rates.length; i++) {
-      const nextBreak = rates[i];
-      if (nextBreak.rate > 0) {
-        const nextBreakCost = nextBreak.limit * nextBreak.rate;
-        if (nextBreakCost < baseFreightCost) {
-          optBreakIndex = i;
-          optWeight = nextBreak.limit;
-          optRate = nextBreak.rate;
-          optFreightCost = nextBreakCost;
-          hasSavings = true;
-          break;
+    const airlineChargeableWeight = Math.max(totalGrossWeight, totalVolumeWeight, pivotWeight);
+    const autoBreakName = getWeightBreakBracket(airlineChargeableWeight);
+
+    addWeightBreakRow(card, autoBreakName, 0, true);
+
+    card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
+      const bName = wrapper.getAttribute("data-break-name");
+      const removeBtn = wrapper.querySelector(".remove-break-btn");
+      if (bName === autoBreakName) {
+        wrapper.classList.add("highlight-break");
+        wrapper.style.borderColor = "var(--accent-success)";
+        wrapper.style.background = "rgba(46,204,113,0.1)";
+        if (removeBtn) removeBtn.style.display = "none";
+      } else {
+        wrapper.classList.remove("highlight-break");
+        wrapper.style.borderColor = "var(--border-2)";
+        wrapper.style.background = "rgba(255,255,255,0.05)";
+        if (removeBtn && wrapper.getAttribute("data-is-auto") !== "true") {
+          removeBtn.style.display = "inline";
         }
       }
+    });
+
+    const breaksData = {};
+    card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
+      const bName = wrapper.getAttribute("data-break-name");
+      const rateVal = parseFloat(wrapper.querySelector(".break-rate-input").value) || 0;
+      breaksData[bName] = rateVal;
+    });
+
+    const activeRate = breaksData[autoBreakName] || 0;
+    let baseFreightCost = airlineChargeableWeight * activeRate;
+    
+    if (breaksData['min'] > 0 && baseFreightCost < breaksData['min']) {
+      baseFreightCost = breaksData['min'];
+      const minWrapper = card.querySelector(`.dynamic-break-wrapper[data-break-name="min"]`);
+      if (minWrapper) {
+        minWrapper.classList.add("highlight-break");
+        minWrapper.style.borderColor = "var(--accent-success)";
+      }
     }
+
+    if (isSelected) {
+      selectedAirlineCard = {
+        card,
+        name,
+        routing,
+        tt,
+        validity,
+        pivotWeight,
+        chargeableWeight: airlineChargeableWeight,
+        autoBreakName,
+        breaksData,
+        activeRate,
+        baseFreightCost
+      };
+    } else {
+      airlinesResults.push({
+        name: name || "Unnamed Airline",
+        routing,
+        tt,
+        validity,
+        pivotWeight,
+        chargeableWeight: airlineChargeableWeight,
+        baseFreightCost,
+        breaksData
+      });
+    }
+  });
+
+  if (!selectedAirlineCard && airlineCards.length > 0) {
+    airlineCards[0].querySelector(".select-airline-radio").checked = true;
+    calculateAirFreight();
+    return;
   }
 
-  const optCard = document.getElementById("air-opt-card");
-  if (hasSavings) {
-    optCard.style.display = "block";
-    const savingsAmount = baseFreightCost - optFreightCost;
-    const currency = document.getElementById("air-currency").value;
-    const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
-    
-    document.getElementById("opt-suggestion-text").innerHTML = `
-      Rating actual ${chargeableWeight.toFixed(2)} kg at the ${rates[activeBreakIndex].label} rate is ${curSymbol}${baseFreightCost.toFixed(2)}.
-      However, rating <strong>as ${optWeight} kg</strong> at the <strong>+${rates[optBreakIndex].limit} kg rate (${curSymbol}${optRate.toFixed(2)}/kg)</strong> is only <strong>${curSymbol}${optFreightCost.toFixed(2)}</strong>.
-      <br><strong>Savings: ${curSymbol}${savingsAmount.toFixed(2)}</strong>.
-    `;
-    
-    const optEl = document.querySelectorAll(".break-input-wrapper")[optBreakIndex];
-    if (optEl) optEl.classList.add("suggested-break");
-
-    document.getElementById("apply-opt").onclick = () => {
-      appState.currentAirFreight.isOptimizedApplied = true;
-      optCard.style.display = "none";
-      calculateAirFreight();
-    };
+  const finalChargeableWeight = selectedAirlineCard.chargeableWeight;
+  
+  document.getElementById("res-air-chw").textContent = `${finalChargeableWeight.toFixed(2)} kg`;
+  
+  const pivotRow = document.getElementById("row-air-pivot");
+  const pivotVal = document.getElementById("res-air-pivot");
+  if (selectedAirlineCard.pivotWeight > 0) {
+    if (pivotRow) pivotRow.style.display = "flex";
+    if (pivotVal) pivotVal.textContent = `${selectedAirlineCard.pivotWeight.toFixed(2)} kg`;
   } else {
-    optCard.style.display = "none";
+    if (pivotRow) pivotRow.style.display = "none";
   }
 
-  let finalChargeableWeight = chargeableWeight;
-  let finalBaseRate = activeRate;
-  let finalFreightCost = baseFreightCost;
-  let usedBreakLabel = activeBreakIndex !== -1 ? rates[activeBreakIndex].label : '';
+  document.getElementById("res-air-routing-val").textContent = selectedAirlineCard.routing || "-";
+  document.getElementById("res-air-tt-val").textContent = selectedAirlineCard.tt || "-";
+  document.getElementById("res-air-validity-val").textContent = selectedAirlineCard.validity || "-";
 
-  if (appState.currentAirFreight.isOptimizedApplied && hasSavings) {
-    finalChargeableWeight = optWeight;
-    finalBaseRate = optRate;
-    finalFreightCost = optFreightCost;
-    usedBreakLabel = `As For ${rates[optBreakIndex].label}`;
+  const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+  originRows.forEach(row => {
+    const nameInput = row.querySelector(".chg-name");
+    const name = nameInput.value.trim().toLowerCase();
     
-    document.querySelectorAll(".break-input-wrapper").forEach(el => el.classList.remove("highlight-break"));
-    const optEl = document.querySelectorAll(".break-input-wrapper")[optBreakIndex];
-    if (optEl) optEl.classList.add("highlight-break");
-  } else if (!hasSavings) {
-    appState.currentAirFreight.isOptimizedApplied = false;
-  }
+    if (name === "cartage" || name === "misc") {
+      const rateInp = row.querySelector(".chg-rate");
+      const unitSelect = row.querySelector(".chg-unit");
+      
+      if (finalChargeableWeight <= 150) {
+        rateInp.value = "6.00";
+        unitSelect.value = "flat";
+      } else {
+        rateInp.value = "0.04";
+        unitSelect.value = "kg";
+      }
+      
+      rateInp.readOnly = true;
+      if (unitSelect) unitSelect.disabled = true;
+      rateInp.style.background = "rgba(255,255,255,0.02)";
+      rateInp.style.color = "var(--text-dim)";
+      if (unitSelect) {
+        unitSelect.style.background = "rgba(0,0,0,0.2)";
+        unitSelect.style.color = "var(--text-dim)";
+      }
+    }
+  });
 
   let totalSurcharges = 0;
   let originSurchargesList = [];
   let destSurchargesList = [];
 
-  const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
   originRows.forEach(row => {
     const name = row.querySelector(".chg-name").value.trim();
     const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
@@ -1354,87 +1637,149 @@ function calculateAirFreight() {
 
   const surchargesList = [...originSurchargesList, ...destSurchargesList];
 
-  const grandTotal = finalFreightCost + totalSurcharges;
-  const currency = document.getElementById("air-currency").value;
-  const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
+  const activeRate = selectedAirlineCard.activeRate;
+  let baseFreightCost = selectedAirlineCard.baseFreightCost;
+  const breaksData = selectedAirlineCard.breaksData;
 
-  let totalINR = grandTotal;
-  if (currency !== 'INR') {
-    totalINR = grandTotal * EXCHANGE_RATES[`${currency}_TO_INR`];
-  }
+  const rates = [
+    { breakName: 'min', limit: 0, rate: breaksData['min'] || 0, label: 'Min' },
+    { breakName: 'minus45', limit: 0.1, rate: breaksData['minus45'] || 0, label: '-45 kg' },
+    { breakName: 'plus45', limit: 45, rate: breaksData['plus45'] || 0, label: '+45 kg' },
+    { breakName: 'plus100', limit: 100, rate: breaksData['plus100'] || 0, label: '+100 kg' },
+    { breakName: 'plus300', limit: 300, rate: breaksData['plus300'] || 0, label: '+300 kg' },
+    { breakName: 'plus500', limit: 500, rate: breaksData['plus500'] || 0, label: '+500 kg' },
+    { breakName: 'plus1000', limit: 1000, rate: breaksData['plus1000'] || 0, label: '+1000 kg' }
+  ];
 
-  document.getElementById("res-air-gw").textContent = `${totalGrossWeight.toFixed(2)} kg`;
-  document.getElementById("res-air-qty").textContent = `${totalPackageQty} Pkgs`;
-  document.getElementById("res-air-vw").textContent = `${totalVolumeWeight.toFixed(2)} kg`;
-  document.getElementById("res-air-chw").textContent = `${finalChargeableWeight.toFixed(2)} kg ${usedBreakLabel ? `(${usedBreakLabel})` : ''}`;
-  
-  const rowPivot = document.getElementById("row-air-pivot");
-  const resPivot = document.getElementById("res-air-pivot");
-  if (rowPivot && resPivot) {
-    if (pivotWeight > 0) {
-      rowPivot.style.display = "flex";
-      resPivot.textContent = `${pivotWeight.toFixed(2)} kg`;
-    } else {
-      rowPivot.style.display = "none";
+  const activeBreakIdx = rates.findIndex(r => r.breakName === selectedAirlineCard.autoBreakName);
+
+  let optBreakIndex = -1;
+  let optWeight = finalChargeableWeight;
+  let optRate = activeRate;
+  let optFreightCost = baseFreightCost;
+  let hasSavings = false;
+
+  if (finalChargeableWeight > 0 && activeBreakIdx !== -1 && activeBreakIdx < rates.length - 1) {
+    for (let i = activeBreakIdx + 1; i < rates.length; i++) {
+      const nextBreak = rates[i];
+      if (nextBreak.rate > 0) {
+        const nextBreakCost = nextBreak.limit * nextBreak.rate;
+        if (nextBreakCost < baseFreightCost) {
+          optBreakIndex = i;
+          optWeight = nextBreak.limit;
+          optRate = nextBreak.rate;
+          optFreightCost = nextBreakCost;
+          hasSavings = true;
+          break;
+        }
+      }
     }
   }
 
-  document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
-  
-  const routing = document.getElementById("air-routing")?.value || "";
-  const rawTt = document.getElementById("air-tt")?.value || "";
-  let tt = rawTt.trim();
-  if (tt && !tt.toLowerCase().includes("day")) {
-    tt = `${tt} Days`;
+  const optCard = document.getElementById("air-opt-card");
+  if (hasSavings) {
+    if (optCard) optCard.style.display = "block";
+    const savingsAmount = baseFreightCost - optFreightCost;
+    const currency = document.getElementById("air-currency").value;
+    const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
+    
+    const activeLabel = rates[activeBreakIdx] ? rates[activeBreakIdx].label : 'Standard';
+    const optLabel = rates[optBreakIndex] ? rates[optBreakIndex].label : '';
+
+    const optSuggestion = document.getElementById("opt-suggestion-text");
+    if (optSuggestion) {
+      optSuggestion.innerHTML = `
+        Rating actual ${finalChargeableWeight.toFixed(2)} kg at the ${activeLabel} rate is ${curSymbol}${baseFreightCost.toFixed(2)}.
+        However, rating <strong>as ${optWeight} kg</strong> at the <strong>+${rates[optBreakIndex].limit} kg rate (${curSymbol}${optRate.toFixed(2)}/kg)</strong> is only <strong>${curSymbol}${optFreightCost.toFixed(2)}</strong>.
+        <br><strong>Savings: ${curSymbol}${savingsAmount.toFixed(2)}</strong>.
+      `;
+    }
+    
+    const optBName = rates[optBreakIndex].breakName;
+    const optWrapper = selectedAirlineCard.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
+    if (optWrapper) {
+      optWrapper.style.borderColor = "var(--accent-warning)";
+      optWrapper.style.background = "rgba(245,158,11,0.1)";
+    }
+
+    document.getElementById("apply-opt").onclick = () => {
+      appState.currentAirFreight.isOptimizedApplied = true;
+      if (optCard) optCard.style.display = "none";
+      calculateAirFreight();
+    };
+  } else {
+    if (optCard) optCard.style.display = "none";
   }
-  const validity = document.getElementById("air-validity")?.value || "";
-  const resRouting = document.getElementById("res-air-routing-val");
-  const resTT = document.getElementById("res-air-tt-val");
-  const resValidity = document.getElementById("res-air-validity-val");
-  if (resRouting) resRouting.textContent = formatRoutingDisplay(routing);
-  if (resTT) resTT.textContent = tt || "-";
-  if (resValidity) resValidity.textContent = validity || "-";
+
+  let finalBaseRate = activeRate;
+  let finalFreightCost = baseFreightCost;
+
+  if (appState.currentAirFreight.isOptimizedApplied && hasSavings) {
+    finalBaseRate = optRate;
+    finalFreightCost = optFreightCost;
+    
+    selectedAirlineCard.card.querySelectorAll(".dynamic-break-wrapper").forEach(el => {
+      el.style.borderColor = "var(--border-2)";
+      el.style.background = "rgba(255,255,255,0.05)";
+    });
+    const optBName = rates[optBreakIndex].breakName;
+    const optWrapper = selectedAirlineCard.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
+    if (optWrapper) {
+      optWrapper.style.borderColor = "var(--accent-success)";
+      optWrapper.style.background = "rgba(46,204,113,0.1)";
+    }
+  } else if (!hasSavings) {
+    appState.currentAirFreight.isOptimizedApplied = false;
+  }
+
+  const grandTotal = finalFreightCost + totalSurcharges;
+  const currency = document.getElementById("air-currency").value;
+  const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
 
   document.getElementById("res-air-base").textContent = `${curSymbol}${finalFreightCost.toFixed(2)}`;
   document.getElementById("res-air-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
   document.getElementById("res-air-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
 
-  // Update Alternative Airline Options Summary Live Results
-  const altContainer = document.getElementById("air-alternatives-results-container");
-  const altList = document.getElementById("air-alternatives-results-list");
-  let alts = [];
-  if (altContainer && altList) {
-    const rows = document.querySelectorAll("#air-alternatives-body tr");
-    rows.forEach(row => {
-      const carrier = row.querySelector(".alt-carrier")?.value || "";
-      const route = row.querySelector(".alt-routing")?.value || "";
-      const transitTime = row.querySelector(".alt-tt")?.value || "";
-      const rateInfo = row.querySelector(".alt-rate")?.value || "";
-      if (carrier || route || transitTime || rateInfo) {
-        alts.push({ carrier, routing: route, tt: transitTime, rate: rateInfo });
-      }
-    });
-    
-    if (alts.length > 0) {
-      altContainer.style.display = "block";
-      altList.innerHTML = alts.map(alt => `
-        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem;">
-          <div style="display: flex; justify-content: space-between; font-weight: 750; color: #fff;">
-            <span>✈️ ${alt.carrier || '-'}</span>
-            <span style="color: var(--accent-air); font-weight: 800;">${alt.rate || '-'}</span>
-          </div>
-          <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 3px;">
-            <span>Route: ${alt.routing || '-'}</span>
-            <span>TT: ${alt.tt || '-'}</span>
-          </div>
-        </div>
-      `).join("");
-    } else {
-      altContainer.style.display = "none";
-      altList.innerHTML = "";
-    }
+  let totalINR = grandTotal;
+  if (currency === 'INR') {
+    totalINR = grandTotal;
+  } else if (currency === 'USD') {
+    totalINR = grandTotal * (EXCHANGE_RATES.USD_TO_INR || 83);
+  } else if (currency === 'EUR') {
+    totalINR = grandTotal * (EXCHANGE_RATES.EUR_TO_USD || 1.08) * (EXCHANGE_RATES.USD_TO_INR || 83);
+  } else if (currency === 'GBP') {
+    totalINR = grandTotal * (EXCHANGE_RATES.GBP_TO_USD || 1.25) * (EXCHANGE_RATES.USD_TO_INR || 83);
   }
 
+  // Update appState values
+  const airlinesListData = [];
+  airlineCards.forEach(card => {
+    const isSelected = card.querySelector(".select-airline-radio").checked;
+    const name = card.querySelector(".air-name").value.trim();
+    const routing = card.querySelector(".air-routing").value.trim();
+    const tt = card.querySelector(".air-tt").value.trim();
+    const validity = card.querySelector(".air-validity").value;
+    const pivotWeight = parseFloat(card.querySelector(".air-pivot-weight").value) || 0;
+
+    const breaksData = {};
+    card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
+      const bName = wrapper.getAttribute("data-break-name");
+      const rateVal = parseFloat(wrapper.querySelector(".break-rate-input").value) || 0;
+      breaksData[bName] = rateVal;
+    });
+
+    airlinesListData.push({
+      name,
+      routing,
+      tt,
+      validity,
+      pivotWeight,
+      selected: isSelected,
+      breaks: breaksData
+    });
+  });
+
+  appState.currentAirFreight.airlines = airlinesListData;
   appState.currentAirFreight.grossWeight = totalGrossWeight;
   appState.currentAirFreight.volumeWeight = totalVolumeWeight;
   appState.currentAirFreight.chargeableWeight = finalChargeableWeight;
@@ -1448,13 +1793,40 @@ function calculateAirFreight() {
   appState.currentAirFreight.originSurcharges = originSurchargesList;
   appState.currentAirFreight.destSurcharges = destSurchargesList;
   appState.currentAirFreight.surchargesCalculated = surchargesList;
-  appState.currentAirFreight.usedBreak = usedBreakLabel;
+  appState.currentAirFreight.usedBreak = selectedAirlineCard.autoBreakName;
   appState.currentAirFreight.appliedRate = finalBaseRate;
-  appState.currentAirFreight.pivotWeight = pivotWeight;
-  appState.currentAirFreight.routing = routing;
-  appState.currentAirFreight.tt = tt;
-  appState.currentAirFreight.validity = validity;
-  appState.currentAirFreight.alternatives = alts;
+  appState.currentAirFreight.pivotWeight = selectedAirlineCard.pivotWeight;
+  appState.currentAirFreight.routing = selectedAirlineCard.routing;
+  appState.currentAirFreight.tt = selectedAirlineCard.tt;
+  appState.currentAirFreight.validity = selectedAirlineCard.validity;
+  appState.currentAirFreight.airline = selectedAirlineCard.name || "N/A";
+
+  const altsContainer = document.getElementById("air-alternatives-results-container");
+  const altsList = document.getElementById("air-alternatives-results-list");
+  
+  if (altsContainer && altsList) {
+    if (airlinesResults.length > 0) {
+      altsContainer.style.display = "block";
+      altsList.innerHTML = airlinesResults.map(alt => {
+        const altGrandTotal = alt.baseFreightCost + totalSurcharges;
+        return `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem;">
+            <div style="display: flex; justify-content: space-between; font-weight: 750; color: #fff;">
+              <span>✈️ ${alt.name || '-'}</span>
+              <span style="color: var(--accent-air); font-weight: 800;">${curSymbol}${altGrandTotal.toFixed(2)}</span>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 3px;">
+              <span>Route: ${alt.routing || '-'}</span>
+              <span>TT: ${alt.tt || '-'}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    } else {
+      altsContainer.style.display = "none";
+      altsList.innerHTML = "";
+    }
+  }
 }
 
 // SEA FREIGHT CALCULATOR LOGIC
@@ -2739,18 +3111,23 @@ function saveCurrentQuote() {
   if (isAir) {
     const originVal = document.getElementById("air-origin").value.trim();
     const destVal = document.getElementById("air-dest").value.trim();
-    const airlineVal = document.getElementById("air-airline").value.trim();
     const incoterm = document.getElementById("air-incoterm").value;
-    const routing = document.getElementById("air-routing").value.trim();
-    const tt = document.getElementById("air-tt").value.trim();
-    const validity = document.getElementById("air-validity").value.trim();
     
     if (!originVal) { alert("Please fill in Origin Airport."); return; }
     if (!destVal) { alert("Please fill in Destination Airport."); return; }
-    if (!airlineVal) { alert("Please fill in Carrier / Airline."); return; }
-    if (!routing) { alert("Please fill in Routing Details."); return; }
-    if (!tt) { alert("Please fill in Transit Time (TT)."); return; }
-    if (!validity) { alert("Please fill in Quote Validity."); return; }
+    
+    const primaryAirline = appState.currentAirFreight.airline || "";
+    const routing = appState.currentAirFreight.routing || "";
+    const tt = appState.currentAirFreight.tt || "";
+    const validity = appState.currentAirFreight.validity || "";
+
+    if (!primaryAirline || primaryAirline === "N/A") {
+      alert("Please enter Carrier / Airline in the selected airline option.");
+      return;
+    }
+    if (!routing) { alert("Please fill in Routing Details in the selected airline option."); return; }
+    if (!tt) { alert("Please fill in Transit Time (TT) in the selected airline option."); return; }
+    if (!validity) { alert("Please fill in Quote Validity in the selected airline option."); return; }
 
     const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
     if (rows.length === 0) {
@@ -2808,7 +3185,7 @@ function saveCurrentQuote() {
 
     const origin = originVal.split(" - ")[0];
     const dest = destVal.split(" - ")[0];
-    const airline = airlineVal.split(" - ")[0];
+    const airline = primaryAirline.split(" - ")[0];
 
     quoteData.type = "air";
     quoteData.route = `${origin} → ${dest} via ${airline || 'Any'}`;
@@ -2828,7 +3205,7 @@ function saveCurrentQuote() {
     quoteData.details = {
       origin: document.getElementById("air-origin").value,
       destination: document.getElementById("air-dest").value,
-      airline: document.getElementById("air-airline").value,
+      airline: primaryAirline,
       incoterm: incoterm,
       module: appState.currentAirFreight.module || 'export',
       termsAndConditions: document.getElementById("air-terms").value.trim() || DEFAULT_AIR_TERMS,
@@ -2848,19 +3225,13 @@ function saveCurrentQuote() {
       tt: tt,
       validity: validity,
       cargoItems: cargoItems,
-      alternatives: (() => {
-        const alts = [];
-        document.querySelectorAll("#air-alternatives-body tr").forEach(row => {
-          const carrier = row.querySelector(".alt-carrier")?.value.trim() || "";
-          const routingVal = row.querySelector(".alt-routing")?.value.trim() || "";
-          const ttVal = row.querySelector(".alt-tt")?.value.trim() || "";
-          const rateVal = row.querySelector(".alt-rate")?.value.trim() || "";
-          if (carrier) {
-            alts.push({ carrier, routing: routingVal, tt: ttVal, rate: rateVal });
-          }
-        });
-        return alts;
-      })()
+      commodity: document.getElementById("air-commodity").value,
+      tempType: document.getElementById("air-temp-type").value,
+      tempRange: document.getElementById("air-temp-range").value,
+      loadabilityTilt: document.getElementById("air-loadability-tilt").value,
+      loadabilityStack: document.getElementById("air-loadability-stack").value,
+      airlines: appState.currentAirFreight.airlines,
+      alternatives: []
     };
   } else {
     const originVal = document.getElementById("sea-origin").value.trim();
@@ -3163,7 +3534,7 @@ function resetSurchargesToDefaults() {
   if (airOriginBody) {
     airOriginBody.innerHTML = `
       <tr>
-        <td><input type="text" class="chg-name" value="Fuel Surcharge (MYC)" required></td>
+        <td><input type="text" class="chg-name" value="Xray" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
         <td>
           <select class="chg-unit">
@@ -3178,12 +3549,12 @@ function resetSurchargesToDefaults() {
         </td>
       </tr>
       <tr>
-        <td><input type="text" class="chg-name" value="Security Surcharge (SCC)" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+        <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
         <td>
-          <select class="chg-unit">
-            <option value="kg" selected>Per kg</option>
-            <option value="flat">Flat</option>
+          <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+            <option value="kg">Per kg</option>
+            <option value="flat" selected>Flat</option>
           </select>
         </td>
         <td>
@@ -3193,12 +3564,12 @@ function resetSurchargesToDefaults() {
         </td>
       </tr>
       <tr>
-        <td><input type="text" class="chg-name" value="XRAY Surcharge (XRAY)" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="text" class="chg-name" value="Misc" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+        <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
         <td>
-          <select class="chg-unit">
-            <option value="kg" selected>Per kg</option>
-            <option value="flat">Flat</option>
+          <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+            <option value="kg">Per kg</option>
+            <option value="flat" selected>Flat</option>
           </select>
         </td>
         <td>
@@ -3207,7 +3578,6 @@ function resetSurchargesToDefaults() {
           </button>
         </td>
       </tr>
-
     `;
     setupSurchargesEvents("air-origin");
   }
@@ -3389,11 +3759,9 @@ function loadMemorizedSurcharges() {
   const categories = ["air-origin", "air-dest", "sea-origin", "sea-dest"];
   const defaults = {
     "air-origin": [
-      "Fuel Surcharge (MYC)",
-      "Security Surcharge (SCC)",
-      "XRAY Surcharge (XRAY)",
-      "AMS fee (Per MAWB)",
-      "AWB fee (AWB)"
+      "Xray",
+      "Cartage",
+      "Misc"
     ],
     "air-dest": [
       "Cartage Surcharge (CTG)"
@@ -3489,7 +3857,42 @@ window.viewSavedQuote = (id) => {
   let detailsRows = "";
   
   let alternativesHtml = "";
-  if (quote.details && quote.details.alternatives && quote.details.alternatives.length > 0) {
+  if (quote.details && quote.details.airlines && quote.details.airlines.length > 0) {
+    const altRows = quote.details.airlines.map(alt => {
+      const breaksRep = Object.keys(alt.breaks || {}).map(b => `${b}: ${currencySym}${alt.breaks[b]}/kg`).join(", ");
+      return `
+        <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold;' : ''}">
+          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; color: #1b1c5c; font-size: 0.7rem;">
+            ${alt.name} ${alt.selected ? '<strong>(Quoted)</strong>' : ''}
+          </td>
+          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.routing || '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.tt || '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.validity || '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.pivotWeight ? alt.pivotWeight + ' kg' : '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; color: #2f3193; font-size: 0.7rem;">${breaksRep}</td>
+        </tr>
+      `;
+    }).join("");
+    
+    alternativesHtml = `
+      <div class="print-section-title" style="margin-top: 1.5rem;">Airline Carrier & Tariff Options</div>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
+        <thead>
+          <tr style="background: #f8fafc;">
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Airline</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Routing</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Transit Time</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Validity</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Pivot Wt</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Rates</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${altRows}
+        </tbody>
+      </table>
+    `;
+  } else if (quote.details && quote.details.alternatives && quote.details.alternatives.length > 0) {
     const altRows = quote.details.alternatives.map(alt => `
       <tr>
         <td style="font-weight: 700; color: #1b1c5c;">${alt.carrier}</td>
@@ -3517,11 +3920,19 @@ window.viewSavedQuote = (id) => {
     `;
   }
   if (isAir) {
+    let commodityText = quote.details.commodity || 'GENERAL';
+    if (quote.details.tempType === 'TEMPERATURE') {
+      commodityText += ` - Temp Range: ${quote.details.tempRange === '2-8' ? '2-8 deg' : '15-25 deg'}`;
+    }
+    const loadabilityText = `${quote.details.loadabilityTilt || 'TILTABLE'} / ${quote.details.loadabilityStack || 'STACKABLE'}`;
+
     detailsRows = `
       <tr><td>Air Freight Desk Module</td><td><strong>Air ${quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
       <tr><td>Origin Airport</td><td>${quote.details.origin || 'BOM'}</td></tr>
       <tr><td>Destination Airport</td><td>${quote.details.destination || 'JFK'}</td></tr>
       <tr><td>Airline</td><td>${quote.details.airline || 'N/A'}</td></tr>
+      <tr><td>Commodity Type</td><td><strong>${commodityText}</strong></td></tr>
+      <tr><td>Loadability</td><td><strong>${loadabilityText}</strong></td></tr>
       <tr><td>Incoterm</td><td><strong>${quote.details.incoterm || 'EXW'}</strong></td></tr>
       <tr><td>Actual Gross Weight</td><td>${(quote.details.grossWeight || 0).toFixed(2)} kg</td></tr>
       <tr><td>Total Package Quantity</td><td>${quote.details.quantity || 'N/A'} Pkgs</td></tr>
@@ -4238,14 +4649,46 @@ function amendQuote(id) {
     document.getElementById("air-cust-name").value = quote.customer;
     document.getElementById("air-origin").value = quote.details.origin || "";
     document.getElementById("air-dest").value = quote.details.destination || "";
-    document.getElementById("air-airline").value = quote.details.airline || "";
     document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
-    document.getElementById("air-pivot-weight").value = quote.details.pivotWeight || "";
-    document.getElementById("air-routing").value = quote.details.routing || "";
-    document.getElementById("air-tt").value = quote.details.tt || "";
-    document.getElementById("air-validity").value = quote.details.validity || "";
     document.getElementById("air-terms").value = quote.details.termsAndConditions || DEFAULT_AIR_TERMS;
     
+    document.getElementById("air-commodity").value = quote.details.commodity || "GENERAL";
+    handleAirCommodityChange();
+    if (quote.details.tempType) {
+      document.getElementById("air-temp-type").value = quote.details.tempType;
+      handleAirTempTypeChange();
+    }
+    if (quote.details.tempRange) {
+      document.getElementById("air-temp-range").value = quote.details.tempRange;
+    }
+    document.getElementById("air-loadability-tilt").value = quote.details.loadabilityTilt || "TILTABLE";
+    document.getElementById("air-loadability-stack").value = quote.details.loadabilityStack || "STACKABLE";
+
+    const airlinesContainer = document.getElementById("air-airlines-list-container");
+    if (airlinesContainer) {
+      airlinesContainer.innerHTML = "";
+      if (quote.details.airlines && quote.details.airlines.length > 0) {
+        quote.details.airlines.forEach(alt => {
+          addAirlineCard(alt);
+        });
+      } else {
+        const initialBreaks = {};
+        const cw = quote.details.chargeableWeight || 0;
+        const bName = getWeightBreakBracket(cw);
+        initialBreaks[bName] = quote.details.appliedRate || 0;
+
+        addAirlineCard({
+          name: quote.details.airline || "",
+          routing: quote.details.routing || "",
+          tt: quote.details.tt || "",
+          validity: quote.details.validity || "",
+          pivotWeight: quote.details.pivotWeight || "",
+          selected: true,
+          breaks: initialBreaks
+        });
+      }
+    }
+
     appState.currentAirFreight.module = quote.details.module || 'export';
     const tabExp = document.getElementById("air-tab-export");
     const tabImp = document.getElementById("air-tab-import");
@@ -4288,9 +4731,6 @@ function amendQuote(id) {
     // Local surcharges
     repopulateSurchargesTable("air-origin-surcharges-body", quote.details.originSurcharges);
     repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
-    
-    // Alternative carrier options
-    repopulateAlternativesTable("air-alternatives-body", quote.details.alternatives);
     
     calculateAirFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
