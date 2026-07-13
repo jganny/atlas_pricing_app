@@ -578,6 +578,19 @@ function updateCurrencyRules(role) {
   const isLocal = activeRole && (activeRole.includes('local') || activeRole === 'jaya' || TEAM_ROLES[activeRole]?.category === 'FREE HAND SALES (AIR/SEA)');
   const targetType = isNrs ? "nrs" : (isLocal ? "local" : "nom");
   
+  // Hide Agency Agreement option for NRS and Free Hand Sales desks
+  const airAgreementGrp = document.getElementById("air-agency-agreement-group");
+  const seaAgreementGrp = document.getElementById("sea-agency-agreement-group");
+  if (airAgreementGrp && seaAgreementGrp) {
+    if (isNrs || isLocal) {
+      airAgreementGrp.style.display = "none";
+      seaAgreementGrp.style.display = "none";
+    } else {
+      airAgreementGrp.style.display = "block";
+      seaAgreementGrp.style.display = "block";
+    }
+  }
+
   // Rebuild Air select if needed
   if (airCurSelect && airCurSelect.getAttribute("data-role-type") !== targetType) {
     const val = airCurSelect.value;
@@ -2335,7 +2348,16 @@ window.convertQuote = (id) => {
   const customerName = quote.customer || "";
   const lower = customerName.toLowerCase().trim();
   const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-  const hasAgreement = !!(ctrl.hasAgreement || ctrl.waiveAgreement);
+  
+  const creatorRole = quote.creator;
+  const isFreeHandOrNrs = creatorRole && (
+    creatorRole === 'jaya' || 
+    creatorRole === 'cathrina' || 
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+  );
+
+  const hasAgreement = isFreeHandOrNrs || !!(ctrl.hasAgreement || ctrl.waiveAgreement);
 
   const container = document.getElementById("won-agreement-upload-container");
   const fileInput = document.getElementById("won-agreement-file");
@@ -2346,7 +2368,7 @@ window.convertQuote = (id) => {
       container.style.display = "none";
       fileInput.required = false;
       fileInput.value = "";
-      statusEl.textContent = "Verified ✅";
+      statusEl.textContent = isFreeHandOrNrs ? "Not Required ✅" : "Verified ✅";
       statusEl.style.color = "var(--accent-success)";
     } else {
       container.style.display = "block";
@@ -5712,7 +5734,16 @@ async function submitWonBookingDetails(e) {
   const customerName = quote.customer || "";
   const lower = customerName.toLowerCase().trim();
   const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-  const hasAgreement = !!(ctrl.hasAgreement || ctrl.waiveAgreement);
+  
+  const creatorRole = quote.creator;
+  const isFreeHandOrNrs = creatorRole && (
+    creatorRole === 'jaya' || 
+    creatorRole === 'cathrina' || 
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+  );
+
+  const hasAgreement = isFreeHandOrNrs || !!(ctrl.hasAgreement || ctrl.waiveAgreement);
 
   const fileInput = document.getElementById("won-agreement-file");
   let fileData = null;
@@ -6076,7 +6107,7 @@ function displayNrsRegistryItems(list) {
           <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Download PDF">📥</button>
         </div>`;
     } else {
-      docsHtml += `<div style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</div>`;
+      docsHtml += `<div style="font-size: 0.65rem; color: var(--accent-success); font-weight: 600;">NOT REQUIRED</div>`;
     }
 
     // Format shipper contact
