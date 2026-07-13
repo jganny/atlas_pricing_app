@@ -2649,70 +2649,8 @@ function renderAdminDashboard() {
   // Render Monthly CSS charts
   renderMonthlyCharts();
 
-  // Render Master logs
-  const tbody = document.getElementById("admin-quotes-body");
-  tbody.innerHTML = "";
-
-  if (appState.quotes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries loaded.</td></tr>`;
-    return;
-  }
-
-  const sortedQuotes = [...appState.quotes].reverse();
-  sortedQuotes.forEach(quote => {
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-quote-id", quote.id);
-    const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-    const amountStr = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-    
-    tr.innerHTML = `
-      <td><strong>#${getQuoteRefId(quote)}</strong></td>
-      <td>${quote.date}</td>
-      <td><span class="quote-type-badge ${quote.type}">
-        ${quote.type === 'air' ? 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
-        }</span></td>
-      <td>
-        <div style="font-weight: 600;">${quote.customer}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
-      </td>
-      <td>
-        <div>${amountStr}</div>
-        ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
-      </td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
-      <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
-      <td class="actions-cell">
-        <button class="action-icon-btn amend" style="background: rgba(245, 158, 11, 0.25); color: var(--accent-warning);" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button class="action-icon-btn view" title="View Quote" onclick="viewSavedQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-        ${quote.status === 'quoted' ? `
-        <button class="action-icon-btn convert" title="Convert Quote" onclick="convertQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        </button>
-        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.1); color: var(--accent-error);" title="Mark as Cancelled" onclick="markQuoteCancelled('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-        </button>
-        <button class="action-icon-btn view" style="background: rgba(156, 163, 175, 0.1); color: var(--text-dim);" title="Mark as Lost" onclick="markQuoteLost('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </button>
-        ` : `
-        <button class="action-icon-btn convert" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-success);" title="Revert to Original (Quoted)" onclick="revertQuoteToOriginal('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-        </button>
-        `}
-        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.25); color: var(--accent-error);" title="Delete Quote (Admin Override)" onclick="deleteQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+  // Render Master logs using Filter & Sort
+  applyDbFiltersAndSort();
 
   // Render Amendment Requests List for Ganny
   const reqPanel = document.getElementById("admin-amendment-requests-panel");
@@ -4081,6 +4019,10 @@ window.viewSavedQuote = (id) => {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
 
+  const printCard = document.getElementById("quote-print-card");
+  if (!printCard) return;
+  document.getElementById("modal-header-title").textContent = "Quotation Official Preview";
+
   const isAir = quote.type === 'air';
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
   
@@ -4093,6 +4035,7 @@ window.viewSavedQuote = (id) => {
       const baseFr = alt.baseFreight !== undefined ? alt.baseFreight : (quote.details.baseFreight || 0);
       const surch = alt.surchargeTotal !== undefined ? alt.surchargeTotal : (quote.details.surchargeTotal || 0);
       const gTotal = alt.grandTotal !== undefined ? alt.grandTotal : (baseFr + surch);
+      const rate = alt.appliedRate !== undefined ? alt.appliedRate : (quote.details.appliedRate || 0);
       
       return `
         <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
@@ -4104,7 +4047,10 @@ window.viewSavedQuote = (id) => {
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.validity || '-'}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.pivotWeight ? alt.pivotWeight + ' kg' : '-'}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${chgWt.toFixed(2)} kg</td>
-          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">${currencySym}${baseFr.toFixed(2)}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193; line-height: 1.3;">
+            <div style="font-size: 0.65rem; opacity: 0.85;">${currencySym}${rate.toFixed(2)} / kg</div>
+            <strong style="color: #1b1c5c; font-size: 0.75rem;">${currencySym}${baseFr.toFixed(2)}</strong>
+          </td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">${currencySym}${surch.toFixed(2)}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
@@ -4171,11 +4117,15 @@ window.viewSavedQuote = (id) => {
     }
     const loadabilityText = `${quote.details.loadabilityTilt || 'TILTABLE'} / ${quote.details.loadabilityStack || 'STACKABLE'}`;
 
+    const quotedAirlinesList = (quote.details.airlines && quote.details.airlines.length > 0)
+      ? quote.details.airlines.map(a => a.name).join(", ")
+      : (quote.details.airline || 'N/A');
+
     detailsRows = `
       <tr><td>Air Freight Desk Module</td><td><strong>Air ${quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
       <tr><td>Origin Airport</td><td>${quote.details.origin || 'BOM'}</td></tr>
       <tr><td>Destination Airport</td><td>${quote.details.destination || 'JFK'}</td></tr>
-      <tr><td>Airline</td><td>${quote.details.airline || 'N/A'}</td></tr>
+      <tr><td>Airline(s)</td><td><strong>${quotedAirlinesList}</strong></td></tr>
       <tr><td>Commodity Type</td><td><strong>${commodityText}</strong></td></tr>
       <tr><td>Loadability</td><td><strong>${loadabilityText}</strong></td></tr>
       <tr><td>Incoterm</td><td><strong>${quote.details.incoterm || 'EXW'}</strong></td></tr>
@@ -4188,8 +4138,6 @@ window.viewSavedQuote = (id) => {
       <tr><td>Routing</td><td>${quote.details.routing || 'Direct'}</td></tr>
       <tr><td>Transit Time (TT)</td><td>${quote.details.tt || 'N/A'}</td></tr>
       <tr><td>Validity</td><td>${quote.details.validity || 'N/A'}</td></tr>
-      <tr><td>Base Freight Rate</td><td>${currencySym}${(quote.details.appliedRate || 0).toFixed(2)} / kg</td></tr>
-      <tr><td>Base Ocean/Air Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
       <tr><td>Charges Breakup</td><td><button class="no-print" onclick="window.showSeaBreakup('${quote.id}')" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.65rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ View Breakup</button></td></tr>
     `;
   } else {
@@ -4489,6 +4437,136 @@ function hideQuoteModal() {
 function printQuote() {
   window.print();
 }
+
+window.applyDbFiltersAndSort = () => {
+  const tbody = document.getElementById("admin-quotes-body");
+  if (!tbody) return;
+
+  const searchQuery = (document.getElementById("db-search-input")?.value || "").toLowerCase().trim();
+  const filterMode = document.getElementById("db-filter-mode")?.value || "all";
+  const filterStatus = document.getElementById("db-filter-status")?.value || "all";
+  const filterCreator = document.getElementById("db-filter-creator")?.value || "all";
+  const sortField = document.getElementById("db-sort-field")?.value || "date-desc";
+
+  // Filter
+  let filtered = appState.quotes.filter(q => {
+    // Mode match
+    if (filterMode !== "all" && q.type !== filterMode) return false;
+    
+    // Status match
+    if (filterStatus !== "all" && q.status !== filterStatus) return false;
+
+    // Creator match
+    if (filterCreator !== "all" && q.creator !== filterCreator) return false;
+
+    // Search query match
+    if (searchQuery) {
+      const creatorName = (TEAM_ROLES[q.creator]?.name || "").toLowerCase();
+      const customer = (q.customer || "").toLowerCase();
+      const refId = q.id.toLowerCase();
+      const type = (q.type || "").toLowerCase();
+      const route = (q.route || "").toLowerCase();
+      const origin = (q.details?.origin || "").toLowerCase();
+      const destination = (q.details?.destination || "").toLowerCase();
+      const carrier = (q.details?.airline || q.details?.shippingLine || "").toLowerCase();
+      const incoterm = (q.details?.incoterm || "").toLowerCase();
+      
+      const isMatch = 
+        customer.includes(searchQuery) ||
+        refId.includes(searchQuery) ||
+        type.includes(searchQuery) ||
+        route.includes(searchQuery) ||
+        origin.includes(searchQuery) ||
+        destination.includes(searchQuery) ||
+        creatorName.includes(searchQuery) ||
+        carrier.includes(searchQuery) ||
+        incoterm.includes(searchQuery);
+        
+      if (!isMatch) return false;
+    }
+
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    if (sortField === "date-desc") {
+      return new Date(b.date) - new Date(a.date) || b.id.localeCompare(a.id);
+    } else if (sortField === "date-asc") {
+      return new Date(a.date) - new Date(b.date) || a.id.localeCompare(b.id);
+    } else if (sortField === "customer-asc") {
+      return a.customer.toLowerCase().localeCompare(b.customer.toLowerCase());
+    } else if (sortField === "customer-desc") {
+      return b.customer.toLowerCase().localeCompare(a.customer.toLowerCase());
+    } else if (sortField === "amount-desc") {
+      return b.amountINR - a.amountINR;
+    } else if (sortField === "amount-asc") {
+      return a.amountINR - b.amountINR;
+    }
+    return 0;
+  });
+
+  tbody.innerHTML = "";
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
+    return;
+  }
+
+  filtered.forEach(quote => {
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-quote-id", quote.id);
+    const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
+    const amountStr = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    
+    tr.innerHTML = `
+      <td><strong>#${getQuoteRefId(quote)}</strong></td>
+      <td>${quote.date}</td>
+      <td><span class="quote-type-badge ${quote.type}">
+        ${quote.type === 'air' ? 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        }</span></td>
+      <td>
+        <div style="font-weight: 600;">${quote.customer}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
+      </td>
+      <td>
+        <div>${amountStr}</div>
+        ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
+      </td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
+      <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
+      <td class="actions-cell">
+        <button class="action-icon-btn amend" style="background: rgba(245, 158, 11, 0.25); color: var(--accent-warning);" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <button class="action-icon-btn view" title="View Quote" onclick="viewSavedQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        ${quote.status === 'quoted' ? `
+        <button class="action-icon-btn convert" title="Convert Quote" onclick="convertQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.1); color: var(--accent-error);" title="Mark as Cancelled" onclick="markQuoteCancelled('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        </button>
+        <button class="action-icon-btn view" style="background: rgba(156, 163, 175, 0.1); color: var(--text-dim);" title="Mark as Lost" onclick="markQuoteLost('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+        ` : `
+        <button class="action-icon-btn convert" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-success);" title="Revert Quote status to Quoted" onclick="revertQuoteToOriginal('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+        </button>
+        `}
+        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.25); color: var(--accent-error);" title="Delete Quote (Admin Override)" onclick="deleteQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
 
 window.filterQuotes = (val) => {
   const query = val.toLowerCase().trim();

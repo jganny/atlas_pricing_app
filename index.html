@@ -365,7 +365,47 @@
           <div class="table-header-row">
             <h3 style="font-weight: 700;">Global Enquiry Database</h3>
             <div class="search-box-container">
-              <input type="text" placeholder="Search customer, route, reference..." oninput="filterQuotes(this.value)">
+              <input type="text" id="db-search-input" placeholder="Search customer, route, reference..." oninput="applyDbFiltersAndSort()">
+            </div>
+          </div>
+          
+          <!-- Filter & Sort Controls Row -->
+          <div class="db-filters-row" style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0 0 1rem 0; padding: 0.75rem; background: rgba(255,255,255,0.02); border: 1px dashed var(--border-color); border-radius: 8px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+              <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; letter-spacing: 0.05em; font-family: 'Outfit', sans-serif;">Filters:</span>
+              <select id="db-filter-mode" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer;">
+                <option value="all" style="background:#1b1c5c; color:#fff;">All Modes</option>
+                <option value="air" style="background:#1b1c5c; color:#fff;">Air Freight</option>
+                <option value="sea" style="background:#1b1c5c; color:#fff;">Sea Freight</option>
+              </select>
+              
+              <select id="db-filter-status" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer;">
+                <option value="all" style="background:#1b1c5c; color:#fff;">All Statuses</option>
+                <option value="quoted" style="background:#1b1c5c; color:#fff;">Quoted</option>
+                <option value="converted" style="background:#1b1c5c; color:#fff;">Converted (Won)</option>
+                <option value="cancelled" style="background:#1b1c5c; color:#fff;">Cancelled</option>
+                <option value="lost" style="background:#1b1c5c; color:#fff;">Lost</option>
+              </select>
+              
+              <select id="db-filter-creator" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer;">
+                <option value="all" style="background:#1b1c5c; color:#fff;">All Agents</option>
+                <option value="shashank" style="background:#1b1c5c; color:#fff;">Shashank</option>
+                <option value="mahendra" style="background:#1b1c5c; color:#fff;">Mahendra</option>
+                <option value="jaya" style="background:#1b1c5c; color:#fff;">Jaya</option>
+                <option value="cathrina" style="background:#1b1c5c; color:#fff;">Cathrina</option>
+              </select>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; letter-spacing: 0.05em; font-family: 'Outfit', sans-serif;">Sort By:</span>
+              <select id="db-sort-field" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer;">
+                <option value="date-desc" style="background:#1b1c5c; color:#fff;">Date (Newest First)</option>
+                <option value="date-asc" style="background:#1b1c5c; color:#fff;">Date (Oldest First)</option>
+                <option value="customer-asc" style="background:#1b1c5c; color:#fff;">Customer (A-Z)</option>
+                <option value="customer-desc" style="background:#1b1c5c; color:#fff;">Customer (Z-A)</option>
+                <option value="amount-desc" style="background:#1b1c5c; color:#fff;">Amount (Highest First)</option>
+                <option value="amount-asc" style="background:#1b1c5c; color:#fff;">Amount (Lowest First)</option>
+              </select>
             </div>
           </div>
           
