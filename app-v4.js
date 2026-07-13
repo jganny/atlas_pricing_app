@@ -2269,8 +2269,9 @@ function renderAdminDashboard() {
     }
     const pending = requests.filter(r => r.status === 'pending');
     
+    let listHtml = "";
     if (pending.length > 0) {
-      reqList.innerHTML = pending.map(req => {
+      listHtml = pending.map(req => {
         const isOverride = req.requestType === 'credit_override';
         const typeLabel = isOverride ? 'CREDIT OVERRIDE' : (req.requestType ? req.requestType.toUpperCase() : 'EDIT');
         const color = isOverride ? 'var(--sky)' : (req.requestType === 'delete' ? 'var(--accent-error)' : 'var(--accent-warning)');
@@ -2293,8 +2294,27 @@ function renderAdminDashboard() {
         `;
       }).join("");
     } else {
-      reqList.innerHTML = `<div style="color: var(--text-dim); font-style: italic;">No pending approval requests.</div>`;
+      listHtml = `<div style="color: var(--text-dim); font-style: italic;">No pending approval requests.</div>`;
     }
+
+    // Prepend system diagnostics warning to listHtml
+    let warningPrefix = "";
+    if (!DB.isCloud) {
+      warningPrefix += `
+        <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--sky); color: var(--sky); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem; margin-bottom: 0.5rem; line-height: 1.3;">
+          🌐 <strong>Offline Mode (LocalStorage):</strong> Users are running on separate browsers and cannot sync request data without connecting to a shared Firebase database. Configure your Firebase Database in the connection settings.
+        </div>
+      `;
+    } else if (window._amendmentRequestsError) {
+      warningPrefix += `
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-error); color: var(--accent-error); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem; margin-bottom: 0.5rem; line-height: 1.3;">
+          ⚠️ <strong>Firestore Sync Error:</strong> ${window._amendmentRequestsError}<br>
+          <span style="font-size: 0.65rem; color: var(--text-muted); display: block; margin-top: 4px;">Only local offline requests are visible. Ask your developer to verify if the collection "amendment_requests" is allowed in Firestore Security Rules.</span>
+        </div>
+      `;
+    }
+    
+    reqList.innerHTML = warningPrefix + listHtml;
   }
 }
 
@@ -5306,6 +5326,10 @@ const DB = {
         }
       }, err => {
         console.warn("Firestore: amendment_requests listen failed, using local/cached records:", err);
+        window._amendmentRequestsError = err.message;
+        if (appState.currentUser === 'ganny') {
+          renderAdminDashboard();
+        }
       });
     }
     
@@ -6563,25 +6587,21 @@ async function renderAdminCustomerControlList() {
   const tbody = document.getElementById("admin-customer-control-body");
   if (!tbody) return;
 
-  // Compile unique customers
-  const customers = Array.from(new Set(appState.quotes.map(q => q.customer.trim())));
-  const defaultCusts = ["Zenith Electronics Ltd", "Adani Enterprises", "Tata Motors", "Reliance Industries"];
-  defaultCusts.forEach(c => {
-    if (!customers.some(x => x.toLowerCase() === c.toLowerCase())) {
-      customers.push(c);
-    }
-  });
-
-  if (customers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No customers found.</td></tr>`;
-    return;
-  }
-
+  // Compile unique customers from quotes and controls
   let controls = window._customerControls || {};
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
     } catch(e) {}
+  }
+  const customers = Array.from(new Set([
+    ...appState.quotes.map(q => q.customer.trim()),
+    ...Object.values(controls).map(c => c.customer.trim())
+  ]));
+
+  if (customers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No customer records found. Add quotes or override requests to populate.</td></tr>`;
+    return;
   }
 
   window._adminCustomerListCached = customers.map(name => {
@@ -6589,6 +6609,7 @@ async function renderAdminCustomerControlList() {
     const ctrl = controls[lower] || {
       customer: name,
       creditDays: 30,
+      creditLimit: 0,
       blocked: false,
       waiveAgreement: false
     };
@@ -6927,3 +6948,133 @@ function updateDiagnosticsUI() {
   }
 }
 window.updateDiagnosticsUI = updateDiagnosticsUI;
+
+async function resetCustomerCreditDirectory() {
+  if (!confirm("⚠️ Are you sure you want to reset all credit control records and remove all override settings in the database?")) return;
+
+  if (DB.firestoreRef) {
+    try {
+      const snap = await DB.firestoreRef.collection("customer_control").get();
+      const promises = [];
+      snap.forEach(doc => {
+        promises.push(doc.ref.delete());
+      });
+      await Promise.all(promises);
+      console.log("DB: Successfully cleared customer_control collection from Firestore.");
+    } catch(err) {
+      console.error("DB: Failed to clear customer_control from Firestore:", err);
+      alert("Database error: " + err.message);
+      return;
+    }
+  }
+
+  localStorage.removeItem("gl_customer_controls");
+  window._customerControls = {};
+  alert("Customer credit control directory has been reset successfully!");
+  renderAdminCustomerControlList();
+}
+window.resetCustomerCreditDirectory = resetCustomerCreditDirectory;
+
+async function clearAllTestData() {
+  if (!confirm("🚨 WARNING: Are you sure you want to clear ALL test quotes, NRS registry bookings, and approvals requests from the database? This is permanent!")) return;
+
+  if (DB.firestoreRef) {
+    try {
+      // Clear quotes
+      const quotesSnap = await DB.firestoreRef.collection("quotes").get();
+      const qPromises = [];
+      quotesSnap.forEach(doc => qPromises.push(doc.ref.delete()));
+      await Promise.all(qPromises);
+
+      // Clear nrs_registry
+      const nrsSnap = await DB.firestoreRef.collection("nrs_registry").get();
+      const nrsPromises = [];
+      nrsSnap.forEach(doc => nrsPromises.push(doc.ref.delete()));
+      await Promise.all(nrsPromises);
+
+      // Clear amendment_requests
+      const reqsSnap = await DB.firestoreRef.collection("amendment_requests").get();
+      const reqsPromises = [];
+      reqsSnap.forEach(doc => reqsPromises.push(doc.ref.delete()));
+      await Promise.all(reqsPromises);
+
+      console.log("DB: Cleared quotes, nrs_registry, and amendment_requests collections.");
+    } catch(err) {
+      console.error("DB: Failed to clear test data from Firestore:", err);
+      alert("Database error: " + err.message);
+      return;
+    }
+  }
+
+  // Clear local caches
+  localStorage.removeItem("logistics_quotes");
+  localStorage.removeItem("gl_nrs_registry");
+  localStorage.removeItem("gl_amendment_requests");
+
+  appState.quotes = [];
+  window._amendmentRequests = [];
+  
+  alert("All test data has been cleared from database successfully!");
+  renderAdminDashboard();
+}
+window.clearAllTestData = clearAllTestData;
+
+async function runDbDiagnostics() {
+  const outputEl = document.getElementById("db-diagnostics-output") || console;
+  let logs = [];
+  const log = (msg) => {
+    logs.push(msg);
+    if (outputEl && outputEl.tagName) {
+      outputEl.innerHTML = logs.join("<br>");
+    } else {
+      console.log(msg);
+    }
+  };
+
+  log("🔍 Starting Database Connection Diagnostics...");
+  log(`• App Mode: ${DB.isCloud ? "Firebase Cloud (Online) 🟢" : "LocalStorage (Offline) 🔵"}`);
+  
+  let configRaw = localStorage.getItem("gl_firebase_config");
+  log(`• Custom config: ${configRaw ? "Yes" : "No (Using DEFAULT)"}`);
+
+  if (!DB.firestoreRef) {
+    log("❌ Firestore Ref is null. Connection not initialized.");
+    return;
+  }
+
+  log(`• Project ID: ${DB.firestoreRef.app.options.projectId}`);
+
+  // Test quotes read
+  try {
+    const snap = await DB.firestoreRef.collection("quotes").limit(1).get();
+    log(`✅ quotes collection read test: PASSED (Found ${snap.size} docs)`);
+  } catch(err) {
+    log(`❌ quotes collection read test: FAILED - ${err.message}`);
+  }
+
+  // Test amendment_requests write
+  const testId = "TEST_WRITE_DIAGNOSTIC";
+  try {
+    log("• Attempting write to 'amendment_requests'...");
+    await DB.firestoreRef.collection("amendment_requests").doc(testId).set({
+      test: true,
+      timestamp: Date.now(),
+      status: 'diagnostic'
+    });
+    log("✅ 'amendment_requests' write test: PASSED");
+
+    // Clean it up
+    await DB.firestoreRef.collection("amendment_requests").doc(testId).delete();
+    log("✅ 'amendment_requests' delete test: PASSED");
+    
+    // Clear any previous error warning banner
+    delete window._amendmentRequestsError;
+    if (appState.currentUser === 'ganny') {
+      renderAdminDashboard();
+    }
+  } catch(err) {
+    log(`❌ 'amendment_requests' write test: FAILED - ${err.message}`);
+    log(`👉 Recommendation: Ask your developer to modify Firestore Security Rules to allow read, write on 'amendment_requests' collection.`);
+  }
+}
+window.runDbDiagnostics = runDbDiagnostics;
