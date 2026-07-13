@@ -1393,6 +1393,42 @@ function calculateAirFreight() {
   document.getElementById("res-air-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
   document.getElementById("res-air-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
 
+  // Update Alternative Airline Options Summary Live Results
+  const altContainer = document.getElementById("air-alternatives-results-container");
+  const altList = document.getElementById("air-alternatives-results-list");
+  let alts = [];
+  if (altContainer && altList) {
+    const rows = document.querySelectorAll("#air-alternatives-body tr");
+    rows.forEach(row => {
+      const carrier = row.querySelector(".alt-carrier")?.value || "";
+      const route = row.querySelector(".alt-routing")?.value || "";
+      const transitTime = row.querySelector(".alt-tt")?.value || "";
+      const rateInfo = row.querySelector(".alt-rate")?.value || "";
+      if (carrier || route || transitTime || rateInfo) {
+        alts.push({ carrier, routing: route, tt: transitTime, rate: rateInfo });
+      }
+    });
+    
+    if (alts.length > 0) {
+      altContainer.style.display = "block";
+      altList.innerHTML = alts.map(alt => `
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem;">
+          <div style="display: flex; justify-content: space-between; font-weight: 750; color: #fff;">
+            <span>✈️ ${alt.carrier || '-'}</span>
+            <span style="color: var(--accent-air); font-weight: 800;">${alt.rate || '-'}</span>
+          </div>
+          <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 3px;">
+            <span>Route: ${alt.routing || '-'}</span>
+            <span>TT: ${alt.tt || '-'}</span>
+          </div>
+        </div>
+      `).join("");
+    } else {
+      altContainer.style.display = "none";
+      altList.innerHTML = "";
+    }
+  }
+
   appState.currentAirFreight.grossWeight = totalGrossWeight;
   appState.currentAirFreight.volumeWeight = totalVolumeWeight;
   appState.currentAirFreight.chargeableWeight = finalChargeableWeight;
@@ -1412,6 +1448,7 @@ function calculateAirFreight() {
   appState.currentAirFreight.routing = routing;
   appState.currentAirFreight.tt = tt;
   appState.currentAirFreight.validity = validity;
+  appState.currentAirFreight.alternatives = alts;
 }
 
 // SEA FREIGHT CALCULATOR LOGIC
@@ -1748,6 +1785,42 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
   document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
 
+  // Update Alternative Sea Options Summary Live Results
+  const altContainer = document.getElementById("sea-alternatives-results-container");
+  const altList = document.getElementById("sea-alternatives-results-list");
+  let alts = [];
+  if (altContainer && altList) {
+    const rows = document.querySelectorAll("#sea-alternatives-body tr");
+    rows.forEach(row => {
+      const carrier = row.querySelector(".alt-carrier")?.value || "";
+      const route = row.querySelector(".alt-routing")?.value || "";
+      const transitTime = row.querySelector(".alt-tt")?.value || "";
+      const rateInfo = row.querySelector(".alt-rate")?.value || "";
+      if (carrier || route || transitTime || rateInfo) {
+        alts.push({ carrier, routing: route, tt: transitTime, rate: rateInfo });
+      }
+    });
+    
+    if (alts.length > 0) {
+      altContainer.style.display = "block";
+      altList.innerHTML = alts.map(alt => `
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem;">
+          <div style="display: flex; justify-content: space-between; font-weight: 750; color: #fff;">
+            <span>🚢 ${alt.carrier || '-'}</span>
+            <span style="color: var(--accent-sea); font-weight: 800;">${alt.rate || '-'}</span>
+          </div>
+          <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 3px;">
+            <span>Route: ${alt.routing || '-'}</span>
+            <span>TT: ${alt.tt || '-'}</span>
+          </div>
+        </div>
+      `).join("");
+    } else {
+      altContainer.style.display = "none";
+      altList.innerHTML = "";
+    }
+  }
+
   appState.currentSeaFreight.grossWeight = weightKg;
   appState.currentSeaFreight.volumeCbm = cbm;
   appState.currentSeaFreight.packagesQuantity = pkgQty;
@@ -1762,6 +1835,7 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.routing = routing;
   appState.currentSeaFreight.tt = tt;
   appState.currentSeaFreight.validity = validity;
+  appState.currentSeaFreight.alternatives = alts;
 }
 
 function setupSurchargesEvents(freightType) {
@@ -4061,12 +4135,44 @@ function addAlternativeOptionRow(tbodyId, carrier = "", routing = "", tt = "", r
     <td><input type="text" class="alt-tt" value="${tt}" required placeholder="e.g. 3-5 Days"></td>
     <td><input type="text" class="alt-rate" value="${rate}" required placeholder="Rate / cost details..."></td>
     <td>
-      <button type="button" class="delete-btn" onclick="this.closest('tr').remove();">
+      <button type="button" class="delete-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
       </button>
     </td>
   `;
+  
+  // Attach input event listeners for live updates
+  tr.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("input", () => {
+      if (tbodyId.includes("air")) {
+        calculateAirFreight();
+      } else {
+        calculateSeaFreight();
+      }
+    });
+  });
+
+  // Attach delete button event listener
+  const deleteBtn = tr.querySelector(".delete-btn");
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", () => {
+      tr.remove();
+      if (tbodyId.includes("air")) {
+        calculateAirFreight();
+      } else {
+        calculateSeaFreight();
+      }
+    });
+  }
+
   tbody.appendChild(tr);
+  
+  // Trigger initial calculation to show empty state/new option
+  if (tbodyId.includes("air")) {
+    calculateAirFreight();
+  } else {
+    calculateSeaFreight();
+  }
 }
 window.addAlternativeOptionRow = addAlternativeOptionRow;
 

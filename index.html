@@ -920,6 +920,12 @@
               <span class="result-value-highlight" id="res-air-total">$0.00</span>
             </div>
             
+            <!-- Dynamic Alternative Carrier Options Summary -->
+            <div id="air-alternatives-results-container" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem; display: none;">
+              <h4 style="font-size: 0.72rem; text-transform: uppercase; color: var(--accent-air); margin-bottom: 0.5rem; font-weight: 750; letter-spacing: 0.05em;">Alternative Airline Rates Summary</h4>
+              <div id="air-alternatives-results-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+            </div>
+
             <div class="action-buttons">
               <button class="btn-primary" onclick="saveCurrentQuote()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -1325,6 +1331,12 @@
               <span class="result-value-highlight" id="res-sea-total">$0.00</span>
             </div>
             
+            <!-- Dynamic Alternative Carrier Options Summary -->
+            <div id="sea-alternatives-results-container" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem; display: none;">
+              <h4 style="font-size: 0.72rem; text-transform: uppercase; color: var(--accent-sea); margin-bottom: 0.5rem; font-weight: 750; letter-spacing: 0.05em;">Alternative Ocean Option Rates Summary</h4>
+              <div id="sea-alternatives-results-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+            </div>
+
             <div class="action-buttons">
               <button class="btn-primary" onclick="saveCurrentQuote()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -1709,6 +1721,6 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
-  <script src="app-v4.js?v=28.0"></script>
+  <script src="app-v4.js?v=29.0"></script>
 </body>
 </html>
