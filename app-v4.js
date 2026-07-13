@@ -2272,12 +2272,27 @@ function renderAdminDashboard() {
     let listHtml = "";
     if (pending.length > 0) {
       listHtml = pending.map(req => {
-        const isOverride = req.requestType === 'credit_override';
-        const typeLabel = isOverride ? 'CREDIT OVERRIDE' : (req.requestType ? req.requestType.toUpperCase() : 'EDIT');
-        const color = isOverride ? 'var(--sky)' : (req.requestType === 'delete' ? 'var(--accent-error)' : 'var(--accent-warning)');
-        const details = isOverride 
-          ? `Customer: <strong>${req.customer}</strong>`
-          : `Quote ID: #<strong>${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer})`;
+        let typeLabel = (req.requestType ? req.requestType.toUpperCase() : 'EDIT');
+        let color = 'var(--accent-warning)';
+        let details = `Quote ID: #<strong>${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer || ''})`;
+
+        if (req.requestType === 'credit_override') {
+          typeLabel = 'CREDIT OVERRIDE';
+          color = 'var(--sky)';
+          details = `Customer: <strong>${req.customer}</strong>`;
+        } else if (req.requestType === 'agreement_waiver') {
+          typeLabel = 'AGREEMENT WAIVER';
+          color = 'var(--accent-air)';
+          details = `Customer: <strong>${req.customer}</strong> (Quote #${getQuoteRefIdById(req.quoteId)})`;
+        } else if (req.requestType === 'customer_release') {
+          typeLabel = 'CUSTOMER UNBLOCK';
+          color = 'var(--accent-success)';
+          details = `Customer: <strong>${req.customer}</strong>`;
+        } else if (req.requestType === 'delete') {
+          typeLabel = 'DELETE QUOTE';
+          color = 'var(--accent-error)';
+          details = `Quote ID: #<strong>${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer})`;
+        }
 
         return `
           <div style="background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 6px; border-left: 3px solid ${color}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -4434,9 +4449,9 @@ function approveAmendment(reqId) {
   const req = requests.find(r => r.id === reqId);
   if (req) {
     req.status = 'approved';
+    const lower = (req.customer || "").toLowerCase().trim();
     
     if (req.requestType === 'credit_override') {
-      const lower = req.customer.toLowerCase().trim();
       let controls = window._customerControls || {};
       if (!controls[lower]) {
         controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
@@ -4454,6 +4469,42 @@ function approveAmendment(reqId) {
         } catch(e) {}
       }
       alert(`Credit override request for customer "${req.customer}" has been APPROVED.`);
+    } else if (req.requestType === 'agreement_waiver') {
+      let controls = window._customerControls || {};
+      if (!controls[lower]) {
+        controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+      }
+      controls[lower].waiveAgreement = true;
+      window._customerControls = controls;
+      
+      if (DB.firestoreRef) {
+        DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+      } else {
+        try {
+          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+          offlineControls[lower] = controls[lower];
+          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+        } catch(e) {}
+      }
+      alert(`Agency Agreement waiver request for customer "${req.customer}" has been APPROVED.`);
+    } else if (req.requestType === 'customer_release') {
+      let controls = window._customerControls || {};
+      if (!controls[lower]) {
+        controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+      }
+      controls[lower].blocked = false;
+      window._customerControls = controls;
+      
+      if (DB.firestoreRef) {
+        DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+      } else {
+        try {
+          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+          offlineControls[lower] = controls[lower];
+          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+        } catch(e) {}
+      }
+      alert(`Blocked compliance release request for customer "${req.customer}" has been APPROVED.`);
     } else {
       // Unlock the quote
       const quote = appState.quotes.find(q => q.id === req.quoteId);
@@ -4498,6 +4549,10 @@ function rejectAmendment(reqId) {
     
     if (req.requestType === 'credit_override') {
       alert(`Credit override request for customer "${req.customer}" has been REJECTED.`);
+    } else if (req.requestType === 'agreement_waiver') {
+      alert(`Agency Agreement waiver request for customer "${req.customer}" has been REJECTED.`);
+    } else if (req.requestType === 'customer_release') {
+      alert(`Blocked compliance release request for customer "${req.customer}" has been REJECTED.`);
     } else {
       alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been REJECTED.`);
     }
@@ -5065,7 +5120,47 @@ function validateCreditCompliance(quoteData) {
   const hasAdminBypass = appState.currentUser === 'ganny' || creditOverride;
 
   if (isBlocked && !hasAdminBypass) {
-    alert(`❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" is currently blocked due to compliance audit or credit hold.\n\nQuote cannot be executed until released by the Admin (Ganny).`);
+    const msg = `❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" is currently blocked due to compliance audit or credit hold.\n\nRequest Admin (Ganny) release/unblock override to execute?`;
+    if (confirm(msg)) {
+      let requests = window._amendmentRequests || [];
+      if (requests.length === 0) {
+        const stored = localStorage.getItem("gl_amendment_requests");
+        if (stored) {
+          try { requests = JSON.parse(stored); } catch(e) {}
+        }
+      }
+      const pending = requests.find(r => r.customer.toLowerCase().trim() === lowerCust && r.requestType === 'customer_release' && r.status === 'pending');
+      if (pending) {
+        alert("A release request for this blocked customer has already been submitted to Admin. Please wait for Ganny's approval.");
+      } else {
+        const newReq = {
+          id: 'REQ' + Math.random().toString(36).substr(2, 9),
+          requestType: 'customer_release',
+          quoteId: 'N/A',
+          customer: customerName,
+          creator: appState.currentUser,
+          creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
+          date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+          status: 'pending',
+          acknowledged: false
+        };
+
+        if (DB.firestoreRef) {
+          DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+            .then(() => {
+              alert("Compliance release request submitted successfully to Ganny.");
+            })
+            .catch(err => {
+              console.error("DB: failed to save customer release request:", err);
+              alert("Failed to submit request to cloud. Saving locally...");
+              saveRequestLocallyFallback(newReq);
+            });
+        } else {
+          saveRequestLocallyFallback(newReq);
+          alert("Compliance release request submitted successfully to Ganny (Offline).");
+        }
+      }
+    }
     return false;
   }
 
@@ -5922,7 +6017,47 @@ async function submitWonBookingDetails(e) {
   }
 
   if (!hasAgreement && !fileData) {
-    alert("❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.");
+    const msg = `❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.\n\nRequest Admin (Ganny) agreement waiver/permission to convert?`;
+    if (confirm(msg)) {
+      let requests = window._amendmentRequests || [];
+      if (requests.length === 0) {
+        const stored = localStorage.getItem("gl_amendment_requests");
+        if (stored) {
+          try { requests = JSON.parse(stored); } catch(e) {}
+        }
+      }
+      const pending = requests.find(r => r.customer.toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
+      if (pending) {
+        alert("An agreement waiver request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
+      } else {
+        const newReq = {
+          id: 'REQ' + Math.random().toString(36).substr(2, 9),
+          requestType: 'agreement_waiver',
+          quoteId: quote.id,
+          customer: customerName,
+          creator: appState.currentUser,
+          creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
+          date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+          status: 'pending',
+          acknowledged: false
+        };
+
+        if (DB.firestoreRef) {
+          DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+            .then(() => {
+              alert("Agreement waiver request submitted successfully to Ganny.");
+            })
+            .catch(err => {
+              console.error("DB: failed to save agreement waiver request:", err);
+              alert("Failed to submit request to cloud. Saving locally...");
+              saveRequestLocallyFallback(newReq);
+            });
+        } else {
+          saveRequestLocallyFallback(newReq);
+          alert("Agreement waiver request submitted successfully to Ganny (Offline).");
+        }
+      }
+    }
     return;
   }
 
