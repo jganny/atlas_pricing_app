@@ -162,33 +162,39 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
     return false;
   }
   
-  if (confirm(`You do not have permission to ${actionVerb} this quotation. Request edit permission from Admin (Ganny)?`)) {
-    const newReq = {
-      id: 'REQ' + Math.random().toString(36).substr(2, 9),
-      requestType: 'edit',
-      quoteId: quote.id,
-      customer: quote.customer,
-      creator: quote.creator,
-      creatorName: TEAM_ROLES[quote.creator]?.name || quote.creator,
-      date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-      status: 'pending',
-      acknowledged: false
-    };
+  const reason = prompt(`You do not have permission to ${actionVerb} this quotation.\n\nPlease enter the reason for requesting edit/amendment permission from Ganny:`);
+  if (reason === null) return false; // User cancelled
+  if (!reason.trim()) {
+    alert("A reason is required to submit the request.");
+    return false;
+  }
 
-    if (DB.firestoreRef) {
-      DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
-        .then(() => {
-          alert("Edit/Amendment request submitted successfully to Ganny.");
-        })
-        .catch(err => {
-          console.error("DB: failed to save edit request:", err);
-          alert("Failed to submit request to cloud. Saving locally...");
-          saveRequestLocallyFallback(newReq);
-        });
-    } else {
-      saveRequestLocallyFallback(newReq);
-      alert("Edit/Amendment request submitted successfully to Ganny (Offline).");
-    }
+  const newReq = {
+    id: 'REQ' + Math.random().toString(36).substr(2, 9),
+    requestType: 'edit',
+    quoteId: quote.id,
+    customer: quote.customer,
+    creator: quote.creator,
+    creatorName: TEAM_ROLES[quote.creator]?.name || quote.creator,
+    date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+    status: 'pending',
+    reason: reason.trim(),
+    acknowledged: false
+  };
+
+  if (DB.firestoreRef) {
+    DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+      .then(() => {
+        alert("Edit/Amendment request submitted successfully to Ganny.");
+      })
+      .catch(err => {
+        console.error("DB: failed to save edit request:", err);
+        alert("Failed to submit request to cloud. Saving locally...");
+        saveRequestLocallyFallback(newReq);
+      });
+  } else {
+    saveRequestLocallyFallback(newReq);
+    alert("Edit/Amendment request submitted successfully to Ganny (Offline).");
   }
   return false;
 }
@@ -2291,6 +2297,7 @@ function renderAdminDashboard() {
               <strong style="color: ${color};">[${typeLabel}]</strong> 
               ${details}<br>
               <span style="font-size: 0.75rem; color: var(--text-muted);">Requested by: ${req.creatorName} on ${req.date}</span>
+              ${req.reason ? `<div style="font-size: 0.72rem; color: var(--accent-warning); margin-top: 4px; padding: 2px 6px; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.2); width: fit-content;"><strong>Reason:</strong> ${req.reason}</div>` : ''}
             </div>
             <div style="display: flex; gap: 0.5rem;">
               <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-success); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight:700;" onclick="approveAmendment('${req.id}')">Approve</button>
@@ -3762,33 +3769,39 @@ window.deleteQuote = (id) => {
       return;
     }
     
-    if (confirm("You do not have permission to delete this quotation. Request deletion permission from Admin (Ganny)?")) {
-      const newReq = {
-        id: 'REQ' + Math.random().toString(36).substr(2, 9),
-        requestType: 'delete',
-        quoteId: quote.id,
-        customer: quote.customer,
-        creator: quote.creator,
-        creatorName: TEAM_ROLES[quote.creator]?.name || quote.creator,
-        date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-        status: 'pending',
-        acknowledged: false
-      };
+    const reason = prompt("You do not have permission to delete this quotation.\n\nPlease enter the reason for requesting deletion permission from Admin (Ganny):");
+    if (reason === null) return; // User cancelled
+    if (!reason.trim()) {
+      alert("A reason is required to submit the request.");
+      return;
+    }
 
-      if (DB.firestoreRef) {
-        DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
-          .then(() => {
-            alert("Deletion request submitted successfully to Ganny.");
-          })
-          .catch(err => {
-            console.error("DB: failed to save delete request:", err);
-            alert("Failed to submit request to cloud. Saving locally...");
-            saveRequestLocallyFallback(newReq);
-          });
-      } else {
-        saveRequestLocallyFallback(newReq);
-        alert("Deletion request submitted successfully to Ganny (Offline).");
-      }
+    const newReq = {
+      id: 'REQ' + Math.random().toString(36).substr(2, 9),
+      requestType: 'delete',
+      quoteId: quote.id,
+      customer: quote.customer,
+      creator: quote.creator,
+      creatorName: TEAM_ROLES[quote.creator]?.name || quote.creator,
+      date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+      status: 'pending',
+      reason: reason.trim(),
+      acknowledged: false
+    };
+
+    if (DB.firestoreRef) {
+      DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+        .then(() => {
+          alert("Deletion request submitted successfully to Ganny.");
+        })
+        .catch(err => {
+          console.error("DB: failed to save delete request:", err);
+          alert("Failed to submit request to cloud. Saving locally...");
+          saveRequestLocallyFallback(newReq);
+        });
+    } else {
+      saveRequestLocallyFallback(newReq);
+      alert("Deletion request submitted successfully to Ganny (Offline).");
     }
     return;
   }
@@ -5816,45 +5829,50 @@ async function submitWonBookingDetails(e) {
   }
 
   if (!hasAgreement && !fileData) {
-    const msg = `❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.\n\nRequest Admin (Ganny) agreement waiver/permission to convert?`;
-    if (confirm(msg)) {
-      let requests = window._amendmentRequests || [];
-      if (requests.length === 0) {
-        const stored = localStorage.getItem("gl_amendment_requests");
-        if (stored) {
-          try { requests = JSON.parse(stored); } catch(e) {}
-        }
-      }
-      const pending = requests.find(r => r.customer.toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
-      if (pending) {
-        alert("An agreement waiver request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
-      } else {
-        const newReq = {
-          id: 'REQ' + Math.random().toString(36).substr(2, 9),
-          requestType: 'agreement_waiver',
-          quoteId: quote.id,
-          customer: customerName,
-          creator: appState.currentUser,
-          creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
-          date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-          status: 'pending',
-          acknowledged: false
-        };
+    const reason = prompt("❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.\n\nPlease enter the reason for requesting an Admin (Ganny) agreement waiver/permission:");
+    if (reason === null) return; // User cancelled
+    if (!reason.trim()) {
+      alert("A reason is required to submit the request.");
+      return;
+    }
 
-        if (DB.firestoreRef) {
-          DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
-            .then(() => {
-              alert("Agreement waiver request submitted successfully to Ganny.");
-            })
-            .catch(err => {
-              console.error("DB: failed to save agreement waiver request:", err);
-              alert("Failed to submit request to cloud. Saving locally...");
-              saveRequestLocallyFallback(newReq);
-            });
-        } else {
-          saveRequestLocallyFallback(newReq);
-          alert("Agreement waiver request submitted successfully to Ganny (Offline).");
-        }
+    let requests = window._amendmentRequests || [];
+    if (requests.length === 0) {
+      const stored = localStorage.getItem("gl_amendment_requests");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(e) {}
+      }
+    }
+    const pending = requests.find(r => r.customer.toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
+    if (pending) {
+      alert("An agreement waiver request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
+    } else {
+      const newReq = {
+        id: 'REQ' + Math.random().toString(36).substr(2, 9),
+        requestType: 'agreement_waiver',
+        quoteId: quote.id,
+        customer: customerName,
+        creator: appState.currentUser,
+        creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
+        date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+        status: 'pending',
+        reason: reason.trim(),
+        acknowledged: false
+      };
+
+      if (DB.firestoreRef) {
+        DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+          .then(() => {
+            alert("Agreement waiver request submitted successfully to Ganny.");
+          })
+          .catch(err => {
+            console.error("DB: failed to save agreement waiver request:", err);
+            alert("Failed to submit request to cloud. Saving locally...");
+            saveRequestLocallyFallback(newReq);
+          });
+      } else {
+        saveRequestLocallyFallback(newReq);
+        alert("Agreement waiver request submitted successfully to Ganny (Offline).");
       }
     }
     return;
