@@ -678,16 +678,28 @@ function resetAirFreightDeskForm() {
   appState.editingQuoteId = null;
 
   // Clear inputs
-  document.getElementById("air-cust-name").value = "";
-  document.getElementById("air-origin").value = "";
-  document.getElementById("air-dest").value = "";
-  document.getElementById("air-airline").value = "";
-  document.getElementById("air-incoterm").value = "EXW";
-  document.getElementById("air-pivot-weight").value = "";
-  document.getElementById("air-routing").value = "";
-  document.getElementById("air-tt").value = "";
-  document.getElementById("air-validity").value = "";
-  document.getElementById("air-terms").value = DEFAULT_AIR_TERMS;
+  const custName = document.getElementById("air-cust-name");
+  if (custName) custName.value = "";
+  const origin = document.getElementById("air-origin");
+  if (origin) origin.value = "";
+  const dest = document.getElementById("air-dest");
+  if (dest) dest.value = "";
+  const incoterm = document.getElementById("air-incoterm");
+  if (incoterm) incoterm.value = "EXW";
+  const terms = document.getElementById("air-terms");
+  if (terms) terms.value = DEFAULT_AIR_TERMS;
+
+  // Clear Commodity and Loadability options
+  const commodity = document.getElementById("air-commodity");
+  if (commodity) commodity.value = "GENERAL";
+  handleAirCommodityChange();
+  const tempType = document.getElementById("air-temp-type");
+  if (tempType) tempType.value = "NON-TEMPERATURE";
+  handleAirTempTypeChange();
+  const tilt = document.getElementById("air-loadability-tilt");
+  if (tilt) tilt.value = "TILTABLE";
+  const stack = document.getElementById("air-loadability-stack");
+  if (stack) stack.value = "STACKABLE";
 
   // Reset module switcher
   appState.currentAirFreight.module = 'export';
@@ -698,12 +710,12 @@ function resetAirFreightDeskForm() {
     tabImp.classList.remove("active");
   }
 
-  // Clear weight break rates
-  const breaks = ["min", "n", "p45", "p100", "p250", "p300", "p500", "p1000"];
-  breaks.forEach(b => {
-    const el = document.getElementById(`rate-${b}`);
-    if (el) el.value = "";
-  });
+  // Clear and reset dynamic airline cards
+  const container = document.getElementById("air-airlines-list-container");
+  if (container) {
+    container.innerHTML = "";
+    addAirlineCard();
+  }
 
   // Reset cargo matrix with single empty row
   const cargoBody = document.getElementById("air-cargo-body");
@@ -729,10 +741,6 @@ function resetAirFreightDeskForm() {
 
   // Surcharges reset to default
   resetSurchargesToDefaults();
-  
-  // Clear alternatives table
-  const airAltBody = document.getElementById("air-alternatives-body");
-  if (airAltBody) airAltBody.innerHTML = "";
   
   // Recalculate to update results layout to 0/empty
   calculateAirFreight();
@@ -5962,7 +5970,7 @@ async function loadLogisticsNews(type = 'global') {
   if (container2) container2.innerHTML = loadingHtml;
 
   const rssUrl = type === 'global' 
-    ? "https://theloadstar.com/feed/" 
+    ? "https://container-news.com/feed/" 
     : "https://www.logisticsinsider.in/feed/";
   const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
@@ -5989,7 +5997,7 @@ async function loadLogisticsNews(type = 'global') {
             <div class="news-feed-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.25rem; transition: all 0.2s; cursor: pointer;">
               <div style="font-weight: 750; font-size: 0.75rem; color: var(--t1); line-height: 1.3;">${title}</div>
               <div style="font-size: 0.62rem; color: var(--sky); font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
-                <span>${type === 'global' ? 'THE LOADSTAR' : 'LOGISTICS INSIDER INDIA'}${author}</span>
+                <span>${type === 'global' ? 'CONTAINER NEWS' : 'LOGISTICS INSIDER INDIA'}${author}</span>
                 <span>${dateStr}</span>
               </div>
             </div>
