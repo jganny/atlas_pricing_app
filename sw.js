@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vertex-v8';
+const CACHE_NAME = 'vertex-v9';
 const ASSETS = [
   './index.html',
   './index.css',

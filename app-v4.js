@@ -1265,11 +1265,11 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
   wrapper.className = "dynamic-break-wrapper";
   wrapper.setAttribute("data-break-name", breakName);
   wrapper.setAttribute("data-is-auto", isAuto ? "true" : "false");
-  wrapper.style.cssText = "background: rgba(255,255,255,0.05); border: 1px solid var(--border-2); border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;";
+  wrapper.style.cssText = "background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;";
 
   wrapper.innerHTML = `
-    <span style="font-size: 0.72rem; font-weight: 700; color: var(--t2);">${labels[breakName] || breakName}</span>
-    <input type="number" class="break-rate-input" placeholder="Rate" min="0" step="0.1" value="${rate > 0 ? rate : ''}" style="width: 60px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid var(--border-1); border-radius: 4px; background: var(--bg-input); color: #fff;">
+    <span style="font-size: 0.72rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
+    <input type="number" class="break-rate-input" placeholder="Rate" min="0" step="0.1" value="${rate > 0 ? rate : ''}" style="width: 60px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;">
     <span class="remove-break-btn" style="cursor: pointer; color: var(--accent-error); font-size: 0.8rem; font-weight: 800; padding: 0 2px; ${isAuto ? 'display:none;' : ''}">×</span>
   `;
 
@@ -1321,13 +1321,15 @@ function addAirlineCard(data = null) {
         <label>Carrier / Airline</label>
         <input type="text" class="air-name" placeholder="Airline name or code..." value="${name}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
       </div>
-      <div class="form-group">
-        <label>Routing Details</label>
-        <input type="text" class="air-routing" placeholder="e.g. Direct / via SIN" value="${routing}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-      </div>
-      <div class="form-group">
-        <label>Transit Time (TT)</label>
-        <input type="text" class="air-tt" placeholder="e.g. 3-5 Days" value="${tt}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+      <div class="form-grid-2 form-group" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0; padding: 0; border: none; background: none;">
+        <div class="form-group">
+          <label>Routing Details</label>
+          <input type="text" class="air-routing" placeholder="e.g. Direct / via SIN" value="${routing}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+        </div>
+        <div class="form-group">
+          <label>Transit Time (TT)</label>
+          <input type="text" class="air-tt" placeholder="e.g. 3-5 Days" value="${tt}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+        </div>
       </div>
     </div>
 
@@ -1344,7 +1346,7 @@ function addAirlineCard(data = null) {
 
     <div style="margin-top: 0.75rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--t2);">Weight Break Tariffs (Rate per KG)</span>
+        <span style="font-size: 0.75rem; font-weight: 700; color: #000;">Weight Break Tariffs (Rate per KG)</span>
         <button type="button" class="btn-text add-weight-break-btn" style="font-size: 0.7rem; color: var(--sky); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0;">+ Add Weight Break</button>
       </div>
       
@@ -1482,8 +1484,8 @@ function calculateAirFreight() {
     return;
   }
 
-  let selectedAirlineCard = null;
-  const airlinesResults = [];
+  const airlinesListData = [];
+  let selectedAirlineData = null;
 
   airlineCards.forEach(card => {
     const isSelected = card.querySelector(".select-airline-radio").checked;
@@ -1498,24 +1500,6 @@ function calculateAirFreight() {
 
     addWeightBreakRow(card, autoBreakName, 0, true);
 
-    card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
-      const bName = wrapper.getAttribute("data-break-name");
-      const removeBtn = wrapper.querySelector(".remove-break-btn");
-      if (bName === autoBreakName) {
-        wrapper.classList.add("highlight-break");
-        wrapper.style.borderColor = "var(--accent-success)";
-        wrapper.style.background = "rgba(46,204,113,0.1)";
-        if (removeBtn) removeBtn.style.display = "none";
-      } else {
-        wrapper.classList.remove("highlight-break");
-        wrapper.style.borderColor = "var(--border-2)";
-        wrapper.style.background = "rgba(255,255,255,0.05)";
-        if (removeBtn && wrapper.getAttribute("data-is-auto") !== "true") {
-          removeBtn.style.display = "inline";
-        }
-      }
-    });
-
     const breaksData = {};
     card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
       const bName = wrapper.getAttribute("data-break-name");
@@ -1526,66 +1510,141 @@ function calculateAirFreight() {
     const activeRate = breaksData[autoBreakName] || 0;
     let baseFreightCost = airlineChargeableWeight * activeRate;
     
+    let isMinActive = false;
     if (breaksData['min'] > 0 && baseFreightCost < breaksData['min']) {
       baseFreightCost = breaksData['min'];
-      const minWrapper = card.querySelector(`.dynamic-break-wrapper[data-break-name="min"]`);
-      if (minWrapper) {
-        minWrapper.classList.add("highlight-break");
-        minWrapper.style.borderColor = "var(--accent-success)";
-      }
+      isMinActive = true;
     }
 
+    // Toggle break display to hide unwanted weight breaks
+    card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
+      const bName = wrapper.getAttribute("data-break-name");
+      const removeBtn = wrapper.querySelector(".remove-break-btn");
+      const isActive = (bName === autoBreakName && !isMinActive) || (bName === 'min' && isMinActive);
+      
+      if (isActive) {
+        wrapper.style.display = "flex";
+        wrapper.classList.add("highlight-break");
+        wrapper.style.borderColor = "var(--accent-success)";
+        wrapper.style.background = "rgba(46,204,113,0.1)";
+        if (removeBtn) removeBtn.style.display = "none";
+      } else {
+        wrapper.style.display = "none";
+        wrapper.classList.remove("highlight-break");
+        wrapper.style.borderColor = "#ccc";
+        wrapper.style.background = "#fff";
+        if (removeBtn && wrapper.getAttribute("data-is-auto") !== "true") {
+          removeBtn.style.display = "inline";
+        }
+      }
+    });
+
+    // Calculate surcharges for this specific airline based on its specific chargeable weight
+    let airlineSurchargeTotal = 0;
+    const airlineOriginSurcharges = [];
+    const airlineDestSurcharges = [];
+
+    // Origin local surcharges
+    const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+    originRows.forEach(row => {
+      const surchargeNameInput = row.querySelector(".chg-name");
+      const surchargeName = surchargeNameInput.value.trim();
+      const surchargeNameLower = surchargeName.toLowerCase();
+      
+      let rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
+      let unit = row.querySelector(".chg-unit").value;
+
+      if (surchargeNameLower === "cartage" || surchargeNameLower === "misc") {
+        if (airlineChargeableWeight < 500) {
+          if (airlineChargeableWeight <= 150) {
+            rate = 6.00;
+            unit = "flat";
+          } else {
+            rate = 0.04;
+            unit = "kg";
+          }
+        } else {
+          rate = 0.00;
+          unit = "flat";
+        }
+      } else if (surchargeNameLower === "xray") {
+        if (airlineChargeableWeight >= 500) {
+          rate = 0.00;
+        }
+      }
+
+      if (surchargeName && rate > 0) {
+        let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
+        airlineSurchargeTotal += cost;
+        airlineOriginSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
+      }
+    });
+
+    // Destination local surcharges
+    const destRows = document.querySelectorAll("#air-dest-surcharges-body tr");
+    destRows.forEach(row => {
+      const surchargeName = row.querySelector(".chg-name").value.trim();
+      const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
+      const unit = row.querySelector(".chg-unit").value;
+
+      if (surchargeName && rate > 0) {
+        let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
+        airlineSurchargeTotal += cost;
+        airlineDestSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
+      }
+    });
+
+    const airlineGrandTotal = baseFreightCost + airlineSurchargeTotal;
+
+    const dataObj = {
+      card,
+      name: name || "Unnamed Airline",
+      routing,
+      tt,
+      validity,
+      pivotWeight,
+      selected: isSelected,
+      breaks: breaksData,
+      chargeableWeight: airlineChargeableWeight,
+      baseFreight: baseFreightCost,
+      appliedRate: isMinActive ? breaksData['min'] : activeRate,
+      surchargeTotal: airlineSurchargeTotal,
+      surchargesCalculated: [...airlineOriginSurcharges, ...airlineDestSurcharges],
+      originSurcharges: airlineOriginSurcharges,
+      destSurcharges: airlineDestSurcharges,
+      grandTotal: airlineGrandTotal,
+      usedBreak: isMinActive ? 'min' : autoBreakName
+    };
+
+    airlinesListData.push(dataObj);
     if (isSelected) {
-      selectedAirlineCard = {
-        card,
-        name,
-        routing,
-        tt,
-        validity,
-        pivotWeight,
-        chargeableWeight: airlineChargeableWeight,
-        autoBreakName,
-        breaksData,
-        activeRate,
-        baseFreightCost
-      };
-    } else {
-      airlinesResults.push({
-        name: name || "Unnamed Airline",
-        routing,
-        tt,
-        validity,
-        pivotWeight,
-        chargeableWeight: airlineChargeableWeight,
-        baseFreightCost,
-        breaksData
-      });
+      selectedAirlineData = dataObj;
     }
   });
 
-  if (!selectedAirlineCard && airlineCards.length > 0) {
+  if (!selectedAirlineData && airlinesListData.length > 0) {
     airlineCards[0].querySelector(".select-airline-radio").checked = true;
     calculateAirFreight();
     return;
   }
 
-  const finalChargeableWeight = selectedAirlineCard.chargeableWeight;
-  
+  const finalChargeableWeight = selectedAirlineData.chargeableWeight;
   document.getElementById("res-air-chw").textContent = `${finalChargeableWeight.toFixed(2)} kg`;
   
   const pivotRow = document.getElementById("row-air-pivot");
   const pivotVal = document.getElementById("res-air-pivot");
-  if (selectedAirlineCard.pivotWeight > 0) {
+  if (selectedAirlineData.pivotWeight > 0) {
     if (pivotRow) pivotRow.style.display = "flex";
-    if (pivotVal) pivotVal.textContent = `${selectedAirlineCard.pivotWeight.toFixed(2)} kg`;
+    if (pivotVal) pivotVal.textContent = `${selectedAirlineData.pivotWeight.toFixed(2)} kg`;
   } else {
     if (pivotRow) pivotRow.style.display = "none";
   }
 
-  document.getElementById("res-air-routing-val").textContent = selectedAirlineCard.routing || "-";
-  document.getElementById("res-air-tt-val").textContent = selectedAirlineCard.tt || "-";
-  document.getElementById("res-air-validity-val").textContent = selectedAirlineCard.validity || "-";
+  document.getElementById("res-air-routing-val").textContent = selectedAirlineData.routing || "-";
+  document.getElementById("res-air-tt-val").textContent = selectedAirlineData.tt || "-";
+  document.getElementById("res-air-validity-val").textContent = selectedAirlineData.validity || "-";
 
+  // Update primary surcharges table input uneditable/zero status
   const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
   originRows.forEach(row => {
     const nameInput = row.querySelector(".chg-name");
@@ -1595,12 +1654,17 @@ function calculateAirFreight() {
       const rateInp = row.querySelector(".chg-rate");
       const unitSelect = row.querySelector(".chg-unit");
       
-      if (finalChargeableWeight <= 150) {
-        rateInp.value = "6.00";
-        unitSelect.value = "flat";
+      if (finalChargeableWeight < 500) {
+        if (finalChargeableWeight <= 150) {
+          rateInp.value = "6.00";
+          unitSelect.value = "flat";
+        } else {
+          rateInp.value = "0.04";
+          unitSelect.value = "kg";
+        }
       } else {
-        rateInp.value = "0.04";
-        unitSelect.value = "kg";
+        rateInp.value = "0.00";
+        unitSelect.value = "flat";
       }
       
       rateInp.readOnly = true;
@@ -1611,43 +1675,25 @@ function calculateAirFreight() {
         unitSelect.style.background = "rgba(0,0,0,0.2)";
         unitSelect.style.color = "var(--text-dim)";
       }
+    } else if (name === "xray") {
+      const rateInp = row.querySelector(".chg-rate");
+      if (finalChargeableWeight >= 500) {
+        rateInp.value = "0.00";
+        rateInp.readOnly = true;
+        rateInp.style.background = "rgba(255,255,255,0.02)";
+        rateInp.style.color = "var(--text-dim)";
+      } else {
+        rateInp.readOnly = false;
+        rateInp.style.background = "";
+        rateInp.style.color = "";
+      }
     }
   });
 
-  let totalSurcharges = 0;
-  let originSurchargesList = [];
-  let destSurchargesList = [];
-
-  originRows.forEach(row => {
-    const name = row.querySelector(".chg-name").value.trim();
-    const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-    const unit = row.querySelector(".chg-unit").value;
-
-    if (name && rate > 0) {
-      let cost = unit === 'kg' ? finalChargeableWeight * rate : rate;
-      totalSurcharges += cost;
-      originSurchargesList.push({ name, rate, unit, calculatedCost: cost });
-    }
-  });
-
-  const destRows = document.querySelectorAll("#air-dest-surcharges-body tr");
-  destRows.forEach(row => {
-    const name = row.querySelector(".chg-name").value.trim();
-    const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-    const unit = row.querySelector(".chg-unit").value;
-
-    if (name && rate > 0) {
-      let cost = unit === 'kg' ? finalChargeableWeight * rate : rate;
-      totalSurcharges += cost;
-      destSurchargesList.push({ name, rate, unit, calculatedCost: cost });
-    }
-  });
-
-  const surchargesList = [...originSurchargesList, ...destSurchargesList];
-
-  const activeRate = selectedAirlineCard.activeRate;
-  let baseFreightCost = selectedAirlineCard.baseFreightCost;
-  const breaksData = selectedAirlineCard.breaksData;
+  // Rating Optimizer for the selected airline
+  const activeRate = selectedAirlineData.appliedRate;
+  let baseFreightCost = selectedAirlineData.baseFreight;
+  const breaksData = selectedAirlineData.breaks;
 
   const rates = [
     { breakName: 'min', limit: 0, rate: breaksData['min'] || 0, label: 'Min' },
@@ -1659,7 +1705,7 @@ function calculateAirFreight() {
     { breakName: 'plus1000', limit: 1000, rate: breaksData['plus1000'] || 0, label: '+1000 kg' }
   ];
 
-  const activeBreakIdx = rates.findIndex(r => r.breakName === selectedAirlineCard.autoBreakName);
+  const activeBreakIdx = rates.findIndex(r => r.breakName === selectedAirlineData.usedBreak);
 
   let optBreakIndex = -1;
   let optWeight = finalChargeableWeight;
@@ -1692,7 +1738,6 @@ function calculateAirFreight() {
     const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
     
     const activeLabel = rates[activeBreakIdx] ? rates[activeBreakIdx].label : 'Standard';
-    const optLabel = rates[optBreakIndex] ? rates[optBreakIndex].label : '';
 
     const optSuggestion = document.getElementById("opt-suggestion-text");
     if (optSuggestion) {
@@ -1704,7 +1749,7 @@ function calculateAirFreight() {
     }
     
     const optBName = rates[optBreakIndex].breakName;
-    const optWrapper = selectedAirlineCard.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
+    const optWrapper = selectedAirlineData.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
     if (optWrapper) {
       optWrapper.style.borderColor = "var(--accent-warning)";
       optWrapper.style.background = "rgba(245,158,11,0.1)";
@@ -1726,115 +1771,114 @@ function calculateAirFreight() {
     finalBaseRate = optRate;
     finalFreightCost = optFreightCost;
     
-    selectedAirlineCard.card.querySelectorAll(".dynamic-break-wrapper").forEach(el => {
-      el.style.borderColor = "var(--border-2)";
-      el.style.background = "rgba(255,255,255,0.05)";
+    selectedAirlineData.card.querySelectorAll(".dynamic-break-wrapper").forEach(el => {
+      el.style.borderColor = "#ccc";
+      el.style.background = "#fff";
     });
     const optBName = rates[optBreakIndex].breakName;
-    const optWrapper = selectedAirlineCard.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
+    const optWrapper = selectedAirlineData.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
     if (optWrapper) {
       optWrapper.style.borderColor = "var(--accent-success)";
       optWrapper.style.background = "rgba(46,204,113,0.1)";
+      optWrapper.style.display = "flex";
     }
   } else if (!hasSavings) {
     appState.currentAirFreight.isOptimizedApplied = false;
   }
 
-  const grandTotal = finalFreightCost + totalSurcharges;
-  const currency = document.getElementById("air-currency").value;
-  const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
+  // Update selected airline with optimized costs if applied
+  selectedAirlineData.baseFreight = finalFreightCost;
+  selectedAirlineData.appliedRate = finalBaseRate;
+  selectedAirlineData.grandTotal = finalFreightCost + selectedAirlineData.surchargeTotal;
 
-  document.getElementById("res-air-base").textContent = `${curSymbol}${finalFreightCost.toFixed(2)}`;
-  document.getElementById("res-air-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
-  document.getElementById("res-air-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
-
-  let totalINR = grandTotal;
-  if (currency === 'INR') {
-    totalINR = grandTotal;
-  } else if (currency === 'USD') {
-    totalINR = grandTotal * (EXCHANGE_RATES.USD_TO_INR || 83);
-  } else if (currency === 'EUR') {
-    totalINR = grandTotal * (EXCHANGE_RATES.EUR_TO_USD || 1.08) * (EXCHANGE_RATES.USD_TO_INR || 83);
-  } else if (currency === 'GBP') {
-    totalINR = grandTotal * (EXCHANGE_RATES.GBP_TO_USD || 1.25) * (EXCHANGE_RATES.USD_TO_INR || 83);
+  // Render individual airline pricing results dynamically
+  const resultsContainer = document.getElementById("air-pricing-results-container");
+  if (resultsContainer) {
+    const currency = document.getElementById("air-currency").value;
+    const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
+    
+    resultsContainer.innerHTML = airlinesListData.map(alt => {
+      return `
+        <div class="glass-card" style="padding: 1rem; border: 1px solid ${alt.selected ? 'var(--accent-success)' : 'var(--border-1)'}; relative; background: ${alt.selected ? 'rgba(46,204,113,0.04)' : 'rgba(255,255,255,0.01)'}; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong style="font-size: 0.85rem; color: var(--sky);">${alt.name || 'Unnamed Airline'}</strong>
+            ${alt.selected ? '<span style="font-size: 0.62rem; background: var(--accent-success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Quoted Option</span>' : ''}
+          </div>
+          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
+            <span class="result-label" style="color: var(--t2);">Chargeable Weight</span>
+            <span class="result-value" style="color: #fff;">${alt.chargeableWeight.toFixed(2)} kg</span>
+          </div>
+          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
+            <span class="result-label" style="color: var(--t2);">Base Freight Cost</span>
+            <span class="result-value" style="color: #fff;">${curSymbol}${alt.baseFreight.toFixed(2)}</span>
+          </div>
+          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
+            <span class="result-label" style="color: var(--t2);">Total Ancillary Surcharges</span>
+            <span class="result-value" style="color: #fff;">${curSymbol}${alt.surchargeTotal.toFixed(2)}</span>
+          </div>
+          <div class="result-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.8rem; font-weight: bold; margin-top: 4px; border-bottom: none;">
+            <span class="result-label" style="color: var(--t1);">Grand Total</span>
+            <span class="result-value" style="color: ${alt.selected ? 'var(--accent-success)' : 'var(--sky)'}; font-size: 0.85rem;">${curSymbol}${alt.grandTotal.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
   // Update appState values
-  const airlinesListData = [];
-  airlineCards.forEach(card => {
-    const isSelected = card.querySelector(".select-airline-radio").checked;
-    const name = card.querySelector(".air-name").value.trim();
-    const routing = card.querySelector(".air-routing").value.trim();
-    const tt = card.querySelector(".air-tt").value.trim();
-    const validity = card.querySelector(".air-validity").value;
-    const pivotWeight = parseFloat(card.querySelector(".air-pivot-weight").value) || 0;
-
-    const breaksData = {};
-    card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
-      const bName = wrapper.getAttribute("data-break-name");
-      const rateVal = parseFloat(wrapper.querySelector(".break-rate-input").value) || 0;
-      breaksData[bName] = rateVal;
-    });
-
-    airlinesListData.push({
-      name,
-      routing,
-      tt,
-      validity,
-      pivotWeight,
-      selected: isSelected,
-      breaks: breaksData
-    });
+  const sanitizedAirlinesList = airlinesListData.map(alt => {
+    return {
+      name: alt.name,
+      routing: alt.routing,
+      tt: alt.tt,
+      validity: alt.validity,
+      pivotWeight: alt.pivotWeight,
+      selected: alt.selected,
+      breaks: alt.breaks,
+      chargeableWeight: alt.chargeableWeight,
+      baseFreight: alt.baseFreight,
+      appliedRate: alt.appliedRate,
+      surchargeTotal: alt.surchargeTotal,
+      surchargesCalculated: alt.surchargesCalculated,
+      originSurcharges: alt.originSurcharges,
+      destSurcharges: alt.destSurcharges,
+      grandTotal: alt.grandTotal
+    };
   });
 
-  appState.currentAirFreight.airlines = airlinesListData;
+  appState.currentAirFreight.airlines = sanitizedAirlinesList;
   appState.currentAirFreight.grossWeight = totalGrossWeight;
   appState.currentAirFreight.volumeWeight = totalVolumeWeight;
   appState.currentAirFreight.chargeableWeight = finalChargeableWeight;
   appState.currentAirFreight.cbm = totalVolume;
-  appState.currentAirFreight.baseFreight = finalFreightCost;
-  appState.currentAirFreight.surchargeTotal = totalSurcharges;
-  appState.currentAirFreight.grandTotal = grandTotal;
-  appState.currentAirFreight.grandTotalINR = totalINR;
-  appState.currentAirFreight.currency = currency;
+  appState.currentAirFreight.baseFreight = selectedAirlineData.baseFreight;
+  appState.currentAirFreight.surchargeTotal = selectedAirlineData.surchargeTotal;
+  appState.currentAirFreight.grandTotal = selectedAirlineData.grandTotal;
+  appState.currentAirFreight.currency = document.getElementById("air-currency").value;
   appState.currentAirFreight.quantity = totalPackageQty;
-  appState.currentAirFreight.originSurcharges = originSurchargesList;
-  appState.currentAirFreight.destSurcharges = destSurchargesList;
-  appState.currentAirFreight.surchargesCalculated = surchargesList;
-  appState.currentAirFreight.usedBreak = selectedAirlineCard.autoBreakName;
-  appState.currentAirFreight.appliedRate = finalBaseRate;
-  appState.currentAirFreight.pivotWeight = selectedAirlineCard.pivotWeight;
-  appState.currentAirFreight.routing = selectedAirlineCard.routing;
-  appState.currentAirFreight.tt = selectedAirlineCard.tt;
-  appState.currentAirFreight.validity = selectedAirlineCard.validity;
-  appState.currentAirFreight.airline = selectedAirlineCard.name || "N/A";
+  appState.currentAirFreight.originSurcharges = selectedAirlineData.originSurcharges;
+  appState.currentAirFreight.destSurcharges = selectedAirlineData.destSurcharges;
+  appState.currentAirFreight.surchargesCalculated = selectedAirlineData.surchargesCalculated;
+  appState.currentAirFreight.usedBreak = selectedAirlineData.usedBreak;
+  appState.currentAirFreight.appliedRate = selectedAirlineData.appliedRate;
+  appState.currentAirFreight.pivotWeight = selectedAirlineData.pivotWeight;
+  appState.currentAirFreight.routing = selectedAirlineData.routing;
+  appState.currentAirFreight.tt = selectedAirlineData.tt;
+  appState.currentAirFreight.validity = selectedAirlineData.validity;
+  appState.currentAirFreight.airline = selectedAirlineData.name || "N/A";
 
-  const altsContainer = document.getElementById("air-alternatives-results-container");
-  const altsList = document.getElementById("air-alternatives-results-list");
-  
-  if (altsContainer && altsList) {
-    if (airlinesResults.length > 0) {
-      altsContainer.style.display = "block";
-      altsList.innerHTML = airlinesResults.map(alt => {
-        const altGrandTotal = alt.baseFreightCost + totalSurcharges;
-        return `
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem;">
-            <div style="display: flex; justify-content: space-between; font-weight: 750; color: #fff;">
-              <span>✈️ ${alt.name || '-'}</span>
-              <span style="color: var(--accent-air); font-weight: 800;">${curSymbol}${altGrandTotal.toFixed(2)}</span>
-            </div>
-            <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 3px;">
-              <span>Route: ${alt.routing || '-'}</span>
-              <span>TT: ${alt.tt || '-'}</span>
-            </div>
-          </div>
-        `;
-      }).join("");
-    } else {
-      altsContainer.style.display = "none";
-      altsList.innerHTML = "";
-    }
+  const currency = document.getElementById("air-currency").value;
+  let totalINR = selectedAirlineData.grandTotal;
+  if (currency === 'INR') {
+    totalINR = selectedAirlineData.grandTotal;
+  } else if (currency === 'USD') {
+    totalINR = selectedAirlineData.grandTotal * (EXCHANGE_RATES.USD_TO_INR || 83);
+  } else if (currency === 'EUR') {
+    totalINR = selectedAirlineData.grandTotal * (EXCHANGE_RATES.EUR_TO_USD || 1.08) * (EXCHANGE_RATES.USD_TO_INR || 83);
+  } else if (currency === 'GBP') {
+    totalINR = selectedAirlineData.grandTotal * (EXCHANGE_RATES.GBP_TO_USD || 1.25) * (EXCHANGE_RATES.USD_TO_INR || 83);
   }
+  appState.currentAirFreight.grandTotalINR = totalINR;
 }
 
 // SEA FREIGHT CALCULATOR LOGIC
@@ -3867,23 +3911,30 @@ window.viewSavedQuote = (id) => {
   let alternativesHtml = "";
   if (quote.details && quote.details.airlines && quote.details.airlines.length > 0) {
     const altRows = quote.details.airlines.map(alt => {
-      const breaksRep = Object.keys(alt.breaks || {}).map(b => `${b}: ${currencySym}${alt.breaks[b]}/kg`).join(", ");
+      const chgWt = alt.chargeableWeight !== undefined ? alt.chargeableWeight : (quote.details.chargeableWeight || 0);
+      const baseFr = alt.baseFreight !== undefined ? alt.baseFreight : (quote.details.baseFreight || 0);
+      const surch = alt.surchargeTotal !== undefined ? alt.surchargeTotal : (quote.details.surchargeTotal || 0);
+      const gTotal = alt.grandTotal !== undefined ? alt.grandTotal : (baseFr + surch);
+      
       return `
-        <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold;' : ''}">
-          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; color: #1b1c5c; font-size: 0.7rem;">
+        <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
             ${alt.name} ${alt.selected ? '<strong>(Quoted)</strong>' : ''}
           </td>
-          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.routing || '-'}</td>
-          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.tt || '-'}</td>
-          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.validity || '-'}</td>
-          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.7rem;">${alt.pivotWeight ? alt.pivotWeight + ' kg' : '-'}</td>
-          <td style="border: 1px solid #e2e8f0; padding: 6px 10px; color: #2f3193; font-size: 0.7rem;">${breaksRep}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.routing || '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.tt || '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.validity || '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.pivotWeight ? alt.pivotWeight + ' kg' : '-'}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${chgWt.toFixed(2)} kg</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">${currencySym}${baseFr.toFixed(2)}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">${currencySym}${surch.toFixed(2)}</td>
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800; color: ${alt.selected ? 'var(--accent-success)' : '#1b1c5c'};">${currencySym}${gTotal.toFixed(2)}</td>
         </tr>
       `;
     }).join("");
     
     alternativesHtml = `
-      <div class="print-section-title" style="margin-top: 1.5rem;">Airline Carrier & Tariff Options</div>
+      <div class="print-section-title" style="margin-top: 1.5rem;">Airline Carrier & Pricing Summary (Individual Details)</div>
       <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
         <thead>
           <tr style="background: #f8fafc;">
@@ -3892,7 +3943,10 @@ window.viewSavedQuote = (id) => {
             <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Transit Time</th>
             <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Validity</th>
             <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Pivot Wt</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Rates</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Chargeable Wt</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Base Freight</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Surcharges</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Grand Total</th>
           </tr>
         </thead>
         <tbody>
