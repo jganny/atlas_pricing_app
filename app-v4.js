@@ -1949,24 +1949,16 @@ function renderMemberDashboard(userId) {
         let reqTypeLabel = "EDIT/AMEND";
         if (req.requestType === 'delete') {
           reqTypeLabel = "DELETE";
-        } else if (req.requestType === 'credit_override') {
-          reqTypeLabel = "CREDIT OVERRIDE";
         }
 
         if (req.status === 'approved') {
           if (req.requestType === 'delete') {
             alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to DELETE quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".\n\nYou can now click the Delete (Trash) button next to the quote to delete it.`);
-          } else if (req.requestType === 'credit_override') {
-            alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request for CREDIT OVERRIDE for customer "${req.customer}".\n\nYou can now execute and save quotes for this customer.`);
           } else {
             alert(`🔔 Admin Permission Alert:\nGanny has APPROVED your request to AMEND quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".\n\nYou can now click the Orange Edit/Amend button next to the quote to correct it!`);
           }
         } else {
-          if (req.requestType === 'credit_override') {
-            alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request for CREDIT OVERRIDE for customer "${req.customer}".`);
-          } else {
-            alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request to ${reqTypeLabel} quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".`);
-          }
+          alert(`🔔 Admin Permission Alert:\nGanny has REJECTED your request to ${reqTypeLabel} quote #${getQuoteRefIdById(req.quoteId)} for "${req.customer}".`);
         }
         req.acknowledged = true;
 
@@ -2270,17 +2262,16 @@ function renderAdminDashboard() {
     const pending = requests.filter(r => r.status === 'pending');
     
     let listHtml = "";
-    if (pending.length > 0) {
-      listHtml = pending.map(req => {
+    // EXCLUDE credit_override from this list (they go to Customer Credit Control & Compliance panel)
+    const filteredPending = pending.filter(r => r.requestType !== 'credit_override');
+
+    if (filteredPending.length > 0) {
+      listHtml = filteredPending.map(req => {
         let typeLabel = (req.requestType ? req.requestType.toUpperCase() : 'EDIT');
         let color = 'var(--accent-warning)';
         let details = `Quote ID: #<strong>${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer || ''})`;
 
-        if (req.requestType === 'credit_override') {
-          typeLabel = 'CREDIT OVERRIDE';
-          color = 'var(--sky)';
-          details = `Customer: <strong>${req.customer}</strong>`;
-        } else if (req.requestType === 'agreement_waiver') {
+        if (req.requestType === 'agreement_waiver') {
           typeLabel = 'AGREEMENT WAIVER';
           color = 'var(--accent-air)';
           details = `Customer: <strong>${req.customer}</strong> (Quote #${getQuoteRefIdById(req.quoteId)})`;
@@ -4453,26 +4444,7 @@ function approveAmendment(reqId) {
   if (req) {
     req.status = 'approved';
     const lower = (req.customer || "").toLowerCase().trim();
-    
-    if (req.requestType === 'credit_override') {
-      let controls = window._customerControls || {};
-      if (!controls[lower]) {
-        controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
-      }
-      controls[lower].creditOverride = true;
-      window._customerControls = controls;
-      
-      if (DB.firestoreRef) {
-        DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
-      } else {
-        try {
-          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-          offlineControls[lower] = controls[lower];
-          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-        } catch(e) {}
-      }
-      alert(`Credit override request for customer "${req.customer}" has been APPROVED.`);
-    } else if (req.requestType === 'agreement_waiver') {
+    if (req.requestType === 'agreement_waiver') {
       let controls = window._customerControls || {};
       if (!controls[lower]) {
         controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
@@ -4490,24 +4462,6 @@ function approveAmendment(reqId) {
         } catch(e) {}
       }
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been APPROVED.`);
-    } else if (req.requestType === 'customer_release') {
-      let controls = window._customerControls || {};
-      if (!controls[lower]) {
-        controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
-      }
-      controls[lower].blocked = false;
-      window._customerControls = controls;
-      
-      if (DB.firestoreRef) {
-        DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
-      } else {
-        try {
-          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-          offlineControls[lower] = controls[lower];
-          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-        } catch(e) {}
-      }
-      alert(`Blocked compliance release request for customer "${req.customer}" has been APPROVED.`);
     } else {
       // Unlock the quote
       const quote = appState.quotes.find(q => q.id === req.quoteId);
@@ -4550,12 +4504,8 @@ function rejectAmendment(reqId) {
   if (req) {
     req.status = 'rejected';
     
-    if (req.requestType === 'credit_override') {
-      alert(`Credit override request for customer "${req.customer}" has been REJECTED.`);
-    } else if (req.requestType === 'agreement_waiver') {
+    if (req.requestType === 'agreement_waiver') {
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been REJECTED.`);
-    } else if (req.requestType === 'customer_release') {
-      alert(`Blocked compliance release request for customer "${req.customer}" has been REJECTED.`);
     } else {
       alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been REJECTED.`);
     }
@@ -5103,161 +5053,7 @@ function convertAmountToUSD(amount, currency) {
 window.convertAmountToUSD = convertAmountToUSD;
 
 function validateCreditCompliance(quoteData) {
-  const customerName = quoteData.customer;
-  if (!customerName) return true;
-  const lowerCust = customerName.toLowerCase().trim();
-  let control = (window._customerControls && window._customerControls[lowerCust]) || null;
-  if (!control) {
-    try {
-      const storedControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-      control = storedControls[lowerCust] || null;
-    } catch(e) {}
-  }
-
-  const creditDays = control ? (parseInt(control.creditDays) || 30) : 30;
-  const creditLimit = control ? (parseFloat(control.creditLimit) || 0) : 0;
-  const isBlocked = control ? !!control.blocked : false;
-  const waiveAgreement = control ? !!control.waiveAgreement : false;
-  const creditOverride = control ? !!control.creditOverride : false;
-
-  const hasAdminBypass = appState.currentUser === 'ganny' || creditOverride;
-
-  if (isBlocked && !hasAdminBypass) {
-    const msg = `❌ CREDIT CONTROL ALERT:\nCustomer "${customerName}" is currently blocked due to compliance audit or credit hold.\n\nRequest Admin (Ganny) release/unblock override to execute?`;
-    if (confirm(msg)) {
-      let requests = window._amendmentRequests || [];
-      if (requests.length === 0) {
-        const stored = localStorage.getItem("gl_amendment_requests");
-        if (stored) {
-          try { requests = JSON.parse(stored); } catch(e) {}
-        }
-      }
-      const pending = requests.find(r => r.customer.toLowerCase().trim() === lowerCust && r.requestType === 'customer_release' && r.status === 'pending');
-      if (pending) {
-        alert("A release request for this blocked customer has already been submitted to Admin. Please wait for Ganny's approval.");
-      } else {
-        const newReq = {
-          id: 'REQ' + Math.random().toString(36).substr(2, 9),
-          requestType: 'customer_release',
-          quoteId: 'N/A',
-          customer: customerName,
-          creator: appState.currentUser,
-          creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
-          date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-          status: 'pending',
-          acknowledged: false
-        };
-
-        if (DB.firestoreRef) {
-          DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
-            .then(() => {
-              alert("Compliance release request submitted successfully to Ganny.");
-            })
-            .catch(err => {
-              console.error("DB: failed to save customer release request:", err);
-              alert("Failed to submit request to cloud. Saving locally...");
-              saveRequestLocallyFallback(newReq);
-            });
-        } else {
-          saveRequestLocallyFallback(newReq);
-          alert("Compliance release request submitted successfully to Ganny (Offline).");
-        }
-      }
-    }
-    return false;
-  }
-
-  // 1. Check if credit period setting crosses 30 days
-  const creditPeriodCrossed30 = (creditDays > 30);
-
-  // 2. Check if outstanding quotes cross credit period or 30 days limit
-  const matchingQuotes = appState.quotes.filter(q => q.customer.trim().toLowerCase() === lowerCust && q.status === 'quoted');
-  let outstandingCrossedCredit = false;
-  let oldestDays = 0;
-
-  matchingQuotes.forEach(q => {
-    const quoteDate = new Date(q.date);
-    const diffTime = Math.abs(new Date() - quoteDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays > creditDays || diffDays > 30) {
-      outstandingCrossedCredit = true;
-      if (diffDays > oldestDays) oldestDays = diffDays;
-    }
-  });
-
-  // 3. Check if outstanding + current quote crosses credit limit
-  const currentUSD = convertAmountToUSD(quoteData.amount, quoteData.currency);
-  const outstandingUSD = matchingQuotes.reduce((sum, q) => sum + convertAmountToUSD(q.amount, q.currency), 0);
-  const newTotalUSD = outstandingUSD + currentUSD;
-  const limitExceeded = (newTotalUSD > creditLimit);
-
-  if (creditPeriodCrossed30 || outstandingCrossedCredit || limitExceeded) {
-    if (hasAdminBypass) {
-      // Clear override flag if used so it is a one-time bypass
-      if (control && control.creditOverride) {
-        control.creditOverride = false;
-        if (DB.firestoreRef) {
-          DB.firestoreRef.collection("customer_control").doc(lowerCust).set(control, { merge: true });
-        } else {
-          try {
-            let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-            offlineControls[lowerCust] = control;
-            localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-          } catch(e) {}
-        }
-      }
-      return true;
-    }
-
-    let blockReason = "";
-    if (creditPeriodCrossed30) blockReason += `• Customer credit period is set to ${creditDays} days (maximum allowed is 30 days).\n`;
-    if (outstandingCrossedCredit) blockReason += `• Customer has outstanding quotes older than their credit period or 30 days (oldest is ${oldestDays} days old).\n`;
-    if (limitExceeded) blockReason += `• Total outstanding with this quote ($${newTotalUSD.toFixed(2)}) exceeds credit limit of $${creditLimit.toFixed(2)}.\n`;
-
-    const msg = `❌ CREDIT CONTROL BLOCK:\n\n${blockReason}\nExecution is blocked. Request Admin (Ganny) override permission to execute?`;
-    if (confirm(msg)) {
-      let requests = window._amendmentRequests || [];
-      if (requests.length === 0) {
-        const stored = localStorage.getItem("gl_amendment_requests");
-        if (stored) {
-          try { requests = JSON.parse(stored); } catch(e) {}
-        }
-      }
-      const pending = requests.find(r => r.customer.toLowerCase().trim() === lowerCust && r.requestType === 'credit_override' && r.status === 'pending');
-      if (pending) {
-        alert("A credit override request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
-      } else {
-        const newReq = {
-          id: 'REQ' + Math.random().toString(36).substr(2, 9),
-          requestType: 'credit_override',
-          quoteId: 'N/A',
-          customer: customerName,
-          creator: appState.currentUser,
-          creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
-          date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-          status: 'pending',
-          acknowledged: false
-        };
-
-        if (DB.firestoreRef) {
-          DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
-            .then(() => {
-              alert("Credit override request submitted successfully to Ganny.");
-            })
-            .catch(err => {
-              console.error("DB: failed to save credit override request:", err);
-              alert("Failed to submit request to cloud. Saving locally...");
-              saveRequestLocallyFallback(newReq);
-            });
-        } else {
-          saveRequestLocallyFallback(newReq);
-          alert("Credit override request submitted successfully to Ganny (Offline).");
-        }
-      }
-    }
-    return false;
-  }
-
+  // Credit control blocking has been removed per user request.
   return true;
 }
 window.validateCreditCompliance = validateCreditCompliance;
@@ -6834,10 +6630,8 @@ window.resetCustomerAgreement = resetCustomerAgreement;
 function displayAdminCustomerControlList(list) {
   const tbody = document.getElementById("admin-customer-control-body");
   if (!tbody) return;
-  tbody.innerHTML = "";
 
   tbody.innerHTML = list.map(ctrl => {
-    const isBlocked = !!ctrl.blocked;
     const waiveAgreement = !!ctrl.waiveAgreement;
     const creditDays = ctrl.creditDays || 30;
     const creditLimit = ctrl.creditLimit || 0;
@@ -6845,12 +6639,9 @@ function displayAdminCustomerControlList(list) {
     const fileName = ctrl.agreementFile || "";
     const lower = ctrl.customer.toLowerCase().trim();
 
-    // Check for pending requests and active override bypasses
+    // Check for pending requests
     const pendingReqs = window._amendmentRequests || [];
-    const hasPendingOverride = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'credit_override' && r.status === 'pending');
-    const hasPendingRelease = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'customer_release' && r.status === 'pending');
     const hasPendingWaiver = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
-    const isOverrideActive = !!ctrl.creditOverride;
 
     const agreementCell = hasAgreement 
       ? `<div style="display: flex; align-items: center; gap: 0.4rem;">
@@ -6874,29 +6665,10 @@ function displayAdminCustomerControlList(list) {
     }
 
     let statusHtml = `
-      <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isBlocked ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)'}; color: ${isBlocked ? 'var(--accent-error)' : 'var(--accent-success)'};">
-        ${isBlocked ? 'Blocked (Held)' : 'Active (Released)'}
+      <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: rgba(46,204,113,0.1); color: var(--accent-success);">
+        Active (Released)
       </span>
     `;
-    if (hasPendingOverride) {
-      statusHtml += `
-        <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(245,158,11,0.2); color: var(--accent-warning); margin-left: 4px; border: 1px solid rgba(245,158,11,0.3); text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Pending Credit Override request submitted by user">
-          OVERRIDE REQ ⏳
-        </span>
-      `;
-    } else if (hasPendingRelease) {
-      statusHtml += `
-        <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(245,158,11,0.2); color: var(--accent-warning); margin-left: 4px; border: 1px solid rgba(245,158,11,0.3); text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Pending Compliance Release/Unblock request submitted by user">
-          RELEASE REQ ⏳
-        </span>
-      `;
-    } else if (isOverrideActive) {
-      statusHtml += `
-        <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.2); color: var(--sky); margin-left: 4px; border: 1px solid rgba(56,189,248,0.3);" title="Credit Override Approved (Bypass Active for next execution)">
-          BYPASS ACTIVE 🔓
-        </span>
-      `;
-    }
 
     return `
       <tr>
@@ -6916,9 +6688,6 @@ function displayAdminCustomerControlList(list) {
         <td>${statusHtml}</td>
         <td>
           <div style="display: flex; gap: 0.3rem;">
-            <button class="btn-primary" onclick="toggleCustomerBlock('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 6px; margin: 0; background: ${isBlocked ? 'var(--accent-success)' : 'var(--accent-error)'}; color: #000; font-weight: 800; border-radius: 4px; cursor: pointer;">
-              ${isBlocked ? 'Release' : 'Block'}
-            </button>
             <button class="btn-secondary" onclick="toggleCustomerAgreementWaiver('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 6px; margin: 0; font-weight: 700; border-radius: 4px; border: 1px solid var(--border-2); cursor: pointer; background: var(--bg-card); color: var(--t1);">
               ${waiveAgreement ? 'Require Agreement' : 'Waive Agreement'}
             </button>
@@ -6976,28 +6745,6 @@ async function updateCustomerCreditLimitValue(customerName, limit) {
   }
 }
 window.updateCustomerCreditLimitValue = updateCustomerCreditLimitValue;
-
-async function toggleCustomerBlock(customerName) {
-  const lower = customerName.toLowerCase();
-  let controls = window._customerControls || {};
-  if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
-  }
-  controls[lower].blocked = !controls[lower].blocked;
-  window._customerControls = controls;
-
-  if (DB.firestoreRef) {
-    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
-  } else {
-    try {
-      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-      offlineControls[lower] = controls[lower];
-      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch(e) {}
-    renderAdminCustomerControlList();
-  }
-}
-window.toggleCustomerBlock = toggleCustomerBlock;
 
 async function toggleCustomerAgreementWaiver(customerName) {
   const lower = customerName.toLowerCase();
