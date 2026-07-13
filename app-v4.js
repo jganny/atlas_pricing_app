@@ -3646,10 +3646,12 @@ window.deleteQuote = (id) => {
 
   // Enforce Ganny or deletionAllowed permission check
   if (appState.currentUser !== 'ganny' && !quote.deletionAllowed) {
-    let requests = [];
-    const stored = localStorage.getItem("gl_amendment_requests");
-    if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
+    let requests = window._amendmentRequests || [];
+    if (requests.length === 0) {
+      const stored = localStorage.getItem("gl_amendment_requests");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(e) {}
+      }
     }
     const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'delete' && r.status === 'pending');
     if (pending) {
@@ -3658,7 +3660,7 @@ window.deleteQuote = (id) => {
     }
     
     if (confirm("You do not have permission to delete this quotation. Request deletion permission from Admin (Ganny)?")) {
-      requests.push({
+      const newReq = {
         id: 'REQ' + Math.random().toString(36).substr(2, 9),
         requestType: 'delete',
         quoteId: quote.id,
@@ -3668,11 +3670,22 @@ window.deleteQuote = (id) => {
         date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
         status: 'pending',
         acknowledged: false
-      });
-      localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-      alert("Deletion request submitted successfully to Ganny.");
-      
-      renderMemberDashboard(appState.currentUser);
+      };
+
+      if (DB.firestoreRef) {
+        DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+          .then(() => {
+            alert("Deletion request submitted successfully to Ganny.");
+          })
+          .catch(err => {
+            console.error("DB: failed to save delete request:", err);
+            alert("Failed to submit request to cloud. Saving locally...");
+            saveRequestLocallyFallback(newReq);
+          });
+      } else {
+        saveRequestLocallyFallback(newReq);
+        alert("Deletion request submitted successfully to Ganny (Offline).");
+      }
     }
     return;
   }
@@ -3681,13 +3694,21 @@ window.deleteQuote = (id) => {
     DB.deleteQuote(id);
     
     // Remove related requests
-    let requests = [];
-    const stored = localStorage.getItem("gl_amendment_requests");
-    if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
+    if (DB.firestoreRef) {
+      const related = (window._amendmentRequests || []).filter(r => r.quoteId === id);
+      related.forEach(r => {
+        DB.firestoreRef.collection("amendment_requests").doc(r.id).delete()
+          .catch(err => console.error("DB: failed to delete request:", err));
+      });
+    } else {
+      let requests = [];
+      const stored = localStorage.getItem("gl_amendment_requests");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(e) {}
+      }
+      requests = requests.filter(r => r.quoteId !== id);
+      localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
     }
-    requests = requests.filter(r => r.quoteId !== id);
-    localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
 
     alert("Quotation deleted successfully!");
     
