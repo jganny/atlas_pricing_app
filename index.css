@@ -929,16 +929,93 @@ select.table-select:focus {
 @media print {
   @page {
     size: A4;
-    margin: 12mm 15mm 12mm 15mm;
+    margin: 15mm 20mm 15mm 20mm;
   }
-  body { background: #fff !important; color: #000 !important; font-size: 10pt !important; }
-  .app-container, .modal-header, .modal-footer, header, .no-print { display: none !important; }
-  .modal-overlay { position: static !important; background: transparent !important; padding: 0 !important; display: block !important; }
-  .modal-content { border: none !important; box-shadow: none !important; max-width: 100% !important; width: 100% !important; max-height: none !important; display: block !important; position: static !important; background: transparent !important; }
-  .modal-body { padding: 0 !important; overflow-y: visible !important; }
-  .quote-print-card { box-shadow: none !important; padding: 0 !important; width: 100% !important; font-size: 9pt !important; }
-  .quote-print-card table { width: 100% !important; page-break-inside: auto; }
-  .quote-print-card tr { page-break-inside: avoid; page-break-after: auto; }
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .app-container, .modal-overlay, .modal-header, .modal-footer, header, .no-print, #breakup-submodal {
+    display: none !important;
+  }
+  #quote-modal {
+    display: block !important;
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #quote-modal .modal-content, #quote-modal .modal-body {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .quote-print-card {
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 9.5pt !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-details {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    margin-bottom: 1.5rem !important;
+    gap: 2rem !important;
+  }
+  .print-details > div {
+    width: 48% !important;
+  }
+  .quote-print-card table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 0.75rem !important;
+    table-layout: auto !important;
+    page-break-inside: auto;
+  }
+  .quote-print-card tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto;
+  }
+  .quote-print-card th, .quote-print-card td {
+    padding: 8px 10px !important;
+    font-size: 8.5pt !important;
+  }
+  .total-summary-box {
+    margin-top: 1.5rem !important;
+    padding: 1rem 1.2rem !important;
+    border: 1px solid #bfdbfe !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid !important;
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -1158,5 +1235,35 @@ select.table-select:focus {
 }
 .news-container .news-feed-card div:last-child span {
   color: #ffc700 !important;
+}
+
+/* Maximized quote modal rules for A4 Preview screenshotting */
+#quote-modal.maximized {
+  padding: 0 !important;
+}
+#quote-modal.maximized .modal-content {
+  max-width: 100vw !important;
+  width: 100vw !important;
+  max-height: 100vh !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+#quote-modal.maximized .modal-body {
+  padding: 2rem !important;
+  background: #f1f5f9; /* Slate grey background behind the white A4 sheet for high contrast */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+#quote-modal.maximized .quote-print-card {
+  width: 210mm !important;
+  min-height: 297mm !important; /* Perfect standard A4 ratio */
+  background: #fff !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  padding: 20mm !important; /* Proper internal A4 margins for preview */
+  margin: 1.5rem auto !important;
+  border-radius: 4px !important;
+  border: 1px solid #cbd5e1 !important;
 }
 

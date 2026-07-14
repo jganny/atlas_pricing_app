@@ -1030,6 +1030,17 @@
               </div>
             </div>
 
+            <div class="form-grid-3" style="margin-top: 1rem;">
+              <div class="form-group autocomplete-container">
+                <label for="sea-liner-name">Liner Name</label>
+                <input type="text" id="sea-liner-name" placeholder="e.g. MSC, Hapag-Lloyd" autocomplete="off">
+              </div>
+              <div class="form-group autocomplete-container">
+                <label for="sea-commodity">Commodity</label>
+                <input type="text" id="sea-commodity" placeholder="e.g. General Cargo" autocomplete="off">
+              </div>
+            </div>
+
             <!-- Collapsible Google Map Helper for Sea -->
             <div id="sea-map-helper-card" class="glass-card" style="margin-top: 1rem; display: none; padding: 1rem; border: 1px dashed var(--sky);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -1161,10 +1172,14 @@
             <!-- LCL Fields -->
             <div id="sea-lcl-form" style="display: none;">
               <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">LCL Freight Pricing</h4>
-              <div class="form-row">
+              <div class="form-row" id="sea-lcl-rates-row">
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label for="sea-lcl-rate">LCL Freight Rate (Per Revenue Ton - RT)</label>
+                  <label for="sea-lcl-rate" id="sea-lcl-rate-label">LCL Freight Rate (Per Revenue Ton - RT)</label>
                   <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="0">
+                </div>
+                <div class="form-group" id="sea-lcl-buy-group" style="margin-bottom: 0; display: none;">
+                  <label for="sea-lcl-buy-rate">LCL Buy Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-lcl-buy-rate" placeholder="Buy Rate" min="0" value="0">
                 </div>
               </div>
             </div>
@@ -1172,10 +1187,14 @@
             <!-- Break Bulk Fields -->
             <div id="sea-bb-form" style="display: none;">
               <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-sea);">Break Bulk Freight Pricing</h4>
-              <div class="form-row">
+              <div class="form-row" id="sea-bb-rates-row">
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label for="sea-bb-rate">Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
+                  <label for="sea-bb-rate" id="sea-bb-rate-label">Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
                   <input type="number" id="sea-bb-rate" placeholder="Rate" min="0" value="0">
+                </div>
+                <div class="form-group" id="sea-bb-buy-group" style="margin-bottom: 0; display: none;">
+                  <label for="sea-bb-buy-rate">Break Bulk Buy Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="0">
                 </div>
               </div>
             </div>
@@ -1366,9 +1385,16 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="modal-header-title">Quotation Official Preview</h3>
-        <button class="action-icon-btn" id="close-modal" onclick="hideQuoteModal()" style="color: var(--accent-error);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button class="action-icon-btn" id="maximize-modal-btn" onclick="toggleMaximizeQuoteModal()" style="color: var(--sky);" title="Maximize Screen">
+            <svg id="maximize-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
+          <button class="action-icon-btn" id="close-modal" onclick="hideQuoteModal()" style="color: var(--accent-error);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </div>
       <div class="modal-body">
         <!-- Rendered printable invoice card -->
@@ -1661,6 +1687,23 @@
           <div class="form-group" style="margin-bottom: 1.2rem;">
             <label for="won-commodity" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Commodity / Goods Description *</label>
             <input type="text" id="won-commodity" placeholder="e.g. Garments, Auto Parts, Chemical Products" required style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+          </div>
+
+          <!-- Confirmed Carrier & Buy Rate Details -->
+          <div id="won-carrier-buy-section" style="display: none;">
+            <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 1.2rem 0 0.8rem 0; text-transform: uppercase; letter-spacing: 0.05em;" id="won-carrier-section-title">Confirmed Carrier Details</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+              <div class="form-group">
+                <label for="won-confirmed-carrier" id="won-confirmed-carrier-label" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Confirmed Airline *</label>
+                <select id="won-confirmed-carrier" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 100%;">
+                  <!-- Dynamically populated -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="won-confirmed-buy-rate" id="won-confirmed-buy-rate-label" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Confirmed Buy Rate *</label>
+                <input type="number" id="won-confirmed-buy-rate" placeholder="Buy Rate" step="0.01" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);">
+              </div>
+            </div>
           </div>
 
           <!-- Agency Agreement -->
