@@ -394,9 +394,11 @@ function checkSession() {
   if (session && TEAM_ROLES[session]) {
     loginSuccess(session);
   } else {
-    // Show login overlay
+    // Show login overlay and keep workspace visible but blurred
+    document.body.classList.add("logged-out-blur");
     document.getElementById("login-overlay").style.display = "flex";
-    document.getElementById("app-workspace").style.display = "none";
+    document.getElementById("app-workspace").style.display = "flex";
+    document.getElementById("subheader-controls").style.display = "flex";
   }
 }
 
@@ -441,6 +443,7 @@ function handleLogin(e) {
 
 function loginSuccess(roleId) {
   appState.currentUser = roleId;
+  document.body.classList.remove("logged-out-blur");
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("app-workspace").style.display = "flex";
   document.getElementById("subheader-controls").style.display = "flex";
@@ -449,7 +452,7 @@ function loginSuccess(roleId) {
   applyDeskNames();
 
   const roleInfo = TEAM_ROLES[roleId];
-  document.getElementById("active-user-name").textContent = roleInfo.name;
+  document.getElementById("active-user-name").textContent = roleInfo.name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const root = document.documentElement;
   if (roleId === 'ganny') {
@@ -475,9 +478,10 @@ function loginSuccess(roleId) {
 function logoutUser() {
   sessionStorage.removeItem("gl_pricing_session");
   appState.currentUser = null;
+  document.body.classList.add("logged-out-blur");
   document.getElementById("login-overlay").style.display = "flex";
-  document.getElementById("app-workspace").style.display = "none";
-  document.getElementById("subheader-controls").style.display = "none";
+  document.getElementById("app-workspace").style.display = "flex";
+  document.getElementById("subheader-controls").style.display = "flex";
 }
 
 // Load Airports & Airlines Data
@@ -915,26 +919,66 @@ function openActiveCalculator(type) {
   const managerPanel = document.getElementById("manager-panel");
   if (managerPanel) managerPanel.classList.remove("active");
   
+  // Hide all panels
+  document.getElementById("air-freight-panel").classList.remove("active");
+  document.getElementById("sea-freight-panel").classList.remove("active");
+  document.getElementById("custom-clearance-panel").classList.remove("active");
+  document.getElementById("transportation-panel").classList.remove("active");
+  document.getElementById("warehousing-panel").classList.remove("active");
+
+  const root = document.documentElement;
+
   if (type === 'air') {
     resetAirFreightDeskForm();
     document.getElementById("air-freight-panel").classList.add("active");
-  } else {
+    root.style.setProperty('--accent-current', 'var(--accent-air)');
+    root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
+  } else if (type === 'sea') {
     resetSeaFreightDeskForm();
     document.getElementById("sea-freight-panel").classList.add("active");
+    root.style.setProperty('--accent-current', 'var(--accent-sea)');
+    root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
+  } else if (type === 'custom') {
+    document.getElementById("custom-clearance-panel").classList.add("active");
+    root.style.setProperty('--accent-current', 'var(--accent-success)');
+    root.style.setProperty('--accent-current-glow', 'var(--accent-success-glow)');
+    calculateCustomClearance();
+  } else if (type === 'transport') {
+    document.getElementById("transportation-panel").classList.add("active");
+    root.style.setProperty('--accent-current', 'var(--violet)');
+    root.style.setProperty('--accent-current-glow', 'rgba(124, 58, 237, 0.2)');
+    calculateTransportation();
+  } else if (type === 'warehouse') {
+    document.getElementById("warehousing-panel").classList.add("active");
+    root.style.setProperty('--accent-current', 'var(--sky)');
+    root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
+    calculateWarehousing();
   }
+  updateModuleTabs(type);
 }
 
 function returnToWorkspace() {
   document.getElementById("air-freight-panel").classList.remove("active");
   document.getElementById("sea-freight-panel").classList.remove("active");
+  document.getElementById("custom-clearance-panel").classList.remove("active");
+  document.getElementById("transportation-panel").classList.remove("active");
+  document.getElementById("warehousing-panel").classList.remove("active");
+  
   if (appState.currentUser === 'ganny') {
     const managerPanel = document.getElementById("manager-panel");
     if (managerPanel) managerPanel.classList.add("active");
+    const root = document.documentElement;
+    root.style.setProperty('--accent-current', 'var(--sky)');
+    root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
     renderAdminDashboard();
   } else {
     document.getElementById("member-dashboard-panel").classList.add("active");
+    const root = document.documentElement;
+    root.style.setProperty('--accent-current', 'var(--indigo)');
+    root.style.setProperty('--accent-current-glow', 'rgba(47, 49, 147, 0.2)');
     renderMemberDashboard(appState.currentUser);
   }
+  updateModuleTabs('dashboard');
 }
 
 // Autocomplete Engine
@@ -1579,11 +1623,24 @@ function addAirlineCard(data = null) {
 
     const availableLabels = available.map(k => `${k}: ${breakOpts[k]}`).join("\n");
     const choice = prompt(`Enter the break code to add:\n\nAvailable:\n${availableLabels}`);
-    if (choice && available.includes(choice.trim().toLowerCase())) {
-      addWeightBreakRow(card, choice.trim().toLowerCase(), 0);
-      calculateAirFreight();
-    } else if (choice) {
-      alert("Invalid selection.");
+    if (choice) {
+      let cleaned = choice.trim().toLowerCase();
+      
+      // Map variations/shorthands to correct keys
+      if (cleaned === 'minimum' || cleaned === 'flat') cleaned = 'min';
+      else if (cleaned === '-45' || cleaned === '45-' || cleaned === 'minus45' || cleaned === 'minus 45') cleaned = 'minus45';
+      else if (cleaned === '+45' || cleaned === '45+' || cleaned === 'plus45' || cleaned === 'plus 45' || cleaned === '45') cleaned = 'plus45';
+      else if (cleaned === '+100' || cleaned === '100+' || cleaned === 'plus100' || cleaned === 'plus 100' || cleaned === '100') cleaned = 'plus100';
+      else if (cleaned === '+300' || cleaned === '300+' || cleaned === 'plus300' || cleaned === 'plus 300' || cleaned === '300') cleaned = 'plus300';
+      else if (cleaned === '+500' || cleaned === '500+' || cleaned === 'plus500' || cleaned === 'plus 500' || cleaned === '500') cleaned = 'plus500';
+      else if (cleaned === '+1000' || cleaned === '1000+' || cleaned === 'plus1000' || cleaned === 'plus 1000' || cleaned === '1000') cleaned = 'plus1000';
+
+      if (available.includes(cleaned)) {
+        addWeightBreakRow(card, cleaned, 0);
+        calculateAirFreight();
+      } else {
+        alert("Invalid selection or weight break already exists.");
+      }
     }
   });
 
@@ -1679,12 +1736,10 @@ function updateCartageRowVisibility() {
         `;
       }
       
-      const callback = calculateAirFreight;
-      row.querySelectorAll("input, select").forEach(inp => inp.addEventListener("input", callback));
-      row.querySelector(".delete-btn").addEventListener("click", () => {
-        row.remove();
-        callback();
-      });
+      const nameInput = row.querySelector(".chg-name");
+      if (nameInput) {
+        nameInput.setAttribute("list", "air-origin-charges-list");
+      }
 
       // Find if Xray row exists, insert after it
       const xrayRow = rows.find(r => r.querySelector(".chg-name")?.value.trim().toLowerCase() === "xray");
@@ -1970,6 +2025,9 @@ function calculateAirFreight() {
 
     const airlineGrandTotal = baseFreightCost + airlineSurchargeTotal;
 
+    const optionBaseBuyFreight = isMinActive ? minBuy : (airlineChargeableWeight * activeBuyRate);
+    const optionGrossProfit = baseFreightCost - optionBaseBuyFreight;
+
     const dataObj = {
       card,
       name: name || "Unnamed Airline",
@@ -1988,7 +2046,9 @@ function calculateAirFreight() {
       originSurcharges: airlineOriginSurcharges,
       destSurcharges: airlineDestSurcharges,
       grandTotal: airlineGrandTotal,
-      usedBreak: isMinActive ? 'min' : usedBreak
+      usedBreak: isMinActive ? 'min' : usedBreak,
+      baseBuyFreight: optionBaseBuyFreight,
+      grossProfit: optionGrossProfit
     };
 
     airlinesListData.push(dataObj);
@@ -2190,6 +2250,8 @@ function calculateAirFreight() {
   selectedAirlineData.baseFreight = finalFreightCost;
   selectedAirlineData.appliedRate = finalBaseRate;
   selectedAirlineData.grandTotal = finalFreightCost + selectedAirlineData.surchargeTotal;
+  // Recalculate GP for optimized rate
+  selectedAirlineData.grossProfit = finalFreightCost - selectedAirlineData.baseBuyFreight;
 
   // Render individual airline pricing results dynamically
   const resultsContainer = document.getElementById("air-pricing-results-container");
@@ -2222,6 +2284,10 @@ function calculateAirFreight() {
             <span class="result-label" style="color: var(--t2);">Total Ancillary Surcharges</span>
             <span class="result-value" style="color: ${color}; font-weight: 700;">${curSymbol}${alt.surchargeTotal.toFixed(2)}</span>
           </div>
+          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
+            <span class="result-label" style="color: var(--t2);">Gross Profit (GP)</span>
+            <span class="result-value" style="color: var(--accent-success); font-weight: 700;">${curSymbol}${(alt.grossProfit || 0).toFixed(2)}</span>
+          </div>
           <div class="result-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.8rem; font-weight: bold; margin-top: 4px; border-bottom: none;">
             <span class="result-label" style="color: var(--t1);">Grand Total</span>
             <span class="result-value" style="color: ${color}; font-size: 0.85rem; font-weight: 800;">${curSymbol}${alt.grandTotal.toFixed(2)}</span>
@@ -2249,7 +2315,8 @@ function calculateAirFreight() {
       surchargesCalculated: alt.surchargesCalculated,
       originSurcharges: alt.originSurcharges,
       destSurcharges: alt.destSurcharges,
-      grandTotal: alt.grandTotal
+      grandTotal: alt.grandTotal,
+      grossProfit: alt.grossProfit
     };
   });
 
@@ -2655,8 +2722,37 @@ function calculateSeaFreight() {
   if (resTT) resTT.textContent = tt || "-";
   if (resValidity) resValidity.textContent = validity || "-";
 
+  let buyBaseFreight = 0;
+  if (type === 'fcl') {
+    const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
+    fclRows.forEach(row => {
+      const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
+      const buyRateInput = row.querySelector(".fcl-buy-rate");
+      const buyRate = buyRateInput ? (parseFloat(buyRateInput.value) || 0) : 0;
+      if (qty > 0 && buyRate > 0) {
+        buyBaseFreight += (qty * buyRate);
+      }
+    });
+  } else if (type === 'lcl') {
+    const buyRateInput = document.getElementById("sea-lcl-buy-rate");
+    const buyRate = buyRateInput ? (parseFloat(buyRateInput.value) || 0) : 0;
+    buyBaseFreight = chargeableCbm * buyRate;
+  } else {
+    const buyRateInput = document.getElementById("sea-bb-buy-rate");
+    const buyRate = buyRateInput ? (parseFloat(buyRateInput.value) || 0) : 0;
+    buyBaseFreight = chargeableCbm * buyRate;
+  }
+
+  const seaGP = baseFreight - buyBaseFreight;
+
   document.getElementById("res-sea-base").textContent = `${curSymbol}${baseFreight.toFixed(2)}`;
   document.getElementById("res-sea-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
+  
+  const resSeaGP = document.getElementById("res-sea-gp");
+  if (resSeaGP) {
+    resSeaGP.textContent = `${curSymbol}${seaGP.toFixed(2)}`;
+  }
+
   document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
 
   // Update Alternative Sea Options Summary Live Results
@@ -2702,6 +2798,7 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.surchargeTotal = totalSurcharges;
   appState.currentSeaFreight.grandTotal = grandTotal;
   appState.currentSeaFreight.grandTotalINR = totalINR;
+  appState.currentSeaFreight.grossProfit = seaGP;
   appState.currentSeaFreight.currency = currency;
   appState.currentSeaFreight.originSurcharges = originSurchargesList;
   appState.currentSeaFreight.destSurcharges = destSurchargesList;
@@ -2724,76 +2821,82 @@ function setupSurchargesEvents(freightType) {
   const callback = isAir ? calculateAirFreight : calculateSeaFreight;
 
   addBtn.addEventListener("click", () => {
-      const row = document.createElement("tr");
-      if (isAir) {
-        row.innerHTML = `
-          <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
-          <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Rate" required></td>
-          <td>
-            <select class="chg-unit">
-              <option value="kg">Per kg</option>
-              <option value="flat">Flat</option>
-            </select>
-          </td>
-          <td>
-            <button type="button" class="delete-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-            </button>
-          </td>
-        `;
-      } else {
-        row.innerHTML = `
-          <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
-          <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Cost" required></td>
-          <td>
-            <select class="chg-unit table-select">
-              <option value="flat" selected>Flat Fee</option>
-              <option value="container">Per Container</option>
-              <option value="rt">Per RT (Revenue Ton)</option>
-              <option value="kg">Per Kg (Gross Weight)</option>
-            </select>
-          </td>
-          <td>
-            <button type="button" class="delete-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-            </button>
-          </td>
-        `;
-      }
+    const row = document.createElement("tr");
+    if (isAir) {
+      row.innerHTML = `
+        <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
+        <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Rate" required></td>
+        <td>
+          <select class="chg-unit">
+            <option value="kg">Per kg</option>
+            <option value="flat">Flat</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      `;
+    } else {
+      row.innerHTML = `
+        <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
+        <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Cost" required></td>
+        <td>
+          <select class="chg-unit table-select">
+            <option value="flat" selected>Flat Fee</option>
+            <option value="container">Per Container</option>
+            <option value="rt">Per RT (Revenue Ton)</option>
+            <option value="kg">Per Kg (Gross Weight)</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      `;
+    }
 
-      // Link newly added input to datalist and bind change event
-      const nameInput = row.querySelector(".chg-name");
-      if (nameInput) {
-        nameInput.setAttribute("list", `${freightType}-charges-list`);
-        nameInput.addEventListener("change", memorizeSurchargeNames);
-      }
+    const nameInput = row.querySelector(".chg-name");
+    if (nameInput) {
+      nameInput.setAttribute("list", `${freightType}-charges-list`);
+    }
 
-      row.querySelectorAll("input, select").forEach(inp => inp.addEventListener("input", callback));
-
-      body.appendChild(row);
-      
-      row.querySelector(".delete-btn").addEventListener("click", () => {
-        row.remove();
-        callback();
-      });
-      
-      callback();
-    });
-
-  // Bind existing rows
-  body.querySelectorAll("input, select").forEach(inp => {
-    inp.addEventListener("input", callback);
+    body.appendChild(row);
+    callback();
   });
+
+  // Use event delegation on body
+  body.addEventListener("input", (e) => {
+    if (e.target.matches("input, select")) {
+      callback();
+    }
+  });
+
+  body.addEventListener("change", (e) => {
+    if (e.target.classList.contains("chg-name")) {
+      memorizeSurchargeNames(e);
+    }
+  });
+
+  body.addEventListener("focusin", (e) => {
+    if (e.target.classList.contains("chg-name")) {
+      e.target.setAttribute("list", `${freightType}-charges-list`);
+    }
+  });
+
+  body.addEventListener("click", (e) => {
+    const btn = e.target.closest(".delete-btn");
+    if (btn && body.contains(btn)) {
+      btn.closest("tr").remove();
+      callback();
+    }
+  });
+
+  // Setup list attribute for any initial rows
   body.querySelectorAll(".chg-name").forEach(inp => {
     inp.setAttribute("list", `${freightType}-charges-list`);
-    inp.addEventListener("change", memorizeSurchargeNames);
-  });
-
-  body.querySelectorAll(".delete-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.target.closest("tr").remove();
-      callback();
-    });
   });
 }
 
@@ -2847,11 +2950,15 @@ function renderMemberDashboard(userId) {
 
   const btnGotoAir = document.getElementById("btn-goto-air");
   const btnGotoSea = document.getElementById("btn-goto-sea");
+  const btnGotoCustom = document.getElementById("btn-goto-custom");
+  const btnGotoTransport = document.getElementById("btn-goto-transport");
+  const btnGotoWarehouse = document.getElementById("btn-goto-warehouse");
 
-  if (btnGotoAir && btnGotoSea) {
-    btnGotoAir.style.display = "flex";
-    btnGotoSea.style.display = "flex";
-  }
+  if (btnGotoAir) btnGotoAir.style.display = "flex";
+  if (btnGotoSea) btnGotoSea.style.display = "flex";
+  if (btnGotoCustom) btnGotoCustom.style.display = "flex";
+  if (btnGotoTransport) btnGotoTransport.style.display = "flex";
+  if (btnGotoWarehouse) btnGotoWarehouse.style.display = "flex";
 
   const myQuotes = appState.quotes.filter(q => q.creator === userId);
   const totalEnquiries = myQuotes.length;
@@ -3037,7 +3144,8 @@ function renderAdminDashboard() {
   const leadBody = document.getElementById("admin-leaderboard-body");
   leadBody.innerHTML = "";
 
-  const desks = ['shashank', 'mahendra', 'jaya', 'cathrina'];
+  // Get all registered member user IDs (excluding manager/admin roles)
+  const desks = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager');
 
   desks.forEach(deskId => {
     const deskQuotes = appState.quotes.filter(q => q.creator === deskId);
@@ -3047,22 +3155,20 @@ function renderAdminDashboard() {
     const deskRevenue = deskQuotes.reduce((acc, q) => acc + q.amountINR, 0);
 
     const tr = document.createElement("tr");
+    tr.style.color = "#000000";
     tr.innerHTML = `
-      <td><strong style="color:#fff;">${TEAM_ROLES[deskId].name}</strong></td>
-      <td>${deskQuotesCount}</td>
-      <td>${deskConversions}</td>
+      <td><strong style="color:#000000;">${TEAM_ROLES[deskId].name.replace(/\s*\(Free\s*Hand\)/i, "")}</strong></td>
+      <td style="color:#000000;">${deskQuotesCount}</td>
+      <td style="color:#000000;">${deskConversions}</td>
       <td>
         <span style="font-weight:700; color: ${deskRate >= 40 ? 'var(--accent-success)' : (deskRate >= 25 ? 'var(--accent-warning)' : 'var(--accent-error)')};">
           ${deskRate.toFixed(1)}%
         </span>
       </td>
-      <td>₹${deskRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+      <td style="color:#000000;">₹${deskRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
     `;
     leadBody.appendChild(tr);
   });
-
-  // Render Monthly CSS charts
-  renderMonthlyCharts();
 
   // Render Master logs using Filter & Sort
   applyDbFiltersAndSort();
@@ -3204,49 +3310,7 @@ function renderControlTowerFeed() {
 }
 
 function renderMonthlyCharts() {
-  const container = document.getElementById("admin-charts-container");
-  container.innerHTML = "";
-
-  // Group quotes by Month (for Jan - July 2026)
-  const months = [
-    { name: 'Jan 26', key: '2026-01' },
-    { name: 'Feb 26', key: '2026-02' },
-    { name: 'Mar 26', key: '2026-03' },
-    { name: 'Apr 26', key: '2026-04' },
-    { name: 'May 26', key: '2026-05' },
-    { name: 'Jun 26', key: '2026-06' },
-    { name: 'Jul 26', key: '2026-07' }
-  ];
-
-  // Find max quotes to scale CSS heights
-  let maxQuotes = 5;
-  months.forEach(m => {
-    const count = appState.quotes.filter(q => q.date.startsWith(m.key)).length;
-    if (count > maxQuotes) maxQuotes = count;
-  });
-
-  months.forEach(m => {
-    const monthlyQuotes = appState.quotes.filter(q => q.date.startsWith(m.key));
-    const quotesCount = monthlyQuotes.length;
-    const conversionsCount = monthlyQuotes.filter(q => q.status === 'converted').length;
-
-    const fillQuoteWidth = quotesCount > 0 ? (quotesCount / maxQuotes * 100) : 0;
-    const fillConvWidth = quotesCount > 0 ? (conversionsCount / maxQuotes * 100) : 0;
-
-    const row = document.createElement("div");
-    row.className = "chart-bar-row";
-    row.innerHTML = `
-      <div class="chart-bar-labels">
-        <span>${m.name}</span>
-        <span style="color:var(--text-muted);">${quotesCount} Enquiries / ${conversionsCount} Won</span>
-      </div>
-      <div class="chart-bar-wrapper">
-        <div class="chart-bar-fill" style="width: ${fillQuoteWidth}%; position: absolute; left:0; top:0; z-index:1;"></div>
-        <div class="chart-bar-fill conversions" style="width: ${fillConvWidth}%; position: absolute; left:0; top:0; z-index:2; height: 100%;"></div>
-      </div>
-    `;
-    container.appendChild(row);
-  });
+  // Permanently removed as charts component was deleted.
 }
 
 window.convertQuote = (id) => {
@@ -4794,22 +4858,10 @@ window.viewSavedQuote = (id) => {
   }
 
   if (quote.status === 'converted' && isEligibleDeskUser(quote.creator)) {
-    const gpSym = quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'));
     detailsRows += `
       <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
         <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Carrier</td>
         <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${quote.confirmedCarrier || 'N/A'}</strong></td>
-      </tr>
-      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
-        <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Buy Rate</td>
-        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong>${currencySym}${(quote.confirmedBuyRate || 0).toFixed(2)}${quote.type === 'air' ? ' / kg' : ''}</strong></td>
-      </tr>
-      <tr style="background: rgba(46,204,113,0.15); font-weight: bold; border-left: 3px solid var(--accent-success);">
-        <td style="padding: 8px 12px; font-size: 0.72rem;">Total Gross Profit (GP)</td>
-        <td style="padding: 8px 12px; font-size: 0.72rem;">
-          <strong style="color: var(--accent-success); font-size: 0.95rem;">${gpSym}${(quote.grossProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
-          ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.75rem; color:var(--text-dim); font-weight:normal;">[₹${(quote.grossProfitINR || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
-        </td>
       </tr>
     `;
   }
@@ -5382,11 +5434,28 @@ window.filterQuotes = (val) => {
 function applyDeskNames() {
   const switcher = document.getElementById("admin-role-selector");
   if (switcher) {
-    let buttonsHtml = `<button class="role-btn active" data-role="manager">${TEAM_ROLES['ganny'].name}</button>`;
-    buttonsHtml += `<button class="role-btn" data-role="shashank"><svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${TEAM_ROLES['shashank'].name}</button>`;
-    buttonsHtml += `<button class="role-btn" data-role="mahendra"><svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${TEAM_ROLES['mahendra'].name}</button>`;
-    buttonsHtml += `<button class="role-btn" data-role="jaya">${TEAM_ROLES['jaya'].name}</button>`;
-    buttonsHtml += `<button class="role-btn" data-role="cathrina">${TEAM_ROLES['cathrina'].name}</button>`;
+    let buttonsHtml = `<button class="role-btn active" data-role="manager">${TEAM_ROLES['ganny'].name.replace(/\(Free Hand\)/g, "")}</button>`;
+    
+    // Add default users
+    const defaultUsers = [
+      { id: 'shashank', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
+      { id: 'mahendra', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
+      { id: 'jaya', icon: '' },
+      { id: 'cathrina', icon: '' }
+    ];
+
+    defaultUsers.forEach(u => {
+      const name = TEAM_ROLES[u.id].name.replace(/\(Free Hand\)/g, "");
+      buttonsHtml += `<button class="role-btn" data-role="${u.id}">${u.icon}${name}</button>`;
+    });
+
+    // Add custom registered users
+    Object.keys(TEAM_ROLES).forEach(roleId => {
+      if (['ganny', 'shashank', 'mahendra', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
+      const name = TEAM_ROLES[roleId].name.replace(/\(Free Hand\)/g, "");
+      buttonsHtml += `<button class="role-btn" data-role="${roleId}">${name}</button>`;
+    });
+
     switcher.innerHTML = buttonsHtml;
     
     // Re-bind clicks
@@ -5401,34 +5470,34 @@ function applyDeskNames() {
   const activeUser = appState.currentUser;
   if (activeUser && activeUser !== 'ganny') {
     const activeUserName = document.getElementById("active-user-name");
-    if (activeUserName) activeUserName.textContent = TEAM_ROLES[activeUser]?.name || activeUser;
+    if (activeUserName) activeUserName.textContent = (TEAM_ROLES[activeUser]?.name || activeUser).replace(/\s*\(Free\s*Hand\)/i, "");
   }
 
   // Update report user dropdown options
   const optShashank = document.getElementById("opt-shashank");
-  if (optShashank) optShashank.textContent = TEAM_ROLES['shashank'].name;
+  if (optShashank) optShashank.textContent = TEAM_ROLES['shashank'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optMahendra = document.getElementById("opt-mahendra");
-  if (optMahendra) optMahendra.textContent = TEAM_ROLES['mahendra'].name;
+  if (optMahendra) optMahendra.textContent = TEAM_ROLES['mahendra'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optJaya = document.getElementById("opt-jaya");
-  if (optJaya) optJaya.textContent = TEAM_ROLES['jaya'].name;
+  if (optJaya) optJaya.textContent = TEAM_ROLES['jaya'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optCathrina = document.getElementById("opt-cathrina");
-  if (optCathrina) optCathrina.textContent = TEAM_ROLES['cathrina'].name;
+  if (optCathrina) optCathrina.textContent = TEAM_ROLES['cathrina'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   // Update text inputs on config forms
   const cfgShashank = document.getElementById("cfg-shashank");
-  if (cfgShashank) cfgShashank.value = TEAM_ROLES['shashank'].name;
+  if (cfgShashank) cfgShashank.value = TEAM_ROLES['shashank'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgMahendra = document.getElementById("cfg-mahendra");
-  if (cfgMahendra) cfgMahendra.value = TEAM_ROLES['mahendra'].name;
+  if (cfgMahendra) cfgMahendra.value = TEAM_ROLES['mahendra'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgJaya = document.getElementById("cfg-jaya");
-  if (cfgJaya) cfgJaya.value = TEAM_ROLES['jaya'].name;
+  if (cfgJaya) cfgJaya.value = TEAM_ROLES['jaya'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgCathrina = document.getElementById("cfg-cathrina");
-  if (cfgCathrina) cfgCathrina.value = TEAM_ROLES['cathrina'].name;
+  if (cfgCathrina) cfgCathrina.value = TEAM_ROLES['cathrina'].name.replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgGmapsKey = document.getElementById("cfg-gmaps-key");
   if (cfgGmapsKey) {
@@ -5616,15 +5685,12 @@ function repopulateSurchargesTable(tableBodyId, surchargesList) {
         </select>
       </td>
       <td>
-        <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); ${isAir ? 'calculateAirFreight()' : 'calculateSeaFreight()'};">
+        <button type="button" class="delete-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
         </button>
       </td>
     `;
     tbody.appendChild(tr);
-    tr.querySelectorAll("input, select").forEach(inp => {
-      inp.addEventListener("input", isAir ? calculateAirFreight : calculateSeaFreight);
-    });
   });
 }
 
@@ -8630,3 +8696,205 @@ async function runDbDiagnostics() {
   }
 }
 window.runDbDiagnostics = runDbDiagnostics;
+
+/* ══════════════════════════════════════════════════
+   DUAL-MODE OPERATIONAL MODULE HANDLERS
+   ══════════════════════════════════════════════════ */
+function updateModuleTabs(activeModule) {
+  document.querySelectorAll(".module-tab").forEach(tab => {
+    if (tab.getAttribute("data-module") === activeModule) {
+      tab.classList.add("active");
+    } else {
+      tab.classList.remove("active");
+    }
+  });
+}
+window.updateModuleTabs = updateModuleTabs;
+
+function toggleModulePathway(module, mode) {
+  const isBundled = (mode === 'bundled');
+  document.getElementById(`${module}-path-bundled-container`).style.display = isBundled ? 'block' : 'none';
+  document.getElementById(`${module}-path-standalone-container`).style.display = isBundled ? 'none' : 'block';
+  document.getElementById(`${module}-summary-inactive`).style.display = isBundled ? 'block' : 'none';
+  document.getElementById(`${module}-summary-active`).style.display = isBundled ? 'none' : 'flex';
+  document.getElementById(`${module}-save-btn-container`).style.display = isBundled ? 'none' : 'block';
+  
+  if (module === 'custom') calculateCustomClearance();
+  else if (module === 'transport') calculateTransportation();
+  else if (module === 'warehouse') calculateWarehousing();
+}
+window.toggleModulePathway = toggleModulePathway;
+
+function calculateCustomClearance() {
+  const tbody = document.getElementById("custom-standalone-body");
+  let subtotal = 0;
+  tbody.querySelectorAll(".chg-rate").forEach(input => {
+    subtotal += parseFloat(input.value) || 0;
+  });
+  
+  const tax = subtotal * 0.18;
+  const total = subtotal + tax;
+  
+  const cur = document.getElementById("custom-currency").value;
+  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+  
+  document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+}
+window.calculateCustomClearance = calculateCustomClearance;
+
+function calculateTransportation() {
+  const tbody = document.getElementById("transport-standalone-body");
+  let subtotal = 0;
+  tbody.querySelectorAll(".chg-rate").forEach(input => {
+    subtotal += parseFloat(input.value) || 0;
+  });
+  
+  const tax = subtotal * 0.18;
+  const total = subtotal + tax;
+  
+  const cur = document.getElementById("transport-currency").value;
+  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+  
+  document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+}
+window.calculateTransportation = calculateTransportation;
+
+function calculateWarehousing() {
+  const tbody = document.getElementById("warehouse-standalone-body");
+  let subtotal = 0;
+  tbody.querySelectorAll(".chg-rate").forEach(input => {
+    subtotal += parseFloat(input.value) || 0;
+  });
+  
+  const tax = subtotal * 0.18;
+  const total = subtotal + tax;
+  
+  const cur = document.getElementById("warehouse-currency").value;
+  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+  
+  document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+}
+window.calculateWarehousing = calculateWarehousing;
+
+function injectModuleFeesToFreight(module, freightType, target = 'origin') {
+  const feesMap = {
+    custom: [
+      { name: "Customs Agency Fee", rate: 5500.00, unit: "flat" },
+      { name: "Documentation Charges", rate: 1200.00, unit: "flat" }
+    ],
+    transport: [
+      { name: "Trucking Base Freight", rate: 18500.00, unit: "flat" },
+      { name: "Fuel Surcharge", rate: 3200.00, unit: "flat" }
+    ],
+    warehouse: [
+      { name: "Monthly Space Storage", rate: 8500.00, unit: "flat" },
+      { name: "Handling In/Out", rate: 2000.00, unit: "flat" }
+    ]
+  };
+
+  const fees = feesMap[module];
+  if (!fees) return;
+
+  const isAir = (freightType === 'air');
+  const bodyId = isAir 
+    ? (target === 'dest' ? "air-dest-surcharges-body" : "air-origin-surcharges-body")
+    : (target === 'dest' ? "sea-dest-surcharges-body" : "sea-origin-surcharges-body");
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+
+  fees.forEach(fee => {
+    const row = document.createElement("tr");
+    if (isAir) {
+      row.innerHTML = `
+        <td><input type="text" class="chg-name" value="${fee.name}" required></td>
+        <td><input type="number" class="chg-rate" value="${fee.rate.toFixed(2)}" step="0.01" required></td>
+        <td>
+          <select class="chg-unit">
+            <option value="kg" ${fee.unit === 'kg' ? 'selected' : ''}>Per kg</option>
+            <option value="flat" ${fee.unit === 'flat' ? 'selected' : ''}>Flat</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      `;
+    } else {
+      row.innerHTML = `
+        <td><input type="text" class="chg-name" value="${fee.name}" required></td>
+        <td><input type="number" class="chg-rate" value="${fee.rate.toFixed(2)}" step="0.01" required></td>
+        <td>
+          <select class="chg-unit table-select">
+            <option value="flat" ${fee.unit === 'flat' ? 'selected' : ''}>Flat Fee</option>
+            <option value="container" ${fee.unit === 'container' ? 'selected' : ''}>Per Container</option>
+            <option value="rt" ${fee.unit === 'rt' ? 'selected' : ''}>Per RT</option>
+            <option value="kg" ${fee.unit === 'kg' ? 'selected' : ''}>Per Kg</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="delete-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      `;
+    }
+    body.appendChild(row);
+  });
+
+  alert(`Successfully added ${module === 'custom' ? 'Custom Clearance' : (module === 'transport' ? 'Transportation' : 'Warehousing')} fees to ${freightType === 'air' ? 'Air Freight' : 'Sea Freight'} ${target === 'dest' ? 'Destination Local' : 'Origin Local'} table!`);
+  
+  if (isAir) {
+    calculateAirFreight();
+  } else {
+    calculateSeaFreight();
+  }
+}
+window.injectModuleFeesToFreight = injectModuleFeesToFreight;
+
+function saveStandaloneQuote(module) {
+  const cur = document.getElementById(`${module}-currency`).value;
+  const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`).textContent.replace(/[^0-9.]/g, '')) || 0;
+  const tax = parseFloat(document.getElementById(`res-${module}-tax`).textContent.replace(/[^0-9.]/g, '')) || 0;
+  const total = parseFloat(document.getElementById(`res-${module}-total`).textContent.replace(/[^0-9.]/g, '')) || 0;
+
+  const customerName = prompt("Please enter Customer Name for this standalone quote:", "Walk-in Customer");
+  if (!customerName) return;
+
+  const rateInr = convertToInr(total, cur);
+
+  const quoteData = {
+    id: 'Q' + Math.random().toString(36).substr(2, 9),
+    date: new Date().toISOString().split('T')[0],
+    customer: customerName,
+    creator: appState.currentUser || "jaya",
+    status: 'quoted',
+    quoteNumber: appState.quotes.length + 1,
+    mode: module,
+    amount: total,
+    currency: cur,
+    amountINR: rateInr,
+    routingDetails: `${module.toUpperCase()} Standalone Services`,
+    notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
+  };
+
+  DB.saveQuote(quoteData);
+  alert(`${module.toUpperCase()} Standalone Quotation saved successfully!`);
+  returnToWorkspace();
+}
+window.saveStandaloneQuote = saveStandaloneQuote;
+
+function convertToInr(amount, currency) {
+  if (currency === 'INR') return amount;
+  if (currency === 'USD') return amount * EXCHANGE_RATES.USD_TO_INR;
+  if (currency === 'EUR') return amount * EXCHANGE_RATES.EUR_TO_INR;
+  if (currency === 'GBP') return amount * EXCHANGE_RATES.GBP_TO_INR;
+  return amount;
+}
+window.convertToInr = convertToInr;

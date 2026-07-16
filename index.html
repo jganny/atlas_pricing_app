@@ -58,56 +58,138 @@
   
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-overlay" class="login-overlay-screen">
-    <div class="login-card">
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.75rem;">
-        <!-- Original Authorized logo styled elegantly -->
-        <img src="logo.png" alt="Vertex Logo" style="height: 100px; width: 100px; object-fit: contain; border-radius: 50%; box-shadow: 0 4px 15px rgba(27, 28, 92, 0.18); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-        <div style="text-align: center;">
-          <div style="color: var(--text-brand); font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; justify-content: center; line-height: 1.1;">
-            <span style="font-size: 2.1rem; font-weight: 700; letter-spacing: 0.04em;">VERTE</span>
-            <span class="custom-brand-x" style="font-size: 2.8rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
+    <!-- Public currency rate ticker at top of landing page -->
+    <div class="public-ticker">
+      <div class="ticker-inner">
+        <span>🌐 VERTEX CORE PUBLIC DATA FEED</span>
+        <span>•</span>
+        <span>USD/INR: ₹83.50</span>
+        <span>•</span>
+        <span>EUR/INR: ₹90.20</span>
+        <span>•</span>
+        <span>GBP/INR: ₹106.10</span>
+        <span>•</span>
+        <span>EUR/USD: $1.08</span>
+        <span>•</span>
+        <span>GBP/USD: $1.27</span>
+        <span>•</span>
+        <span>Global Shipping Rates: Stable</span>
+        <span>•</span>
+        <span>Air Cargo Capacities: Optimizing</span>
+      </div>
+    </div>
+    
+    <div class="landing-container">
+      <!-- Left Column: News and Features -->
+      <div class="landing-info">
+        <!-- Visual feature grid -->
+        <h3 class="landing-section-title">VERTEX Platform Capabilities</h3>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <div class="feature-icon">✈️</div>
+            <div>
+              <div class="feature-name">Air Freight</div>
+              <div class="feature-desc">Dynamic multi-carrier quoting, cargo dimensional weight and volumetric calculations.</div>
+            </div>
           </div>
-          <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.3rem;">Pricing, Simplified.</div>
-        </div>
-      </div>
-      <h2 style="font-weight: 800; margin-bottom: 0.25rem; font-size: 1.35rem;">Pricing Desk</h2>
-      <div class="login-subtitle">Please authenticate to access your pricing desk</div>
-      
-      <form id="login-form" onsubmit="handleLogin(event)">
-        <div class="form-group" style="text-align: left;">
-          <label for="login-username">Desk Username</label>
-          <input type="text" id="login-username" placeholder="e.g. air_nom" required autocapitalize="none" autocorrect="off" spellcheck="false">
-        </div>
-        <div class="form-group" style="text-align: left;">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" placeholder="••••••••" required autocapitalize="none" autocorrect="off" spellcheck="false">
-        </div>
-        <button type="submit" class="login-btn">Secure Login</button>
-      </form>
-      <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 1rem; text-align: center; line-height: 1.3;">
-        🔑 <em>Default password for all desks is <strong>password</strong> unless previously modified.</em>
-      </div>
-
-      <!-- Collapsible Diagnostics Drawer -->
-      <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-1); padding-top: 0.75rem; text-align: center;">
-        <div style="display: flex; gap: 0.6rem; justify-content: center; align-items: center; margin-bottom: 0.5rem;">
-          <button type="button" onclick="resetDbConnectionLocal()" style="background: none; border: none; color: var(--indigo); font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
-            ⚠️ Reset Connection to Offline
-          </button>
-          <span style="color: var(--border-2);">|</span>
-          <button type="button" onclick="toggleDiagnosticsDrawer()" style="background: none; border: none; color: var(--sky); font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
-            Diagnostics ⚙️
-          </button>
+          <div class="feature-item">
+            <div class="feature-icon">🚢</div>
+            <div>
+              <div class="feature-name">Sea Freight</div>
+              <div class="feature-desc">FCL/LCL ocean pricing metrics, carrier contract validation, and local port surcharges.</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🛂</div>
+            <div>
+              <div class="feature-name">Custom Clearance</div>
+              <div class="feature-desc">Automated customs entry processing, documentation tariffs, and regulatory fee compliance.</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🚛</div>
+            <div>
+              <div class="feature-name">Transportation</div>
+              <div class="feature-desc">First/last-mile container trucking, fuel surcharges, toll schedules, and multi-modal routing.</div>
+            </div>
+          </div>
+          <div class="feature-item" style="grid-column: span 2;">
+            <div class="feature-icon">🏢</div>
+            <div>
+              <div class="feature-name">Warehousing</div>
+              <div class="feature-desc">Storage allocation billing, cargo handling, inventory controls, and cross-dock operations.</div>
+            </div>
+          </div>
         </div>
         
-        <div id="diagnostics-drawer" style="display: none; background: rgba(27,28,92,0.03); border: 1px solid var(--border-1); border-radius: 8px; padding: 8px; text-align: left; font-family: monospace; font-size: 0.62rem; color: var(--t2); margin-top: 0.5rem; line-height: 1.4;">
-          <div>• Connection: <span id="diag-conn">Checking...</span></div>
-          <div>• Project ID: <span id="diag-project">None</span></div>
-          <div>• Synced Users: <span id="diag-users">0</span></div>
-          <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">• Firebase Status: <span id="diag-status">Initializing...</span></div>
-          <div style="margin-top: 0.4rem; border-top: 1px dashed var(--border-1); padding-top: 0.4rem;">
-            <button type="button" onclick="runDbDiagnostics()" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 3px; background: var(--sky); color: #000; border: none; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin: 0;">Run Detailed Diagnostics</button>
-            <div id="db-diagnostics-output" style="margin-top: 0.3rem; font-size: 0.58rem; color: var(--t3); line-height: 1.2;"></div>
+        <!-- Public news layout -->
+        <h3 class="landing-section-title">Public Logistics Insights</h3>
+        <div class="public-news-feed">
+          <div class="news-item">
+            <span class="news-date">Jul 16, 2026</span>
+            <div class="news-title">Global Ocean Carrier Alliances Announce Revised Surcharge Frameworks</div>
+            <div class="news-body">New fuel adjustments and local handling adjustments are being deployed across Asia-Europe trade routes.</div>
+          </div>
+          <div class="news-item">
+            <span class="news-date">Jul 15, 2026</span>
+            <div class="news-title">Air Freight Demands Surge Amid High-Tech Supply Chain Re-routing</div>
+            <div class="news-body">Dimensional cargo weight optimizations are becoming crucial for electronics manufacturers to secure space.</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Column: Login Card -->
+      <div class="login-card" style="margin-top: 0;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.75rem;">
+          <!-- Original Authorized logo styled elegantly -->
+          <img src="logo.png" alt="Vertex Logo" style="height: 100px; width: 100px; object-fit: contain; border-radius: 50%; box-shadow: 0 4px 15px rgba(27, 28, 92, 0.18); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <div style="text-align: center;">
+            <div style="color: var(--text-brand); font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; justify-content: center; line-height: 1.1;">
+              <span style="font-size: 2.1rem; font-weight: 700; letter-spacing: 0.04em; color: #fff;">VERTE</span>
+              <span class="custom-brand-x" style="font-size: 2.8rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.3rem;">Pricing, Simplified.</div>
+          </div>
+        </div>
+        <h2 style="font-weight: 800; margin-bottom: 0.25rem; font-size: 1.35rem; color: #fff;">Pricing Desk</h2>
+        <div class="login-subtitle" style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.85rem;">Please authenticate to access your pricing desk</div>
+        
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-group" style="text-align: left;">
+            <label for="login-username" style="color: #fff;">Desk Username</label>
+            <input type="text" id="login-username" placeholder="e.g. air_nom" required autocapitalize="none" autocorrect="off" spellcheck="false" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1);">
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="login-password" style="color: #fff;">Password</label>
+            <input type="password" id="login-password" placeholder="••••••••" required autocapitalize="none" autocorrect="off" spellcheck="false" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1);">
+          </div>
+          <button type="submit" class="login-btn" style="background: var(--sky); color: #000; font-weight: 800;">Secure Login</button>
+        </form>
+        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 1rem; text-align: center; line-height: 1.3;">
+          🔑 <em>Default password for all desks is <strong>password</strong> unless previously modified.</em>
+        </div>
+
+        <!-- Collapsible Diagnostics Drawer -->
+        <div style="margin-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.75rem; text-align: center;">
+          <div style="display: flex; gap: 0.6rem; justify-content: center; align-items: center; margin-bottom: 0.5rem;">
+            <button type="button" onclick="resetDbConnectionLocal()" style="background: none; border: none; color: var(--sky); font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
+              ⚠️ Reset Connection to Offline
+            </button>
+            <span style="color: rgba(255,255,255,0.2);">|</span>
+            <button type="button" onclick="toggleDiagnosticsDrawer()" style="background: none; border: none; color: var(--sky); font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
+              Diagnostics ⚙️
+            </button>
+          </div>
+          
+          <div id="diagnostics-drawer" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 8px; text-align: left; font-family: monospace; font-size: 0.62rem; color: #94a3b8; margin-top: 0.5rem; line-height: 1.4;">
+            <div>• Connection: <span id="diag-conn">Checking...</span></div>
+            <div>• Project ID: <span id="diag-project">None</span></div>
+            <div>• Synced Users: <span id="diag-users">0</span></div>
+            <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">• Firebase Status: <span id="diag-status">Initializing...</span></div>
+            <div style="margin-top: 0.4rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.4rem;">
+              <button type="button" onclick="runDbDiagnostics()" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 3px; background: var(--sky); color: #000; border: none; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin: 0;">Run Detailed Diagnostics</button>
+              <div id="db-diagnostics-output" style="margin-top: 0.3rem; font-size: 0.58rem; color: #64748b; line-height: 1.2;"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -165,6 +247,17 @@
           <button class="role-btn" data-role="cathrina">NRS</button>
         </div>
 
+        <!-- Global Operational Modules Navigation Tabs -->
+        <div class="module-navigation-tabs" id="global-module-tabs" style="display: flex;">
+          <button class="module-tab active" data-module="dashboard" onclick="goHome()">Home</button>
+          <button class="module-tab" data-module="air" onclick="openActiveCalculator('air')">Air Freight</button>
+          <button class="module-tab" data-module="sea" onclick="openActiveCalculator('sea')">Sea Freight</button>
+          <button class="module-tab" data-module="custom" onclick="openActiveCalculator('custom')">Custom Clearance</button>
+          <button class="module-tab" data-module="transport" onclick="openActiveCalculator('transport')">Transportation</button>
+          <button class="module-tab" data-module="warehouse" onclick="openActiveCalculator('warehouse')">Warehousing</button>
+        </div>
+
+
         <!-- Database Sync Connection Status Badge -->
         <div id="db-connection-badge" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.65rem; border-radius: var(--r-pill); font-size: 0.68rem; font-weight: 700; background: rgba(27,28,92,0.04); border: 1px solid var(--border-2); color: var(--sky); transition: all 0.3s; flex-shrink: 0;">
           <span id="db-connection-dot" style="display: inline-block; width: 6px; height: 6px; background: var(--sky); border-radius: 50%;"></span>
@@ -185,10 +278,7 @@
     <main>
       <!-- ==================== ADMIN DASHBOARD PANEL ==================== -->
       <div id="manager-panel" class="view-panel">
-        <div class="section-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          ADMIN AUDIT & PERFORMANCE CONTROL
-        </div>
+
 
         <!-- Navigation triggers for active calculators (Admin Quick Access) -->
         <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
@@ -199,6 +289,18 @@
           <button class="btn-primary" style="background: var(--accent-sea);" onclick="openActiveCalculator('sea')" id="admin-goto-sea">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
             Price Sea Freight Enquiry
+          </button>
+          <button class="btn-primary" style="background: var(--accent-success); color: #000;" onclick="openActiveCalculator('custom')" id="admin-goto-custom">
+            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🛂</span>
+            Price Custom Clearance
+          </button>
+          <button class="btn-primary" style="background: var(--violet);" onclick="openActiveCalculator('transport')" id="admin-goto-transport">
+            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🚛</span>
+            Price Transportation
+          </button>
+          <button class="btn-primary" style="background: var(--sky); color: #000;" onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse">
+            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🏢</span>
+            Price Warehousing
           </button>
         </div>
 
@@ -238,17 +340,7 @@
               </div>
             </div>
             
-            <!-- Right Side: High-End Live Timeline / Shipment Feed -->
-            <div style="display: flex; flex-direction: column; gap: 0.65rem; overflow-y: auto; max-height: 280px; padding-right: 0.25rem;">
-              <div style="font-size: 0.72rem; font-weight: 700; color: var(--t2); margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.4rem;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                ACTIVE WORKFLOW DESK SUMMARY
-              </div>
-              
-              <div id="control-tower-feed-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
-                <!-- Populated dynamically from appState.quotes -->
-              </div>
-            </div>
+
           </div>
         </div>
 
@@ -342,23 +434,7 @@
           </div>
         </div>
 
-        <!-- Charts visualization -->
-        <div class="glass-card" style="margin-bottom: 2rem;">
-          <h3 style="font-weight: 700; margin-bottom: 1.5rem; font-size: 1.1rem; text-transform: uppercase;">Monthly Activity Charts</h3>
-          <div class="chart-container" id="admin-charts-container">
-            <!-- Populated by JS -->
-          </div>
-          <div class="chart-legend">
-            <div class="legend-item">
-              <div class="legend-color" style="background: var(--accent-sea);"></div>
-              <span>Total Enquiries Quoted</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color" style="background: var(--accent-success);"></div>
-              <span>Conversions (Won)</span>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Master quotes view -->
         <div class="glass-card">
@@ -481,13 +557,25 @@
             <h3 style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
               Quotation Calculators
             </h3>
-            <button class="btn-primary" onclick="openActiveCalculator('air')" id="btn-goto-air" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+             <button class="btn-primary" onclick="openActiveCalculator('air')" id="btn-goto-air" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>
               Price Air Freight Enquiry
             </button>
             <button class="btn-primary" style="background: var(--accent-sea); width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="openActiveCalculator('sea')" id="btn-goto-sea">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
               Price Sea Freight Enquiry
+            </button>
+            <button class="btn-primary" style="background: var(--accent-success); color: #000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="openActiveCalculator('custom')" id="btn-goto-custom">
+              <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🛂</span>
+              Price Custom Clearance
+            </button>
+            <button class="btn-primary" style="background: var(--violet); width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="openActiveCalculator('transport')" id="btn-goto-transport">
+              <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🚛</span>
+              Price Transportation
+            </button>
+            <button class="btn-primary" style="background: var(--sky); color: #000; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="openActiveCalculator('warehouse')" id="btn-goto-warehouse">
+              <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🏢</span>
+              Price Warehousing
             </button>
           </div>
 
@@ -1357,6 +1445,10 @@
               <span class="result-label">Surcharge Total Fees</span>
               <span class="result-value" id="res-sea-sur">$0.00</span>
             </div>
+            <div class="result-row" id="row-sea-gp">
+              <span class="result-label">Gross Profit (GP)</span>
+              <span class="result-value" id="res-sea-gp" style="color: var(--accent-success); font-weight: 700;">$0.00</span>
+            </div>
             <div class="result-row" style="border-bottom: none;">
               <span class="result-label">Estimated Grand Total</span>
               <span class="result-value-highlight" id="res-sea-total">$0.00</span>
@@ -1372,6 +1464,366 @@
               <button class="btn-primary" onclick="saveCurrentQuote()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Save Quote to Database
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== CUSTOM CLEARANCE PANEL ==================== -->
+      <div id="custom-clearance-panel" class="view-panel">
+        <div class="calculator-header" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+          <div>
+            <div style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Operational Desk</div>
+            <h2 style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">CUSTOM CLEARANCE DESK</h2>
+          </div>
+          <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
+        </div>
+
+        <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+          <div class="glass-card" style="padding: 2rem;">
+            <!-- Pathway selector -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: var(--sky);">Operational Pathway Selector</label>
+              <div style="display: flex; gap: 2rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700;">
+                  <input type="radio" name="custom-pathway" value="bundled" checked onchange="toggleModulePathway('custom', 'bundled')"> Pathway A (Bundled with Freight)
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700;">
+                  <input type="radio" name="custom-pathway" value="standalone" onchange="toggleModulePathway('custom', 'standalone')"> Pathway B (Standalone)
+                </label>
+              </div>
+            </div>
+
+            <!-- Pathway A container -->
+            <div id="custom-path-bundled-container">
+              <h4 style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Pathway A: Bundled Surcharges</h4>
+              <p style="font-size: 0.82rem; color: var(--t3); line-height: 1.5; margin-bottom: 1.5rem;">
+                In **Pathway A (Bundled)**, Custom Clearance fees are inputted directly as sub-items under standard Origin Local and Destination Local fee tables alongside main freight.
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.75rem;">
+                  <button type="button" class="btn-primary" onclick="injectModuleFeesToFreight('custom', 'air', 'origin')">Add to Air Origin Local</button>
+                  <button type="button" class="btn-primary" onclick="injectModuleFeesToFreight('custom', 'air', 'dest')">Add to Air Dest Local</button>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                  <button type="button" class="btn-primary" style="background: var(--accent-sea);" onclick="injectModuleFeesToFreight('custom', 'sea', 'origin')">Add to Sea Origin Local</button>
+                  <button type="button" class="btn-primary" style="background: var(--accent-sea);" onclick="injectModuleFeesToFreight('custom', 'sea', 'dest')">Add to Sea Dest Local</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pathway B container -->
+            <div id="custom-path-standalone-container" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: #fff; margin: 0;">Standalone Breakup Calculations</h4>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
+                  <select id="custom-currency" onchange="calculateCustomClearance()" style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
+                    <option value="INR" selected>INR - Indian Rupee (₹)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cargo-table-container" style="border: none; margin-bottom: 0;">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th>Surcharge / Fee Name</th>
+                      <th>Rate / Fee</th>
+                    </tr>
+                  </thead>
+                  <tbody id="custom-standalone-body">
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Customs Agency Fee" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="5500.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Documentation Charges" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="1200.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Customs Inspection Assist" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="2500.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Cartage & Port Handling" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="3500.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary sidebar -->
+          <div class="glass-card results-panel" style="padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 style="font-weight: 800; margin-bottom: 1.25rem; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Pricing Summary</h3>
+              <div id="custom-summary-inactive" style="font-size: 0.82rem; color: var(--text-muted); font-style: italic; text-align: center; margin-top: 3rem;">
+                Pathway A (Bundled) is currently active. Fees are integrated alongside the main freight calculations.
+              </div>
+              <div id="custom-summary-active" style="display: none; flex-direction: column; gap: 0.75rem;">
+                <div class="result-row">
+                  <span class="result-label">Subtotal</span>
+                  <span class="result-value" id="res-custom-subtotal">₹12,700.00</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">GST / Service Tax (18%)</span>
+                  <span class="result-value" id="res-custom-tax">₹2,286.00</span>
+                </div>
+                <div class="result-row" style="border-bottom: none; margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                  <span class="result-label">Estimated Grand Total</span>
+                  <span class="result-value-highlight" id="res-custom-total">₹14,986.00</span>
+                </div>
+              </div>
+            </div>
+            <div class="action-buttons" id="custom-save-btn-container" style="display: none; margin-top: 1.5rem;">
+              <button class="btn-primary" onclick="saveStandaloneQuote('custom')" style="width: 100%;">
+                Save Standalone Quote
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TRANSPORTATION PANEL ==================== -->
+      <div id="transportation-panel" class="view-panel">
+        <div class="calculator-header" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+          <div>
+            <div style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Operational Desk</div>
+            <h2 style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">TRANSPORTATION DESK</h2>
+          </div>
+          <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
+        </div>
+
+        <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+          <div class="glass-card" style="padding: 2rem;">
+            <!-- Pathway selector -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: var(--sky);">Operational Pathway Selector</label>
+              <div style="display: flex; gap: 2rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700;">
+                  <input type="radio" name="transport-pathway" value="bundled" checked onchange="toggleModulePathway('transport', 'bundled')"> Pathway A (Bundled with Freight)
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700;">
+                  <input type="radio" name="transport-pathway" value="standalone" onchange="toggleModulePathway('transport', 'standalone')"> Pathway B (Standalone)
+                </label>
+              </div>
+            </div>
+
+            <!-- Pathway A container -->
+            <div id="transport-path-bundled-container">
+              <h4 style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Pathway A: Bundled Surcharges</h4>
+              <p style="font-size: 0.82rem; color: var(--t3); line-height: 1.5; margin-bottom: 1.5rem;">
+                In **Pathway A (Bundled)**, Transportation fees are inputted directly as sub-items under standard Origin Local and Destination Local fee tables alongside main freight.
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.75rem;">
+                  <button type="button" class="btn-primary" onclick="injectModuleFeesToFreight('transport', 'air', 'origin')">Add to Air Origin Local</button>
+                  <button type="button" class="btn-primary" onclick="injectModuleFeesToFreight('transport', 'air', 'dest')">Add to Air Dest Local</button>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                  <button type="button" class="btn-primary" style="background: var(--accent-sea);" onclick="injectModuleFeesToFreight('transport', 'sea', 'origin')">Add to Sea Origin Local</button>
+                  <button type="button" class="btn-primary" style="background: var(--accent-sea);" onclick="injectModuleFeesToFreight('transport', 'sea', 'dest')">Add to Sea Dest Local</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pathway B container -->
+            <div id="transport-path-standalone-container" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: #fff; margin: 0;">Standalone Breakup Calculations</h4>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
+                  <select id="transport-currency" onchange="calculateTransportation()" style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
+                    <option value="INR" selected>INR - Indian Rupee (₹)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cargo-table-container" style="border: none; margin-bottom: 0;">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th>Surcharge / Fee Name</th>
+                      <th>Rate / Fee</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transport-standalone-body">
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Trucking Base Freight" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="18500.00" step="0.01" oninput="calculateTransportation()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Fuel Surcharge" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="3200.00" step="0.01" oninput="calculateTransportation()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Loading / Unloading" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="1500.00" step="0.01" oninput="calculateTransportation()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Tolls & Border Taxes" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="800.00" step="0.01" oninput="calculateTransportation()"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary sidebar -->
+          <div class="glass-card results-panel" style="padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 style="font-weight: 800; margin-bottom: 1.25rem; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Pricing Summary</h3>
+              <div id="transport-summary-inactive" style="font-size: 0.82rem; color: var(--text-muted); font-style: italic; text-align: center; margin-top: 3rem;">
+                Pathway A (Bundled) is currently active. Fees are integrated alongside the main freight calculations.
+              </div>
+              <div id="transport-summary-active" style="display: none; flex-direction: column; gap: 0.75rem;">
+                <div class="result-row">
+                  <span class="result-label">Subtotal</span>
+                  <span class="result-value" id="res-transport-subtotal">₹24,000.00</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">GST / Service Tax (18%)</span>
+                  <span class="result-value" id="res-transport-tax">₹4,320.00</span>
+                </div>
+                <div class="result-row" style="border-bottom: none; margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                  <span class="result-label">Estimated Grand Total</span>
+                  <span class="result-value-highlight" id="res-transport-total">₹28,320.00</span>
+                </div>
+              </div>
+            </div>
+            <div class="action-buttons" id="transport-save-btn-container" style="display: none; margin-top: 1.5rem;">
+              <button class="btn-primary" onclick="saveStandaloneQuote('transport')" style="width: 100%;">
+                Save Standalone Quote
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== WAREHOUSING PANEL ==================== -->
+      <div id="warehousing-panel" class="view-panel">
+        <div class="calculator-header" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+          <div>
+            <div style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Operational Desk</div>
+            <h2 style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">WAREHOUSING DESK</h2>
+          </div>
+          <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
+        </div>
+
+        <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+          <div class="glass-card" style="padding: 2rem;">
+            <!-- Pathway selector -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: var(--sky);">Operational Pathway Selector</label>
+              <div style="display: flex; gap: 2rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700;">
+                  <input type="radio" name="warehouse-pathway" value="bundled" checked onchange="toggleModulePathway('warehouse', 'bundled')"> Pathway A (Bundled with Freight)
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700;">
+                  <input type="radio" name="warehouse-pathway" value="standalone" onchange="toggleModulePathway('warehouse', 'standalone')"> Pathway B (Standalone)
+                </label>
+              </div>
+            </div>
+
+            <!-- Pathway A container -->
+            <div id="warehouse-path-bundled-container">
+              <h4 style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Pathway A: Bundled Surcharges</h4>
+              <p style="font-size: 0.82rem; color: var(--t3); line-height: 1.5; margin-bottom: 1.5rem;">
+                In **Pathway A (Bundled)**, Warehousing fees are inputted directly as sub-items under standard Origin Local and Destination Local fee tables alongside main freight.
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.75rem;">
+                  <button type="button" class="btn-primary" onclick="injectModuleFeesToFreight('warehouse', 'air', 'origin')">Add to Air Origin Local</button>
+                  <button type="button" class="btn-primary" onclick="injectModuleFeesToFreight('warehouse', 'air', 'dest')">Add to Air Dest Local</button>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                  <button type="button" class="btn-primary" style="background: var(--accent-sea);" onclick="injectModuleFeesToFreight('warehouse', 'sea', 'origin')">Add to Sea Origin Local</button>
+                  <button type="button" class="btn-primary" style="background: var(--accent-sea);" onclick="injectModuleFeesToFreight('warehouse', 'sea', 'dest')">Add to Sea Dest Local</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pathway B container -->
+            <div id="warehouse-path-standalone-container" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: #fff; margin: 0;">Standalone Breakup Calculations</h4>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
+                  <select id="warehouse-currency" onchange="calculateWarehousing()" style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
+                    <option value="INR" selected>INR - Indian Rupee (₹)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cargo-table-container" style="border: none; margin-bottom: 0;">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th>Surcharge / Fee Name</th>
+                      <th>Rate / Fee</th>
+                    </tr>
+                  </thead>
+                  <tbody id="warehouse-standalone-body">
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Monthly Space Storage" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="8500.00" step="0.01" oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Handling In / Out" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="2000.00" step="0.01" oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Palletization Charges" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="1200.00" step="0.01" oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Documentation & Admin" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="500.00" step="0.01" oninput="calculateWarehousing()"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary sidebar -->
+          <div class="glass-card results-panel" style="padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 style="font-weight: 800; margin-bottom: 1.25rem; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Pricing Summary</h3>
+              <div id="warehouse-summary-inactive" style="font-size: 0.82rem; color: var(--text-muted); font-style: italic; text-align: center; margin-top: 3rem;">
+                Pathway A (Bundled) is currently active. Fees are integrated alongside the main freight calculations.
+              </div>
+              <div id="warehouse-summary-active" style="display: none; flex-direction: column; gap: 0.75rem;">
+                <div class="result-row">
+                  <span class="result-label">Subtotal</span>
+                  <span class="result-value" id="res-warehouse-subtotal">₹12,200.00</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">GST / Service Tax (18%)</span>
+                  <span class="result-value" id="res-warehouse-tax">₹2,196.00</span>
+                </div>
+                <div class="result-row" style="border-bottom: none; margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                  <span class="result-label">Estimated Grand Total</span>
+                  <span class="result-value-highlight" id="res-warehouse-total">₹14,396.00</span>
+                </div>
+              </div>
+            </div>
+            <div class="action-buttons" id="warehouse-save-btn-container" style="display: none; margin-top: 1.5rem;">
+              <button class="btn-primary" onclick="saveStandaloneQuote('warehouse')" style="width: 100%;">
+                Save Standalone Quote
               </button>
             </div>
           </div>
