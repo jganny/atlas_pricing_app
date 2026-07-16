@@ -58,140 +58,56 @@
   
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-overlay" class="login-overlay-screen">
-    <div class="landing-container">
-      <!-- Left Column: News and Features -->
-      <div class="landing-info">
-        <!-- Public currency rate ticker at top of landing page -->
-        <div class="public-ticker">
-          <div class="ticker-inner">
-            <span>🌐 VERTEX CORE PUBLIC DATA FEED</span>
-            <span>•</span>
-            <span>USD/INR: ₹83.50</span>
-            <span>•</span>
-            <span>EUR/INR: ₹90.20</span>
-            <span>•</span>
-            <span>GBP/INR: ₹106.10</span>
-            <span>•</span>
-            <span>EUR/USD: $1.08</span>
-            <span>•</span>
-            <span>GBP/USD: $1.27</span>
-            <span>•</span>
-            <span>Global Shipping Rates: Stable</span>
-            <span>•</span>
-            <span>Air Cargo Capacities: Optimizing</span>
+    <div class="login-card" style="margin-top: 0;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <!-- Original Authorized logo styled elegantly -->
+        <img src="logo.png" alt="Vertex Logo" style="height: 80px; width: 80px; object-fit: contain; border-radius: 50%; box-shadow: 0 4px 15px rgba(27, 28, 92, 0.18); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <div style="text-align: center;">
+          <div style="color: var(--text-brand); font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; justify-content: center; line-height: 1.1;">
+            <span style="font-size: 1.8rem; font-weight: 700; letter-spacing: 0.04em; color: #0f172a;">VERTE</span>
+            <span class="custom-brand-x" style="font-size: 2.4rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
           </div>
-        </div>
-
-        <!-- Public news layout -->
-        <h3 class="landing-section-title">Public Logistics Insights</h3>
-        <div class="public-news-feed">
-          <div class="news-item">
-            <span class="news-date">Jul 16, 2026</span>
-            <div class="news-title">Global Ocean Carrier Alliances Announce Revised Surcharge Frameworks</div>
-            <div class="news-body">New fuel adjustments and local handling adjustments are being deployed across Asia-Europe trade routes.</div>
-          </div>
-          <div class="news-item">
-            <span class="news-date">Jul 15, 2026</span>
-            <div class="news-title">Air Freight Demands Surge Amid High-Tech Supply Chain Re-routing</div>
-            <div class="news-body">Dimensional cargo weight optimizations are becoming crucial for electronics manufacturers to secure space.</div>
-          </div>
-        </div>
-
-        <!-- Visual feature grid -->
-        <h3 class="landing-section-title">VERTEX Platform Capabilities</h3>
-        <div class="feature-grid">
-          <div class="feature-item" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="feature-icon" style="margin: 0; font-size: 1.6rem; line-height: 1;">✈️</div>
-              <div class="feature-name" style="margin: 0;">Air Freight</div>
-            </div>
-            <div class="feature-desc" style="margin: 0;">Dynamic multi-carrier quoting, cargo dimensional weight and volumetric calculations.</div>
-          </div>
-          <div class="feature-item" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="feature-icon" style="margin: 0; font-size: 1.6rem; line-height: 1;">🚢</div>
-              <div class="feature-name" style="margin: 0;">Sea Freight</div>
-            </div>
-            <div class="feature-desc" style="margin: 0;">FCL/LCL ocean pricing metrics, carrier contract validation, and local port surcharges.</div>
-          </div>
-          <div class="feature-item" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="feature-icon" style="margin: 0; font-size: 1.6rem; line-height: 1;">🛂</div>
-              <div class="feature-name" style="margin: 0;">Custom Clearance</div>
-            </div>
-            <div class="feature-desc" style="margin: 0;">Automated customs entry processing, documentation tariffs, and regulatory fee compliance.</div>
-          </div>
-          <div class="feature-item" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="feature-icon" style="margin: 0; font-size: 1.6rem; line-height: 1;">🚛</div>
-              <div class="feature-name" style="margin: 0;">Transportation</div>
-            </div>
-            <div class="feature-desc" style="margin: 0;">First/last-mile container trucking, fuel surcharges, toll schedules, and multi-modal routing.</div>
-          </div>
-          <div class="feature-item" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start; grid-column: span 2;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="feature-icon" style="margin: 0; font-size: 1.6rem; line-height: 1;">🏢</div>
-              <div class="feature-name" style="margin: 0;">Warehousing</div>
-            </div>
-            <div class="feature-desc" style="margin: 0;">Storage allocation billing, cargo handling, inventory controls, and cross-dock operations.</div>
-          </div>
+          <div style="font-size: 0.75rem; color: #475569; font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.1rem;">Pricing, Simplified.</div>
         </div>
       </div>
+      <h2 style="font-weight: 800; margin-bottom: 0.25rem; font-size: 1.2rem; color: #0f172a; text-align: center;">Pricing Desk</h2>
+      <div class="login-subtitle" style="color: #475569; margin-bottom: 1rem; font-size: 0.8rem; text-align: center;">Please authenticate to access your pricing desk</div>
       
-      <!-- Right Column: Dedicated centered flexbox area for login card -->
-      <div class="login-right-panel">
-        <div class="login-card" style="margin-top: 0;">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
-            <!-- Original Authorized logo styled elegantly -->
-            <img src="logo.png" alt="Vertex Logo" style="height: 80px; width: 80px; object-fit: contain; border-radius: 50%; box-shadow: 0 4px 15px rgba(27, 28, 92, 0.18); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="text-align: center;">
-              <div style="color: var(--text-brand); font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; justify-content: center; line-height: 1.1;">
-                <span style="font-size: 1.8rem; font-weight: 700; letter-spacing: 0.04em; color: #0f172a;">VERTE</span>
-                <span class="custom-brand-x" style="font-size: 2.4rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
-              </div>
-              <div style="font-size: 0.75rem; color: #475569; font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.1rem;">Pricing, Simplified.</div>
-            </div>
-          </div>
-          <h2 style="font-weight: 800; margin-bottom: 0.25rem; font-size: 1.2rem; color: #0f172a; text-align: center;">Pricing Desk</h2>
-          <div class="login-subtitle" style="color: #475569; margin-bottom: 1rem; font-size: 0.8rem; text-align: center;">Please authenticate to access your pricing desk</div>
-          
-          <form id="login-form" onsubmit="handleLogin(event)">
-            <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
-              <label for="login-username" style="color: #0f172a; font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.3rem; letter-spacing: 0.05em;">DESK USERNAME</label>
-              <input type="text" id="login-username" placeholder="e.g. air_nom" required autocapitalize="none" autocorrect="off" spellcheck="false" class="login-input-field" style="border: 1.5px solid #475569 !important;">
-            </div>
-            <div class="form-group" style="text-align: left; margin-bottom: 1.25rem;">
-              <label for="login-password" style="color: #0f172a; font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.3rem; letter-spacing: 0.05em;">DESK PASSWORD</label>
-              <input type="password" id="login-password" placeholder="••••••••" required autocapitalize="none" autocorrect="off" spellcheck="false" class="login-input-field" style="border: 1.5px solid #475569 !important;">
-            </div>
-            <button type="submit" class="login-btn" style="background: var(--sky); color: #000; font-weight: 800; border: none; border-radius: 8px; padding: 0.75rem; width: 100%; cursor: pointer;">Login</button>
-          </form>
-          <div style="font-size: 0.65rem; color: #475569; margin-top: 0.75rem; text-align: center; line-height: 1.3;">
-            🔑 <em>Default password for all desks is <strong>password</strong> unless previously modified.</em>
-          </div>
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+          <label for="login-username" style="color: #0f172a; font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.3rem; letter-spacing: 0.05em;">DESK USERNAME</label>
+          <input type="text" id="login-username" placeholder="e.g. air_nom" required autocapitalize="none" autocorrect="off" spellcheck="false" class="login-input-field" style="border: 1.5px solid #475569 !important;">
+        </div>
+        <div class="form-group" style="text-align: left; margin-bottom: 1.25rem;">
+          <label for="login-password" style="color: #0f172a; font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.3rem; letter-spacing: 0.05em;">DESK PASSWORD</label>
+          <input type="password" id="login-password" placeholder="••••••••" required autocapitalize="none" autocorrect="off" spellcheck="false" class="login-input-field" style="border: 1.5px solid #475569 !important;">
+        </div>
+        <button type="submit" class="login-btn" style="background: var(--sky); color: #000; font-weight: 800; border: none; border-radius: 8px; padding: 0.75rem; width: 100%; cursor: pointer;">Login</button>
+      </form>
+      <div style="font-size: 0.65rem; color: #475569; margin-top: 0.75rem; text-align: center; line-height: 1.3;">
+        🔑 <em>Default password for all desks is <strong>password</strong> unless previously modified.</em>
+      </div>
 
-          <!-- Collapsible Diagnostics Drawer -->
-          <div style="margin-top: 1rem; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 0.5rem; text-align: center;">
-            <div style="display: flex; gap: 0.6rem; justify-content: center; align-items: center; margin-bottom: 0.25rem;">
-              <button type="button" onclick="resetDbConnectionLocal()" style="background: none; border: none; color: #0284c7; font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
-                ⚠️ Reset Connection to Offline
-              </button>
-              <span style="color: rgba(0,0,0,0.2);">|</span>
-              <button type="button" onclick="toggleDiagnosticsDrawer()" style="background: none; border: none; color: #0284c7; font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
-                Diagnostics ⚙️
-              </button>
-            </div>
-            
-            <div id="diagnostics-drawer" style="display: none; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 8px; text-align: left; font-family: monospace; font-size: 0.62rem; color: #334155; margin-top: 0.5rem; line-height: 1.4;">
-              <div>• Connection: <span id="diag-conn">Checking...</span></div>
-              <div>• Project ID: <span id="diag-project">None</span></div>
-              <div>• Synced Users: <span id="diag-users">0</span></div>
-              <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">• Firebase Status: <span id="diag-status">Initializing...</span></div>
-              <div style="margin-top: 0.4rem; border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 0.4rem;">
-                <button type="button" onclick="runDbDiagnostics()" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 3px; background: var(--sky); color: #000; border: none; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin: 0;">Run Detailed Diagnostics</button>
-                <div id="db-diagnostics-output" style="margin-top: 0.3rem; font-size: 0.58rem; color: #64748b; line-height: 1.2;"></div>
-              </div>
-            </div>
+      <!-- Collapsible Diagnostics Drawer -->
+      <div style="margin-top: 1rem; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 0.5rem; text-align: center;">
+        <div style="display: flex; gap: 0.6rem; justify-content: center; align-items: center; margin-bottom: 0.25rem;">
+          <button type="button" onclick="resetDbConnectionLocal()" style="background: none; border: none; color: #0284c7; font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
+            ⚠️ Reset Connection to Offline
+          </button>
+          <span style="color: rgba(0,0,0,0.2);">|</span>
+          <button type="button" onclick="toggleDiagnosticsDrawer()" style="background: none; border: none; color: #0284c7; font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
+            Diagnostics ⚙️
+          </button>
+        </div>
+        
+        <div id="diagnostics-drawer" style="display: none; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 8px; text-align: left; font-family: monospace; font-size: 0.62rem; color: #334155; margin-top: 0.5rem; line-height: 1.4;">
+          <div>• Connection: <span id="diag-conn">Checking...</span></div>
+          <div>• Project ID: <span id="diag-project">None</span></div>
+          <div>• Synced Users: <span id="diag-users">0</span></div>
+          <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">• Firebase Status: <span id="diag-status">Initializing...</span></div>
+          <div style="margin-top: 0.4rem; border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 0.4rem;">
+            <button type="button" onclick="runDbDiagnostics()" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 3px; background: var(--sky); color: #000; border: none; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin: 0;">Run Detailed Diagnostics</button>
+            <div id="db-diagnostics-output" style="margin-top: 0.3rem; font-size: 0.58rem; color: #64748b; line-height: 1.2;"></div>
           </div>
         </div>
       </div>
