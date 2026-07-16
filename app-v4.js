@@ -5641,7 +5641,8 @@ window.applyDbFiltersAndSort = () => {
   const filterMode = document.getElementById("db-filter-mode")?.value || "all";
   const filterStatus = document.getElementById("db-filter-status")?.value || "all";
   const filterCreator = document.getElementById("db-filter-creator")?.value || "all";
-  const filterDate = document.getElementById("db-filter-date")?.value;
+  const filterStartDate = document.getElementById("db-filter-start-date")?.value;
+  const filterEndDate = document.getElementById("db-filter-end-date")?.value;
   const filterMonth = document.getElementById("db-filter-month")?.value;
   const filterYear = document.getElementById("db-filter-year")?.value || "all";
   const sortField = document.getElementById("db-sort-field")?.value || "date-desc";
@@ -5657,8 +5658,9 @@ window.applyDbFiltersAndSort = () => {
     // Creator match
     if (filterCreator !== "all" && q.creator !== filterCreator) return false;
 
-    // Date-wise match
-    if (filterDate && q.date !== filterDate) return false;
+    // Date range filter
+    if (filterStartDate && q.date < filterStartDate) return false;
+    if (filterEndDate && q.date > filterEndDate) return false;
 
     // Month-wise match
     if (filterMonth && !q.date.startsWith(filterMonth)) return false;
@@ -10166,11 +10168,39 @@ window.getQuoteSummaryTextFormatted = function() {
   return `${modalTitle}\n\n${bodyText}`;
 };
 
-window.copyQuoteSummaryText = function() {
-  const text = getQuoteSummaryTextFormatted();
-  navigator.clipboard.writeText(text)
-    .then(() => alert("📋 Structured quote summary plain-text copied to clipboard!"))
-    .catch(() => alert("Failed to copy text."));
+window.downloadQuotePDF = function() {
+  const printCard = document.getElementById("quote-print-card");
+  if (!printCard) return;
+
+  const generatePDF = (element) => {
+    const opt = {
+      margin:       10,
+      filename:     'Quotation_' + new Date().toISOString().slice(0, 10) + '.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    const wrapper = document.createElement('div');
+    wrapper.style.fontFamily = '"Plus Jakarta Sans", Arial, sans-serif';
+    wrapper.style.color = '#0f172a';
+    wrapper.style.background = '#ffffff';
+    wrapper.style.padding = '15mm';
+    wrapper.innerHTML = element.innerHTML;
+    
+    html2pdf().set(opt).from(wrapper).save();
+  };
+
+  if (typeof html2pdf === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => {
+      generatePDF(printCard);
+    };
+    document.head.appendChild(script);
+  } else {
+    generatePDF(printCard);
+  }
 };
 
 window.shareQuoteWhatsApp = function() {
