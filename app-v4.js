@@ -7184,6 +7184,13 @@ const DB = {
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
 
+    // Unify correct fallback credentials at the very start
+    const DEFAULT_FIREBASE_CONFIG = {
+      projectId: "vertex-35d95",
+      apiKey: "AlzaSyBnS2173ew2vpxR7rOs0FfTpfsEmhj79Uc",
+      databaseId: "(default)"
+    };
+
     let config = null;
     if (configRaw) {
       try {
@@ -7207,17 +7214,14 @@ const DB = {
             console.warn("DB: Error cleaning up existing Firebase App instance:", e);
           }
         }
-        firebase.initializeApp(config);
-        const config = {
-          projectId: "vertex-35d95",
-          apiKey: "AlzaSyBnS2173ew2vpxR7rOs0FfTpfsEmhj79Uc",
-          databaseId: "(default)"
-        };
 
-        const dbId = config.databaseId;
+        firebase.initializeApp(config);
+
+        const dbId = config.databaseId || '(default)';
         console.log("DB: Stored Project ID in LocalStorage:", config.projectId);
         console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
         console.log("DB: Initializing Firestore connection with database ID:", dbId);
+
         this.firestoreRef = firebase.firestore(firebase.app());
         this.isCloud = true;
 
