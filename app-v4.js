@@ -7208,11 +7208,11 @@ const DB = {
           }
         }
         firebase.initializeApp(config);
-        const dbId = config.databaseId || 'vertex-35d95'; // <-- Hardcoded fallback added here
+        const dbId = config.databaseId || '(default)';
         console.log("DB: Stored Project ID in LocalStorage:", config.projectId);
         console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
         console.log("DB: Initializing Firestore connection with database ID:", dbId);
-        this.firestoreRef = firebase.firestore(firebase.app()); // <-- Removed the string parameter to point to core project
+        this.firestoreRef = firebase.firestore(firebase.app());
         this.isCloud = true;
 
         // Enable offline persistence
