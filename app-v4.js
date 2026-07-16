@@ -1,3 +1,11 @@
+// Bypass crashes for deleted landing configurations
+if (typeof landingConfigurations === 'undefined') {
+  window.landingConfigurations = [];
+}
+if (typeof landingConfig === 'undefined') {
+  window.landingConfig = 'USD';
+}
+
 // Exchange Rates
 let EXCHANGE_RATES = {
   USD_TO_INR: 83.50,
@@ -1782,6 +1790,9 @@ function updateCartageRowVisibility() {
 window.updateCartageRowVisibility = updateCartageRowVisibility;
 
 function calculateAirFreight() {
+  const role = TEAM_ROLES[appState.currentUser];
+  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
+  const qCur = isNomUser ? document.getElementById("air-currency").value : "INR";
   updateCurrencyRules(appState.currentUser);
   updateCartageRowVisibility();
 
@@ -2034,7 +2045,8 @@ function calculateAirFreight() {
         let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
         
         const currSelect = row.querySelector(".chg-curr");
-        const defaultSurchargeCur = (appState.currentAirFreight.module === 'import' && !isNomUser) ? "USD" : qCur;
+        let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
+        const defaultSurchargeCur = (appState.currentAirFreight.module === 'import' && !isNomUser) ? "USD" : selectedCurrency;
         const currency = currSelect ? currSelect.value : defaultSurchargeCur;
         
         let costInInr = cost;
@@ -2043,9 +2055,9 @@ function calculateAirFreight() {
         else if (currency === 'GBP') costInInr = cost * EXCHANGE_RATES.GBP_TO_INR;
         
         let costInQCur = costInInr;
-        if (qCur === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
-        else if (qCur === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
-        else if (qCur === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
+        if (selectedCurrency === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
+        else if (selectedCurrency === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
+        else if (selectedCurrency === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
         
         airlineSurchargeTotal += costInQCur;
         airlineOriginSurcharges.push({ name: surchargeName, rate, unit, currency, calculatedCost: costInQCur });
@@ -2063,7 +2075,8 @@ function calculateAirFreight() {
         let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
         
         const currSelect = row.querySelector(".chg-curr");
-        const defaultSurchargeCur = (appState.currentAirFreight.module === 'export' && !isNomUser) ? "USD" : qCur;
+        let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
+        const defaultSurchargeCur = (appState.currentAirFreight.module === 'export' && !isNomUser) ? "USD" : selectedCurrency;
         const currency = currSelect ? currSelect.value : defaultSurchargeCur;
         
         let costInInr = cost;
@@ -2072,9 +2085,9 @@ function calculateAirFreight() {
         else if (currency === 'GBP') costInInr = cost * EXCHANGE_RATES.GBP_TO_INR;
         
         let costInQCur = costInInr;
-        if (qCur === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
-        else if (qCur === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
-        else if (qCur === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
+        if (selectedCurrency === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
+        else if (selectedCurrency === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
+        else if (selectedCurrency === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
         
         airlineSurchargeTotal += costInQCur;
         airlineDestSurcharges.push({ name: surchargeName, rate, unit, currency, calculatedCost: costInQCur });
@@ -2082,11 +2095,12 @@ function calculateAirFreight() {
     });
 
     if (isFreeHandOrNrs && amsFee > 0) {
+      let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
       let amsInInr = amsFee * EXCHANGE_RATES.USD_TO_INR;
       let amsInQCur = amsInInr;
-      if (qCur === 'USD') amsInQCur = amsInInr / EXCHANGE_RATES.USD_TO_INR;
-      else if (qCur === 'EUR') amsInQCur = amsInInr / EXCHANGE_RATES.EUR_TO_INR;
-      else if (qCur === 'GBP') amsInQCur = amsInInr / EXCHANGE_RATES.GBP_TO_INR;
+      if (selectedCurrency === 'USD') amsInQCur = amsInInr / EXCHANGE_RATES.USD_TO_INR;
+      else if (selectedCurrency === 'EUR') amsInQCur = amsInInr / EXCHANGE_RATES.EUR_TO_INR;
+      else if (selectedCurrency === 'GBP') amsInQCur = amsInInr / EXCHANGE_RATES.GBP_TO_INR;
       
       airlineSurchargeTotal += amsInQCur;
       airlineOriginSurcharges.push({ name: "AMS Fee", rate: amsFee, unit: "flat", currency: "USD", calculatedCost: amsInQCur });
@@ -6839,6 +6853,7 @@ document.addEventListener("change", (e) => {
 });
 
 async function fetchExchangeRates() {
+  let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
   try {
     const res = await fetch("https://open.er-api.com/v6/latest/USD");
     if (!res.ok) throw new Error("Rates API failed");
