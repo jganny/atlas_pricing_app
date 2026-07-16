@@ -10204,17 +10204,43 @@ window.downloadQuotePDF = function() {
 };
 
 window.shareQuoteWhatsApp = function() {
-  const text = getQuoteSummaryTextFormatted();
-  const url = `https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-  window.open(url, '_blank');
+  const printCard = document.getElementById("quote-print-card");
+  if (!printCard) return;
+
+  const runShare = () => {
+    const opt = {
+      filename:     'Logistics_Pricing_Quotation.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jspdf:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(printCard).outputPdf('blob').then((pdfBlob) => {
+      const pdfFile = new File([pdfBlob], 'Logistics_Pricing_Quotation.pdf', { type: 'application/pdf' });
+      if (navigator.share) {
+        navigator.share({
+          files: [pdfFile],
+          title: 'Logistics Pricing Quotation'
+        }).catch((err) => {
+          console.error("Native share failed:", err);
+        });
+      } else {
+        alert("Your browser does not support the Web Share API for files.");
+      }
+    });
+  };
+
+  if (typeof html2pdf === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = runShare;
+    document.head.appendChild(script);
+  } else {
+    runShare();
+  }
 };
 
-window.shareQuoteMail = function() {
-  const text = getQuoteSummaryTextFormatted();
-  const subject = "Official Freight Pricing Quotation Summary";
-  const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-  window.open(url);
-};
+window.shareQuoteMail = window.shareQuoteWhatsApp;
 
 // 7. Core advanced initialization
 function initializeAdvancedFeatures() {
