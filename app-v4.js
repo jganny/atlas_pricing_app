@@ -1,3 +1,4 @@
+window.qCur = window.qCur || "USD";
 // Bypass crashes for deleted landing configurations
 if (typeof landingConfigurations === 'undefined') {
   window.landingConfigurations = [];
@@ -6859,46 +6860,50 @@ async function fetchExchangeRates() {
     if (!res.ok) throw new Error("Rates API failed");
     const data = await res.json();
     if (data && data.rates) {
-      const r = data.rates;
-      EXCHANGE_RATES.USD_TO_INR = r.INR;
-      EXCHANGE_RATES.EUR_TO_INR = r.INR / r.EUR;
-      EXCHANGE_RATES.GBP_TO_INR = r.INR / r.GBP;
-      EXCHANGE_RATES.EUR_TO_USD = 1 / r.EUR;
-      EXCHANGE_RATES.GBP_TO_USD = 1 / r.GBP;
-      
-      const airInput = document.getElementById("air-custom-exchange-rate");
-      const seaInput = document.getElementById("sea-custom-exchange-rate");
-      if (airInput) airInput.value = r.INR.toFixed(2);
-      if (seaInput) seaInput.value = r.INR.toFixed(2);
-      
-      // Update UI Ticker
-      const tickerUsd = document.getElementById("ticker-usd");
-      const tickerEur = document.getElementById("ticker-eur");
-      const tickerGbp = document.getElementById("ticker-gbp");
-      if (tickerUsd) tickerUsd.textContent = `USD ₹${r.INR.toFixed(2)}`;
-      if (tickerEur) tickerEur.textContent = `EUR ₹${(r.INR / r.EUR).toFixed(2)}`;
-      if (tickerGbp) tickerGbp.textContent = `GBP ₹${(r.INR / r.GBP).toFixed(2)}`;
-      
-      // Update Modal fields
-      const modUsdInr = document.getElementById("modal-usd-inr");
-      const modEurInr = document.getElementById("modal-eur-inr");
-      const modGbpInr = document.getElementById("modal-gbp-inr");
-      const modEurUsd = document.getElementById("modal-eur-usd");
-      const modGbpUsd = document.getElementById("modal-gbp-usd");
-      if (modUsdInr) modUsdInr.textContent = `₹${r.INR.toFixed(2)}`;
-      if (modEurInr) modEurInr.textContent = `₹${(r.INR / r.EUR).toFixed(2)}`;
-      if (modGbpInr) modGbpInr.textContent = `₹${(r.INR / r.GBP).toFixed(2)}`;
-      if (modEurUsd) modEurUsd.textContent = `$${(1 / r.EUR).toFixed(2)}`;
-      if (modGbpUsd) modGbpUsd.textContent = `$${(1 / r.GBP).toFixed(2)}`;
-      
-      // Last Updated Text
-      const d = new Date(data.time_last_update_utc);
-      const updatedText = document.getElementById("xe-last-updated");
-      if (updatedText) updatedText.textContent = `Last Updated: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} (UTC)`;
-      
-      // Trigger calculations update
-      if (typeof calculateAirFreight === 'function') calculateAirFreight();
-      if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
+      try {
+        const r = data.rates;
+        EXCHANGE_RATES.USD_TO_INR = r.INR;
+        EXCHANGE_RATES.EUR_TO_INR = r.INR / r.EUR;
+        EXCHANGE_RATES.GBP_TO_INR = r.INR / r.GBP;
+        EXCHANGE_RATES.EUR_TO_USD = 1 / r.EUR;
+        EXCHANGE_RATES.GBP_TO_USD = 1 / r.GBP;
+        
+        const airInput = document.getElementById("air-custom-exchange-rate");
+        const seaInput = document.getElementById("sea-custom-exchange-rate");
+        if (airInput) airInput.value = r.INR.toFixed(2);
+        if (seaInput) seaInput.value = r.INR.toFixed(2);
+        
+        // Update UI Ticker
+        const tickerUsd = document.getElementById("ticker-usd");
+        const tickerEur = document.getElementById("ticker-eur");
+        const tickerGbp = document.getElementById("ticker-gbp");
+        if (tickerUsd) tickerUsd.textContent = `USD ₹${r.INR.toFixed(2)}`;
+        if (tickerEur) tickerEur.textContent = `EUR ₹${(r.INR / r.EUR).toFixed(2)}`;
+        if (tickerGbp) tickerGbp.textContent = `GBP ₹${(r.INR / r.GBP).toFixed(2)}`;
+        
+        // Update Modal fields
+        const modUsdInr = document.getElementById("modal-usd-inr");
+        const modEurInr = document.getElementById("modal-eur-inr");
+        const modGbpInr = document.getElementById("modal-gbp-inr");
+        const modEurUsd = document.getElementById("modal-eur-usd");
+        const modGbpUsd = document.getElementById("modal-gbp-usd");
+        if (modUsdInr) modUsdInr.textContent = `₹${r.INR.toFixed(2)}`;
+        if (modEurInr) modEurInr.textContent = `₹${(r.INR / r.EUR).toFixed(2)}`;
+        if (modGbpInr) modGbpInr.textContent = `₹${(r.INR / r.GBP).toFixed(2)}`;
+        if (modEurUsd) modEurUsd.textContent = `$${(1 / r.EUR).toFixed(2)}`;
+        if (modGbpUsd) modGbpUsd.textContent = `$${(1 / r.GBP).toFixed(2)}`;
+        
+        // Last Updated Text
+        const d = new Date(data.time_last_update_utc);
+        const updatedText = document.getElementById("xe-last-updated");
+        if (updatedText) updatedText.textContent = `Last Updated: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} (UTC)`;
+        
+        // Trigger calculations update
+        if (typeof calculateAirFreight === 'function') calculateAirFreight();
+        if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
+      } catch (error) {
+        console.warn("Initialization step safety fallback:", error);
+      }
     }
   } catch (error) {
     console.error("Failed to fetch exchange rates dynamically. Using static fallbacks.", error);
