@@ -349,6 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadMemorizedSurcharges();
   checkSession();
   fetchExchangeRates();
+  initializeAdvancedFeatures();
 
   // Modal handlers
   document.getElementById("close-modal")?.addEventListener("click", hideQuoteModal);
@@ -1823,6 +1824,11 @@ function calculateAirFreight() {
   document.getElementById("res-air-vw").textContent = `${totalVolumeWeight.toFixed(2)} kg`;
   document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
 
+  const volBadge = document.getElementById("air-volumetric-badge");
+  if (volBadge) {
+    volBadge.style.display = totalVolumeWeight > totalGrossWeight ? "inline-block" : "none";
+  }
+
   const airlineCards = document.querySelectorAll("#air-airlines-list-container .airline-card");
   
   if (airlineCards.length === 0) {
@@ -2720,6 +2726,15 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-vol").textContent = `${cbm.toFixed(2)} CBM`;
   document.getElementById("res-sea-qty").textContent = `${pkgQty} Pkgs`;
 
+  const seaVolBadge = document.getElementById("sea-volumetric-badge");
+  if (seaVolBadge) {
+    seaVolBadge.style.display = (cbm * 1000) > weightKg ? "inline-block" : "none";
+  }
+  
+  if (typeof updateContainerPayloadScale === 'function') {
+    updateContainerPayloadScale();
+  }
+
   const routing = document.getElementById("sea-routing")?.value || "";
   const rawTt = document.getElementById("sea-tt")?.value || "";
   let tt = rawTt.trim();
@@ -3045,6 +3060,9 @@ function renderMemberDashboard(userId) {
         </button>
         <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="action-icon-btn duplicate" style="background: rgba(14, 165, 233, 0.2); color: var(--sky);" title="Duplicate & Edit" onclick="duplicateAndEditQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
         ${isQuoted ? `
         <button class="action-icon-btn convert" style="background: rgba(74, 222, 128, 0.2); color: var(--accent-success);" title="Convert Quote to Won" onclick="convertQuote('${quote.id}')">
@@ -3565,7 +3583,7 @@ function generatePerformanceReport() {
   const totalGP = filtered.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
 
   // Group stats by member for summary grids
-  const members = ['shashank', 'mahendra', 'jaya', 'cathrina'];
+  const members = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager');
   let breakdownRows = "";
 
   members.forEach(mId => {
@@ -5329,6 +5347,9 @@ window.applyDbFiltersAndSort = () => {
   const filterMode = document.getElementById("db-filter-mode")?.value || "all";
   const filterStatus = document.getElementById("db-filter-status")?.value || "all";
   const filterCreator = document.getElementById("db-filter-creator")?.value || "all";
+  const filterDate = document.getElementById("db-filter-date")?.value;
+  const filterMonth = document.getElementById("db-filter-month")?.value;
+  const filterYear = document.getElementById("db-filter-year")?.value || "all";
   const sortField = document.getElementById("db-sort-field")?.value || "date-desc";
 
   // Filter
@@ -5341,6 +5362,15 @@ window.applyDbFiltersAndSort = () => {
 
     // Creator match
     if (filterCreator !== "all" && q.creator !== filterCreator) return false;
+
+    // Date-wise match
+    if (filterDate && q.date !== filterDate) return false;
+
+    // Month-wise match
+    if (filterMonth && !q.date.startsWith(filterMonth)) return false;
+
+    // Year-wise match
+    if (filterYear !== "all" && !q.date.startsWith(filterYear)) return false;
 
     // Search query match
     if (searchQuery) {
@@ -5429,6 +5459,9 @@ window.applyDbFiltersAndSort = () => {
         </button>
         <button class="action-icon-btn view" title="View Quote" onclick="viewSavedQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="action-icon-btn duplicate" style="background: rgba(14, 165, 233, 0.2); color: var(--sky);" title="Duplicate & Edit" onclick="duplicateAndEditQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
         ${quote.status === 'quoted' ? `
         <button class="action-icon-btn convert" title="Convert Quote" onclick="convertQuote('${quote.id}')">
@@ -9106,3 +9139,721 @@ function resetCargoAndRatesForAir() {
 }
 window.resetCargoAndRatesForSea = resetCargoAndRatesForSea;
 window.resetCargoAndRatesForAir = resetCargoAndRatesForAir;
+
+
+/* ==================== ADVANCED CUSTOM FEATURES MODULE ==================== */
+
+let autofillRecords = {
+  customerNames: ["Zenith Electronics Ltd", "Adani Enterprises", "Tata Motors", "Samsung India", "Reliance Industries"],
+  agentNames: ["Adani Global Log", "Kuehne Nagel", "DHL Global Forwarding", "DB Schenker"],
+  contactNumbers: ["+919876543210", "+919999888877", "+15556667777"],
+  emailIds: ["logistics@zenith.com", "import@adani.com", "freight@tata.com", "export@samsung.com"],
+  officeAddresses: ["Sector 62, Noida, UP, India", "Adani House, Port Road, Mundra, Gujarat", "Chinchwad, Pune, Maharashtra", "Oragadam, Chennai, Tamil Nadu"]
+};
+
+function loadAutofillRecords() {
+  const stored = localStorage.getItem("gl_autofill_records");
+  if (stored) {
+    try {
+      autofillRecords = JSON.parse(stored);
+    } catch(e) {
+      console.error(e);
+    }
+  }
+}
+function saveAutofillRecords() {
+  localStorage.setItem("gl_autofill_records", JSON.stringify(autofillRecords));
+}
+
+function registerAutofillValue(type, value) {
+  if (!value || typeof value !== 'string') return;
+  const val = value.trim();
+  if (!val || val.length < 2) return;
+  if (!autofillRecords[type]) autofillRecords[type] = [];
+  if (!autofillRecords[type].includes(val)) {
+    autofillRecords[type].push(val);
+    saveAutofillRecords();
+  }
+}
+
+function setupAutocompleteDropdown(inputId, recordKey) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  
+  const container = input.parentElement;
+  if (container) {
+    container.classList.add("autocomplete-container");
+    container.style.position = "relative";
+  }
+  
+  let dropdown = container.querySelector(".autocomplete-dropdown");
+  if (!dropdown) {
+    dropdown = document.createElement("div");
+    dropdown.className = "autocomplete-dropdown";
+    container.appendChild(dropdown);
+  }
+  
+  const showSuggestions = () => {
+    const val = input.value.trim().toLowerCase();
+    dropdown.innerHTML = "";
+    if (val.length === 0) {
+      dropdown.classList.remove("show");
+      dropdown.style.display = "none";
+      return;
+    }
+    
+    const matches = (autofillRecords[recordKey] || []).filter(item => item.toLowerCase().includes(val));
+    if (matches.length === 0) {
+      dropdown.classList.remove("show");
+      dropdown.style.display = "none";
+      return;
+    }
+    
+    matches.forEach(match => {
+      const div = document.createElement("div");
+      div.className = "autocomplete-item";
+      div.style.padding = "6px 12px";
+      div.style.cursor = "pointer";
+      div.style.color = "#000";
+      div.innerHTML = `<span>${match}</span>`;
+      div.addEventListener("click", () => {
+        input.value = match;
+        dropdown.classList.remove("show");
+        dropdown.style.display = "none";
+        
+        const event = new Event('input', { bubbles: true });
+        input.dispatchEvent(event);
+        const changeEvent = new Event('change', { bubbles: true });
+        input.dispatchEvent(changeEvent);
+        
+        registerAutofillValue(recordKey, match);
+      });
+      dropdown.appendChild(div);
+    });
+    
+    dropdown.classList.add("show");
+    dropdown.style.display = "block";
+  };
+  
+  input.addEventListener("input", showSuggestions);
+  input.addEventListener("focus", showSuggestions);
+  
+  document.addEventListener("click", (e) => {
+    if (!container.contains(e.target)) {
+      dropdown.classList.remove("show");
+      dropdown.style.display = "none";
+    }
+  });
+}
+
+// 2. Timezone Port Clocks
+const CITY_TIMEZONES = {
+  "bom": "Asia/Kolkata", "del": "Asia/Kolkata", "maa": "Asia/Kolkata", "blr": "Asia/Kolkata",
+  "dxb": "Asia/Dubai", "sin": "Asia/Singapore", "lhr": "Europe/London", "jfk": "America/New_York",
+  "lax": "America/Los_Angeles", "fra": "Europe/Berlin", "hnd": "Asia/Tokyo", "cdg": "Europe/Paris",
+  "mumbai": "Asia/Kolkata", "nhava sheva": "Asia/Kolkata", "chennai": "Asia/Kolkata", "mundra": "Asia/Kolkata",
+  "singapore": "Asia/Singapore", "rotterdam": "Europe/Amsterdam", "shanghai": "Asia/Shanghai",
+  "dubai": "Asia/Dubai", "jebel ali": "Asia/Dubai", "new york": "America/New_York", "hamburg": "Europe/Berlin",
+  "antwerp": "Europe/Brussels", "felixstowe": "Europe/London", "busan": "Asia/Seoul", "port klang": "Asia/Kuala_Lumpur"
+};
+
+function getPortTimezone(portName) {
+  if (!portName) return null;
+  const clean = portName.toLowerCase().trim();
+  for (const [key, tz] of Object.entries(CITY_TIMEZONES)) {
+    if (clean.includes(key)) return tz;
+  }
+  return null;
+}
+
+function startPortClocks() {
+  setInterval(() => {
+    const airOriginVal = document.getElementById("air-origin")?.value || "London";
+    const airDestVal = document.getElementById("air-dest")?.value || "Singapore";
+    updateClock("air-clock-origin", airOriginVal, "Origin");
+    updateClock("air-clock-dest", airDestVal, "Dest");
+
+    const seaOriginVal = document.getElementById("sea-origin")?.value || "Rotterdam";
+    const seaDestVal = document.getElementById("sea-dest")?.value || "Shanghai";
+    updateClock("sea-clock-origin", seaOriginVal, "Origin");
+    updateClock("sea-clock-dest", seaDestVal, "Dest");
+  }, 1000);
+}
+
+function updateClock(elementId, cityName, label) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const tz = getPortTimezone(cityName) || "UTC";
+  try {
+    const timeStr = new Date().toLocaleTimeString("en-US", { timeZone: tz, hour12: false });
+    el.textContent = `${label} (${cityName.split(' ')[0] || cityName}): ${timeStr}`;
+  } catch (e) {
+    const timeStr = new Date().toLocaleTimeString("en-US", { hour12: false });
+    el.textContent = `${label}: ${timeStr}`;
+  }
+}
+
+// 3. Transit ETA widget
+window.calculateTransitETA = function(mode) {
+  const originInput = document.getElementById(`${mode}-origin`);
+  const destInput = document.getElementById(`${mode}-dest`);
+  const incotermSelect = document.getElementById(`${mode}-incoterm`);
+  const displayEl = document.getElementById(`${mode}-transit-eta-display`);
+  
+  if (!originInput || !destInput || !displayEl) return;
+  
+  const origin = originInput.value.trim();
+  const dest = destInput.value.trim();
+  const incoterm = incotermSelect?.value || "EXW";
+  
+  if (!origin || !dest) {
+    displayEl.style.display = "none";
+    return;
+  }
+  
+  let baseDays = mode === 'air' ? 3 : 25;
+  const isSameRegion = origin.substring(0, 2).toLowerCase() === dest.substring(0, 2).toLowerCase();
+  
+  if (isSameRegion) {
+    baseDays = mode === 'air' ? 1.5 : 8;
+  } else if ((origin.toLowerCase().includes("us") && dest.toLowerCase().includes("in")) || 
+             (origin.toLowerCase().includes("in") && dest.toLowerCase().includes("us"))) {
+    baseDays = mode === 'air' ? 5 : 40;
+  }
+  
+  let extraDays = 0;
+  if (["EXW", "FCA", "FOB"].includes(incoterm)) {
+    extraDays += mode === 'air' ? 1 : 4;
+  }
+  if (["DAP", "DDU", "DDP"].includes(incoterm)) {
+    extraDays += mode === 'air' ? 2 : 5;
+  }
+  
+  const totalDays = Math.ceil(baseDays + extraDays);
+  const now = new Date();
+  now.setDate(now.getDate() + totalDays);
+  const etaStr = now.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+  
+  displayEl.textContent = `⏱️ Est. Transit: ${totalDays} Days | Target ETA: ${etaStr}`;
+  displayEl.style.display = "block";
+  
+  updateDocsChecklist(mode, incoterm);
+};
+
+const INCOTERM_DOCS = {
+  "EXW": ["Export customs declaration template", "Commercial Invoice", "Packing List", "Certificate of Origin (COO)", "Factory release note"],
+  "FCA": ["Export customs declaration", "Commercial Invoice", "Packing List", "Carrier booking confirmation", "Lorry receipt / FCR"],
+  "FOB": ["Bill of Lading / AWB template", "Export customs declaration", "Commercial Invoice", "Packing List", "Mate's receipt"],
+  "CIF": ["Bill of Lading / AWB", "Marine insurance certificate", "Export customs declaration", "Commercial Invoice", "Packing List"],
+  "DAP": ["Import customs entry", "Delivery Order (D/O)", "Bill of Lading / AWB", "Commercial Invoice", "Packing List"],
+  "DDU": ["Import customs entry checklist", "Delivery Order (D/O)", "Commercial Invoice", "Packing List", "Customs Bond (if applicable)"],
+  "DDP": ["Import duty payment receipt", "Import customs entry (cleared)", "Delivery Order (D/O)", "Commercial Invoice", "Packing List"]
+};
+
+function updateDocsChecklist(mode, incoterm) {
+  const labelEl = document.getElementById(`${mode}-docs-incoterm`);
+  const listEl = document.getElementById(`${mode}-docs-list`);
+  if (!listEl) return;
+  
+  if (labelEl) labelEl.textContent = incoterm;
+  listEl.innerHTML = "";
+  
+  const docs = INCOTERM_DOCS[incoterm] || INCOTERM_DOCS["EXW"];
+  docs.forEach(doc => {
+    const li = document.createElement("li");
+    li.style.display = "flex";
+    li.style.alignItems = "center";
+    li.style.gap = "6px";
+    li.innerHTML = `<span style="color:var(--accent-success);">✓</span> <span>${doc}</span>`;
+    listEl.appendChild(li);
+  });
+}
+
+// 4. Live Tracking Panel
+function renderTrackingControlCenter() {
+  const html = `
+    <div class="glass-card" style="padding: 1.5rem;">
+      <h3 style="font-weight: 800; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        🌐 Global Cargo Operations Tracking Control Center
+      </h3>
+      
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem;">
+        <button type="button" class="tab-btn active-tracking-tab" id="tab-btn-ocean" onclick="switchTrackingTab('ocean')" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; background: var(--accent-sea); color: #fff; border: none; font-weight: 700;">🚢 Ocean Vessel Tracker</button>
+        <button type="button" class="tab-btn" id="tab-btn-air" onclick="switchTrackingTab('air')" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.05); color: var(--t1); border: 1px solid var(--border-1); font-weight: 700;">✈️ Air Cargo Freight Tracker</button>
+        <button type="button" class="tab-btn" id="tab-btn-map" onclick="switchTrackingTab('map')" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.05); color: var(--t1); border: 1px solid var(--border-1); font-weight: 700;">🗺️ Live Port Control Map</button>
+      </div>
+      
+      <div id="tracking-content-ocean" class="tracking-tab-content">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+          <input type="text" id="ocean-tracking-input" placeholder="Enter Container (e.g. MSKU1234567) or Booking Number" style="background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.4rem 0.6rem; font-size: 0.8rem; flex: 1; outline: none;">
+          <button type="button" class="btn-primary" onclick="trackOceanCargo()" style="background: var(--accent-sea); border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Track Vessel</button>
+        </div>
+        <div id="ocean-tracking-results" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-1); border-radius: 8px; padding: 1rem; font-size: 0.8rem;"></div>
+      </div>
+      
+      <div id="tracking-content-air" class="tracking-tab-content" style="display: none;">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+          <input type="text" id="air-tracking-input" placeholder="Enter AWB Number (e.g. 020-12345678)" style="background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.4rem 0.6rem; font-size: 0.8rem; flex: 1; outline: none;" oninput="detectAwbPrefix()">
+          <button type="button" class="btn-primary" onclick="trackAirCargo()" style="background: var(--accent-air); border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Track Flight</button>
+        </div>
+        <div id="air-awb-airline-detected" style="font-size: 0.7rem; color: var(--sky); font-weight: bold; margin-top: -0.75rem; margin-bottom: 0.75rem; display: none;"></div>
+        <div id="air-tracking-results" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-1); border-radius: 8px; padding: 1rem; font-size: 0.8rem;"></div>
+      </div>
+      
+      <div id="tracking-content-map" class="tracking-tab-content" style="display: none;">
+        <div style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-1); background: rgba(0,0,0,0.2); height: 350px;">
+          <iframe id="ais-map-frame" src="https://www.vesselfinder.com/aismap?zoom=3&lat=20&lon=70&width=100%&height=350&names=false&mmsi=0&track=false&clicktoact=false" width="100%" height="100%" frameborder="0" style="border: 0;"></iframe>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  const memberContainer = document.getElementById("member-tracking-control-center");
+  if (memberContainer) memberContainer.innerHTML = html;
+  
+  const adminContainer = document.getElementById("admin-tracking-control-center");
+  if (adminContainer) {
+    const adminHtml = html
+      .replace(/ocean-tracking-input/g, "admin-ocean-input")
+      .replace(/ocean-tracking-results/g, "admin-ocean-results")
+      .replace(/air-tracking-input/g, "admin-air-input")
+      .replace(/air-awb-airline-detected/g, "admin-awb-detected")
+      .replace(/air-tracking-results/g, "admin-air-results")
+      .replace(/ais-map-frame/g, "admin-ais-map")
+      .replace(/switchTrackingTab\('/g, "switchTrackingTabAdmin('")
+      .replace(/trackOceanCargo\(\)/g, "trackOceanCargoAdmin()")
+      .replace(/detectAwbPrefix\(\)/g, "detectAwbPrefixAdmin()")
+      .replace(/trackAirCargo\(\)/g, "trackAirCargoAdmin()")
+      .replace(/tab-btn-ocean/g, "admin-tab-btn-ocean")
+      .replace(/tab-btn-air/g, "admin-tab-btn-air")
+      .replace(/tab-btn-map/g, "admin-tab-btn-map")
+      .replace(/tracking-content-ocean/g, "admin-tracking-content-ocean")
+      .replace(/tracking-content-air/g, "admin-tracking-content-air")
+      .replace(/tracking-content-map/g, "admin-tracking-content-map");
+      
+    adminContainer.innerHTML = adminHtml;
+  }
+}
+
+window.switchTrackingTab = function(tabName) {
+  document.querySelectorAll(".tracking-tab-content").forEach(el => el.style.display = "none");
+  document.querySelectorAll(".tab-btn").forEach(el => {
+    el.style.background = "rgba(255,255,255,0.05)";
+    el.style.color = "var(--t1)";
+  });
+  
+  const content = document.getElementById(`tracking-content-${tabName}`);
+  if (content) content.style.display = "block";
+  
+  const btn = document.getElementById(`tab-btn-${tabName}`);
+  if (btn) {
+    btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
+    btn.style.color = '#fff';
+  }
+};
+
+window.switchTrackingTabAdmin = function(tabName) {
+  document.querySelectorAll("#admin-tracking-control-center .tracking-tab-content").forEach(el => el.style.display = "none");
+  document.querySelectorAll("#admin-tracking-control-center .tab-btn").forEach(el => {
+    el.style.background = "rgba(255,255,255,0.05)";
+    el.style.color = "var(--t1)";
+  });
+  
+  const content = document.getElementById(`admin-tracking-content-${tabName}`);
+  if (content) content.style.display = "block";
+  
+  const btn = document.getElementById(`admin-tab-btn-${tabName}`);
+  if (btn) {
+    btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
+    btn.style.color = '#fff';
+  }
+};
+
+const SIMULATED_OCEAN_LOGS = [
+  "🚢 Booking Confirmed & Empty Container Released",
+  "📦 Container Loaded and Stuffed at Shipper Factory",
+  "🚛 Gated-In at Origin Port Terminal",
+  "⚓ Loaded onboard Vessel 'MSC AMALFI V.260'",
+  "🌊 Vessel Departed (In Transit)",
+  "⚓ Arrived at Transit Hub (Port of Singapore)",
+  "🌊 Departed Singapore onboard Vessel 'MSC OSCAR V.094'",
+  "🏁 Arrived at Destination Port (Port of Rotterdam)",
+  "🚛 Gated-Out for Final Door Delivery",
+  "✅ Delivered to Consignee Warehouse"
+];
+
+const SIMULATED_AIR_LOGS = [
+  "✈️ Booking Confirmed, AWB Issued",
+  "📦 Cargo Received at Origin Freight Station",
+  "🛃 Export Customs Clearance Completed",
+  "⚓ Gated in and Loaded on flight 'LH757'",
+  "🌊 Flight Departed",
+  "⚓ Arrived at Transit Hub (Frankfurt Airport FRA)",
+  "✈️ Loaded on connecting flight 'LH400'",
+  "🏁 Arrived at Destination Airport (New York JFK)",
+  "🛃 Import Customs Cleared",
+  "✅ Cargo Delivered to consignee"
+];
+
+function buildTimeline(logs, containerId) {
+  const div = document.getElementById(containerId);
+  if (!div) return;
+  div.style.display = "block";
+  
+  let html = `<h4 style="margin: 0 0 0.75rem 0; font-weight: 700; color:var(--sky);">Tracking Timeline History</h4>`;
+  html += `<div style="display:flex; flex-direction:column; gap:0.5rem; position:relative; padding-left:1.25rem; border-left: 2px solid var(--border-2);">`;
+  
+  logs.forEach((log, index) => {
+    const isCompleted = index < logs.length - 2;
+    const color = isCompleted ? "var(--accent-success)" : (index === logs.length - 2 ? "var(--accent-warning)" : "var(--text-dim)");
+    html += `
+      <div style="position:relative;">
+        <span style="position:absolute; left:-1.65rem; top:2px; height:10px; width:10px; background:${color}; border-radius:50%; box-shadow: 0 0 6px ${color};"></span>
+        <div style="font-weight:600; color: ${isCompleted ? '#fff' : 'var(--text-dim)'};">${log}</div>
+        <div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">Status Updated: 2026-07-16 12:${30 + index} PM</div>
+      </div>
+    `;
+  });
+  
+  html += `</div>`;
+  div.innerHTML = html;
+}
+
+window.trackOceanCargo = function() {
+  const num = document.getElementById("ocean-tracking-input")?.value || "";
+  if (!num) return alert("Please enter a Container or Booking number.");
+  buildTimeline(SIMULATED_OCEAN_LOGS, "ocean-tracking-results");
+};
+
+window.trackOceanCargoAdmin = function() {
+  const num = document.getElementById("admin-ocean-input")?.value || "";
+  if (!num) return alert("Please enter a Container or Booking number.");
+  buildTimeline(SIMULATED_OCEAN_LOGS, "admin-ocean-results");
+};
+
+const AIRLINE_PREFIXES = {
+  "020": "Lufthansa Cargo (LH)",
+  "999": "Air India (AI)",
+  "125": "British Airways (BA)",
+  "074": "KLM Cargo (KL)",
+  "001": "American Airlines Cargo (AA)",
+  "176": "Emirates SkyCargo (EK)",
+  "016": "United Cargo (UA)"
+};
+
+window.detectAwbPrefix = function() {
+  const input = document.getElementById("air-tracking-input");
+  const detectEl = document.getElementById("air-awb-airline-detected");
+  if (!input || !detectEl) return;
+  
+  const prefix = input.value.trim().substring(0, 3);
+  if (AIRLINE_PREFIXES[prefix]) {
+    detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
+    detectEl.style.display = "block";
+  } else {
+    detectEl.style.display = "none";
+  }
+};
+
+window.detectAwbPrefixAdmin = function() {
+  const input = document.getElementById("admin-air-input");
+  const detectEl = document.getElementById("admin-awb-detected");
+  if (!input || !detectEl) return;
+  
+  const prefix = input.value.trim().substring(0, 3);
+  if (AIRLINE_PREFIXES[prefix]) {
+    detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
+    detectEl.style.display = "block";
+  } else {
+    detectEl.style.display = "none";
+  }
+};
+
+window.trackAirCargo = function() {
+  const num = document.getElementById("air-tracking-input")?.value || "";
+  if (!num) return alert("Please enter AWB number.");
+  buildTimeline(SIMULATED_AIR_LOGS, "air-tracking-results");
+};
+
+window.trackAirCargoAdmin = function() {
+  const num = document.getElementById("admin-air-input")?.value || "";
+  if (!num) return alert("Please enter AWB number.");
+  buildTimeline(SIMULATED_AIR_LOGS, "admin-air-results");
+};
+
+// 5. Synced Scratchpads & Broadcast Hub
+window.syncScratchpad = function() {
+  const text = document.getElementById("dashboard-scratchpad").value;
+  const syncStatus = document.getElementById("scratchpad-sync-status");
+  const currentUser = appState.currentUser || "shashank";
+  
+  if (syncStatus) syncStatus.textContent = "Syncing with cloud...";
+  
+  // Save to active scratchpads in localStorage
+  let scratchpads = {};
+  try {
+    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+  } catch(e) {}
+  
+  scratchpads[currentUser] = {
+    text: text,
+    user: TEAM_ROLES[currentUser]?.name || currentUser,
+    time: new Date().toLocaleTimeString()
+  };
+  
+  localStorage.setItem("gl_active_scratchpads", JSON.stringify(scratchpads));
+  
+  setTimeout(() => {
+    if (syncStatus) syncStatus.textContent = "All changes synced to database";
+    // If Admin view is active, update their viewer as well
+    if (appState.currentUser === 'ganny') {
+      updateAdminScratchpadViewer();
+    }
+  }, 400);
+};
+
+function updateAdminScratchpadViewer() {
+  const container = document.getElementById("admin-desk-scratchpads");
+  if (!container) return;
+  
+  let scratchpads = {};
+  try {
+    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+  } catch(e) {}
+  
+  const keys = Object.keys(scratchpads);
+  if (keys.length === 0) {
+    container.innerHTML = `<div style="font-style: italic; color: var(--text-dim);">No active reminder syncs yet.</div>`;
+    return;
+  }
+  
+  let html = "";
+  keys.forEach(k => {
+    const pad = scratchpads[k];
+    html += `
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); border-radius: 6px; padding: 6px 10px; margin-bottom: 0.4rem;">
+        <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--sky); font-size:0.75rem; margin-bottom:2px;">
+          <span>${pad.user}</span>
+          <span style="font-size:0.65rem; color:var(--text-dim);">${pad.time}</span>
+        </div>
+        <div style="color:#fff; white-space:pre-wrap; line-height:1.3; font-size:0.75rem;">${pad.text || "(empty notes)"}</div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+// Admin Broadcast notices
+window.sendAdminBroadcast = function() {
+  const type = document.getElementById("broadcast-type").value;
+  const msg = document.getElementById("broadcast-message").value.trim();
+  
+  if (!msg) return alert("Please enter broadcast message.");
+  
+  const broadcast = {
+    id: 'B' + Date.now(),
+    type: type,
+    message: msg,
+    timestamp: new Date().toLocaleTimeString(),
+    active: true
+  };
+  
+  localStorage.setItem("gl_admin_broadcast", JSON.stringify(broadcast));
+  alert("📢 Broadcast notice pushed to all active screens!");
+  document.getElementById("broadcast-message").value = "";
+  
+  // Instantly trigger overlay check
+  checkActiveBroadcast();
+};
+
+function checkActiveBroadcast() {
+  let broadcast = null;
+  try {
+    const data = localStorage.getItem("gl_admin_broadcast");
+    if (data) broadcast = JSON.parse(data);
+  } catch(e) {}
+  
+  if (!broadcast || !broadcast.active) {
+    const overlay = document.getElementById("system-broadcast-overlay");
+    if (overlay) overlay.style.display = "none";
+    return;
+  }
+  
+  // Render high visibility overlay banner if not already present
+  let overlay = document.getElementById("system-broadcast-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "system-broadcast-overlay";
+    overlay.style.cssText = "position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; font-family:'Outfit', sans-serif; font-size:0.85rem; font-weight:700; box-shadow:0 3px 15px rgba(0,0,0,0.3); transition:all 0.3s;";
+    document.body.appendChild(overlay);
+  }
+  
+  // Set theme color depending on type
+  if (broadcast.type === 'mandate') {
+    overlay.style.background = "linear-gradient(90deg, #ef4444, #b91c1c)"; // Red
+    overlay.innerHTML = `<div>⚠️ SYSTEM MANDATE NOTICE: ${broadcast.message}</div>`;
+  } else if (broadcast.type === 'meeting') {
+    overlay.style.background = "linear-gradient(90deg, #f59e0b, #d97706)"; // Amber/Yellow
+    overlay.innerHTML = `<div>📅 CALENDAR VISIT REMINDER: ${broadcast.message}</div>`;
+  } else {
+    overlay.style.background = "linear-gradient(90deg, #10b981, #047857)"; // Green
+    overlay.innerHTML = `<div>🎉 HOLIDAY / LEAVE POPUP: ${broadcast.message}</div>`;
+  }
+  
+  // Close / dismiss button
+  overlay.innerHTML += `
+    <button type="button" style="background:#fff; border:none; color:#000; font-size:0.65rem; font-weight:bold; cursor:pointer; padding:3px 8px; border-radius:4px;" onclick="dismissBroadcast()">
+      Dismiss / Close
+    </button>
+  `;
+  overlay.style.display = "flex";
+}
+
+window.dismissBroadcast = function() {
+  const overlay = document.getElementById("system-broadcast-overlay");
+  if (overlay) overlay.style.display = "none";
+  
+  // Soft dismiss (mark as inactive in localStorage)
+  try {
+    const data = localStorage.getItem("gl_admin_broadcast");
+    if (data) {
+      const b = JSON.parse(data);
+      b.active = false;
+      localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
+    }
+  } catch(e) {}
+};
+
+// Check broadcast every 3 seconds
+setInterval(checkActiveBroadcast, 3000);
+
+// SMS Gateway browser deep-link
+window.triggerSmsGateway = function() {
+  const num = document.getElementById("sms-mobile")?.value || "";
+  const msg = document.getElementById("sms-text")?.value || "";
+  
+  if (!num || !msg) return alert("Please enter mobile number and note text.");
+  
+  // Launch system sms protocols
+  const url = `sms:${num}?&body=${encodeURIComponent(msg)}`;
+  window.location.href = url;
+};
+
+// 6. Share Quote Engine
+window.toggleShareDropdown = function(e) {
+  if (e) e.stopPropagation();
+  const dropdown = document.getElementById("share-dropdown-menu");
+  if (!dropdown) return;
+  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+};
+
+document.addEventListener("click", () => {
+  const dropdown = document.getElementById("share-dropdown-menu");
+  if (dropdown) dropdown.style.display = "none";
+});
+
+window.getQuoteSummaryTextFormatted = function() {
+  const modalTitle = document.getElementById("modal-header-title")?.textContent || "Official Pricing Quotation Summary";
+  const bodyText = document.getElementById("quote-print-card")?.innerText || "";
+  return `${modalTitle}\n\n${bodyText}`;
+};
+
+window.copyQuoteSummaryText = function() {
+  const text = getQuoteSummaryTextFormatted();
+  navigator.clipboard.writeText(text)
+    .then(() => alert("📋 Structured quote summary plain-text copied to clipboard!"))
+    .catch(() => alert("Failed to copy text."));
+};
+
+window.shareQuoteWhatsApp = function() {
+  const text = getQuoteSummaryTextFormatted();
+  const url = `https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+};
+
+window.shareQuoteMail = function() {
+  const text = getQuoteSummaryTextFormatted();
+  const subject = "Official Freight Pricing Quotation Summary";
+  const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+  window.open(url);
+};
+
+// 7. Core advanced initialization
+function initializeAdvancedFeatures() {
+  loadAutofillRecords();
+  
+  // Setup search dropdown autocomplete lists
+  setupAutocompleteDropdown("air-cust-name", "customerNames");
+  setupAutocompleteDropdown("sea-cust-name", "customerNames");
+  setupAutocompleteDropdown("won-shipper-name", "agentNames");
+  setupAutocompleteDropdown("won-shipper-phone", "contactNumbers");
+  setupAutocompleteDropdown("won-shipper-email", "emailIds");
+  setupAutocompleteDropdown("won-shipper-address", "officeAddresses");
+  setupAutocompleteDropdown("won-cnee-name", "agentNames");
+  setupAutocompleteDropdown("won-cnee-phone", "contactNumbers");
+  setupAutocompleteDropdown("won-cnee-email", "emailIds");
+  setupAutocompleteDropdown("won-cnee-address", "officeAddresses");
+  
+  // Port clocks
+  startPortClocks();
+  
+  // Set initial clocks & ETAs
+  calculateTransitETA("air");
+  calculateTransitETA("sea");
+  
+  // Connected Desks Scratchpads initial load
+  const user = appState.currentUser || "shashank";
+  let scratchpads = {};
+  try {
+    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+  } catch(e) {}
+  
+  const pad = scratchpads[user];
+  const ta = document.getElementById("dashboard-scratchpad");
+  if (ta && pad) {
+    ta.value = pad.text;
+  }
+  
+  // Render live tracking panels
+  renderTrackingControlCenter();
+  
+  // Update admin viewer if admin
+  if (appState.currentUser === 'ganny') {
+    updateAdminScratchpadViewer();
+  }
+  
+  // Bind live inputs listeners for calculations
+  document.getElementById("air-origin")?.addEventListener("input", () => calculateTransitETA("air"));
+  document.getElementById("air-dest")?.addEventListener("input", () => calculateTransitETA("air"));
+  document.getElementById("sea-origin")?.addEventListener("input", () => calculateTransitETA("sea"));
+  document.getElementById("sea-dest")?.addEventListener("input", () => calculateTransitETA("sea"));
+  
+  // Update creator dropdown in Admin grid view dynamically
+  const filterCreator = document.getElementById("db-filter-creator");
+  if (filterCreator) {
+    filterCreator.innerHTML = `<option value="all" style="background:#1b1c5c; color:#fff;">All Agents</option>`;
+    Object.keys(TEAM_ROLES).forEach(k => {
+      if (k === 'ganny' || k === 'manager') return;
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.style.background = "#1b1c5c";
+      opt.style.color = "#fff";
+      opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
+      filterCreator.appendChild(opt);
+    });
+  }
+  
+  // Update report user dropdown dynamically
+  const reportUser = document.getElementById("report-user");
+  if (reportUser) {
+    reportUser.innerHTML = `<option value="all">All Pricing Officers</option>`;
+    Object.keys(TEAM_ROLES).forEach(k => {
+      if (k === 'ganny' || k === 'manager') return;
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
+      reportUser.appendChild(opt);
+    });
+  }
+}
+window.initializeAdvancedFeatures = initializeAdvancedFeatures;

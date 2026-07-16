@@ -434,7 +434,42 @@
           </div>
         </div>
 
+        <!-- Admin Synced Reminders & Broadcast Control Hub Row -->
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem; align-items: stretch;">
+          <!-- Synced Desk Scratchpad Viewer -->
+          <div class="glass-card" style="flex: 1.2; min-width: 300px; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem;">
+            <h3 style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
+              Connected Desks Active Reminders
+            </h3>
+            <div id="admin-desk-scratchpads" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 180px; overflow-y: auto; font-size: 0.8rem;">
+              <div style="font-style: italic; color: var(--text-dim);">No active reminder syncs yet.</div>
+            </div>
+          </div>
+          <!-- Admin Broadcast Control Hub -->
+          <div class="glass-card" style="flex: 1.6; min-width: 300px; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem;">
+            <h3 style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--accent-warning); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
+              Multi-Purpose Admin Broadcast Hub
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.2rem;">
+                <select id="broadcast-type" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; flex: 1;">
+                  <option value="mandate">⚠️ System Mandate Banner</option>
+                  <option value="meeting">📅 Meeting / Visit Reminder</option>
+                  <option value="holiday">🎉 Holiday / Leave Popup</option>
+                </select>
+              </div>
+              <textarea id="broadcast-message" placeholder="Type notice message here..." style="height: 60px; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.4rem 0.6rem; font-size: 0.8rem; resize: none; font-family: inherit; outline: none; margin-bottom: 0.2rem;"></textarea>
+              <button class="btn-primary" onclick="sendAdminBroadcast()" style="background: var(--accent-warning); color: #000; font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">
+                📢 Broadcast Notice to All Users
+              </button>
+            </div>
+          </div>
+        </div>
 
+
+
+        <!-- Global Cargo Operations Tracking Control Center -->
+        <div id="admin-tracking-control-center" style="margin-bottom: 2rem;"></div>
 
         <!-- Master quotes view -->
         <div class="glass-card">
@@ -453,6 +488,9 @@
                 <option value="all" style="background:#1b1c5c; color:#fff;">All Modes</option>
                 <option value="air" style="background:#1b1c5c; color:#fff;">Air Freight</option>
                 <option value="sea" style="background:#1b1c5c; color:#fff;">Sea Freight</option>
+                <option value="custom" style="background:#1b1c5c; color:#fff;">Custom Clearance</option>
+                <option value="transport" style="background:#1b1c5c; color:#fff;">Transportation</option>
+                <option value="warehouse" style="background:#1b1c5c; color:#fff;">Warehousing</option>
               </select>
               
               <select id="db-filter-status" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer;">
@@ -469,6 +507,16 @@
                 <option value="mahendra" style="background:#1b1c5c; color:#fff;">Mahendra</option>
                 <option value="jaya" style="background:#1b1c5c; color:#fff;">Jaya</option>
                 <option value="cathrina" style="background:#1b1c5c; color:#fff;">Cathrina</option>
+              </select>
+
+              <!-- Granular Date Metrics -->
+              <input type="date" id="db-filter-date" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; outline: none; cursor: pointer;">
+              <input type="month" id="db-filter-month" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; outline: none; cursor: pointer;">
+              <select id="db-filter-year" onchange="applyDbFiltersAndSort()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer;">
+                <option value="all" style="background:#1b1c5c; color:#fff;">All Years</option>
+                <option value="2026" style="background:#1b1c5c; color:#fff;">2026</option>
+                <option value="2025" style="background:#1b1c5c; color:#fff;">2025</option>
+                <option value="2024" style="background:#1b1c5c; color:#fff;">2024</option>
               </select>
             </div>
             
@@ -602,6 +650,35 @@
           </div>
         </div>
 
+        <!-- Global Cargo Operations Tracking Control Center -->
+        <div id="member-tracking-control-center" style="margin-bottom: 2rem;"></div>
+
+        <!-- Row 3: Sticky Notes & SMS Gateway -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+          <!-- Persistent Scratchpad (Connected Desk Sticky Notes) -->
+          <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <h3 style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
+              Connected Desk Sticky Notes (Synced)
+            </h3>
+            <textarea id="dashboard-scratchpad" placeholder="Type reminders here... they sync automatically to the Admin panel." style="width: 100%; height: 120px; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.5rem; font-size: 0.8rem; resize: none; font-family: inherit; outline: none;" oninput="syncScratchpad()"></textarea>
+            <div style="font-size: 0.65rem; color: var(--text-dim); text-align: right;" id="scratchpad-sync-status">All changes synced to database</div>
+          </div>
+
+          <!-- SMS Gateway Desk -->
+          <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <h3 style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
+              Instant SMS Gateway Desk
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <input type="text" id="sms-mobile" placeholder="Recipient Mobile Number (e.g. +919876543210)" style="background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.4rem 0.6rem; font-size: 0.8rem; outline: none;">
+              <textarea id="sms-text" placeholder="Type SMS text..." style="height: 60px; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.4rem 0.6rem; font-size: 0.8rem; resize: none; font-family: inherit; outline: none;"></textarea>
+              <button class="btn-primary" onclick="triggerSmsGateway()" style="background: var(--accent-success); color: #000; font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+                💬 Launch SMS App
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Table of user's personal quotes -->
         <div class="glass-card">
           <div class="table-header-row">
@@ -678,9 +755,19 @@
         <div class="workspace">
           <!-- Inputs section -->
           <div class="glass-card">
-            <div class="section-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>
-              AIR FREIGHT DESK
+            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>
+                <span>AIR FREIGHT DESK</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div id="air-port-clocks-tile" style="display: flex; gap: 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-1); border-radius: 6px; padding: 2px 8px; font-size: 0.68rem; font-family: monospace;">
+                  <span id="air-clock-origin">Origin: --:--:--</span>
+                  <span style="color: var(--text-dim);">|</span>
+                  <span id="air-clock-dest">Dest: --:--:--</span>
+                </div>
+                <button type="button" class="btn-secondary" style="font-size: 0.65rem; padding: 2px 8px; border: 1px solid var(--accent-error); color: var(--accent-error); background: rgba(239, 68, 68, 0.05); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; margin: 0;" onclick="resetFreightForm('air')">🔄 Reset Form</button>
+              </div>
             </div>
             
             <!-- Export/Import Toggle Tabs -->
@@ -719,7 +806,7 @@
               </div>
               <div class="form-group" style="margin-bottom: 0;">
                 <label for="air-incoterm">Incoterm</label>
-                <select id="air-incoterm">
+                <select id="air-incoterm" onchange="calculateTransitETA('air')">
                   <option value="EXW" selected>EXW - Ex Works</option>
                   <option value="FCA">FCA - Free Carrier</option>
                   <option value="FOB">FOB - Free On Board</option>
@@ -728,6 +815,7 @@
                   <option value="DDU">DDU - Delivered Duty Unpaid</option>
                   <option value="DDP">DDP - Delivered Duty Paid</option>
                 </select>
+                <div id="air-transit-eta-display" style="font-size: 0.68rem; margin-top: 0.4rem; color: var(--sky); font-weight: bold; padding: 4px 8px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 6px; display: none;"></div>
               </div>
             </div>
 
@@ -813,7 +901,10 @@
 
             <!-- Dimensions Calculator Table -->
             <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-              <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Cargo Dimensions Matrix</h4>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin: 0;">Cargo Dimensions Matrix</h4>
+                <span id="air-volumetric-badge" style="display: none; font-size: 0.65rem; font-weight: bold; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid #3b82f6; padding: 2px 6px; border-radius: 4px;">⚠️ VOLUMETRIC WEIGHT OVERRIDE</span>
+              </div>
               <!-- Unit Selector -->
               <div class="toggle-group dim-unit-toggle" style="margin-bottom: 0; width: 180px;">
                 <div class="toggle-option active unit-active" data-unit="cms">CMS (LWH / 6000)</div>
@@ -1032,6 +1123,14 @@
               <!-- Individual Airline options cost summary will render here dynamically -->
             </div>
 
+            <!-- Required Docs Checklist -->
+            <div id="air-docs-checklist-container" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+              <details style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.5rem;">
+                <summary style="font-size: 0.75rem; font-weight: bold; color: var(--sky); cursor: pointer; outline: none;">📋 Required Customs Docs (Incoterm: <span id="air-docs-incoterm">EXW</span>)</summary>
+                <ul id="air-docs-list" style="margin: 0.5rem 0 0 0; padding-left: 1.25rem; font-size: 0.72rem; color: var(--t2); display: flex; flex-direction: column; gap: 4px;"></ul>
+              </details>
+            </div>
+
             <div class="action-buttons">
               <button class="btn-primary" onclick="saveCurrentQuote()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -1050,9 +1149,19 @@
         <div class="workspace">
           <!-- Inputs Column -->
           <div class="glass-card">
-            <div class="section-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
-              SEA FREIGHT DESK
+            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M12 17v4M8 21h8"/></svg>
+                <span>SEA FREIGHT DESK</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div id="sea-port-clocks-tile" style="display: flex; gap: 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-1); border-radius: 6px; padding: 2px 8px; font-size: 0.68rem; font-family: monospace;">
+                  <span id="sea-clock-origin">Origin: --:--:--</span>
+                  <span style="color: var(--text-dim);">|</span>
+                  <span id="sea-clock-dest">Dest: --:--:--</span>
+                </div>
+                <button type="button" class="btn-secondary" style="font-size: 0.65rem; padding: 2px 8px; border: 1px solid var(--accent-error); color: var(--accent-error); background: rgba(239, 68, 68, 0.05); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; margin: 0;" onclick="resetFreightForm('sea')">🔄 Reset Form</button>
+              </div>
             </div>
             
             <!-- Sea Export/Import Toggle Tabs -->
@@ -1091,7 +1200,7 @@
               </div>
               <div class="form-group" style="margin-bottom: 0;">
                 <label for="sea-incoterm">Incoterm</label>
-                <select id="sea-incoterm">
+                <select id="sea-incoterm" onchange="calculateTransitETA('sea')">
                   <option value="EXW" selected>EXW - Ex Works</option>
                   <option value="FCA">FCA - Free Carrier</option>
                   <option value="FOB">FOB - Free On Board</option>
@@ -1100,6 +1209,7 @@
                   <option value="DDU">DDU - Delivered Duty Unpaid</option>
                   <option value="DDP">DDP - Delivered Duty Paid</option>
                 </select>
+                <div id="sea-transit-eta-display" style="font-size: 0.68rem; margin-top: 0.4rem; color: var(--sky); font-weight: bold; padding: 4px 8px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 6px; display: none;"></div>
               </div>
             </div>
 
@@ -1156,7 +1266,17 @@
             <div class="form-grid-3" style="margin-top: 1rem;">
               <div class="form-group">
                 <label for="sea-gross-weight">Total Gross Weight (Kg)</label>
-                <input type="number" id="sea-gross-weight" placeholder="e.g. 5000" min="0" value="0">
+                <input type="number" id="sea-gross-weight" placeholder="e.g. 5000" min="0" value="0" oninput="updateContainerPayloadScale()">
+                <div id="sea-payload-meter-container" style="margin-top: 0.5rem; display: none;">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.62rem; font-weight: bold; color: var(--text-dim); margin-bottom: 2px;">
+                    <span>Container Payload safety</span>
+                    <span id="sea-payload-meter-percent">0%</span>
+                  </div>
+                  <div style="background: var(--border-1); height: 6px; border-radius: 3px; overflow: hidden; position: relative;">
+                    <div id="sea-payload-meter-bar" style="background: var(--accent-success); width: 0%; height: 100%; transition: width 0.3s, background-color 0.3s;"></div>
+                  </div>
+                  <div id="sea-payload-meter-warning" style="font-size: 0.62rem; color: var(--accent-error); font-weight: 700; margin-top: 3px; display: none;">⚠️ HEAVY-WEIGHT WARNING: Special multi-axle trailer / premium surcharges apply.</div>
+                </div>
               </div>
               <div class="form-group">
                 <label for="sea-volume">Total Volume (CBM)</label>
@@ -1185,7 +1305,10 @@
 
             <!-- Sea Cargo Dimensions Calculator Table -->
             <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-              <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--accent-sea);">Cargo Dimensions Calculator (LxWxH)</h4>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <h4 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--accent-sea); margin: 0;">Cargo Dimensions Calculator (LxWxH)</h4>
+                <span id="sea-volumetric-badge" style="display: none; font-size: 0.65rem; font-weight: bold; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid #3b82f6; padding: 2px 6px; border-radius: 4px;">⚠️ VOLUMETRIC WEIGHT OVERRIDE</span>
+              </div>
               <!-- Unit Selector -->
               <div class="toggle-group" id="sea-dim-unit-toggle" style="margin-bottom: 0; width: 180px;">
                 <div class="toggle-option active" data-unit="cms">CMS</div>
@@ -1464,6 +1587,14 @@
             <div id="sea-alternatives-results-container" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem; display: none;">
               <h4 style="font-size: 0.72rem; text-transform: uppercase; color: var(--accent-sea); margin-bottom: 0.5rem; font-weight: 750; letter-spacing: 0.05em;">Alternative Ocean Option Rates Summary</h4>
               <div id="sea-alternatives-results-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+            </div>
+
+            <!-- Required Docs Checklist -->
+            <div id="sea-docs-checklist-container" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+              <details style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.5rem;">
+                <summary style="font-size: 0.75rem; font-weight: bold; color: var(--sky); cursor: pointer; outline: none;">📋 Required Customs Docs (Incoterm: <span id="sea-docs-incoterm">EXW</span>)</summary>
+                <ul id="sea-docs-list" style="margin: 0.5rem 0 0 0; padding-left: 1.25rem; font-size: 0.72rem; color: var(--t2); display: flex; flex-direction: column; gap: 4px;"></ul>
+              </details>
             </div>
 
             <div class="action-buttons">
@@ -1862,6 +1993,16 @@
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" onclick="hideQuoteModal()">Close</button>
+        <div style="position: relative; display: inline-block;">
+          <button class="btn-primary" id="share-quote-btn" style="background: var(--accent-air); color: #fff; box-shadow: none;" onclick="toggleShareDropdown(event)">
+            <span>🔗 Share Quote</span>
+          </button>
+          <div id="share-dropdown-menu" style="display: none; position: absolute; bottom: 100%; right: 0; margin-bottom: 5px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-lg); z-index: 2010; min-width: 180px;">
+            <button class="btn-text" style="width: 100%; text-align: left; padding: 8px 12px; font-size: 0.75rem; color: #fff; border-bottom: 1px solid var(--border-1); display: flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer;" onclick="copyQuoteSummaryText()">📋 Copy Plain Text</button>
+            <button class="btn-text" style="width: 100%; text-align: left; padding: 8px 12px; font-size: 0.75rem; color: #fff; border-bottom: 1px solid var(--border-1); display: flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer;" onclick="shareQuoteWhatsApp()">💬 WhatsApp Web</button>
+            <button class="btn-text" style="width: 100%; text-align: left; padding: 8px 12px; font-size: 0.75rem; color: #fff; display: flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer;" onclick="shareQuoteMail()">✉️ Native Mail Client</button>
+          </div>
+        </div>
         <button class="btn-primary" id="print-quote-btn" style="background: var(--accent-success); color: #000; box-shadow: none;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print / PDF Export
