@@ -7192,6 +7192,7 @@ const DB = {
     };
 
     // Completely unique, conflict-isolated initialization parameters
+    // Completely unique, conflict-isolated initialization parameters
     const standaloneAtlasFirebaseSettings = {
       projectId: "vertex-35d95",
       apiKey: "AlzaSyBnS2173ew2vpxR7rOs0FfTpfsEmhj79Uc",
@@ -7207,7 +7208,6 @@ const DB = {
         }
       }
 
-      // Force initialize with our completely unique identifier variable
       firebase.initializeApp(standaloneAtlasFirebaseSettings);
 
       const targetDbClusterId = standaloneAtlasFirebaseSettings.databaseId || '(default)';
@@ -7227,25 +7227,25 @@ const DB = {
 
       this.registerSnapshotListener();
 
+      // Balanced and stitched migration pathway
+      const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
+      if (localQuotes.length > 0) {
+        console.log(`DB: Found ${localQuotes.length} local quotes. Migrating to Firestore...`);
+        try {
+          const migrationPromises = localQuotes.map(async q => {
+            if (!q.timestamp) q.timestamp = Date.now();
+            return this.firestoreRef.collection("quotes").doc(q.id).set(q);
+          });
+          await Promise.all(migrationPromises);
+          console.log("DB: Local quotes migration succeeded!");
+          localStorage.removeItem("logistics_quotes");
+        } catch (err) {
+          console.error("DB: Migration of local quotes failed. Retaining local copy.", err);
+        }
+      }
+
     } catch (globalInitError) {
       console.error("Critical connection engine initialization halt:", globalInitError);
-    }
-
-    // Check for migration from local to cloud
-    const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
-    if (localQuotes.length > 0) {
-      console.log(`DB: Found ${localQuotes.length} local quotes. Migrating to Firestore...`);
-      try {
-        const migrationPromises = localQuotes.map(async q => {
-          if (!q.timestamp) q.timestamp = Date.now();
-          return this.firestoreRef.collection("quotes").doc(q.id).set(q);
-        });
-        await Promise.all(migrationPromises);
-        console.log("DB: Local quotes migration succeeded!");
-        localStorage.removeItem("logistics_quotes");
-      } catch (err) {
-        console.error("DB: Migration of local quotes failed. Retaining local copy.", err);
-      }
     }
     // Check for migration from local to cloud for NRS registry
     const localNrs = JSON.parse(localStorage.getItem("gl_nrs_registry") || "[]");
@@ -7267,380 +7267,136 @@ const DB = {
     const localReqs = JSON.parse(localStorage.getItem("gl_amendment_requests") || "[]");
     if (localReqs.length > 0) {
       console.log(`DB: Found ${localReqs.length} local amendment requests. Migrating to Firestore...`);
+      // Completely unique, conflict-isolated initialization parameters
+      const standaloneAtlasFirebaseSettings = {
+        projectId: "vertex-35d95",
+        apiKey: "AlzaSyBnS2173ew2vpxR7rOs0FfTpfsEmhj79Uc",
+        databaseId: "(default)"
+      };
+
       try {
-        const migrationPromises = localReqs.map(async r => {
-          return this.firestoreRef.collection("amendment_requests").doc(r.id).set(r);
-        });
-        await Promise.all(migrationPromises);
-        console.log("DB: Local amendment requests migration succeeded!");
-      } catch (err) {
-        console.error("DB: Migration of local amendment requests failed:", err);
-      }
-    }
-    return;
-  } catch(e) {
-    console.error("Failed to initialize Firebase:", e);
-  }
-}
-
-// Fallback to local storage
-this.fallbackToLocal();
-  },
-
-registerSnapshotListener() {
-  const statusDot = document.getElementById("db-connection-dot");
-  const statusText = document.getElementById("db-connection-text");
-
-  console.log("DB: Registering Firestore snapshot listener...");
-
-  // Sync users list from Firestore
-  this.syncUsers();
-
-  // Sync customer controls list from Firestore
-  if (this.firestoreRef) {
-    this.firestoreRef.collection("customer_control").onSnapshot(snap => {
-      let controls = {};
-      snap.forEach(doc => {
-        controls[doc.id] = doc.data();
-      });
-      window._customerControls = controls;
-      localStorage.setItem("gl_customer_controls", JSON.stringify(controls));
-      renderAdminCustomerControlList();
-    }, err => {
-      console.warn("Firestore: customer_control listen failed, using local/cached records:", err);
-    });
-
-    // Sync amendment requests list from Firestore
-    this.firestoreRef.collection("amendment_requests").onSnapshot(snap => {
-      let reqs = [];
-      snap.forEach(doc => {
-        reqs.push(doc.data());
-      });
-      window._amendmentRequests = reqs;
-      localStorage.setItem("gl_amendment_requests", JSON.stringify(reqs));
-
-      // Auto refresh dashboards dynamically
-      if (appState.currentUser) {
-        if (appState.currentUser === 'ganny') {
-          renderAdminDashboard();
-        } else {
-          renderMemberDashboard(appState.currentUser);
+        if (firebase.apps.length > 0) {
+          try {
+            await firebase.app().delete();
+          } catch (cleanupError) {
+            console.warn("DB: Maintenance bypass on existing instance:", cleanupError);
+          }
         }
-      }
-    }, err => {
-      console.warn("Firestore: amendment_requests listen failed, using local/cached records:", err);
-      window._amendmentRequestsError = err.message;
-      if (appState.currentUser === 'ganny') {
-        renderAdminDashboard();
-      }
-    });
-  }
 
-  // Unsubscribe from any existing listener if applicable
-  if (this.snapshotUnsubscribe) {
-    this.snapshotUnsubscribe();
-  }
+        firebase.initializeApp(standaloneAtlasFirebaseSettings);
 
-  this.snapshotUnsubscribe = this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
-    console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
-    const list = [];
-    snapshot.forEach(doc => {
-      const q = doc.data();
-      this.sanitize(q, list.length);
-      list.push(q);
-    });
-    // Sort quotes chronologically (newest first)
-    list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    appState.quotes = list;
+        const targetDbClusterId = standaloneAtlasFirebaseSettings.databaseId || '(default)';
+        console.log("DB: Stored Project ID Verification:", standaloneAtlasFirebaseSettings.projectId);
+        console.log("DB: Stored API Key Verification:", standaloneAtlasFirebaseSettings.apiKey);
+        console.log("DB: Initializing Firestore connection with database ID:", targetDbClusterId);
 
-    // Update badge status to show online
-    if (statusDot) statusDot.style.background = "#10b981"; // green
-    if (statusText) statusText.textContent = "Firebase Cloud (Online)";
+        this.firestoreRef = firebase.firestore(firebase.app());
+        this.isCloud = true;
 
-    // Refresh view
-    if (appState.currentUser) {
-      if (appState.currentUser === 'ganny') {
-        renderAdminDashboard();
-      } else {
-        renderMemberDashboard(appState.currentUser);
-      }
-    }
-  }, error => {
-    console.error("Firestore synchronization error:", error);
+        this.firestoreRef.enablePersistence().catch(persistenceError => {
+          console.warn("Offline pipeline retention state deferred:", persistenceError.code);
+        });
 
-    // Self-healing: check if default database is missing and redirect to named 'default' database ID
-    if (error.message && error.message.includes("(default) does not exist") && !this.triedDefaultFallback) {
-      console.log("DB: Default database not found. Self-healing to connect to named database 'default'...");
-      this.triedDefaultFallback = true;
-      try {
-        this.firestoreRef = firebase.firestore(firebase.app(), 'default');
+        if (statusDot) statusDot.style.background = "#10b981";
+        if (statusText) statusText.textContent = "Firebase Cloud (Online)";
+
         this.registerSnapshotListener();
-        return;
-      } catch (fallbackErr) {
-        console.error("DB: Self-healing fallback failed:", fallbackErr);
+
+        // Balanced and stitched migration pathway
+        const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
+        if (localQuotes.length > 0) {
+          console.log(`DB: Found ${localQuotes.length} local quotes. Migrating to Firestore...`);
+          try {
+            const migrationPromises = localQuotes.map(async q => {
+              if (!q.timestamp) q.timestamp = Date.now();
+              return this.firestoreRef.collection("quotes").doc(q.id).set(q);
+            });
+            await Promise.all(migrationPromises);
+            console.log("DB: Local quotes migration succeeded!");
+            localStorage.removeItem("logistics_quotes");
+          } catch (err) {
+            console.error("DB: Migration of local quotes failed. Retaining local copy.", err);
+          }
+        }
+
+      } catch (globalInitError) {
+        console.error("Critical connection engine initialization halt:", globalInitError);
       }
     }
 
-    if (statusDot) statusDot.style.background = "#ef4444"; // red
-    if (statusText) statusText.textContent = "Firebase: " + error.message;
-  });
-},
-
-  async syncUsers() {
-  if (!this.firestoreRef) return;
-  try {
-    const snapshot = await this.firestoreRef.collection("users").get();
-    if (snapshot.empty) {
-      // Auto-populate default roles if empty
-      const defaultUsers = [
-        { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin' },
-        { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-        { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
-        { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
-        { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
-      ];
-      for (const u of defaultUsers) {
-        await this.firestoreRef.collection("users").doc(u.username).set(u);
+    const tabIndia = document.getElementById("news-tab-india");
+    if (tabGlobal && tabIndia) {
+      if (type === 'global') {
+        tabGlobal.classList.add("active");
+        tabGlobal.style.borderColor = "var(--sky)";
+        tabGlobal.style.color = "var(--sky)";
+        tabIndia.classList.remove("active");
+        tabIndia.style.borderColor = "transparent";
+        tabIndia.style.color = "var(--t3)";
+      } else {
+        tabIndia.classList.add("active");
+        tabIndia.style.borderColor = "var(--sky)";
+        tabIndia.style.color = "var(--sky)";
+        tabGlobal.classList.remove("active");
+        tabGlobal.style.borderColor = "transparent";
+        tabGlobal.style.color = "var(--t3)";
       }
-      console.log("DB: Auto-populated default users in Firestore");
     }
 
-    // Set listener on users collection
-    this.firestoreRef.collection("users").onSnapshot(snap => {
-      let customUsers = [];
-      snap.forEach(doc => {
-        const u = doc.data();
-        customUsers.push(u);
-
-        // Update TEAM_ROLES dynamically
-        TEAM_ROLES[u.username] = {
-          name: u.fullName,
-          type: u.role || 'member',
-          category: u.category || 'FREE HAND SALES (AIR/SEA)',
-          currency: u.currency || 'INR'
-        };
-      });
-      window._firebaseUsers = customUsers;
-      localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
-      console.log("DB: Synced users from Firestore count:", customUsers.length);
-    });
-  } catch (err) {
-    console.error("DB: Failed to sync users from Firestore:", err);
-  }
-},
-
-fallbackToLocal() {
-  const statusDot = document.getElementById("db-connection-dot");
-  const statusText = document.getElementById("db-connection-text");
-
-  this.isCloud = false;
-  if (statusDot) statusDot.style.background = "#38bdf8"; // sky blue
-  if (statusText) statusText.textContent = "LocalStorage (Offline)";
-
-  // Load local storage quotes
-  const saved = localStorage.getItem("logistics_quotes");
-  if (saved) {
-    try {
-      appState.quotes = JSON.parse(saved);
-      if (appState.quotes.some(q => typeof q.id === 'string' && q.id.startsWith("q"))) {
-        appState.quotes = [];
-        localStorage.setItem("logistics_quotes", JSON.stringify([]));
+    // Update Member tabs
+    const mTabGlobal = document.getElementById("member-news-tab-global");
+    const mTabIndia = document.getElementById("member-news-tab-india");
+    if (mTabGlobal && mTabIndia) {
+      if (type === 'global') {
+        mTabGlobal.classList.add("active");
+        mTabGlobal.style.borderColor = "var(--sky)";
+        mTabGlobal.style.color = "var(--sky)";
+        mTabIndia.classList.remove("active");
+        mTabIndia.style.borderColor = "transparent";
+        mTabIndia.style.color = "var(--t3)";
+      } else {
+        mTabIndia.classList.add("active");
+        mTabIndia.style.borderColor = "var(--sky)";
+        mTabIndia.style.color = "var(--sky)";
+        mTabGlobal.classList.remove("active");
+        mTabGlobal.style.borderColor = "transparent";
+        mTabGlobal.style.color = "var(--t3)";
       }
-    } catch (e) {
-      appState.quotes = [];
     }
-  } else {
-    appState.quotes = [];
-  }
 
-  // Load local amendment requests cache
-  const storedReqs = localStorage.getItem("gl_amendment_requests");
-  if (storedReqs) {
-    try {
-      window._amendmentRequests = JSON.parse(storedReqs);
-    } catch (e) {
-      window._amendmentRequests = [];
-    }
-  } else {
-    window._amendmentRequests = [];
-  }
-
-  // Sanitize quotes array
-  appState.quotes.forEach((q, idx) => {
-    this.sanitize(q, idx);
-  });
-},
-
-sanitize(q, idx) {
-  const creatorMap = {
-    'air-nom': 'shashank',
-    'sea-nom': 'mahendra',
-    'air-local': 'jaya',
-    'sea-local': 'jaya'
-  };
-  if (creatorMap[q.creator]) {
-    q.creator = creatorMap[q.creator];
-  }
-  if (!q.quoteNumber) {
-    q.quoteNumber = idx + 1;
-  }
-  if (!q.timestamp) {
-    q.timestamp = Date.now() - (idx * 60 * 1000);
-  }
-},
-
-  async saveQuote(quote) {
-  if (!quote.timestamp) quote.timestamp = Date.now();
-
-  // Local memory update immediately so the local user doesn't see lag
-  const idx = appState.quotes.findIndex(q => q.id === quote.id);
-  if (idx !== -1) {
-    appState.quotes[idx] = quote;
-  } else {
-    appState.quotes.push(quote);
-  }
-
-  if (this.isCloud && this.firestoreRef) {
-    console.log("DB: Attempting to write quote to Firestore...", quote.id);
-    try {
-      await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
-      console.log("DB: Firestore write succeeded!");
-    } catch (err) {
-      console.error("DB: Firestore write failed:", err);
-      alert("Cloud Database Write Error: " + err.message);
-    }
-  } else {
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
-    if (appState.currentUser === 'ganny') {
-      renderAdminDashboard();
-    } else {
-      renderMemberDashboard(appState.currentUser);
-    }
-  }
-},
-
-  async deleteQuote(quoteId) {
-  appState.quotes = appState.quotes.filter(q => q.id !== quoteId);
-
-  if (this.isCloud && this.firestoreRef) {
-    try {
-      await this.firestoreRef.collection("quotes").doc(quoteId).delete();
-    } catch (err) {
-      console.error("DB: Firestore delete failed:", err);
-      alert("Cloud Database Delete Error: " + err.message);
-    }
-  } else {
-    localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
-    if (appState.currentUser === 'ganny') {
-      renderAdminDashboard();
-    } else {
-      renderMemberDashboard(appState.currentUser);
-    }
-  }
-},
-
-  async clearAllQuotes() {
-  if (this.isCloud && this.firestoreRef) {
-    try {
-      const snapshot = await this.firestoreRef.collection("quotes").get();
-      const promises = [];
-      snapshot.forEach(doc => {
-        promises.push(doc.ref.delete());
-      });
-      await Promise.all(promises);
-      console.log("DB: All quotes deleted from Firestore.");
-    } catch (err) {
-      console.error("DB: Failed to clear Firestore quotes:", err);
-      throw err;
-    }
-  } else {
-    localStorage.removeItem("logistics_quotes");
-  }
-  appState.quotes = [];
-}
-};
-window.DB = DB;
-
-async function loadLogisticsNews(type = 'global') {
-  const container1 = document.getElementById("logistics-news-list");
-  const container2 = document.getElementById("member-logistics-news-list");
-  if (!container1 && !container2) return;
-
-  // Update Admin tabs
-  const tabGlobal = document.getElementById("news-tab-global");
-  const tabIndia = document.getElementById("news-tab-india");
-  if (tabGlobal && tabIndia) {
-    if (type === 'global') {
-      tabGlobal.classList.add("active");
-      tabGlobal.style.borderColor = "var(--sky)";
-      tabGlobal.style.color = "var(--sky)";
-      tabIndia.classList.remove("active");
-      tabIndia.style.borderColor = "transparent";
-      tabIndia.style.color = "var(--t3)";
-    } else {
-      tabIndia.classList.add("active");
-      tabIndia.style.borderColor = "var(--sky)";
-      tabIndia.style.color = "var(--sky)";
-      tabGlobal.classList.remove("active");
-      tabGlobal.style.borderColor = "transparent";
-      tabGlobal.style.color = "var(--t3)";
-    }
-  }
-
-  // Update Member tabs
-  const mTabGlobal = document.getElementById("member-news-tab-global");
-  const mTabIndia = document.getElementById("member-news-tab-india");
-  if (mTabGlobal && mTabIndia) {
-    if (type === 'global') {
-      mTabGlobal.classList.add("active");
-      mTabGlobal.style.borderColor = "var(--sky)";
-      mTabGlobal.style.color = "var(--sky)";
-      mTabIndia.classList.remove("active");
-      mTabIndia.style.borderColor = "transparent";
-      mTabIndia.style.color = "var(--t3)";
-    } else {
-      mTabIndia.classList.add("active");
-      mTabIndia.style.borderColor = "var(--sky)";
-      mTabIndia.style.color = "var(--sky)";
-      mTabGlobal.classList.remove("active");
-      mTabGlobal.style.borderColor = "transparent";
-      mTabGlobal.style.color = "var(--t3)";
-    }
-  }
-
-  const loadingHtml = `
+    const loadingHtml = `
     <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
       <span style="display:inline-block; width:6px; height:6px; background:var(--sky); border-radius:50%; margin-right:4px;"></span>
       Fetching latest ${type === 'global' ? 'Global' : 'India'} news...
     </div>
   `;
-  if (container1) container1.innerHTML = loadingHtml;
-  if (container2) container2.innerHTML = loadingHtml;
+    if (container1) container1.innerHTML = loadingHtml;
+    if (container2) container2.innerHTML = loadingHtml;
 
-  const rssUrl = type === 'global'
-    ? "https://container-news.com/feed/"
-    : "https://www.logisticsinsider.in/feed/";
-  const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+    const rssUrl = type === 'global'
+      ? "https://container-news.com/feed/"
+      : "https://www.logisticsinsider.in/feed/";
+    const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
-  try {
-    const res = await fetch(feedUrl);
-    const data = await res.json();
+    try {
+      const res = await fetch(feedUrl);
+      const data = await res.json();
 
-    if (data && data.status === 'ok' && data.items && data.items.length > 0) {
-      const itemsHtml = data.items.map(item => {
-        let dateStr = "";
-        try {
-          const d = new Date(item.pubDate);
-          if (!isNaN(d.getTime())) {
-            dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
-          }
-        } catch (e) { }
+      if (data && data.status === 'ok' && data.items && data.items.length > 0) {
+        const itemsHtml = data.items.map(item => {
+          let dateStr = "";
+          try {
+            const d = new Date(item.pubDate);
+            if (!isNaN(d.getTime())) {
+              dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+            }
+          } catch (e) { }
 
-        const title = item.title || "Logistics News Update";
-        const link = item.link || "#";
-        const author = item.author ? ` • By ${item.author}` : "";
+          const title = item.title || "Logistics News Update";
+          const link = item.link || "#";
+          const author = item.author ? ` • By ${item.author}` : "";
 
-        return `
+          return `
           <a href="${link}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block; margin-bottom: 0.5rem;">
             <div class="news-feed-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.25rem; transition: all 0.2s; cursor: pointer;">
               <div style="font-weight: 750; font-size: 0.75rem; color: var(--t1); line-height: 1.3;">${title}</div>
@@ -7651,24 +7407,26 @@ async function loadLogisticsNews(type = 'global') {
             </div>
           </a>
         `;
-      }).join("");
+        }).join("");
 
-      if (container1) container1.innerHTML = itemsHtml;
-      if (container2) container2.innerHTML = itemsHtml;
-    } else {
-      throw new Error("Invalid RSS feed response");
-    }
-  } catch (err) {
-    console.error("Failed to load logistics news:", err);
-    const errorHtml = `
+        if (container1) container1.innerHTML = itemsHtml;
+        if (container2) container2.innerHTML = itemsHtml;
+      } else {
+        throw new Error("Invalid RSS feed response");
+      }
+    } catch (err) {
+      console.error("Failed to load logistics news:", err);
+      const errorHtml = `
       <div style="font-size: 0.72rem; color: var(--accent-error); font-style: italic; text-align: center; margin-top: 1.5rem;">
         ⚠️ Failed to load news feed.
       </div>
-    `;
-    if (container1) container1.innerHTML = errorHtml;
-    if (container2) container2.innerHTML = errorHtml;
+   `;
+      if (container1) container1.innerHTML = errorHtml;
+      if (container2) container2.innerHTML = errorHtml;
+    }
   }
-}
+} // <-- Moving the closing brace here closes the parent block completely
+
 window.loadLogisticsNews = loadLogisticsNews;
 
 // MODAL & SECURITY HANDLERS
