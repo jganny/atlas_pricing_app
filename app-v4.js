@@ -1520,8 +1520,12 @@ function addAirlineCard(data = null) {
   const isFreeHandOrNrs = creatorRole && (
     creatorRole === 'jaya' || 
     creatorRole === 'cathrina' || 
+    creatorRole === 'shashank' ||
+    creatorRole === 'mahendra' ||
     TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
-    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
+    TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
+    TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
   );
 
   card.innerHTML = `
@@ -1970,8 +1974,12 @@ function calculateAirFreight() {
       const isFreeHandOrNrs = creatorRole && (
         creatorRole === 'jaya' || 
         creatorRole === 'cathrina' || 
+        creatorRole === 'shashank' ||
+        creatorRole === 'mahendra' ||
         TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
-        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
+        TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
+        TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
       );
 
       if (surchargeNameLower === "cartage" || surchargeNameLower === "misc") {
@@ -2085,8 +2093,12 @@ function calculateAirFreight() {
   const isFreeHandOrNrs = creatorRole && (
     creatorRole === 'jaya' || 
     creatorRole === 'cathrina' || 
+    creatorRole === 'shashank' ||
+    creatorRole === 'mahendra' ||
     TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
-    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
+    TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
+    TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
   );
 
   originRows.forEach(row => {
@@ -2878,6 +2890,9 @@ function setupSurchargesEvents(freightType) {
     if (e.target.classList.contains("chg-name")) {
       memorizeSurchargeNames(e);
     }
+    if (e.target.matches("input, select")) {
+      callback();
+    }
   });
 
   body.addEventListener("focusin", (e) => {
@@ -2987,7 +3002,7 @@ function renderMemberDashboard(userId) {
   tbody.innerHTML = "";
 
   if (myQuotes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries priced yet. Click a button above to start pricing.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries priced yet. Click a button above to start pricing.</td></tr>`;
     return;
   }
 
@@ -2998,11 +3013,15 @@ function renderMemberDashboard(userId) {
     const tr = document.createElement("tr");
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-    const quoteAmount = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     
     const isQuoted = quote.status === 'quoted';
     const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
     
+    const carrier = quote.confirmedCarrier || (quote.details?.airline || quote.details?.shippingLine || 'N/A');
+    const buyRate = getQuoteBuyRate(quote);
+    const sellRate = getQuoteSellRate(quote);
+    const gp = getQuoteGP(quote);
+
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
@@ -3015,14 +3034,10 @@ function renderMemberDashboard(userId) {
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
       </td>
-      <td>
-        <div>${quoteAmount}</div>
-        ${quote.grossProfit !== undefined ? `
-          <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
-            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${quote.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </div>
-        ` : ''}
-      </td>
+      <td><strong>${carrier}</strong></td>
+      <td>${buyRate > 0 ? `${currencySym}${buyRate.toFixed(2)}` : '-'}</td>
+      <td>${sellRate > 0 ? `${currencySym}${sellRate.toFixed(2)}` : '-'}</td>
+      <td><strong style="color: ${gp >= 0 ? 'var(--accent-success)' : 'var(--accent-error)'};">${gp !== 0 ? `${currencySym}${gp.toFixed(2)}` : '-'}</strong></td>
       <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
       <td class="actions-cell">
         <button class="action-icon-btn amend" style="background: ${quote.amendmentAllowed ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
@@ -3172,6 +3187,27 @@ function renderAdminDashboard() {
 
   // Render Master logs using Filter & Sort
   applyDbFiltersAndSort();
+
+  // Render user credentials list
+  const userCredsBody = document.getElementById("admin-user-credentials-body");
+  if (userCredsBody) {
+    const allUsers = getAllUsers();
+    userCredsBody.innerHTML = allUsers.map(u => {
+      return `
+        <tr>
+          <td><strong>${u.username}</strong></td>
+          <td>${u.fullName}</td>
+          <td><span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.1); color: var(--t1); font-weight: 600;">${u.category || u.role || 'FREE HAND SALES'}</span></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="password" class="user-pw-display" value="${u.password || 'password'}" readonly style="background:transparent; border:none; color:var(--t1); font-size:0.75rem; font-family: monospace; width: 80px; padding:0; height:auto; box-shadow:none;">
+              <button type="button" class="btn-text" style="font-size: 0.65rem; padding: 0 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;" onclick="togglePasswordVisibility(this)">Show</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
 
   // Render Amendment Requests List for Ganny
   const reqPanel = document.getElementById("admin-amendment-requests-panel");
@@ -4177,8 +4213,12 @@ function resetSurchargesToDefaults() {
     const isFreeHandOrNrs = creatorRole && (
       creatorRole === 'jaya' || 
       creatorRole === 'cathrina' || 
+      creatorRole === 'shashank' ||
+      creatorRole === 'mahendra' ||
       TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
-      TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+      TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
+      TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
+      TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
     );
 
     if (isFreeHandOrNrs) {
@@ -4757,28 +4797,73 @@ window.viewSavedQuote = (id) => {
         </tbody>
       </table>
     `;
-  } else if (quote.details && quote.details.alternatives && quote.details.alternatives.length > 0) {
-    const altRows = quote.details.alternatives.map(alt => `
-      <tr>
-        <td style="font-weight: 700; color: #1b1c5c;">${alt.carrier}</td>
-        <td>${alt.routing}</td>
-        <td>${alt.tt}</td>
-        <td style="font-weight: 700; color: #2f3193;">${alt.rate}</td>
+  } else if (quote.type === 'sea' && quote.details) {
+    const primarySelected = (quote.confirmedCarrier === quote.details.shippingLine) || !quote.confirmedCarrier;
+    const detailsLabel = quote.details.mode === 'fcl' 
+      ? (quote.details.fclSummary ? quote.details.fclSummary.join(", ") : "FCL") 
+      : `${quote.details.volumeCbm || 0} CBM / ${quote.details.grossWeight || 0} kg`;
+
+    let primaryRow = `
+      <tr style="${primarySelected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
+          ${quote.details.shippingLine || 'N/A'} (Primary)
+        </td>
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.routing || '-'}</td>
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.tt || '-'}</td>
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.validity || '-'}</td>
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${detailsLabel || '-'}</td>
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193; font-weight: 700;">
+          ${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}
+        </td>
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">
+          ${currencySym}${(quote.details.surchargeTotal || 0).toFixed(2)}
+        </td>
+        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800; color: #1b1c5c;">
+          ${currencySym}${((quote.details.baseFreight || 0) + (quote.details.surchargeTotal || 0)).toFixed(2)}
+        </td>
       </tr>
-    `).join("");
-    
+    `;
+
+    let altRows = "";
+    if (quote.details.alternatives && quote.details.alternatives.length > 0) {
+      altRows = quote.details.alternatives.map(alt => {
+        const isSelected = (quote.confirmedCarrier === alt.carrier);
+        return `
+          <tr style="${isSelected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
+              ${alt.carrier}
+            </td>
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.routing || '-'}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.tt || '-'}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.validity || '-'}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">-</td>
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193; font-weight: 700;">-</td>
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">-</td>
+            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800; color: #1b1c5c;">
+              ${alt.rate}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
     alternativesHtml = `
-      <div class="print-section-title" style="margin-top: 1.5rem;">Alternative Carrier & Routing Options</div>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem;">
+      <div class="print-section-title" style="margin-top: 1.5rem;">Shipping Line & Pricing Summary (Individual details)</div>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
         <thead>
           <tr style="background: #f8fafc;">
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Carrier / Operator</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Routing Details</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Transit Time (TT)</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Rate & Cost Details</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Shipping Line</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Routing</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Transit Time</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Validity</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Details</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Base Freight</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Surcharges</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Grand Total</th>
           </tr>
         </thead>
         <tbody>
+          ${primaryRow}
           ${altRows}
         </tbody>
       </table>
@@ -4841,7 +4926,6 @@ window.viewSavedQuote = (id) => {
       <tr><td>Origin Port</td><td>${quote.details.origin || 'INNSA'}</td></tr>
       <tr><td>Destination Port</td><td>${quote.details.destination || 'Rotterdam'}</td></tr>
       <tr><td>Shipping Line</td><td>${quote.details.shippingLine || 'N/A'}</td></tr>
-      <tr><td>Liner Name</td><td>${quote.details.linerName || 'N/A'}</td></tr>
       <tr><td>Commodity</td><td>${quote.details.commodity || 'N/A'}</td></tr>
       <tr><td>Incoterm</td><td><strong>${quote.details.incoterm || 'EXW'}</strong></td></tr>
       <tr><td>Sea Freight Mode</td><td>${modeLabel}</td></tr>
@@ -5307,7 +5391,7 @@ window.applyDbFiltersAndSort = () => {
 
   tbody.innerHTML = "";
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
     return;
   }
 
@@ -5315,9 +5399,12 @@ window.applyDbFiltersAndSort = () => {
     const tr = document.createElement("tr");
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-    const amountStr = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     
+    const carrier = quote.confirmedCarrier || (quote.details?.airline || quote.details?.shippingLine || 'N/A');
+    const buyRate = getQuoteBuyRate(quote);
+    const sellRate = getQuoteSellRate(quote);
+    const gp = getQuoteGP(quote);
+
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
@@ -5330,17 +5417,11 @@ window.applyDbFiltersAndSort = () => {
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
       </td>
-      <td>
-        <div>${amountStr}</div>
-        ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
-        ${quote.grossProfit !== undefined ? `
-          <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
-            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${quote.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${quote.grossProfitINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
-          </div>
-        ` : ''}
-      </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
+      <td><strong>${carrier}</strong></td>
+      <td>${buyRate > 0 ? `${currencySym}${buyRate.toFixed(2)}` : '-'}</td>
+      <td>${sellRate > 0 ? `${currencySym}${sellRate.toFixed(2)}` : '-'}</td>
+      <td><strong style="color: ${gp >= 0 ? 'var(--accent-success)' : 'var(--accent-error)'};">${gp !== 0 ? `${currencySym}${gp.toFixed(2)}` : '-'}</strong></td>
       <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
       <td class="actions-cell">
         <button class="action-icon-btn amend" style="background: rgba(245, 158, 11, 0.25); color: var(--accent-warning);" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
@@ -8898,3 +8979,130 @@ function convertToInr(amount, currency) {
   return amount;
 }
 window.convertToInr = convertToInr;
+
+function getQuoteBuyRate(quote) {
+  if (quote.confirmedBuyRate !== undefined && quote.confirmedBuyRate > 0) {
+    return quote.confirmedBuyRate;
+  }
+  if (!quote.details) return 0;
+  if (quote.type === 'air') {
+    if (quote.details.airlines && quote.details.airlines.length > 0) {
+      const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
+      if (activeAir) {
+        const brk = activeAir.usedBreak || 'min';
+        if (activeAir.breaks && activeAir.breaks[brk]) {
+          return activeAir.breaks[brk].buy || 0;
+        }
+      }
+    }
+    return quote.details.buyRate || 0;
+  } else {
+    if (quote.details.mode === 'fcl') {
+      if (quote.details.containerItems && quote.details.containerItems.length > 0) {
+        return quote.details.containerItems.reduce((sum, item) => sum + (item.buy || 0), 0);
+      }
+      return 0;
+    } else if (quote.details.mode === 'lcl') {
+      return quote.details.lclBuyRateApplied || 0;
+    } else {
+      return quote.details.bbBuyRateApplied || 0;
+    }
+  }
+}
+window.getQuoteBuyRate = getQuoteBuyRate;
+
+function getQuoteSellRate(quote) {
+  if (!quote.details) return quote.amount;
+  if (quote.type === 'air') {
+    if (quote.details.airlines && quote.details.airlines.length > 0) {
+      const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
+      return activeAir ? (activeAir.appliedRate || 0) : 0;
+    }
+    return quote.details.appliedRate || 0;
+  } else {
+    if (quote.details.mode === 'fcl') {
+      if (quote.details.containerItems && quote.details.containerItems.length > 0) {
+        return quote.details.containerItems.reduce((sum, item) => sum + (item.sell || item.rate || 0), 0);
+      }
+      return 0;
+    } else if (quote.details.mode === 'lcl') {
+      return quote.details.lclRateApplied || 0;
+    } else {
+      return quote.details.bbRateApplied || 0;
+    }
+  }
+}
+window.getQuoteSellRate = getQuoteSellRate;
+
+function getQuoteGP(quote) {
+  if (quote.grossProfit !== undefined) {
+    return quote.grossProfit;
+  }
+  if (!quote.details) return 0;
+  if (quote.type === 'air') {
+    const chgWt = quote.details.chargeableWeight || 0;
+    const sellRate = getQuoteSellRate(quote);
+    const buyRate = getQuoteBuyRate(quote);
+    return (sellRate - buyRate) * chgWt;
+  } else {
+    const sellBase = quote.details.baseFreight || 0;
+    const buyRate = getQuoteBuyRate(quote);
+    if (quote.details.mode === 'fcl') {
+      const qty = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
+      return sellBase - (qty * buyRate);
+    } else {
+      const rt = quote.details.lclChargeable || 0;
+      return sellBase - (rt * buyRate);
+    }
+  }
+}
+window.getQuoteGP = getQuoteGP;
+
+function getAllUsers() {
+  const defaultUsers = [
+    { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin', category: 'Admin' },
+    { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
+    { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+    { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
+    { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
+  ];
+
+  let customUsers = [];
+  try {
+    const stored = localStorage.getItem("gl_custom_users");
+    if (stored) {
+      customUsers = JSON.parse(stored);
+    }
+  } catch(e) {}
+
+  const allUsersMap = {};
+  defaultUsers.forEach(u => {
+    allUsersMap[u.username] = u;
+  });
+  customUsers.forEach(u => {
+    allUsersMap[u.username] = u;
+  });
+
+  return Object.values(allUsersMap);
+}
+window.getAllUsers = getAllUsers;
+
+window.togglePasswordVisibility = (btn) => {
+  const input = btn.previousElementSibling;
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "Hide";
+  } else {
+    input.type = "password";
+    btn.textContent = "Show";
+  }
+};
+
+function resetCargoAndRatesForSea() {
+  calculateSeaFreight();
+}
+function resetCargoAndRatesForAir() {
+  calculateAirFreight();
+}
+window.resetCargoAndRatesForSea = resetCargoAndRatesForSea;
+window.resetCargoAndRatesForAir = resetCargoAndRatesForAir;

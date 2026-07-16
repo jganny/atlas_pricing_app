@@ -493,8 +493,11 @@
                   <th>Date</th>
                   <th>Mode</th>
                   <th>Agent & Route Details</th>
-                  <th>Quoted Amount</th>
                   <th>Priced By Desk</th>
+                  <th>Carrier</th>
+                  <th>Buy Rate</th>
+                  <th>Sell Rate</th>
+                  <th>GP</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -616,7 +619,10 @@
                   <th>Date</th>
                   <th>Mode</th>
                   <th>Agent & Route Details</th>
-                  <th>Quoted Amount</th>
+                  <th>Carrier</th>
+                  <th>Buy Rate</th>
+                  <th>Sell Rate</th>
+                  <th>GP</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -1119,7 +1125,7 @@
             </div>
 
             <div class="form-grid-3" style="margin-top: 1rem;">
-              <div class="form-group autocomplete-container">
+              <div class="form-group autocomplete-container" style="display: none;">
                 <label for="sea-liner-name">Liner Name</label>
                 <input type="text" id="sea-liner-name" placeholder="e.g. MSC, Hapag-Lloyd" autocomplete="off">
               </div>
@@ -2011,6 +2017,26 @@
           </form>
           <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.75rem; line-height: 1.35;">
             💡 <em>New users will be granted access to the <strong>Local Free Hand Sales Category</strong> only, with no access to Nomination or NRS desks.</em>
+          </div>
+        </div>
+
+        <!-- Card 2.5: User Profiles & Credentials -->
+        <div style="border-top: 1px solid var(--border-1); padding-top: 1.5rem;">
+          <h3 style="font-weight: 800; margin-bottom: 1rem; font-size: 0.95rem; text-transform: uppercase; color: var(--accent-air); font-family: 'Outfit', sans-serif;">User Profiles & Credentials</h3>
+          <div class="quotes-table-container" style="max-height: 200px; overflow-y: auto;">
+            <table class="quotes-table" style="font-size: 0.72rem;">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Full Name</th>
+                  <th>Role / Category</th>
+                  <th>Password</th>
+                </tr>
+              </thead>
+              <tbody id="admin-user-credentials-body">
+                <!-- Dynamically populated by JS -->
+              </tbody>
+            </table>
           </div>
         </div>
 
