@@ -391,13 +391,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Authentication System
 function checkSession() {
+  document.getElementById("login-overlay").style.display = "flex";
   const session = sessionStorage.getItem("gl_pricing_session");
   if (session && TEAM_ROLES[session]) {
     loginSuccess(session);
   } else {
-    // Show login overlay and keep workspace visible but blurred
     document.body.classList.add("logged-out-blur");
-    document.getElementById("login-overlay").style.display = "flex";
     document.getElementById("app-workspace").style.display = "flex";
     document.getElementById("subheader-controls").style.display = "flex";
   }
