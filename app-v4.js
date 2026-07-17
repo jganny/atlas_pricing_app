@@ -225,7 +225,22 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
       .catch(err => {
         console.error("DB: failed to save edit request:", err);
         alert("Failed to submit request to cloud. Saving locally...");
-           saveRequestLocallyFallback(newReq);
+               saveRequestLocallyFallback(newReq);
+  }
+}
+
+// Safe fallback placeholders to prevent pre-login startup crashes
+function loadLogisticsNews() {
+  console.log("Bypassing news feed loading.");
+}
+function registerSnapshotListener() {
+  console.log("Bypassing background snapshot listener layout.");
+}
+function calculateTransitETA() {
+  console.log("Bypassing transit calculations.");
+}
+var tabGlobal = tabGlobal || {};
+
   }
 }
 
