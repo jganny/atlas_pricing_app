@@ -7300,7 +7300,7 @@ const DB = {
         if (statusDot) statusDot.style.background = "#10b981";
         if (statusText) statusText.textContent = "Firebase Cloud (Online)";
 
-        this.registerSnapshotListener();
+        registerSnapshotListener();
 
         // Balanced and stitched migration pathway
         const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
