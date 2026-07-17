@@ -10432,6 +10432,6 @@ const DB = {
     }
     var tabGlobal = tabGlobal || {};
       }
-  });
+  };
 });
 
