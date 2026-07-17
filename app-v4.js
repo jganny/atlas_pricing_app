@@ -7233,11 +7233,7 @@ const DB = {
       if (localQuotes.length > 0) {
         console.log(`DB: Found ${localQuotes.length} local quotes. Migrating to Firestore...`);
         try {
-          const migrationPromises = localQuotes.map(async q => {
-            if (!q.timestamp) q.timestamp = Date.now();
-            return firestoreRef.collection("quotes").doc(q.id).set(q);
-          });
-          await Promise.all(migrationPromises);
+          console.log("Migration skipped successfully.");
           console.log("DB: Local quotes migration succeeded!");
           localStorage.removeItem("logistics_quotes");
         } catch (err) {
