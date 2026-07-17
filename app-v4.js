@@ -10431,5 +10431,7 @@ const DB = {
       console.log("Bypassing transit calculations.");
     }
     var tabGlobal = tabGlobal || {};
+      }
   });
 });
+
