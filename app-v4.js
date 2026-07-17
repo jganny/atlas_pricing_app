@@ -101,7 +101,7 @@ window.isEligibleDeskUser = isEligibleDeskUser;
 
 // Global App State
 let appState = {
-  currentUser: null, // User Role Object
+  currentUser: null, 
   airports: [],
   airlines: [],
   quotes: [],
@@ -110,7 +110,7 @@ let appState = {
     destination: '',
     airline: '',
     dimUnit: 'cms',
-    module: 'export', // 'export' or 'import'
+    module: 'export', 
     cargoItems: [{ length: '', width: '', height: '', qty: '', grossWeight: '' }],
     rates: { min: '', minus45: '', plus45: '', plus100: '', plus300: '', plus500: '', plus1000: '' },
     surcharges: [{ name: 'Xray', rate: 0.00, unit: 'kg' }, { name: 'Cartage', rate: 6.00, unit: 'flat' }, { name: 'Misc', rate: 6.00, unit: 'flat' }],
@@ -122,8 +122,8 @@ let appState = {
     origin: '',
     destination: '',
     shippingLine: '',
-    type: 'fcl', // 'fcl', 'lcl', or 'bb' (break bulk)
-    module: 'export', // 'export' or 'import'
+    type: 'fcl', 
+    module: 'export', 
     containers: [
       { type: "20'GP", qty: 1, rate: 1800 },
       { type: "40'GP", qty: 0, rate: 2600 },
@@ -198,7 +198,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
   }
 
   const reason = prompt(`You do not have permission to ${actionVerb} this quotation.\n\nPlease enter the reason for requesting edit/amendment permission from Ganny:`);
-  if (reason === null) return false; // User cancelled
+  if (reason === null) return false; 
   if (!reason.trim()) {
     alert("A reason is required to submit the request.");
     return false;
@@ -217,7 +217,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
     acknowledged: false
   };
 
-  if (DB.firestoreRef) {
+  if (typeof DB !== 'undefined' && DB.firestoreRef) {
     DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
       .then(() => {
         alert("Edit/Amendment request submitted successfully to Ganny.");
@@ -226,8 +226,25 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
         console.error("DB: failed to save edit request:", err);
         alert("Failed to submit request to cloud. Saving locally...");
         saveRequestLocallyFallback(newReq);
-  })
+      });
+  } else {
+    saveRequestLocallyFallback(newReq);
+  }
+  return false;
 }
+window.checkAndRequestEditPermission = checkAndRequestEditPermission;
+
+function saveRequestLocallyFallback(newReq) {
+  let localRequests = [];
+  const stored = localStorage.getItem("gl_amendment_requests");
+  if (stored) {
+    try { localRequests = JSON.parse(stored); } catch(e) {}
+  }
+  localRequests.push(newReq);
+  localStorage.setItem("gl_amendment_requests", JSON.stringify(localRequests));
+  console.log("Saved request locally:", newReq);
+}
+
 // Safe fallback placeholders to prevent pre-login startup crashes
 function loadLogisticsNews() {
   console.log("Bypassing news feed loading.");
@@ -239,9 +256,6 @@ function calculateTransitETA() {
   console.log("Bypassing transit calculations.");
 }
 var tabGlobal = tabGlobal || {};
-
-  }
-}
 
 // Safe fallback placeholders to prevent pre-login startup crashes
 function loadLogisticsNews() {
