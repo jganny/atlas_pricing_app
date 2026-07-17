@@ -1,3 +1,4 @@
+var type = 'global';
 window.qCur = window.qCur || "USD";
 // Bypass crashes for deleted landing configurations
 if (typeof landingConfigurations === 'undefined') {
