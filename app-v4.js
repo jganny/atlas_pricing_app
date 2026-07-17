@@ -7235,7 +7235,7 @@ const DB = {
         try {
           const migrationPromises = localQuotes.map(async q => {
             if (!q.timestamp) q.timestamp = Date.now();
-            return this.firestoreRef.collection("quotes").doc(q.id).set(q);
+            return firestoreRef.collection("quotes").doc(q.id).set(q);
           });
           await Promise.all(migrationPromises);
           console.log("DB: Local quotes migration succeeded!");
