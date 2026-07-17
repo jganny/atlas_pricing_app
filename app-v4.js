@@ -226,7 +226,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
         console.error("DB: failed to save edit request:", err);
         alert("Failed to submit request to cloud. Saving locally...");
         saveRequestLocallyFallback(newReq);
-  }
+  })
 }
 // Safe fallback placeholders to prevent pre-login startup crashes
 function loadLogisticsNews() {
