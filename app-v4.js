@@ -10409,27 +10409,18 @@ const DB = {
       }
     };
     // Safe fallback placeholders to prevent pre-login startup crashes
-    function loadLogisticsNews() {
-      console.log("Bypassing news feed loading.");
-    }
-    function registerSnapshotListener() {
-      console.log("Bypassing background snapshot listener layout.");
-    }
-    function calculateTransitETA() {
-      console.log("Bypassing transit calculations.");
-    }
-    var tabGlobal = tabGlobal || {};
-
-    // Safe fallback placeholders to prevent pre-login startup crashes
-    function loadLogisticsNews() {
-      console.log("Bypassing news feed loading.");
-    }
-    function registerSnapshotListener() {
-      console.log("Bypassing background snapshot listener layout.");
-    }
-    function calculateTransitETA() {
+function loadLogisticsNews() {
+  console.log("Bypassing news feed loading.");
+}
+function registerSnapshotListener() {
+  console.log("Bypassing background snapshot listener layout.");
+}
+function calculateTransitETA() {
   console.log("Bypassing transit calculations.");
 }
 var tabGlobal = tabGlobal || {};
 
-
+// Re-balancing the global application wrappers
+    });
+  });
+});
