@@ -7325,7 +7325,7 @@ const DB = {
       }
     }
     var type = 'global';
-    const tabIndia = document.getElementById("news-tab-india"); // Keep this line exactly here!
+    const tabIndia = document.getElementById("news-tab-india");
     if (tabGlobal && tabIndia) {
       if (type === 'global') {
         const tabIndia = document.getElementById("news-tab-india");
