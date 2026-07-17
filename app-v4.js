@@ -10428,10 +10428,8 @@ const DB = {
       console.log("Bypassing background snapshot listener layout.");
     }
     function calculateTransitETA() {
-      console.log("Bypassing transit calculations.");
-    }
-    var tabGlobal = tabGlobal || {};
-      }
-  };
-});
+  console.log("Bypassing transit calculations.");
+}
+var tabGlobal = tabGlobal || {};
+
 
