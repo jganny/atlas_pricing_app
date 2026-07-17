@@ -7326,7 +7326,7 @@ const DB = {
 
     const tabIndia = document.getElementById("news-tab-india");
     if (tabGlobal && tabIndia) {
-      if (type === 'global') {
+      if (typeof type !== 'undefined' && type === 'global') {
         tabGlobal.classList.add("active");
         tabGlobal.style.borderColor = "var(--sky)";
         tabGlobal.style.color = "var(--sky)";
