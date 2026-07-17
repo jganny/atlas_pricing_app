@@ -10419,7 +10419,7 @@ function calculateTransitETA() {
   console.log("Bypassing transit calculations.");
 }
 var tabGlobal = tabGlobal || {};
-var CITY_TIMEZONES = CITY_TIMEZONES || {};
+
 // Safe fallback placeholders to prevent pre-login startup crashes
 function loadLogisticsNews() {
   console.log("Bypassing news feed loading.");
@@ -10431,4 +10431,4 @@ function calculateTransitETA() {
   console.log("Bypassing transit calculations.");
 }
 var tabGlobal = tabGlobal || {};
-var CITY_TIMEZONES = CITY_TIMEZONES || {};
+
