@@ -7324,80 +7324,83 @@ const DB = {
         console.error("Critical connection engine initialization halt:", globalInitError);
       }
     }
-
-    const tabIndia = document.getElementById("news-tab-india");
+    var type = 'global';
+    const tabIndia = document.getElementById("news-tab-india"); // Keep this line exactly here!
     if (tabGlobal && tabIndia) {
-      if (typeof type !== 'undefined' && type === 'global') {
-        tabGlobal.classList.add("active");
-        tabGlobal.style.borderColor = "var(--sky)";
-        tabGlobal.style.color = "var(--sky)";
-        tabIndia.classList.remove("active");
-        tabIndia.style.borderColor = "transparent";
-        tabIndia.style.color = "var(--t3)";
-      } else {
-        tabIndia.classList.add("active");
-        tabIndia.style.borderColor = "var(--sky)";
-        tabIndia.style.color = "var(--sky)";
-        tabGlobal.classList.remove("active");
-        tabGlobal.style.borderColor = "transparent";
-        tabGlobal.style.color = "var(--t3)";
-      }
-    }
-
-    // Update Member tabs
-    const mTabGlobal = document.getElementById("member-news-tab-global");
-    const mTabIndia = document.getElementById("member-news-tab-india");
-    if (mTabGlobal && mTabIndia) {
       if (type === 'global') {
-        mTabGlobal.classList.add("active");
-        mTabGlobal.style.borderColor = "var(--sky)";
-        mTabGlobal.style.color = "var(--sky)";
-        mTabIndia.classList.remove("active");
-        mTabIndia.style.borderColor = "transparent";
-        mTabIndia.style.color = "var(--t3)";
-      } else {
-        mTabIndia.classList.add("active");
-        mTabIndia.style.borderColor = "var(--sky)";
-        mTabIndia.style.color = "var(--sky)";
-        mTabGlobal.classList.remove("active");
-        mTabGlobal.style.borderColor = "transparent";
-        mTabGlobal.style.color = "var(--t3)";
-      }
-    }
+        const tabIndia = document.getElementById("news-tab-india");
+        if (tabGlobal && tabIndia) {
+          if (typeof type !== 'undefined' && type === 'global') {
+            tabGlobal.classList.add("active");
+            tabGlobal.style.borderColor = "var(--sky)";
+            tabGlobal.style.color = "var(--sky)";
+            tabIndia.classList.remove("active");
+            tabIndia.style.borderColor = "transparent";
+            tabIndia.style.color = "var(--t3)";
+          } else {
+            tabIndia.classList.add("active");
+            tabIndia.style.borderColor = "var(--sky)";
+            tabIndia.style.color = "var(--sky)";
+            tabGlobal.classList.remove("active");
+            tabGlobal.style.borderColor = "transparent";
+            tabGlobal.style.color = "var(--t3)";
+          }
+        }
 
-    const loadingHtml = `
+        // Update Member tabs
+        const mTabGlobal = document.getElementById("member-news-tab-global");
+        const mTabIndia = document.getElementById("member-news-tab-india");
+        if (mTabGlobal && mTabIndia) {
+          if (type === 'global') {
+            mTabGlobal.classList.add("active");
+            mTabGlobal.style.borderColor = "var(--sky)";
+            mTabGlobal.style.color = "var(--sky)";
+            mTabIndia.classList.remove("active");
+            mTabIndia.style.borderColor = "transparent";
+            mTabIndia.style.color = "var(--t3)";
+          } else {
+            mTabIndia.classList.add("active");
+            mTabIndia.style.borderColor = "var(--sky)";
+            mTabIndia.style.color = "var(--sky)";
+            mTabGlobal.classList.remove("active");
+            mTabGlobal.style.borderColor = "transparent";
+            mTabGlobal.style.color = "var(--t3)";
+          }
+        }
+
+        const loadingHtml = `
     <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
       <span style="display:inline-block; width:6px; height:6px; background:var(--sky); border-radius:50%; margin-right:4px;"></span>
       Fetching latest ${type === 'global' ? 'Global' : 'India'} news...
     </div>
   `;
-    if (container1) container1.innerHTML = loadingHtml;
-    if (container2) container2.innerHTML = loadingHtml;
+        if (container1) container1.innerHTML = loadingHtml;
+        if (container2) container2.innerHTML = loadingHtml;
 
-    const rssUrl = type === 'global'
-      ? "https://container-news.com/feed/"
-      : "https://www.logisticsinsider.in/feed/";
-    const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+        const rssUrl = type === 'global'
+          ? "https://container-news.com/feed/"
+          : "https://www.logisticsinsider.in/feed/";
+        const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
-    try {
-      const res = await fetch(feedUrl);
-      const data = await res.json();
+        try {
+          const res = await fetch(feedUrl);
+          const data = await res.json();
 
-      if (data && data.status === 'ok' && data.items && data.items.length > 0) {
-        const itemsHtml = data.items.map(item => {
-          let dateStr = "";
-          try {
-            const d = new Date(item.pubDate);
-            if (!isNaN(d.getTime())) {
-              dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
-            }
-          } catch (e) { }
+          if (data && data.status === 'ok' && data.items && data.items.length > 0) {
+            const itemsHtml = data.items.map(item => {
+              let dateStr = "";
+              try {
+                const d = new Date(item.pubDate);
+                if (!isNaN(d.getTime())) {
+                  dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+                }
+              } catch (e) { }
 
-          const title = item.title || "Logistics News Update";
-          const link = item.link || "#";
-          const author = item.author ? ` • By ${item.author}` : "";
+              const title = item.title || "Logistics News Update";
+              const link = item.link || "#";
+              const author = item.author ? ` • By ${item.author}` : "";
 
-          return `
+              return `
           <a href="${link}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block; margin-bottom: 0.5rem;">
             <div class="news-feed-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.25rem; transition: all 0.2s; cursor: pointer;">
               <div style="font-weight: 750; font-size: 0.75rem; color: var(--t1); line-height: 1.3;">${title}</div>
@@ -7408,549 +7411,549 @@ const DB = {
             </div>
           </a>
         `;
-        }).join("");
+            }).join("");
 
-        if (container1) container1.innerHTML = itemsHtml;
-        if (container2) container2.innerHTML = itemsHtml;
-      } else {
-        throw new Error("Invalid RSS feed response");
-      }
-    } catch (err) {
-      console.error("Failed to load logistics news:", err);
-      const errorHtml = `
+            if (container1) container1.innerHTML = itemsHtml;
+            if (container2) container2.innerHTML = itemsHtml;
+          } else {
+            throw new Error("Invalid RSS feed response");
+          }
+        } catch (err) {
+          console.error("Failed to load logistics news:", err);
+          const errorHtml = `
       <div style="font-size: 0.72rem; color: var(--accent-error); font-style: italic; text-align: center; margin-top: 1.5rem;">
         ⚠️ Failed to load news feed.
       </div>
    `;
-      if (container1) container1.innerHTML = errorHtml;
-      if (container2) container2.innerHTML = errorHtml;
-    }
-  }
-} // <-- Moving the closing brace here closes the parent block completely
-
-window.loadLogisticsNews = loadLogisticsNews;
-
-// MODAL & SECURITY HANDLERS
-function toggleAdminSettingsModal() {
-  const modal = document.getElementById("admin-settings-modal");
-  if (!modal) return;
-
-  if (modal.style.display === "none" || !modal.style.display) {
-    // Populate configurations dynamically inside modal inputs
-    const savedNames = localStorage.getItem("gl_desk_names");
-    if (savedNames) {
-      try {
-        const parsed = JSON.parse(savedNames);
-        if (parsed["shashank"]) document.getElementById("cfg-shashank").value = parsed["shashank"];
-        if (parsed["mahendra"]) document.getElementById("cfg-mahendra").value = parsed["mahendra"];
-        if (parsed["jaya"]) document.getElementById("cfg-jaya").value = parsed["jaya"];
-        if (parsed["cathrina"]) document.getElementById("cfg-cathrina").value = parsed["cathrina"];
-      } catch (e) { }
-    }
-
-    document.getElementById("cfg-gmaps-key").value = localStorage.getItem("gl_gmaps_key") || "";
-    document.getElementById("cfg-firebase-json").value = localStorage.getItem("gl_firebase_config_raw") || "";
-
-    renderAdminCustomerControlList();
-    modal.style.display = "flex";
-  } else {
-    modal.style.display = "none";
-  }
-}
-window.toggleAdminSettingsModal = toggleAdminSettingsModal;
-
-function openChangePasswordModal() {
-  const modal = document.getElementById("change-password-modal");
-  if (modal) modal.style.display = "flex";
-}
-window.openChangePasswordModal = openChangePasswordModal;
-
-function closeChangePasswordModal() {
-  const modal = document.getElementById("change-password-modal");
-  if (modal) {
-    modal.style.display = "none";
-    document.getElementById("new-pass-val").value = "";
-  }
-}
-window.closeChangePasswordModal = closeChangePasswordModal;
-
-async function saveNewPassword(e) {
-  e.preventDefault();
-  const newPass = document.getElementById("new-pass-val").value;
-  if (!newPass || newPass.length < 6) {
-    alert("Password must be at least 6 characters long.");
-    return;
-  }
-
-  const currentUser = appState.currentUser;
-  if (!currentUser) return;
-
-  try {
-    if (DB.firestoreRef) {
-      // Find dynamic user document in Firestore and update
-      await DB.firestoreRef.collection("users").doc(currentUser).update({
-        password: newPass
-      });
-      alert("🎉 Password updated successfully in Cloud Database!");
-    } else {
-      // Offline local storage fallback
-      let customUsers = [];
-      const stored = localStorage.getItem("gl_custom_users");
-      if (stored) {
-        try { customUsers = JSON.parse(stored); } catch (err) { }
+          if (container1) container1.innerHTML = errorHtml;
+          if (container2) container2.innerHTML = errorHtml;
+        }
       }
+    } // <-- Moving the closing brace here closes the parent block completely
 
-      const matched = customUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === currentUser);
-      if (matched) {
-        matched.password = newPass;
-        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
-        alert("🎉 Password updated successfully in local session!");
+    window.loadLogisticsNews = loadLogisticsNews;
+
+    // MODAL & SECURITY HANDLERS
+    function toggleAdminSettingsModal() {
+      const modal = document.getElementById("admin-settings-modal");
+      if (!modal) return;
+
+      if (modal.style.display === "none" || !modal.style.display) {
+        // Populate configurations dynamically inside modal inputs
+        const savedNames = localStorage.getItem("gl_desk_names");
+        if (savedNames) {
+          try {
+            const parsed = JSON.parse(savedNames);
+            if (parsed["shashank"]) document.getElementById("cfg-shashank").value = parsed["shashank"];
+            if (parsed["mahendra"]) document.getElementById("cfg-mahendra").value = parsed["mahendra"];
+            if (parsed["jaya"]) document.getElementById("cfg-jaya").value = parsed["jaya"];
+            if (parsed["cathrina"]) document.getElementById("cfg-cathrina").value = parsed["cathrina"];
+          } catch (e) { }
+        }
+
+        document.getElementById("cfg-gmaps-key").value = localStorage.getItem("gl_gmaps_key") || "";
+        document.getElementById("cfg-firebase-json").value = localStorage.getItem("gl_firebase_config_raw") || "";
+
+        renderAdminCustomerControlList();
+        modal.style.display = "flex";
       } else {
-        // Fallback for default hardcoded users
-        const mockCustomUser = {
-          username: currentUser,
-          fullName: TEAM_ROLES[currentUser].name,
-          password: newPass
-        };
-        customUsers.push(mockCustomUser);
-        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
-        alert("🎉 Password created successfully for offline session!");
-      }
-    }
-    closeChangePasswordModal();
-  } catch (err) {
-    alert("❌ Error saving new password: " + err.message);
-  }
-}
-window.saveNewPassword = saveNewPassword;
-
-// GLOBAL KEYBOARD ACCESSIBILITY
-document.addEventListener("keydown", (e) => {
-  // ESC key: Exit modals and return to home from calculators
-  if (e.key === "Escape") {
-    const modalIds = [
-      "admin-settings-modal",
-      "change-password-modal",
-      "xe-rates-modal",
-      "print-preview-modal",
-      "won-booking-modal"
-    ];
-    let modalClosed = false;
-
-    for (const id of modalIds) {
-      const modal = document.getElementById(id);
-      if (modal && (modal.style.display === "flex" || modal.style.display === "block")) {
         modal.style.display = "none";
-        modalClosed = true;
-
-        // Modal-specific cleanups
-        if (id === "change-password-modal") {
-          document.getElementById("new-pass-val").value = "";
-        }
       }
     }
+    window.toggleAdminSettingsModal = toggleAdminSettingsModal;
 
-    // If no modal was closed, but we are inside an active calculator desk, return back to main dashboard
-    if (!modalClosed) {
-      const activePanel = document.querySelector(".view-panel.active");
-      if (activePanel && activePanel.id !== "manager-panel" && activePanel.id !== "member-dashboard-panel") {
-        goHome();
+    function openChangePasswordModal() {
+      const modal = document.getElementById("change-password-modal");
+      if (modal) modal.style.display = "flex";
+    }
+    window.openChangePasswordModal = openChangePasswordModal;
+
+    function closeChangePasswordModal() {
+      const modal = document.getElementById("change-password-modal");
+      if (modal) {
+        modal.style.display = "none";
+        document.getElementById("new-pass-val").value = "";
       }
     }
-  }
+    window.closeChangePasswordModal = closeChangePasswordModal;
 
-  // Enter key: Auto-proceed on forms
-  if (e.key === "Enter") {
-    const activeEl = document.activeElement;
-    if (activeEl && (activeEl.tagName === "BUTTON" || activeEl.tagName === "TEXTAREA")) {
-      return;
-    }
-
-    // 1. If inside change password modal, submit it
-    const cpModal = document.getElementById("change-password-modal");
-    if (cpModal && cpModal.style.display === "flex") {
-      const form = document.getElementById("change-password-form");
-      if (form) {
-        form.requestSubmit();
-        e.preventDefault();
+    async function saveNewPassword(e) {
+      e.preventDefault();
+      const newPass = document.getElementById("new-pass-val").value;
+      if (!newPass || newPass.length < 6) {
+        alert("Password must be at least 6 characters long.");
+        return;
       }
-      return;
-    }
 
-    // 2. If inside won booking details modal, submit it
-    const wbModal = document.getElementById("won-booking-modal");
-    if (wbModal && wbModal.style.display === "flex") {
-      const form = document.getElementById("won-booking-form");
-      if (form) {
-        form.requestSubmit();
-        e.preventDefault();
-      }
-      return;
-    }
+      const currentUser = appState.currentUser;
+      if (!currentUser) return;
 
-    // 3. If inside login overlay, submit it
-    const loginOverlay = document.getElementById("login-overlay");
-    if (loginOverlay && loginOverlay.style.display !== "none") {
-      const form = document.getElementById("login-form");
-      if (form) {
-        form.requestSubmit();
-        e.preventDefault();
-      }
-    }
-  }
-});
-
-function closeWonBookingModal() {
-  const modal = document.getElementById("won-booking-modal");
-  if (modal) modal.style.display = "none";
-}
-window.closeWonBookingModal = closeWonBookingModal;
-
-async function submitWonBookingDetails(e) {
-  e.preventDefault();
-  const id = document.getElementById("won-quote-id").value;
-  const quote = appState.quotes.find(q => q.id === id);
-  if (!quote) return;
-
-  if (quote.paymentTerms === "ADVANCE REQUIRED" && quote.advancePaymentStatus !== "Collected") {
-    alert("Action Denied: Advance payment must be collected and marked as Collected in the system before this shipment can be Confirmed/Won.");
-    return;
-  }
-
-  const shipperName = document.getElementById("won-shipper-name").value.trim();
-  const shipperPhone = document.getElementById("won-shipper-phone").value.trim();
-  const shipperEmail = document.getElementById("won-shipper-email").value.trim();
-  const shipperAddress = document.getElementById("won-shipper-address").value.trim();
-
-  const consigneeName = document.getElementById("won-cnee-name").value.trim();
-  const consigneePhone = document.getElementById("won-cnee-phone").value.trim();
-  const consigneeEmail = document.getElementById("won-cnee-email").value.trim();
-  const consigneeAddress = document.getElementById("won-cnee-address").value.trim();
-
-  const commodity = document.getElementById("won-commodity").value.trim();
-
-  if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress ||
-    !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
-    alert("Please fill all exporter, importer and cargo details to proceed.");
-    return;
-  }
-
-  // Validate contacts format
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-  const phoneRegex = /[0-9+\-\s()]{7,}/;
-
-  if (!emailRegex.test(shipperEmail)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Exporter (Shipper).");
-    return;
-  }
-  if (!phoneRegex.test(shipperPhone)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Exporter (Shipper).");
-    return;
-  }
-  if (!emailRegex.test(consigneeEmail)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Importer (Consignee).");
-    return;
-  }
-  if (!phoneRegex.test(consigneePhone)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Importer (Consignee).");
-    return;
-  }
-
-  // Check agreement upload
-  const customerName = quote.customer || "";
-  const lower = customerName.toLowerCase().trim();
-  const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-
-  const creatorRole = quote.creator;
-  const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' ||
-    creatorRole === 'cathrina' ||
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
-    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
-  );
-
-  const hasAgreement = isFreeHandOrNrs || !!(ctrl.hasAgreement || ctrl.waiveAgreement);
-
-  const fileInput = document.getElementById("won-agreement-file");
-  let fileData = null;
-  let fileName = "";
-  if (fileInput && fileInput.files && fileInput.files.length > 0) {
-    const file = fileInput.files[0];
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      alert("❌ COMPLIANCE ERROR: Only PDF files (.pdf) are allowed for Agency Agreements.");
-      return;
-    }
-    fileData = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(file);
-    });
-    fileName = file.name;
-  }
-
-  if (!hasAgreement && !fileData) {
-    const reason = prompt("❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.\n\nPlease enter the reason for requesting an Admin (Ganny) agreement waiver/permission:");
-    if (reason === null) return; // User cancelled
-    if (!reason.trim()) {
-      alert("A reason is required to submit the request.");
-      return;
-    }
-
-    let requests = window._amendmentRequests || [];
-    if (requests.length === 0) {
-      const stored = localStorage.getItem("gl_amendment_requests");
-      if (stored) {
-        try { requests = JSON.parse(stored); } catch (e) { }
-      }
-    }
-    const pending = requests.find(r => r.customer.toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
-    if (pending) {
-      alert("An agreement waiver request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
-    } else {
-      const newReq = {
-        id: 'REQ' + Math.random().toString(36).substr(2, 9),
-        requestType: 'agreement_waiver',
-        quoteId: quote.id,
-        customer: customerName,
-        creator: appState.currentUser,
-        creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
-        date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-        status: 'pending',
-        reason: reason.trim(),
-        acknowledged: false
-      };
-
-      if (DB.firestoreRef) {
-        DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
-          .then(() => {
-            alert("Agreement waiver request submitted successfully to Ganny.");
-          })
-          .catch(err => {
-            console.error("DB: failed to save agreement waiver request:", err);
-            alert("Failed to submit request to cloud. Saving locally...");
-            saveRequestLocallyFallback(newReq);
+      try {
+        if (DB.firestoreRef) {
+          // Find dynamic user document in Firestore and update
+          await DB.firestoreRef.collection("users").doc(currentUser).update({
+            password: newPass
           });
-      } else {
-        saveRequestLocallyFallback(newReq);
-        alert("Agreement waiver request submitted successfully to Ganny (Offline).");
+          alert("🎉 Password updated successfully in Cloud Database!");
+        } else {
+          // Offline local storage fallback
+          let customUsers = [];
+          const stored = localStorage.getItem("gl_custom_users");
+          if (stored) {
+            try { customUsers = JSON.parse(stored); } catch (err) { }
+          }
+
+          const matched = customUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === currentUser);
+          if (matched) {
+            matched.password = newPass;
+            localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+            alert("🎉 Password updated successfully in local session!");
+          } else {
+            // Fallback for default hardcoded users
+            const mockCustomUser = {
+              username: currentUser,
+              fullName: TEAM_ROLES[currentUser].name,
+              password: newPass
+            };
+            customUsers.push(mockCustomUser);
+            localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+            alert("🎉 Password created successfully for offline session!");
+          }
+        }
+        closeChangePasswordModal();
+      } catch (err) {
+        alert("❌ Error saving new password: " + err.message);
       }
     }
-    return;
-  }
+    window.saveNewPassword = saveNewPassword;
 
-  // Save agreement to database if uploaded
-  if (fileData) {
-    await saveCustomerAgreementRecord(customerName, fileName, fileData);
-    quote.agencyAgreementName = fileName;
-    quote.agencyAgreementData = fileData;
-  } else if (ctrl.agreementFile && ctrl.agreementData) {
-    quote.agencyAgreementName = ctrl.agreementFile;
-    quote.agencyAgreementData = ctrl.agreementData;
-  }
+    // GLOBAL KEYBOARD ACCESSIBILITY
+    document.addEventListener("keydown", (e) => {
+      // ESC key: Exit modals and return to home from calculators
+      if (e.key === "Escape") {
+        const modalIds = [
+          "admin-settings-modal",
+          "change-password-modal",
+          "xe-rates-modal",
+          "print-preview-modal",
+          "won-booking-modal"
+        ];
+        let modalClosed = false;
 
-  quote.status = 'converted';
-  quote.shipperName = shipperName;
-  quote.shipperPhone = shipperPhone;
-  quote.shipperEmail = shipperEmail;
-  quote.shipperAddress = shipperAddress;
-  quote.consigneeName = consigneeName;
-  quote.consigneePhone = consigneePhone;
-  quote.consigneeEmail = consigneeEmail;
-  quote.consigneeAddress = consigneeAddress;
-  quote.commodity = commodity;
-  quote.conversionDate = new Date().toISOString().split('T')[0];
-  quote.date = new Date().toISOString().split('T')[0];
+        for (const id of modalIds) {
+          const modal = document.getElementById(id);
+          if (modal && (modal.style.display === "flex" || modal.style.display === "block")) {
+            modal.style.display = "none";
+            modalClosed = true;
 
-  if (isEligibleDeskUser(quote.creator)) {
-    const confirmedCarrier = document.getElementById("won-confirmed-carrier").value;
-    const buyRateVal = parseFloat(document.getElementById("won-confirmed-buy-rate").value) || 0;
+            // Modal-specific cleanups
+            if (id === "change-password-modal") {
+              document.getElementById("new-pass-val").value = "";
+            }
+          }
+        }
 
-    if (!confirmedCarrier || buyRateVal <= 0) {
-      alert("❌ COMPLIANCE ERROR: Please enter a valid Confirmed Airline/Shipping Line and Buy Rate.");
-      return;
-    }
-
-    quote.confirmedCarrier = confirmedCarrier;
-    quote.confirmedBuyRate = buyRateVal;
-
-    let sellBaseFreight = 0;
-    let buyBaseFreight = 0;
-    let grossProfit = 0;
-
-    if (quote.type === 'air') {
-      let chargeableWeight = quote.details.chargeableWeight || 0;
-      let appliedSellRate = quote.details.appliedRate || 0;
-
-      if (quote.details.airlines && quote.details.airlines.length > 0) {
-        const match = quote.details.airlines.find(a => a.name === confirmedCarrier);
-        if (match) {
-          appliedSellRate = match.appliedRate || appliedSellRate;
-          chargeableWeight = match.chargeableWeight || chargeableWeight;
+        // If no modal was closed, but we are inside an active calculator desk, return back to main dashboard
+        if (!modalClosed) {
+          const activePanel = document.querySelector(".view-panel.active");
+          if (activePanel && activePanel.id !== "manager-panel" && activePanel.id !== "member-dashboard-panel") {
+            goHome();
+          }
         }
       }
-      sellBaseFreight = chargeableWeight * appliedSellRate;
-      buyBaseFreight = chargeableWeight * buyRateVal;
-      grossProfit = sellBaseFreight - buyBaseFreight;
-    } else {
-      // Sea
-      if (quote.details.mode === 'fcl') {
-        sellBaseFreight = quote.details.baseFreight || 0;
-        const totalContainers = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
-        buyBaseFreight = totalContainers * buyRateVal;
-        grossProfit = sellBaseFreight - buyBaseFreight;
+
+      // Enter key: Auto-proceed on forms
+      if (e.key === "Enter") {
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === "BUTTON" || activeEl.tagName === "TEXTAREA")) {
+          return;
+        }
+
+        // 1. If inside change password modal, submit it
+        const cpModal = document.getElementById("change-password-modal");
+        if (cpModal && cpModal.style.display === "flex") {
+          const form = document.getElementById("change-password-form");
+          if (form) {
+            form.requestSubmit();
+            e.preventDefault();
+          }
+          return;
+        }
+
+        // 2. If inside won booking details modal, submit it
+        const wbModal = document.getElementById("won-booking-modal");
+        if (wbModal && wbModal.style.display === "flex") {
+          const form = document.getElementById("won-booking-form");
+          if (form) {
+            form.requestSubmit();
+            e.preventDefault();
+          }
+          return;
+        }
+
+        // 3. If inside login overlay, submit it
+        const loginOverlay = document.getElementById("login-overlay");
+        if (loginOverlay && loginOverlay.style.display !== "none") {
+          const form = document.getElementById("login-form");
+          if (form) {
+            form.requestSubmit();
+            e.preventDefault();
+          }
+        }
+      }
+    });
+
+    function closeWonBookingModal() {
+      const modal = document.getElementById("won-booking-modal");
+      if (modal) modal.style.display = "none";
+    }
+    window.closeWonBookingModal = closeWonBookingModal;
+
+    async function submitWonBookingDetails(e) {
+      e.preventDefault();
+      const id = document.getElementById("won-quote-id").value;
+      const quote = appState.quotes.find(q => q.id === id);
+      if (!quote) return;
+
+      if (quote.paymentTerms === "ADVANCE REQUIRED" && quote.advancePaymentStatus !== "Collected") {
+        alert("Action Denied: Advance payment must be collected and marked as Collected in the system before this shipment can be Confirmed/Won.");
+        return;
+      }
+
+      const shipperName = document.getElementById("won-shipper-name").value.trim();
+      const shipperPhone = document.getElementById("won-shipper-phone").value.trim();
+      const shipperEmail = document.getElementById("won-shipper-email").value.trim();
+      const shipperAddress = document.getElementById("won-shipper-address").value.trim();
+
+      const consigneeName = document.getElementById("won-cnee-name").value.trim();
+      const consigneePhone = document.getElementById("won-cnee-phone").value.trim();
+      const consigneeEmail = document.getElementById("won-cnee-email").value.trim();
+      const consigneeAddress = document.getElementById("won-cnee-address").value.trim();
+
+      const commodity = document.getElementById("won-commodity").value.trim();
+
+      if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress ||
+        !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
+        alert("Please fill all exporter, importer and cargo details to proceed.");
+        return;
+      }
+
+      // Validate contacts format
+      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+      const phoneRegex = /[0-9+\-\s()]{7,}/;
+
+      if (!emailRegex.test(shipperEmail)) {
+        alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Exporter (Shipper).");
+        return;
+      }
+      if (!phoneRegex.test(shipperPhone)) {
+        alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Exporter (Shipper).");
+        return;
+      }
+      if (!emailRegex.test(consigneeEmail)) {
+        alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Importer (Consignee).");
+        return;
+      }
+      if (!phoneRegex.test(consigneePhone)) {
+        alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Importer (Consignee).");
+        return;
+      }
+
+      // Check agreement upload
+      const customerName = quote.customer || "";
+      const lower = customerName.toLowerCase().trim();
+      const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+
+      const creatorRole = quote.creator;
+      const isFreeHandOrNrs = creatorRole && (
+        creatorRole === 'jaya' ||
+        creatorRole === 'cathrina' ||
+        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
+        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+      );
+
+      const hasAgreement = isFreeHandOrNrs || !!(ctrl.hasAgreement || ctrl.waiveAgreement);
+
+      const fileInput = document.getElementById("won-agreement-file");
+      let fileData = null;
+      let fileName = "";
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          alert("❌ COMPLIANCE ERROR: Only PDF files (.pdf) are allowed for Agency Agreements.");
+          return;
+        }
+        fileData = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+        fileName = file.name;
+      }
+
+      if (!hasAgreement && !fileData) {
+        const reason = prompt("❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.\n\nPlease enter the reason for requesting an Admin (Ganny) agreement waiver/permission:");
+        if (reason === null) return; // User cancelled
+        if (!reason.trim()) {
+          alert("A reason is required to submit the request.");
+          return;
+        }
+
+        let requests = window._amendmentRequests || [];
+        if (requests.length === 0) {
+          const stored = localStorage.getItem("gl_amendment_requests");
+          if (stored) {
+            try { requests = JSON.parse(stored); } catch (e) { }
+          }
+        }
+        const pending = requests.find(r => r.customer.toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
+        if (pending) {
+          alert("An agreement waiver request for this customer has already been submitted to Admin. Please wait for Ganny's approval.");
+        } else {
+          const newReq = {
+            id: 'REQ' + Math.random().toString(36).substr(2, 9),
+            requestType: 'agreement_waiver',
+            quoteId: quote.id,
+            customer: customerName,
+            creator: appState.currentUser,
+            creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
+            date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+            status: 'pending',
+            reason: reason.trim(),
+            acknowledged: false
+          };
+
+          if (DB.firestoreRef) {
+            DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+              .then(() => {
+                alert("Agreement waiver request submitted successfully to Ganny.");
+              })
+              .catch(err => {
+                console.error("DB: failed to save agreement waiver request:", err);
+                alert("Failed to submit request to cloud. Saving locally...");
+                saveRequestLocallyFallback(newReq);
+              });
+          } else {
+            saveRequestLocallyFallback(newReq);
+            alert("Agreement waiver request submitted successfully to Ganny (Offline).");
+          }
+        }
+        return;
+      }
+
+      // Save agreement to database if uploaded
+      if (fileData) {
+        await saveCustomerAgreementRecord(customerName, fileName, fileData);
+        quote.agencyAgreementName = fileName;
+        quote.agencyAgreementData = fileData;
+      } else if (ctrl.agreementFile && ctrl.agreementData) {
+        quote.agencyAgreementName = ctrl.agreementFile;
+        quote.agencyAgreementData = ctrl.agreementData;
+      }
+
+      quote.status = 'converted';
+      quote.shipperName = shipperName;
+      quote.shipperPhone = shipperPhone;
+      quote.shipperEmail = shipperEmail;
+      quote.shipperAddress = shipperAddress;
+      quote.consigneeName = consigneeName;
+      quote.consigneePhone = consigneePhone;
+      quote.consigneeEmail = consigneeEmail;
+      quote.consigneeAddress = consigneeAddress;
+      quote.commodity = commodity;
+      quote.conversionDate = new Date().toISOString().split('T')[0];
+      quote.date = new Date().toISOString().split('T')[0];
+
+      if (isEligibleDeskUser(quote.creator)) {
+        const confirmedCarrier = document.getElementById("won-confirmed-carrier").value;
+        const buyRateVal = parseFloat(document.getElementById("won-confirmed-buy-rate").value) || 0;
+
+        if (!confirmedCarrier || buyRateVal <= 0) {
+          alert("❌ COMPLIANCE ERROR: Please enter a valid Confirmed Airline/Shipping Line and Buy Rate.");
+          return;
+        }
+
+        quote.confirmedCarrier = confirmedCarrier;
+        quote.confirmedBuyRate = buyRateVal;
+
+        let sellBaseFreight = 0;
+        let buyBaseFreight = 0;
+        let grossProfit = 0;
+
+        if (quote.type === 'air') {
+          let chargeableWeight = quote.details.chargeableWeight || 0;
+          let appliedSellRate = quote.details.appliedRate || 0;
+
+          if (quote.details.airlines && quote.details.airlines.length > 0) {
+            const match = quote.details.airlines.find(a => a.name === confirmedCarrier);
+            if (match) {
+              appliedSellRate = match.appliedRate || appliedSellRate;
+              chargeableWeight = match.chargeableWeight || chargeableWeight;
+            }
+          }
+          sellBaseFreight = chargeableWeight * appliedSellRate;
+          buyBaseFreight = chargeableWeight * buyRateVal;
+          grossProfit = sellBaseFreight - buyBaseFreight;
+        } else {
+          // Sea
+          if (quote.details.mode === 'fcl') {
+            sellBaseFreight = quote.details.baseFreight || 0;
+            const totalContainers = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
+            buyBaseFreight = totalContainers * buyRateVal;
+            grossProfit = sellBaseFreight - buyBaseFreight;
+          } else {
+            // LCL or BB
+            const chargeableRT = quote.details.lclChargeable || 0;
+            const appliedSellRate = quote.details.mode === 'lcl' ? (quote.details.lclRateApplied || 0) : (quote.details.bbRateApplied || 0);
+            sellBaseFreight = chargeableRT * appliedSellRate;
+            buyBaseFreight = chargeableRT * buyRateVal;
+            grossProfit = sellBaseFreight - buyBaseFreight;
+          }
+        }
+
+        quote.grossProfit = grossProfit;
+        quote.grossProfitCurrency = quote.currency;
+
+        let grossProfitINR = grossProfit;
+        if (quote.currency !== 'INR') {
+          grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+        }
+        quote.grossProfitINR = grossProfitINR;
+      }
+
+      try {
+        // 1. Save quote update (updates Firestore dynamically)
+        await DB.saveQuote(quote);
+
+        // 2. NRS registry entry mapping
+        const nrsEntry = {
+          id: quote.id,
+          refId: getQuoteRefId(quote),
+          mode: quote.type === 'air' ? 'Air Nomination' : 'Sea Nomination',
+          agent: quote.customer,
+          pol: (quote.details && quote.details.origin) || '',
+          pod: (quote.details && quote.details.destination) || '',
+          shipperName,
+          shipperPhone,
+          shipperEmail,
+          shipperAddress,
+          consigneeName,
+          consigneePhone,
+          consigneeEmail,
+          consigneeAddress,
+          commodity,
+          dateWon: quote.conversionDate,
+          agencyAgreementName: quote.agencyAgreementName || "",
+          agencyAgreementData: quote.agencyAgreementData || "",
+          confirmedCarrier: quote.confirmedCarrier || "",
+          confirmedBuyRate: quote.confirmedBuyRate || 0,
+          grossProfit: quote.grossProfit || 0,
+          grossProfitINR: quote.grossProfitINR || 0,
+          grossProfitCurrency: quote.grossProfitCurrency || quote.currency
+        };
+
+        if (DB.firestoreRef) {
+          await DB.firestoreRef.collection("nrs_registry").doc(quote.id).set(nrsEntry);
+        } else {
+          let offlineRegistry = [];
+          const stored = localStorage.getItem("gl_nrs_registry");
+          if (stored) {
+            try { offlineRegistry = JSON.parse(stored); } catch (err) { }
+          }
+          const idx = offlineRegistry.findIndex(item => item.id === quote.id);
+          if (idx !== -1) {
+            offlineRegistry[idx] = nrsEntry;
+          } else {
+            offlineRegistry.push(nrsEntry);
+          }
+          localStorage.setItem("gl_nrs_registry", JSON.stringify(offlineRegistry));
+        }
+
+        // 3. Confirmation intimation alert to Cathrina (NRS)
+        if (quote.creator === 'shashank' || quote.creator === 'mahendra') {
+          let alerts = [];
+          const stored = localStorage.getItem("nrs_alerts");
+          if (stored) {
+            try { alerts = JSON.parse(stored); } catch (err) { alerts = []; }
+          }
+          alerts.push({
+            id: 'A' + Math.random().toString(36).substr(2, 9),
+            date: new Date().toLocaleTimeString() + " " + new Date().toLocaleDateString(),
+            message: `Booking Confirmed: Customer "${quote.customer}" (${quote.route}) prepared by ${TEAM_ROLES[quote.creator]?.name || quote.creator}.`
+          });
+          localStorage.setItem("nrs_alerts", JSON.stringify(alerts));
+        }
+
+        alert("🎉 Booking successfully converted to WON and registered in NRS module!");
+        closeWonBookingModal();
+
+        // Refresh active panel
+        if (appState.currentUser === 'ganny') {
+          renderAdminDashboard();
+        } else {
+          renderMemberDashboard(appState.currentUser);
+        }
+      } catch (err) {
+        alert("❌ Error converting booking: " + err.message);
+      }
+    }
+    window.submitWonBookingDetails = submitWonBookingDetails;
+
+    async function renderNrsRegistry() {
+      const panel = document.getElementById("nrs-registry-panel");
+      const tbody = document.getElementById("nrs-registry-body");
+      if (!panel || !tbody) return;
+
+      const currentUser = appState.currentUser;
+      // Show only to Ganny (Admin) and Cathrina (NRS)
+      if (currentUser === 'ganny' || currentUser === 'cathrina') {
+        panel.style.display = "block";
       } else {
-        // LCL or BB
-        const chargeableRT = quote.details.lclChargeable || 0;
-        const appliedSellRate = quote.details.mode === 'lcl' ? (quote.details.lclRateApplied || 0) : (quote.details.bbRateApplied || 0);
-        sellBaseFreight = chargeableRT * appliedSellRate;
-        buyBaseFreight = chargeableRT * buyRateVal;
-        grossProfit = sellBaseFreight - buyBaseFreight;
+        panel.style.display = "none";
+        return;
+      }
+
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">Loading NRS directory...</td></tr>`;
+
+      try {
+        let registryList = [];
+        if (DB.firestoreRef) {
+          const snap = await DB.firestoreRef.collection("nrs_registry").get();
+          snap.forEach(doc => {
+            registryList.push(doc.data());
+          });
+        } else {
+          const stored = localStorage.getItem("gl_nrs_registry");
+          if (stored) {
+            try { registryList = JSON.parse(stored); } catch (e) { }
+          }
+        }
+
+        window._nrsRegistryCached = registryList;
+        displayNrsRegistryItems(registryList);
+      } catch (err) {
+        console.error("NRS: Failed to render registry database:", err);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-error); padding: 2rem;">⚠️ Failed to load directory.</td></tr>`;
       }
     }
+    window.renderNrsRegistry = renderNrsRegistry;
 
-    quote.grossProfit = grossProfit;
-    quote.grossProfitCurrency = quote.currency;
+    function previewPdfDataUrl(dataUrl, title = "Document Preview") {
+      try {
+        const parts = dataUrl.split(';base64,');
+        const contentType = parts[0].split(':')[1];
+        const raw = window.atob(parts[1]);
+        const rawLength = raw.length;
+        const uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+          uInt8Array[i] = raw.charCodeAt(i);
+        }
+        const blob = new Blob([uInt8Array], { type: contentType });
+        const blobUrl = URL.createObjectURL(blob);
 
-    let grossProfitINR = grossProfit;
-    if (quote.currency !== 'INR') {
-      grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
-    }
-    quote.grossProfitINR = grossProfitINR;
-  }
-
-  try {
-    // 1. Save quote update (updates Firestore dynamically)
-    await DB.saveQuote(quote);
-
-    // 2. NRS registry entry mapping
-    const nrsEntry = {
-      id: quote.id,
-      refId: getQuoteRefId(quote),
-      mode: quote.type === 'air' ? 'Air Nomination' : 'Sea Nomination',
-      agent: quote.customer,
-      pol: (quote.details && quote.details.origin) || '',
-      pod: (quote.details && quote.details.destination) || '',
-      shipperName,
-      shipperPhone,
-      shipperEmail,
-      shipperAddress,
-      consigneeName,
-      consigneePhone,
-      consigneeEmail,
-      consigneeAddress,
-      commodity,
-      dateWon: quote.conversionDate,
-      agencyAgreementName: quote.agencyAgreementName || "",
-      agencyAgreementData: quote.agencyAgreementData || "",
-      confirmedCarrier: quote.confirmedCarrier || "",
-      confirmedBuyRate: quote.confirmedBuyRate || 0,
-      grossProfit: quote.grossProfit || 0,
-      grossProfitINR: quote.grossProfitINR || 0,
-      grossProfitCurrency: quote.grossProfitCurrency || quote.currency
-    };
-
-    if (DB.firestoreRef) {
-      await DB.firestoreRef.collection("nrs_registry").doc(quote.id).set(nrsEntry);
-    } else {
-      let offlineRegistry = [];
-      const stored = localStorage.getItem("gl_nrs_registry");
-      if (stored) {
-        try { offlineRegistry = JSON.parse(stored); } catch (err) { }
-      }
-      const idx = offlineRegistry.findIndex(item => item.id === quote.id);
-      if (idx !== -1) {
-        offlineRegistry[idx] = nrsEntry;
-      } else {
-        offlineRegistry.push(nrsEntry);
-      }
-      localStorage.setItem("gl_nrs_registry", JSON.stringify(offlineRegistry));
-    }
-
-    // 3. Confirmation intimation alert to Cathrina (NRS)
-    if (quote.creator === 'shashank' || quote.creator === 'mahendra') {
-      let alerts = [];
-      const stored = localStorage.getItem("nrs_alerts");
-      if (stored) {
-        try { alerts = JSON.parse(stored); } catch (err) { alerts = []; }
-      }
-      alerts.push({
-        id: 'A' + Math.random().toString(36).substr(2, 9),
-        date: new Date().toLocaleTimeString() + " " + new Date().toLocaleDateString(),
-        message: `Booking Confirmed: Customer "${quote.customer}" (${quote.route}) prepared by ${TEAM_ROLES[quote.creator]?.name || quote.creator}.`
-      });
-      localStorage.setItem("nrs_alerts", JSON.stringify(alerts));
-    }
-
-    alert("🎉 Booking successfully converted to WON and registered in NRS module!");
-    closeWonBookingModal();
-
-    // Refresh active panel
-    if (appState.currentUser === 'ganny') {
-      renderAdminDashboard();
-    } else {
-      renderMemberDashboard(appState.currentUser);
-    }
-  } catch (err) {
-    alert("❌ Error converting booking: " + err.message);
-  }
-}
-window.submitWonBookingDetails = submitWonBookingDetails;
-
-async function renderNrsRegistry() {
-  const panel = document.getElementById("nrs-registry-panel");
-  const tbody = document.getElementById("nrs-registry-body");
-  if (!panel || !tbody) return;
-
-  const currentUser = appState.currentUser;
-  // Show only to Ganny (Admin) and Cathrina (NRS)
-  if (currentUser === 'ganny' || currentUser === 'cathrina') {
-    panel.style.display = "block";
-  } else {
-    panel.style.display = "none";
-    return;
-  }
-
-  tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">Loading NRS directory...</td></tr>`;
-
-  try {
-    let registryList = [];
-    if (DB.firestoreRef) {
-      const snap = await DB.firestoreRef.collection("nrs_registry").get();
-      snap.forEach(doc => {
-        registryList.push(doc.data());
-      });
-    } else {
-      const stored = localStorage.getItem("gl_nrs_registry");
-      if (stored) {
-        try { registryList = JSON.parse(stored); } catch (e) { }
-      }
-    }
-
-    window._nrsRegistryCached = registryList;
-    displayNrsRegistryItems(registryList);
-  } catch (err) {
-    console.error("NRS: Failed to render registry database:", err);
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-error); padding: 2rem;">⚠️ Failed to load directory.</td></tr>`;
-  }
-}
-window.renderNrsRegistry = renderNrsRegistry;
-
-function previewPdfDataUrl(dataUrl, title = "Document Preview") {
-  try {
-    const parts = dataUrl.split(';base64,');
-    const contentType = parts[0].split(':')[1];
-    const raw = window.atob(parts[1]);
-    const rawLength = raw.length;
-    const uInt8Array = new Uint8Array(rawLength);
-    for (let i = 0; i < rawLength; ++i) {
-      uInt8Array[i] = raw.charCodeAt(i);
-    }
-    const blob = new Blob([uInt8Array], { type: contentType });
-    const blobUrl = URL.createObjectURL(blob);
-
-    const win = window.open();
-    if (win) {
-      win.document.write(`
+        const win = window.open();
+        if (win) {
+          win.document.write(`
         <html>
           <head>
             <title>${title}</title>
@@ -7970,204 +7973,204 @@ function previewPdfDataUrl(dataUrl, title = "Document Preview") {
           </body>
         </html>
       `);
-      win.document.close();
-    } else {
-      alert("Pop-up blocker active! Please allow pop-ups for this website to preview PDFs.");
+          win.document.close();
+        } else {
+          alert("Pop-up blocker active! Please allow pop-ups for this website to preview PDFs.");
+        }
+      } catch (err) {
+        console.error("PDF Preview failed:", err);
+        const win = window.open();
+        if (win) win.location.href = dataUrl;
+      }
     }
-  } catch (err) {
-    console.error("PDF Preview failed:", err);
-    const win = window.open();
-    if (win) win.location.href = dataUrl;
-  }
-}
-window.previewPdfDataUrl = previewPdfDataUrl;
+    window.previewPdfDataUrl = previewPdfDataUrl;
 
-function previewNrsAgreementPdf(id) {
-  const list = window._nrsRegistryCached || [];
-  const item = list.find(x => x.id === id);
+    function previewNrsAgreementPdf(id) {
+      const list = window._nrsRegistryCached || [];
+      const item = list.find(x => x.id === id);
 
-  let agreementData = item ? item.agencyAgreementData : null;
-  let agreementName = item ? item.agencyAgreementName : null;
+      let agreementData = item ? item.agencyAgreementData : null;
+      let agreementName = item ? item.agencyAgreementName : null;
 
-  if (!agreementData) {
-    const q = appState.quotes.find(x => x.id === id);
-    if (q) {
-      agreementData = q.agencyAgreementData;
-      agreementName = q.agencyAgreementName;
+      if (!agreementData) {
+        const q = appState.quotes.find(x => x.id === id);
+        if (q) {
+          agreementData = q.agencyAgreementData;
+          agreementName = q.agencyAgreementName;
+        }
+      }
+
+      if (!agreementData) {
+        const customer = (item && item.customer) || "";
+        const lower = customer.toLowerCase().trim();
+        const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+        if (ctrl.agreementData) {
+          agreementData = ctrl.agreementData;
+          agreementName = ctrl.agreementFile;
+        }
+      }
+
+      if (agreementData) {
+        previewPdfDataUrl(agreementData, agreementName || "Agency Agreement");
+      } else {
+        alert("No PDF document uploaded or found for this won booking/customer.");
+      }
     }
-  }
+    window.previewNrsAgreementPdf = previewNrsAgreementPdf;
 
-  if (!agreementData) {
-    const customer = (item && item.customer) || "";
-    const lower = customer.toLowerCase().trim();
-    const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-    if (ctrl.agreementData) {
-      agreementData = ctrl.agreementData;
-      agreementName = ctrl.agreementFile;
+    function previewNrsInvoicePackingPdf(id) {
+      const list = window._nrsRegistryCached || [];
+      const item = list.find(x => x.id === id);
+
+      let invoicePackingData = item ? item.invoicePackingData : null;
+      let invoicePackingName = item ? item.invoicePackingName : null;
+
+      if (!invoicePackingData) {
+        const q = appState.quotes.find(x => x.id === id);
+        if (q) {
+          invoicePackingData = q.invoicePackingData;
+          invoicePackingName = q.invoicePackingName;
+        }
+      }
+
+      if (invoicePackingData) {
+        previewPdfDataUrl(invoicePackingData, invoicePackingName || "Commercial Invoice & Packing List");
+      } else {
+        alert("No Commercial Invoice & Packing List PDF uploaded for this booking.");
+      }
     }
-  }
+    window.previewNrsInvoicePackingPdf = previewNrsInvoicePackingPdf;
 
-  if (agreementData) {
-    previewPdfDataUrl(agreementData, agreementName || "Agency Agreement");
-  } else {
-    alert("No PDF document uploaded or found for this won booking/customer.");
-  }
-}
-window.previewNrsAgreementPdf = previewNrsAgreementPdf;
+    function downloadNrsAgreementPdf(id) {
+      const list = window._nrsRegistryCached || [];
+      const item = list.find(x => x.id === id);
 
-function previewNrsInvoicePackingPdf(id) {
-  const list = window._nrsRegistryCached || [];
-  const item = list.find(x => x.id === id);
+      let agreementData = item ? item.agencyAgreementData : null;
+      let agreementName = item ? item.agencyAgreementName : null;
 
-  let invoicePackingData = item ? item.invoicePackingData : null;
-  let invoicePackingName = item ? item.invoicePackingName : null;
+      if (!agreementData) {
+        const q = appState.quotes.find(x => x.id === id);
+        if (q) {
+          agreementData = q.agencyAgreementData;
+          agreementName = q.agencyAgreementName;
+        }
+      }
 
-  if (!invoicePackingData) {
-    const q = appState.quotes.find(x => x.id === id);
-    if (q) {
-      invoicePackingData = q.invoicePackingData;
-      invoicePackingName = q.invoicePackingName;
+      if (agreementData) {
+        const link = document.createElement("a");
+        link.href = agreementData;
+        link.download = agreementName || "agency_agreement.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const customer = (item && item.customer) || "";
+        const lower = customer.toLowerCase().trim();
+        const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+        if (ctrl.agreementData) {
+          const link = document.createElement("a");
+          link.href = ctrl.agreementData;
+          link.download = ctrl.agreementFile || "agency_agreement.pdf";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("No PDF document uploaded or found for this won booking/customer.");
+        }
+      }
     }
-  }
+    window.downloadNrsAgreementPdf = downloadNrsAgreementPdf;
 
-  if (invoicePackingData) {
-    previewPdfDataUrl(invoicePackingData, invoicePackingName || "Commercial Invoice & Packing List");
-  } else {
-    alert("No Commercial Invoice & Packing List PDF uploaded for this booking.");
-  }
-}
-window.previewNrsInvoicePackingPdf = previewNrsInvoicePackingPdf;
+    function downloadNrsInvoicePackingPdf(id) {
+      const list = window._nrsRegistryCached || [];
+      const item = list.find(x => x.id === id);
 
-function downloadNrsAgreementPdf(id) {
-  const list = window._nrsRegistryCached || [];
-  const item = list.find(x => x.id === id);
+      let invoicePackingData = item ? item.invoicePackingData : null;
+      let invoicePackingName = item ? item.invoicePackingName : null;
 
-  let agreementData = item ? item.agencyAgreementData : null;
-  let agreementName = item ? item.agencyAgreementName : null;
+      if (!invoicePackingData) {
+        const q = appState.quotes.find(x => x.id === id);
+        if (q) {
+          invoicePackingData = q.invoicePackingData;
+          invoicePackingName = q.invoicePackingName;
+        }
+      }
 
-  if (!agreementData) {
-    const q = appState.quotes.find(x => x.id === id);
-    if (q) {
-      agreementData = q.agencyAgreementData;
-      agreementName = q.agencyAgreementName;
+      if (invoicePackingData) {
+        const link = document.createElement("a");
+        link.href = invoicePackingData;
+        link.download = invoicePackingName || "commercial_invoice_packing_list.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert("No Commercial Invoice & Packing List PDF uploaded for this booking.");
+      }
     }
-  }
+    window.downloadNrsInvoicePackingPdf = downloadNrsInvoicePackingPdf;
 
-  if (agreementData) {
-    const link = document.createElement("a");
-    link.href = agreementData;
-    link.download = agreementName || "agency_agreement.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } else {
-    const customer = (item && item.customer) || "";
-    const lower = customer.toLowerCase().trim();
-    const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-    if (ctrl.agreementData) {
-      const link = document.createElement("a");
-      link.href = ctrl.agreementData;
-      link.download = ctrl.agreementFile || "agency_agreement.pdf";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      alert("No PDF document uploaded or found for this won booking/customer.");
-    }
-  }
-}
-window.downloadNrsAgreementPdf = downloadNrsAgreementPdf;
+    function displayNrsRegistryItems(list) {
+      const tbody = document.getElementById("nrs-registry-body");
+      if (!tbody) return;
+      tbody.innerHTML = "";
 
-function downloadNrsInvoicePackingPdf(id) {
-  const list = window._nrsRegistryCached || [];
-  const item = list.find(x => x.id === id);
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
+        return;
+      }
 
-  let invoicePackingData = item ? item.invoicePackingData : null;
-  let invoicePackingName = item ? item.invoicePackingName : null;
+      // Sort by dateWon descending
+      const sorted = [...list].sort((a, b) => new Date(b.dateWon) - new Date(a.dateWon));
 
-  if (!invoicePackingData) {
-    const q = appState.quotes.find(x => x.id === id);
-    if (q) {
-      invoicePackingData = q.invoicePackingData;
-      invoicePackingName = q.invoicePackingName;
-    }
-  }
+      tbody.innerHTML = sorted.map(item => {
+        const agentKey = (item.agent || item.customer || "").toLowerCase().trim();
+        const hasDoc = !!(item.agencyAgreementData || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementData));
+        const docName = item.agencyAgreementName || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementFile) || "agency_agreement.pdf";
 
-  if (invoicePackingData) {
-    const link = document.createElement("a");
-    link.href = invoicePackingData;
-    link.download = invoicePackingName || "commercial_invoice_packing_list.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } else {
-    alert("No Commercial Invoice & Packing List PDF uploaded for this booking.");
-  }
-}
-window.downloadNrsInvoicePackingPdf = downloadNrsInvoicePackingPdf;
+        // Derive correct nomination from refId prefix — overrides any stale stored mode value
+        const prefix = (item.refId || "").substring(0, 2).toUpperCase();
+        const isAirByRef = prefix === 'AE' || prefix === 'AI';
+        const isSeaByRef = prefix === 'SE' || prefix === 'SI';
+        const nomMode = isAirByRef ? 'Air Nomination' : (isSeaByRef ? 'Sea Nomination' : (item.mode || 'Sea Nomination'));
+        const isAir = nomMode === 'Air Nomination';
 
-function displayNrsRegistryItems(list) {
-  const tbody = document.getElementById("nrs-registry-body");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No won shipments registered yet.</td></tr>`;
-    return;
-  }
-
-  // Sort by dateWon descending
-  const sorted = [...list].sort((a, b) => new Date(b.dateWon) - new Date(a.dateWon));
-
-  tbody.innerHTML = sorted.map(item => {
-    const agentKey = (item.agent || item.customer || "").toLowerCase().trim();
-    const hasDoc = !!(item.agencyAgreementData || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementData));
-    const docName = item.agencyAgreementName || (window._customerControls && window._customerControls[agentKey] && window._customerControls[agentKey].agreementFile) || "agency_agreement.pdf";
-
-    // Derive correct nomination from refId prefix — overrides any stale stored mode value
-    const prefix = (item.refId || "").substring(0, 2).toUpperCase();
-    const isAirByRef = prefix === 'AE' || prefix === 'AI';
-    const isSeaByRef = prefix === 'SE' || prefix === 'SI';
-    const nomMode = isAirByRef ? 'Air Nomination' : (isSeaByRef ? 'Sea Nomination' : (item.mode || 'Sea Nomination'));
-    const isAir = nomMode === 'Air Nomination';
-
-    let docsHtml = "";
-    if (hasDoc) {
-      docsHtml += `
+        let docsHtml = "";
+        if (hasDoc) {
+          docsHtml += `
         <div style="display: flex; align-items: center; gap: 0.3rem;">
           <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Agreement: ${docName}">📜 ${docName}</span>
           <button class="btn-text" onclick="previewNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Preview PDF">👁️</button>
           <button class="btn-text" onclick="downloadNrsAgreementPdf('${item.id}')" style="font-size: 0.65rem; padding: 0px 2px; color: var(--sky); border: none; background: transparent; cursor: pointer;" title="Download PDF">📥</button>
         </div>`;
-    } else {
-      docsHtml += `<div style="font-size: 0.65rem; color: var(--accent-success); font-weight: 600;">NOT REQUIRED</div>`;
-    }
+        } else {
+          docsHtml += `<div style="font-size: 0.65rem; color: var(--accent-success); font-weight: 600;">NOT REQUIRED</div>`;
+        }
 
-    // Format shipper contact
-    const sPhone = item.shipperPhone || "";
-    const sEmail = item.shipperEmail || "";
-    const sAddress = item.shipperAddress || "";
-    let shipperSubtext = "";
-    if (sPhone) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📞 ${sPhone}</div>`;
-    if (sEmail) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📧 ${sEmail}</div>`;
-    if (sAddress) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sAddress}">📍 ${sAddress}</div>`;
-    if (!shipperSubtext && item.shipperContact) {
-      shipperSubtext = `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.shipperContact}</div>`;
-    }
+        // Format shipper contact
+        const sPhone = item.shipperPhone || "";
+        const sEmail = item.shipperEmail || "";
+        const sAddress = item.shipperAddress || "";
+        let shipperSubtext = "";
+        if (sPhone) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📞 ${sPhone}</div>`;
+        if (sEmail) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📧 ${sEmail}</div>`;
+        if (sAddress) shipperSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sAddress}">📍 ${sAddress}</div>`;
+        if (!shipperSubtext && item.shipperContact) {
+          shipperSubtext = `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.shipperContact}</div>`;
+        }
 
-    // Format consignee contact
-    const cPhone = item.consigneePhone || "";
-    const cEmail = item.consigneeEmail || "";
-    const cAddress = item.consigneeAddress || "";
-    let consigneeSubtext = "";
-    if (cPhone) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📞 ${cPhone}</div>`;
-    if (cEmail) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📧 ${cEmail}</div>`;
-    if (cAddress) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${cAddress}">📍 ${cAddress}</div>`;
-    if (!consigneeSubtext && item.consigneeContact) {
-      consigneeSubtext = `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.consigneeContact}</div>`;
-    }
+        // Format consignee contact
+        const cPhone = item.consigneePhone || "";
+        const cEmail = item.consigneeEmail || "";
+        const cAddress = item.consigneeAddress || "";
+        let consigneeSubtext = "";
+        if (cPhone) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📞 ${cPhone}</div>`;
+        if (cEmail) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px;">📧 ${cEmail}</div>`;
+        if (cAddress) consigneeSubtext += `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 1px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${cAddress}">📍 ${cAddress}</div>`;
+        if (!consigneeSubtext && item.consigneeContact) {
+          consigneeSubtext = `<div style="font-size: 0.62rem; color: var(--t3); margin-top: 2px;">${item.consigneeContact}</div>`;
+        }
 
-    return `
+        return `
       <tr>
         <td style="font-weight: 750; color: var(--sky); font-size: 0.72rem;">#${item.refId}</td>
         <td>
@@ -8203,85 +8206,85 @@ function displayNrsRegistryItems(list) {
         </td>
         <td>
           ${(() => {
-        const followUps = item.followUps || [];
-        const latest = followUps.length > 0 ? followUps[followUps.length - 1] : null;
-        const statusColors = {
-          'Awaiting Response': { bg: 'rgba(245,158,11,0.12)', color: '#d97706' },
-          'Documents Pending': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
-          'Booking Confirmed by Shipper': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
-          'Shipment Dispatched': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
-          'Completed': { bg: 'rgba(34,197,94,0.12)', color: '#15803d' }
-        };
-        const sc = latest ? (statusColors[latest.status] || { bg: 'rgba(0,0,0,0.05)', color: 'var(--t3)' }) : null;
-        let badgeHtml = '';
-        if (latest) {
-          badgeHtml = `<div style="font-size: 0.58rem; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: ${sc.bg}; color: ${sc.color}; margin-bottom: 3px; white-space: nowrap;">${latest.status}</div>`;
-        }
-        return `
+            const followUps = item.followUps || [];
+            const latest = followUps.length > 0 ? followUps[followUps.length - 1] : null;
+            const statusColors = {
+              'Awaiting Response': { bg: 'rgba(245,158,11,0.12)', color: '#d97706' },
+              'Documents Pending': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
+              'Booking Confirmed by Shipper': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
+              'Shipment Dispatched': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
+              'Completed': { bg: 'rgba(34,197,94,0.12)', color: '#15803d' }
+            };
+            const sc = latest ? (statusColors[latest.status] || { bg: 'rgba(0,0,0,0.05)', color: 'var(--t3)' }) : null;
+            let badgeHtml = '';
+            if (latest) {
+              badgeHtml = `<div style="font-size: 0.58rem; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: ${sc.bg}; color: ${sc.color}; margin-bottom: 3px; white-space: nowrap;">${latest.status}</div>`;
+            }
+            return `
               ${badgeHtml}
               <button onclick="openNrsFollowUpModal('${item.id}')" style="font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--sky); cursor: pointer; font-weight: 700; white-space: nowrap;" title="View / Add Follow-ups">
                 📋 ${followUps.length > 0 ? followUps.length + ' note' + (followUps.length > 1 ? 's' : '') : 'Track'}
               </button>
             `;
-      })()}
+          })()}
         </td>
       </tr>
     `;
-  }).join("");
-}
+      }).join("");
+    }
 
-function filterNrsRegistry(query) {
-  const list = window._nrsRegistryCached || [];
-  const q = query.trim().toLowerCase();
-  if (!q) {
-    displayNrsRegistryItems(list);
-    return;
-  }
+    function filterNrsRegistry(query) {
+      const list = window._nrsRegistryCached || [];
+      const q = query.trim().toLowerCase();
+      if (!q) {
+        displayNrsRegistryItems(list);
+        return;
+      }
 
-  const filtered = list.filter(item => {
-    return (
-      item.refId.toLowerCase().includes(q) ||
-      (item.agent && item.agent.toLowerCase().includes(q)) ||
-      (item.customer && item.customer.toLowerCase().includes(q)) ||
-      (item.pol && item.pol.toLowerCase().includes(q)) ||
-      (item.pod && item.pod.toLowerCase().includes(q)) ||
-      item.shipperName.toLowerCase().includes(q) ||
-      (item.shipperPhone && item.shipperPhone.toLowerCase().includes(q)) ||
-      (item.shipperEmail && item.shipperEmail.toLowerCase().includes(q)) ||
-      item.consigneeName.toLowerCase().includes(q) ||
-      (item.consigneePhone && item.consigneePhone.toLowerCase().includes(q)) ||
-      (item.consigneeEmail && item.consigneeEmail.toLowerCase().includes(q)) ||
-      (item.commodity && item.commodity.toLowerCase().includes(q)) ||
-      item.mode.toLowerCase().includes(q)
-    );
-  });
-  displayNrsRegistryItems(filtered);
-}
-window.filterNrsRegistry = filterNrsRegistry;
+      const filtered = list.filter(item => {
+        return (
+          item.refId.toLowerCase().includes(q) ||
+          (item.agent && item.agent.toLowerCase().includes(q)) ||
+          (item.customer && item.customer.toLowerCase().includes(q)) ||
+          (item.pol && item.pol.toLowerCase().includes(q)) ||
+          (item.pod && item.pod.toLowerCase().includes(q)) ||
+          item.shipperName.toLowerCase().includes(q) ||
+          (item.shipperPhone && item.shipperPhone.toLowerCase().includes(q)) ||
+          (item.shipperEmail && item.shipperEmail.toLowerCase().includes(q)) ||
+          item.consigneeName.toLowerCase().includes(q) ||
+          (item.consigneePhone && item.consigneePhone.toLowerCase().includes(q)) ||
+          (item.consigneeEmail && item.consigneeEmail.toLowerCase().includes(q)) ||
+          (item.commodity && item.commodity.toLowerCase().includes(q)) ||
+          item.mode.toLowerCase().includes(q)
+        );
+      });
+      displayNrsRegistryItems(filtered);
+    }
+    window.filterNrsRegistry = filterNrsRegistry;
 
-// ==================== NRS FOLLOW-UP TRACKER ====================
-function openNrsFollowUpModal(itemId) {
-  const list = window._nrsRegistryCached || [];
-  const item = list.find(i => i.id === itemId);
-  if (!item) {
-    alert('Booking record not found.');
-    return;
-  }
+    // ==================== NRS FOLLOW-UP TRACKER ====================
+    function openNrsFollowUpModal(itemId) {
+      const list = window._nrsRegistryCached || [];
+      const item = list.find(i => i.id === itemId);
+      if (!item) {
+        alert('Booking record not found.');
+        return;
+      }
 
-  document.getElementById('nrs-followup-item-id').value = itemId;
+      document.getElementById('nrs-followup-item-id').value = itemId;
 
-  // Derive correct mode from refId
-  const prefix = (item.refId || '').substring(0, 2).toUpperCase();
-  const isAirByRef = prefix === 'AE' || prefix === 'AI';
-  const isSeaByRef = prefix === 'SE' || prefix === 'SI';
-  const nomMode = isAirByRef ? 'Air Nomination' : (isSeaByRef ? 'Sea Nomination' : (item.mode || 'N/A'));
+      // Derive correct mode from refId
+      const prefix = (item.refId || '').substring(0, 2).toUpperCase();
+      const isAirByRef = prefix === 'AE' || prefix === 'AI';
+      const isSeaByRef = prefix === 'SE' || prefix === 'SI';
+      const nomMode = isAirByRef ? 'Air Nomination' : (isSeaByRef ? 'Sea Nomination' : (item.mode || 'N/A'));
 
-  // Set title
-  document.getElementById('nrs-followup-title').textContent = `#${item.refId} — FOLLOW-UPS`;
+      // Set title
+      document.getElementById('nrs-followup-title').textContent = `#${item.refId} — FOLLOW-UPS`;
 
-  // Set summary
-  const agentName = item.agent || item.customer || 'N/A';
-  document.getElementById('nrs-followup-summary').innerHTML = `
+      // Set summary
+      const agentName = item.agent || item.customer || 'N/A';
+      document.getElementById('nrs-followup-summary').innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem;">
       <div><strong>Agent:</strong> ${agentName}</div>
       <div><strong>Mode:</strong> ${nomMode}</div>
@@ -8294,55 +8297,55 @@ function openNrsFollowUpModal(itemId) {
     </div>
   `;
 
-  // Render follow-up log
-  renderNrsFollowUpLog(item.followUps || []);
+      // Render follow-up log
+      renderNrsFollowUpLog(item.followUps || []);
 
-  // Clear input
-  document.getElementById('nrs-followup-note').value = '';
-  document.getElementById('nrs-followup-status').selectedIndex = 0;
+      // Clear input
+      document.getElementById('nrs-followup-note').value = '';
+      document.getElementById('nrs-followup-status').selectedIndex = 0;
 
-  // Show modal
-  const modal = document.getElementById('nrs-followup-modal');
-  modal.style.display = 'flex';
-}
-window.openNrsFollowUpModal = openNrsFollowUpModal;
+      // Show modal
+      const modal = document.getElementById('nrs-followup-modal');
+      modal.style.display = 'flex';
+    }
+    window.openNrsFollowUpModal = openNrsFollowUpModal;
 
-function renderNrsFollowUpLog(followUps) {
-  const log = document.getElementById('nrs-followup-log');
-  if (!log) return;
+    function renderNrsFollowUpLog(followUps) {
+      const log = document.getElementById('nrs-followup-log');
+      if (!log) return;
 
-  if (!followUps || followUps.length === 0) {
-    log.innerHTML = `<div style="text-align: center; color: var(--t3); font-size: 0.68rem; font-style: italic; padding: 1rem;">No follow-ups recorded yet.</div>`;
-    return;
-  }
+      if (!followUps || followUps.length === 0) {
+        log.innerHTML = `<div style="text-align: center; color: var(--t3); font-size: 0.68rem; font-style: italic; padding: 1rem;">No follow-ups recorded yet.</div>`;
+        return;
+      }
 
-  const statusIcons = {
-    'Awaiting Response': '📞',
-    'Documents Pending': '📄',
-    'Booking Confirmed by Shipper': '✅',
-    'Shipment Dispatched': '🚀',
-    'Completed': '🏁'
-  };
+      const statusIcons = {
+        'Awaiting Response': '📞',
+        'Documents Pending': '📄',
+        'Booking Confirmed by Shipper': '✅',
+        'Shipment Dispatched': '🚀',
+        'Completed': '🏁'
+      };
 
-  const statusColors = {
-    'Awaiting Response': '#d97706',
-    'Documents Pending': '#2563eb',
-    'Booking Confirmed by Shipper': '#059669',
-    'Shipment Dispatched': '#7c3aed',
-    'Completed': '#15803d'
-  };
+      const statusColors = {
+        'Awaiting Response': '#d97706',
+        'Documents Pending': '#2563eb',
+        'Booking Confirmed by Shipper': '#059669',
+        'Shipment Dispatched': '#7c3aed',
+        'Completed': '#15803d'
+      };
 
-  // Show newest first
-  const sorted = [...followUps].reverse();
+      // Show newest first
+      const sorted = [...followUps].reverse();
 
-  log.innerHTML = sorted.map((fu, idx) => {
-    const icon = statusIcons[fu.status] || '📝';
-    const color = statusColors[fu.status] || 'var(--t2)';
-    const dateStr = fu.date ? new Date(fu.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-    const timeStr = fu.time || '';
-    const byUser = fu.by ? (TEAM_ROLES[fu.by]?.name || fu.by) : '';
+      log.innerHTML = sorted.map((fu, idx) => {
+        const icon = statusIcons[fu.status] || '📝';
+        const color = statusColors[fu.status] || 'var(--t2)';
+        const dateStr = fu.date ? new Date(fu.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        const timeStr = fu.time || '';
+        const byUser = fu.by ? (TEAM_ROLES[fu.by]?.name || fu.by) : '';
 
-    return `
+        return `
       <div style="padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border-1); ${idx === sorted.length - 1 ? 'border-bottom: none;' : ''}">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
           <span style="font-size: 0.64rem; font-weight: 800; color: ${color};">${icon} ${fu.status}</span>
@@ -8352,265 +8355,265 @@ function renderNrsFollowUpLog(followUps) {
         ${byUser ? `<div style="font-size: 0.56rem; color: var(--t3); margin-top: 2px; font-weight: 600;">— ${byUser}</div>` : ''}
       </div>
     `;
-  }).join('');
+      }).join('');
 
-  // Scroll to top (latest)
-  log.scrollTop = 0;
-}
-
-async function addNrsFollowUp() {
-  const itemId = document.getElementById('nrs-followup-item-id').value;
-  const status = document.getElementById('nrs-followup-status').value;
-  const note = document.getElementById('nrs-followup-note').value.trim();
-
-  if (!note) {
-    alert('Please enter a follow-up note.');
-    return;
-  }
-
-  if (!itemId) {
-    alert('Booking reference not found.');
-    return;
-  }
-
-  const now = new Date();
-  const followUpEntry = {
-    date: now.toISOString().split('T')[0],
-    time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-    status: status,
-    note: note,
-    by: appState.currentUser || 'unknown'
-  };
-
-  // Update cached data
-  const list = window._nrsRegistryCached || [];
-  const item = list.find(i => i.id === itemId);
-  if (!item) {
-    alert('Booking record not found in cache.');
-    return;
-  }
-
-  if (!item.followUps) item.followUps = [];
-  item.followUps.push(followUpEntry);
-
-  // Persist to Firestore
-  try {
-    if (DB.firestoreRef) {
-      await DB.firestoreRef.collection('nrs_registry').doc(itemId).set(
-        { followUps: item.followUps },
-        { merge: true }
-      );
-    } else {
-      // Offline fallback — save to localStorage
-      let offlineNrs = {};
-      try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch (e) { }
-      if (!offlineNrs[itemId]) offlineNrs[itemId] = {};
-      offlineNrs[itemId].followUps = item.followUps;
-      localStorage.setItem('gl_nrs_registry', JSON.stringify(offlineNrs));
+      // Scroll to top (latest)
+      log.scrollTop = 0;
     }
-  } catch (err) {
-    console.error('Failed to save follow-up:', err);
-    alert('⚠️ Follow-up saved locally but Firestore sync failed.');
-  }
 
-  // Re-render the log
-  renderNrsFollowUpLog(item.followUps);
+    async function addNrsFollowUp() {
+      const itemId = document.getElementById('nrs-followup-item-id').value;
+      const status = document.getElementById('nrs-followup-status').value;
+      const note = document.getElementById('nrs-followup-note').value.trim();
 
-  // Clear input
-  document.getElementById('nrs-followup-note').value = '';
-  document.getElementById('nrs-followup-status').selectedIndex = 0;
+      if (!note) {
+        alert('Please enter a follow-up note.');
+        return;
+      }
 
-  // Refresh the NRS table to show the updated badge
-  displayNrsRegistryItems(list);
-}
-window.addNrsFollowUp = addNrsFollowUp;
+      if (!itemId) {
+        alert('Booking reference not found.');
+        return;
+      }
 
-function closeNrsFollowUpModal() {
-  const modal = document.getElementById('nrs-followup-modal');
-  if (modal) modal.style.display = 'none';
-}
-window.closeNrsFollowUpModal = closeNrsFollowUpModal;
+      const now = new Date();
+      const followUpEntry = {
+        date: now.toISOString().split('T')[0],
+        time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        status: status,
+        note: note,
+        by: appState.currentUser || 'unknown'
+      };
 
-// CREDIT CONTROL & COMPLIANCE HANDLERS
-window._uploadedAgreements = { air: null, sea: null };
-function handleAgreementUpload(mode, input) {
-  if (!input.files || input.files.length === 0) return;
-  const file = input.files[0];
+      // Update cached data
+      const list = window._nrsRegistryCached || [];
+      const item = list.find(i => i.id === itemId);
+      if (!item) {
+        alert('Booking record not found in cache.');
+        return;
+      }
 
-  if (!window._uploadedAgreements) window._uploadedAgreements = {};
-  window._uploadedAgreements[mode] = {
-    name: file.name,
-    size: file.size
-  };
+      if (!item.followUps) item.followUps = [];
+      item.followUps.push(followUpEntry);
 
-  const statusLabel = document.getElementById(`${mode}-agreement-status`);
-  if (statusLabel) {
-    statusLabel.textContent = "[Uploaded]";
-    statusLabel.style.color = "var(--accent-success)";
-  }
-
-  const filenameLabel = document.getElementById(`${mode}-agreement-filename`);
-  if (filenameLabel) {
-    filenameLabel.textContent = file.name;
-    filenameLabel.title = file.name;
-  }
-}
-window.handleAgreementUpload = handleAgreementUpload;
-
-async function renderAdminCustomerControlList() {
-  const tbody = document.getElementById("admin-customer-control-body");
-  if (!tbody) return;
-
-  // Compile unique customers from quotes and controls
-  let controls = window._customerControls || {};
-  if (Object.keys(controls).length === 0) {
-    try {
-      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch (e) { }
-  }
-  const customers = Array.from(new Set([
-    ...appState.quotes.map(q => q.customer.trim()),
-    ...Object.values(controls).map(c => c.customer.trim())
-  ]));
-
-  if (customers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No customer records found. Add quotes or override requests to populate.</td></tr>`;
-    return;
-  }
-
-  window._adminCustomerListCached = customers.map(name => {
-    const lower = name.toLowerCase();
-    const ctrl = controls[lower] || {
-      customer: name,
-      creditDays: 30,
-      creditLimit: 0,
-      blocked: false,
-      waiveAgreement: false
-    };
-    return ctrl;
-  });
-
-  displayAdminCustomerControlList(window._adminCustomerListCached);
-}
-window.renderAdminCustomerControlList = renderAdminCustomerControlList;
-
-function downloadAgreementPdf(customerName) {
-  const lower = customerName.toLowerCase().trim();
-  const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-  if (ctrl.agreementData) {
-    const link = document.createElement("a");
-    link.href = ctrl.agreementData;
-    link.download = ctrl.agreementFile || "agency_agreement.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } else {
-    alert("No PDF data found for this customer.");
-  }
-}
-window.downloadAgreementPdf = downloadAgreementPdf;
-
-async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
-  if (!customerName) return;
-  const lower = customerName.toLowerCase().trim();
-  let controls = window._customerControls || {};
-  if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
-  }
-
-  controls[lower].hasAgreement = true;
-  controls[lower].agreementFile = fileName;
-  controls[lower].agreementData = fileData;
-  window._customerControls = controls;
-
-  // Save to Firestore/local storage
-  if (DB.firestoreRef) {
-    try {
-      await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
-      console.log(`DB: Saved agency agreement for "${customerName}" to Firestore.`);
-    } catch (err) {
-      console.error("DB: Failed to save agency agreement to Firestore:", err);
-    }
-  } else {
-    try {
-      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-      offlineControls[lower] = controls[lower];
-      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
-  }
-}
-window.saveCustomerAgreementRecord = saveCustomerAgreementRecord;
-
-async function resetCustomerAgreement(customerName) {
-  if (!confirm(`Are you sure you want to cancel and delete the Agency Agreement for "${customerName}"?`)) return;
-
-  const lower = customerName.toLowerCase().trim();
-  let controls = window._customerControls || {};
-  if (controls[lower]) {
-    controls[lower].hasAgreement = false;
-    delete controls[lower].agreementFile;
-    delete controls[lower].agreementData;
-
-    // Sync to database
-    if (DB.firestoreRef) {
-      await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower]);
-    } else {
+      // Persist to Firestore
       try {
-        let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-        offlineControls[lower] = controls[lower];
-        localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-      } catch (e) { }
+        if (DB.firestoreRef) {
+          await DB.firestoreRef.collection('nrs_registry').doc(itemId).set(
+            { followUps: item.followUps },
+            { merge: true }
+          );
+        } else {
+          // Offline fallback — save to localStorage
+          let offlineNrs = {};
+          try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch (e) { }
+          if (!offlineNrs[itemId]) offlineNrs[itemId] = {};
+          offlineNrs[itemId].followUps = item.followUps;
+          localStorage.setItem('gl_nrs_registry', JSON.stringify(offlineNrs));
+        }
+      } catch (err) {
+        console.error('Failed to save follow-up:', err);
+        alert('⚠️ Follow-up saved locally but Firestore sync failed.');
+      }
+
+      // Re-render the log
+      renderNrsFollowUpLog(item.followUps);
+
+      // Clear input
+      document.getElementById('nrs-followup-note').value = '';
+      document.getElementById('nrs-followup-status').selectedIndex = 0;
+
+      // Refresh the NRS table to show the updated badge
+      displayNrsRegistryItems(list);
     }
-    alert(`Successfully reset Agency Agreement for "${customerName}".`);
-    renderAdminCustomerControlList();
-  }
-}
-window.resetCustomerAgreement = resetCustomerAgreement;
+    window.addNrsFollowUp = addNrsFollowUp;
 
-function displayAdminCustomerControlList(list) {
-  const tbody = document.getElementById("admin-customer-control-body");
-  if (!tbody) return;
+    function closeNrsFollowUpModal() {
+      const modal = document.getElementById('nrs-followup-modal');
+      if (modal) modal.style.display = 'none';
+    }
+    window.closeNrsFollowUpModal = closeNrsFollowUpModal;
 
-  tbody.innerHTML = list.map(ctrl => {
-    const waiveAgreement = !!ctrl.waiveAgreement;
-    const creditDays = ctrl.creditDays || 30;
-    const creditLimit = ctrl.creditLimit || 0;
-    const hasAgreement = !!ctrl.hasAgreement;
-    const fileName = ctrl.agreementFile || "";
-    const lower = ctrl.customer.toLowerCase().trim();
+    // CREDIT CONTROL & COMPLIANCE HANDLERS
+    window._uploadedAgreements = { air: null, sea: null };
+    function handleAgreementUpload(mode, input) {
+      if (!input.files || input.files.length === 0) return;
+      const file = input.files[0];
 
-    // Check for pending requests
-    const pendingReqs = window._amendmentRequests || [];
-    const hasPendingWaiver = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
+      if (!window._uploadedAgreements) window._uploadedAgreements = {};
+      window._uploadedAgreements[mode] = {
+        name: file.name,
+        size: file.size
+      };
 
-    const agreementCell = hasAgreement
-      ? `<div style="display: flex; align-items: center; gap: 0.4rem;">
+      const statusLabel = document.getElementById(`${mode}-agreement-status`);
+      if (statusLabel) {
+        statusLabel.textContent = "[Uploaded]";
+        statusLabel.style.color = "var(--accent-success)";
+      }
+
+      const filenameLabel = document.getElementById(`${mode}-agreement-filename`);
+      if (filenameLabel) {
+        filenameLabel.textContent = file.name;
+        filenameLabel.title = file.name;
+      }
+    }
+    window.handleAgreementUpload = handleAgreementUpload;
+
+    async function renderAdminCustomerControlList() {
+      const tbody = document.getElementById("admin-customer-control-body");
+      if (!tbody) return;
+
+      // Compile unique customers from quotes and controls
+      let controls = window._customerControls || {};
+      if (Object.keys(controls).length === 0) {
+        try {
+          controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+        } catch (e) { }
+      }
+      const customers = Array.from(new Set([
+        ...appState.quotes.map(q => q.customer.trim()),
+        ...Object.values(controls).map(c => c.customer.trim())
+      ]));
+
+      if (customers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No customer records found. Add quotes or override requests to populate.</td></tr>`;
+        return;
+      }
+
+      window._adminCustomerListCached = customers.map(name => {
+        const lower = name.toLowerCase();
+        const ctrl = controls[lower] || {
+          customer: name,
+          creditDays: 30,
+          creditLimit: 0,
+          blocked: false,
+          waiveAgreement: false
+        };
+        return ctrl;
+      });
+
+      displayAdminCustomerControlList(window._adminCustomerListCached);
+    }
+    window.renderAdminCustomerControlList = renderAdminCustomerControlList;
+
+    function downloadAgreementPdf(customerName) {
+      const lower = customerName.toLowerCase().trim();
+      const ctrl = (window._customerControls && window._customerControls[lower]) || {};
+      if (ctrl.agreementData) {
+        const link = document.createElement("a");
+        link.href = ctrl.agreementData;
+        link.download = ctrl.agreementFile || "agency_agreement.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert("No PDF data found for this customer.");
+      }
+    }
+    window.downloadAgreementPdf = downloadAgreementPdf;
+
+    async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
+      if (!customerName) return;
+      const lower = customerName.toLowerCase().trim();
+      let controls = window._customerControls || {};
+      if (!controls[lower]) {
+        controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+      }
+
+      controls[lower].hasAgreement = true;
+      controls[lower].agreementFile = fileName;
+      controls[lower].agreementData = fileData;
+      window._customerControls = controls;
+
+      // Save to Firestore/local storage
+      if (DB.firestoreRef) {
+        try {
+          await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+          console.log(`DB: Saved agency agreement for "${customerName}" to Firestore.`);
+        } catch (err) {
+          console.error("DB: Failed to save agency agreement to Firestore:", err);
+        }
+      } else {
+        try {
+          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+          offlineControls[lower] = controls[lower];
+          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+        } catch (e) { }
+      }
+    }
+    window.saveCustomerAgreementRecord = saveCustomerAgreementRecord;
+
+    async function resetCustomerAgreement(customerName) {
+      if (!confirm(`Are you sure you want to cancel and delete the Agency Agreement for "${customerName}"?`)) return;
+
+      const lower = customerName.toLowerCase().trim();
+      let controls = window._customerControls || {};
+      if (controls[lower]) {
+        controls[lower].hasAgreement = false;
+        delete controls[lower].agreementFile;
+        delete controls[lower].agreementData;
+
+        // Sync to database
+        if (DB.firestoreRef) {
+          await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower]);
+        } else {
+          try {
+            let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+            offlineControls[lower] = controls[lower];
+            localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+          } catch (e) { }
+        }
+        alert(`Successfully reset Agency Agreement for "${customerName}".`);
+        renderAdminCustomerControlList();
+      }
+    }
+    window.resetCustomerAgreement = resetCustomerAgreement;
+
+    function displayAdminCustomerControlList(list) {
+      const tbody = document.getElementById("admin-customer-control-body");
+      if (!tbody) return;
+
+      tbody.innerHTML = list.map(ctrl => {
+        const waiveAgreement = !!ctrl.waiveAgreement;
+        const creditDays = ctrl.creditDays || 30;
+        const creditLimit = ctrl.creditLimit || 0;
+        const hasAgreement = !!ctrl.hasAgreement;
+        const fileName = ctrl.agreementFile || "";
+        const lower = ctrl.customer.toLowerCase().trim();
+
+        // Check for pending requests
+        const pendingReqs = window._amendmentRequests || [];
+        const hasPendingWaiver = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
+
+        const agreementCell = hasAgreement
+          ? `<div style="display: flex; align-items: center; gap: 0.4rem;">
            <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fileName}">${fileName}</span>
            <button class="btn-text" onclick="downloadAgreementPdf('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥 Download</button>
            <button class="btn-text" onclick="resetCustomerAgreement('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--accent-error); border: none; background: transparent; cursor: pointer; text-decoration: underline;">❌ Reset</button>
          </div>`
-      : `<span style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</span>`;
+          : `<span style="font-size: 0.65rem; color: var(--t3); font-style: italic;">No Agreement PDF</span>`;
 
-    let complianceHtml = `
+        let complianceHtml = `
       <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${waiveAgreement ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)'}; color: ${waiveAgreement ? 'var(--accent-success)' : 'var(--accent-error)'};">
         ${waiveAgreement ? 'Agreement Waived' : 'Agreement Required'}
       </span>
     `;
-    if (hasPendingWaiver) {
-      complianceHtml += `
+        if (hasPendingWaiver) {
+          complianceHtml += `
         <span style="font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(245,158,11,0.2); color: var(--accent-warning); margin-left: 4px; border: 1px solid rgba(245,158,11,0.3); text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Pending Waiver request submitted by user">
           WAIVER REQ ⏳
         </span>
       `;
-    }
+        }
 
-    let statusHtml = `
+        let statusHtml = `
       <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: rgba(46,204,113,0.1); color: var(--accent-success);">
         Active (Released)
       </span>
     `;
 
-    return `
+        return `
       <tr>
         <td style="font-weight: 700; color: var(--t1);">${ctrl.customer}</td>
         <td>
@@ -8635,491 +8638,491 @@ function displayAdminCustomerControlList(list) {
         </td>
       </tr>
     `;
-  }).join("");
-}
-
-async function updateCustomerCreditPeriod(customerName, days) {
-  const val = parseInt(days);
-  if (isNaN(val) || val < 0) return;
-  const lower = customerName.toLowerCase();
-
-  let controls = window._customerControls || {};
-  if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
-  }
-  controls[lower].creditDays = val;
-  window._customerControls = controls;
-
-  if (DB.firestoreRef) {
-    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
-  } else {
-    try {
-      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-      offlineControls[lower] = controls[lower];
-      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
-  }
-}
-window.updateCustomerCreditPeriod = updateCustomerCreditPeriod;
-
-async function updateCustomerCreditLimitValue(customerName, limit) {
-  const val = parseFloat(limit);
-  if (isNaN(val) || val < 0) return;
-  const lower = customerName.toLowerCase();
-
-  let controls = window._customerControls || {};
-  if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
-  }
-  controls[lower].creditLimit = val;
-  window._customerControls = controls;
-
-  if (DB.firestoreRef) {
-    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
-  } else {
-    try {
-      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-      offlineControls[lower] = controls[lower];
-      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
-  }
-}
-window.updateCustomerCreditLimitValue = updateCustomerCreditLimitValue;
-
-async function toggleCustomerAgreementWaiver(customerName) {
-  const lower = customerName.toLowerCase();
-  let controls = window._customerControls || {};
-  if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
-  }
-  controls[lower].waiveAgreement = !controls[lower].waiveAgreement;
-  window._customerControls = controls;
-
-  if (DB.firestoreRef) {
-    await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
-  } else {
-    try {
-      let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-      offlineControls[lower] = controls[lower];
-      localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
-    renderAdminCustomerControlList();
-  }
-}
-window.toggleCustomerAgreementWaiver = toggleCustomerAgreementWaiver;
-
-function filterAdminCustomerList(query) {
-  const list = window._adminCustomerListCached || [];
-  const q = query.trim().toLowerCase();
-  if (!q) {
-    displayAdminCustomerControlList(list);
-    return;
-  }
-  const filtered = list.filter(c => c.customer.toLowerCase().includes(q));
-  displayAdminCustomerControlList(filtered);
-}
-window.filterAdminCustomerList = filterAdminCustomerList;
-
-// DIAGNOSTICS & RESET HANDLERS
-window._lastJsError = "None";
-window.addEventListener("error", (e) => {
-  window._lastJsError = `${e.message} (${e.filename}:${e.lineno})`;
-  const statusLabel = document.getElementById("diag-status");
-  if (statusLabel) {
-    statusLabel.textContent = `Error: ${e.message}`;
-    statusLabel.style.color = "var(--accent-error)";
-  }
-});
-
-function resetDbConnectionLocal() {
-  if (confirm("Reset Firebase Cloud Connection and fallback to Offline Local Database? This will clear active session, unregister service workers, purge caches, and reload the application.")) {
-    localStorage.removeItem("gl_firebase_config");
-    localStorage.removeItem("gl_firebase_config_raw");
-    localStorage.removeItem("gl_custom_users");
-    sessionStorage.clear();
-
-    // Clear service worker registrations
-    if (navigator.serviceWorker) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        for (let r of regs) r.unregister();
-      });
+      }).join("");
     }
 
-    // Clear all caches
-    if (window.caches) {
-      caches.keys().then(keys => {
-        keys.forEach(k => caches.delete(k));
-      });
+    async function updateCustomerCreditPeriod(customerName, days) {
+      const val = parseInt(days);
+      if (isNaN(val) || val < 0) return;
+      const lower = customerName.toLowerCase();
+
+      let controls = window._customerControls || {};
+      if (!controls[lower]) {
+        controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+      }
+      controls[lower].creditDays = val;
+      window._customerControls = controls;
+
+      if (DB.firestoreRef) {
+        await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+      } else {
+        try {
+          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+          offlineControls[lower] = controls[lower];
+          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+        } catch (e) { }
+      }
     }
+    window.updateCustomerCreditPeriod = updateCustomerCreditPeriod;
 
-    // Force hard reload with timestamp to bypass caches
-    setTimeout(() => {
-      window.location.href = window.location.origin + window.location.pathname + '?r=' + Date.now();
-    }, 300);
-  }
-}
-window.resetDbConnectionLocal = resetDbConnectionLocal;
+    async function updateCustomerCreditLimitValue(customerName, limit) {
+      const val = parseFloat(limit);
+      if (isNaN(val) || val < 0) return;
+      const lower = customerName.toLowerCase();
 
-function toggleDiagnosticsDrawer() {
-  const drawer = document.getElementById("diagnostics-drawer");
-  if (!drawer) return;
+      let controls = window._customerControls || {};
+      if (!controls[lower]) {
+        controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+      }
+      controls[lower].creditLimit = val;
+      window._customerControls = controls;
 
-  if (drawer.style.display === "none") {
-    drawer.style.display = "block";
-    updateDiagnosticsUI();
-  } else {
-    drawer.style.display = "none";
-  }
-}
-window.toggleDiagnosticsDrawer = toggleDiagnosticsDrawer;
-
-function updateDiagnosticsUI() {
-  const diagConn = document.getElementById("diag-conn");
-  const diagProj = document.getElementById("diag-project");
-  const diagUsers = document.getElementById("diag-users");
-  const diagStatus = document.getElementById("diag-status");
-
-  if (diagConn) diagConn.textContent = DB.isCloud ? "Cloud (Online) 🟢" : "Offline (Local) 🔵";
-
-  let projectId = "None";
-  try {
-    const configRaw = localStorage.getItem("gl_firebase_config");
-    if (configRaw) {
-      const config = JSON.parse(configRaw);
-      if (config && config.projectId) projectId = config.projectId;
+      if (DB.firestoreRef) {
+        await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+      } else {
+        try {
+          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+          offlineControls[lower] = controls[lower];
+          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+        } catch (e) { }
+      }
     }
-  } catch (e) { }
-  if (diagProj) diagProj.textContent = projectId;
+    window.updateCustomerCreditLimitValue = updateCustomerCreditLimitValue;
 
-  let dbUsers = window._firebaseUsers || [];
-  if (dbUsers.length === 0) {
-    try {
-      const stored = localStorage.getItem("gl_custom_users");
-      if (stored) dbUsers = JSON.parse(stored) || [];
-    } catch (e) { }
-  }
-  if (diagUsers) diagUsers.textContent = `${dbUsers.length} users`;
+    async function toggleCustomerAgreementWaiver(customerName) {
+      const lower = customerName.toLowerCase();
+      let controls = window._customerControls || {};
+      if (!controls[lower]) {
+        controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
+      }
+      controls[lower].waiveAgreement = !controls[lower].waiveAgreement;
+      window._customerControls = controls;
 
-  if (diagStatus) {
-    if (window._lastJsError && window._lastJsError !== "None") {
-      diagStatus.textContent = window._lastJsError;
-      diagStatus.style.color = "var(--accent-error)";
-    } else {
-      diagStatus.textContent = DB.isCloud ? "Connection established" : "Local fallback active";
-      diagStatus.style.color = DB.isCloud ? "var(--accent-success)" : "var(--sky)";
+      if (DB.firestoreRef) {
+        await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
+      } else {
+        try {
+          let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+          offlineControls[lower] = controls[lower];
+          localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
+        } catch (e) { }
+        renderAdminCustomerControlList();
+      }
     }
-  }
-}
-window.updateDiagnosticsUI = updateDiagnosticsUI;
+    window.toggleCustomerAgreementWaiver = toggleCustomerAgreementWaiver;
 
-async function resetCustomerCreditDirectory() {
-  if (!confirm("⚠️ Are you sure you want to reset all credit control records and remove all override settings in the database?")) return;
-
-  if (DB.firestoreRef) {
-    try {
-      const snap = await DB.firestoreRef.collection("customer_control").get();
-      const promises = [];
-      snap.forEach(doc => {
-        promises.push(doc.ref.delete());
-      });
-      await Promise.all(promises);
-      console.log("DB: Successfully cleared customer_control collection from Firestore.");
-    } catch (err) {
-      console.error("DB: Failed to clear customer_control from Firestore:", err);
-      alert("Database error: " + err.message);
-      return;
+    function filterAdminCustomerList(query) {
+      const list = window._adminCustomerListCached || [];
+      const q = query.trim().toLowerCase();
+      if (!q) {
+        displayAdminCustomerControlList(list);
+        return;
+      }
+      const filtered = list.filter(c => c.customer.toLowerCase().includes(q));
+      displayAdminCustomerControlList(filtered);
     }
-  }
+    window.filterAdminCustomerList = filterAdminCustomerList;
 
-  localStorage.removeItem("gl_customer_controls");
-  window._customerControls = {};
-  alert("Customer credit control directory has been reset successfully!");
-  renderAdminCustomerControlList();
-}
-window.resetCustomerCreditDirectory = resetCustomerCreditDirectory;
-
-async function clearAllTestData() {
-  if (!confirm("🚨 WARNING: Are you sure you want to clear ALL test quotes, NRS registry bookings, and approvals requests from the database? This is permanent!")) return;
-
-  if (DB.firestoreRef) {
-    try {
-      // Clear quotes
-      const quotesSnap = await DB.firestoreRef.collection("quotes").get();
-      const qPromises = [];
-      quotesSnap.forEach(doc => qPromises.push(doc.ref.delete()));
-      await Promise.all(qPromises);
-
-      // Clear nrs_registry
-      const nrsSnap = await DB.firestoreRef.collection("nrs_registry").get();
-      const nrsPromises = [];
-      nrsSnap.forEach(doc => nrsPromises.push(doc.ref.delete()));
-      await Promise.all(nrsPromises);
-
-      // Clear amendment_requests
-      const reqsSnap = await DB.firestoreRef.collection("amendment_requests").get();
-      const reqsPromises = [];
-      reqsSnap.forEach(doc => reqsPromises.push(doc.ref.delete()));
-      await Promise.all(reqsPromises);
-
-      console.log("DB: Cleared quotes, nrs_registry, and amendment_requests collections.");
-    } catch (err) {
-      console.error("DB: Failed to clear test data from Firestore:", err);
-      alert("Database error: " + err.message);
-      return;
-    }
-  }
-
-  // Clear local caches
-  localStorage.removeItem("logistics_quotes");
-  localStorage.removeItem("gl_nrs_registry");
-  localStorage.removeItem("gl_amendment_requests");
-
-  appState.quotes = [];
-  window._amendmentRequests = [];
-
-  alert("All test data has been cleared from database successfully!");
-  renderAdminDashboard();
-}
-window.clearAllTestData = clearAllTestData;
-
-async function runDbDiagnostics() {
-  const outputEl = document.getElementById("db-diagnostics-output") || console;
-  let logs = [];
-  const log = (msg) => {
-    logs.push(msg);
-    if (outputEl && outputEl.tagName) {
-      outputEl.innerHTML = logs.join("<br>");
-    } else {
-      console.log(msg);
-    }
-  };
-
-  log("🔍 Starting Database Connection Diagnostics...");
-  log(`• App Mode: ${DB.isCloud ? "Firebase Cloud (Online) 🟢" : "LocalStorage (Offline) 🔵"}`);
-
-  let configRaw = localStorage.getItem("gl_firebase_config");
-  log(`• Custom config: ${configRaw ? "Yes" : "No (Using DEFAULT)"}`);
-
-  if (!DB.firestoreRef) {
-    log("❌ Firestore Ref is null. Connection not initialized.");
-    return;
-  }
-
-  log(`• Project ID: ${DB.firestoreRef.app.options.projectId}`);
-
-  // Test quotes read
-  try {
-    const snap = await DB.firestoreRef.collection("quotes").limit(1).get();
-    log(`✅ quotes collection read test: PASSED (Found ${snap.size} docs)`);
-  } catch (err) {
-    log(`❌ quotes collection read test: FAILED - ${err.message}`);
-  }
-
-  // Test amendment_requests write
-  const testId = "TEST_WRITE_DIAGNOSTIC";
-  try {
-    log("• Attempting write to 'amendment_requests'...");
-    await DB.firestoreRef.collection("amendment_requests").doc(testId).set({
-      test: true,
-      timestamp: Date.now(),
-      status: 'diagnostic'
+    // DIAGNOSTICS & RESET HANDLERS
+    window._lastJsError = "None";
+    window.addEventListener("error", (e) => {
+      window._lastJsError = `${e.message} (${e.filename}:${e.lineno})`;
+      const statusLabel = document.getElementById("diag-status");
+      if (statusLabel) {
+        statusLabel.textContent = `Error: ${e.message}`;
+        statusLabel.style.color = "var(--accent-error)";
+      }
     });
-    log("✅ 'amendment_requests' write test: PASSED");
 
-    // Clean it up
-    await DB.firestoreRef.collection("amendment_requests").doc(testId).delete();
-    log("✅ 'amendment_requests' delete test: PASSED");
+    function resetDbConnectionLocal() {
+      if (confirm("Reset Firebase Cloud Connection and fallback to Offline Local Database? This will clear active session, unregister service workers, purge caches, and reload the application.")) {
+        localStorage.removeItem("gl_firebase_config");
+        localStorage.removeItem("gl_firebase_config_raw");
+        localStorage.removeItem("gl_custom_users");
+        sessionStorage.clear();
 
-    // Clear any previous error warning banner
-    delete window._amendmentRequestsError;
-    if (appState.currentUser === 'ganny') {
+        // Clear service worker registrations
+        if (navigator.serviceWorker) {
+          navigator.serviceWorker.getRegistrations().then(regs => {
+            for (let r of regs) r.unregister();
+          });
+        }
+
+        // Clear all caches
+        if (window.caches) {
+          caches.keys().then(keys => {
+            keys.forEach(k => caches.delete(k));
+          });
+        }
+
+        // Force hard reload with timestamp to bypass caches
+        setTimeout(() => {
+          window.location.href = window.location.origin + window.location.pathname + '?r=' + Date.now();
+        }, 300);
+      }
+    }
+    window.resetDbConnectionLocal = resetDbConnectionLocal;
+
+    function toggleDiagnosticsDrawer() {
+      const drawer = document.getElementById("diagnostics-drawer");
+      if (!drawer) return;
+
+      if (drawer.style.display === "none") {
+        drawer.style.display = "block";
+        updateDiagnosticsUI();
+      } else {
+        drawer.style.display = "none";
+      }
+    }
+    window.toggleDiagnosticsDrawer = toggleDiagnosticsDrawer;
+
+    function updateDiagnosticsUI() {
+      const diagConn = document.getElementById("diag-conn");
+      const diagProj = document.getElementById("diag-project");
+      const diagUsers = document.getElementById("diag-users");
+      const diagStatus = document.getElementById("diag-status");
+
+      if (diagConn) diagConn.textContent = DB.isCloud ? "Cloud (Online) 🟢" : "Offline (Local) 🔵";
+
+      let projectId = "None";
+      try {
+        const configRaw = localStorage.getItem("gl_firebase_config");
+        if (configRaw) {
+          const config = JSON.parse(configRaw);
+          if (config && config.projectId) projectId = config.projectId;
+        }
+      } catch (e) { }
+      if (diagProj) diagProj.textContent = projectId;
+
+      let dbUsers = window._firebaseUsers || [];
+      if (dbUsers.length === 0) {
+        try {
+          const stored = localStorage.getItem("gl_custom_users");
+          if (stored) dbUsers = JSON.parse(stored) || [];
+        } catch (e) { }
+      }
+      if (diagUsers) diagUsers.textContent = `${dbUsers.length} users`;
+
+      if (diagStatus) {
+        if (window._lastJsError && window._lastJsError !== "None") {
+          diagStatus.textContent = window._lastJsError;
+          diagStatus.style.color = "var(--accent-error)";
+        } else {
+          diagStatus.textContent = DB.isCloud ? "Connection established" : "Local fallback active";
+          diagStatus.style.color = DB.isCloud ? "var(--accent-success)" : "var(--sky)";
+        }
+      }
+    }
+    window.updateDiagnosticsUI = updateDiagnosticsUI;
+
+    async function resetCustomerCreditDirectory() {
+      if (!confirm("⚠️ Are you sure you want to reset all credit control records and remove all override settings in the database?")) return;
+
+      if (DB.firestoreRef) {
+        try {
+          const snap = await DB.firestoreRef.collection("customer_control").get();
+          const promises = [];
+          snap.forEach(doc => {
+            promises.push(doc.ref.delete());
+          });
+          await Promise.all(promises);
+          console.log("DB: Successfully cleared customer_control collection from Firestore.");
+        } catch (err) {
+          console.error("DB: Failed to clear customer_control from Firestore:", err);
+          alert("Database error: " + err.message);
+          return;
+        }
+      }
+
+      localStorage.removeItem("gl_customer_controls");
+      window._customerControls = {};
+      alert("Customer credit control directory has been reset successfully!");
+      renderAdminCustomerControlList();
+    }
+    window.resetCustomerCreditDirectory = resetCustomerCreditDirectory;
+
+    async function clearAllTestData() {
+      if (!confirm("🚨 WARNING: Are you sure you want to clear ALL test quotes, NRS registry bookings, and approvals requests from the database? This is permanent!")) return;
+
+      if (DB.firestoreRef) {
+        try {
+          // Clear quotes
+          const quotesSnap = await DB.firestoreRef.collection("quotes").get();
+          const qPromises = [];
+          quotesSnap.forEach(doc => qPromises.push(doc.ref.delete()));
+          await Promise.all(qPromises);
+
+          // Clear nrs_registry
+          const nrsSnap = await DB.firestoreRef.collection("nrs_registry").get();
+          const nrsPromises = [];
+          nrsSnap.forEach(doc => nrsPromises.push(doc.ref.delete()));
+          await Promise.all(nrsPromises);
+
+          // Clear amendment_requests
+          const reqsSnap = await DB.firestoreRef.collection("amendment_requests").get();
+          const reqsPromises = [];
+          reqsSnap.forEach(doc => reqsPromises.push(doc.ref.delete()));
+          await Promise.all(reqsPromises);
+
+          console.log("DB: Cleared quotes, nrs_registry, and amendment_requests collections.");
+        } catch (err) {
+          console.error("DB: Failed to clear test data from Firestore:", err);
+          alert("Database error: " + err.message);
+          return;
+        }
+      }
+
+      // Clear local caches
+      localStorage.removeItem("logistics_quotes");
+      localStorage.removeItem("gl_nrs_registry");
+      localStorage.removeItem("gl_amendment_requests");
+
+      appState.quotes = [];
+      window._amendmentRequests = [];
+
+      alert("All test data has been cleared from database successfully!");
       renderAdminDashboard();
     }
-  } catch (err) {
-    log(`❌ 'amendment_requests' write test: FAILED - ${err.message}`);
-    log(`👉 Recommendation: Ask your developer to modify Firestore Security Rules to allow read, write on 'amendment_requests' collection.`);
-  }
-}
-window.runDbDiagnostics = runDbDiagnostics;
+    window.clearAllTestData = clearAllTestData;
 
-/* ══════════════════════════════════════════════════
-   DUAL-MODE OPERATIONAL MODULE HANDLERS
-   ══════════════════════════════════════════════════ */
-function updateModuleTabs(activeModule) {
-  document.querySelectorAll(".module-tab").forEach(tab => {
-    if (tab.getAttribute("data-module") === activeModule) {
-      tab.classList.add("active");
-    } else {
-      tab.classList.remove("active");
+    async function runDbDiagnostics() {
+      const outputEl = document.getElementById("db-diagnostics-output") || console;
+      let logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        if (outputEl && outputEl.tagName) {
+          outputEl.innerHTML = logs.join("<br>");
+        } else {
+          console.log(msg);
+        }
+      };
+
+      log("🔍 Starting Database Connection Diagnostics...");
+      log(`• App Mode: ${DB.isCloud ? "Firebase Cloud (Online) 🟢" : "LocalStorage (Offline) 🔵"}`);
+
+      let configRaw = localStorage.getItem("gl_firebase_config");
+      log(`• Custom config: ${configRaw ? "Yes" : "No (Using DEFAULT)"}`);
+
+      if (!DB.firestoreRef) {
+        log("❌ Firestore Ref is null. Connection not initialized.");
+        return;
+      }
+
+      log(`• Project ID: ${DB.firestoreRef.app.options.projectId}`);
+
+      // Test quotes read
+      try {
+        const snap = await DB.firestoreRef.collection("quotes").limit(1).get();
+        log(`✅ quotes collection read test: PASSED (Found ${snap.size} docs)`);
+      } catch (err) {
+        log(`❌ quotes collection read test: FAILED - ${err.message}`);
+      }
+
+      // Test amendment_requests write
+      const testId = "TEST_WRITE_DIAGNOSTIC";
+      try {
+        log("• Attempting write to 'amendment_requests'...");
+        await DB.firestoreRef.collection("amendment_requests").doc(testId).set({
+          test: true,
+          timestamp: Date.now(),
+          status: 'diagnostic'
+        });
+        log("✅ 'amendment_requests' write test: PASSED");
+
+        // Clean it up
+        await DB.firestoreRef.collection("amendment_requests").doc(testId).delete();
+        log("✅ 'amendment_requests' delete test: PASSED");
+
+        // Clear any previous error warning banner
+        delete window._amendmentRequestsError;
+        if (appState.currentUser === 'ganny') {
+          renderAdminDashboard();
+        }
+      } catch (err) {
+        log(`❌ 'amendment_requests' write test: FAILED - ${err.message}`);
+        log(`👉 Recommendation: Ask your developer to modify Firestore Security Rules to allow read, write on 'amendment_requests' collection.`);
+      }
     }
-  });
-}
-window.updateModuleTabs = updateModuleTabs;
+    window.runDbDiagnostics = runDbDiagnostics;
 
-function toggleModulePathway(module, mode) {
-  const isBundled = (mode === 'bundled');
-  document.getElementById(`${module}-path-bundled-container`).style.display = isBundled ? 'block' : 'none';
-  document.getElementById(`${module}-path-standalone-container`).style.display = isBundled ? 'none' : 'block';
-  document.getElementById(`${module}-summary-inactive`).style.display = isBundled ? 'block' : 'none';
-  document.getElementById(`${module}-summary-active`).style.display = isBundled ? 'none' : 'flex';
-  document.getElementById(`${module}-save-btn-container`).style.display = isBundled ? 'none' : 'block';
+    /* ══════════════════════════════════════════════════
+       DUAL-MODE OPERATIONAL MODULE HANDLERS
+       ══════════════════════════════════════════════════ */
+    function updateModuleTabs(activeModule) {
+      document.querySelectorAll(".module-tab").forEach(tab => {
+        if (tab.getAttribute("data-module") === activeModule) {
+          tab.classList.add("active");
+        } else {
+          tab.classList.remove("active");
+        }
+      });
+    }
+    window.updateModuleTabs = updateModuleTabs;
 
-  if (module === 'custom') calculateCustomClearance();
-  else if (module === 'transport') calculateTransportation();
-  else if (module === 'warehouse') calculateWarehousing();
-}
-window.toggleModulePathway = toggleModulePathway;
+    function toggleModulePathway(module, mode) {
+      const isBundled = (mode === 'bundled');
+      document.getElementById(`${module}-path-bundled-container`).style.display = isBundled ? 'block' : 'none';
+      document.getElementById(`${module}-path-standalone-container`).style.display = isBundled ? 'none' : 'block';
+      document.getElementById(`${module}-summary-inactive`).style.display = isBundled ? 'block' : 'none';
+      document.getElementById(`${module}-summary-active`).style.display = isBundled ? 'none' : 'flex';
+      document.getElementById(`${module}-save-btn-container`).style.display = isBundled ? 'none' : 'block';
 
-function calculateCustomClearance() {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
+      if (module === 'custom') calculateCustomClearance();
+      else if (module === 'transport') calculateTransportation();
+      else if (module === 'warehouse') calculateWarehousing();
+    }
+    window.toggleModulePathway = toggleModulePathway;
 
-  const curSelect = document.getElementById("custom-currency");
-  if (!isNomUser && curSelect) {
-    curSelect.value = "INR";
-    curSelect.disabled = true;
-  } else if (curSelect) {
-    curSelect.disabled = false;
-  }
+    function calculateCustomClearance() {
+      const activeRole = getActiveRole();
+      const role = TEAM_ROLES[activeRole];
+      const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
 
-  const cur = curSelect ? curSelect.value : "INR";
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+      const curSelect = document.getElementById("custom-currency");
+      if (!isNomUser && curSelect) {
+        curSelect.value = "INR";
+        curSelect.disabled = true;
+      } else if (curSelect) {
+        curSelect.disabled = false;
+      }
 
-  const tbody = document.getElementById("custom-standalone-body");
-  let subtotalINR = 0;
-  tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotalINR += parseFloat(input.value) || 0;
-  });
+      const cur = curSelect ? curSelect.value : "INR";
+      const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
 
-  const taxINR = subtotalINR * 0.18;
-  const totalINR = subtotalINR + taxINR;
+      const tbody = document.getElementById("custom-standalone-body");
+      let subtotalINR = 0;
+      tbody.querySelectorAll(".chg-rate").forEach(input => {
+        subtotalINR += parseFloat(input.value) || 0;
+      });
 
-  let rateDivider = 1;
-  if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
-  else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
-  else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
+      const taxINR = subtotalINR * 0.18;
+      const totalINR = subtotalINR + taxINR;
 
-  const subtotal = subtotalINR / rateDivider;
-  const tax = taxINR / rateDivider;
-  const total = subtotal + tax;
+      let rateDivider = 1;
+      if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
+      else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
+      else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
 
-  document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-window.calculateCustomClearance = calculateCustomClearance;
+      const subtotal = subtotalINR / rateDivider;
+      const tax = taxINR / rateDivider;
+      const total = subtotal + tax;
 
-function calculateTransportation() {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
+      document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    window.calculateCustomClearance = calculateCustomClearance;
 
-  const curSelect = document.getElementById("transport-currency");
-  if (!isNomUser && curSelect) {
-    curSelect.value = "INR";
-    curSelect.disabled = true;
-  } else if (curSelect) {
-    curSelect.disabled = false;
-  }
+    function calculateTransportation() {
+      const activeRole = getActiveRole();
+      const role = TEAM_ROLES[activeRole];
+      const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
 
-  const cur = curSelect ? curSelect.value : "INR";
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+      const curSelect = document.getElementById("transport-currency");
+      if (!isNomUser && curSelect) {
+        curSelect.value = "INR";
+        curSelect.disabled = true;
+      } else if (curSelect) {
+        curSelect.disabled = false;
+      }
 
-  const tbody = document.getElementById("transport-standalone-body");
-  let subtotalINR = 0;
-  tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotalINR += parseFloat(input.value) || 0;
-  });
+      const cur = curSelect ? curSelect.value : "INR";
+      const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
 
-  const taxINR = subtotalINR * 0.18;
-  const totalINR = subtotalINR + taxINR;
+      const tbody = document.getElementById("transport-standalone-body");
+      let subtotalINR = 0;
+      tbody.querySelectorAll(".chg-rate").forEach(input => {
+        subtotalINR += parseFloat(input.value) || 0;
+      });
 
-  let rateDivider = 1;
-  if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
-  else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
-  else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
+      const taxINR = subtotalINR * 0.18;
+      const totalINR = subtotalINR + taxINR;
 
-  const subtotal = subtotalINR / rateDivider;
-  const tax = taxINR / rateDivider;
-  const total = subtotal + tax;
+      let rateDivider = 1;
+      if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
+      else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
+      else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
 
-  document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-window.calculateTransportation = calculateTransportation;
+      const subtotal = subtotalINR / rateDivider;
+      const tax = taxINR / rateDivider;
+      const total = subtotal + tax;
 
-function calculateWarehousing() {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
+      document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    window.calculateTransportation = calculateTransportation;
 
-  const curSelect = document.getElementById("warehouse-currency");
-  if (!isNomUser && curSelect) {
-    curSelect.value = "INR";
-    curSelect.disabled = true;
-  } else if (curSelect) {
-    curSelect.disabled = false;
-  }
+    function calculateWarehousing() {
+      const activeRole = getActiveRole();
+      const role = TEAM_ROLES[activeRole];
+      const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
 
-  const cur = curSelect ? curSelect.value : "INR";
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+      const curSelect = document.getElementById("warehouse-currency");
+      if (!isNomUser && curSelect) {
+        curSelect.value = "INR";
+        curSelect.disabled = true;
+      } else if (curSelect) {
+        curSelect.disabled = false;
+      }
 
-  const tbody = document.getElementById("warehouse-standalone-body");
-  let subtotalINR = 0;
-  tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotalINR += parseFloat(input.value) || 0;
-  });
+      const cur = curSelect ? curSelect.value : "INR";
+      const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
 
-  const taxINR = subtotalINR * 0.18;
-  const totalINR = subtotalINR + taxINR;
+      const tbody = document.getElementById("warehouse-standalone-body");
+      let subtotalINR = 0;
+      tbody.querySelectorAll(".chg-rate").forEach(input => {
+        subtotalINR += parseFloat(input.value) || 0;
+      });
 
-  let rateDivider = 1;
-  if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
-  else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
-  else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
+      const taxINR = subtotalINR * 0.18;
+      const totalINR = subtotalINR + taxINR;
 
-  const subtotal = subtotalINR / rateDivider;
-  const tax = taxINR / rateDivider;
-  const total = subtotal + tax;
+      let rateDivider = 1;
+      if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
+      else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
+      else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
 
-  document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-window.calculateWarehousing = calculateWarehousing;
+      const subtotal = subtotalINR / rateDivider;
+      const tax = taxINR / rateDivider;
+      const total = subtotal + tax;
 
-function injectModuleFeesToFreight(module, freightType, target = 'origin') {
-  const feesMap = {
-    custom: [
-      { name: "Customs Agency Fee", rate: 5500.00, unit: "flat" },
-      { name: "Documentation Charges", rate: 1200.00, unit: "flat" }
-    ],
-    transport: [
-      { name: "Trucking Base Freight", rate: 18500.00, unit: "flat" },
-      { name: "Fuel Surcharge", rate: 3200.00, unit: "flat" }
-    ],
-    warehouse: [
-      { name: "Monthly Space Storage", rate: 8500.00, unit: "flat" },
-      { name: "Handling In/Out", rate: 2000.00, unit: "flat" }
-    ]
-  };
+      document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    window.calculateWarehousing = calculateWarehousing;
 
-  const fees = feesMap[module];
-  if (!fees) return;
+    function injectModuleFeesToFreight(module, freightType, target = 'origin') {
+      const feesMap = {
+        custom: [
+          { name: "Customs Agency Fee", rate: 5500.00, unit: "flat" },
+          { name: "Documentation Charges", rate: 1200.00, unit: "flat" }
+        ],
+        transport: [
+          { name: "Trucking Base Freight", rate: 18500.00, unit: "flat" },
+          { name: "Fuel Surcharge", rate: 3200.00, unit: "flat" }
+        ],
+        warehouse: [
+          { name: "Monthly Space Storage", rate: 8500.00, unit: "flat" },
+          { name: "Handling In/Out", rate: 2000.00, unit: "flat" }
+        ]
+      };
 
-  const isAir = (freightType === 'air');
-  const bodyId = isAir
-    ? (target === 'dest' ? "air-dest-surcharges-body" : "air-origin-surcharges-body")
-    : (target === 'dest' ? "sea-dest-surcharges-body" : "sea-origin-surcharges-body");
-  const body = document.getElementById(bodyId);
-  if (!body) return;
+      const fees = feesMap[module];
+      if (!fees) return;
 
-  fees.forEach(fee => {
-    const row = document.createElement("tr");
-    if (isAir) {
-      row.innerHTML = `
+      const isAir = (freightType === 'air');
+      const bodyId = isAir
+        ? (target === 'dest' ? "air-dest-surcharges-body" : "air-origin-surcharges-body")
+        : (target === 'dest' ? "sea-dest-surcharges-body" : "sea-origin-surcharges-body");
+      const body = document.getElementById(bodyId);
+      if (!body) return;
+
+      fees.forEach(fee => {
+        const row = document.createElement("tr");
+        if (isAir) {
+          row.innerHTML = `
         <td><input type="text" class="chg-name" value="${fee.name}" required></td>
         <td><input type="number" class="chg-rate" value="${fee.rate.toFixed(2)}" step="0.01" required></td>
         <td>
@@ -9134,8 +9137,8 @@ function injectModuleFeesToFreight(module, freightType, target = 'origin') {
           </button>
         </td>
       `;
-    } else {
-      row.innerHTML = `
+        } else {
+          row.innerHTML = `
         <td><input type="text" class="chg-name" value="${fee.name}" required></td>
         <td><input type="number" class="chg-rate" value="${fee.rate.toFixed(2)}" step="0.01" required></td>
         <td>
@@ -9152,420 +9155,420 @@ function injectModuleFeesToFreight(module, freightType, target = 'origin') {
           </button>
         </td>
       `;
+        }
+        body.appendChild(row);
+      });
+
+      alert(`Successfully added ${module === 'custom' ? 'Custom Clearance' : (module === 'transport' ? 'Transportation' : 'Warehousing')} fees to ${freightType === 'air' ? 'Air Freight' : 'Sea Freight'} ${target === 'dest' ? 'Destination Local' : 'Origin Local'} table!`);
+
+      if (isAir) {
+        calculateAirFreight();
+      } else {
+        calculateSeaFreight();
+      }
     }
-    body.appendChild(row);
-  });
+    window.injectModuleFeesToFreight = injectModuleFeesToFreight;
 
-  alert(`Successfully added ${module === 'custom' ? 'Custom Clearance' : (module === 'transport' ? 'Transportation' : 'Warehousing')} fees to ${freightType === 'air' ? 'Air Freight' : 'Sea Freight'} ${target === 'dest' ? 'Destination Local' : 'Origin Local'} table!`);
+    function saveStandaloneQuote(module) {
+      const cur = document.getElementById(`${module}-currency`).value;
+      const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`).textContent.replace(/[^0-9.]/g, '')) || 0;
+      const tax = parseFloat(document.getElementById(`res-${module}-tax`).textContent.replace(/[^0-9.]/g, '')) || 0;
+      const total = parseFloat(document.getElementById(`res-${module}-total`).textContent.replace(/[^0-9.]/g, '')) || 0;
 
-  if (isAir) {
-    calculateAirFreight();
-  } else {
-    calculateSeaFreight();
-  }
-}
-window.injectModuleFeesToFreight = injectModuleFeesToFreight;
+      const customerName = prompt("Please enter Customer Name for this standalone quote:", "Walk-in Customer");
+      if (!customerName) return;
 
-function saveStandaloneQuote(module) {
-  const cur = document.getElementById(`${module}-currency`).value;
-  const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`).textContent.replace(/[^0-9.]/g, '')) || 0;
-  const tax = parseFloat(document.getElementById(`res-${module}-tax`).textContent.replace(/[^0-9.]/g, '')) || 0;
-  const total = parseFloat(document.getElementById(`res-${module}-total`).textContent.replace(/[^0-9.]/g, '')) || 0;
+      const rateInr = convertToInr(total, cur);
 
-  const customerName = prompt("Please enter Customer Name for this standalone quote:", "Walk-in Customer");
-  if (!customerName) return;
+      const quoteData = {
+        id: 'Q' + Math.random().toString(36).substr(2, 9),
+        date: new Date().toISOString().split('T')[0],
+        customer: customerName,
+        creator: appState.currentUser || "jaya",
+        status: 'quoted',
+        quoteNumber: appState.quotes.length + 1,
+        mode: module,
+        amount: total,
+        currency: cur,
+        amountINR: rateInr,
+        routingDetails: `${module.toUpperCase()} Standalone Services`,
+        notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
+      };
 
-  const rateInr = convertToInr(total, cur);
+      DB.saveQuote(quoteData);
+      alert(`${module.toUpperCase()} Standalone Quotation saved successfully!`);
+      returnToWorkspace();
+    }
+    window.saveStandaloneQuote = saveStandaloneQuote;
 
-  const quoteData = {
-    id: 'Q' + Math.random().toString(36).substr(2, 9),
-    date: new Date().toISOString().split('T')[0],
-    customer: customerName,
-    creator: appState.currentUser || "jaya",
-    status: 'quoted',
-    quoteNumber: appState.quotes.length + 1,
-    mode: module,
-    amount: total,
-    currency: cur,
-    amountINR: rateInr,
-    routingDetails: `${module.toUpperCase()} Standalone Services`,
-    notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
-  };
+    function convertToInr(amount, currency) {
+      if (currency === 'INR') return amount;
+      if (currency === 'USD') return amount * EXCHANGE_RATES.USD_TO_INR;
+      if (currency === 'EUR') return amount * EXCHANGE_RATES.EUR_TO_INR;
+      if (currency === 'GBP') return amount * EXCHANGE_RATES.GBP_TO_INR;
+      return amount;
+    }
+    window.convertToInr = convertToInr;
 
-  DB.saveQuote(quoteData);
-  alert(`${module.toUpperCase()} Standalone Quotation saved successfully!`);
-  returnToWorkspace();
-}
-window.saveStandaloneQuote = saveStandaloneQuote;
-
-function convertToInr(amount, currency) {
-  if (currency === 'INR') return amount;
-  if (currency === 'USD') return amount * EXCHANGE_RATES.USD_TO_INR;
-  if (currency === 'EUR') return amount * EXCHANGE_RATES.EUR_TO_INR;
-  if (currency === 'GBP') return amount * EXCHANGE_RATES.GBP_TO_INR;
-  return amount;
-}
-window.convertToInr = convertToInr;
-
-function getQuoteBuyRate(quote) {
-  if (quote.confirmedBuyRate !== undefined && quote.confirmedBuyRate > 0) {
-    return quote.confirmedBuyRate;
-  }
-  if (!quote.details) return 0;
-  if (quote.type === 'air') {
-    if (quote.details.airlines && quote.details.airlines.length > 0) {
-      const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
-      if (activeAir) {
-        const brk = activeAir.usedBreak || 'min';
-        if (activeAir.breaks && activeAir.breaks[brk]) {
-          return activeAir.breaks[brk].buy || 0;
+    function getQuoteBuyRate(quote) {
+      if (quote.confirmedBuyRate !== undefined && quote.confirmedBuyRate > 0) {
+        return quote.confirmedBuyRate;
+      }
+      if (!quote.details) return 0;
+      if (quote.type === 'air') {
+        if (quote.details.airlines && quote.details.airlines.length > 0) {
+          const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
+          if (activeAir) {
+            const brk = activeAir.usedBreak || 'min';
+            if (activeAir.breaks && activeAir.breaks[brk]) {
+              return activeAir.breaks[brk].buy || 0;
+            }
+          }
+        }
+        return quote.details.buyRate || 0;
+      } else {
+        if (quote.details.mode === 'fcl') {
+          if (quote.details.containerItems && quote.details.containerItems.length > 0) {
+            return quote.details.containerItems.reduce((sum, item) => sum + (item.buy || 0), 0);
+          }
+          return 0;
+        } else if (quote.details.mode === 'lcl') {
+          return quote.details.lclBuyRateApplied || 0;
+        } else {
+          return quote.details.bbBuyRateApplied || 0;
         }
       }
     }
-    return quote.details.buyRate || 0;
-  } else {
-    if (quote.details.mode === 'fcl') {
-      if (quote.details.containerItems && quote.details.containerItems.length > 0) {
-        return quote.details.containerItems.reduce((sum, item) => sum + (item.buy || 0), 0);
+    window.getQuoteBuyRate = getQuoteBuyRate;
+
+    function getQuoteSellRate(quote) {
+      if (!quote.details) return quote.amount;
+      if (quote.type === 'air') {
+        if (quote.details.airlines && quote.details.airlines.length > 0) {
+          const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
+          return activeAir ? (activeAir.appliedRate || 0) : 0;
+        }
+        return quote.details.appliedRate || 0;
+      } else {
+        if (quote.details.mode === 'fcl') {
+          if (quote.details.containerItems && quote.details.containerItems.length > 0) {
+            return quote.details.containerItems.reduce((sum, item) => sum + (item.sell || item.rate || 0), 0);
+          }
+          return 0;
+        } else if (quote.details.mode === 'lcl') {
+          return quote.details.lclRateApplied || 0;
+        } else {
+          return quote.details.bbRateApplied || 0;
+        }
       }
-      return 0;
-    } else if (quote.details.mode === 'lcl') {
-      return quote.details.lclBuyRateApplied || 0;
-    } else {
-      return quote.details.bbBuyRateApplied || 0;
     }
-  }
-}
-window.getQuoteBuyRate = getQuoteBuyRate;
+    window.getQuoteSellRate = getQuoteSellRate;
 
-function getQuoteSellRate(quote) {
-  if (!quote.details) return quote.amount;
-  if (quote.type === 'air') {
-    if (quote.details.airlines && quote.details.airlines.length > 0) {
-      const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
-      return activeAir ? (activeAir.appliedRate || 0) : 0;
-    }
-    return quote.details.appliedRate || 0;
-  } else {
-    if (quote.details.mode === 'fcl') {
-      if (quote.details.containerItems && quote.details.containerItems.length > 0) {
-        return quote.details.containerItems.reduce((sum, item) => sum + (item.sell || item.rate || 0), 0);
+    function getQuoteGP(quote) {
+      if (quote.grossProfit !== undefined) {
+        return quote.grossProfit;
       }
-      return 0;
-    } else if (quote.details.mode === 'lcl') {
-      return quote.details.lclRateApplied || 0;
-    } else {
-      return quote.details.bbRateApplied || 0;
+      if (!quote.details) return 0;
+      if (quote.type === 'air') {
+        const chgWt = quote.details.chargeableWeight || 0;
+        const sellRate = getQuoteSellRate(quote);
+        const buyRate = getQuoteBuyRate(quote);
+        return (sellRate - buyRate) * chgWt;
+      } else {
+        const sellBase = quote.details.baseFreight || 0;
+        const buyRate = getQuoteBuyRate(quote);
+        if (quote.details.mode === 'fcl') {
+          const qty = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
+          return sellBase - (qty * buyRate);
+        } else {
+          const rt = quote.details.lclChargeable || 0;
+          return sellBase - (rt * buyRate);
+        }
+      }
     }
-  }
-}
-window.getQuoteSellRate = getQuoteSellRate;
+    window.getQuoteGP = getQuoteGP;
 
-function getQuoteGP(quote) {
-  if (quote.grossProfit !== undefined) {
-    return quote.grossProfit;
-  }
-  if (!quote.details) return 0;
-  if (quote.type === 'air') {
-    const chgWt = quote.details.chargeableWeight || 0;
-    const sellRate = getQuoteSellRate(quote);
-    const buyRate = getQuoteBuyRate(quote);
-    return (sellRate - buyRate) * chgWt;
-  } else {
-    const sellBase = quote.details.baseFreight || 0;
-    const buyRate = getQuoteBuyRate(quote);
-    if (quote.details.mode === 'fcl') {
-      const qty = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
-      return sellBase - (qty * buyRate);
-    } else {
-      const rt = quote.details.lclChargeable || 0;
-      return sellBase - (rt * buyRate);
-    }
-  }
-}
-window.getQuoteGP = getQuoteGP;
+    function getAllUsers() {
+      const defaultUsers = [
+        { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin', category: 'Admin' },
+        { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
+        { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+        { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
+        { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
+      ];
 
-function getAllUsers() {
-  const defaultUsers = [
-    { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin', category: 'Admin' },
-    { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-    { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
-    { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
-    { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
-  ];
+      let customUsers = [];
+      try {
+        const stored = localStorage.getItem("gl_custom_users");
+        if (stored) {
+          customUsers = JSON.parse(stored);
+        }
+      } catch (e) { }
 
-  let customUsers = [];
-  try {
-    const stored = localStorage.getItem("gl_custom_users");
-    if (stored) {
-      customUsers = JSON.parse(stored);
-    }
-  } catch (e) { }
-
-  const allUsersMap = {};
-  defaultUsers.forEach(u => {
-    allUsersMap[u.username] = u;
-  });
-  customUsers.forEach(u => {
-    allUsersMap[u.username] = u;
-  });
-
-  return Object.values(allUsersMap);
-}
-window.getAllUsers = getAllUsers;
-
-window.togglePasswordVisibility = (btn) => {
-  const input = btn.previousElementSibling;
-  if (input.type === "password") {
-    input.type = "text";
-    btn.textContent = "Hide";
-  } else {
-    input.type = "password";
-    btn.textContent = "Show";
-  }
-};
-
-function resetCargoAndRatesForSea() {
-  calculateSeaFreight();
-}
-function resetCargoAndRatesForAir() {
-  calculateAirFreight();
-}
-window.resetCargoAndRatesForSea = resetCargoAndRatesForSea;
-window.resetCargoAndRatesForAir = resetCargoAndRatesForAir;
-
-
-/* ==================== ADVANCED CUSTOM FEATURES MODULE ==================== */
-
-let autofillRecords = {
-  customerNames: ["Zenith Electronics Ltd", "Adani Enterprises", "Tata Motors", "Samsung India", "Reliance Industries"],
-  agentNames: ["Adani Global Log", "Kuehne Nagel", "DHL Global Forwarding", "DB Schenker"],
-  contactNumbers: ["+919876543210", "+919999888877", "+15556667777"],
-  emailIds: ["logistics@zenith.com", "import@adani.com", "freight@tata.com", "export@samsung.com"],
-  officeAddresses: ["Sector 62, Noida, UP, India", "Adani House, Port Road, Mundra, Gujarat", "Chinchwad, Pune, Maharashtra", "Oragadam, Chennai, Tamil Nadu"]
-};
-
-function loadAutofillRecords() {
-  const stored = localStorage.getItem("gl_autofill_records");
-  if (stored) {
-    try {
-      autofillRecords = JSON.parse(stored);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-}
-function saveAutofillRecords() {
-  localStorage.setItem("gl_autofill_records", JSON.stringify(autofillRecords));
-}
-
-function registerAutofillValue(type, value) {
-  if (!value || typeof value !== 'string') return;
-  const val = value.trim();
-  if (!val || val.length < 2) return;
-  if (!autofillRecords[type]) autofillRecords[type] = [];
-  if (!autofillRecords[type].includes(val)) {
-    autofillRecords[type].push(val);
-    saveAutofillRecords();
-  }
-}
-
-function setupAutocompleteDropdown(inputId, recordKey) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-
-  const container = input.parentElement;
-  if (container) {
-    container.classList.add("autocomplete-container");
-    container.style.position = "relative";
-  }
-
-  let dropdown = container.querySelector(".autocomplete-dropdown");
-  if (!dropdown) {
-    dropdown = document.createElement("div");
-    dropdown.className = "autocomplete-dropdown";
-    container.appendChild(dropdown);
-  }
-
-  const showSuggestions = () => {
-    const val = input.value.trim().toLowerCase();
-    dropdown.innerHTML = "";
-    if (val.length === 0) {
-      dropdown.classList.remove("show");
-      dropdown.style.display = "none";
-      return;
-    }
-
-    const matches = (autofillRecords[recordKey] || []).filter(item => item.toLowerCase().includes(val));
-    if (matches.length === 0) {
-      dropdown.classList.remove("show");
-      dropdown.style.display = "none";
-      return;
-    }
-
-    matches.forEach(match => {
-      const div = document.createElement("div");
-      div.className = "autocomplete-item";
-      div.style.padding = "6px 12px";
-      div.style.cursor = "pointer";
-      div.style.color = "#000";
-      div.innerHTML = `<span>${match}</span>`;
-      div.addEventListener("click", () => {
-        input.value = match;
-        dropdown.classList.remove("show");
-        dropdown.style.display = "none";
-
-        const event = new Event('input', { bubbles: true });
-        input.dispatchEvent(event);
-        const changeEvent = new Event('change', { bubbles: true });
-        input.dispatchEvent(changeEvent);
-
-        registerAutofillValue(recordKey, match);
+      const allUsersMap = {};
+      defaultUsers.forEach(u => {
+        allUsersMap[u.username] = u;
       });
-      dropdown.appendChild(div);
-    });
+      customUsers.forEach(u => {
+        allUsersMap[u.username] = u;
+      });
 
-    dropdown.classList.add("show");
-    dropdown.style.display = "block";
-  };
-
-  input.addEventListener("input", showSuggestions);
-  input.addEventListener("focus", showSuggestions);
-
-  document.addEventListener("click", (e) => {
-    if (!container.contains(e.target)) {
-      dropdown.classList.remove("show");
-      dropdown.style.display = "none";
+      return Object.values(allUsersMap);
     }
-  });
-}
+    window.getAllUsers = getAllUsers;
 
-// 2. Timezone Port Clocks
-const CITY_TIMEZONES = {
-  "bom": "Asia/Kolkata", "del": "Asia/Kolkata", "maa": "Asia/Kolkata", "blr": "Asia/Kolkata",
-  "dxb": "Asia/Dubai", "sin": "Asia/Singapore", "lhr": "Europe/London", "jfk": "America/New_York",
-  "lax": "America/Los_Angeles", "fra": "Europe/Berlin", "hnd": "Asia/Tokyo", "cdg": "Europe/Paris",
-  "mumbai": "Asia/Kolkata", "nhava sheva": "Asia/Kolkata", "chennai": "Asia/Kolkata", "mundra": "Asia/Kolkata",
-  "singapore": "Asia/Singapore", "rotterdam": "Europe/Amsterdam", "shanghai": "Asia/Shanghai",
-  "dubai": "Asia/Dubai", "jebel ali": "Asia/Dubai", "new york": "America/New_York", "hamburg": "Europe/Berlin",
-  "antwerp": "Europe/Brussels", "felixstowe": "Europe/London", "busan": "Asia/Seoul", "port klang": "Asia/Kuala_Lumpur"
-};
+    window.togglePasswordVisibility = (btn) => {
+      const input = btn.previousElementSibling;
+      if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "Hide";
+      } else {
+        input.type = "password";
+        btn.textContent = "Show";
+      }
+    };
 
-function getPortTimezone(portName) {
-  if (!portName) return null;
-  const clean = portName.toLowerCase().trim();
-  for (const [key, tz] of Object.entries(CITY_TIMEZONES)) {
-    if (clean.includes(key)) return tz;
-  }
-  return null;
-}
+    function resetCargoAndRatesForSea() {
+      calculateSeaFreight();
+    }
+    function resetCargoAndRatesForAir() {
+      calculateAirFreight();
+    }
+    window.resetCargoAndRatesForSea = resetCargoAndRatesForSea;
+    window.resetCargoAndRatesForAir = resetCargoAndRatesForAir;
 
-function startPortClocks() {
-  setInterval(() => {
-    const airOriginVal = document.getElementById("air-origin")?.value || "London";
-    const airDestVal = document.getElementById("air-dest")?.value || "Singapore";
-    updateClock("air-clock-origin", airOriginVal, "Origin");
-    updateClock("air-clock-dest", airDestVal, "Dest");
 
-    const seaOriginVal = document.getElementById("sea-origin")?.value || "Rotterdam";
-    const seaDestVal = document.getElementById("sea-dest")?.value || "Shanghai";
-    updateClock("sea-clock-origin", seaOriginVal, "Origin");
-    updateClock("sea-clock-dest", seaDestVal, "Dest");
-  }, 1000);
-}
+    /* ==================== ADVANCED CUSTOM FEATURES MODULE ==================== */
 
-function updateClock(elementId, cityName, label) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  const tz = getPortTimezone(cityName) || "UTC";
-  try {
-    const timeStr = new Date().toLocaleTimeString("en-US", { timeZone: tz, hour12: false });
-    el.textContent = `${label} (${cityName.split(' ')[0] || cityName}): ${timeStr}`;
-  } catch (e) {
-    const timeStr = new Date().toLocaleTimeString("en-US", { hour12: false });
-    el.textContent = `${label}: ${timeStr}`;
-  }
-}
+    let autofillRecords = {
+      customerNames: ["Zenith Electronics Ltd", "Adani Enterprises", "Tata Motors", "Samsung India", "Reliance Industries"],
+      agentNames: ["Adani Global Log", "Kuehne Nagel", "DHL Global Forwarding", "DB Schenker"],
+      contactNumbers: ["+919876543210", "+919999888877", "+15556667777"],
+      emailIds: ["logistics@zenith.com", "import@adani.com", "freight@tata.com", "export@samsung.com"],
+      officeAddresses: ["Sector 62, Noida, UP, India", "Adani House, Port Road, Mundra, Gujarat", "Chinchwad, Pune, Maharashtra", "Oragadam, Chennai, Tamil Nadu"]
+    };
 
-// 3. Transit ETA widget
-window.calculateTransitETA = function (mode) {
-  const originInput = document.getElementById(`${mode}-origin`);
-  const destInput = document.getElementById(`${mode}-dest`);
-  const incotermSelect = document.getElementById(`${mode}-incoterm`);
-  const displayEl = document.getElementById(`${mode}-transit-eta-display`);
+    function loadAutofillRecords() {
+      const stored = localStorage.getItem("gl_autofill_records");
+      if (stored) {
+        try {
+          autofillRecords = JSON.parse(stored);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    function saveAutofillRecords() {
+      localStorage.setItem("gl_autofill_records", JSON.stringify(autofillRecords));
+    }
 
-  if (!originInput || !destInput || !displayEl) return;
+    function registerAutofillValue(type, value) {
+      if (!value || typeof value !== 'string') return;
+      const val = value.trim();
+      if (!val || val.length < 2) return;
+      if (!autofillRecords[type]) autofillRecords[type] = [];
+      if (!autofillRecords[type].includes(val)) {
+        autofillRecords[type].push(val);
+        saveAutofillRecords();
+      }
+    }
 
-  const origin = originInput.value.trim();
-  const dest = destInput.value.trim();
-  const incoterm = incotermSelect?.value || "EXW";
+    function setupAutocompleteDropdown(inputId, recordKey) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
 
-  if (!origin || !dest) {
-    displayEl.style.display = "none";
-    return;
-  }
+      const container = input.parentElement;
+      if (container) {
+        container.classList.add("autocomplete-container");
+        container.style.position = "relative";
+      }
 
-  let baseDays = mode === 'air' ? 3 : 25;
-  const isSameRegion = origin.substring(0, 2).toLowerCase() === dest.substring(0, 2).toLowerCase();
+      let dropdown = container.querySelector(".autocomplete-dropdown");
+      if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.className = "autocomplete-dropdown";
+        container.appendChild(dropdown);
+      }
 
-  if (isSameRegion) {
-    baseDays = mode === 'air' ? 1.5 : 8;
-  } else if ((origin.toLowerCase().includes("us") && dest.toLowerCase().includes("in")) ||
-    (origin.toLowerCase().includes("in") && dest.toLowerCase().includes("us"))) {
-    baseDays = mode === 'air' ? 5 : 40;
-  }
+      const showSuggestions = () => {
+        const val = input.value.trim().toLowerCase();
+        dropdown.innerHTML = "";
+        if (val.length === 0) {
+          dropdown.classList.remove("show");
+          dropdown.style.display = "none";
+          return;
+        }
 
-  let extraDays = 0;
-  if (["EXW", "FCA", "FOB"].includes(incoterm)) {
-    extraDays += mode === 'air' ? 1 : 4;
-  }
-  if (["DAP", "DDU", "DDP"].includes(incoterm)) {
-    extraDays += mode === 'air' ? 2 : 5;
-  }
+        const matches = (autofillRecords[recordKey] || []).filter(item => item.toLowerCase().includes(val));
+        if (matches.length === 0) {
+          dropdown.classList.remove("show");
+          dropdown.style.display = "none";
+          return;
+        }
 
-  const totalDays = Math.ceil(baseDays + extraDays);
-  const now = new Date();
-  now.setDate(now.getDate() + totalDays);
-  const etaStr = now.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+        matches.forEach(match => {
+          const div = document.createElement("div");
+          div.className = "autocomplete-item";
+          div.style.padding = "6px 12px";
+          div.style.cursor = "pointer";
+          div.style.color = "#000";
+          div.innerHTML = `<span>${match}</span>`;
+          div.addEventListener("click", () => {
+            input.value = match;
+            dropdown.classList.remove("show");
+            dropdown.style.display = "none";
 
-  displayEl.textContent = `⏱️ Est. Transit: ${totalDays} Days | Target ETA: ${etaStr}`;
-  displayEl.style.display = "block";
+            const event = new Event('input', { bubbles: true });
+            input.dispatchEvent(event);
+            const changeEvent = new Event('change', { bubbles: true });
+            input.dispatchEvent(changeEvent);
 
-  updateDocsChecklist(mode, incoterm);
-};
+            registerAutofillValue(recordKey, match);
+          });
+          dropdown.appendChild(div);
+        });
 
-const INCOTERM_DOCS = {
-  "EXW": ["Export customs declaration template", "Commercial Invoice", "Packing List", "Certificate of Origin (COO)", "Factory release note"],
-  "FCA": ["Export customs declaration", "Commercial Invoice", "Packing List", "Carrier booking confirmation", "Lorry receipt / FCR"],
-  "FOB": ["Bill of Lading / AWB template", "Export customs declaration", "Commercial Invoice", "Packing List", "Mate's receipt"],
-  "CIF": ["Bill of Lading / AWB", "Marine insurance certificate", "Export customs declaration", "Commercial Invoice", "Packing List"],
-  "DAP": ["Import customs entry", "Delivery Order (D/O)", "Bill of Lading / AWB", "Commercial Invoice", "Packing List"],
-  "DDU": ["Import customs entry checklist", "Delivery Order (D/O)", "Commercial Invoice", "Packing List", "Customs Bond (if applicable)"],
-  "DDP": ["Import duty payment receipt", "Import customs entry (cleared)", "Delivery Order (D/O)", "Commercial Invoice", "Packing List"]
-};
+        dropdown.classList.add("show");
+        dropdown.style.display = "block";
+      };
 
-function updateDocsChecklist(mode, incoterm) {
-  const labelEl = document.getElementById(`${mode}-docs-incoterm`);
-  const listEl = document.getElementById(`${mode}-docs-list`);
-  if (!listEl) return;
+      input.addEventListener("input", showSuggestions);
+      input.addEventListener("focus", showSuggestions);
 
-  if (labelEl) labelEl.textContent = incoterm;
-  listEl.innerHTML = "";
+      document.addEventListener("click", (e) => {
+        if (!container.contains(e.target)) {
+          dropdown.classList.remove("show");
+          dropdown.style.display = "none";
+        }
+      });
+    }
 
-  const docs = INCOTERM_DOCS[incoterm] || INCOTERM_DOCS["EXW"];
-  docs.forEach(doc => {
-    const li = document.createElement("li");
-    li.style.display = "flex";
-    li.style.alignItems = "center";
-    li.style.gap = "6px";
-    li.innerHTML = `<span style="color:var(--accent-success);">✓</span> <span>${doc}</span>`;
-    listEl.appendChild(li);
-  });
-}
+    // 2. Timezone Port Clocks
+    const CITY_TIMEZONES = {
+      "bom": "Asia/Kolkata", "del": "Asia/Kolkata", "maa": "Asia/Kolkata", "blr": "Asia/Kolkata",
+      "dxb": "Asia/Dubai", "sin": "Asia/Singapore", "lhr": "Europe/London", "jfk": "America/New_York",
+      "lax": "America/Los_Angeles", "fra": "Europe/Berlin", "hnd": "Asia/Tokyo", "cdg": "Europe/Paris",
+      "mumbai": "Asia/Kolkata", "nhava sheva": "Asia/Kolkata", "chennai": "Asia/Kolkata", "mundra": "Asia/Kolkata",
+      "singapore": "Asia/Singapore", "rotterdam": "Europe/Amsterdam", "shanghai": "Asia/Shanghai",
+      "dubai": "Asia/Dubai", "jebel ali": "Asia/Dubai", "new york": "America/New_York", "hamburg": "Europe/Berlin",
+      "antwerp": "Europe/Brussels", "felixstowe": "Europe/London", "busan": "Asia/Seoul", "port klang": "Asia/Kuala_Lumpur"
+    };
 
-// 4. Live Tracking Panel
-function renderTrackingControlCenter() {
-  const html = `
+    function getPortTimezone(portName) {
+      if (!portName) return null;
+      const clean = portName.toLowerCase().trim();
+      for (const [key, tz] of Object.entries(CITY_TIMEZONES)) {
+        if (clean.includes(key)) return tz;
+      }
+      return null;
+    }
+
+    function startPortClocks() {
+      setInterval(() => {
+        const airOriginVal = document.getElementById("air-origin")?.value || "London";
+        const airDestVal = document.getElementById("air-dest")?.value || "Singapore";
+        updateClock("air-clock-origin", airOriginVal, "Origin");
+        updateClock("air-clock-dest", airDestVal, "Dest");
+
+        const seaOriginVal = document.getElementById("sea-origin")?.value || "Rotterdam";
+        const seaDestVal = document.getElementById("sea-dest")?.value || "Shanghai";
+        updateClock("sea-clock-origin", seaOriginVal, "Origin");
+        updateClock("sea-clock-dest", seaDestVal, "Dest");
+      }, 1000);
+    }
+
+    function updateClock(elementId, cityName, label) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const tz = getPortTimezone(cityName) || "UTC";
+      try {
+        const timeStr = new Date().toLocaleTimeString("en-US", { timeZone: tz, hour12: false });
+        el.textContent = `${label} (${cityName.split(' ')[0] || cityName}): ${timeStr}`;
+      } catch (e) {
+        const timeStr = new Date().toLocaleTimeString("en-US", { hour12: false });
+        el.textContent = `${label}: ${timeStr}`;
+      }
+    }
+
+    // 3. Transit ETA widget
+    window.calculateTransitETA = function (mode) {
+      const originInput = document.getElementById(`${mode}-origin`);
+      const destInput = document.getElementById(`${mode}-dest`);
+      const incotermSelect = document.getElementById(`${mode}-incoterm`);
+      const displayEl = document.getElementById(`${mode}-transit-eta-display`);
+
+      if (!originInput || !destInput || !displayEl) return;
+
+      const origin = originInput.value.trim();
+      const dest = destInput.value.trim();
+      const incoterm = incotermSelect?.value || "EXW";
+
+      if (!origin || !dest) {
+        displayEl.style.display = "none";
+        return;
+      }
+
+      let baseDays = mode === 'air' ? 3 : 25;
+      const isSameRegion = origin.substring(0, 2).toLowerCase() === dest.substring(0, 2).toLowerCase();
+
+      if (isSameRegion) {
+        baseDays = mode === 'air' ? 1.5 : 8;
+      } else if ((origin.toLowerCase().includes("us") && dest.toLowerCase().includes("in")) ||
+        (origin.toLowerCase().includes("in") && dest.toLowerCase().includes("us"))) {
+        baseDays = mode === 'air' ? 5 : 40;
+      }
+
+      let extraDays = 0;
+      if (["EXW", "FCA", "FOB"].includes(incoterm)) {
+        extraDays += mode === 'air' ? 1 : 4;
+      }
+      if (["DAP", "DDU", "DDP"].includes(incoterm)) {
+        extraDays += mode === 'air' ? 2 : 5;
+      }
+
+      const totalDays = Math.ceil(baseDays + extraDays);
+      const now = new Date();
+      now.setDate(now.getDate() + totalDays);
+      const etaStr = now.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+
+      displayEl.textContent = `⏱️ Est. Transit: ${totalDays} Days | Target ETA: ${etaStr}`;
+      displayEl.style.display = "block";
+
+      updateDocsChecklist(mode, incoterm);
+    };
+
+    const INCOTERM_DOCS = {
+      "EXW": ["Export customs declaration template", "Commercial Invoice", "Packing List", "Certificate of Origin (COO)", "Factory release note"],
+      "FCA": ["Export customs declaration", "Commercial Invoice", "Packing List", "Carrier booking confirmation", "Lorry receipt / FCR"],
+      "FOB": ["Bill of Lading / AWB template", "Export customs declaration", "Commercial Invoice", "Packing List", "Mate's receipt"],
+      "CIF": ["Bill of Lading / AWB", "Marine insurance certificate", "Export customs declaration", "Commercial Invoice", "Packing List"],
+      "DAP": ["Import customs entry", "Delivery Order (D/O)", "Bill of Lading / AWB", "Commercial Invoice", "Packing List"],
+      "DDU": ["Import customs entry checklist", "Delivery Order (D/O)", "Commercial Invoice", "Packing List", "Customs Bond (if applicable)"],
+      "DDP": ["Import duty payment receipt", "Import customs entry (cleared)", "Delivery Order (D/O)", "Commercial Invoice", "Packing List"]
+    };
+
+    function updateDocsChecklist(mode, incoterm) {
+      const labelEl = document.getElementById(`${mode}-docs-incoterm`);
+      const listEl = document.getElementById(`${mode}-docs-list`);
+      if (!listEl) return;
+
+      if (labelEl) labelEl.textContent = incoterm;
+      listEl.innerHTML = "";
+
+      const docs = INCOTERM_DOCS[incoterm] || INCOTERM_DOCS["EXW"];
+      docs.forEach(doc => {
+        const li = document.createElement("li");
+        li.style.display = "flex";
+        li.style.alignItems = "center";
+        li.style.gap = "6px";
+        li.innerHTML = `<span style="color:var(--accent-success);">✓</span> <span>${doc}</span>`;
+        listEl.appendChild(li);
+      });
+    }
+
+    // 4. Live Tracking Panel
+    function renderTrackingControlCenter() {
+      const html = `
     <div class="glass-card" style="padding: 1.5rem;">
       <h3 style="font-weight: 800; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
         🌐 Global Cargo Operations Tracking Control Center
@@ -9602,229 +9605,229 @@ function renderTrackingControlCenter() {
     </div>
   `;
 
-  const memberContainer = document.getElementById("member-tracking-control-center");
-  if (memberContainer) memberContainer.innerHTML = html;
+      const memberContainer = document.getElementById("member-tracking-control-center");
+      if (memberContainer) memberContainer.innerHTML = html;
 
-  const adminContainer = document.getElementById("admin-tracking-control-center");
-  if (adminContainer) {
-    const adminHtml = html
-      .replace(/ocean-tracking-input/g, "admin-ocean-input")
-      .replace(/ocean-tracking-results/g, "admin-ocean-results")
-      .replace(/air-tracking-input/g, "admin-air-input")
-      .replace(/air-awb-airline-detected/g, "admin-awb-detected")
-      .replace(/air-tracking-results/g, "admin-air-results")
-      .replace(/ais-map-frame/g, "admin-ais-map")
-      .replace(/switchTrackingTab\('/g, "switchTrackingTabAdmin('")
-      .replace(/trackOceanCargo\(\)/g, "trackOceanCargoAdmin()")
-      .replace(/detectAwbPrefix\(\)/g, "detectAwbPrefixAdmin()")
-      .replace(/trackAirCargo\(\)/g, "trackAirCargoAdmin()")
-      .replace(/tab-btn-ocean/g, "admin-tab-btn-ocean")
-      .replace(/tab-btn-air/g, "admin-tab-btn-air")
-      .replace(/tab-btn-map/g, "admin-tab-btn-map")
-      .replace(/tracking-content-ocean/g, "admin-tracking-content-ocean")
-      .replace(/tracking-content-air/g, "admin-tracking-content-air")
-      .replace(/tracking-content-map/g, "admin-tracking-content-map");
+      const adminContainer = document.getElementById("admin-tracking-control-center");
+      if (adminContainer) {
+        const adminHtml = html
+          .replace(/ocean-tracking-input/g, "admin-ocean-input")
+          .replace(/ocean-tracking-results/g, "admin-ocean-results")
+          .replace(/air-tracking-input/g, "admin-air-input")
+          .replace(/air-awb-airline-detected/g, "admin-awb-detected")
+          .replace(/air-tracking-results/g, "admin-air-results")
+          .replace(/ais-map-frame/g, "admin-ais-map")
+          .replace(/switchTrackingTab\('/g, "switchTrackingTabAdmin('")
+          .replace(/trackOceanCargo\(\)/g, "trackOceanCargoAdmin()")
+          .replace(/detectAwbPrefix\(\)/g, "detectAwbPrefixAdmin()")
+          .replace(/trackAirCargo\(\)/g, "trackAirCargoAdmin()")
+          .replace(/tab-btn-ocean/g, "admin-tab-btn-ocean")
+          .replace(/tab-btn-air/g, "admin-tab-btn-air")
+          .replace(/tab-btn-map/g, "admin-tab-btn-map")
+          .replace(/tracking-content-ocean/g, "admin-tracking-content-ocean")
+          .replace(/tracking-content-air/g, "admin-tracking-content-air")
+          .replace(/tracking-content-map/g, "admin-tracking-content-map");
 
-    adminContainer.innerHTML = adminHtml;
-  }
-}
+        adminContainer.innerHTML = adminHtml;
+      }
+    }
 
-window.switchTrackingTab = function (tabName) {
-  document.querySelectorAll(".tracking-tab-content").forEach(el => el.style.display = "none");
-  document.querySelectorAll(".tab-btn").forEach(el => {
-    el.style.background = "rgba(255,255,255,0.05)";
-    el.style.color = "var(--t1)";
-  });
+    window.switchTrackingTab = function (tabName) {
+      document.querySelectorAll(".tracking-tab-content").forEach(el => el.style.display = "none");
+      document.querySelectorAll(".tab-btn").forEach(el => {
+        el.style.background = "rgba(255,255,255,0.05)";
+        el.style.color = "var(--t1)";
+      });
 
-  const content = document.getElementById(`tracking-content-${tabName}`);
-  if (content) content.style.display = "block";
+      const content = document.getElementById(`tracking-content-${tabName}`);
+      if (content) content.style.display = "block";
 
-  const btn = document.getElementById(`tab-btn-${tabName}`);
-  if (btn) {
-    btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
-    btn.style.color = '#fff';
-  }
-};
+      const btn = document.getElementById(`tab-btn-${tabName}`);
+      if (btn) {
+        btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
+        btn.style.color = '#fff';
+      }
+    };
 
-window.switchTrackingTabAdmin = function (tabName) {
-  document.querySelectorAll("#admin-tracking-control-center .tracking-tab-content").forEach(el => el.style.display = "none");
-  document.querySelectorAll("#admin-tracking-control-center .tab-btn").forEach(el => {
-    el.style.background = "rgba(255,255,255,0.05)";
-    el.style.color = "var(--t1)";
-  });
+    window.switchTrackingTabAdmin = function (tabName) {
+      document.querySelectorAll("#admin-tracking-control-center .tracking-tab-content").forEach(el => el.style.display = "none");
+      document.querySelectorAll("#admin-tracking-control-center .tab-btn").forEach(el => {
+        el.style.background = "rgba(255,255,255,0.05)";
+        el.style.color = "var(--t1)";
+      });
 
-  const content = document.getElementById(`admin-tracking-content-${tabName}`);
-  if (content) content.style.display = "block";
+      const content = document.getElementById(`admin-tracking-content-${tabName}`);
+      if (content) content.style.display = "block";
 
-  const btn = document.getElementById(`admin-tab-btn-${tabName}`);
-  if (btn) {
-    btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
-    btn.style.color = '#fff';
-  }
-};
+      const btn = document.getElementById(`admin-tab-btn-${tabName}`);
+      if (btn) {
+        btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
+        btn.style.color = '#fff';
+      }
+    };
 
-const SIMULATED_OCEAN_LOGS = [
-  "🚢 Booking Confirmed & Empty Container Released",
-  "📦 Container Loaded and Stuffed at Shipper Factory",
-  "🚛 Gated-In at Origin Port Terminal",
-  "⚓ Loaded onboard Vessel 'MSC AMALFI V.260'",
-  "🌊 Vessel Departed (In Transit)",
-  "⚓ Arrived at Transit Hub (Port of Singapore)",
-  "🌊 Departed Singapore onboard Vessel 'MSC OSCAR V.094'",
-  "🏁 Arrived at Destination Port (Port of Rotterdam)",
-  "🚛 Gated-Out for Final Door Delivery",
-  "✅ Delivered to Consignee Warehouse"
-];
+    const SIMULATED_OCEAN_LOGS = [
+      "🚢 Booking Confirmed & Empty Container Released",
+      "📦 Container Loaded and Stuffed at Shipper Factory",
+      "🚛 Gated-In at Origin Port Terminal",
+      "⚓ Loaded onboard Vessel 'MSC AMALFI V.260'",
+      "🌊 Vessel Departed (In Transit)",
+      "⚓ Arrived at Transit Hub (Port of Singapore)",
+      "🌊 Departed Singapore onboard Vessel 'MSC OSCAR V.094'",
+      "🏁 Arrived at Destination Port (Port of Rotterdam)",
+      "🚛 Gated-Out for Final Door Delivery",
+      "✅ Delivered to Consignee Warehouse"
+    ];
 
-const SIMULATED_AIR_LOGS = [
-  "✈️ Booking Confirmed, AWB Issued",
-  "📦 Cargo Received at Origin Freight Station",
-  "🛃 Export Customs Clearance Completed",
-  "⚓ Gated in and Loaded on flight 'LH757'",
-  "🌊 Flight Departed",
-  "⚓ Arrived at Transit Hub (Frankfurt Airport FRA)",
-  "✈️ Loaded on connecting flight 'LH400'",
-  "🏁 Arrived at Destination Airport (New York JFK)",
-  "🛃 Import Customs Cleared",
-  "✅ Cargo Delivered to consignee"
-];
+    const SIMULATED_AIR_LOGS = [
+      "✈️ Booking Confirmed, AWB Issued",
+      "📦 Cargo Received at Origin Freight Station",
+      "🛃 Export Customs Clearance Completed",
+      "⚓ Gated in and Loaded on flight 'LH757'",
+      "🌊 Flight Departed",
+      "⚓ Arrived at Transit Hub (Frankfurt Airport FRA)",
+      "✈️ Loaded on connecting flight 'LH400'",
+      "🏁 Arrived at Destination Airport (New York JFK)",
+      "🛃 Import Customs Cleared",
+      "✅ Cargo Delivered to consignee"
+    ];
 
-function buildTimeline(logs, containerId) {
-  const div = document.getElementById(containerId);
-  if (!div) return;
-  div.style.display = "block";
+    function buildTimeline(logs, containerId) {
+      const div = document.getElementById(containerId);
+      if (!div) return;
+      div.style.display = "block";
 
-  let html = `<h4 style="margin: 0 0 0.75rem 0; font-weight: 700; color:var(--sky);">Tracking Timeline History</h4>`;
-  html += `<div style="display:flex; flex-direction:column; gap:0.5rem; position:relative; padding-left:1.25rem; border-left: 2px solid var(--border-2);">`;
+      let html = `<h4 style="margin: 0 0 0.75rem 0; font-weight: 700; color:var(--sky);">Tracking Timeline History</h4>`;
+      html += `<div style="display:flex; flex-direction:column; gap:0.5rem; position:relative; padding-left:1.25rem; border-left: 2px solid var(--border-2);">`;
 
-  logs.forEach((log, index) => {
-    const isCompleted = index < logs.length - 2;
-    const color = isCompleted ? "var(--accent-success)" : (index === logs.length - 2 ? "var(--accent-warning)" : "var(--text-dim)");
-    html += `
+      logs.forEach((log, index) => {
+        const isCompleted = index < logs.length - 2;
+        const color = isCompleted ? "var(--accent-success)" : (index === logs.length - 2 ? "var(--accent-warning)" : "var(--text-dim)");
+        html += `
       <div style="position:relative;">
         <span style="position:absolute; left:-1.65rem; top:2px; height:10px; width:10px; background:${color}; border-radius:50%; box-shadow: 0 0 6px ${color};"></span>
         <div style="font-weight:600; color: ${isCompleted ? '#fff' : 'var(--text-dim)'};">${log}</div>
         <div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">Status Updated: 2026-07-16 12:${30 + index} PM</div>
       </div>
     `;
-  });
+      });
 
-  html += `</div>`;
-  div.innerHTML = html;
-}
-
-window.trackOceanCargo = function () {
-  const num = document.getElementById("ocean-tracking-input")?.value || "";
-  if (!num) return alert("Please enter a Container or Booking number.");
-  buildTimeline(SIMULATED_OCEAN_LOGS, "ocean-tracking-results");
-};
-
-window.trackOceanCargoAdmin = function () {
-  const num = document.getElementById("admin-ocean-input")?.value || "";
-  if (!num) return alert("Please enter a Container or Booking number.");
-  buildTimeline(SIMULATED_OCEAN_LOGS, "admin-ocean-results");
-};
-
-const AIRLINE_PREFIXES = {
-  "020": "Lufthansa Cargo (LH)",
-  "999": "Air India (AI)",
-  "125": "British Airways (BA)",
-  "074": "KLM Cargo (KL)",
-  "001": "American Airlines Cargo (AA)",
-  "176": "Emirates SkyCargo (EK)",
-  "016": "United Cargo (UA)"
-};
-
-window.detectAwbPrefix = function () {
-  const input = document.getElementById("air-tracking-input");
-  const detectEl = document.getElementById("air-awb-airline-detected");
-  if (!input || !detectEl) return;
-
-  const prefix = input.value.trim().substring(0, 3);
-  if (AIRLINE_PREFIXES[prefix]) {
-    detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
-    detectEl.style.display = "block";
-  } else {
-    detectEl.style.display = "none";
-  }
-};
-
-window.detectAwbPrefixAdmin = function () {
-  const input = document.getElementById("admin-air-input");
-  const detectEl = document.getElementById("admin-awb-detected");
-  if (!input || !detectEl) return;
-
-  const prefix = input.value.trim().substring(0, 3);
-  if (AIRLINE_PREFIXES[prefix]) {
-    detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
-    detectEl.style.display = "block";
-  } else {
-    detectEl.style.display = "none";
-  }
-};
-
-window.trackAirCargo = function () {
-  const num = document.getElementById("air-tracking-input")?.value || "";
-  if (!num) return alert("Please enter AWB number.");
-  buildTimeline(SIMULATED_AIR_LOGS, "air-tracking-results");
-};
-
-window.trackAirCargoAdmin = function () {
-  const num = document.getElementById("admin-air-input")?.value || "";
-  if (!num) return alert("Please enter AWB number.");
-  buildTimeline(SIMULATED_AIR_LOGS, "admin-air-results");
-};
-
-// 5. Synced Scratchpads & Broadcast Hub
-window.syncScratchpad = function () {
-  const text = document.getElementById("dashboard-scratchpad").value;
-  const syncStatus = document.getElementById("scratchpad-sync-status");
-  const currentUser = appState.currentUser || "shashank";
-
-  if (syncStatus) syncStatus.textContent = "Syncing with cloud...";
-
-  // Save to active scratchpads in localStorage
-  let scratchpads = {};
-  try {
-    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-  } catch (e) { }
-
-  scratchpads[currentUser] = {
-    text: text,
-    user: TEAM_ROLES[currentUser]?.name || currentUser,
-    time: new Date().toLocaleTimeString()
-  };
-
-  localStorage.setItem("gl_active_scratchpads", JSON.stringify(scratchpads));
-
-  setTimeout(() => {
-    if (syncStatus) syncStatus.textContent = "All changes synced to database";
-    // If Admin view is active, update their viewer as well
-    if (appState.currentUser === 'ganny') {
-      updateAdminScratchpadViewer();
+      html += `</div>`;
+      div.innerHTML = html;
     }
-  }, 400);
-};
 
-function updateAdminScratchpadViewer() {
-  const container = document.getElementById("admin-desk-scratchpads");
-  if (!container) return;
+    window.trackOceanCargo = function () {
+      const num = document.getElementById("ocean-tracking-input")?.value || "";
+      if (!num) return alert("Please enter a Container or Booking number.");
+      buildTimeline(SIMULATED_OCEAN_LOGS, "ocean-tracking-results");
+    };
 
-  let scratchpads = {};
-  try {
-    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-  } catch (e) { }
+    window.trackOceanCargoAdmin = function () {
+      const num = document.getElementById("admin-ocean-input")?.value || "";
+      if (!num) return alert("Please enter a Container or Booking number.");
+      buildTimeline(SIMULATED_OCEAN_LOGS, "admin-ocean-results");
+    };
 
-  const keys = Object.keys(scratchpads);
-  if (keys.length === 0) {
-    container.innerHTML = `<div style="font-style: italic; color: var(--text-dim);">No active reminder syncs yet.</div>`;
-    return;
-  }
+    const AIRLINE_PREFIXES = {
+      "020": "Lufthansa Cargo (LH)",
+      "999": "Air India (AI)",
+      "125": "British Airways (BA)",
+      "074": "KLM Cargo (KL)",
+      "001": "American Airlines Cargo (AA)",
+      "176": "Emirates SkyCargo (EK)",
+      "016": "United Cargo (UA)"
+    };
 
-  let html = "";
-  keys.forEach(k => {
-    const pad = scratchpads[k];
-    html += `
+    window.detectAwbPrefix = function () {
+      const input = document.getElementById("air-tracking-input");
+      const detectEl = document.getElementById("air-awb-airline-detected");
+      if (!input || !detectEl) return;
+
+      const prefix = input.value.trim().substring(0, 3);
+      if (AIRLINE_PREFIXES[prefix]) {
+        detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
+        detectEl.style.display = "block";
+      } else {
+        detectEl.style.display = "none";
+      }
+    };
+
+    window.detectAwbPrefixAdmin = function () {
+      const input = document.getElementById("admin-air-input");
+      const detectEl = document.getElementById("admin-awb-detected");
+      if (!input || !detectEl) return;
+
+      const prefix = input.value.trim().substring(0, 3);
+      if (AIRLINE_PREFIXES[prefix]) {
+        detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
+        detectEl.style.display = "block";
+      } else {
+        detectEl.style.display = "none";
+      }
+    };
+
+    window.trackAirCargo = function () {
+      const num = document.getElementById("air-tracking-input")?.value || "";
+      if (!num) return alert("Please enter AWB number.");
+      buildTimeline(SIMULATED_AIR_LOGS, "air-tracking-results");
+    };
+
+    window.trackAirCargoAdmin = function () {
+      const num = document.getElementById("admin-air-input")?.value || "";
+      if (!num) return alert("Please enter AWB number.");
+      buildTimeline(SIMULATED_AIR_LOGS, "admin-air-results");
+    };
+
+    // 5. Synced Scratchpads & Broadcast Hub
+    window.syncScratchpad = function () {
+      const text = document.getElementById("dashboard-scratchpad").value;
+      const syncStatus = document.getElementById("scratchpad-sync-status");
+      const currentUser = appState.currentUser || "shashank";
+
+      if (syncStatus) syncStatus.textContent = "Syncing with cloud...";
+
+      // Save to active scratchpads in localStorage
+      let scratchpads = {};
+      try {
+        scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+      } catch (e) { }
+
+      scratchpads[currentUser] = {
+        text: text,
+        user: TEAM_ROLES[currentUser]?.name || currentUser,
+        time: new Date().toLocaleTimeString()
+      };
+
+      localStorage.setItem("gl_active_scratchpads", JSON.stringify(scratchpads));
+
+      setTimeout(() => {
+        if (syncStatus) syncStatus.textContent = "All changes synced to database";
+        // If Admin view is active, update their viewer as well
+        if (appState.currentUser === 'ganny') {
+          updateAdminScratchpadViewer();
+        }
+      }, 400);
+    };
+
+    function updateAdminScratchpadViewer() {
+      const container = document.getElementById("admin-desk-scratchpads");
+      if (!container) return;
+
+      let scratchpads = {};
+      try {
+        scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+      } catch (e) { }
+
+      const keys = Object.keys(scratchpads);
+      if (keys.length === 0) {
+        container.innerHTML = `<div style="font-style: italic; color: var(--text-dim);">No active reminder syncs yet.</div>`;
+        return;
+      }
+
+      let html = "";
+      keys.forEach(k => {
+        const pad = scratchpads[k];
+        html += `
       <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); border-radius: 6px; padding: 6px 10px; margin-bottom: 0.4rem;">
         <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--sky); font-size:0.75rem; margin-bottom:2px;">
           <span>${pad.user}</span>
@@ -9833,340 +9836,340 @@ function updateAdminScratchpadViewer() {
         <div style="color:#fff; white-space:pre-wrap; line-height:1.3; font-size:0.75rem;">${pad.text || "(empty notes)"}</div>
       </div>
     `;
-  });
-  container.innerHTML = html;
-}
+      });
+      container.innerHTML = html;
+    }
 
-// Admin Broadcast notices
-window.sendAdminBroadcast = function () {
-  const type = document.getElementById("broadcast-type").value;
-  const msg = document.getElementById("broadcast-message").value.trim();
+    // Admin Broadcast notices
+    window.sendAdminBroadcast = function () {
+      const type = document.getElementById("broadcast-type").value;
+      const msg = document.getElementById("broadcast-message").value.trim();
 
-  if (!msg) return alert("Please enter broadcast message.");
+      if (!msg) return alert("Please enter broadcast message.");
 
-  const broadcast = {
-    id: 'B' + Date.now(),
-    type: type,
-    message: msg,
-    timestamp: new Date().toLocaleTimeString(),
-    active: true
-  };
+      const broadcast = {
+        id: 'B' + Date.now(),
+        type: type,
+        message: msg,
+        timestamp: new Date().toLocaleTimeString(),
+        active: true
+      };
 
-  localStorage.setItem("gl_admin_broadcast", JSON.stringify(broadcast));
-  alert("📢 Broadcast notice pushed to all active screens!");
-  document.getElementById("broadcast-message").value = "";
+      localStorage.setItem("gl_admin_broadcast", JSON.stringify(broadcast));
+      alert("📢 Broadcast notice pushed to all active screens!");
+      document.getElementById("broadcast-message").value = "";
 
-  // Instantly trigger overlay check
-  checkActiveBroadcast();
-};
+      // Instantly trigger overlay check
+      checkActiveBroadcast();
+    };
 
-function checkActiveBroadcast() {
-  let broadcast = null;
-  try {
-    const data = localStorage.getItem("gl_admin_broadcast");
-    if (data) broadcast = JSON.parse(data);
-  } catch (e) { }
+    function checkActiveBroadcast() {
+      let broadcast = null;
+      try {
+        const data = localStorage.getItem("gl_admin_broadcast");
+        if (data) broadcast = JSON.parse(data);
+      } catch (e) { }
 
-  if (!broadcast || !broadcast.active) {
-    const overlay = document.getElementById("system-broadcast-overlay");
-    if (overlay) overlay.style.display = "none";
-    return;
-  }
+      if (!broadcast || !broadcast.active) {
+        const overlay = document.getElementById("system-broadcast-overlay");
+        if (overlay) overlay.style.display = "none";
+        return;
+      }
 
-  // Render high visibility overlay banner if not already present
-  let overlay = document.getElementById("system-broadcast-overlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "system-broadcast-overlay";
-    overlay.style.cssText = "position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; font-family:'Outfit', sans-serif; font-size:0.85rem; font-weight:700; box-shadow:0 3px 15px rgba(0,0,0,0.3); transition:all 0.3s;";
-    document.body.appendChild(overlay);
-  }
+      // Render high visibility overlay banner if not already present
+      let overlay = document.getElementById("system-broadcast-overlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "system-broadcast-overlay";
+        overlay.style.cssText = "position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; font-family:'Outfit', sans-serif; font-size:0.85rem; font-weight:700; box-shadow:0 3px 15px rgba(0,0,0,0.3); transition:all 0.3s;";
+        document.body.appendChild(overlay);
+      }
 
-  // Set theme color depending on type
-  if (broadcast.type === 'mandate') {
-    overlay.style.background = "linear-gradient(90deg, #ef4444, #b91c1c)"; // Red
-    overlay.innerHTML = `<div>⚠️ SYSTEM MANDATE NOTICE: ${broadcast.message}</div>`;
-  } else if (broadcast.type === 'meeting') {
-    overlay.style.background = "linear-gradient(90deg, #f59e0b, #d97706)"; // Amber/Yellow
-    overlay.innerHTML = `<div>📅 CALENDAR VISIT REMINDER: ${broadcast.message}</div>`;
-  } else {
-    overlay.style.background = "linear-gradient(90deg, #10b981, #047857)"; // Green
-    overlay.innerHTML = `<div>🎉 HOLIDAY / LEAVE POPUP: ${broadcast.message}</div>`;
-  }
+      // Set theme color depending on type
+      if (broadcast.type === 'mandate') {
+        overlay.style.background = "linear-gradient(90deg, #ef4444, #b91c1c)"; // Red
+        overlay.innerHTML = `<div>⚠️ SYSTEM MANDATE NOTICE: ${broadcast.message}</div>`;
+      } else if (broadcast.type === 'meeting') {
+        overlay.style.background = "linear-gradient(90deg, #f59e0b, #d97706)"; // Amber/Yellow
+        overlay.innerHTML = `<div>📅 CALENDAR VISIT REMINDER: ${broadcast.message}</div>`;
+      } else {
+        overlay.style.background = "linear-gradient(90deg, #10b981, #047857)"; // Green
+        overlay.innerHTML = `<div>🎉 HOLIDAY / LEAVE POPUP: ${broadcast.message}</div>`;
+      }
 
-  // Close / dismiss button
-  overlay.innerHTML += `
+      // Close / dismiss button
+      overlay.innerHTML += `
     <button type="button" style="background:#fff; border:none; color:#000; font-size:0.65rem; font-weight:bold; cursor:pointer; padding:3px 8px; border-radius:4px;" onclick="dismissBroadcast()">
       Dismiss / Close
     </button>
   `;
-  overlay.style.display = "flex";
-}
-
-window.dismissBroadcast = function () {
-  const overlay = document.getElementById("system-broadcast-overlay");
-  if (overlay) overlay.style.display = "none";
-
-  // Soft dismiss (mark as inactive in localStorage)
-  try {
-    const data = localStorage.getItem("gl_admin_broadcast");
-    if (data) {
-      const b = JSON.parse(data);
-      b.active = false;
-      localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
+      overlay.style.display = "flex";
     }
-  } catch (e) { }
-};
 
-// Check broadcast every 3 seconds
-setInterval(checkActiveBroadcast, 3000);
+    window.dismissBroadcast = function () {
+      const overlay = document.getElementById("system-broadcast-overlay");
+      if (overlay) overlay.style.display = "none";
 
-// SMS Gateway browser deep-link
-window.triggerSmsGateway = function () {
-  const num = document.getElementById("sms-mobile")?.value || "";
-  const msg = document.getElementById("sms-text")?.value || "";
-
-  if (!num || !msg) return alert("Please enter mobile number and note text.");
-
-  // Launch system sms protocols
-  const url = `sms:${num}?&body=${encodeURIComponent(msg)}`;
-  window.location.href = url;
-};
-
-// 6. Share Quote Engine
-window.toggleShareDropdown = function (e) {
-  if (e) e.stopPropagation();
-  const dropdown = document.getElementById("share-dropdown-menu");
-  if (!dropdown) return;
-  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-};
-
-document.addEventListener("click", () => {
-  const dropdown = document.getElementById("share-dropdown-menu");
-  if (dropdown) dropdown.style.display = "none";
-});
-
-window.getQuoteSummaryTextFormatted = function () {
-  const modalTitle = document.getElementById("modal-header-title")?.textContent || "Official Pricing Quotation Summary";
-  const bodyText = document.getElementById("quote-print-card")?.innerText || "";
-  return `${modalTitle}\n\n${bodyText}`;
-};
-
-window.downloadQuotePDF = function () {
-  const printCard = document.getElementById("quote-print-card");
-  if (!printCard) return;
-
-  const generatePDF = (element) => {
-    const opt = {
-      margin: 10,
-      filename: 'Quotation_' + new Date().toISOString().slice(0, 10) + '.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      // Soft dismiss (mark as inactive in localStorage)
+      try {
+        const data = localStorage.getItem("gl_admin_broadcast");
+        if (data) {
+          const b = JSON.parse(data);
+          b.active = false;
+          localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
+        }
+      } catch (e) { }
     };
 
-    const wrapper = document.createElement('div');
-    wrapper.style.fontFamily = '"Plus Jakarta Sans", Arial, sans-serif';
-    wrapper.style.color = '#0f172a';
-    wrapper.style.background = '#ffffff';
-    wrapper.style.padding = '15mm';
-    wrapper.innerHTML = element.innerHTML;
+    // Check broadcast every 3 seconds
+    setInterval(checkActiveBroadcast, 3000);
 
-    html2pdf().set(opt).from(wrapper).save();
-  };
+    // SMS Gateway browser deep-link
+    window.triggerSmsGateway = function () {
+      const num = document.getElementById("sms-mobile")?.value || "";
+      const msg = document.getElementById("sms-text")?.value || "";
 
-  if (typeof html2pdf === 'undefined') {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = () => {
-      generatePDF(printCard);
-    };
-    document.head.appendChild(script);
-  } else {
-    generatePDF(printCard);
-  }
-};
+      if (!num || !msg) return alert("Please enter mobile number and note text.");
 
-window.shareQuoteWhatsApp = function () {
-  const printCard = document.getElementById("quote-print-card");
-  if (!printCard) return;
-
-  const runShare = () => {
-    const opt = {
-      filename: 'Logistics_Pricing_Quotation.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jspdf: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      // Launch system sms protocols
+      const url = `sms:${num}?&body=${encodeURIComponent(msg)}`;
+      window.location.href = url;
     };
 
-    html2pdf().set(opt).from(printCard).outputPdf('blob').then((pdfBlob) => {
-      const pdfFile = new File([pdfBlob], 'Logistics_Pricing_Quotation.pdf', { type: 'application/pdf' });
-      if (navigator.share) {
-        navigator.share({
-          files: [pdfFile],
-          title: 'Logistics Pricing Quotation'
-        }).catch((err) => {
-          console.error("Native share failed:", err);
-        });
+    // 6. Share Quote Engine
+    window.toggleShareDropdown = function (e) {
+      if (e) e.stopPropagation();
+      const dropdown = document.getElementById("share-dropdown-menu");
+      if (!dropdown) return;
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    };
+
+    document.addEventListener("click", () => {
+      const dropdown = document.getElementById("share-dropdown-menu");
+      if (dropdown) dropdown.style.display = "none";
+    });
+
+    window.getQuoteSummaryTextFormatted = function () {
+      const modalTitle = document.getElementById("modal-header-title")?.textContent || "Official Pricing Quotation Summary";
+      const bodyText = document.getElementById("quote-print-card")?.innerText || "";
+      return `${modalTitle}\n\n${bodyText}`;
+    };
+
+    window.downloadQuotePDF = function () {
+      const printCard = document.getElementById("quote-print-card");
+      if (!printCard) return;
+
+      const generatePDF = (element) => {
+        const opt = {
+          margin: 10,
+          filename: 'Quotation_' + new Date().toISOString().slice(0, 10) + '.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        const wrapper = document.createElement('div');
+        wrapper.style.fontFamily = '"Plus Jakarta Sans", Arial, sans-serif';
+        wrapper.style.color = '#0f172a';
+        wrapper.style.background = '#ffffff';
+        wrapper.style.padding = '15mm';
+        wrapper.innerHTML = element.innerHTML;
+
+        html2pdf().set(opt).from(wrapper).save();
+      };
+
+      if (typeof html2pdf === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = () => {
+          generatePDF(printCard);
+        };
+        document.head.appendChild(script);
       } else {
-        alert("Your browser does not support the Web Share API for files.");
+        generatePDF(printCard);
       }
-    });
-  };
+    };
 
-  if (typeof html2pdf === 'undefined') {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = runShare;
-    document.head.appendChild(script);
-  } else {
-    runShare();
-  }
-};
+    window.shareQuoteWhatsApp = function () {
+      const printCard = document.getElementById("quote-print-card");
+      if (!printCard) return;
 
-window.shareQuoteMail = window.shareQuoteWhatsApp;
+      const runShare = () => {
+        const opt = {
+          filename: 'Logistics_Pricing_Quotation.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jspdf: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
 
-// 7. Core advanced initialization
-function initializeAdvancedFeatures() {
-  loadAutofillRecords();
+        html2pdf().set(opt).from(printCard).outputPdf('blob').then((pdfBlob) => {
+          const pdfFile = new File([pdfBlob], 'Logistics_Pricing_Quotation.pdf', { type: 'application/pdf' });
+          if (navigator.share) {
+            navigator.share({
+              files: [pdfFile],
+              title: 'Logistics Pricing Quotation'
+            }).catch((err) => {
+              console.error("Native share failed:", err);
+            });
+          } else {
+            alert("Your browser does not support the Web Share API for files.");
+          }
+        });
+      };
 
-  // Setup search dropdown autocomplete lists
-  setupAutocompleteDropdown("air-cust-name", "customerNames");
-  setupAutocompleteDropdown("sea-cust-name", "customerNames");
-  setupAutocompleteDropdown("won-shipper-name", "agentNames");
-  setupAutocompleteDropdown("won-shipper-phone", "contactNumbers");
-  setupAutocompleteDropdown("won-shipper-email", "emailIds");
-  setupAutocompleteDropdown("won-shipper-address", "officeAddresses");
-  setupAutocompleteDropdown("won-cnee-name", "agentNames");
-  setupAutocompleteDropdown("won-cnee-phone", "contactNumbers");
-  setupAutocompleteDropdown("won-cnee-email", "emailIds");
-  setupAutocompleteDropdown("won-cnee-address", "officeAddresses");
-
-  // Port clocks
-  startPortClocks();
-
-  // Set initial clocks & ETAs
-  calculateTransitETA("air");
-  calculateTransitETA("sea");
-
-  // Connected Desks Scratchpads initial load
-  const user = appState.currentUser || "shashank";
-  let scratchpads = {};
-  try {
-    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-  } catch (e) { }
-
-  const pad = scratchpads[user];
-  const ta = document.getElementById("dashboard-scratchpad");
-  if (ta && pad) {
-    ta.value = pad.text;
-  }
-
-  // Render live tracking panels
-  renderTrackingControlCenter();
-
-  // Update admin viewer if admin
-  if (appState.currentUser === 'ganny') {
-    updateAdminScratchpadViewer();
-  }
-
-  // Bind live inputs listeners for calculations
-  document.getElementById("air-origin")?.addEventListener("input", () => calculateTransitETA("air"));
-  document.getElementById("air-dest")?.addEventListener("input", () => calculateTransitETA("air"));
-  document.getElementById("sea-origin")?.addEventListener("input", () => calculateTransitETA("sea"));
-  document.getElementById("sea-dest")?.addEventListener("input", () => calculateTransitETA("sea"));
-
-  // Update creator dropdown in Admin grid view dynamically
-  const filterCreator = document.getElementById("db-filter-creator");
-  if (filterCreator) {
-    filterCreator.innerHTML = `<option value="all" style="background:#1b1c5c; color:#fff;">All Agents</option>`;
-    Object.keys(TEAM_ROLES).forEach(k => {
-      if (k === 'ganny' || k === 'manager') return;
-      const opt = document.createElement("option");
-      opt.value = k;
-      opt.style.background = "#1b1c5c";
-      opt.style.color = "#fff";
-      opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
-      filterCreator.appendChild(opt);
-    });
-  }
-
-  // Update report user dropdown dynamically
-  const reportUser = document.getElementById("report-user");
-  if (reportUser) {
-    reportUser.innerHTML = `<option value="all">All Pricing Officers</option>`;
-    Object.keys(TEAM_ROLES).forEach(k => {
-      if (k === 'ganny' || k === 'manager') return;
-      const opt = document.createElement("option");
-      opt.value = k;
-      opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
-      reportUser.appendChild(opt);
-    });
-  }
-
-  // Custom exchange rate listeners
-  document.getElementById("air-custom-exchange-rate")?.addEventListener("input", (e) => {
-    updateCustomExchangeRate(e.target.value);
-  });
-  document.getElementById("sea-custom-exchange-rate")?.addEventListener("input", (e) => {
-    updateCustomExchangeRate(e.target.value);
-  });
-}
-window.initializeAdvancedFeatures = initializeAdvancedFeatures;
-
-// CUSTOM CORE ADVANCED SYSTEM EXTENSIONS
-
-// 1. Update Custom Exchange Rate
-window.updateCustomExchangeRate = function (val) {
-  const rate = parseFloat(val) || 83.50;
-  EXCHANGE_RATES.USD_TO_INR = rate;
-  if (EXCHANGE_RATES.EUR_TO_USD) {
-    EXCHANGE_RATES.EUR_TO_INR = rate * EXCHANGE_RATES.EUR_TO_USD;
-  } else {
-    EXCHANGE_RATES.EUR_TO_INR = rate * (1.08);
-  }
-  if (EXCHANGE_RATES.GBP_TO_USD) {
-    EXCHANGE_RATES.GBP_TO_INR = rate * EXCHANGE_RATES.GBP_TO_USD;
-  } else {
-    EXCHANGE_RATES.GBP_TO_INR = rate * (1.25);
-  }
-
-  // Sync inputs
-  const airInput = document.getElementById("air-custom-exchange-rate");
-  const seaInput = document.getElementById("sea-custom-exchange-rate");
-  if (airInput && parseFloat(airInput.value) !== rate) airInput.value = rate.toFixed(2);
-  if (seaInput && parseFloat(seaInput.value) !== rate) seaInput.value = rate.toFixed(2);
-
-  // Recalculate
-  if (typeof calculateAirFreight === 'function') calculateAirFreight();
-  if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
-};
-
-// 2. Format Surcharge Rate Cell to support custom/native currency
-window.formatSurchargeRateCell = function (tr, isMultiCurrency, currencyVal) {
-  const rateInput = tr.querySelector(".chg-rate");
-  if (!rateInput) return;
-  const td = rateInput.closest("td");
-  if (!td) return;
-
-  if (td.dataset.currencyFormatted === "true") {
-    const select = td.querySelector(".chg-curr");
-    if (select && isMultiCurrency && currencyVal) {
-      if (select.value !== currencyVal) {
-        select.value = currencyVal;
+      if (typeof html2pdf === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = runShare;
+        document.head.appendChild(script);
+      } else {
+        runShare();
       }
+    };
+
+    window.shareQuoteMail = window.shareQuoteWhatsApp;
+
+    // 7. Core advanced initialization
+    function initializeAdvancedFeatures() {
+      loadAutofillRecords();
+
+      // Setup search dropdown autocomplete lists
+      setupAutocompleteDropdown("air-cust-name", "customerNames");
+      setupAutocompleteDropdown("sea-cust-name", "customerNames");
+      setupAutocompleteDropdown("won-shipper-name", "agentNames");
+      setupAutocompleteDropdown("won-shipper-phone", "contactNumbers");
+      setupAutocompleteDropdown("won-shipper-email", "emailIds");
+      setupAutocompleteDropdown("won-shipper-address", "officeAddresses");
+      setupAutocompleteDropdown("won-cnee-name", "agentNames");
+      setupAutocompleteDropdown("won-cnee-phone", "contactNumbers");
+      setupAutocompleteDropdown("won-cnee-email", "emailIds");
+      setupAutocompleteDropdown("won-cnee-address", "officeAddresses");
+
+      // Port clocks
+      startPortClocks();
+
+      // Set initial clocks & ETAs
+      calculateTransitETA("air");
+      calculateTransitETA("sea");
+
+      // Connected Desks Scratchpads initial load
+      const user = appState.currentUser || "shashank";
+      let scratchpads = {};
+      try {
+        scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+      } catch (e) { }
+
+      const pad = scratchpads[user];
+      const ta = document.getElementById("dashboard-scratchpad");
+      if (ta && pad) {
+        ta.value = pad.text;
+      }
+
+      // Render live tracking panels
+      renderTrackingControlCenter();
+
+      // Update admin viewer if admin
+      if (appState.currentUser === 'ganny') {
+        updateAdminScratchpadViewer();
+      }
+
+      // Bind live inputs listeners for calculations
+      document.getElementById("air-origin")?.addEventListener("input", () => calculateTransitETA("air"));
+      document.getElementById("air-dest")?.addEventListener("input", () => calculateTransitETA("air"));
+      document.getElementById("sea-origin")?.addEventListener("input", () => calculateTransitETA("sea"));
+      document.getElementById("sea-dest")?.addEventListener("input", () => calculateTransitETA("sea"));
+
+      // Update creator dropdown in Admin grid view dynamically
+      const filterCreator = document.getElementById("db-filter-creator");
+      if (filterCreator) {
+        filterCreator.innerHTML = `<option value="all" style="background:#1b1c5c; color:#fff;">All Agents</option>`;
+        Object.keys(TEAM_ROLES).forEach(k => {
+          if (k === 'ganny' || k === 'manager') return;
+          const opt = document.createElement("option");
+          opt.value = k;
+          opt.style.background = "#1b1c5c";
+          opt.style.color = "#fff";
+          opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
+          filterCreator.appendChild(opt);
+        });
+      }
+
+      // Update report user dropdown dynamically
+      const reportUser = document.getElementById("report-user");
+      if (reportUser) {
+        reportUser.innerHTML = `<option value="all">All Pricing Officers</option>`;
+        Object.keys(TEAM_ROLES).forEach(k => {
+          if (k === 'ganny' || k === 'manager') return;
+          const opt = document.createElement("option");
+          opt.value = k;
+          opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
+          reportUser.appendChild(opt);
+        });
+      }
+
+      // Custom exchange rate listeners
+      document.getElementById("air-custom-exchange-rate")?.addEventListener("input", (e) => {
+        updateCustomExchangeRate(e.target.value);
+      });
+      document.getElementById("sea-custom-exchange-rate")?.addEventListener("input", (e) => {
+        updateCustomExchangeRate(e.target.value);
+      });
     }
-    return;
-  }
+    window.initializeAdvancedFeatures = initializeAdvancedFeatures;
 
-  td.dataset.currencyFormatted = "true";
-  td.style.whiteSpace = "nowrap";
+    // CUSTOM CORE ADVANCED SYSTEM EXTENSIONS
 
-  const currentVal = rateInput.value;
-  const callback = tr.closest("tbody").id.startsWith("air") ? calculateAirFreight : calculateSeaFreight;
+    // 1. Update Custom Exchange Rate
+    window.updateCustomExchangeRate = function (val) {
+      const rate = parseFloat(val) || 83.50;
+      EXCHANGE_RATES.USD_TO_INR = rate;
+      if (EXCHANGE_RATES.EUR_TO_USD) {
+        EXCHANGE_RATES.EUR_TO_INR = rate * EXCHANGE_RATES.EUR_TO_USD;
+      } else {
+        EXCHANGE_RATES.EUR_TO_INR = rate * (1.08);
+      }
+      if (EXCHANGE_RATES.GBP_TO_USD) {
+        EXCHANGE_RATES.GBP_TO_INR = rate * EXCHANGE_RATES.GBP_TO_USD;
+      } else {
+        EXCHANGE_RATES.GBP_TO_INR = rate * (1.25);
+      }
 
-  if (isMultiCurrency) {
-    td.innerHTML = `
+      // Sync inputs
+      const airInput = document.getElementById("air-custom-exchange-rate");
+      const seaInput = document.getElementById("sea-custom-exchange-rate");
+      if (airInput && parseFloat(airInput.value) !== rate) airInput.value = rate.toFixed(2);
+      if (seaInput && parseFloat(seaInput.value) !== rate) seaInput.value = rate.toFixed(2);
+
+      // Recalculate
+      if (typeof calculateAirFreight === 'function') calculateAirFreight();
+      if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
+    };
+
+    // 2. Format Surcharge Rate Cell to support custom/native currency
+    window.formatSurchargeRateCell = function (tr, isMultiCurrency, currencyVal) {
+      const rateInput = tr.querySelector(".chg-rate");
+      if (!rateInput) return;
+      const td = rateInput.closest("td");
+      if (!td) return;
+
+      if (td.dataset.currencyFormatted === "true") {
+        const select = td.querySelector(".chg-curr");
+        if (select && isMultiCurrency && currencyVal) {
+          if (select.value !== currencyVal) {
+            select.value = currencyVal;
+          }
+        }
+        return;
+      }
+
+      td.dataset.currencyFormatted = "true";
+      td.style.whiteSpace = "nowrap";
+
+      const currentVal = rateInput.value;
+      const callback = tr.closest("tbody").id.startsWith("air") ? calculateAirFreight : calculateSeaFreight;
+
+      if (isMultiCurrency) {
+        td.innerHTML = `
       <div style="display: flex; gap: 4px; align-items: center;">
         <select class="chg-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; width: 60px;">
           <option value="USD" ${currencyVal === 'USD' ? 'selected' : ''}>USD</option>
@@ -10176,105 +10179,105 @@ window.formatSurchargeRateCell = function (tr, isMultiCurrency, currencyVal) {
         <input type="number" class="chg-rate" value="${currentVal}" step="0.01" style="flex: 1; min-width: 60px;" required>
       </div>
     `;
-    td.querySelector(".chg-curr").addEventListener("change", callback);
-    td.querySelector(".chg-rate").addEventListener("input", callback);
-  } else {
-    td.innerHTML = `
+        td.querySelector(".chg-curr").addEventListener("change", callback);
+        td.querySelector(".chg-rate").addEventListener("input", callback);
+      } else {
+        td.innerHTML = `
       <div style="display: flex; gap: 4px; align-items: center;">
         <span style="font-size: 0.72rem; font-weight: bold; color: var(--sky);">${currencyVal}</span>
         <input type="number" class="chg-rate" value="${currentVal}" step="0.01" style="flex: 1; min-width: 60px;" required>
       </div>
     `;
-    td.querySelector(".chg-rate").addEventListener("input", callback);
-  }
-};
+        td.querySelector(".chg-rate").addEventListener("input", callback);
+      }
+    };
 
-// 3. Sync Surcharges Currencies
-window.syncSurchargesCurrencies = function (freightType) {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
+    // 3. Sync Surcharges Currencies
+    window.syncSurchargesCurrencies = function (freightType) {
+      const activeRole = getActiveRole();
+      const role = TEAM_ROLES[activeRole];
+      const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
 
-  const isAir = freightType.startsWith("air");
-  const state = isAir ? appState.currentAirFreight : appState.currentSeaFreight;
-  const direction = state.module || 'export';
+      const isAir = freightType.startsWith("air");
+      const state = isAir ? appState.currentAirFreight : appState.currentSeaFreight;
+      const direction = state.module || 'export';
 
-  const originBody = document.getElementById(`${freightType}-origin-surcharges-body`);
-  const destBody = document.getElementById(`${freightType}-dest-surcharges-body`);
+      const originBody = document.getElementById(`${freightType}-origin-surcharges-body`);
+      const destBody = document.getElementById(`${freightType}-dest-surcharges-body`);
 
-  if (isNomUser) {
-    const qCur = document.getElementById(`${isAir ? 'air' : 'sea'}-currency`).value;
-    if (originBody) {
-      originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, qCur));
-    }
-    if (destBody) {
-      destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, qCur));
-    }
-    return;
-  }
+      if (isNomUser) {
+        const qCur = document.getElementById(`${isAir ? 'air' : 'sea'}-currency`).value;
+        if (originBody) {
+          originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, qCur));
+        }
+        if (destBody) {
+          destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, qCur));
+        }
+        return;
+      }
 
-  if (direction === 'export') {
-    if (originBody) {
-      originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, "INR"));
-    }
-    if (destBody) {
-      destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, true, "USD"));
-    }
-  } else {
-    if (originBody) {
-      originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, true, "USD"));
-    }
-    if (destBody) {
-      destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, "INR"));
-    }
-  }
-};
+      if (direction === 'export') {
+        if (originBody) {
+          originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, "INR"));
+        }
+        if (destBody) {
+          destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, true, "USD"));
+        }
+      } else {
+        if (originBody) {
+          originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, true, "USD"));
+        }
+        if (destBody) {
+          destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, "INR"));
+        }
+      }
+    };
 
-// 4. Update Advance Payment Status
-window.updateAdvancePaymentStatus = function (quoteId, status) {
-  const quote = appState.quotes.find(q => q.id === quoteId);
-  if (quote) {
-    quote.advancePaymentStatus = status;
-    DB.saveQuote(quote);
-    if (appState.currentUser === 'ganny') {
-      if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();
-    } else {
-      renderMemberDashboard(appState.currentUser);
-    }
-  }
-};
+    // 4. Update Advance Payment Status
+    window.updateAdvancePaymentStatus = function (quoteId, status) {
+      const quote = appState.quotes.find(q => q.id === quoteId);
+      if (quote) {
+        quote.advancePaymentStatus = status;
+        DB.saveQuote(quote);
+        if (appState.currentUser === 'ganny') {
+          if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();
+        } else {
+          renderMemberDashboard(appState.currentUser);
+        }
+      }
+    };
 
-// 5. Request Admin Approval Handler
-window.requestAdminApproval = function (id) {
-  const quote = appState.quotes.find(q => q.id === id);
-  if (quote) {
-    checkAndRequestEditPermission(quote, "edit/amend");
-  }
-};
+    // 5. Request Admin Approval Handler
+    window.requestAdminApproval = function (id) {
+      const quote = appState.quotes.find(q => q.id === id);
+      if (quote) {
+        checkAndRequestEditPermission(quote, "edit/amend");
+      }
+    };
 
-// 6. FCL, LCL, BB base freight currency selectors for Import direction
-window.ensureSeaBaseFreightCurrencySelectors = function () {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-  const isImport = appState.currentSeaFreight.module === 'import';
-  const qCur = document.getElementById("sea-currency").value;
+    // 6. FCL, LCL, BB base freight currency selectors for Import direction
+    window.ensureSeaBaseFreightCurrencySelectors = function () {
+      const activeRole = getActiveRole();
+      const role = TEAM_ROLES[activeRole];
+      const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
+      const isImport = appState.currentSeaFreight.module === 'import';
+      const qCur = document.getElementById("sea-currency").value;
 
-  // FCL Container Rows
-  const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
-  fclRows.forEach(tr => {
-    const rateInput = tr.querySelector(".fcl-rate") || tr.querySelector(".fcl-sell-rate");
-    if (!rateInput) return;
-    const td = rateInput.closest("td");
-    if (!td) return;
+      // FCL Container Rows
+      const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
+      fclRows.forEach(tr => {
+        const rateInput = tr.querySelector(".fcl-rate") || tr.querySelector(".fcl-sell-rate");
+        if (!rateInput) return;
+        const td = rateInput.closest("td");
+        if (!td) return;
 
-    if (isImport && !isNomUser) {
-      if (td.dataset.currencyFormatted !== "import") {
-        td.dataset.currencyFormatted = "import";
-        const currentVal = rateInput.value;
-        const isSell = rateInput.classList.contains("fcl-sell-rate");
+        if (isImport && !isNomUser) {
+          if (td.dataset.currencyFormatted !== "import") {
+            td.dataset.currencyFormatted = "import";
+            const currentVal = rateInput.value;
+            const isSell = rateInput.classList.contains("fcl-sell-rate");
 
-        td.innerHTML = `
+            td.innerHTML = `
           <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
             <select class="fcl-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; width: 60px;">
               <option value="USD">USD</option>
@@ -10285,40 +10288,40 @@ window.ensureSeaBaseFreightCurrencySelectors = function () {
             <input type="number" class="${isSell ? 'fcl-sell-rate' : 'fcl-rate'}" value="${currentVal}" min="0" style="width: 100%;">
           </div>
         `;
-        td.querySelector(".fcl-curr").addEventListener("change", calculateSeaFreight);
-        td.querySelector("input").addEventListener("input", calculateSeaFreight);
-      }
-    } else {
-      if (td.dataset.currencyFormatted !== "export") {
-        td.dataset.currencyFormatted = "export";
-        const currentVal = rateInput.value;
-        const isSell = rateInput.classList.contains("fcl-sell-rate");
-        td.innerHTML = `
+            td.querySelector(".fcl-curr").addEventListener("change", calculateSeaFreight);
+            td.querySelector("input").addEventListener("input", calculateSeaFreight);
+          }
+        } else {
+          if (td.dataset.currencyFormatted !== "export") {
+            td.dataset.currencyFormatted = "export";
+            const currentVal = rateInput.value;
+            const isSell = rateInput.classList.contains("fcl-sell-rate");
+            td.innerHTML = `
           <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
             <span class="fcl-curr-label" style="font-size: 0.72rem; font-weight: bold; color: var(--sky);">${qCur}</span>
             <input type="number" class="${isSell ? 'fcl-sell-rate' : 'fcl-rate'}" value="${currentVal}" min="0" style="width: 100%;">
           </div>
         `;
-        td.querySelector("input").addEventListener("input", calculateSeaFreight);
-      } else {
-        const label = td.querySelector(".fcl-curr-label");
-        if (label) label.textContent = qCur;
-      }
-    }
-  });
+            td.querySelector("input").addEventListener("input", calculateSeaFreight);
+          } else {
+            const label = td.querySelector(".fcl-curr-label");
+            if (label) label.textContent = qCur;
+          }
+        }
+      });
 
-  // LCL rates
-  const lclRate = document.getElementById("sea-lcl-rate");
-  if (lclRate) {
-    const parent = lclRate.closest(".form-group");
-    if (parent) {
-      if (isImport && !isNomUser) {
-        if (parent.dataset.currencyFormatted !== "import") {
-          parent.dataset.currencyFormatted = "import";
-          const currentVal = lclRate.value;
-          const label = document.getElementById("sea-lcl-rate-label");
-          if (label) label.innerHTML = 'LCL Freight Rate (Per Revenue Ton - RT)';
-          lclRate.outerHTML = `
+      // LCL rates
+      const lclRate = document.getElementById("sea-lcl-rate");
+      if (lclRate) {
+        const parent = lclRate.closest(".form-group");
+        if (parent) {
+          if (isImport && !isNomUser) {
+            if (parent.dataset.currencyFormatted !== "import") {
+              parent.dataset.currencyFormatted = "import";
+              const currentVal = lclRate.value;
+              const label = document.getElementById("sea-lcl-rate-label");
+              if (label) label.innerHTML = 'LCL Freight Rate (Per Revenue Ton - RT)';
+              lclRate.outerHTML = `
             <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
               <select class="lcl-curr" id="sea-lcl-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; width: 80px;">
                 <option value="USD">USD</option>
@@ -10329,47 +10332,47 @@ window.ensureSeaBaseFreightCurrencySelectors = function () {
               <input type="number" id="sea-lcl-rate" value="${currentVal}" min="0" style="flex:1;">
             </div>
           `;
-          document.getElementById("sea-lcl-curr").addEventListener("change", calculateSeaFreight);
-          document.getElementById("sea-lcl-rate").addEventListener("input", calculateSeaFreight);
-        }
-      } else {
-        if (parent.dataset.currencyFormatted !== "export") {
-          parent.dataset.currencyFormatted = "export";
-          const currentVal = lclRate.value;
-          const label = document.getElementById("sea-lcl-rate-label");
-          if (label) label.innerHTML = `LCL Freight Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
-          parent.querySelector("div")?.remove();
-          const inp = document.createElement("input");
-          inp.type = "number";
-          inp.id = "sea-lcl-rate";
-          inp.value = currentVal;
-          inp.placeholder = "Rate";
-          inp.min = "0";
-          parent.appendChild(inp);
-          inp.addEventListener("input", calculateSeaFreight);
-        } else {
-          const label = document.getElementById("sea-lcl-rate-label");
-          if (label) {
-            const span = label.querySelector(".curr-label");
-            if (span) span.textContent = qCur;
+              document.getElementById("sea-lcl-curr").addEventListener("change", calculateSeaFreight);
+              document.getElementById("sea-lcl-rate").addEventListener("input", calculateSeaFreight);
+            }
+          } else {
+            if (parent.dataset.currencyFormatted !== "export") {
+              parent.dataset.currencyFormatted = "export";
+              const currentVal = lclRate.value;
+              const label = document.getElementById("sea-lcl-rate-label");
+              if (label) label.innerHTML = `LCL Freight Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
+              parent.querySelector("div")?.remove();
+              const inp = document.createElement("input");
+              inp.type = "number";
+              inp.id = "sea-lcl-rate";
+              inp.value = currentVal;
+              inp.placeholder = "Rate";
+              inp.min = "0";
+              parent.appendChild(inp);
+              inp.addEventListener("input", calculateSeaFreight);
+            } else {
+              const label = document.getElementById("sea-lcl-rate-label");
+              if (label) {
+                const span = label.querySelector(".curr-label");
+                if (span) span.textContent = qCur;
+              }
+            }
           }
         }
       }
-    }
-  }
 
-  // BB rates
-  const bbRate = document.getElementById("sea-bb-rate");
-  if (bbRate) {
-    const parent = bbRate.closest(".form-group");
-    if (parent) {
-      if (isImport && !isNomUser) {
-        if (parent.dataset.currencyFormatted !== "import") {
-          parent.dataset.currencyFormatted = "import";
-          const currentVal = bbRate.value;
-          const label = document.getElementById("sea-bb-rate-label");
-          if (label) label.innerHTML = 'Break Bulk Ocean Rate (Per Revenue Ton - RT)';
-          bbRate.outerHTML = `
+      // BB rates
+      const bbRate = document.getElementById("sea-bb-rate");
+      if (bbRate) {
+        const parent = bbRate.closest(".form-group");
+        if (parent) {
+          if (isImport && !isNomUser) {
+            if (parent.dataset.currencyFormatted !== "import") {
+              parent.dataset.currencyFormatted = "import";
+              const currentVal = bbRate.value;
+              const label = document.getElementById("sea-bb-rate-label");
+              if (label) label.innerHTML = 'Break Bulk Ocean Rate (Per Revenue Ton - RT)';
+              bbRate.outerHTML = `
             <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
               <select class="bb-curr" id="sea-bb-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; width: 80px;">
                 <option value="USD">USD</option>
@@ -10380,56 +10383,56 @@ window.ensureSeaBaseFreightCurrencySelectors = function () {
               <input type="number" id="sea-bb-rate" value="${currentVal}" min="0" style="flex:1;">
             </div>
           `;
-          document.getElementById("sea-bb-curr").addEventListener("change", calculateSeaFreight);
-          document.getElementById("sea-bb-rate").addEventListener("input", calculateSeaFreight);
-        }
-      } else {
-        if (parent.dataset.currencyFormatted !== "export") {
-          parent.dataset.currencyFormatted = "export";
-          const currentVal = bbRate.value;
-          const label = document.getElementById("sea-bb-rate-label");
-          if (label) label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
-          parent.querySelector("div")?.remove();
-          const inp = document.createElement("input");
-          inp.type = "number";
-          inp.id = "sea-bb-rate";
-          inp.value = currentVal;
-          inp.placeholder = "Rate";
-          inp.min = "0";
-          parent.appendChild(inp);
-          inp.addEventListener("input", calculateSeaFreight);
-        } else {
-          const label = document.getElementById("sea-bb-rate-label");
-          if (label) {
-            const span = label.querySelector(".curr-label");
-            if (span) span.textContent = qCur;
+              document.getElementById("sea-bb-curr").addEventListener("change", calculateSeaFreight);
+              document.getElementById("sea-bb-rate").addEventListener("input", calculateSeaFreight);
+            }
+          } else {
+            if (parent.dataset.currencyFormatted !== "export") {
+              parent.dataset.currencyFormatted = "export";
+              const currentVal = bbRate.value;
+              const label = document.getElementById("sea-bb-rate-label");
+              if (label) label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
+              parent.querySelector("div")?.remove();
+              const inp = document.createElement("input");
+              inp.type = "number";
+              inp.id = "sea-bb-rate";
+              inp.value = currentVal;
+              inp.placeholder = "Rate";
+              inp.min = "0";
+              parent.appendChild(inp);
+              inp.addEventListener("input", calculateSeaFreight);
+            } else {
+              const label = document.getElementById("sea-bb-rate-label");
+              if (label) {
+                const span = label.querySelector(".curr-label");
+                if (span) span.textContent = qCur;
+              }
+            }
           }
         }
       }
+    };
+    // Safe fallback placeholders to prevent pre-login startup crashes
+    function loadLogisticsNews() {
+      console.log("Bypassing news feed loading.");
     }
-  }
-};
-// Safe fallback placeholders to prevent pre-login startup crashes
-function loadLogisticsNews() {
-  console.log("Bypassing news feed loading.");
-}
-function registerSnapshotListener() {
-  console.log("Bypassing background snapshot listener layout.");
-}
-function calculateTransitETA() {
-  console.log("Bypassing transit calculations.");
-}
-var tabGlobal = tabGlobal || {};
+    function registerSnapshotListener() {
+      console.log("Bypassing background snapshot listener layout.");
+    }
+    function calculateTransitETA() {
+      console.log("Bypassing transit calculations.");
+    }
+    var tabGlobal = tabGlobal || {};
 
-// Safe fallback placeholders to prevent pre-login startup crashes
-function loadLogisticsNews() {
-  console.log("Bypassing news feed loading.");
-}
-function registerSnapshotListener() {
-  console.log("Bypassing background snapshot listener layout.");
-}
-function calculateTransitETA() {
-  console.log("Bypassing transit calculations.");
-}
-var tabGlobal = tabGlobal || {};
+    // Safe fallback placeholders to prevent pre-login startup crashes
+    function loadLogisticsNews() {
+      console.log("Bypassing news feed loading.");
+    }
+    function registerSnapshotListener() {
+      console.log("Bypassing background snapshot listener layout.");
+    }
+    function calculateTransitETA() {
+      console.log("Bypassing transit calculations.");
+    }
+    var tabGlobal = tabGlobal || {};
 
