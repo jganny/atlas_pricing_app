@@ -10468,13 +10468,14 @@ window.ensureSeaBaseFreightCurrencySelectors = function () {
 
 document.getElementById("sea-bb-curr").addEventListener("change", calculateSeaFreight);
 document.getElementById("sea-bb-rate").addEventListener("input", calculateSeaFreight);
-        }
-      } else {
+} else {
   if (parent.dataset.currencyFormatted !== "export") {
     parent.dataset.currencyFormatted = "export";
     const currentVal = bbRate.value;
     const label = document.getElementById("sea-bb-rate-label");
-    if (label) label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
+    if (label) {
+      label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
+    }
     parent.querySelector("div")?.remove();
     const inp = document.createElement("input");
     inp.type = "number";
@@ -10488,15 +10489,14 @@ document.getElementById("sea-bb-rate").addEventListener("input", calculateSeaFre
     const label = document.getElementById("sea-bb-rate-label");
     if (label) {
       const span = label.querySelector(".curr-label");
-      if (span) span.textContent = qCur;
+      if (span) {
+        span.textContent = qCur;
+      }
     }
   }
 }
-    }
-  }
-};
+
 // Safe fallback placeholders to prevent pre-login startup crashes
-6753edc(Fix login syntax error in app - v4.js)
 function loadLogisticsNews() {
   console.log("Bypassing news feed loading.");
 }
@@ -10506,12 +10506,7 @@ function registerSnapshotListener() {
 function calculateTransitETA() {
   console.log("Bypassing transit calculations.");
 }
+
 var tabGlobal = tabGlobal || {};
-HEAD
 
 // Re-balancing the global application wrappers
-    });
-  });
-});
-
-6753edc(Fix login syntax error in app - v4.js)
