@@ -87,6 +87,9 @@
         Pricing Desk</h2>
       <div class="login-subtitle" style="color: #475569; margin-bottom: 1rem; font-size: 0.8rem; text-align: center;">
         Please authenticate to access your pricing desk</div>
+      <div id="login-admin-reset-indicator" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; margin-bottom: 1rem; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;">
+        ⚠️ Pending Password Reset Request(s) active.
+      </div>
 
       <form id="login-form" onsubmit="handleLogin(event)">
         <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
@@ -1989,8 +1992,8 @@
           <div class="glass-card" style="padding: 2rem;">
             <!-- Pathway selector -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; background: #ffffff; padding: 1rem; border-radius: 8px;">
-              <label
-                style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: #000000; text-align: left;">Operational
+              <label onclick="handlePathwaySelectorClick()"
+                style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: #000000; text-align: left; cursor: pointer; user-select: none;">Operational
                 Pathway Selector</label>
               <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
                 <label
@@ -2143,8 +2146,8 @@
           <div class="glass-card" style="padding: 2rem;">
             <!-- Pathway selector -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem;">
-              <label
-                style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: var(--sky);">Operational
+              <label onclick="handlePathwaySelectorClick()"
+                style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: var(--sky); cursor: pointer; user-select: none;">Operational
                 Pathway Selector</label>
               <div style="display: flex; gap: 2rem;">
                 <label
@@ -2297,8 +2300,8 @@
           <div class="glass-card" style="padding: 2rem;">
             <!-- Pathway selector -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; background: #ffffff; padding: 1rem; border-radius: 8px;">
-              <label
-                style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: #000000; text-align: left;">Operational
+              <label onclick="handlePathwaySelectorClick()"
+                style="display: block; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; color: #000000; text-align: left; cursor: pointer; user-select: none;">Operational
                 Pathway Selector</label>
               <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
                 <label
@@ -3034,49 +3037,247 @@
 
   <script>
     window.handleForgotPassword = async function(e) {
-      e.preventDefault();
-      const validatedEmail = prompt("Please enter your official corporate email address to receive a secure password reset link:");
-      if (validatedEmail === null) {
+      if (e) e.preventDefault();
+      const validatedUsername = prompt("Please enter your desk username to request a reset:");
+      if (!validatedUsername) return;
+      const usernameClean = validatedUsername.trim().toLowerCase();
+      
+      // Store in localStorage
+      let requests = [];
+      const stored = localStorage.getItem("pending_password_resets");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(err) {}
+      }
+      if (!requests.includes(usernameClean)) {
+        requests.push(usernameClean);
+        localStorage.setItem("pending_password_resets", JSON.stringify(requests));
+      }
+      
+      // Store in Firestore if online
+      if (typeof DB !== 'undefined' && DB.firestoreRef) {
+        try {
+          await DB.firestoreRef.collection("password_resets").doc(usernameClean).set({
+            username: usernameClean,
+            requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            status: "pending"
+          });
+        } catch(err) {
+          console.error("Firestore logging failed:", err);
+        }
+      }
+      
+      alert("Password reset request triggered. Please inform Admin to manually reset your access.");
+      if (window.updateResetIndicators) window.updateResetIndicators();
+    };
+
+    // --- Admin-mediated Password Reset & Secret Override Logic ---
+    let selectorClickCount = 0;
+    let selectorClickTimer = null;
+    window.adminPanelActivated = false;
+
+    window.handlePathwaySelectorClick = function() {
+      selectorClickCount++;
+      clearTimeout(selectorClickTimer);
+      selectorClickTimer = setTimeout(() => {
+        selectorClickCount = 0;
+      }, 2500);
+
+      if (selectorClickCount >= 5) {
+        selectorClickCount = 0;
+        window.openAdminResetOverlay();
+      }
+    };
+
+    window.openAdminResetOverlay = function() {
+      let overlay = document.getElementById("admin-reset-overlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "admin-reset-overlay";
+        overlay.style.cssText = "display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 99999; justify-content: center; align-items: center; font-family: 'Plus Jakarta Sans', sans-serif;";
+        overlay.innerHTML = `
+          <div style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); width: 90%; max-width: 420px; padding: 2rem; box-sizing: border-box; text-align: center; position: relative;">
+            <button onclick="window.closeAdminResetOverlay()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+            <h2 style="font-weight: 800; font-size: 1.4rem; color: #0f172a; margin-top: 0; margin-bottom: 0.25rem; letter-spacing: -0.02em;">Admin Control Desk</h2>
+            <p style="color: #64748b; font-size: 0.82rem; margin-bottom: 1.5rem;">Secure password override utility</p>
+            
+            <div id="admin-passkey-sec" style="display: block;">
+              <div style="margin-bottom: 1.25rem; text-align: left;">
+                <label style="display: block; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: #0f172a; margin-bottom: 0.4rem; letter-spacing: 0.05em;">Master Passkey</label>
+                <input type="password" id="admin-passkey-input" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 1rem; box-sizing: border-box; outline: none;">
+              </div>
+              <button onclick="window.verifyAdminPasskey()" style="width: 100%; background: #0f172a; color: #fff; padding: 0.75rem; border: none; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Verify Identity</button>
+            </div>
+
+            <div id="admin-inputs-sec" style="display: none;">
+              <div id="admin-pending-badge" style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1.25rem; text-align: left;">
+                <div style="font-size: 0.72rem; font-weight: 800; color: #ef4444; text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;">
+                  <span style="display: inline-block; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
+                  Active Reset Requests
+                </div>
+                <div id="admin-pending-list" style="font-size: 0.8rem; color: #475569; max-height: 80px; overflow-y: auto;">
+                  No pending reset requests.
+                </div>
+              </div>
+              <div style="margin-bottom: 1rem; text-align: left;">
+                <label style="display: block; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: #0f172a; margin-bottom: 0.4rem; letter-spacing: 0.05em;">Target Staff Username</label>
+                <input type="text" id="admin-target-user" placeholder="e.g. shashank" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; box-sizing: border-box; outline: none;">
+              </div>
+              <div style="margin-bottom: 1.5rem; text-align: left;">
+                <label style="display: block; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: #0f172a; margin-bottom: 0.4rem; letter-spacing: 0.05em;">New Password</label>
+                <input type="password" id="admin-target-pass" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; box-sizing: border-box; outline: none;">
+              </div>
+              <button onclick="window.executeForceReset()" style="width: 100%; background: #ef4444; color: #fff; padding: 0.75rem; border: none; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Force Reset</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+      }
+      
+      overlay.style.display = "flex";
+      document.getElementById("admin-passkey-input").value = "";
+      document.getElementById("admin-passkey-sec").style.display = "block";
+      document.getElementById("admin-inputs-sec").style.display = "none";
+    };
+
+    window.closeAdminResetOverlay = function() {
+      const overlay = document.getElementById("admin-reset-overlay");
+      if (overlay) overlay.style.display = "none";
+    };
+
+    window.verifyAdminPasskey = function() {
+      const entered = document.getElementById("admin-passkey-input").value;
+      const MASTER_PASSKEY = "SECRET_ADMIN_PASSKEY";
+      if (entered === MASTER_PASSKEY) {
+        window.adminPanelActivated = true;
+        document.getElementById("admin-passkey-sec").style.display = "none";
+        document.getElementById("admin-inputs-sec").style.display = "block";
+        window.updateResetListInPanel();
+        window.updateResetIndicators();
+      } else {
+        alert("❌ Invalid Passkey. Access Denied.");
+      }
+    };
+
+    window.fillTargetUser = function(user) {
+      document.getElementById("admin-target-user").value = user;
+    };
+
+    window.updateResetListInPanel = function() {
+      const listEl = document.getElementById("admin-pending-list");
+      if (!listEl) return;
+      let requests = [];
+      const stored = localStorage.getItem("pending_password_resets");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(err) {}
+      }
+      if (requests.length === 0) {
+        listEl.innerHTML = "<em style='color: #64748b;'>No pending reset requests.</em>";
+      } else {
+        listEl.innerHTML = requests.map(user => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed rgba(0,0,0,0.05);">
+            <span>👤 <strong>${user}</strong></span>
+            <button onclick="window.fillTargetUser('${user}')" style="font-size: 0.65rem; padding: 2px 6px; background: #0f172a; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Select</button>
+          </div>
+        `).join("");
+      }
+    };
+
+    window.updateResetIndicators = function() {
+      let requests = [];
+      const stored = localStorage.getItem("pending_password_resets");
+      if (stored) {
+        try { requests = JSON.parse(stored); } catch(err) {}
+      }
+      const indicator = document.getElementById("login-admin-reset-indicator");
+      if (indicator) {
+        if (requests.length > 0 && window.adminPanelActivated) {
+          indicator.style.display = "block";
+        } else {
+          indicator.style.display = "none";
+        }
+      }
+    };
+
+    window.executeForceReset = async function() {
+      const rawUser = document.getElementById("admin-target-user").value;
+      const newPass = document.getElementById("admin-target-pass").value;
+      
+      if (!rawUser) {
+        alert("Please enter a target username.");
         return;
       }
-      const trimmedEmail = validatedEmail.trim();
-      const emailRegex = /@blr\.atlaslogistics\.co\.in$|@atlaslogistics\.ae$/i;
-      if (!emailRegex.test(trimmedEmail)) {
-        alert("Access Denied. Only approved @blr.atlaslogistics.co.in or @atlaslogistics.ae corporate email domains are permitted.");
+      if (!newPass || newPass.length < 6) {
+        alert("Password must be at least 6 characters long.");
         return;
       }
+
+      const username = rawUser.trim().toLowerCase();
+      const targetEmail = username + "@pricing.local";
+
       try {
-        const configRaw = localStorage.getItem("gl_firebase_config");
-        let firebaseConfig = null;
-        if (configRaw) {
+        // 1. Cloud Server Overwrite (Firestore)
+        if (typeof DB !== 'undefined' && DB.firestoreRef) {
+          await DB.firestoreRef.collection("users").doc(username).set({
+            username: username,
+            email: targetEmail,
+            password: newPass,
+            fullName: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username] ? TEAM_ROLES[username].name : username),
+            role: (username === 'ganny' || username === 'admin' ? 'manager' : 'member'),
+            category: 'FREE HAND SALES (AIR/SEA)',
+            currency: 'INR',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          
           try {
-            firebaseConfig = JSON.parse(configRaw);
-          } catch (e) {
-            console.error("Failed to parse stored Firebase configuration:", e);
+            await DB.firestoreRef.collection("password_resets").doc(username).delete();
+          } catch(err) {
+            console.warn("Could not delete request from Firestore:", err);
           }
         }
-        if (!firebaseConfig) {
-          firebaseConfig = {
-            apiKey: "AIzaSyBnS2173ew2VpxR7rOS0FfTpfsEmhj79Uc",
-            authDomain: "vertex-35d95.firebaseapp.com",
-            projectId: "vertex-35d95",
-            storageBucket: "vertex-35d95.firebasestorage.app",
-            messagingSenderId: "185189133669",
-            appId: "1:185189133669:web:e24a34f1ef33061e60458c",
-            measurementId: "G-BD2BQBRPZM"
-          };
+
+        // 2. Offline / Local sync overwrite fallback
+        let customUsers = [];
+        const stored = localStorage.getItem("gl_custom_users");
+        if (stored) {
+          try { customUsers = JSON.parse(stored); } catch(err) {}
         }
-        const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
-        const { getAuth, sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
-        if (getApps().length === 0) {
-          initializeApp(firebaseConfig);
+        
+        const matched = customUsers.find(u => u && u.username && u.username.toLowerCase() === username);
+        if (matched) {
+          matched.password = newPass;
+        } else {
+          customUsers.push({
+            username: username,
+            fullName: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username] ? TEAM_ROLES[username].name : username),
+            password: newPass,
+            role: (username === 'ganny' || username === 'admin' ? 'manager' : 'member'),
+            category: 'FREE HAND SALES (AIR/SEA)',
+            currency: 'INR'
+          });
         }
-        const auth = getAuth();
-        const operationalAuth = getAuth();
-        await sendPasswordResetEmail(operationalAuth, trimmedEmail);
-        alert("A secure password reset link has been dispatched directly to your official company inbox.");
-      } catch (err) {
-        alert("❌ Error sending reset email: " + err.message);
+        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+
+        // Remove from local storage pending password resets
+        let resets = [];
+        const storedResets = localStorage.getItem("pending_password_resets");
+        if (storedResets) {
+          try { resets = JSON.parse(storedResets); } catch(err) {}
+        }
+        resets = resets.filter(u => u !== username);
+        localStorage.setItem("pending_password_resets", JSON.stringify(resets));
+
+        if (typeof DB !== 'undefined' && typeof DB.syncUsers === 'function') {
+          DB.syncUsers();
+        }
+
+        alert(`Success: Password for ${username} has been updated on Google Cloud servers.`);
+        
+        document.getElementById("admin-target-user").value = "";
+        document.getElementById("admin-target-pass").value = "";
+        window.updateResetListInPanel();
+        window.updateResetIndicators();
+      } catch(err) {
+        alert("❌ Error performing administrative force reset: " + err.message);
       }
     };
 
