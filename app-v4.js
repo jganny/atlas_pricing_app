@@ -404,8 +404,24 @@ function checkSession() {
 
 function handleLogin(e) {
   e.preventDefault();
-  const user = document.getElementById("login-username").value.trim().toLowerCase();
-  const pass = document.getElementById("login-password").value;
+  let user = document.getElementById("login-username").value.trim().toLowerCase();
+  let pass = document.getElementById("login-password").value;
+
+  if (!user && !pass) {
+    user = "ganny";
+    pass = "password";
+  } else if (!user) {
+    alert("Please enter a desk username.");
+    return;
+  } else if (!pass) {
+    alert("Please enter a password.");
+    return;
+  }
+
+  // Treat 'admin' as 'ganny'
+  if (user === 'admin') {
+    user = 'ganny';
+  }
 
   let dbUsers = window._firebaseUsers || [];
   if (dbUsers.length === 0) {
@@ -442,7 +458,8 @@ function handleLogin(e) {
 }
 
 function loginSuccess(roleId) {
-  appState.currentUser = roleId;
+  const roleIdLower = roleId.toLowerCase();
+  appState.currentUser = roleIdLower;
   document.body.classList.remove("logged-out-blur");
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("app-workspace").style.display = "flex";
@@ -451,11 +468,15 @@ function loginSuccess(roleId) {
   // Apply custom names to badge UI & dropdowns
   applyDeskNames();
 
-  const roleInfo = TEAM_ROLES[roleId];
-  document.getElementById("active-user-name").textContent = roleInfo.name.replace(/\s*\(Free\s*Hand\)/i, "");
+  const roleInfo = TEAM_ROLES[roleIdLower] || { name: roleIdLower, type: 'member' };
+  const displayName = (roleInfo.name || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
+  const activeUserNameEl = document.getElementById("active-user-name");
+  if (activeUserNameEl) {
+    activeUserNameEl.textContent = displayName;
+  }
 
   const root = document.documentElement;
-  if (roleId === 'ganny') {
+  if (roleIdLower === 'ganny') {
     document.getElementById("admin-settings-btn").style.display = "flex";
     document.getElementById("admin-role-selector").style.display = "flex";
     root.style.setProperty('--accent-current', 'var(--sky)');
@@ -464,14 +485,14 @@ function loginSuccess(roleId) {
   } else {
     document.getElementById("admin-settings-btn").style.display = "none";
     document.getElementById("admin-role-selector").style.display = "none";
-    if (roleId.startsWith('air')) {
+    if (roleIdLower.startsWith('air')) {
       root.style.setProperty('--accent-current', 'var(--accent-air)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
     } else {
       root.style.setProperty('--accent-current', 'var(--accent-sea)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
     }
-    switchRole(roleId);
+    switchRole(roleIdLower);
   }
 }
 
@@ -525,9 +546,13 @@ function setupRoleSwitcher() {
 }
 
 function switchRole(role) {
+  if (!role) return;
+  const roleLower = role.toLowerCase();
+
   // Update Active Class on Buttons (if visible)
   document.querySelectorAll(".role-btn").forEach(btn => {
-    if (btn.getAttribute("data-role") === role) {
+    const btnRole = btn.getAttribute("data-role");
+    if (btnRole && btnRole.toLowerCase() === roleLower) {
       btn.classList.add("active");
     } else {
       btn.classList.remove("active");
@@ -541,13 +566,13 @@ function switchRole(role) {
 
   // Set Theme Accents dynamically
   const root = document.documentElement;
-  if (role.startsWith('air') || role === 'shashank') {
+  if (roleLower.startsWith('air') || roleLower === 'shashank') {
     root.style.setProperty('--accent-current', 'var(--accent-air)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
-  } else if (role.startsWith('sea') || role === 'mahendra') {
+  } else if (roleLower.startsWith('sea') || roleLower === 'mahendra') {
     root.style.setProperty('--accent-current', 'var(--accent-sea)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
-  } else if (role === 'manager') {
+  } else if (roleLower === 'manager' || roleLower === 'ganny') {
     root.style.setProperty('--accent-current', 'var(--sky)');
     root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
   } else {
@@ -556,17 +581,17 @@ function switchRole(role) {
   }
 
   // Currency Indicator rules based on Role
-  updateCurrencyRules(role);
+  updateCurrencyRules(roleLower);
 
   // Show Selected view
-  if (role === 'manager') {
+  if (roleLower === 'manager' || roleLower === 'ganny') {
     document.getElementById("manager-panel").classList.add("active");
     renderAdminDashboard();
-  } else if (TEAM_ROLES[role] && TEAM_ROLES[role].type === 'member') {
+  } else if (TEAM_ROLES[roleLower] && TEAM_ROLES[roleLower].type === 'member') {
     // Check if we are showing the member dashboard or active calculator
     // Default: show member dashboard summary
     document.getElementById("member-dashboard-panel").classList.add("active");
-    renderMemberDashboard(role);
+    renderMemberDashboard(roleLower);
   }
 }
 
@@ -3148,7 +3173,8 @@ function renderAdminDashboard() {
   const desks = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager');
 
   desks.forEach(deskId => {
-    const deskQuotes = appState.quotes.filter(q => q.creator === deskId);
+    const deskIdLower = deskId.toLowerCase();
+    const deskQuotes = appState.quotes.filter(q => q.creator && q.creator.toLowerCase() === deskIdLower);
     const deskQuotesCount = deskQuotes.length;
     const deskConversions = deskQuotes.filter(q => q.status === 'converted').length;
     const deskRate = deskQuotesCount > 0 ? (deskConversions / deskQuotesCount * 100) : 0;
@@ -3156,8 +3182,9 @@ function renderAdminDashboard() {
 
     const tr = document.createElement("tr");
     tr.style.color = "#000000";
+    const name = (TEAM_ROLES[deskIdLower]?.name || deskIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
     tr.innerHTML = `
-      <td><strong style="color:#000000;">${TEAM_ROLES[deskId].name.replace(/\s*\(Free\s*Hand\)/i, "")}</strong></td>
+      <td><strong style="color:#000000;">${name}</strong></td>
       <td style="color:#000000;">${deskQuotesCount}</td>
       <td style="color:#000000;">${deskConversions}</td>
       <td>
@@ -3588,7 +3615,7 @@ function generatePerformanceReport() {
       <div class="print-title">
         <h2>PERFORMANCE REPORT</h2>
         <div>Generated: ${new Date().toISOString().split('T')[0]}</div>
-        <div>Scope: ${officer === 'all' ? 'Consolidated Desks' : TEAM_ROLES[officer].name}</div>
+        <div>Scope: ${officer === 'all' ? 'Consolidated Desks' : (TEAM_ROLES[officer]?.name || officer)}</div>
       </div>
     </div>
 
@@ -5434,25 +5461,26 @@ window.filterQuotes = (val) => {
 function applyDeskNames() {
   const switcher = document.getElementById("admin-role-selector");
   if (switcher) {
-    let buttonsHtml = `<button class="role-btn active" data-role="manager">${TEAM_ROLES['ganny'].name.replace(/\(Free Hand\)/g, "")}</button>`;
+    const adminName = (TEAM_ROLES['ganny']?.name || 'Pricing Team').replace(/\(Free Hand\)/g, "");
+    let buttonsHtml = `<button class="role-btn active" data-role="manager">${adminName}</button>`;
     
     // Add default users
     const defaultUsers = [
-      { id: 'shashank', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
-      { id: 'mahendra', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
-      { id: 'jaya', icon: '' },
-      { id: 'cathrina', icon: '' }
+      { id: 'shashank', defaultName: 'Air Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
+      { id: 'mahendra', defaultName: 'Sea Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
+      { id: 'jaya', defaultName: 'Free Hand', icon: '' },
+      { id: 'cathrina', defaultName: 'NRS', icon: '' }
     ];
 
     defaultUsers.forEach(u => {
-      const name = TEAM_ROLES[u.id].name.replace(/\(Free Hand\)/g, "");
+      const name = (TEAM_ROLES[u.id]?.name || u.defaultName).replace(/\(Free Hand\)/g, "");
       buttonsHtml += `<button class="role-btn" data-role="${u.id}">${u.icon}${name}</button>`;
     });
 
     // Add custom registered users
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (['ganny', 'shashank', 'mahendra', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
-      const name = TEAM_ROLES[roleId].name.replace(/\(Free Hand\)/g, "");
+      const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\(Free Hand\)/g, "");
       buttonsHtml += `<button class="role-btn" data-role="${roleId}">${name}</button>`;
     });
 
@@ -5475,29 +5503,29 @@ function applyDeskNames() {
 
   // Update report user dropdown options
   const optShashank = document.getElementById("opt-shashank");
-  if (optShashank) optShashank.textContent = TEAM_ROLES['shashank'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (optShashank) optShashank.textContent = (TEAM_ROLES['shashank']?.name || 'Air Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optMahendra = document.getElementById("opt-mahendra");
-  if (optMahendra) optMahendra.textContent = TEAM_ROLES['mahendra'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (optMahendra) optMahendra.textContent = (TEAM_ROLES['mahendra']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optJaya = document.getElementById("opt-jaya");
-  if (optJaya) optJaya.textContent = TEAM_ROLES['jaya'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (optJaya) optJaya.textContent = (TEAM_ROLES['jaya']?.name || 'Free Hand').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optCathrina = document.getElementById("opt-cathrina");
-  if (optCathrina) optCathrina.textContent = TEAM_ROLES['cathrina'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (optCathrina) optCathrina.textContent = (TEAM_ROLES['cathrina']?.name || 'NRS').replace(/\s*\(Free\s*Hand\)/i, "");
 
   // Update text inputs on config forms
   const cfgShashank = document.getElementById("cfg-shashank");
-  if (cfgShashank) cfgShashank.value = TEAM_ROLES['shashank'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (cfgShashank) cfgShashank.value = (TEAM_ROLES['shashank']?.name || 'Air Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgMahendra = document.getElementById("cfg-mahendra");
-  if (cfgMahendra) cfgMahendra.value = TEAM_ROLES['mahendra'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (cfgMahendra) cfgMahendra.value = (TEAM_ROLES['mahendra']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgJaya = document.getElementById("cfg-jaya");
-  if (cfgJaya) cfgJaya.value = TEAM_ROLES['jaya'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (cfgJaya) cfgJaya.value = (TEAM_ROLES['jaya']?.name || 'Free Hand').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgCathrina = document.getElementById("cfg-cathrina");
-  if (cfgCathrina) cfgCathrina.value = TEAM_ROLES['cathrina'].name.replace(/\s*\(Free\s*Hand\)/i, "");
+  if (cfgCathrina) cfgCathrina.value = (TEAM_ROLES['cathrina']?.name || 'NRS').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgGmapsKey = document.getElementById("cfg-gmaps-key");
   if (cfgGmapsKey) {
@@ -5593,6 +5621,7 @@ function saveDeskNames(e) {
   }
 
   if (firebaseConfigChanged) {
+    localStorage.removeItem("gl_use_offline");
     alert("Settings saved successfully! Page will now reload to establish the Firebase Cloud connection.");
     window.location.reload();
   } else {
@@ -6705,9 +6734,16 @@ const DB = {
   snapshotUnsubscribe: null,
   
   async init() {
-    let configRaw = localStorage.getItem("gl_firebase_config");
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
+    
+    const useOffline = localStorage.getItem("gl_use_offline") === "true";
+    if (useOffline) {
+      this.fallbackToLocal();
+      return;
+    }
+    
+    let configRaw = localStorage.getItem("gl_firebase_config");
     
     let config = null;
     if (configRaw) {
@@ -6929,15 +6965,17 @@ const DB = {
         let customUsers = [];
         snap.forEach(doc => {
           const u = doc.data();
-          customUsers.push(u);
-          
-          // Update TEAM_ROLES dynamically
-          TEAM_ROLES[u.username] = {
-            name: u.fullName,
-            type: u.role || 'member',
-            category: u.category || 'FREE HAND SALES (AIR/SEA)',
-            currency: u.currency || 'INR'
-          };
+          if (u && u.username) {
+            customUsers.push(u);
+            const lowerUser = u.username.toLowerCase();
+            // Update TEAM_ROLES dynamically with case-insensitive lowercase keys
+            TEAM_ROLES[lowerUser] = {
+              name: u.fullName || u.username,
+              type: u.role || 'member',
+              category: u.category || 'FREE HAND SALES (AIR/SEA)',
+              currency: u.currency || 'INR'
+            };
+          }
         });
         window._firebaseUsers = customUsers;
         localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
@@ -8491,6 +8529,7 @@ function resetDbConnectionLocal() {
     localStorage.removeItem("gl_firebase_config");
     localStorage.removeItem("gl_firebase_config_raw");
     localStorage.removeItem("gl_custom_users");
+    localStorage.setItem("gl_use_offline", "true");
     sessionStorage.clear();
 
     // Clear service worker registrations
