@@ -1005,15 +1005,75 @@
                 <input type="text" id="air-dest" placeholder="Type Airport code or city..." autocomplete="off">
               </div>
               <div class="form-group">
-                <label for="air-commodity">Commodity Type</label>
-                <select id="air-commodity">
-                  <option value="GENERAL">GENERAL</option>
-                  <option value="LIVE ANIMALS">LIVE ANIMALS</option>
-                  <option value="HAZARDOUS">HAZARDOUS</option>
-                  <option value="PERISHABLES">PERISHABLES</option>
-                  <option value="PHARMA">PHARMA</option>
+                <label for="air-commodity">Commodity Type / HSN Code</label>
+                <select id="air-commodity" style="font-size: 0.82rem;">
+                  <optgroup label="Operational Commodity Types">
+                    <option value="GENERAL" selected>GENERAL (General Cargo)</option>
+                    <option value="LIVE ANIMALS">LIVE ANIMALS</option>
+                    <option value="HAZARDOUS">HAZARDOUS (DG)</option>
+                    <option value="PERISHABLES">PERISHABLES</option>
+                    <option value="PHARMA">PHARMA / Medical</option>
+                  </optgroup>
+                  <optgroup label="Chapter 01-05 | Live Animals &amp; Animal Products">
+                    <option value="0101 | Live Horses">0101 | Live Horses &amp; Asses</option>
+                    <option value="0201 | Fresh/Chilled Beef">0201 | Fresh / Chilled Beef</option>
+                    <option value="0301 | Live Fish">0301 | Live Fish</option>
+                    <option value="0401 | Milk &amp; Cream">0401 | Milk &amp; Cream</option>
+                  </optgroup>
+                  <optgroup label="Chapter 06-14 | Vegetable Products">
+                    <option value="0901 | Coffee">0901 | Coffee, Raw / Roasted</option>
+                    <option value="1006 | Rice">1006 | Rice</option>
+                    <option value="1201 | Soyabeans">1201 | Soya Beans</option>
+                  </optgroup>
+                  <optgroup label="Chapter 28-38 | Chemicals">
+                    <option value="3002 | Blood Vaccines">3002 | Blood / Vaccines / Antisera</option>
+                    <option value="3004 | Medicines (Retail)">3004 | Medicaments (Retail Packs)</option>
+                    <option value="3208 | Paints &amp; Varnishes">3208 | Paints &amp; Varnishes</option>
+                  </optgroup>
+                  <optgroup label="Chapter 39-40 | Plastics &amp; Rubber">
+                    <option value="3901 | Polyethylene">3901 | Polyethylene, Primary Form</option>
+                    <option value="3904 | PVC">3904 | PVC &amp; Vinyl Copolymers</option>
+                  </optgroup>
+                  <optgroup label="Chapter 50-63 | Textiles &amp; Apparel">
+                    <option value="5201 | Raw Cotton">5201 | Cotton, Not Carded</option>
+                    <option value="5208 | Woven Cotton Fabrics">5208 | Woven Cotton Fabrics</option>
+                    <option value="6101 | Overcoats / Jackets">6101 | Overcoats / Jackets, Knitted</option>
+                    <option value="6201 | Overcoats, Woven">6201 | Overcoats / Jackets, Woven</option>
+                  </optgroup>
+                  <optgroup label="Chapter 64-67 | Footwear, Headgear">
+                    <option value="6401 | Waterproof Footwear">6401 | Waterproof Footwear</option>
+                    <option value="6402 | Sports / Casual Footwear">6402 | Sports / Casual Footwear</option>
+                  </optgroup>
+                  <optgroup label="Chapter 71 | Precious Metals &amp; Stones">
+                    <option value="7101 | Pearls">7101 | Pearls, Natural / Cultured</option>
+                    <option value="7108 | Gold">7108 | Gold (including Gold Plated)</option>
+                  </optgroup>
+                  <optgroup label="Chapter 84-85 | Machinery &amp; Electronics">
+                    <option value="8401 | Nuclear Reactors">8401 | Nuclear Reactors / Boilers</option>
+                    <option value="8415 | Air Conditioning">8415 | Air-Conditioning Units</option>
+                    <option value="8471 | Computers">8471 | Automatic Data Processing Machines</option>
+                    <option value="8517 | Telephones">8517 | Telephones / Smartphones</option>
+                    <option value="8528 | Monitors / Projectors">8528 | Monitors / Projectors / TVs</option>
+                    <option value="8541 | Semiconductors">8541 | Semiconductors / Diodes / LEDs</option>
+                    <option value="8544 | Insulated Wire">8544 | Insulated Wire / Cable</option>
+                  </optgroup>
+                  <optgroup label="Chapter 86-89 | Transport Equipment">
+                    <option value="8701 | Tractors">8701 | Tractors</option>
+                    <option value="8703 | Passenger Cars">8703 | Passenger Cars / SUVs</option>
+                    <option value="8802 | Aircraft">8802 | Aircraft / Helicopters</option>
+                  </optgroup>
+                  <optgroup label="Chapter 90-92 | Instruments &amp; Optics">
+                    <option value="9001 | Optical Fibre">9001 | Optical Fibres / Cables</option>
+                    <option value="9018 | Medical Instruments">9018 | Instruments for Medical Science</option>
+                  </optgroup>
+                  <optgroup label="Chapter 94-96 | Miscellaneous Manufactured Goods">
+                    <option value="9401 | Seats / Chairs">9401 | Seats (Aircraft, Vehicle, Household)</option>
+                    <option value="9403 | Other Furniture">9403 | Office / Kitchen / Bedroom Furniture</option>
+                    <option value="9503 | Toys">9503 | Tricycles, Scooters, Puzzles, Toys</option>
+                  </optgroup>
                 </select>
               </div>
+
             </div>
 
             <!-- Follow-up Temperature Questions -->
@@ -1519,9 +1579,148 @@
                 <label for="sea-liner-name">Liner Name</label>
                 <input type="text" id="sea-liner-name" placeholder="e.g. MSC, Hapag-Lloyd" autocomplete="off">
               </div>
-              <div class="form-group autocomplete-container">
-                <label for="sea-commodity">Commodity</label>
-                <input type="text" id="sea-commodity" placeholder="e.g. General Cargo" autocomplete="off">
+              <div class="form-group">
+                <label for="sea-commodity">Commodity / HSN Code</label>
+                <div style="position: relative;">
+                  <select id="sea-commodity" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%; font-size: 0.85rem;">
+                    <option value="">-- Select Commodity --</option>
+                    <optgroup label="Chapter 01-05 | Live Animals &amp; Animal Products">
+                      <option value="0101 | Live Horses">0101 | Live Horses &amp; Asses</option>
+                      <option value="0201 | Fresh/Chilled Beef">0201 | Fresh / Chilled Beef</option>
+                      <option value="0301 | Live Fish">0301 | Live Fish</option>
+                      <option value="0401 | Milk &amp; Cream">0401 | Milk &amp; Cream</option>
+                      <option value="0501 | Human Hair">0501 | Human Hair, Unworked</option>
+                    </optgroup>
+                    <optgroup label="Chapter 06-14 | Vegetable Products">
+                      <option value="0701 | Potatoes">0701 | Potatoes, Fresh / Chilled</option>
+                      <option value="0901 | Coffee">0901 | Coffee, Raw / Roasted</option>
+                      <option value="1001 | Wheat">1001 | Wheat &amp; Meslin</option>
+                      <option value="1006 | Rice">1006 | Rice</option>
+                      <option value="1201 | Soyabeans">1201 | Soya Beans</option>
+                    </optgroup>
+                    <optgroup label="Chapter 15 | Animal &amp; Vegetable Fats / Oils">
+                      <option value="1511 | Palm Oil">1511 | Palm Oil &amp; Fractions</option>
+                      <option value="1514 | Rapeseed Oil">1514 | Rapeseed / Colza Oil</option>
+                    </optgroup>
+                    <optgroup label="Chapter 16-24 | Prepared Foodstuffs">
+                      <option value="1601 | Sausages">1601 | Sausages &amp; Similar Products</option>
+                      <option value="1701 | Cane / Beet Sugar">1701 | Cane / Beet Sugar</option>
+                      <option value="1901 | Malt Extract">1901 | Malt Extract, Cereal Preparations</option>
+                      <option value="2009 | Fruit Juices">2009 | Fruit Juices, Unfermented</option>
+                      <option value="2101 | Coffee Extracts">2101 | Coffee / Tea Extracts</option>
+                      <option value="2201 | Mineral Water">2201 | Mineral / Aerated Water</option>
+                    </optgroup>
+                    <optgroup label="Chapter 25-27 | Minerals &amp; Fuels">
+                      <option value="2501 | Salt">2501 | Salt, Pure Sodium Chloride</option>
+                      <option value="2601 | Iron Ores">2601 | Iron Ores &amp; Concentrates</option>
+                      <option value="2701 | Coal">2701 | Coal, Briquettes, Ovoids</option>
+                      <option value="2709 | Crude Petroleum">2709 | Crude Petroleum Oils</option>
+                      <option value="2710 | Petroleum Distillates">2710 | Petroleum Distillates (HSD/MS)</option>
+                    </optgroup>
+                    <optgroup label="Chapter 28-38 | Chemicals">
+                      <option value="2801 | Fluorine / Chlorine">2801 | Fluorine / Chlorine / Bromine</option>
+                      <option value="2814 | Ammonia">2814 | Ammonia, Anhydrous</option>
+                      <option value="2901 | Acyclic Hydrocarbons">2901 | Acyclic Hydrocarbons</option>
+                      <option value="3002 | Blood Vaccines">3002 | Blood / Vaccines / Antisera</option>
+                      <option value="3004 | Medicines (Retail)">3004 | Medicaments (Retail Packs)</option>
+                      <option value="3208 | Paints &amp; Varnishes">3208 | Paints &amp; Varnishes</option>
+                      <option value="3401 | Soap">3401 | Soap, Organic Surfactants</option>
+                    </optgroup>
+                    <optgroup label="Chapter 39-40 | Plastics &amp; Rubber">
+                      <option value="3901 | Polyethylene">3901 | Polyethylene, Primary Form</option>
+                      <option value="3904 | PVC">3904 | PVC &amp; Vinyl Copolymers</option>
+                      <option value="4001 | Natural Rubber">4001 | Natural Rubber, Latex</option>
+                      <option value="4002 | Synthetic Rubber">4002 | Synthetic Rubber</option>
+                    </optgroup>
+                    <optgroup label="Chapter 41-43 | Hides, Leather &amp; Furs">
+                      <option value="4101 | Bovine Hides">4101 | Raw Bovine / Equine Hides</option>
+                      <option value="4104 | Tanned Leather">4104 | Tanned / Crust Leather</option>
+                    </optgroup>
+                    <optgroup label="Chapter 44-46 | Wood &amp; Cork">
+                      <option value="4401 | Fuel Wood">4401 | Fuel Wood / Sawdust</option>
+                      <option value="4407 | Sawn Timber">4407 | Sawn / Sliced Timber</option>
+                      <option value="4412 | Plywood">4412 | Plywood, Veneered Panels</option>
+                    </optgroup>
+                    <optgroup label="Chapter 47-49 | Pulp, Paper &amp; Paperboard">
+                      <option value="4701 | Mechanical Wood Pulp">4701 | Mechanical Wood Pulp</option>
+                      <option value="4802 | Uncoated Paper">4802 | Uncoated Paper / Paperboard</option>
+                      <option value="4901 | Printed Books">4901 | Printed Books / Brochures</option>
+                    </optgroup>
+                    <optgroup label="Chapter 50-63 | Textiles &amp; Apparel">
+                      <option value="5201 | Raw Cotton">5201 | Cotton, Not Carded</option>
+                      <option value="5208 | Woven Cotton Fabrics">5208 | Woven Cotton Fabrics</option>
+                      <option value="5402 | Synthetic Filament Yarn">5402 | Synthetic Filament Yarn</option>
+                      <option value="5801 | Woven Pile Fabrics">5801 | Woven Pile Fabrics</option>
+                      <option value="6101 | Overcoats / Jackets">6101 | Overcoats / Jackets, Knitted</option>
+                      <option value="6201 | Overcoats, Woven">6201 | Overcoats / Jackets, Woven</option>
+                      <option value="6301 | Blankets">6301 | Blankets &amp; Travel Rugs</option>
+                    </optgroup>
+                    <optgroup label="Chapter 64-67 | Footwear, Headgear">
+                      <option value="6401 | Waterproof Footwear">6401 | Waterproof Footwear</option>
+                      <option value="6402 | Sports / Casual Footwear">6402 | Sports / Casual Footwear</option>
+                      <option value="6501 | Hat Forms">6501 | Hat Forms / Hat Bodies</option>
+                    </optgroup>
+                    <optgroup label="Chapter 68-70 | Stone, Glass &amp; Ceramics">
+                      <option value="6801 | Natural Stone Slabs">6801 | Setts, Curbstones, Flagstones</option>
+                      <option value="6907 | Ceramic Tiles">6907 | Unglazed Ceramic Tiles</option>
+                      <option value="7001 | Glass Cullet">7001 | Cullet / Other Waste Glass</option>
+                      <option value="7003 | Cast Glass Sheets">7003 | Cast / Rolled Glass Sheets</option>
+                    </optgroup>
+                    <optgroup label="Chapter 71 | Precious Metals &amp; Stones">
+                      <option value="7101 | Pearls">7101 | Pearls, Natural / Cultured</option>
+                      <option value="7108 | Gold">7108 | Gold (including Gold Plated)</option>
+                    </optgroup>
+                    <optgroup label="Chapter 72-83 | Base Metals">
+                      <option value="7201 | Pig Iron">7201 | Pig Iron &amp; Spiegeleisen</option>
+                      <option value="7207 | Steel Billets">7207 | Semi-Finished Steel Products</option>
+                      <option value="7210 | Flat Rolled Steel">7210 | Flat-Rolled Steel (Coated)</option>
+                      <option value="7301 | Sheet Piling">7301 | Sheet Piling &amp; Angles</option>
+                      <option value="7601 | Unwrought Aluminium">7601 | Unwrought Aluminium</option>
+                      <option value="8301 | Padlocks">8301 | Padlocks, Locks, Keys</option>
+                    </optgroup>
+                    <optgroup label="Chapter 84-85 | Machinery &amp; Electronics">
+                      <option value="8401 | Nuclear Reactors">8401 | Nuclear Reactors / Boilers</option>
+                      <option value="8408 | Diesel Engines">8408 | Diesel / Semi-Diesel Engines</option>
+                      <option value="8415 | Air Conditioning">8415 | Air-Conditioning Units</option>
+                      <option value="8418 | Refrigerators">8418 | Refrigerators / Freezers</option>
+                      <option value="8471 | Computers">8471 | Automatic Data Processing Machines</option>
+                      <option value="8517 | Telephones">8517 | Telephones / Smartphones</option>
+                      <option value="8528 | Monitors / Projectors">8528 | Monitors / Projectors / TVs</option>
+                      <option value="8541 | Semiconductors">8541 | Semiconductors / Diodes / LEDs</option>
+                      <option value="8544 | Insulated Wire">8544 | Insulated Wire / Cable</option>
+                    </optgroup>
+                    <optgroup label="Chapter 86-89 | Transport Equipment">
+                      <option value="8601 | Rail Locomotives">8601 | Rail Locomotives (Electric)</option>
+                      <option value="8701 | Tractors">8701 | Tractors</option>
+                      <option value="8702 | Motor Buses">8702 | Motor Buses / Coaches</option>
+                      <option value="8703 | Passenger Cars">8703 | Passenger Cars / SUVs</option>
+                      <option value="8704 | Trucks / Lorries">8704 | Motor Vehicles for Goods</option>
+                      <option value="8802 | Aircraft">8802 | Aircraft / Helicopters</option>
+                      <option value="8901 | Cargo Ships">8901 | Cruise / Passenger Ships</option>
+                      <option value="8902 | Fishing Vessels">8902 | Fishing Vessels</option>
+                    </optgroup>
+                    <optgroup label="Chapter 90-92 | Instruments &amp; Optics">
+                      <option value="9001 | Optical Fibre">9001 | Optical Fibres / Cables</option>
+                      <option value="9018 | Medical Instruments">9018 | Instruments for Medical Science</option>
+                      <option value="9026 | Flow Meters">9026 | Instruments for Measuring Flow</option>
+                    </optgroup>
+                    <optgroup label="Chapter 93 | Arms &amp; Ammunition">
+                      <option value="9301 | Military Weapons">9301 | Military Weapons</option>
+                    </optgroup>
+                    <optgroup label="Chapter 94-96 | Miscellaneous Manufactured Goods">
+                      <option value="9401 | Seats / Chairs">9401 | Seats (Aircraft, Vehicle, Household)</option>
+                      <option value="9403 | Other Furniture">9403 | Office / Kitchen / Bedroom Furniture</option>
+                      <option value="9503 | Toys">9503 | Tricycles, Scooters, Puzzles, Toys</option>
+                      <option value="9601 | Worked Ivory">9601 | Worked Ivory / Bone / Tortoise-shell</option>
+                    </optgroup>
+                    <optgroup label="General / Other">
+                      <option value="GENERAL CARGO">General Cargo (Non-Specific)</option>
+                      <option value="HAZARDOUS CARGO">Hazardous / DG Cargo</option>
+                      <option value="PERISHABLES">Perishables / Cold Chain</option>
+                      <option value="PROJECT CARGO">Project Cargo / ODC</option>
+                    </optgroup>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -1549,6 +1748,40 @@
               <div style="font-size: 0.65rem; color: var(--t3); margin-top: 0.4rem; line-height: 1.4;">
                 * Notice: Google Maps Platform searches may incur usage fees. External links comply with standard Terms
                 of Service (ToS).
+              </div>
+            </div>
+
+            <!-- ===== UNIVERSAL CARGO PARAMETER SELECTORS (FCL / LCL / BB) ===== -->
+            <div class="form-grid-3" style="margin-top: 1rem; margin-bottom: 0.5rem;" id="sea-cargo-params-universal">
+              <div class="form-group">
+                <label for="sea-handling-profile">Handling Profile</label>
+                <select id="sea-handling-profile" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                  <option value="Stackable" selected>Stackable</option>
+                  <option value="Non Stackable">Non Stackable</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sea-orientation-profile">Orientation Profile</label>
+                <select id="sea-orientation-profile" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                  <option value="Tiltable" selected>Tiltable</option>
+                  <option value="Non Tiltable">Non Tiltable</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sea-cargo-risk">Cargo Risk Rating</label>
+                <select id="sea-cargo-risk" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                  <option value="Non Hazardous" selected>Non Hazardous</option>
+                  <option value="Hazardous (DG)">Hazardous (DG)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid-3" style="margin-bottom: 1rem;" id="sea-cargo-params-climate">
+              <div class="form-group">
+                <label for="sea-climate-constraint">Climate Constraints</label>
+                <select id="sea-climate-constraint" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                  <option value="Ambient (15-25 DEG)" selected>Ambient (15-25°C)</option>
+                  <option value="Temperature Controlled (2-8 DEG)">Temperature Controlled (2–8°C)</option>
+                </select>
               </div>
             </div>
 
@@ -1733,6 +1966,45 @@
                 <div class="form-group" id="sea-bb-buy-group" style="margin-bottom: 0; display: none;">
                   <label for="sea-bb-buy-rate">Break Bulk Buy Rate (Per Revenue Ton - RT)</label>
                   <input type="number" id="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="0">
+                </div>
+              </div>
+
+              <!-- ===== BB-ONLY EXTENDED PARAMETERS ===== -->
+              <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed rgba(56,189,248,0.25);">
+                <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 800; color: var(--accent-sea); margin-bottom: 0.85rem;">⚓ Break Bulk Operational Parameters</h4>
+                <div class="form-grid-3">
+                  <div class="form-group">
+                    <label for="sea-bb-operational-mode">Operational Mode</label>
+                    <select id="sea-bb-operational-mode" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                      <option value="Hook to Hook" selected>Hook to Hook</option>
+                      <option value="Standard Wharfage">Standard Wharfage</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="sea-bb-stowage">Stowage Configuration</label>
+                    <select id="sea-bb-stowage" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                      <option value="Under Deck" selected>Under Deck</option>
+                      <option value="On Deck">On Deck</option>
+                    </select>
+                  </div>
+                </div>
+                <!-- LayCan Dual-Calendar Window -->
+                <div style="margin-top: 0.5rem;">
+                  <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--sky); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">⚓ LayCan Window (Laydays / Cancelling)</label>
+                  <div class="form-grid-3">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label for="sea-bb-laydays">Laydays (Earliest)</label>
+                      <input type="date" id="sea-bb-laydays" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label for="sea-bb-cancelling">Cancelling (Latest)</label>
+                      <input type="date" id="sea-bb-cancelling" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label style="display: block; margin-bottom: 0.35rem;">LayCan Duration</label>
+                      <div id="sea-bb-laycan-duration" style="padding: 0.65rem 0.9rem; background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2); border-radius: var(--r-sm); font-size: 0.82rem; font-weight: 700; color: var(--sky); min-height: 42px; display: flex; align-items: center;">— days</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2238,6 +2510,42 @@
                       <td><input type="number" class="chg-rate" value="0.00" step="0.01"
                           oninput="calculateTransportation()"></td>
                     </tr>
+                    <!-- ===== TRANSPORTATION LINE-HAUL METRIC HEADINGS ===== -->
+                    <tr style="background: rgba(56,189,248,0.04);">
+                      <td colspan="2" style="padding: 0.5rem 0.75rem; border-top: 1px dashed rgba(56,189,248,0.25);">
+                        <span style="font-size: 0.7rem; font-weight: 900; color: var(--sky); text-transform: uppercase; letter-spacing: 0.08em;">🚛 Line-Haul Routing Metrics</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Long-Haul Lane Rate" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateTransportation()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Multi-Stop Delivery Surcharge" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateTransportation()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Detention / Demurrage" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateTransportation()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Night Delivery / Time-Slot Premium" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateTransportation()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Cross-Border Handling Fee" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateTransportation()"></td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -2387,6 +2695,42 @@
                     </tr>
                     <tr>
                       <td><input type="text" class="chg-name" value="Documentation & Admin" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <!-- ===== WAREHOUSING FULFILLMENT METRIC HEADINGS ===== -->
+                    <tr style="background: rgba(56,189,248,0.04);">
+                      <td colspan="2" style="padding: 0.5rem 0.75rem; border-top: 1px dashed rgba(56,189,248,0.25);">
+                        <span style="font-size: 0.7rem; font-weight: 900; color: var(--sky); text-transform: uppercase; letter-spacing: 0.08em;">📦 Fulfillment Metrics</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Pick & Pack Operations" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Order Processing Fee" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Inventory Management Charge" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Cross-Docking / Transshipment" readonly
+                          style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01"
+                          oninput="calculateWarehousing()"></td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Returns / Reverse Logistics" readonly
                           style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
                       <td><input type="number" class="chg-rate" value="0.00" step="0.01"
                           oninput="calculateWarehousing()"></td>

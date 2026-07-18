@@ -2578,6 +2578,48 @@ function setupSeaFreightEvents() {
   document.getElementById("sea-tt")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-validity")?.addEventListener("input", calculateSeaFreight);
 
+  // Bind cargo parameter dropdowns (universal — FCL / LCL / BB)
+  const seaCargoParamIds = [
+    "sea-handling-profile",
+    "sea-orientation-profile",
+    "sea-cargo-risk",
+    "sea-climate-constraint"
+  ];
+  seaCargoParamIds.forEach(id => {
+    document.getElementById(id)?.addEventListener("change", calculateSeaFreight);
+  });
+
+  // Bind BB-only operational parameter dropdowns
+  document.getElementById("sea-bb-operational-mode")?.addEventListener("change", calculateSeaFreight);
+  document.getElementById("sea-bb-stowage")?.addEventListener("change", calculateSeaFreight);
+
+  // LayCan dual-calendar — auto-compute duration in days
+  function updateLayCanDuration() {
+    const laydays = document.getElementById("sea-bb-laydays")?.value;
+    const cancelling = document.getElementById("sea-bb-cancelling")?.value;
+    const durationEl = document.getElementById("sea-bb-laycan-duration");
+    if (durationEl) {
+      if (laydays && cancelling) {
+        const diffMs = new Date(cancelling) - new Date(laydays);
+        const diffDays = Math.round(diffMs / 86400000);
+        if (diffDays >= 0) {
+          durationEl.textContent = `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+          durationEl.style.color = diffDays <= 3 ? 'var(--accent-error)' : 'var(--sky)';
+        } else {
+          durationEl.textContent = '⚠ Invalid range';
+          durationEl.style.color = 'var(--accent-error)';
+        }
+      } else {
+        durationEl.textContent = '— days';
+        durationEl.style.color = 'var(--sky)';
+      }
+    }
+    calculateSeaFreight();
+  }
+  document.getElementById("sea-bb-laydays")?.addEventListener("change", updateLayCanDuration);
+  document.getElementById("sea-bb-cancelling")?.addEventListener("change", updateLayCanDuration);
+
+
   // Bind dynamic container line appender
   document.getElementById("sea-add-container")?.addEventListener("click", () => {
     addFclContainerRow();
@@ -2952,6 +2994,19 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.tt = tt;
   appState.currentSeaFreight.validity = validity;
   appState.currentSeaFreight.alternatives = alts;
+
+  // Capture new cargo parameter values into state
+  appState.currentSeaFreight.handlingProfile = document.getElementById("sea-handling-profile")?.value || "Stackable";
+  appState.currentSeaFreight.orientationProfile = document.getElementById("sea-orientation-profile")?.value || "Tiltable";
+  appState.currentSeaFreight.cargoRisk = document.getElementById("sea-cargo-risk")?.value || "Non Hazardous";
+  appState.currentSeaFreight.climateConstraint = document.getElementById("sea-climate-constraint")?.value || "Ambient (15-25 DEG)";
+  // BB-only params
+  if (type === 'bb') {
+    appState.currentSeaFreight.bbOperationalMode = document.getElementById("sea-bb-operational-mode")?.value || "Hook to Hook";
+    appState.currentSeaFreight.bbStowage = document.getElementById("sea-bb-stowage")?.value || "Under Deck";
+    appState.currentSeaFreight.bbLaydays = document.getElementById("sea-bb-laydays")?.value || "";
+    appState.currentSeaFreight.bbCancelling = document.getElementById("sea-bb-cancelling")?.value || "";
+  }
 }
 
 function setupSurchargesEvents(freightType) {
@@ -4203,6 +4258,16 @@ function saveCurrentQuote() {
       tt: tt,
       validity: validity,
       stuffingOption: (document.getElementById("sea-fcl-stuffing-container")?.style.display !== 'none' && document.getElementById("sea-fcl-stuffing")) ? document.getElementById("sea-fcl-stuffing").value : null,
+      // ===== Cargo Parameters (Universal: FCL / LCL / BB) =====
+      handlingProfile: appState.currentSeaFreight.handlingProfile || "Stackable",
+      orientationProfile: appState.currentSeaFreight.orientationProfile || "Tiltable",
+      cargoRisk: appState.currentSeaFreight.cargoRisk || "Non Hazardous",
+      climateConstraint: appState.currentSeaFreight.climateConstraint || "Ambient (15-25 DEG)",
+      // ===== BB-Only Extended Parameters =====
+      bbOperationalMode: appState.currentSeaFreight.type === 'bb' ? (appState.currentSeaFreight.bbOperationalMode || "Hook to Hook") : null,
+      bbStowage: appState.currentSeaFreight.type === 'bb' ? (appState.currentSeaFreight.bbStowage || "Under Deck") : null,
+      bbLaydays: appState.currentSeaFreight.type === 'bb' ? (appState.currentSeaFreight.bbLaydays || "") : null,
+      bbCancelling: appState.currentSeaFreight.type === 'bb' ? (appState.currentSeaFreight.bbCancelling || "") : null,
       alternatives: (() => {
         const alts = [];
         document.querySelectorAll("#sea-alternatives-body tr").forEach(row => {
