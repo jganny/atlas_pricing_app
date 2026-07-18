@@ -390,6 +390,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Authentication System
 function checkSession() {
+  if (DB.isCloud) {
+    // With Firebase Auth, onAuthStateChanged handles session validation.
+    return;
+  }
   const session = sessionStorage.getItem("gl_pricing_session");
   if (session && TEAM_ROLES[session]) {
     loginSuccess(session);
@@ -402,7 +406,7 @@ function checkSession() {
   }
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   let user = document.getElementById("login-username").value.trim().toLowerCase();
   let pass = document.getElementById("login-password").value;
@@ -423,36 +427,49 @@ function handleLogin(e) {
     user = 'ganny';
   }
 
-  let dbUsers = window._firebaseUsers || [];
-  if (dbUsers.length === 0) {
-    const storedCustom = localStorage.getItem("gl_custom_users");
-    if (storedCustom) {
-      try { dbUsers = JSON.parse(storedCustom); } catch(err) {}
-    }
-  }
-
-  const matched = dbUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === user);
-  const validHardcoded = ["ganny", "shashank", "mahendra", "jaya", "cathrina"];
-
-  if (matched) {
-    if (pass === matched.password || (validHardcoded.includes(user) && pass === "password")) {
-      sessionStorage.setItem("gl_pricing_session", user);
+  if (DB.isCloud) {
+    const email = user.includes('@') ? user : `${user}@atlaspricing.com`;
+    try {
+      await firebase.auth().signInWithEmailAndPassword(email, pass);
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
-      loginSuccess(user);
-    } else {
-      alert("Invalid login credentials. Please check your password.");
+    } catch (err) {
+      alert("❌ Login failed: " + err.message);
       document.getElementById("login-password").value = "";
     }
   } else {
-    if (validHardcoded.includes(user) && pass === "password") {
-      sessionStorage.setItem("gl_pricing_session", user);
-      document.getElementById("login-username").value = "";
-      document.getElementById("login-password").value = "";
-      loginSuccess(user);
+    // Offline local storage fallback
+    let dbUsers = window._firebaseUsers || [];
+    if (dbUsers.length === 0) {
+      const storedCustom = localStorage.getItem("gl_custom_users");
+      if (storedCustom) {
+        try { dbUsers = JSON.parse(storedCustom); } catch(err) {}
+      }
+    }
+
+    const matched = dbUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === user);
+    const validHardcoded = ["ganny", "shashank", "mahendra", "jaya", "cathrina"];
+
+    if (matched) {
+      if (pass === matched.password || (validHardcoded.includes(user) && pass === "password")) {
+        sessionStorage.setItem("gl_pricing_session", user);
+        document.getElementById("login-username").value = "";
+        document.getElementById("login-password").value = "";
+        loginSuccess(user);
+      } else {
+        alert("Invalid login credentials. Please check your password.");
+        document.getElementById("login-password").value = "";
+      }
     } else {
-      alert("Invalid login credentials. Please check your username/password.");
-      document.getElementById("login-password").value = "";
+      if (validHardcoded.includes(user) && pass === "password") {
+        sessionStorage.setItem("gl_pricing_session", user);
+        document.getElementById("login-username").value = "";
+        document.getElementById("login-password").value = "";
+        loginSuccess(user);
+      } else {
+        alert("Invalid login credentials. Please check your username/password.");
+        document.getElementById("login-password").value = "";
+      }
     }
   }
 }
@@ -497,13 +514,69 @@ function loginSuccess(roleId) {
 }
 
 function logoutUser() {
-  sessionStorage.removeItem("gl_pricing_session");
-  appState.currentUser = null;
-  document.body.classList.add("logged-out-blur");
-  document.getElementById("login-overlay").style.display = "flex";
-  document.getElementById("app-workspace").style.display = "flex";
-  document.getElementById("subheader-controls").style.display = "flex";
+  if (DB.isCloud) {
+    firebase.auth().signOut().catch(err => {
+      console.error("Auth: Sign out failed:", err);
+    });
+  } else {
+    sessionStorage.removeItem("gl_pricing_session");
+    appState.currentUser = null;
+    document.body.classList.add("logged-out-blur");
+    document.getElementById("login-overlay").style.display = "flex";
+    document.getElementById("app-workspace").style.display = "flex";
+    document.getElementById("subheader-controls").style.display = "flex";
+  }
 }
+
+function renderUserCredentialsList() {
+  const userCredsBody = document.getElementById("admin-user-credentials-body");
+  if (!userCredsBody) return;
+  
+  let dbUsers = window._firebaseUsers || [];
+  if (dbUsers.length === 0) {
+    try {
+      const stored = localStorage.getItem("gl_custom_users");
+      if (stored) dbUsers = JSON.parse(stored) || [];
+    } catch(e) {}
+  }
+  
+  // Default hardcoded users
+  const defaultUsers = [
+    { username: 'ganny', fullName: 'Pricing Team (Admin)', role: 'admin' },
+    { username: 'shashank', fullName: 'Air Nomination', role: 'member', category: 'AIR - NOMINATION' },
+    { username: 'mahendra', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION' },
+    { username: 'jaya', fullName: 'Free Hand Sales', role: 'member', category: 'FREE HAND SALES (AIR/SEA)' },
+    { username: 'cathrina', fullName: 'NRS', role: 'member', category: 'NRS (AIR/SEA)' }
+  ];
+  
+  // Combine unique users
+  const allUsersMap = {};
+  defaultUsers.forEach(u => allUsersMap[u.username] = u);
+  dbUsers.forEach(u => {
+    if (u && u.username) {
+      allUsersMap[u.username.toLowerCase()] = {
+        username: u.username,
+        fullName: u.fullName || u.username,
+        role: u.role || 'member',
+        category: u.category || 'FREE HAND SALES (AIR/SEA)'
+      };
+    }
+  });
+  
+  const allUsers = Object.values(allUsersMap);
+  userCredsBody.innerHTML = allUsers.map(u => {
+    const roleCat = u.category || (u.role === 'admin' ? 'Admin' : 'Member');
+    return `
+      <tr>
+        <td><strong>${u.username}</strong></td>
+        <td>${u.fullName}</td>
+        <td><span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.1); color: var(--t1); font-weight: 600;">${roleCat}</span></td>
+        <td><span style="color: var(--accent-success); font-family: monospace; font-size: 0.7rem;">Firebase Secure Auth</span></td>
+      </tr>
+    `;
+  }).join("");
+}
+window.renderUserCredentialsList = renderUserCredentialsList;
 
 // Load Airports & Airlines Data
 async function loadData() {
@@ -3200,6 +3273,11 @@ function renderAdminDashboard() {
   // Render Master logs using Filter & Sort
   applyDbFiltersAndSort();
 
+  // Render user credentials list securely
+  if (typeof renderUserCredentialsList === 'function') {
+    renderUserCredentialsList();
+  }
+
   // Render Amendment Requests List for Ganny
   const reqPanel = document.getElementById("admin-amendment-requests-panel");
   const reqList = document.getElementById("admin-amendment-requests-list");
@@ -5648,7 +5726,6 @@ async function registerNewUserProfile(e) {
   const newUser = {
     username,
     fullName,
-    password,
     role: 'member',
     category: 'FREE HAND SALES (AIR/SEA)',
     currency: 'INR'
@@ -5656,6 +5733,18 @@ async function registerNewUserProfile(e) {
 
   try {
     if (DB.firestoreRef) {
+      const email = `${username}@atlaspricing.com`;
+      // Create secondary app instance for registration to prevent signing out the current admin
+      const configRaw = localStorage.getItem("gl_firebase_config");
+      const config = configRaw ? JSON.parse(configRaw) : DEFAULT_FIREBASE_CONFIG;
+      const secondaryApp = firebase.initializeApp(config, "SecondaryApp");
+      try {
+        await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
+        await secondaryApp.delete();
+      } catch (authErr) {
+        await secondaryApp.delete();
+        throw authErr;
+      }
       await DB.firestoreRef.collection("users").doc(username).set(newUser);
     } else {
       let customUsers = [];
@@ -5663,7 +5752,9 @@ async function registerNewUserProfile(e) {
       if (stored) {
         try { customUsers = JSON.parse(stored); } catch(err) {}
       }
-      customUsers.push(newUser);
+      // Offline mode still saves password locally for fallback login
+      const localNewUser = { ...newUser, password };
+      customUsers.push(localNewUser);
       localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
     }
     
@@ -5679,6 +5770,9 @@ async function registerNewUserProfile(e) {
     document.getElementById("reg-password").value = "";
     
     alert(`User Profile for "${fullName}" registered successfully! They can now log in using "${username}".`);
+    if (typeof renderUserCredentialsList === 'function') {
+      renderUserCredentialsList();
+    }
   } catch (err) {
     alert("❌ Error registering user: " + err.message);
   }
@@ -6785,6 +6879,24 @@ const DB = {
         if (statusText) statusText.textContent = "Firebase Cloud (Online)";
         
         this.registerSnapshotListener();
+
+        // Setup persistent auth listener
+        firebase.auth().onAuthStateChanged(user => {
+          if (user) {
+            console.log("Auth: user logged in", user.email);
+            const username = user.email.split('@')[0].toLowerCase();
+            sessionStorage.setItem("gl_pricing_session", username);
+            loginSuccess(username);
+          } else {
+            console.log("Auth: user logged out");
+            sessionStorage.removeItem("gl_pricing_session");
+            appState.currentUser = null;
+            document.body.classList.add("logged-out-blur");
+            document.getElementById("login-overlay").style.display = "flex";
+            document.getElementById("app-workspace").style.display = "flex";
+            document.getElementById("subheader-controls").style.display = "flex";
+          }
+        });
         
         // Check for migration from local to cloud
         const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
@@ -6946,13 +7058,13 @@ const DB = {
     try {
       const snapshot = await this.firestoreRef.collection("users").get();
       if (snapshot.empty) {
-        // Auto-populate default roles if empty
+        // Auto-populate default roles if empty (passwords omitted, handled via Firebase Auth console / registration)
         const defaultUsers = [
-          { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin' },
-          { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-          { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
-          { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
-          { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
+          { username: 'ganny', fullName: 'Pricing Team (Admin)', role: 'admin' },
+          { username: 'shashank', fullName: 'Air Nomination', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
+          { username: 'mahendra', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+          { username: 'jaya', fullName: 'Free Hand Sales', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
+          { username: 'cathrina', fullName: 'NRS', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
         ];
         for (const u of defaultUsers) {
           await this.firestoreRef.collection("users").doc(u.username).set(u);
@@ -6980,6 +7092,9 @@ const DB = {
         window._firebaseUsers = customUsers;
         localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
         console.log("DB: Synced users from Firestore count:", customUsers.length);
+        if (typeof window.renderUserCredentialsList === 'function') {
+          window.renderUserCredentialsList();
+        }
       });
     } catch (err) {
       console.error("DB: Failed to sync users from Firestore:", err);
@@ -7284,12 +7399,10 @@ async function saveNewPassword(e) {
   if (!currentUser) return;
 
   try {
-    if (DB.firestoreRef) {
-      // Find dynamic user document in Firestore and update
-      await DB.firestoreRef.collection("users").doc(currentUser).update({
-        password: newPass
-      });
-      alert("🎉 Password updated successfully in Cloud Database!");
+    if (DB.firestoreRef && firebase.auth().currentUser) {
+      // Securely update password via Firebase Auth
+      await firebase.auth().currentUser.updatePassword(newPass);
+      alert("🎉 Password updated successfully in Firebase Authentication!");
     } else {
       // Offline local storage fallback
       let customUsers = [];
