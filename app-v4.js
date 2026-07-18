@@ -434,38 +434,55 @@ async function handleLogin(e) {
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
     } catch (err) {
-      if (err.code === 'auth/user-not-found') {
-        let shouldCreate = false;
-        const validHardcoded = ["ganny", "ganesh", "shashank", "mahendra", "jaya", "cathrina"];
-        if (validHardcoded.includes(user) && pass === "password") {
-          shouldCreate = true;
-        } else {
-          try {
-            const userDoc = await DB.firestoreRef.collection("users").doc(user).get();
-            if (userDoc.exists && userDoc.data().password === pass) {
-              shouldCreate = true;
-            }
-          } catch (docErr) {
-            console.warn("Could not check Firestore user doc:", docErr);
-          }
+      console.warn("Firebase Auth failed, checking database fallback:", err.message);
+      
+      let matchedPass = false;
+      
+      // Check database users document directly
+      try {
+        const userDoc = await DB.firestoreRef.collection("users").doc(user).get();
+        if (userDoc.exists && userDoc.data().password === pass) {
+          matchedPass = true;
         }
+      } catch (docErr) {
+        console.warn("Could not check Firestore user doc:", docErr);
+      }
 
-        if (shouldCreate) {
-          try {
-            await firebase.auth().createUserWithEmailAndPassword(email, pass);
-            document.getElementById("login-username").value = "";
-            document.getElementById("login-password").value = "";
-            return;
-          } catch (createErr) {
-            alert("❌ Login failed: " + createErr.message);
-          }
-        } else {
-          alert("❌ Login failed: " + err.message);
+      // Hardcoded defaults check
+      const validHardcoded = ["ganny", "ganesh", "shashank", "mahendra", "jaya", "cathrina"];
+      if (validHardcoded.includes(user) && pass === "password") {
+        matchedPass = true;
+      }
+
+      // Local storage custom users check
+      if (!matchedPass) {
+        let customUsers = [];
+        const storedCustom = localStorage.getItem("gl_custom_users");
+        if (storedCustom) {
+          try { customUsers = JSON.parse(storedCustom); } catch (e) {}
+        }
+        const matchedLocal = customUsers.find(u => u && u.username && u.username.toLowerCase() === user);
+        if (matchedLocal && matchedLocal.password === pass) {
+          matchedPass = true;
+        }
+      }
+
+      if (matchedPass) {
+        sessionStorage.setItem("gl_pricing_session", user);
+        document.getElementById("login-username").value = "";
+        document.getElementById("login-password").value = "";
+        loginSuccess(user);
+        
+        // Auto-create/sync Firebase Auth in the background
+        try {
+          await firebase.auth().createUserWithEmailAndPassword(email, pass);
+        } catch (syncErr) {
+          console.log("Background auth sync skipped/failed:", syncErr.message);
         }
       } else {
-        alert("❌ Login failed: " + err.message);
+        alert("❌ Login failed: Invalid username or password.");
+        document.getElementById("login-password").value = "";
       }
-      document.getElementById("login-password").value = "";
     }
   } else {
     // Offline local storage fallback
