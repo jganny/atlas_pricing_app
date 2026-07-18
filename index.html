@@ -3035,20 +3035,21 @@
   <script>
     window.handleForgotPassword = async function(e) {
       e.preventDefault();
-      const username = document.getElementById("login-username").value.trim().toLowerCase();
-      if (!username) {
-        alert("Please enter your Desk Username first in the input field.");
+      const validatedEmail = prompt("Please enter your official corporate email address to receive a secure password reset link:");
+      if (validatedEmail === null) {
         return;
       }
-      
-      const email = username.includes("@") ? username : `${username}@atlaspricing.com`;
+      const trimmedEmail = validatedEmail.trim();
+      const emailRegex = /@blr\.atlaslogistics\.co\.in$|@atlaslogistics\.ae$/i;
+      if (!emailRegex.test(trimmedEmail)) {
+        alert("Access Denied. Only approved @blr.atlaslogistics.co.in or @atlaslogistics.ae corporate email domains are permitted.");
+        return;
+      }
       try {
-        if (typeof firebase !== 'undefined' && firebase.auth) {
-          await firebase.auth().sendPasswordResetEmail(email);
-          alert(`🎉 A secure password reset link has been dispatched to ${email}. Please check your inbox.`);
-        } else {
-          alert("Firebase SDK not initialized or app is running offline.");
-        }
+        const { getAuth, sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+        const auth = getAuth();
+        await sendPasswordResetEmail(auth, trimmedEmail);
+        alert("A secure password reset link has been dispatched directly to your official company inbox.");
       } catch (err) {
         alert("❌ Error sending reset email: " + err.message);
       }
