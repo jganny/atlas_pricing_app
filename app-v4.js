@@ -434,7 +434,37 @@ async function handleLogin(e) {
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
     } catch (err) {
-      alert("❌ Login failed: " + err.message);
+      if (err.code === 'auth/user-not-found') {
+        let shouldCreate = false;
+        const validHardcoded = ["ganny", "ganesh", "shashank", "mahendra", "jaya", "cathrina"];
+        if (validHardcoded.includes(user) && pass === "password") {
+          shouldCreate = true;
+        } else {
+          try {
+            const userDoc = await DB.firestoreRef.collection("users").doc(user).get();
+            if (userDoc.exists && userDoc.data().password === pass) {
+              shouldCreate = true;
+            }
+          } catch (docErr) {
+            console.warn("Could not check Firestore user doc:", docErr);
+          }
+        }
+
+        if (shouldCreate) {
+          try {
+            await firebase.auth().createUserWithEmailAndPassword(email, pass);
+            document.getElementById("login-username").value = "";
+            document.getElementById("login-password").value = "";
+            return;
+          } catch (createErr) {
+            alert("❌ Login failed: " + createErr.message);
+          }
+        } else {
+          alert("❌ Login failed: " + err.message);
+        }
+      } else {
+        alert("❌ Login failed: " + err.message);
+      }
       document.getElementById("login-password").value = "";
     }
   } else {
