@@ -3084,7 +3084,17 @@
 
       if (selectorClickCount >= 5) {
         selectorClickCount = 0;
-        window.openAdminResetOverlay();
+        const passkey = prompt("Enter Admin Master Passkey:");
+        if (passkey === "MasterPricing2026") {
+          window.openAdminResetOverlay();
+          window.adminPanelActivated = true;
+          document.getElementById("admin-passkey-sec").style.display = "none";
+          document.getElementById("admin-inputs-sec").style.display = "block";
+          if (window.updateResetListInPanel) window.updateResetListInPanel();
+          if (window.updateResetIndicators) window.updateResetIndicators();
+        } else if (passkey !== null) {
+          alert("❌ Invalid Passkey. Access Denied.");
+        }
       }
     };
 
@@ -3146,7 +3156,7 @@
 
     window.verifyAdminPasskey = function() {
       const entered = document.getElementById("admin-passkey-input").value;
-      const MASTER_PASSKEY = "SECRET_ADMIN_PASSKEY";
+      const MASTER_PASSKEY = "MasterPricing2026";
       if (entered === MASTER_PASSKEY) {
         window.adminPanelActivated = true;
         document.getElementById("admin-passkey-sec").style.display = "none";
