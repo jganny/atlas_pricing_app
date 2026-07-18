@@ -428,7 +428,14 @@ async function handleLogin(e) {
   }
 
   if (DB.isCloud) {
-    const email = user.includes('@') ? user : `${user}@atlaspricing.com`;
+    let email;
+    if (user === 'ganny') {
+      email = 'ganny@atlaslogistics.ae';
+    } else if (user === 'ganesh') {
+      email = 'ganesh@blr.atlaslogistics.co.in';
+    } else {
+      email = user.includes('@') ? user : `${user}@pricing.local`;
+    }
     try {
       await firebase.auth().signInWithEmailAndPassword(email, pass);
       document.getElementById("login-username").value = "";
