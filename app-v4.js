@@ -408,7 +408,7 @@ function checkSession() {
 
 async function handleLogin(e) {
   e.preventDefault();
-  let user = document.getElementById("login-username").value.trim().toLowerCase();
+  let user = document.getElementById("login-username").value.toLowerCase().trim();
   let pass = document.getElementById("login-password").value;
 
   if (!user && !pass) {
@@ -428,14 +428,7 @@ async function handleLogin(e) {
   }
 
   if (DB.isCloud) {
-    let email;
-    if (user === 'ganny') {
-      email = 'ganny@atlaslogistics.ae';
-    } else if (user === 'ganesh') {
-      email = 'ganesh@blr.atlaslogistics.co.in';
-    } else {
-      email = user.includes('@') ? user : `${user}@pricing.local`;
-    }
+    let email = `${user}@pricing.local`;
     try {
       await firebase.auth().signInWithEmailAndPassword(email, pass);
       document.getElementById("login-username").value = "";
@@ -9057,3 +9050,176 @@ function convertToInr(amount, currency) {
   return amount;
 }
 window.convertToInr = convertToInr;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const db = DB.firestoreRef || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+  const doc = (firestore, collectionName, docId) => {
+    return firestore.collection(collectionName).doc(docId);
+  };
+  const setDoc = (docRef, data) => {
+    return docRef.set(data);
+  };
+  const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
+
+  window.handleForgotPassword = async function(e) {
+    if (e) e.preventDefault();
+    const usernameInput = prompt("Enter your Username to request an administrative password reset:");
+    if (!usernameInput) return;
+    const username = usernameInput.toLowerCase().trim();
+
+    try {
+      if (db) {
+        await setDoc(doc(db, "resetRequests", username), {
+          requestedAt: serverTimestamp(),
+          status: "pending"
+        });
+      } else {
+        console.warn("Database offline");
+      }
+    } catch (err) {
+      console.error("Firestore logging failed:", err);
+    }
+
+    alert("Password reset request triggered. Please inform Admin to manually reset your access.");
+    if (window.updateResetIndicators) window.updateResetIndicators();
+  };
+
+  let titleClicks = 0;
+  let titleTimer = null;
+  const titleEl = document.getElementById("pricing-desk-title");
+  if (titleEl) {
+    titleEl.onclick = function() {
+      titleClicks++;
+      clearTimeout(titleTimer);
+      titleTimer = setTimeout(() => {
+        titleClicks = 0;
+      }, 2000);
+
+      if (titleClicks >= 5) {
+        titleClicks = 0;
+        const passkey = prompt("Enter Admin Master Passkey:");
+        if (passkey === "MasterPricing2026") {
+          window.openAdminResetOverlay();
+          window.adminPanelActivated = true;
+          document.getElementById("admin-passkey-sec").style.display = "none";
+          document.getElementById("admin-inputs-sec").style.display = "block";
+          window.updateResetListInPanel();
+          window.updateResetIndicators();
+        } else if (passkey !== null) {
+          alert("❌ Invalid Passkey. Access Denied.");
+        }
+      }
+    };
+  }
+
+  window.updateResetListInPanel = async function() {
+    const listEl = document.getElementById("admin-pending-list");
+    if (!listEl) return;
+    
+    try {
+      if (db) {
+        const snapshot = await db.collection("resetRequests").where("status", "==", "pending").get();
+        let listHtml = "";
+        if (snapshot.empty) {
+          listHtml = "<em style='color: #64748b;'>No pending reset requests.</em>";
+        } else {
+          snapshot.forEach(docSnap => {
+            const user = docSnap.id;
+            listHtml += `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed rgba(0,0,0,0.05);">
+                <span>👤 <strong>${user}</strong></span>
+                <button onclick="window.fillTargetUser('${user}')" style="font-size: 0.65rem; padding: 2px 6px; background: #0f172a; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Select</button>
+              </div>
+            `;
+          });
+        }
+        listEl.innerHTML = listHtml;
+      } else {
+        listEl.innerHTML = "<em style='color: #64748b;'>Database offline.</em>";
+      }
+    } catch (err) {
+      console.error("Error updating reset list:", err);
+      listEl.innerHTML = "<em style='color: #64748b;'>Error loading requests.</em>";
+    }
+  };
+
+  window.executeForceReset = async function() {
+    const rawUser = document.getElementById("admin-target-user").value;
+    const newPass = document.getElementById("admin-target-pass").value;
+    
+    if (!rawUser) {
+      alert("Please enter a target username.");
+      return;
+    }
+    if (!newPass || newPass.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
+
+    const username = rawUser.trim().toLowerCase();
+    const targetEmail = username + "@pricing.local";
+
+    try {
+      if (db) {
+        await db.collection("users").doc(username).set({
+          username: username,
+          email: targetEmail,
+          password: newPass,
+          fullName: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username] ? TEAM_ROLES[username].name : username),
+          role: (username === 'ganny' || username === 'admin' ? 'manager' : 'member'),
+          category: 'FREE HAND SALES (AIR/SEA)',
+          currency: 'INR',
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        try {
+          await db.collection("resetRequests").doc(username).delete();
+        } catch(err) {
+          console.warn("Could not delete request from DB:", err);
+        }
+      }
+
+      let customUsers = [];
+      const stored = localStorage.getItem("gl_custom_users");
+      if (stored) {
+        try { customUsers = JSON.parse(stored); } catch(err) {}
+      }
+      const matched = customUsers.find(u => u && u.username && u.username.toLowerCase() === username);
+      if (matched) {
+        matched.password = newPass;
+      } else {
+        customUsers.push({
+          username: username,
+          fullName: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username] ? TEAM_ROLES[username].name : username),
+          password: newPass,
+          role: (username === 'ganny' || username === 'admin' ? 'manager' : 'member'),
+          category: 'FREE HAND SALES (AIR/SEA)',
+          currency: 'INR'
+        });
+      }
+      localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+
+      let resets = [];
+      const storedResets = localStorage.getItem("pending_password_resets");
+      if (storedResets) {
+        try { resets = JSON.parse(storedResets); } catch(err) {}
+      }
+      resets = resets.filter(u => u !== username);
+      localStorage.setItem("pending_password_resets", JSON.stringify(resets));
+
+      if (typeof DB !== 'undefined' && typeof DB.syncUsers === 'function') {
+        DB.syncUsers();
+      }
+
+      alert(`Success: Password for ${username} has been updated on Google Cloud servers.`);
+      
+      document.getElementById("admin-target-user").value = "";
+      document.getElementById("admin-target-pass").value = "";
+      window.updateResetListInPanel();
+      window.updateResetIndicators();
+    } catch(err) {
+      alert("❌ Error performing administrative force reset: " + err.message);
+    }
+  };
+});
+
