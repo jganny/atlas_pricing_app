@@ -1976,13 +1976,13 @@
       <!-- ==================== CUSTOM CLEARANCE PANEL ==================== -->
       <div id="custom-clearance-panel" class="view-panel">
         <div class="calculator-header"
-          style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+          style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
             <div
               style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
               Operational Desk</div>
             <h2
-              style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
+              style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
               CUSTOM CLEARANCE DESK</h2>
           </div>
           <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
@@ -1997,12 +1997,12 @@
                 Pathway Selector</label>
               <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
                 <label
-                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700; text-align: left;">
+                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: var(--t2); font-weight: 700; text-align: left;">
                   <input type="radio" name="custom-pathway" value="bundled" checked
                     onchange="toggleModulePathway('custom', 'bundled')"> Pathway A (Bundled with Freight)
                 </label>
                 <label
-                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700; text-align: left;">
+                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: var(--t2); font-weight: 700; text-align: left;">
                   <input type="radio" name="custom-pathway" value="standalone"
                     onchange="toggleModulePathway('custom', 'standalone')"> Pathway B (Standalone)
                 </label>
@@ -2011,7 +2011,7 @@
 
             <!-- Pathway A container -->
             <div id="custom-path-bundled-container">
-              <h4 style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Pathway A: Bundled
+              <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--sky); margin-bottom: 0.5rem;">Pathway A: Bundled
                 Surcharges</h4>
               <p style="font-size: 0.82rem; color: var(--t3); line-height: 1.5; margin-bottom: 1.5rem;">
                 In **Pathway A (Bundled)**, Custom Clearance fees are inputted directly as sub-items under standard
@@ -2036,14 +2036,14 @@
             <!-- Pathway B container -->
             <div id="custom-path-standalone-container" style="display: none;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
-                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: #fff; margin: 0;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: var(--sky); margin: 0;">
                   Standalone Breakup Calculations</h4>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <button type="button" class="btn-primary" onclick="addTableColumn('custom')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700;">+ Add Column</button>
                   <button type="button" class="btn-secondary" onclick="deleteTableColumn('custom')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: var(--rose); color: #fff; border-color: var(--rose);">- Delete Column</button>
                   <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
                   <select id="custom-currency" onchange="calculateCustomClearance()"
-                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
+                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
                     <option value="INR" selected>INR - Indian Rupee (₹)</option>
                     <option value="USD">USD - US Dollar ($)</option>
                     <option value="EUR">EUR - Euro (€)</option>
@@ -2130,13 +2130,13 @@
       <!-- ==================== TRANSPORTATION PANEL ==================== -->
       <div id="transportation-panel" class="view-panel">
         <div class="calculator-header"
-          style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+          style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
             <div
               style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
               Operational Desk</div>
             <h2
-              style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
+              style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
               TRANSPORTATION DESK</h2>
           </div>
           <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
@@ -2150,12 +2150,12 @@
                 Pathway Selector</label>
               <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
                 <label
-                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700; text-align: left;">
+                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: var(--t2); font-weight: 700; text-align: left;">
                   <input type="radio" name="transport-pathway" value="bundled" checked
                     onchange="toggleModulePathway('transport', 'bundled')"> Pathway A (Bundled with Freight)
                 </label>
                 <label
-                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700; text-align: left;">
+                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: var(--t2); font-weight: 700; text-align: left;">
                   <input type="radio" name="transport-pathway" value="standalone"
                     onchange="toggleModulePathway('transport', 'standalone')"> Pathway B (Standalone)
                 </label>
@@ -2164,7 +2164,7 @@
 
             <!-- Pathway A container -->
             <div id="transport-path-bundled-container">
-              <h4 style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Pathway A: Bundled
+              <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--sky); margin-bottom: 0.5rem;">Pathway A: Bundled
                 Surcharges</h4>
               <p style="font-size: 0.82rem; color: var(--t3); line-height: 1.5; margin-bottom: 1.5rem;">
                 In **Pathway A (Bundled)**, Transportation fees are inputted directly as sub-items under standard Origin
@@ -2189,14 +2189,14 @@
             <!-- Pathway B container -->
             <div id="transport-path-standalone-container" style="display: none;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
-                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: #fff; margin: 0;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: var(--sky); margin: 0;">
                   Standalone Breakup Calculations</h4>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <button type="button" class="btn-primary" onclick="addTableColumn('transport')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700;">+ Add Column</button>
                   <button type="button" class="btn-secondary" onclick="deleteTableColumn('transport')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: var(--rose); color: #fff; border-color: var(--rose);">- Delete Column</button>
                   <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
                   <select id="transport-currency" onchange="calculateTransportation()"
-                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
+                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
                     <option value="INR" selected>INR - Indian Rupee (₹)</option>
                     <option value="USD">USD - US Dollar ($)</option>
                     <option value="EUR">EUR - Euro (€)</option>
@@ -2283,13 +2283,13 @@
       <!-- ==================== WAREHOUSING PANEL ==================== -->
       <div id="warehousing-panel" class="view-panel">
         <div class="calculator-header"
-          style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+          style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
             <div
               style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
               Operational Desk</div>
             <h2
-              style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
+              style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
               WAREHOUSING DESK</h2>
           </div>
           <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
@@ -2303,12 +2303,12 @@
                 Pathway Selector</label>
               <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
                 <label
-                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700; text-align: left;">
+                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: var(--t2); font-weight: 700; text-align: left;">
                   <input type="radio" name="warehouse-pathway" value="bundled" checked
                     onchange="toggleModulePathway('warehouse', 'bundled')"> Pathway A (Bundled with Freight)
                 </label>
                 <label
-                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: #fff; font-weight: 700; text-align: left;">
+                  style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; color: var(--t2); font-weight: 700; text-align: left;">
                   <input type="radio" name="warehouse-pathway" value="standalone"
                     onchange="toggleModulePathway('warehouse', 'standalone')"> Pathway B (Standalone)
                 </label>
@@ -2317,7 +2317,7 @@
 
             <!-- Pathway A container -->
             <div id="warehouse-path-bundled-container">
-              <h4 style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Pathway A: Bundled
+              <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--sky); margin-bottom: 0.5rem;">Pathway A: Bundled
                 Surcharges</h4>
               <p style="font-size: 0.82rem; color: var(--t3); line-height: 1.5; margin-bottom: 1.5rem;">
                 In **Pathway A (Bundled)**, Warehousing fees are inputted directly as sub-items under standard Origin
@@ -2342,14 +2342,14 @@
             <!-- Pathway B container -->
             <div id="warehouse-path-standalone-container" style="display: none;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
-                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: #fff; margin: 0;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: var(--sky); margin: 0;">
                   Standalone Breakup Calculations</h4>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <button type="button" class="btn-primary" onclick="addTableColumn('warehouse')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700;">+ Add Column</button>
                   <button type="button" class="btn-secondary" onclick="deleteTableColumn('warehouse')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: var(--rose); color: #fff; border-color: var(--rose);">- Delete Column</button>
                   <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
                   <select id="warehouse-currency" onchange="calculateWarehousing()"
-                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
+                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
                     <option value="INR" selected>INR - Indian Rupee (₹)</option>
                     <option value="USD">USD - US Dollar ($)</option>
                     <option value="EUR">EUR - Euro (€)</option>
