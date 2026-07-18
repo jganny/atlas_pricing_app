@@ -1297,7 +1297,7 @@ body.logged-out-blur #subheader-controls {
   max-height: 100vh !important;
   width: 100vw !important;
   overflow: hidden !important;
-  display: flex !important;
+  display: flex;
   justify-content: center !important;
   align-items: center !important;
   min-height: 100vh !important;
