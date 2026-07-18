@@ -10468,30 +10468,29 @@ window.ensureSeaBaseFreightCurrencySelectors = function () {
 
 document.getElementById("sea-bb-curr").addEventListener("change", calculateSeaFreight);
 document.getElementById("sea-bb-rate").addEventListener("input", calculateSeaFreight);
+
+if (parent.dataset.currencyFormatted !== "export") {
+  parent.dataset.currencyFormatted = "export";
+  const currentVal = bbRate.value;
+  const label = document.getElementById("sea-bb-rate-label");
+  if (label) {
+    label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
+  }
+  parent.querySelector("div")?.remove();
+  const inp = document.createElement("input");
+  inp.type = "number";
+  inp.id = "sea-bb-rate";
+  inp.value = currentVal;
+  inp.placeholder = "Rate";
+  inp.min = "0";
+  parent.appendChild(inp);
+  inp.addEventListener("input", calculateSeaFreight);
 } else {
-  if (parent.dataset.currencyFormatted !== "export") {
-    parent.dataset.currencyFormatted = "export";
-    const currentVal = bbRate.value;
-    const label = document.getElementById("sea-bb-rate-label");
-    if (label) {
-      label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
-    }
-    parent.querySelector("div")?.remove();
-    const inp = document.createElement("input");
-    inp.type = "number";
-    inp.id = "sea-bb-rate";
-    inp.value = currentVal;
-    inp.placeholder = "Rate";
-    inp.min = "0";
-    parent.appendChild(inp);
-    inp.addEventListener("input", calculateSeaFreight);
-  } else {
-    const label = document.getElementById("sea-bb-rate-label");
-    if (label) {
-      const span = label.querySelector(".curr-label");
-      if (span) {
-        span.textContent = qCur;
-      }
+  const label = document.getElementById("sea-bb-rate-label");
+  if (label) {
+    const span = label.querySelector(".curr-label");
+    if (span) {
+      span.textContent = qCur;
     }
   }
 }
