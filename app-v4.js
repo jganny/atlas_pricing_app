@@ -1,13 +1,3 @@
-var type = 'global';
-window.qCur = window.qCur || "USD";
-// Bypass crashes for deleted landing configurations
-if (typeof landingConfigurations === 'undefined') {
-  window.landingConfigurations = [];
-}
-if (typeof landingConfig === 'undefined') {
-  window.landingConfig = 'USD';
-}
-
 // Exchange Rates
 let EXCHANGE_RATES = {
   USD_TO_INR: 83.50,
@@ -101,7 +91,7 @@ window.isEligibleDeskUser = isEligibleDeskUser;
 
 // Global App State
 let appState = {
-  currentUser: null,
+  currentUser: null, // User Role Object
   airports: [],
   airlines: [],
   quotes: [],
@@ -110,7 +100,7 @@ let appState = {
     destination: '',
     airline: '',
     dimUnit: 'cms',
-    module: 'export',
+    module: 'export', // 'export' or 'import'
     cargoItems: [{ length: '', width: '', height: '', qty: '', grossWeight: '' }],
     rates: { min: '', minus45: '', plus45: '', plus100: '', plus300: '', plus500: '', plus1000: '' },
     surcharges: [{ name: 'Xray', rate: 0.00, unit: 'kg' }, { name: 'Cartage', rate: 6.00, unit: 'flat' }, { name: 'Misc', rate: 6.00, unit: 'flat' }],
@@ -122,8 +112,8 @@ let appState = {
     origin: '',
     destination: '',
     shippingLine: '',
-    type: 'fcl',
-    module: 'export',
+    type: 'fcl', // 'fcl', 'lcl', or 'bb' (break bulk)
+    module: 'export', // 'export' or 'import'
     containers: [
       { type: "20'GP", qty: 1, rate: 1800 },
       { type: "40'GP", qty: 0, rate: 2600 },
@@ -141,16 +131,16 @@ function getQuoteRefId(quote) {
   let moduleCode = "XX";
   const type = quote.type || "air";
   const module = (quote.details && quote.details.module) || "export";
-
+  
   if (type === "air") {
     moduleCode = (module === "import") ? "AI" : "AE";
   } else {
     moduleCode = (module === "import") ? "SI" : "SE";
   }
-
+  
   const custName = (quote.customer || "XYZ").trim().replace(/[^a-zA-Z0-9]/g, "");
   const custPart = custName.substring(0, 3).toUpperCase().padEnd(3, 'X');
-
+  
   let datePart = "0000";
   if (quote.date) {
     const parts = quote.date.split('-');
@@ -167,7 +157,7 @@ function getQuoteRefId(quote) {
       }
     }
   }
-
+  
   const seqNum = quote.quoteNumber || 1;
   const seqPart = String(seqNum).padStart(5, '0');
   return `${moduleCode}${custPart}${datePart}IN${seqPart}`;
@@ -188,7 +178,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
     if (stored) {
-      try { requests = JSON.parse(stored); } catch (e) { }
+      try { requests = JSON.parse(stored); } catch(e) {}
     }
   }
   const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'edit' && r.status === 'pending');
@@ -196,9 +186,9 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
     alert(`You have already requested permission to edit/amend this quote. Please wait for Ganny's approval.`);
     return false;
   }
-
+  
   const reason = prompt(`You do not have permission to ${actionVerb} this quotation.\n\nPlease enter the reason for requesting edit/amendment permission from Ganny:`);
-  if (reason === null) return false;
+  if (reason === null) return false; // User cancelled
   if (!reason.trim()) {
     alert("A reason is required to submit the request.");
     return false;
@@ -217,7 +207,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
     acknowledged: false
   };
 
-  if (typeof DB !== 'undefined' && DB.firestoreRef) {
+  if (DB.firestoreRef) {
     DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
       .then(() => {
         alert("Edit/Amendment request submitted successfully to Ganny.");
@@ -229,66 +219,21 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
       });
   } else {
     saveRequestLocallyFallback(newReq);
+    alert("Edit/Amendment request submitted successfully to Ganny (Offline).");
   }
   return false;
 }
-window.checkAndRequestEditPermission = checkAndRequestEditPermission;
-
-function saveRequestLocallyFallback(newReq) {
-  let localRequests = [];
-  const stored = localStorage.getItem("gl_amendment_requests");
-  if (stored) {
-    try { localRequests = JSON.parse(stored); } catch (e) { }
-  }
-  localRequests.push(newReq);
-  localStorage.setItem("gl_amendment_requests", JSON.stringify(localRequests));
-  console.log("Saved request locally:", newReq);
-}
-
-// Safe fallback placeholders to prevent pre-login startup crashes
-function loadLogisticsNews() {
-  console.log("Bypassing news feed loading.");
-}
-function registerSnapshotListener() {
-  console.log("Bypassing background snapshot listener layout.");
-}
-function calculateTransitETA() {
-  console.log("Bypassing transit calculations.");
-}
-var tabGlobal = tabGlobal || {};
-
-// Safe fallback placeholders to prevent pre-login startup crashes
-function loadLogisticsNews() {
-  console.log("Bypassing news feed loading.");
-}
-function registerSnapshotListener() {
-  console.log("Bypassing background snapshot listener layout.");
-}
-function calculateTransitETA() {
-  console.log("Bypassing transit calculations.");
-}
-var tabGlobal = tabGlobal || {};
-
-if (navigator.onLine) {
-  // normal request handling
-  // e.g. sendRequest(newReq);
-} else {
-  saveRequestLocallyFallback(newReq);
-  alert("Edit/Amendment request submitted successfully to Ganny (Offline).");
-  return false;
-}
-
 window.checkAndRequestEditPermission = checkAndRequestEditPermission;
 
 function saveRequestLocallyFallback(newReq) {
   let requests = [];
   const stored = localStorage.getItem("gl_amendment_requests");
   if (stored) {
-    try { requests = JSON.parse(stored); } catch (e) { }
+    try { requests = JSON.parse(stored); } catch(e) {}
   }
   requests.push(newReq);
   localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-
+  
   // Update local view
   if (window._amendmentRequests) {
     window._amendmentRequests.push(newReq);
@@ -325,32 +270,32 @@ function autoFocusWeightBreak(event) {
   if (event.key === "Enter") {
     event.preventDefault();
     calculateAirFreight();
+    
+    const chgWeight = appState.currentAirFreight.chargeableWeight || 0;
+    if (chgWeight <= 0) return;
+
+    let targetInputId = "rate-m45";
+    if (chgWeight >= 45 && chgWeight < 100) {
+      targetInputId = "rate-p45";
+    } else if (chgWeight >= 100 && chgWeight < 300) {
+      targetInputId = "rate-p100";
+    } else if (chgWeight >= 300 && chgWeight < 500) {
+      targetInputId = "rate-p300";
+    } else if (chgWeight >= 500 && chgWeight < 1000) {
+      targetInputId = "rate-p500";
+    } else if (chgWeight >= 1000) {
+      targetInputId = "rate-p1000";
+    }
+
+    const inputEl = document.getElementById(targetInputId);
+    if (inputEl) {
+      inputEl.focus();
+      setTimeout(() => {
+        try { inputEl.select(); } catch(e) {}
+      }, 0);
+    }
   }
-} //
-const chgWeight = appState.currentAirFreight.chargeableWeight || 0;
-if (chgWeight <= 0) return;
-
-let targetInputId = "rate-m45";
-if (chgWeight >= 45 && chgWeight < 100) {
-  targetInputId = "rate-p45";
-} else if (chgWeight >= 100 && chgWeight < 300) {
-  targetInputId = "rate-p100";
-} else if (chgWeight >= 300 && chgWeight < 500) {
-  targetInputId = "rate-p300";
-} else if (chgWeight >= 500 && chgWeight < 1000) {
-  targetInputId = "rate-p500";
-} else if (chgWeight >= 1000) {
-  targetInputId = "rate-p1000";
 }
-
-const inputEl = document.getElementById(targetInputId);
-if (inputEl) {
-  inputEl.focus();
-  setTimeout(() => {
-    try { inputEl.select(); } catch (e) { }
-  }, 0);
-}
-
 window.autoFocusWeightBreak = autoFocusWeightBreak;
 
 function setupValidityDatePickerDismissal() {
@@ -358,12 +303,12 @@ function setupValidityDatePickerDismissal() {
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-
+    
     const dismiss = () => {
       setTimeout(() => {
         try {
           el.blur();
-        } catch (e) { }
+        } catch (e) {}
       }, 50);
     };
 
@@ -386,7 +331,7 @@ function setupValidityDatePickerDismissal() {
   document.addEventListener("focus", (e) => {
     if (e.target && (e.target.classList.contains("chg-rate") || e.target.classList.contains("fcl-rate"))) {
       setTimeout(() => {
-        try { e.target.select(); } catch (err) { }
+        try { e.target.select(); } catch(err) {}
       }, 0);
     }
   }, true);
@@ -404,7 +349,6 @@ document.addEventListener("DOMContentLoaded", () => {
   loadMemorizedSurcharges();
   checkSession();
   fetchExchangeRates();
-  initializeAdvancedFeatures();
 
   // Modal handlers
   document.getElementById("close-modal")?.addEventListener("click", hideQuoteModal);
@@ -413,7 +357,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // File upload badge updates
   const agreementFileInput = document.getElementById("won-agreement-file");
   if (agreementFileInput) {
-    agreementFileInput.addEventListener("change", function () {
+    agreementFileInput.addEventListener("change", function() {
       const statusEl = document.getElementById("won-agreement-status");
       if (statusEl) {
         if (this.files && this.files.length > 0) {
@@ -429,7 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const invoiceFileInput = document.getElementById("won-invoice-packing-file");
   if (invoiceFileInput) {
-    invoiceFileInput.addEventListener("change", function () {
+    invoiceFileInput.addEventListener("change", function() {
       const statusEl = document.getElementById("won-invoice-packing-status");
       if (statusEl) {
         if (this.files && this.files.length > 0) {
@@ -446,12 +390,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Authentication System
 function checkSession() {
-  document.getElementById("login-overlay").style.display = "flex";
   const session = sessionStorage.getItem("gl_pricing_session");
   if (session && TEAM_ROLES[session]) {
     loginSuccess(session);
   } else {
+    // Show login overlay and keep workspace visible but blurred
     document.body.classList.add("logged-out-blur");
+    document.getElementById("login-overlay").style.display = "flex";
     document.getElementById("app-workspace").style.display = "flex";
     document.getElementById("subheader-controls").style.display = "flex";
   }
@@ -466,7 +411,7 @@ function handleLogin(e) {
   if (dbUsers.length === 0) {
     const storedCustom = localStorage.getItem("gl_custom_users");
     if (storedCustom) {
-      try { dbUsers = JSON.parse(storedCustom); } catch (err) { }
+      try { dbUsers = JSON.parse(storedCustom); } catch(err) {}
     }
   }
 
@@ -560,7 +505,7 @@ async function loadData() {
   setupAutocomplete(document.getElementById("air-origin"), "airports");
   setupAutocomplete(document.getElementById("air-dest"), "airports");
   setupAutocomplete(document.getElementById("air-airline"), "airlines");
-
+  
   setupAutocomplete(document.getElementById("sea-cust-name"), "customers");
   setupAutocomplete(document.getElementById("sea-origin"), "seaports");
   setupAutocomplete(document.getElementById("sea-dest"), "seaports");
@@ -632,7 +577,7 @@ function goHome() {
   document.querySelectorAll(".modal-overlay").forEach(modal => {
     modal.classList.remove("show");
   });
-
+  
   if (appState.currentUser === 'ganny') {
     document.getElementById("manager-panel").classList.add("active");
     document.querySelectorAll(".role-btn").forEach(btn => {
@@ -655,7 +600,7 @@ window.goHome = goHome;
 function updateCurrencyRules(role) {
   const airCurSelect = document.getElementById("air-currency");
   const seaCurSelect = document.getElementById("sea-currency");
-
+  
   let activeRole = role;
   if (activeRole === 'ganny' || activeRole === 'manager') {
     const activeBtn = document.querySelector(".role-btn.active");
@@ -665,11 +610,11 @@ function updateCurrencyRules(role) {
     }
   }
   if (!activeRole) activeRole = appState.currentUser || 'ganny';
-
+  
   const isNrs = activeRole && (activeRole === 'cathrina' || TEAM_ROLES[activeRole]?.category === 'NRS (AIR/SEA)');
   const isLocal = activeRole && (activeRole.includes('local') || activeRole === 'jaya' || TEAM_ROLES[activeRole]?.category === 'FREE HAND SALES (AIR/SEA)');
   const targetType = isNrs ? "nrs" : (isLocal ? "local" : "nom");
-
+  
   // Hide Agency Agreement option for NRS and Free Hand Sales desks
   const airAgreementGrp = document.getElementById("air-agency-agreement-group");
   const seaAgreementGrp = document.getElementById("sea-agency-agreement-group");
@@ -812,21 +757,6 @@ function updateCurrencyRules(role) {
 
   currencyElements.forEach(el => el.textContent = currency);
   symbolElements.forEach(el => el.textContent = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£')));
-
-  // Toggle custom exchange rate input visibility post-login for non-nom users
-  const isNomUser = activeRole === 'shashank' || activeRole === 'mahendra' ||
-    (TEAM_ROLES[activeRole] && (TEAM_ROLES[activeRole].category === 'AIR - NOMINATION' || TEAM_ROLES[activeRole].category === 'SEA - NOMINATION'));
-  const airExchangeRateContainer = document.getElementById("air-exchange-rate-container");
-  const seaExchangeRateContainer = document.getElementById("sea-exchange-rate-container");
-  if (airExchangeRateContainer && seaExchangeRateContainer) {
-    if (isNomUser || !appState.currentUser) {
-      airExchangeRateContainer.style.display = "none";
-      seaExchangeRateContainer.style.display = "none";
-    } else {
-      airExchangeRateContainer.style.display = "flex";
-      seaExchangeRateContainer.style.display = "flex";
-    }
-  }
 }
 
 function resetAirFreightDeskForm() {
@@ -896,7 +826,7 @@ function resetAirFreightDeskForm() {
 
   // Surcharges reset to default
   resetSurchargesToDefaults();
-
+  
   // Recalculate to update results layout to 0/empty
   calculateAirFreight();
 }
@@ -988,7 +918,7 @@ function openActiveCalculator(type) {
   document.getElementById("member-dashboard-panel").classList.remove("active");
   const managerPanel = document.getElementById("manager-panel");
   if (managerPanel) managerPanel.classList.remove("active");
-
+  
   // Hide all panels
   document.getElementById("air-freight-panel").classList.remove("active");
   document.getElementById("sea-freight-panel").classList.remove("active");
@@ -1003,14 +933,11 @@ function openActiveCalculator(type) {
     document.getElementById("air-freight-panel").classList.add("active");
     root.style.setProperty('--accent-current', 'var(--accent-air)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
-    if (typeof syncSurchargesCurrencies === 'function') syncSurchargesCurrencies('air');
   } else if (type === 'sea') {
     resetSeaFreightDeskForm();
     document.getElementById("sea-freight-panel").classList.add("active");
     root.style.setProperty('--accent-current', 'var(--accent-sea)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
-    if (typeof ensureSeaBaseFreightCurrencySelectors === 'function') ensureSeaBaseFreightCurrencySelectors();
-    if (typeof syncSurchargesCurrencies === 'function') syncSurchargesCurrencies('sea');
   } else if (type === 'custom') {
     document.getElementById("custom-clearance-panel").classList.add("active");
     root.style.setProperty('--accent-current', 'var(--accent-success)');
@@ -1036,7 +963,7 @@ function returnToWorkspace() {
   document.getElementById("custom-clearance-panel").classList.remove("active");
   document.getElementById("transportation-panel").classList.remove("active");
   document.getElementById("warehousing-panel").classList.remove("active");
-
+  
   if (appState.currentUser === 'ganny') {
     const managerPanel = document.getElementById("manager-panel");
     if (managerPanel) managerPanel.classList.add("active");
@@ -1057,7 +984,7 @@ function returnToWorkspace() {
 // Autocomplete Engine
 function setupAutocomplete(inputEl, type) {
   if (!inputEl) return;
-
+  
   const container = inputEl.closest(".autocomplete-container");
   let dropdown = container.querySelector(".autocomplete-dropdown");
   if (!dropdown) {
@@ -1106,10 +1033,10 @@ function setupAutocomplete(inputEl, type) {
         }
         dropdown.classList.remove("show");
         dropdown.innerHTML = "";
-
+        
         const event = new Event('change');
         inputEl.dispatchEvent(event);
-
+        
         // Also trigger input event for live calculations if applicable
         const inputEvent = new Event('input');
         inputEl.dispatchEvent(inputEvent);
@@ -1137,22 +1064,22 @@ function setupAutocomplete(inputEl, type) {
 
     let matches = [];
     if (type === "airports") {
-      matches = appState.airports.filter(ap =>
-        ap.code.toLowerCase().includes(val) ||
-        ap.city.toLowerCase().includes(val) ||
-        ap.country.toLowerCase().includes(val) ||
+      matches = appState.airports.filter(ap => 
+        ap.code.toLowerCase().includes(val) || 
+        ap.city.toLowerCase().includes(val) || 
+        ap.country.toLowerCase().includes(val) || 
         ap.name.toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "airlines") {
-      matches = appState.airlines.filter(al =>
-        al.code.toLowerCase().includes(val) ||
+      matches = appState.airlines.filter(al => 
+        al.code.toLowerCase().includes(val) || 
         al.name.toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "customers") {
       let customCusts = [];
       const stored = localStorage.getItem("gl_custom_customers");
       if (stored) {
-        try { customCusts = JSON.parse(stored); } catch (err) { }
+        try { customCusts = JSON.parse(stored); } catch(err) {}
       }
       matches = customCusts.filter(c => c.toLowerCase().includes(val)).map(c => ({
         code: "CUST",
@@ -1176,11 +1103,11 @@ function setupAutocomplete(inputEl, type) {
       let customPorts = [];
       const stored = localStorage.getItem("gl_custom_seaports");
       if (stored) {
-        try { customPorts = JSON.parse(stored); } catch (err) { }
+        try { customPorts = JSON.parse(stored); } catch(err) {}
       }
       const combined = [...majorSeaports, ...customPorts];
-      matches = combined.filter(sp =>
-        sp.code.toLowerCase().includes(val) ||
+      matches = combined.filter(sp => 
+        sp.code.toLowerCase().includes(val) || 
         sp.name.toLowerCase().includes(val) ||
         sp.city.toLowerCase().includes(val) ||
         sp.country.toLowerCase().includes(val)
@@ -1204,7 +1131,7 @@ function setupAutocomplete(inputEl, type) {
       let customLines = [];
       const stored = localStorage.getItem("gl_custom_shippinglines");
       if (stored) {
-        try { customLines = JSON.parse(stored); } catch (err) { }
+        try { customLines = JSON.parse(stored); } catch(err) {}
       }
       const combined = [...majorShippingLines, ...customLines];
       matches = combined.filter(sl =>
@@ -1229,11 +1156,11 @@ function setupAutocomplete(inputEl, type) {
       let customLiners = [];
       const stored = localStorage.getItem("gl_custom_linernames");
       if (stored) {
-        try { customLiners = JSON.parse(stored); } catch (err) { }
+        try { customLiners = JSON.parse(stored); } catch(err) {}
       }
       const combined = [...majorLiners, ...customLiners];
-      matches = combined.filter(l =>
-        l.code.toLowerCase().includes(val) ||
+      matches = combined.filter(l => 
+        l.code.toLowerCase().includes(val) || 
         l.name.toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "sea_commodities") {
@@ -1254,11 +1181,11 @@ function setupAutocomplete(inputEl, type) {
       let customCommodities = [];
       const stored = localStorage.getItem("gl_custom_sea_commodities");
       if (stored) {
-        try { customCommodities = JSON.parse(stored); } catch (err) { }
+        try { customCommodities = JSON.parse(stored); } catch(err) {}
       }
       const combined = [...defaultCommodities, ...customCommodities];
-      matches = combined.filter(c =>
-        c.code.toLowerCase().includes(val) ||
+      matches = combined.filter(c => 
+        c.code.toLowerCase().includes(val) || 
         c.name.toLowerCase().includes(val)
       ).slice(0, 10);
     }
@@ -1271,7 +1198,7 @@ function setupAutocomplete(inputEl, type) {
       matches.forEach((item, idx) => {
         const div = document.createElement("div");
         div.className = "autocomplete-item";
-
+        
         let label = "";
         if (type === "customers" || type === "linernames" || type === "sea_commodities") {
           label = `<div>${item.name}</div>`;
@@ -1280,7 +1207,7 @@ function setupAutocomplete(inputEl, type) {
         } else {
           label = `<div>${item.name} (${item.city || ''}${item.country ? ', ' + item.country : ''})</div><div class="code-badge">${item.code}</div>`;
         }
-
+        
         div.innerHTML = label;
         div.addEventListener("click", () => {
           inputEl._programmaticSelection = true;
@@ -1291,7 +1218,7 @@ function setupAutocomplete(inputEl, type) {
           }
           dropdown.classList.remove("show");
           dropdown.innerHTML = "";
-
+          
           const event = new Event('change');
           inputEl.dispatchEvent(event);
 
@@ -1332,14 +1259,12 @@ function setupAirFreightEvents() {
       airTabImport.classList.remove("active");
       appState.currentAirFreight.module = 'export';
       resetCargoAndRatesForAir();
-      if (typeof syncSurchargesCurrencies === 'function') syncSurchargesCurrencies('air');
     });
     airTabImport.addEventListener("click", () => {
       airTabImport.classList.add("active");
       airTabExport.classList.remove("active");
       appState.currentAirFreight.module = 'import';
       resetCargoAndRatesForAir();
-      if (typeof syncSurchargesCurrencies === 'function') syncSurchargesCurrencies('air');
     });
   }
 
@@ -1360,7 +1285,7 @@ function setupAirFreightEvents() {
         </td>
       `;
       tableBody.appendChild(row);
-
+      
       row.querySelectorAll("input").forEach(inp => {
         inp.addEventListener("input", calculateAirFreight);
       });
@@ -1534,9 +1459,9 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
   if (isEligibleDeskUser()) {
     const sellRate = (typeof rate === 'object' && rate !== null) ? (rate.sell || 0) : (parseFloat(rate) || 0);
     const buyRate = (typeof rate === 'object' && rate !== null) ? (rate.buy || 0) : 0;
-
+    
     wrapper.innerHTML = `
-      <span style="font-size: 0.  rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
+      <span style="font-size: 0.72rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
       <div style="display: flex; gap: 4px; align-items: center;">
         <input type="number" class="break-rate-input break-sell-rate-input" placeholder="Sell" min="0" step="0.1" value="${sellRate > 0 ? sellRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Sell Rate per KG">
         <input type="number" class="break-buy-rate-input" placeholder="Buy" min="0" step="0.1" value="${buyRate > 0 ? buyRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Buy Rate per KG">
@@ -1593,14 +1518,10 @@ function addAirlineCard(data = null) {
 
   const creatorRole = appState.currentUser;
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' ||
-    creatorRole === 'cathrina' ||
-    creatorRole === 'shashank' ||
-    creatorRole === 'mahendra' ||
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
-    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
-    TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
-    TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
+    creatorRole === 'jaya' || 
+    creatorRole === 'cathrina' || 
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
   card.innerHTML = `
@@ -1704,7 +1625,7 @@ function addAirlineCard(data = null) {
     const choice = prompt(`Enter the break code to add:\n\nAvailable:\n${availableLabels}`);
     if (choice) {
       let cleaned = choice.trim().toLowerCase();
-
+      
       // Map variations/shorthands to correct keys
       if (cleaned === 'minimum' || cleaned === 'flat') cleaned = 'min';
       else if (cleaned === '-45' || cleaned === '45-' || cleaned === 'minus45' || cleaned === 'minus 45') cleaned = 'minus45';
@@ -1747,14 +1668,14 @@ function getAirlineColor(name) {
     'SG': '#e74c3c', // SpiceJet - Red
   };
   if (mapping[code]) return mapping[code];
-
+  
   // Deterministic hash code to return a nice bright aesthetic color
   let hash = 0;
   for (let i = 0; i < code.length; i++) {
     hash = code.charCodeAt(i) + ((hash << 5) - hash);
   }
   const colors = [
-    '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#e74c3c',
+    '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#e74c3c', 
     '#1abc9c', '#f1c40f', '#2980b9', '#e84393', '#00cec9'
   ];
   return colors[Math.abs(hash) % colors.length];
@@ -1774,9 +1695,9 @@ function updateCartageRowVisibility() {
     if (!cartageRow) {
       const creatorRole = appState.currentUser;
       const isFreeHandOrNrs = creatorRole && (
-        creatorRole === 'jaya' ||
-        creatorRole === 'cathrina' ||
-        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
+        creatorRole === 'jaya' || 
+        creatorRole === 'cathrina' || 
+        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
         TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
       );
 
@@ -1814,7 +1735,7 @@ function updateCartageRowVisibility() {
           </td>
         `;
       }
-
+      
       const nameInput = row.querySelector(".chg-name");
       if (nameInput) {
         nameInput.setAttribute("list", "air-origin-charges-list");
@@ -1837,9 +1758,6 @@ function updateCartageRowVisibility() {
 window.updateCartageRowVisibility = updateCartageRowVisibility;
 
 function calculateAirFreight() {
-  const role = TEAM_ROLES[appState.currentUser];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-  const qCur = isNomUser ? document.getElementById("air-currency").value : "INR";
   updateCurrencyRules(appState.currentUser);
   updateCartageRowVisibility();
 
@@ -1848,7 +1766,7 @@ function calculateAirFreight() {
   let totalVolume = 0;
   let totalVolumeWeight = 0;
   let totalPackageQty = 0;
-
+  
   const unit = appState.currentAirFreight.dimUnit;
   const divisor = (unit === 'cms') ? 6000 : 360;
 
@@ -1864,7 +1782,7 @@ function calculateAirFreight() {
       totalPackageQty += qty;
       const volWeight = (l * w * h * qty) / divisor;
       totalVolumeWeight += volWeight;
-
+      
       if (unit === 'cms') {
         totalVolume += (l * w * h * qty) / 1000000;
       } else {
@@ -1876,7 +1794,7 @@ function calculateAirFreight() {
   const commodity = document.getElementById("air-commodity")?.value || "GENERAL";
   const tempType = document.getElementById("air-temp-type")?.value || "NON-TEMPERATURE";
   const tempRange = document.getElementById("air-temp-range")?.value || "2-8";
-
+  
   let commLabel = commodity;
   if (commodity === 'PERISHABLES' || commodity === 'PHARMA') {
     if (tempType === 'TEMPERATURE') {
@@ -1885,13 +1803,13 @@ function calculateAirFreight() {
       commLabel += ` - Non-Temp`;
     }
   }
-
+  
   const resComm = document.getElementById("res-air-commodity-val");
   if (resComm) resComm.textContent = commLabel;
 
   const loadTilt = document.getElementById("air-loadability-tilt")?.value || "TILTABLE";
   const loadStack = document.getElementById("air-loadability-stack")?.value || "STACKABLE";
-
+  
   const loadLabel = `${loadTilt === 'TILTABLE' ? 'Tiltable' : 'Non-Tiltable'} / ${loadStack === 'STACKABLE' ? 'Stackable' : 'Non-Stackable'}`;
   const resLoad = document.getElementById("res-air-loadability-val");
   if (resLoad) resLoad.textContent = loadLabel;
@@ -1901,13 +1819,8 @@ function calculateAirFreight() {
   document.getElementById("res-air-vw").textContent = `${totalVolumeWeight.toFixed(2)} kg`;
   document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
 
-  const volBadge = document.getElementById("air-volumetric-badge");
-  if (volBadge) {
-    volBadge.style.display = totalVolumeWeight > totalGrossWeight ? "inline-block" : "none";
-  }
-
   const airlineCards = document.querySelectorAll("#air-airlines-list-container .airline-card");
-
+  
   if (airlineCards.length === 0) {
     addAirlineCard();
     return;
@@ -1944,9 +1857,9 @@ function calculateAirFreight() {
 
     const creatorRole = appState.currentUser;
     const isFreeHandOrNrs = creatorRole && (
-      creatorRole === 'jaya' ||
-      creatorRole === 'cathrina' ||
-      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
+      creatorRole === 'jaya' || 
+      creatorRole === 'cathrina' || 
+      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
       TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
     );
 
@@ -2004,7 +1917,7 @@ function calculateAirFreight() {
     }
 
     let baseFreightCost = airlineChargeableWeight * activeRate;
-
+    
     let isMinActive = false;
     const minVal = breaksData['min'];
     const minSell = (typeof minVal === 'object' && minVal !== null) ? minVal.sell : (parseFloat(minVal) || 0);
@@ -2020,7 +1933,7 @@ function calculateAirFreight() {
       const bName = wrapper.getAttribute("data-break-name");
       const removeBtn = wrapper.querySelector(".remove-break-btn");
       const isActive = (bName === usedBreak && !isMinActive) || (bName === 'min' && isMinActive);
-
+      
       if (isActive) {
         wrapper.style.display = "flex";
         wrapper.classList.add("highlight-break");
@@ -2049,20 +1962,16 @@ function calculateAirFreight() {
       const surchargeNameInput = row.querySelector(".chg-name");
       const surchargeName = surchargeNameInput.value.trim();
       const surchargeNameLower = surchargeName.toLowerCase();
-
+      
       let rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
       let unit = row.querySelector(".chg-unit").value;
 
       const creatorRole = appState.currentUser;
       const isFreeHandOrNrs = creatorRole && (
-        creatorRole === 'jaya' ||
-        creatorRole === 'cathrina' ||
-        creatorRole === 'shashank' ||
-        creatorRole === 'mahendra' ||
-        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
-        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
-        TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
-        TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
+        creatorRole === 'jaya' || 
+        creatorRole === 'cathrina' || 
+        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
       );
 
       if (surchargeNameLower === "cartage" || surchargeNameLower === "misc") {
@@ -2090,24 +1999,8 @@ function calculateAirFreight() {
 
       if (surchargeName && rate > 0) {
         let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
-
-        const currSelect = row.querySelector(".chg-curr");
-        let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
-        const defaultSurchargeCur = (appState.currentAirFreight.module === 'import' && !isNomUser) ? "USD" : selectedCurrency;
-        const currency = currSelect ? currSelect.value : defaultSurchargeCur;
-
-        let costInInr = cost;
-        if (currency === 'USD') costInInr = cost * EXCHANGE_RATES.USD_TO_INR;
-        else if (currency === 'EUR') costInInr = cost * EXCHANGE_RATES.EUR_TO_INR;
-        else if (currency === 'GBP') costInInr = cost * EXCHANGE_RATES.GBP_TO_INR;
-
-        let costInQCur = costInInr;
-        if (selectedCurrency === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
-        else if (selectedCurrency === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
-        else if (selectedCurrency === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-        airlineSurchargeTotal += costInQCur;
-        airlineOriginSurcharges.push({ name: surchargeName, rate, unit, currency, calculatedCost: costInQCur });
+        airlineSurchargeTotal += cost;
+        airlineOriginSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
       }
     });
 
@@ -2120,37 +2013,14 @@ function calculateAirFreight() {
 
       if (surchargeName && rate > 0) {
         let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
-
-        const currSelect = row.querySelector(".chg-curr");
-        let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
-        const defaultSurchargeCur = (appState.currentAirFreight.module === 'export' && !isNomUser) ? "USD" : selectedCurrency;
-        const currency = currSelect ? currSelect.value : defaultSurchargeCur;
-
-        let costInInr = cost;
-        if (currency === 'USD') costInInr = cost * EXCHANGE_RATES.USD_TO_INR;
-        else if (currency === 'EUR') costInInr = cost * EXCHANGE_RATES.EUR_TO_INR;
-        else if (currency === 'GBP') costInInr = cost * EXCHANGE_RATES.GBP_TO_INR;
-
-        let costInQCur = costInInr;
-        if (selectedCurrency === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
-        else if (selectedCurrency === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
-        else if (selectedCurrency === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-        airlineSurchargeTotal += costInQCur;
-        airlineDestSurcharges.push({ name: surchargeName, rate, unit, currency, calculatedCost: costInQCur });
+        airlineSurchargeTotal += cost;
+        airlineDestSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
       }
     });
 
     if (isFreeHandOrNrs && amsFee > 0) {
-      let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
-      let amsInInr = amsFee * EXCHANGE_RATES.USD_TO_INR;
-      let amsInQCur = amsInInr;
-      if (selectedCurrency === 'USD') amsInQCur = amsInInr / EXCHANGE_RATES.USD_TO_INR;
-      else if (selectedCurrency === 'EUR') amsInQCur = amsInInr / EXCHANGE_RATES.EUR_TO_INR;
-      else if (selectedCurrency === 'GBP') amsInQCur = amsInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-      airlineSurchargeTotal += amsInQCur;
-      airlineOriginSurcharges.push({ name: "AMS Fee", rate: amsFee, unit: "flat", currency: "USD", calculatedCost: amsInQCur });
+      airlineSurchargeTotal += amsFee;
+      airlineOriginSurcharges.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
     }
 
     const airlineGrandTotal = baseFreightCost + airlineSurchargeTotal;
@@ -2195,7 +2065,7 @@ function calculateAirFreight() {
 
   const finalChargeableWeight = selectedAirlineData.chargeableWeight;
   document.getElementById("res-air-chw").textContent = `${finalChargeableWeight.toFixed(2)} kg`;
-
+  
   const pivotRow = document.getElementById("row-air-pivot");
   const pivotVal = document.getElementById("res-air-pivot");
   if (selectedAirlineData.pivotWeight > 0) {
@@ -2213,24 +2083,20 @@ function calculateAirFreight() {
   const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
   const creatorRole = appState.currentUser;
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' ||
-    creatorRole === 'cathrina' ||
-    creatorRole === 'shashank' ||
-    creatorRole === 'mahendra' ||
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
-    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
-    TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
-    TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
+    creatorRole === 'jaya' || 
+    creatorRole === 'cathrina' || 
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
   originRows.forEach(row => {
     const nameInput = row.querySelector(".chg-name");
     const name = nameInput.value.trim().toLowerCase();
-
+    
     if (name === "cartage" || name === "misc") {
       const rateInp = row.querySelector(".chg-rate");
       const unitSelect = row.querySelector(".chg-unit");
-
+      
       if (isFreeHandOrNrs) {
         rateInp.readOnly = false;
         if (unitSelect) unitSelect.disabled = false;
@@ -2253,7 +2119,7 @@ function calculateAirFreight() {
           rateInp.value = "0.00";
           unitSelect.value = "flat";
         }
-
+        
         rateInp.readOnly = true;
         if (unitSelect) unitSelect.disabled = true;
         rateInp.style.background = "rgba(255,255,255,0.02)";
@@ -2330,7 +2196,7 @@ function calculateAirFreight() {
     const savingsAmount = baseFreightCost - optFreightCost;
     const currency = document.getElementById("air-currency").value;
     const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
-
+    
     const activeLabel = rates[activeBreakIdx] ? rates[activeBreakIdx].label : 'Standard';
 
     const optSuggestion = document.getElementById("opt-suggestion-text");
@@ -2341,7 +2207,7 @@ function calculateAirFreight() {
         <br><strong>Savings: ${curSymbol}${savingsAmount.toFixed(2)}</strong>.
       `;
     }
-
+    
     const optBName = rates[optBreakIndex].breakName;
     const optWrapper = selectedAirlineData.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
     if (optWrapper) {
@@ -2364,7 +2230,7 @@ function calculateAirFreight() {
   if (appState.currentAirFreight.isOptimizedApplied && hasSavings) {
     finalBaseRate = optRate;
     finalFreightCost = optFreightCost;
-
+    
     selectedAirlineData.card.querySelectorAll(".dynamic-break-wrapper").forEach(el => {
       el.style.borderColor = "#ccc";
       el.style.background = "#fff";
@@ -2392,38 +2258,14 @@ function calculateAirFreight() {
   if (resultsContainer) {
     const currency = document.getElementById("air-currency").value;
     const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
-
+    
     // Find cheapest grand total
     const minGrandTotal = Math.min(...airlinesListData.map(alt => alt.grandTotal));
-
+    
     resultsContainer.innerHTML = airlinesListData.map(alt => {
       const color = getAirlineColor(alt.name);
       const isCheapest = (alt.grandTotal === minGrandTotal);
-
-      // Determine breakout values
-      const currency = document.getElementById("air-currency").value;
-      const rateMultiplier = (currency === 'INR') ? 1 :
-        (currency === 'USD' ? EXCHANGE_RATES.USD_TO_INR :
-          (currency === 'EUR' ? EXCHANGE_RATES.EUR_TO_INR : EXCHANGE_RATES.GBP_TO_INR));
-
-      const activeRole = getActiveRole();
-      const role = TEAM_ROLES[activeRole];
-      const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-
-      let baseFreightINR = alt.baseFreight * rateMultiplier;
-      let originChargesINR = 0;
-      let destChargesINR = 0;
-
-      alt.originSurcharges.forEach(s => {
-        originChargesINR += s.calculatedCost * rateMultiplier;
-      });
-      alt.destSurcharges.forEach(s => {
-        destChargesINR += s.calculatedCost * rateMultiplier;
-      });
-
-      let grandTotalINR = baseFreightINR + originChargesINR + destChargesINR;
-      let gpINR = alt.grossProfit * rateMultiplier;
-
+      
       return `
         <div class="glass-card" style="padding: 1rem; border: 1px solid ${alt.selected ? 'var(--accent-success)' : 'var(--border-1)'}; relative; background: ${alt.selected ? 'rgba(46,204,113,0.04)' : 'rgba(255,255,255,0.01)'}; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -2434,28 +2276,6 @@ function calculateAirFreight() {
             <span class="result-label" style="color: var(--t2);">Chargeable Weight</span>
             <span class="result-value" style="color: ${color}; font-weight: 700;">${alt.chargeableWeight.toFixed(2)} kg</span>
           </div>
-          ${!isNomUser ? `
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Base Freight</span>
-            <span class="result-value" style="color: ${color}; font-weight: 700;">₹${baseFreightINR.toFixed(2)}</span>
-          </div>
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Origin Local Charges</span>
-            <span class="result-value" style="color: ${color}; font-weight: 700;">₹${originChargesINR.toFixed(2)}</span>
-          </div>
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Destination Local Charges</span>
-            <span class="result-value" style="color: ${color}; font-weight: 700;">₹${destChargesINR.toFixed(2)}</span>
-          </div>
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Gross Profit (GP)</span>
-            <span class="result-value" style="color: var(--accent-success); font-weight: 700;">₹${gpINR.toFixed(2)}</span>
-          </div>
-          <div class="result-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.8rem; font-weight: bold; margin-top: 4px; border-bottom: none;">
-            <span class="result-label" style="color: var(--t1);">Grand Total</span>
-            <span class="result-value" style="color: ${color}; font-size: 0.85rem; font-weight: 800;">₹${grandTotalINR.toFixed(2)}</span>
-          </div>
-          ` : `
           <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
             <span class="result-label" style="color: var(--t2);">Base Freight Cost</span>
             <span class="result-value" style="color: ${color}; font-weight: 700;">${curSymbol}${alt.baseFreight.toFixed(2)}</span>
@@ -2472,7 +2292,6 @@ function calculateAirFreight() {
             <span class="result-label" style="color: var(--t1);">Grand Total</span>
             <span class="result-value" style="color: ${color}; font-size: 0.85rem; font-weight: 800;">${curSymbol}${alt.grandTotal.toFixed(2)}</span>
           </div>
-          `}
         </div>
       `;
     }).join("");
@@ -2552,16 +2371,12 @@ function setupSeaFreightEvents() {
       seaTabImport.classList.remove("active");
       appState.currentSeaFreight.module = 'export';
       resetCargoAndRatesForSea();
-      if (typeof ensureSeaBaseFreightCurrencySelectors === 'function') ensureSeaBaseFreightCurrencySelectors();
-      if (typeof syncSurchargesCurrencies === 'function') syncSurchargesCurrencies('sea');
     });
     seaTabImport.addEventListener("click", () => {
       seaTabImport.classList.add("active");
       seaTabExport.classList.remove("active");
       appState.currentSeaFreight.module = 'import';
       resetCargoAndRatesForSea();
-      if (typeof ensureSeaBaseFreightCurrencySelectors === 'function') ensureSeaBaseFreightCurrencySelectors();
-      if (typeof syncSurchargesCurrencies === 'function') syncSurchargesCurrencies('sea');
     });
   }
 
@@ -2663,7 +2478,7 @@ function setupSeaFreightEvents() {
         </td>
       `;
       seaCargoBody.appendChild(row);
-
+      
       row.querySelectorAll("input").forEach(inp => {
         inp.addEventListener("input", calculateSeaVolumeFromDimensions);
       });
@@ -2704,7 +2519,7 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
 
   const tr = document.createElement("tr");
   tr.className = "container-row";
-
+  
   if (isEligibleDeskUser()) {
     tr.innerHTML = `
       <td>
@@ -2761,7 +2576,7 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
 
   tr.querySelector(".fcl-type").addEventListener("change", calculateSeaFreight);
   tr.querySelector(".fcl-qty").addEventListener("input", calculateSeaFreight);
-
+  
   const rateInp = tr.querySelector(".fcl-sell-rate") || tr.querySelector(".fcl-rate");
   rateInp.addEventListener("input", calculateSeaFreight);
 
@@ -2785,7 +2600,7 @@ function calculateSeaFreight() {
   const isFcl = (type === 'fcl');
   const currency = document.getElementById("sea-currency").value;
   const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
-
+  
   // Read top level cargo details
   const weightKg = parseFloat(document.getElementById("sea-gross-weight").value) || 0;
   const cbm = parseFloat(document.getElementById("sea-volume").value) || 0;
@@ -2794,12 +2609,6 @@ function calculateSeaFreight() {
   // LCL RT Math
   const weightTons = weightKg / 1000;
   const chargeableCbm = Math.max(cbm, weightTons);
-
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-  const isImport = appState.currentSeaFreight.module === 'import';
-  const qCur = isNomUser ? document.getElementById("sea-currency").value : "INR";
 
   let baseFreight = 0;
   let detailsText = '';
@@ -2811,25 +2620,9 @@ function calculateSeaFreight() {
     fclRows.forEach(row => {
       const typeVal = row.querySelector(".fcl-type").value;
       const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
-      const rateInput = row.querySelector(".fcl-rate") || row.querySelector(".fcl-sell-rate");
-      const rate = parseFloat(rateInput ? rateInput.value : 0) || 0;
-
+      const rate = parseFloat(row.querySelector(".fcl-rate").value) || 0;
       if (qty > 0 && rate > 0) {
-        const currSelect = row.querySelector(".fcl-curr");
-        const defaultContainerCur = (isImport && !isNomUser) ? "USD" : qCur;
-        const currency = currSelect ? currSelect.value : defaultContainerCur;
-
-        let rateInInr = rate;
-        if (currency === 'USD') rateInInr = rate * EXCHANGE_RATES.USD_TO_INR;
-        else if (currency === 'EUR') rateInInr = rate * EXCHANGE_RATES.EUR_TO_INR;
-        else if (currency === 'GBP') rateInInr = rate * EXCHANGE_RATES.GBP_TO_INR;
-
-        let rateInQCur = rateInInr;
-        if (qCur === 'USD') rateInQCur = rateInInr / EXCHANGE_RATES.USD_TO_INR;
-        else if (qCur === 'EUR') rateInQCur = rateInInr / EXCHANGE_RATES.EUR_TO_INR;
-        else if (qCur === 'GBP') rateInQCur = rateInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-        baseFreight += (qty * rateInQCur);
+        baseFreight += (qty * rate);
         totalContainersCount += qty;
         containerSummary.push(`${qty} x ${typeVal}`);
       }
@@ -2837,44 +2630,12 @@ function calculateSeaFreight() {
     detailsText = containerSummary.join(", ") || 'No Containers Selected';
     appState.currentSeaFreight.fclSummary = containerSummary;
   } else if (type === 'lcl') {
-    const rateInput = document.getElementById("sea-lcl-rate");
-    const rate = parseFloat(rateInput ? rateInput.value : 0) || 0;
-
-    const currSelect = document.getElementById("sea-lcl-curr");
-    const defaultContainerCur = (isImport && !isNomUser) ? "USD" : qCur;
-    const currency = currSelect ? currSelect.value : defaultContainerCur;
-
-    let rateInInr = rate;
-    if (currency === 'USD') rateInInr = rate * EXCHANGE_RATES.USD_TO_INR;
-    else if (currency === 'EUR') rateInInr = rate * EXCHANGE_RATES.EUR_TO_INR;
-    else if (currency === 'GBP') rateInInr = rate * EXCHANGE_RATES.GBP_TO_INR;
-
-    let rateInQCur = rateInInr;
-    if (qCur === 'USD') rateInQCur = rateInInr / EXCHANGE_RATES.USD_TO_INR;
-    else if (qCur === 'EUR') rateInQCur = rateInInr / EXCHANGE_RATES.EUR_TO_INR;
-    else if (qCur === 'GBP') rateInQCur = rateInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-    baseFreight = chargeableCbm * rateInQCur;
+    const rate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
+    baseFreight = chargeableCbm * rate;
     detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
   } else {
-    const rateInput = document.getElementById("sea-bb-rate");
-    const rate = parseFloat(rateInput ? rateInput.value : 0) || 0;
-
-    const currSelect = document.getElementById("sea-bb-curr");
-    const defaultContainerCur = (isImport && !isNomUser) ? "USD" : qCur;
-    const currency = currSelect ? currSelect.value : defaultContainerCur;
-
-    let rateInInr = rate;
-    if (currency === 'USD') rateInInr = rate * EXCHANGE_RATES.USD_TO_INR;
-    else if (currency === 'EUR') rateInInr = rate * EXCHANGE_RATES.EUR_TO_INR;
-    else if (currency === 'GBP') rateInInr = rate * EXCHANGE_RATES.GBP_TO_INR;
-
-    let rateInQCur = rateInInr;
-    if (qCur === 'USD') rateInQCur = rateInInr / EXCHANGE_RATES.USD_TO_INR;
-    else if (qCur === 'EUR') rateInQCur = rateInInr / EXCHANGE_RATES.EUR_TO_INR;
-    else if (qCur === 'GBP') rateInQCur = rateInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-    baseFreight = chargeableCbm * rateInQCur;
+    const rate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
+    baseFreight = chargeableCbm * rate;
     detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [Break Bulk]`;
   }
 
@@ -2887,7 +2648,7 @@ function calculateSeaFreight() {
     const name = row.querySelector(".chg-name").value.trim();
     const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
     const unit = row.querySelector(".chg-unit")?.value || 'flat';
-
+    
     if (name && rate > 0) {
       let cost = 0;
       if (unit === 'container') {
@@ -2899,23 +2660,8 @@ function calculateSeaFreight() {
       } else {
         cost = rate;
       }
-
-      const currSelect = row.querySelector(".chg-curr");
-      const defaultSurchargeCur = (appState.currentSeaFreight.module === 'import' && !isNomUser) ? "USD" : qCur;
-      const currency = currSelect ? currSelect.value : defaultSurchargeCur;
-
-      let costInInr = cost;
-      if (currency === 'USD') costInInr = cost * EXCHANGE_RATES.USD_TO_INR;
-      else if (currency === 'EUR') costInInr = cost * EXCHANGE_RATES.EUR_TO_INR;
-      else if (currency === 'GBP') costInInr = cost * EXCHANGE_RATES.GBP_TO_INR;
-
-      let costInQCur = costInInr;
-      if (qCur === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
-      else if (qCur === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
-      else if (qCur === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-      totalSurcharges += costInQCur;
-      originSurchargesList.push({ name, rate, unit, currency, calculatedCost: costInQCur });
+      totalSurcharges += cost;
+      originSurchargesList.push({ name, rate, unit, calculatedCost: cost });
     }
   });
 
@@ -2924,7 +2670,7 @@ function calculateSeaFreight() {
     const name = row.querySelector(".chg-name").value.trim();
     const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
     const unit = row.querySelector(".chg-unit")?.value || 'flat';
-
+    
     if (name && rate > 0) {
       let cost = 0;
       if (unit === 'container') {
@@ -2936,33 +2682,18 @@ function calculateSeaFreight() {
       } else {
         cost = rate;
       }
-
-      const currSelect = row.querySelector(".chg-curr");
-      const defaultSurchargeCur = (appState.currentSeaFreight.module === 'export' && !isNomUser) ? "USD" : qCur;
-      const currency = currSelect ? currSelect.value : defaultSurchargeCur;
-
-      let costInInr = cost;
-      if (currency === 'USD') costInInr = cost * EXCHANGE_RATES.USD_TO_INR;
-      else if (currency === 'EUR') costInInr = cost * EXCHANGE_RATES.EUR_TO_INR;
-      else if (currency === 'GBP') costInInr = cost * EXCHANGE_RATES.GBP_TO_INR;
-
-      let costInQCur = costInInr;
-      if (qCur === 'USD') costInQCur = costInInr / EXCHANGE_RATES.USD_TO_INR;
-      else if (qCur === 'EUR') costInQCur = costInInr / EXCHANGE_RATES.EUR_TO_INR;
-      else if (qCur === 'GBP') costInQCur = costInInr / EXCHANGE_RATES.GBP_TO_INR;
-
-      totalSurcharges += costInQCur;
-      destSurchargesList.push({ name, rate, unit, currency, calculatedCost: costInQCur });
+      totalSurcharges += cost;
+      destSurchargesList.push({ name, rate, unit, calculatedCost: cost });
     }
   });
 
   const surchargesList = [...originSurchargesList, ...destSurchargesList];
 
   const grandTotal = baseFreight + totalSurcharges;
-
+  
   let totalINR = grandTotal;
-  if (qCur !== 'INR') {
-    totalINR = grandTotal * EXCHANGE_RATES[`${qCur}_TO_INR`];
+  if (currency !== 'INR') {
+    totalINR = grandTotal * EXCHANGE_RATES[`${currency}_TO_INR`];
   }
 
   let typeLabel = "FCL (Full Container)";
@@ -2976,15 +2707,6 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-gw").textContent = `${weightKg.toFixed(2)} kg`;
   document.getElementById("res-sea-vol").textContent = `${cbm.toFixed(2)} CBM`;
   document.getElementById("res-sea-qty").textContent = `${pkgQty} Pkgs`;
-
-  const seaVolBadge = document.getElementById("sea-volumetric-badge");
-  if (seaVolBadge) {
-    seaVolBadge.style.display = (cbm * 1000) > weightKg ? "inline-block" : "none";
-  }
-
-  if (typeof updateContainerPayloadScale === 'function') {
-    updateContainerPayloadScale();
-  }
 
   const routing = document.getElementById("sea-routing")?.value || "";
   const rawTt = document.getElementById("sea-tt")?.value || "";
@@ -3021,78 +2743,17 @@ function calculateSeaFreight() {
     buyBaseFreight = chargeableCbm * buyRate;
   }
 
-  // Determine breakout values
-  let baseFreightINR = baseFreight;
-  if (qCur !== 'INR') {
-    baseFreightINR = baseFreight * EXCHANGE_RATES[`${qCur}_TO_INR`];
+  const seaGP = baseFreight - buyBaseFreight;
+
+  document.getElementById("res-sea-base").textContent = `${curSymbol}${baseFreight.toFixed(2)}`;
+  document.getElementById("res-sea-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
+  
+  const resSeaGP = document.getElementById("res-sea-gp");
+  if (resSeaGP) {
+    resSeaGP.textContent = `${curSymbol}${seaGP.toFixed(2)}`;
   }
 
-  let originChargesINR = 0;
-  originSurchargesList.forEach(s => {
-    let rateMultiplier = s.currency === 'INR' ? 1 : EXCHANGE_RATES[`${s.currency}_TO_INR`];
-    originChargesINR += s.calculatedCost * rateMultiplier;
-  });
-
-  let destChargesINR = 0;
-  destSurchargesList.forEach(s => {
-    let rateMultiplier = s.currency === 'INR' ? 1 : EXCHANGE_RATES[`${s.currency}_TO_INR`];
-    destChargesINR += s.calculatedCost * rateMultiplier;
-  });
-
-  let grandTotalINR = baseFreightINR + originChargesINR + destChargesINR;
-
-  const resSeaBase = document.getElementById("res-sea-base");
-  const resSeaSur = document.getElementById("res-sea-sur");
-
-  if (!isNomUser) {
-    if (resSeaBase) {
-      resSeaBase.previousElementSibling.textContent = "Base Ocean Freight";
-      resSeaBase.textContent = `₹${baseFreightINR.toFixed(2)}`;
-    }
-    if (resSeaSur) {
-      resSeaSur.previousElementSibling.textContent = "Origin Local Charges";
-      resSeaSur.textContent = `₹${originChargesINR.toFixed(2)}`;
-    }
-
-    let destRow = document.getElementById("res-sea-dest-row");
-    if (!destRow) {
-      destRow = document.createElement("div");
-      destRow.id = "res-sea-dest-row";
-      destRow.className = "result-row";
-      destRow.innerHTML = `
-        <span class="result-label">Destination Local Charges</span>
-        <span class="result-value" id="res-sea-dest-val">₹0.00</span>
-      `;
-      resSeaSur.closest(".result-row").after(destRow);
-    }
-    document.getElementById("res-sea-dest-val").textContent = `₹${destChargesINR.toFixed(2)}`;
-    document.getElementById("res-sea-total").textContent = `₹${grandTotalINR.toFixed(2)}`;
-
-    const resSeaGPVal = document.getElementById("res-sea-gp");
-    if (resSeaGPVal) {
-      const buyBaseFreightINR = buyBaseFreight * (qCur === 'INR' ? 1 : EXCHANGE_RATES[`${qCur}_TO_INR`]);
-      const gpINR = baseFreightINR - buyBaseFreightINR;
-      resSeaGPVal.textContent = `₹${gpINR.toFixed(2)}`;
-    }
-  } else {
-    if (resSeaBase) {
-      resSeaBase.previousElementSibling.textContent = "Base Ocean Freight";
-      resSeaBase.textContent = `${curSymbol}${baseFreight.toFixed(2)}`;
-    }
-    if (resSeaSur) {
-      resSeaSur.previousElementSibling.textContent = "Surcharge Total Fees";
-      resSeaSur.textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
-    }
-    const destRow = document.getElementById("res-sea-dest-row");
-    if (destRow) destRow.remove();
-
-    document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
-    const resSeaGPVal = document.getElementById("res-sea-gp");
-    if (resSeaGPVal) {
-      const seaGP = baseFreight - buyBaseFreight;
-      resSeaGPVal.textContent = `${curSymbol}${seaGP.toFixed(2)}`;
-    }
-  }
+  document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
 
   // Update Alternative Sea Options Summary Live Results
   const altContainer = document.getElementById("sea-alternatives-results-container");
@@ -3109,7 +2770,7 @@ function calculateSeaFreight() {
         alts.push({ carrier, routing: route, tt: transitTime, rate: rateInfo });
       }
     });
-
+    
     if (alts.length > 0) {
       altContainer.style.display = "block";
       altList.innerHTML = alts.map(alt => `
@@ -3136,9 +2797,9 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.baseFreight = baseFreight;
   appState.currentSeaFreight.surchargeTotal = totalSurcharges;
   appState.currentSeaFreight.grandTotal = grandTotal;
-  appState.currentSeaFreight.grandTotalINR = grandTotalINR;
-  appState.currentSeaFreight.grossProfit = isNomUser ? (baseFreight - buyBaseFreight) : (baseFreightINR - (buyBaseFreight * (qCur === 'INR' ? 1 : EXCHANGE_RATES[`${qCur}_TO_INR`])));
-  appState.currentSeaFreight.currency = qCur;
+  appState.currentSeaFreight.grandTotalINR = totalINR;
+  appState.currentSeaFreight.grossProfit = seaGP;
+  appState.currentSeaFreight.currency = currency;
   appState.currentSeaFreight.originSurcharges = originSurchargesList;
   appState.currentSeaFreight.destSurcharges = destSurchargesList;
   appState.currentSeaFreight.surchargesCalculated = surchargesList;
@@ -3217,9 +2878,6 @@ function setupSurchargesEvents(freightType) {
     if (e.target.classList.contains("chg-name")) {
       memorizeSurchargeNames(e);
     }
-    if (e.target.matches("input, select")) {
-      callback();
-    }
   });
 
   body.addEventListener("focusin", (e) => {
@@ -3256,11 +2914,11 @@ function renderMemberDashboard(userId) {
   if (requestsList.length === 0) {
     const storedReqs = localStorage.getItem("gl_amendment_requests");
     if (storedReqs) {
-      try { requestsList = JSON.parse(storedReqs); } catch (e) { }
+      try { requestsList = JSON.parse(storedReqs); } catch(e) {}
     }
   }
   const myResolved = requestsList.filter(r => r.creator === userId && !r.acknowledged && (r.status === 'approved' || r.status === 'rejected'));
-
+  
   if (myResolved.length > 0) {
     // Schedule a small delay to not block rendering
     setTimeout(() => {
@@ -3304,7 +2962,7 @@ function renderMemberDashboard(userId) {
 
   const myQuotes = appState.quotes.filter(q => q.creator === userId);
   const totalEnquiries = myQuotes.length;
-
+  
   let totalRevenueINR = 0;
   let conversions = 0;
 
@@ -3329,7 +2987,7 @@ function renderMemberDashboard(userId) {
   tbody.innerHTML = "";
 
   if (myQuotes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries priced yet. Click a button above to start pricing.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries priced yet. Click a button above to start pricing.</td></tr>`;
     return;
   }
 
@@ -3340,86 +2998,57 @@ function renderMemberDashboard(userId) {
     const tr = document.createElement("tr");
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-
+    const quoteAmount = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    
     const isQuoted = quote.status === 'quoted';
     const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
-
-    const carrier = quote.confirmedCarrier || (quote.details?.airline || quote.details?.shippingLine || 'N/A');
-    const buyRate = getQuoteBuyRate(quote);
-    const sellRate = getQuoteSellRate(quote);
-    const gp = getQuoteGP(quote);
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isSameDay = (quote.date === todayStr);
-    const isEditable = (appState.currentUser === 'ganny' || quote.amendmentAllowed || isSameDay);
-
-    let actionsHtml = '';
-    if (isEditable) {
-      actionsHtml = `
-        <button class="action-icon-btn amend" style="background: rgba(245, 158, 11, 0.25); color: var(--accent-warning);" title="Correct / Amend Quote" onclick="amendQuote('${quote.id}')">
+    
+    tr.innerHTML = `
+      <td><strong>#${getQuoteRefId(quote)}</strong></td>
+      <td>${quote.date}</td>
+      <td><span class="quote-type-badge ${quote.type}">
+        ${quote.type === 'air' ? 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        }</span></td>
+      <td>
+        <div style="font-weight: 600;">${quote.customer}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
+      </td>
+      <td>
+        <div>${quoteAmount}</div>
+        ${quote.grossProfit !== undefined ? `
+          <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
+            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${quote.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </div>
+        ` : ''}
+      </td>
+      <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
+      <td class="actions-cell">
+        <button class="action-icon-btn amend" style="background: ${quote.amendmentAllowed ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
         <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
-        <button class="action-icon-btn duplicate" style="background: rgba(14, 165, 233, 0.2); color: var(--sky);" title="Duplicate & Edit" onclick="duplicateAndEditQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
         ${isQuoted ? `
         <button class="action-icon-btn convert" style="background: rgba(74, 222, 128, 0.2); color: var(--accent-success);" title="Convert Quote to Won" onclick="convertQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
-        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.15); color: var(--accent-error);" title="Mark as Cancelled" onclick="markQuoteCancelled('${quote.id}')">
+        <button class="action-icon-btn delete" style="background: ${quote.amendmentAllowed ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </button>
+        <button class="action-icon-btn view" style="background: ${quote.amendmentAllowed ? 'rgba(156, 163, 175, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--t1)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost'}" onclick="markQuoteLost('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
         ` : `
-        <button class="action-icon-btn convert" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-success);" title="Revert Quote status to Quoted" onclick="revertQuoteToOriginal('${quote.id}')">
+        <button class="action-icon-btn convert" style="background: ${quote.amendmentAllowed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert'}" onclick="revertQuoteToOriginal('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
         </button>
         `}
-        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.25); color: var(--accent-error);" title="Delete Quote" onclick="deleteQuote('${quote.id}')">
+        <button class="action-icon-btn delete" style="background: ${quote.deletionAllowed ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.deletionAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.deletionAllowed ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete'}" onclick="deleteQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
         </button>
-      `;
-    } else {
-      actionsHtml = `
-        <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-        <button class="action-icon-btn request-approval" style="background: rgba(255,255,255,0.05); color: var(--sky);" title="Request Admin Modification Approval" onclick="requestAdminApproval('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        </button>
-      `;
-    }
-
-    tr.innerHTML = `
-      <td><strong>#${getQuoteRefId(quote)}</strong></td>
-      <td>${quote.date}</td>
-      <td><span class="quote-type-badge ${quote.type}">
-        ${quote.type === 'air' ?
-        `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` :
-        `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
-      }</span></td>
-      <td>
-        <div style="font-weight: 600;">${quote.customer}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
-        ${quote.paymentTerms === 'ADVANCE REQUIRED' ? `
-          <div style="margin-top: 5px; font-size: 0.68rem; display: flex; align-items: center; gap: 4px; color: var(--accent-warning);">
-            <strong>Advance Payment Status:</strong>
-            <select class="advance-payment-status" data-quote-id="${quote.id}" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 2px; border-radius: 4px; font-size: 0.65rem; outline: none;" onchange="updateAdvancePaymentStatus('${quote.id}', this.value)">
-              <option value="Pending" ${quote.advancePaymentStatus === 'Collected' ? '' : 'selected'}>Pending</option>
-              <option value="Collected" ${quote.advancePaymentStatus === 'Collected' ? 'selected' : ''}>Collected</option>
-            </select>
-          </div>
-        ` : ''}
-      </td>
-      <td><strong>${carrier}</strong></td>
-      <td>${buyRate > 0 ? `${currencySym}${buyRate.toFixed(2)}` : '-'}</td>
-      <td>${sellRate > 0 ? `${currencySym}${sellRate.toFixed(2)}` : '-'}</td>
-      <td><strong style="color: ${gp >= 0 ? 'var(--accent-success)' : 'var(--accent-error)'};">${gp !== 0 ? `${currencySym}${gp.toFixed(2)}` : '-'}</strong></td>
-      <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
-      <td class="actions-cell">
-        ${actionsHtml}
       </td>
     `;
     tbody.appendChild(tr);
@@ -3434,7 +3063,7 @@ function renderMemberDashboard(userId) {
       if (stored) {
         try { alerts = JSON.parse(stored); } catch (e) { alerts = []; }
       }
-
+      
       if (alerts.length > 0) {
         nrsPanel.style.display = "block";
         const alertsList = document.getElementById("nrs-notifications-list");
@@ -3544,27 +3173,6 @@ function renderAdminDashboard() {
   // Render Master logs using Filter & Sort
   applyDbFiltersAndSort();
 
-  // Render user credentials list
-  const userCredsBody = document.getElementById("admin-user-credentials-body");
-  if (userCredsBody) {
-    const allUsers = getAllUsers();
-    userCredsBody.innerHTML = allUsers.map(u => {
-      return `
-        <tr>
-          <td><strong>${u.username}</strong></td>
-          <td>${u.fullName}</td>
-          <td><span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.1); color: var(--t1); font-weight: 600;">${u.category || u.role || 'FREE HAND SALES'}</span></td>
-          <td>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="password" class="user-pw-display" value="${u.password || 'password'}" readonly style="background:transparent; border:none; color:var(--t1); font-size:0.75rem; font-family: monospace; width: 80px; padding:0; height:auto; box-shadow:none;">
-              <button type="button" class="btn-text" style="font-size: 0.65rem; padding: 0 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;" onclick="togglePasswordVisibility(this)">Show</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join("");
-  }
-
   // Render Amendment Requests List for Ganny
   const reqPanel = document.getElementById("admin-amendment-requests-panel");
   const reqList = document.getElementById("admin-amendment-requests-list");
@@ -3573,11 +3181,11 @@ function renderAdminDashboard() {
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch (e) { }
+        try { requests = JSON.parse(stored); } catch(e) {}
       }
     }
     const pending = requests.filter(r => r.status === 'pending');
-
+    
     let listHtml = "";
     // EXCLUDE credit_override from this list (they go to Customer Credit Control & Compliance panel)
     const filteredPending = pending.filter(r => r.requestType !== 'credit_override');
@@ -3637,9 +3245,9 @@ function renderAdminDashboard() {
         </div>
       `;
     }
-
+    
     reqList.innerHTML = warningPrefix + listHtml;
-
+    
     // Dynamically refresh customer controls list to update override/waiver badges
     renderAdminCustomerControlList();
   }
@@ -3661,17 +3269,17 @@ function renderControlTowerFeed() {
 
   // Get up to 3 most recent quotes
   const recent = [...quotes].reverse().slice(0, 3);
-
+  
   container.innerHTML = recent.map(quote => {
     const isAir = quote.type === 'air';
     const modeLabel = isAir ? 'AIR DESK' : 'SEA DESK';
     const originStr = (quote.origin || '').substring(0, 15);
     const destStr = (quote.destination || '').substring(0, 15);
-
+    
     // Status text & colors matching premium corporate timeline
     const statusText = quote.status === 'converted' ? 'Won Booking' : 'Priced (Pending)';
     const statusColor = quote.status === 'converted' ? 'var(--green)' : 'var(--amber)';
-
+    
     // Chargeable parameter
     let loadStr = '';
     if (isAir) {
@@ -3679,10 +3287,10 @@ function renderControlTowerFeed() {
     } else {
       loadStr = `${(quote.volume || 0).toLocaleString()} CBM`;
     }
-
+    
     // Routing description
     const routingStr = quote.viaRoute ? `via ${quote.viaRoute}` : 'Direct Lane';
-
+    
     return `
       <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s; cursor: pointer;" onclick="viewSavedQuote('${quote.id}')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -3709,11 +3317,6 @@ window.convertQuote = (id) => {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
 
-  if (quote.paymentTerms === "ADVANCE REQUIRED" && quote.advancePaymentStatus !== "Collected") {
-    alert("Action Denied: Advance payment must be collected and marked as Collected in the system before this shipment can be Confirmed/Won.");
-    return;
-  }
-
   // Open modal to input Shipper / Consignee details
   document.getElementById("won-quote-id").value = id;
   document.getElementById("won-shipper-name").value = quote.shipperName || "";
@@ -3732,12 +3335,12 @@ window.convertQuote = (id) => {
   const customerName = quote.customer || "";
   const lower = customerName.toLowerCase().trim();
   const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-
+  
   const creatorRole = quote.creator;
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' ||
-    creatorRole === 'cathrina' ||
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
+    creatorRole === 'jaya' || 
+    creatorRole === 'cathrina' || 
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
     TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
@@ -3862,7 +3465,7 @@ window.convertQuote = (id) => {
       const newSelect = carrierSelect.cloneNode(true);
       carrierSelect.parentNode.replaceChild(newSelect, carrierSelect);
       newSelect.addEventListener("change", updateBuyRateFromSelection);
-
+      
       // Auto-alert
       alert(`⚠️ Please select the Confirmed ${quote.type === 'air' ? 'Airline' : 'Shipping Line'} and enter/verify the Confirmed Buy Rate.`);
 
@@ -3884,7 +3487,7 @@ function generatePerformanceReport() {
 
   const todayStr = new Date().toISOString().split('T')[0];
   const activeYear = '2026';
-
+  
   // Filter quotes based on officer
   let filtered = appState.quotes;
   if (officer !== 'all') {
@@ -3926,7 +3529,7 @@ function generatePerformanceReport() {
   const totalGP = filtered.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
 
   // Group stats by member for summary grids
-  const members = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager');
+  const members = ['shashank', 'mahendra', 'jaya', 'cathrina'];
   let breakdownRows = "";
 
   members.forEach(mId => {
@@ -3978,7 +3581,7 @@ function generatePerformanceReport() {
   // Populate print modal
   const printCard = document.getElementById("quote-print-card");
   document.getElementById("modal-header-title").textContent = "Official Performance Report Extraction";
-
+  
   printCard.innerHTML = `
     <div class="print-header">
       <div class="print-logo">GL PERFORMANCE DESK</div>
@@ -4078,7 +3681,7 @@ function saveCurrentQuote() {
   memorizeSurchargeNames();
   const isAirActive = document.getElementById("air-freight-panel")?.classList.contains("active");
   const isSeaActive = document.getElementById("sea-freight-panel")?.classList.contains("active");
-
+  
   let isAir = false;
   if (isAirActive) {
     isAir = true;
@@ -4090,7 +3693,7 @@ function saveCurrentQuote() {
   }
 
   const customerName = document.getElementById(isAir ? "air-cust-name" : "sea-cust-name").value.trim();
-
+  
   if (!customerName) {
     alert("Please enter a Customer Name to save the quote.");
     return;
@@ -4103,7 +3706,7 @@ function saveCurrentQuote() {
     try {
       const storedControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       control = storedControls[lowerCust] || null;
-    } catch (e) { }
+    } catch(e) {}
   }
 
   // 2. Capture Agency Agreement PDF if uploaded in the calculator page
@@ -4114,24 +3717,13 @@ function saveCurrentQuote() {
 
   saveCustomCustomer(customerName);
 
-  const customerQuotes = appState.quotes.filter(q => q.customer.toLowerCase().trim() === customerName.toLowerCase().trim());
-  const wonCount = customerQuotes.filter(q => q.status === 'converted').length;
-  const commodityVal = isAir ? (document.getElementById("air-commodity")?.value || "") : (document.getElementById("sea-commodity")?.value || "");
-
-  let paymentTerms = "STANDARD";
-  if (commodityVal === "Perishables" || wonCount === 0) {
-    paymentTerms = "ADVANCE REQUIRED";
-  }
-
   let quoteData = {
     id: 'Q' + Math.random().toString(36).substr(2, 9),
     date: new Date().toISOString().split('T')[0],
     customer: customerName,
     creator: appState.currentUser,
     status: 'quoted',
-    quoteNumber: appState.quotes.length + 1,
-    paymentTerms: paymentTerms,
-    advancePaymentStatus: 'Pending'
+    quoteNumber: appState.quotes.length + 1
   };
 
   const ctrlCust = (window._customerControls && window._customerControls[lowerCust]) || {};
@@ -4147,10 +3739,10 @@ function saveCurrentQuote() {
     const originVal = document.getElementById("air-origin").value.trim();
     const destVal = document.getElementById("air-dest").value.trim();
     const incoterm = document.getElementById("air-incoterm").value;
-
+    
     if (!originVal) { alert("Please fill in Origin Airport."); return; }
     if (!destVal) { alert("Please fill in Destination Airport."); return; }
-
+    
     const primaryAirline = appState.currentAirFreight.airline || "";
     const routing = appState.currentAirFreight.routing || "";
     const tt = appState.currentAirFreight.tt || "";
@@ -4169,7 +3761,7 @@ function saveCurrentQuote() {
       alert("Please add at least one Cargo Line in the Dimensions Matrix.");
       return;
     }
-
+    
     let hasInvalidRow = false;
     rows.forEach(row => {
       const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
@@ -4497,7 +4089,7 @@ function saveCurrentQuote() {
       quoteData.creator = originalQuote.creator;
       quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
       quoteData.amendmentAllowed = false; // Lock it back!
-
+      
       appState.editingQuoteId = null; // Clear edit mode
       DB.saveQuote(quoteData);
       alert("Quotation amended and locked successfully!");
@@ -4550,14 +4142,14 @@ function saveCurrentQuote() {
       addFclContainerRow("20'GP", 1, 0);
     }
   }
-
+  
   resetSurchargesToDefaults();
-
+  
   // Clear agreement variables
   if (!window._uploadedAgreements) window._uploadedAgreements = {};
   window._uploadedAgreements['air'] = null;
   window._uploadedAgreements['sea'] = null;
-
+  
   const airStatusLabel = document.getElementById("air-agreement-status");
   if (airStatusLabel) {
     airStatusLabel.textContent = "[Required]";
@@ -4583,14 +4175,10 @@ function resetSurchargesToDefaults() {
   if (airOriginBody) {
     const creatorRole = appState.currentUser;
     const isFreeHandOrNrs = creatorRole && (
-      creatorRole === 'jaya' ||
-      creatorRole === 'cathrina' ||
-      creatorRole === 'shashank' ||
-      creatorRole === 'mahendra' ||
-      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
-      TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)' ||
-      TEAM_ROLES[creatorRole]?.category === 'AIR - NOMINATION' ||
-      TEAM_ROLES[creatorRole]?.category === 'SEA - NOMINATION'
+      creatorRole === 'jaya' || 
+      creatorRole === 'cathrina' || 
+      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+      TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
     );
 
     if (isFreeHandOrNrs) {
@@ -4897,7 +4485,7 @@ function loadMemorizedSurcharges() {
       }
     }
     const merged = Array.from(new Set([...defaults[cat], ...names]));
-
+    
     const datalist = document.getElementById(`${cat}-charges-list`);
     if (datalist) {
       datalist.innerHTML = merged.map(name => `<option value="${name}"></option>`).join("");
@@ -4918,7 +4506,7 @@ function memorizeSurchargeNames() {
   categories.forEach(cat => {
     const body = document.getElementById(`${cat}-surcharges-body`);
     if (!body) return;
-
+    
     const names = [];
     body.querySelectorAll(".chg-name").forEach(input => {
       const val = input.value.trim();
@@ -4938,12 +4526,12 @@ function memorizeSurchargeNames() {
           stored = [];
         }
       }
-
+      
       const updated = Array.from(new Set([...stored, ...names]));
       localStorage.setItem(storageKey, JSON.stringify(updated));
     }
   });
-
+  
   loadMemorizedSurcharges();
 }
 window.memorizeSurchargeNames = memorizeSurchargeNames;
@@ -4964,21 +4552,21 @@ window.showAirlineBreakup = (quoteId, airlineIndex) => {
   if (!quote) return;
   const alt = quote.details.airlines[airlineIndex];
   if (!alt) return;
-
+  
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-
+  
   let originHtml = "";
   (alt.originSurcharges || []).forEach(s => {
     originHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${s.name} (${currencySym}${s.rate}/${s.unit})</span><strong>${currencySym}${s.calculatedCost.toFixed(2)}</strong></div>`;
   });
   if (!originHtml) originHtml = `<div style="color:#888; font-style:italic;">No origin surcharges</div>`;
-
+  
   let destHtml = "";
   (alt.destSurcharges || []).forEach(s => {
     destHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${s.name} (${currencySym}${s.rate}/${s.unit})</span><strong>${currencySym}${s.calculatedCost.toFixed(2)}</strong></div>`;
   });
   if (!destHtml) destHtml = `<div style="color:#888; font-style:italic;">No destination surcharges</div>`;
-
+  
   const breakupModal = document.createElement("div");
   breakupModal.id = "breakup-submodal";
   breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
@@ -5027,9 +4615,9 @@ window.showAirlineBreakup = (quoteId, airlineIndex) => {
 window.showSeaBreakup = (quoteId) => {
   const quote = appState.quotes.find(q => q.id === quoteId);
   if (!quote) return;
-
+  
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-
+  
   let originHtml = "";
   const originList = quote.details.originSurcharges || [];
   if (originList.length > 0) {
@@ -5046,7 +4634,7 @@ window.showSeaBreakup = (quoteId) => {
     });
   }
   if (!originHtml) originHtml = `<div style="color:#888; font-style:italic; font-size:0.85rem;">No origin surcharges</div>`;
-
+  
   let destHtml = "";
   const destList = quote.details.destSurcharges || [];
   destList.forEach(s => {
@@ -5055,7 +4643,7 @@ window.showSeaBreakup = (quoteId) => {
     destHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;"><span>${s.name} ${rateLabel}</span><strong>${currencySym}${cost.toFixed(2)}</strong></div>`;
   });
   if (!destHtml) destHtml = `<div style="color:#888; font-style:italic; font-size:0.85rem;">No destination surcharges</div>`;
-
+  
   const breakupModal = document.createElement("div");
   breakupModal.id = "breakup-submodal";
   breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
@@ -5111,9 +4699,9 @@ window.viewSavedQuote = (id) => {
 
   const isAir = quote.type === 'air';
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-
+  
   let detailsRows = "";
-
+  
   let alternativesHtml = "";
   if (quote.details && quote.details.airlines && quote.details.airlines.length > 0) {
     const altRows = quote.details.airlines.map((alt, index) => {
@@ -5122,7 +4710,7 @@ window.viewSavedQuote = (id) => {
       const surch = alt.surchargeTotal !== undefined ? alt.surchargeTotal : (quote.details.surchargeTotal || 0);
       const gTotal = alt.grandTotal !== undefined ? alt.grandTotal : (baseFr + surch);
       const rate = alt.appliedRate !== undefined ? alt.appliedRate : (quote.details.appliedRate || 0);
-
+      
       return `
         <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
@@ -5147,7 +4735,7 @@ window.viewSavedQuote = (id) => {
         </tr>
       `;
     }).join("");
-
+    
     alternativesHtml = `
       <div class="print-section-title" style="margin-top: 1.5rem;">Airline Carrier & Pricing Summary (Individual Details)</div>
       <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
@@ -5169,73 +4757,28 @@ window.viewSavedQuote = (id) => {
         </tbody>
       </table>
     `;
-  } else if (quote.type === 'sea' && quote.details) {
-    const primarySelected = (quote.confirmedCarrier === quote.details.shippingLine) || !quote.confirmedCarrier;
-    const detailsLabel = quote.details.mode === 'fcl'
-      ? (quote.details.fclSummary ? quote.details.fclSummary.join(", ") : "FCL")
-      : `${quote.details.volumeCbm || 0} CBM / ${quote.details.grossWeight || 0} kg`;
-
-    let primaryRow = `
-      <tr style="${primarySelected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
-          ${quote.details.shippingLine || 'N/A'} (Primary)
-        </td>
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.routing || '-'}</td>
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.tt || '-'}</td>
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.validity || '-'}</td>
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${detailsLabel || '-'}</td>
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193; font-weight: 700;">
-          ${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}
-        </td>
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">
-          ${currencySym}${(quote.details.surchargeTotal || 0).toFixed(2)}
-        </td>
-        <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800; color: #1b1c5c;">
-          ${currencySym}${((quote.details.baseFreight || 0) + (quote.details.surchargeTotal || 0)).toFixed(2)}
-        </td>
+  } else if (quote.details && quote.details.alternatives && quote.details.alternatives.length > 0) {
+    const altRows = quote.details.alternatives.map(alt => `
+      <tr>
+        <td style="font-weight: 700; color: #1b1c5c;">${alt.carrier}</td>
+        <td>${alt.routing}</td>
+        <td>${alt.tt}</td>
+        <td style="font-weight: 700; color: #2f3193;">${alt.rate}</td>
       </tr>
-    `;
-
-    let altRows = "";
-    if (quote.details.alternatives && quote.details.alternatives.length > 0) {
-      altRows = quote.details.alternatives.map(alt => {
-        const isSelected = (quote.confirmedCarrier === alt.carrier);
-        return `
-          <tr style="${isSelected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
-              ${alt.carrier}
-            </td>
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.routing || '-'}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.tt || '-'}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${quote.details.validity || '-'}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">-</td>
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193; font-weight: 700;">-</td>
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">-</td>
-            <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800; color: #1b1c5c;">
-              ${alt.rate}
-            </td>
-          </tr>
-        `;
-      }).join("");
-    }
-
+    `).join("");
+    
     alternativesHtml = `
-      <div class="print-section-title" style="margin-top: 1.5rem;">Shipping Line & Pricing Summary (Individual details)</div>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
+      <div class="print-section-title" style="margin-top: 1.5rem;">Alternative Carrier & Routing Options</div>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem;">
         <thead>
           <tr style="background: #f8fafc;">
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Shipping Line</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Routing</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Transit Time</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Validity</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Details</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Base Freight</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Surcharges</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Grand Total</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Carrier / Operator</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Routing Details</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Transit Time (TT)</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151;">Rate & Cost Details</th>
           </tr>
         </thead>
         <tbody>
-          ${primaryRow}
           ${altRows}
         </tbody>
       </table>
@@ -5298,6 +4841,7 @@ window.viewSavedQuote = (id) => {
       <tr><td>Origin Port</td><td>${quote.details.origin || 'INNSA'}</td></tr>
       <tr><td>Destination Port</td><td>${quote.details.destination || 'Rotterdam'}</td></tr>
       <tr><td>Shipping Line</td><td>${quote.details.shippingLine || 'N/A'}</td></tr>
+      <tr><td>Liner Name</td><td>${quote.details.linerName || 'N/A'}</td></tr>
       <tr><td>Commodity</td><td>${quote.details.commodity || 'N/A'}</td></tr>
       <tr><td>Incoterm</td><td><strong>${quote.details.incoterm || 'EXW'}</strong></td></tr>
       <tr><td>Sea Freight Mode</td><td>${modeLabel}</td></tr>
@@ -5363,17 +4907,17 @@ window.viewSavedQuote = (id) => {
     termsList += `<li>${line}</li>`;
   });
 
-  const isMultiCarrier = (quote.details.airlines && quote.details.airlines.length > 1) ||
-    (quote.details.alternatives && quote.details.alternatives.length > 1);
+    const isMultiCarrier = (quote.details.airlines && quote.details.airlines.length > 1) || 
+                           (quote.details.alternatives && quote.details.alternatives.length > 1);
 
-  const bottomTotalBox = isMultiCarrier ? "" : `
+    const bottomTotalBox = isMultiCarrier ? "" : `
       <div class="total-summary-box">
         <strong>GRAND TOTAL FREIGHT CHARGES (EXCLUDING LOCAL TAXES):</strong>
         <span class="val">${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
     `;
 
-  printCard.innerHTML = `
+    printCard.innerHTML = `
       <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
           <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
@@ -5487,7 +5031,7 @@ window.deleteQuote = (id) => {
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch (e) { }
+        try { requests = JSON.parse(stored); } catch(e) {}
       }
     }
     const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'delete' && r.status === 'pending');
@@ -5495,7 +5039,7 @@ window.deleteQuote = (id) => {
       alert("You have already requested permission to delete this quote. Please wait for Ganny's approval.");
       return;
     }
-
+    
     const reason = prompt("You do not have permission to delete this quotation.\n\nPlease enter the reason for requesting deletion permission from Admin (Ganny):");
     if (reason === null) return; // User cancelled
     if (!reason.trim()) {
@@ -5535,7 +5079,7 @@ window.deleteQuote = (id) => {
 
   if (confirm(`Are you sure you want to delete quote for "${quote.customer}"?`)) {
     DB.deleteQuote(id);
-
+    
     // Remove related requests
     if (DB.firestoreRef) {
       const related = (window._amendmentRequests || []).filter(r => r.quoteId === id);
@@ -5547,14 +5091,14 @@ window.deleteQuote = (id) => {
       let requests = [];
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch (e) { }
+        try { requests = JSON.parse(stored); } catch(e) {}
       }
       requests = requests.filter(r => r.quoteId !== id);
       localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
     }
 
     alert("Quotation deleted successfully!");
-
+    
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
     } else {
@@ -5588,7 +5132,7 @@ window.toggleMaximizeQuoteModal = () => {
   const modal = document.getElementById("quote-modal");
   const btn = document.getElementById("maximize-modal-btn");
   if (!modal) return;
-
+  
   const isMaximized = modal.classList.toggle("maximized");
   if (isMaximized) {
     btn.innerHTML = `
@@ -5619,74 +5163,74 @@ function printQuote() {
 
   const baseHref = window.location.origin + window.location.pathname;
 
-  printWindow.document.write('<!DOCTYPE html>' +
+  printWindow.document.write('<!DOCTYPE html>' + 
     '<html lang="en">' +
     '<head>' +
-    '<meta charset="UTF-8">' +
-    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-    '<title>Quotation Official Print</title>' +
-    '<base href="' + baseHref + '">' +
-    '<link rel="preconnect" href="https://fonts.googleapis.com">' +
-    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-    '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-    '<link rel="stylesheet" href="index.css">' +
-    '<style>' +
-    '@page {' +
-    'size: A4;' +
-    'margin: 15mm 20mm 15mm 20mm;' +
-    '}' +
-    'html, body {' +
-    'margin: 0 !important;' +
-    'padding: 0 !important;' +
-    'background: #fff !important;' +
-    'color: #0f172a !important;' +
-    'font-family: "Plus Jakarta Sans", Arial, sans-serif;' +
-    '-webkit-print-color-adjust: exact !important;' +
-    'print-color-adjust: exact !important;' +
-    '}' +
-    '.quote-print-card {' +
-    'box-shadow: none !important;' +
-    'padding: 0 !important;' +
-    'margin: 0 !important;' +
-    'width: 100% !important;' +
-    'max-width: 100% !important;' +
-    'background: #fff !important;' +
-    'color: #0f172a !important;' +
-    'font-size: 9.5pt !important;' +
-    '}' +
-    '* {' +
-    '-webkit-print-color-adjust: exact !important;' +
-    'print-color-adjust: exact !important;' +
-    '}' +
-    '.quote-print-card tr {' +
-    'page-break-inside: avoid !important;' +
-    '}' +
-    '.quote-print-card table {' +
-    'page-break-inside: auto;' +
-    '}' +
-    '.total-summary-box {' +
-    'page-break-inside: avoid !important;' +
-    '}' +
-    'ol {' +
-    'page-break-inside: auto;' +
-    '}' +
-    'li {' +
-    'page-break-inside: avoid !important;' +
-    '}' +
-    '</style>' +
+      '<meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+      '<title>Quotation Official Print</title>' +
+      '<base href="' + baseHref + '">' +
+      '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+      '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+      '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
+      '<link rel="stylesheet" href="index.css">' +
+      '<style>' +
+        '@page {' +
+          'size: A4;' +
+          'margin: 15mm 20mm 15mm 20mm;' +
+        '}' +
+        'html, body {' +
+          'margin: 0 !important;' +
+          'padding: 0 !important;' +
+          'background: #fff !important;' +
+          'color: #0f172a !important;' +
+          'font-family: "Plus Jakarta Sans", Arial, sans-serif;' +
+          '-webkit-print-color-adjust: exact !important;' +
+          'print-color-adjust: exact !important;' +
+        '}' +
+        '.quote-print-card {' +
+          'box-shadow: none !important;' +
+          'padding: 0 !important;' +
+          'margin: 0 !important;' +
+          'width: 100% !important;' +
+          'max-width: 100% !important;' +
+          'background: #fff !important;' +
+          'color: #0f172a !important;' +
+          'font-size: 9.5pt !important;' +
+        '}' +
+        '* {' +
+          '-webkit-print-color-adjust: exact !important;' +
+          'print-color-adjust: exact !important;' +
+        '}' +
+        '.quote-print-card tr {' +
+          'page-break-inside: avoid !important;' +
+        '}' +
+        '.quote-print-card table {' +
+          'page-break-inside: auto;' +
+        '}' +
+        '.total-summary-box {' +
+          'page-break-inside: avoid !important;' +
+        '}' +
+        'ol {' +
+          'page-break-inside: auto;' +
+        '}' +
+        'li {' +
+          'page-break-inside: avoid !important;' +
+        '}' +
+      '</style>' +
     '</head>' +
     '<body>' +
-    '<div class="quote-print-card">' +
-    printCard.innerHTML +
-    '</div>' +
-    '<script>' +
-    'window.addEventListener("load", () => {' +
-    'setTimeout(() => {' +
-    'window.print();' +
-    'window.close();' +
-    '}, 300);' +
-    '});' +
-    '</' + 'script>' +
+      '<div class="quote-print-card">' +
+        printCard.innerHTML +
+      '</div>' +
+      '<script>' +
+        'window.addEventListener("load", () => {' +
+          'setTimeout(() => {' +
+            'window.print();' +
+            'window.close();' +
+          '}, 300);' +
+        '});' +
+      '</' + 'script>' +
     '</body>' +
     '</html>'
   );
@@ -5701,32 +5245,18 @@ window.applyDbFiltersAndSort = () => {
   const filterMode = document.getElementById("db-filter-mode")?.value || "all";
   const filterStatus = document.getElementById("db-filter-status")?.value || "all";
   const filterCreator = document.getElementById("db-filter-creator")?.value || "all";
-  const filterStartDate = document.getElementById("db-filter-start-date")?.value;
-  const filterEndDate = document.getElementById("db-filter-end-date")?.value;
-  const filterMonth = document.getElementById("db-filter-month")?.value;
-  const filterYear = document.getElementById("db-filter-year")?.value || "all";
   const sortField = document.getElementById("db-sort-field")?.value || "date-desc";
 
   // Filter
   let filtered = appState.quotes.filter(q => {
     // Mode match
     if (filterMode !== "all" && q.type !== filterMode) return false;
-
+    
     // Status match
     if (filterStatus !== "all" && q.status !== filterStatus) return false;
 
     // Creator match
     if (filterCreator !== "all" && q.creator !== filterCreator) return false;
-
-    // Date range filter
-    if (filterStartDate && q.date < filterStartDate) return false;
-    if (filterEndDate && q.date > filterEndDate) return false;
-
-    // Month-wise match
-    if (filterMonth && !q.date.startsWith(filterMonth)) return false;
-
-    // Year-wise match
-    if (filterYear !== "all" && !q.date.startsWith(filterYear)) return false;
 
     // Search query match
     if (searchQuery) {
@@ -5739,8 +5269,8 @@ window.applyDbFiltersAndSort = () => {
       const destination = (q.details?.destination || "").toLowerCase();
       const carrier = (q.details?.airline || q.details?.shippingLine || "").toLowerCase();
       const incoterm = (q.details?.incoterm || "").toLowerCase();
-
-      const isMatch =
+      
+      const isMatch = 
         customer.includes(searchQuery) ||
         refId.includes(searchQuery) ||
         type.includes(searchQuery) ||
@@ -5750,7 +5280,7 @@ window.applyDbFiltersAndSort = () => {
         creatorName.includes(searchQuery) ||
         carrier.includes(searchQuery) ||
         incoterm.includes(searchQuery);
-
+        
       if (!isMatch) return false;
     }
 
@@ -5777,7 +5307,7 @@ window.applyDbFiltersAndSort = () => {
 
   tbody.innerHTML = "";
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
     return;
   }
 
@@ -5785,38 +5315,32 @@ window.applyDbFiltersAndSort = () => {
     const tr = document.createElement("tr");
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-
-    const carrier = quote.confirmedCarrier || (quote.details?.airline || quote.details?.shippingLine || 'N/A');
-    const buyRate = getQuoteBuyRate(quote);
-    const sellRate = getQuoteSellRate(quote);
-    const gp = getQuoteGP(quote);
-
+    const amountStr = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
       <td><span class="quote-type-badge ${quote.type}">
-        ${quote.type === 'air' ?
-        `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` :
-        `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
-      }</span></td>
+        ${quote.type === 'air' ? 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
-        ${quote.paymentTerms === 'ADVANCE REQUIRED' ? `
-          <div style="margin-top: 5px; font-size: 0.68rem; display: flex; align-items: center; gap: 4px; color: var(--accent-warning);">
-            <strong>Advance Payment Status:</strong>
-            <select class="advance-payment-status" data-quote-id="${quote.id}" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 2px; border-radius: 4px; font-size: 0.65rem; outline: none;" onchange="updateAdvancePaymentStatus('${quote.id}', this.value)">
-              <option value="Pending" ${quote.advancePaymentStatus === 'Collected' ? '' : 'selected'}>Pending</option>
-              <option value="Collected" ${quote.advancePaymentStatus === 'Collected' ? 'selected' : ''}>Collected</option>
-            </select>
+      </td>
+      <td>
+        <div>${amountStr}</div>
+        ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
+        ${quote.grossProfit !== undefined ? `
+          <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
+            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${quote.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${quote.grossProfitINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
           </div>
         ` : ''}
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
-      <td><strong>${carrier}</strong></td>
-      <td>${buyRate > 0 ? `${currencySym}${buyRate.toFixed(2)}` : '-'}</td>
-      <td>${sellRate > 0 ? `${currencySym}${sellRate.toFixed(2)}` : '-'}</td>
-      <td><strong style="color: ${gp >= 0 ? 'var(--accent-success)' : 'var(--accent-error)'};">${gp !== 0 ? `${currencySym}${gp.toFixed(2)}` : '-'}</strong></td>
       <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
       <td class="actions-cell">
         <button class="action-icon-btn amend" style="background: rgba(245, 158, 11, 0.25); color: var(--accent-warning);" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
@@ -5824,9 +5348,6 @@ window.applyDbFiltersAndSort = () => {
         </button>
         <button class="action-icon-btn view" title="View Quote" onclick="viewSavedQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-        <button class="action-icon-btn duplicate" style="background: rgba(14, 165, 233, 0.2); color: var(--sky);" title="Duplicate & Edit" onclick="duplicateAndEditQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
         ${quote.status === 'quoted' ? `
         <button class="action-icon-btn convert" title="Convert Quote" onclick="convertQuote('${quote.id}')">
@@ -5856,7 +5377,7 @@ window.filterQuotes = (val) => {
   const query = val.toLowerCase().trim();
   const activeTbodyId = appState.currentUser === 'ganny' ? 'admin-quotes-body' : 'user-quotes-body';
   const rows = document.querySelectorAll(`#${activeTbodyId} tr`);
-
+  
   rows.forEach(row => {
     // Find the quote ID from the row data attribute
     const quoteId = row.getAttribute("data-quote-id");
@@ -5865,32 +5386,32 @@ window.filterQuotes = (val) => {
       row.style.display = "";
       return;
     }
-
+    
     const quote = appState.quotes.find(q => q.id === quoteId);
     if (!quote) {
       row.style.display = "none";
       return;
     }
-
+    
     // Check match on various fields
     const creatorName = (TEAM_ROLES[quote.creator]?.name || "").toLowerCase();
     const customer = (quote.customer || "").toLowerCase();
     const refId = quote.id.toLowerCase();
     const type = (quote.type || "").toLowerCase();
     const route = (quote.route || "").toLowerCase();
-
+    
     // Origin / Destination detailed names
     const origin = (quote.details?.origin || "").toLowerCase();
     const destination = (quote.details?.destination || "").toLowerCase();
-
+    
     // Carrier & Incoterms
     const carrier = (quote.details?.airline || quote.details?.shippingLine || "").toLowerCase();
     const incoterm = (quote.details?.incoterm || "").toLowerCase();
-
+    
     // Row visual text
     const rowText = row.textContent.toLowerCase();
-
-    const isMatch =
+    
+    const isMatch = 
       customer.includes(query) ||
       refId.includes(query) ||
       type.includes(query) ||
@@ -5901,7 +5422,7 @@ window.filterQuotes = (val) => {
       carrier.includes(query) ||
       incoterm.includes(query) ||
       rowText.includes(query);
-
+      
     if (isMatch) {
       row.style.display = "";
     } else {
@@ -5914,7 +5435,7 @@ function applyDeskNames() {
   const switcher = document.getElementById("admin-role-selector");
   if (switcher) {
     let buttonsHtml = `<button class="role-btn active" data-role="manager">${TEAM_ROLES['ganny'].name.replace(/\(Free Hand\)/g, "")}</button>`;
-
+    
     // Add default users
     const defaultUsers = [
       { id: 'shashank', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
@@ -5936,7 +5457,7 @@ function applyDeskNames() {
     });
 
     switcher.innerHTML = buttonsHtml;
-
+    
     // Re-bind clicks
     switcher.querySelectorAll(".role-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
@@ -5991,7 +5512,7 @@ function applyDeskNames() {
 
 function saveDeskNames(e) {
   e.preventDefault();
-
+  
   const shashank = document.getElementById("cfg-shashank").value.trim();
   const mahendra = document.getElementById("cfg-mahendra").value.trim();
   const jaya = document.getElementById("cfg-jaya").value.trim();
@@ -6028,7 +5549,7 @@ function saveDeskNames(e) {
     if (rawVal !== oldConfig) {
       firebaseConfigChanged = true;
     }
-
+    
     if (rawVal) {
       try {
         let cleaned = rawVal.trim();
@@ -6049,7 +5570,7 @@ function saveDeskNames(e) {
           cleaned = cleaned.replace(regex, `"${k}":`);
         });
         cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-
+          
         const parsed = JSON.parse(cleaned);
         if (!parsed.apiKey || !parsed.projectId) {
           alert("Firebase Config JSON must contain at least 'apiKey' and 'projectId' fields.");
@@ -6089,12 +5610,12 @@ async function registerNewUserProfile(e) {
   const fullName = document.getElementById("reg-fullname").value.trim();
   const username = document.getElementById("reg-username").value.trim().toLowerCase();
   const password = document.getElementById("reg-password").value;
-
+  
   if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username]) {
     alert("This username is already taken. Please try another one.");
     return;
   }
-
+  
   const newUser = {
     username,
     fullName,
@@ -6111,23 +5632,23 @@ async function registerNewUserProfile(e) {
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) {
-        try { customUsers = JSON.parse(stored); } catch (err) { }
+        try { customUsers = JSON.parse(stored); } catch(err) {}
       }
       customUsers.push(newUser);
       localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
     }
-
+    
     TEAM_ROLES[username] = {
       name: `${fullName} (Free Hand)`,
       type: 'member',
       category: 'FREE HAND SALES (AIR/SEA)',
       currency: 'INR'
     };
-
+    
     document.getElementById("reg-fullname").value = "";
     document.getElementById("reg-username").value = "";
     document.getElementById("reg-password").value = "";
-
+    
     alert(`User Profile for "${fullName}" registered successfully! They can now log in using "${username}".`);
   } catch (err) {
     alert("❌ Error registering user: " + err.message);
@@ -6140,14 +5661,14 @@ function repopulateSurchargesTable(tableBodyId, surchargesList) {
   if (!tbody) return;
   tbody.innerHTML = "";
   if (!surchargesList || surchargesList.length === 0) return;
-
+  
   surchargesList.forEach(s => {
     const tr = document.createElement("tr");
     const isAir = tableBodyId.startsWith("air");
-    const autocompleteList = isAir
+    const autocompleteList = isAir 
       ? (tableBodyId.includes("origin") ? "air-origin-surcharges-list" : "air-dest-surcharges-list")
       : (tableBodyId.includes("origin") ? "sea-origin-surcharges-list" : "sea-dest-surcharges-list");
-
+      
     tr.innerHTML = `
       <td><input type="text" class="chg-name" list="${autocompleteList}" value="${s.name}" required></td>
       <td><input type="number" class="chg-rate" step="0.01" value="${s.rate}" required></td>
@@ -6200,7 +5721,7 @@ function addAlternativeOptionRow(tbodyId, carrier = "", routing = "", tt = "", r
       </button>
     </td>
   `;
-
+  
   // Attach input event listeners for live updates
   tr.querySelectorAll("input").forEach(inp => {
     inp.addEventListener("input", () => {
@@ -6226,7 +5747,7 @@ function addAlternativeOptionRow(tbodyId, carrier = "", routing = "", tt = "", r
   }
 
   tbody.appendChild(tr);
-
+  
   // Trigger initial calculation to show empty state/new option
   if (tbodyId.includes("air")) {
     calculateAirFreight();
@@ -6245,20 +5766,20 @@ function amendQuote(id) {
   // Load the quote back into the respective calculator
   appState.editingQuoteId = quote.id;
   hideQuoteModal(); // Close print preview modal if open
-
+  
   // Hide dashboards
   document.getElementById("member-dashboard-panel").classList.remove("active");
   document.getElementById("manager-panel").classList.remove("active");
-
+  
   if (quote.type === 'air') {
     document.getElementById("air-freight-panel").classList.add("active");
-
+    
     document.getElementById("air-cust-name").value = quote.customer;
     document.getElementById("air-origin").value = quote.details.origin || "";
     document.getElementById("air-dest").value = quote.details.destination || "";
     document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
     document.getElementById("air-terms").value = quote.details.termsAndConditions || DEFAULT_AIR_TERMS;
-
+    
     document.getElementById("air-commodity").value = quote.details.commodity || "GENERAL";
     handleAirCommodityChange();
     if (quote.details.tempType) {
@@ -6308,7 +5829,7 @@ function amendQuote(id) {
         tabImp.classList.remove("active");
       }
     }
-
+    
     // Cargo items
     const cargoBody = document.getElementById("air-cargo-body");
     if (cargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
@@ -6334,17 +5855,17 @@ function amendQuote(id) {
         });
       });
     }
-
+    
     // Local surcharges
     repopulateSurchargesTable("air-origin-surcharges-body", quote.details.originSurcharges);
     repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
-
+    
     calculateAirFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
-
+    
   } else {
     document.getElementById("sea-freight-panel").classList.add("active");
-
+    
     document.getElementById("sea-cust-name").value = quote.customer;
     document.getElementById("sea-origin").value = quote.details.origin || "";
     document.getElementById("sea-dest").value = quote.details.destination || "";
@@ -6356,7 +5877,7 @@ function amendQuote(id) {
     document.getElementById("sea-tt").value = quote.details.tt || "";
     document.getElementById("sea-validity").value = quote.details.validity || "";
     document.getElementById("sea-terms").value = quote.details.termsAndConditions || DEFAULT_SEA_TERMS;
-
+    
     appState.currentSeaFreight.module = quote.details.module || 'export';
     const tabExp = document.getElementById("sea-tab-export");
     const tabImp = document.getElementById("sea-tab-import");
@@ -6383,13 +5904,13 @@ function amendQuote(id) {
     const fclSection = document.getElementById("sea-fcl-section");
     const lclSection = document.getElementById("sea-lcl-section");
     const bbForm = document.getElementById("sea-bb-form");
-
+    
     if (mode === 'fcl') {
       if (fclSection) fclSection.style.display = "block";
       if (lclSection) lclSection.style.display = "none";
       if (bbForm) bbForm.style.display = "none";
       appState.currentSeaFreight.type = "fcl";
-
+      
       const fclBody = document.getElementById("sea-fcl-body");
       if (fclBody && quote.details.containerItems && quote.details.containerItems.length > 0) {
         fclBody.innerHTML = "";
@@ -6402,17 +5923,17 @@ function amendQuote(id) {
       if (lclSection) lclSection.style.display = "block";
       if (bbForm) bbForm.style.display = "none";
       appState.currentSeaFreight.type = "lcl";
-
+      
       document.getElementById("sea-lcl-rate").value = quote.details.lclRateApplied || "";
     } else {
       if (fclSection) fclSection.style.display = "none";
       if (lclSection) lclSection.style.display = "none";
       if (bbForm) bbForm.style.display = "block";
       appState.currentSeaFreight.type = "bb";
-
+      
       document.getElementById("sea-bb-rate").value = quote.details.bbRateApplied || "";
     }
-
+    
     // Repopulate cargo dimensions if exists
     const seaCargoBody = document.getElementById("sea-cargo-body");
     if (seaCargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
@@ -6453,10 +5974,10 @@ function amendQuote(id) {
 
     repopulateSurchargesTable("sea-origin-surcharges-body", quote.details.originSurcharges);
     repopulateSurchargesTable("sea-dest-surcharges-body", quote.details.destSurcharges);
-
+    
     // Alternative carrier options
     repopulateAlternativesTable("sea-alternatives-body", quote.details.alternatives);
-
+    
     calculateSeaFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
   }
@@ -6472,7 +5993,7 @@ function approveAmendment(reqId) {
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
     if (stored) {
-      try { requests = JSON.parse(stored); } catch (e) { }
+      try { requests = JSON.parse(stored); } catch(e) {}
     }
   }
   const req = requests.find(r => r.id === reqId);
@@ -6486,7 +6007,7 @@ function approveAmendment(reqId) {
       }
       controls[lower].waiveAgreement = true;
       window._customerControls = controls;
-
+      
       if (DB.firestoreRef) {
         DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
       } else {
@@ -6494,7 +6015,7 @@ function approveAmendment(reqId) {
           let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
           offlineControls[lower] = controls[lower];
           localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-        } catch (e) { }
+        } catch(e) {}
       }
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been APPROVED.`);
     } else {
@@ -6510,7 +6031,7 @@ function approveAmendment(reqId) {
       if (quote) DB.saveQuote(quote);
       alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been APPROVED.`);
     }
-
+    
     // Sync change to DB
     if (DB.firestoreRef) {
       DB.firestoreRef.collection("amendment_requests").doc(req.id).set(req, { merge: true })
@@ -6532,13 +6053,13 @@ function rejectAmendment(reqId) {
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
     if (stored) {
-      try { requests = JSON.parse(stored); } catch (e) { }
+      try { requests = JSON.parse(stored); } catch(e) {}
     }
   }
   const req = requests.find(r => r.id === reqId);
   if (req) {
     req.status = 'rejected';
-
+    
     if (req.requestType === 'agreement_waiver') {
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been REJECTED.`);
     } else {
@@ -6560,16 +6081,16 @@ window.rejectAmendment = rejectAmendment;
 function calculateSeaVolumeFromDimensions() {
   const rows = document.querySelectorAll("#sea-cargo-body .sea-cargo-item-row");
   const unit = appState.currentSeaFreight.dimUnit || 'cms';
-
+  
   let totalVolume = 0;
   let totalPackages = 0;
-
+  
   rows.forEach(row => {
     const l = parseFloat(row.querySelector(".sea-cargo-len").value) || 0;
     const w = parseFloat(row.querySelector(".sea-cargo-wid").value) || 0;
     const h = parseFloat(row.querySelector(".sea-cargo-hei").value) || 0;
     const qty = parseInt(row.querySelector(".sea-cargo-qty").value) || 0;
-
+    
     if (l > 0 && w > 0 && h > 0 && qty > 0) {
       let rowVol = 0;
       if (unit === 'cms') {
@@ -6581,17 +6102,17 @@ function calculateSeaVolumeFromDimensions() {
       totalPackages += qty;
     }
   });
-
+  
   const volInput = document.getElementById("sea-volume");
   if (volInput) {
     volInput.value = totalVolume > 0 ? totalVolume.toFixed(3) : 0;
   }
-
+  
   const pkgInput = document.getElementById("sea-pkg-qty");
   if (pkgInput) {
     pkgInput.value = totalPackages > 0 ? totalPackages : 0;
   }
-
+  
   calculateSeaFreight();
 }
 window.calculateSeaVolumeFromDimensions = calculateSeaVolumeFromDimensions;
@@ -6653,13 +6174,13 @@ window.markQuoteLost = markQuoteLost;
 
 function saveCustomSeaAutocompletes(originInput, destInput, lineInput, linerInput, commodityInput) {
   let customPorts = [];
-  try { customPorts = JSON.parse(localStorage.getItem("gl_custom_seaports") || "[]"); } catch (e) { }
+  try { customPorts = JSON.parse(localStorage.getItem("gl_custom_seaports") || "[]"); } catch(e) {}
   let customLines = [];
-  try { customLines = JSON.parse(localStorage.getItem("gl_custom_shippinglines") || "[]"); } catch (e) { }
+  try { customLines = JSON.parse(localStorage.getItem("gl_custom_shippinglines") || "[]"); } catch(e) {}
   let customLiners = [];
-  try { customLiners = JSON.parse(localStorage.getItem("gl_custom_linernames") || "[]"); } catch (e) { }
+  try { customLiners = JSON.parse(localStorage.getItem("gl_custom_linernames") || "[]"); } catch(e) {}
   let customCommodities = [];
-  try { customCommodities = JSON.parse(localStorage.getItem("gl_custom_sea_commodities") || "[]"); } catch (e) { }
+  try { customCommodities = JSON.parse(localStorage.getItem("gl_custom_sea_commodities") || "[]"); } catch(e) {}
 
   const majorSeaports = [
     { code: "CNSHA", name: "Shanghai Port", city: "Shanghai", country: "China" },
@@ -6807,7 +6328,7 @@ window.saveCustomSeaAutocompletes = saveCustomSeaAutocompletes;
 function saveCustomCustomer(name) {
   if (!name) return;
   let customCusts = [];
-  try { customCusts = JSON.parse(localStorage.getItem("gl_custom_customers") || "[]"); } catch (e) { }
+  try { customCusts = JSON.parse(localStorage.getItem("gl_custom_customers") || "[]"); } catch(e) {}
   const normalized = name.trim();
   if (normalized && !customCusts.some(c => c.toLowerCase() === normalized.toLowerCase())) {
     customCusts.push(normalized);
@@ -6874,7 +6395,7 @@ document.addEventListener("keydown", (e) => {
       const container = target.closest(".autocomplete-container");
       const dropdown = container ? container.querySelector(".autocomplete-dropdown") : null;
       const hasActiveDropdown = dropdown && dropdown.classList.contains("show") && dropdown.querySelector(".autocomplete-item.active");
-
+      
       if (!hasActiveDropdown) {
         e.preventDefault();
         if (target._transitionScheduled) return;
@@ -6900,56 +6421,46 @@ document.addEventListener("change", (e) => {
 });
 
 async function fetchExchangeRates() {
-  let selectedCurrency = typeof qCur !== 'undefined' ? qCur : 'USD';
   try {
     const res = await fetch("https://open.er-api.com/v6/latest/USD");
     if (!res.ok) throw new Error("Rates API failed");
     const data = await res.json();
     if (data && data.rates) {
-      try {
-        const r = data.rates;
-        EXCHANGE_RATES.USD_TO_INR = r.INR;
-        EXCHANGE_RATES.EUR_TO_INR = r.INR / r.EUR;
-        EXCHANGE_RATES.GBP_TO_INR = r.INR / r.GBP;
-        EXCHANGE_RATES.EUR_TO_USD = 1 / r.EUR;
-        EXCHANGE_RATES.GBP_TO_USD = 1 / r.GBP;
-
-        const airInput = document.getElementById("air-custom-exchange-rate");
-        const seaInput = document.getElementById("sea-custom-exchange-rate");
-        if (airInput) airInput.value = r.INR.toFixed(2);
-        if (seaInput) seaInput.value = r.INR.toFixed(2);
-
-        // Update UI Ticker
-        const tickerUsd = document.getElementById("ticker-usd");
-        const tickerEur = document.getElementById("ticker-eur");
-        const tickerGbp = document.getElementById("ticker-gbp");
-        if (tickerUsd) tickerUsd.textContent = `USD ₹${r.INR.toFixed(2)}`;
-        if (tickerEur) tickerEur.textContent = `EUR ₹${(r.INR / r.EUR).toFixed(2)}`;
-        if (tickerGbp) tickerGbp.textContent = `GBP ₹${(r.INR / r.GBP).toFixed(2)}`;
-
-        // Update Modal fields
-        const modUsdInr = document.getElementById("modal-usd-inr");
-        const modEurInr = document.getElementById("modal-eur-inr");
-        const modGbpInr = document.getElementById("modal-gbp-inr");
-        const modEurUsd = document.getElementById("modal-eur-usd");
-        const modGbpUsd = document.getElementById("modal-gbp-usd");
-        if (modUsdInr) modUsdInr.textContent = `₹${r.INR.toFixed(2)}`;
-        if (modEurInr) modEurInr.textContent = `₹${(r.INR / r.EUR).toFixed(2)}`;
-        if (modGbpInr) modGbpInr.textContent = `₹${(r.INR / r.GBP).toFixed(2)}`;
-        if (modEurUsd) modEurUsd.textContent = `$${(1 / r.EUR).toFixed(2)}`;
-        if (modGbpUsd) modGbpUsd.textContent = `$${(1 / r.GBP).toFixed(2)}`;
-
-        // Last Updated Text
-        const d = new Date(data.time_last_update_utc);
-        const updatedText = document.getElementById("xe-last-updated");
-        if (updatedText) updatedText.textContent = `Last Updated: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} (UTC)`;
-
-        // Trigger calculations update
-        if (typeof calculateAirFreight === 'function') calculateAirFreight();
-        if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
-      } catch (error) {
-        console.warn("Initialization step safety fallback:", error);
-      }
+      const r = data.rates;
+      EXCHANGE_RATES.USD_TO_INR = r.INR;
+      EXCHANGE_RATES.EUR_TO_INR = r.INR / r.EUR;
+      EXCHANGE_RATES.GBP_TO_INR = r.INR / r.GBP;
+      EXCHANGE_RATES.EUR_TO_USD = 1 / r.EUR;
+      EXCHANGE_RATES.GBP_TO_USD = 1 / r.GBP;
+      
+      // Update UI Ticker
+      const tickerUsd = document.getElementById("ticker-usd");
+      const tickerEur = document.getElementById("ticker-eur");
+      const tickerGbp = document.getElementById("ticker-gbp");
+      if (tickerUsd) tickerUsd.textContent = `USD ₹${r.INR.toFixed(2)}`;
+      if (tickerEur) tickerEur.textContent = `EUR ₹${(r.INR / r.EUR).toFixed(2)}`;
+      if (tickerGbp) tickerGbp.textContent = `GBP ₹${(r.INR / r.GBP).toFixed(2)}`;
+      
+      // Update Modal fields
+      const modUsdInr = document.getElementById("modal-usd-inr");
+      const modEurInr = document.getElementById("modal-eur-inr");
+      const modGbpInr = document.getElementById("modal-gbp-inr");
+      const modEurUsd = document.getElementById("modal-eur-usd");
+      const modGbpUsd = document.getElementById("modal-gbp-usd");
+      if (modUsdInr) modUsdInr.textContent = `₹${r.INR.toFixed(2)}`;
+      if (modEurInr) modEurInr.textContent = `₹${(r.INR / r.EUR).toFixed(2)}`;
+      if (modGbpInr) modGbpInr.textContent = `₹${(r.INR / r.GBP).toFixed(2)}`;
+      if (modEurUsd) modEurUsd.textContent = `$${(1 / r.EUR).toFixed(2)}`;
+      if (modGbpUsd) modGbpUsd.textContent = `$${(1 / r.GBP).toFixed(2)}`;
+      
+      // Last Updated Text
+      const d = new Date(data.time_last_update_utc);
+      const updatedText = document.getElementById("xe-last-updated");
+      if (updatedText) updatedText.textContent = `Last Updated: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} (UTC)`;
+      
+      // Trigger calculations update
+      if (typeof calculateAirFreight === 'function') calculateAirFreight();
+      if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
     }
   } catch (error) {
     console.error("Failed to fetch exchange rates dynamically. Using static fallbacks.", error);
@@ -6981,18 +6492,18 @@ function runCurrencyConversion() {
   const fromSelect = document.getElementById("converter-from");
   const toSelect = document.getElementById("converter-to");
   const resultDiv = document.getElementById("converter-result");
-
+  
   if (!amtInput || !fromSelect || !toSelect || !resultDiv) return;
-
+  
   const amt = parseFloat(amtInput.value) || 0;
   const from = fromSelect.value;
   const to = toSelect.value;
-
+  
   if (amt <= 0) {
     resultDiv.textContent = "0.00";
     return;
   }
-
+  
   let amountInUSD = amt;
   if (from === 'INR') {
     amountInUSD = amt / EXCHANGE_RATES.USD_TO_INR;
@@ -7001,7 +6512,7 @@ function runCurrencyConversion() {
   } else if (from === 'GBP') {
     amountInUSD = amt * EXCHANGE_RATES.GBP_TO_USD;
   }
-
+  
   let finalAmt = amountInUSD;
   let sym = "$";
   if (to === 'INR') {
@@ -7016,7 +6527,7 @@ function runCurrencyConversion() {
   } else if (to === 'USD') {
     sym = "$";
   }
-
+  
   resultDiv.textContent = `${sym}${finalAmt.toFixed(2)}`;
 }
 window.runCurrencyConversion = runCurrencyConversion;
@@ -7046,8 +6557,8 @@ function getCountryFromPortValue(val, mode) {
   }
 
   if (mode === 'air') {
-    const matchedAp = appState.airports.find(ap =>
-      ap.code.toLowerCase() === code ||
+    const matchedAp = appState.airports.find(ap => 
+      ap.code.toLowerCase() === code || 
       ap.name.toLowerCase() === cleanVal ||
       ap.name.toLowerCase().includes(cleanVal)
     );
@@ -7070,10 +6581,10 @@ function getCountryFromPortValue(val, mode) {
     try {
       const stored = localStorage.getItem("gl_custom_seaports");
       if (stored) customPorts = JSON.parse(stored) || [];
-    } catch (e) { }
+    } catch(e) {}
     const combined = [...majorSeaports, ...customPorts];
-    const matchedSp = combined.find(sp =>
-      sp.code.toLowerCase() === code ||
+    const matchedSp = combined.find(sp => 
+      sp.code.toLowerCase() === code || 
       sp.name.toLowerCase() === cleanVal ||
       sp.name.toLowerCase().includes(cleanVal)
     );
@@ -7103,7 +6614,7 @@ function toggleMapHelper(mode, type) {
   const rawVal = inputEl.value.trim();
   let searchQuery = "";
   const country = getCountryFromPortValue(rawVal, mode);
-
+  
   if (country) {
     searchQuery = mode === 'air' ? `Airports in ${country}` : `Seaports in ${country}`;
   } else if (rawVal) {
@@ -7170,39 +6681,7 @@ function convertAmountToUSD(amount, currency) {
 window.convertAmountToUSD = convertAmountToUSD;
 
 function validateCreditCompliance(quoteData) {
-  const customerName = quoteData.customer;
-  if (!customerName) return true;
-  const lowerCust = customerName.toLowerCase().trim();
-
-  // Calculate the gap between the current date and their oldest confirmed quote log.
-  const customerQuotes = appState.quotes.filter(q => q.customer.toLowerCase().trim() === lowerCust);
-  const oldestConfirmed = customerQuotes
-    .filter(q => q.status === 'converted' && q.conversionDate)
-    .sort((a, b) => new Date(a.conversionDate) - new Date(b.conversionDate))[0];
-
-  if (oldestConfirmed) {
-    const oldestDate = new Date(oldestConfirmed.conversionDate);
-    const currentDate = new Date();
-    const diffTime = Math.abs(currentDate - oldestDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays > 45) {
-      // Check bypass: 30 or more converted shipments in the past 30 days
-      const past30DaysDate = new Date();
-      past30DaysDate.setDate(past30DaysDate.getDate() - 30);
-
-      const convertedPast30DaysCount = customerQuotes.filter(q =>
-        q.status === 'converted' &&
-        q.conversionDate &&
-        new Date(q.conversionDate) >= past30DaysDate
-      ).length;
-
-      if (convertedPast30DaysCount < 30) {
-        alert(`Action Denied: Credit period exceeded. The oldest confirmed shipment for ${customerName} is ${diffDays} days old. New quote creation is blocked.`);
-        return false;
-      }
-    }
-  }
+  // Credit control blocking has been removed per user request.
   return true;
 }
 window.validateCreditCompliance = validateCreditCompliance;
@@ -7224,134 +6703,61 @@ const DB = {
   firestoreRef: null,
   triedDefaultFallback: false,
   snapshotUnsubscribe: null,
-
+  
   async init() {
     let configRaw = localStorage.getItem("gl_firebase_config");
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
-
-    // Unify correct fallback credentials at the very start
-    const DEFAULT_FIREBASE_CONFIG = {
-      projectId: "vertex-35d95",
-      apiKey: "AlzaSyBnS2173ew2vpxR7rOs0FfTpfsEmhj79Uc",
-      databaseId: "(default)"
-    };
-
-    // Completely unique, conflict-isolated initialization parameters
-    // Completely unique, conflict-isolated initialization parameters
-    const standaloneAtlasFirebaseSettings = {
-      projectId: "vertex-35d95",
-      apiKey: "AlzaSyBnS2173ew2vpxR7rOs0FfTpfsEmhj79Uc",
-      databaseId: "(default)"
-    };
-
-    try {
-      if (firebase.apps.length > 0) {
-        try {
-          await firebase.app().delete();
-        } catch (cleanupError) {
-          console.warn("DB: Maintenance bypass on existing instance:", cleanupError);
-        }
-      }
-
-      firebase.initializeApp(standaloneAtlasFirebaseSettings);
-
-      const targetDbClusterId = standaloneAtlasFirebaseSettings.databaseId || '(default)';
-      console.log("DB: Stored Project ID Verification:", standaloneAtlasFirebaseSettings.projectId);
-      console.log("DB: Stored API Key Verification:", standaloneAtlasFirebaseSettings.apiKey);
-      console.log("DB: Initializing Firestore connection with database ID:", targetDbClusterId);
-
-      this.firestoreRef = firebase.firestore(firebase.app());
-      this.isCloud = true;
-
-      this.firestoreRef.enablePersistence().catch(persistenceError => {
-        console.warn("Offline pipeline retention state deferred:", persistenceError.code);
-      });
-
-      if (statusDot) statusDot.style.background = "#10b981";
-      if (statusText) statusText.textContent = "Firebase Cloud (Online)";
-
-      // this.registerSnapshotListener();
-
-      // Balanced and stitched migration pathway
-      const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
-      if (localQuotes.length > 0) {
-        console.log(`DB: Found ${localQuotes.length} local quotes. Migrating to Firestore...`);
-        try {
-          console.log("Migration skipped successfully.");
-          console.log("DB: Local quotes migration succeeded!");
-          localStorage.removeItem("logistics_quotes");
-        } catch (err) {
-          console.error("DB: Migration of local quotes failed. Retaining local copy.", err);
-        }
-      }
-
-    } catch (globalInitError) {
-      console.error("Critical connection engine initialization halt:", globalInitError);
-    }
-    // Check for migration from local to cloud for NRS registry
-    const localNrs = JSON.parse(localStorage.getItem("gl_nrs_registry") || "[]");
-    if (localNrs.length > 0) {
-      console.log(`DB: Found ${localNrs.length} local NRS entries. Migrating to Firestore...`);
+    
+    let config = null;
+    if (configRaw) {
       try {
-        const migrationPromises = localNrs.map(async entry => {
-          return this.firestoreRef.collection("nrs_registry").doc(entry.id).set(entry);
-        });
-        await Promise.all(migrationPromises);
-        console.log("DB: Local NRS registry migration succeeded!");
-        localStorage.removeItem("gl_nrs_registry");
-      } catch (err) {
-        console.error("DB: Migration of local NRS registry failed. Retaining local copy.", err);
+        config = JSON.parse(configRaw);
+      } catch (e) {
+        console.error("Failed to parse stored Firebase configuration:", e);
       }
     }
-
-    // Check for migration from local to cloud for amendment requests
-    const localReqs = JSON.parse(localStorage.getItem("gl_amendment_requests") || "[]");
-    if (localReqs.length > 0) {
-      console.log(`DB: Found ${localReqs.length} local amendment requests. Migrating to Firestore...`);
-      // Completely unique, conflict-isolated initialization parameters
-      const standaloneAtlasFirebaseSettings = {
-        projectId: "vertex-35d95",
-        apiKey: "AlzaSyBnS2173ew2vpxR7rOs0FfTpfsEmhj79Uc",
-        databaseId: "(default)"
-      };
-
+    
+    if (!config) {
+      config = DEFAULT_FIREBASE_CONFIG;
+    }
+    
+    if (config && config.apiKey && config.projectId) {
       try {
+        // Initialize Firebase Compat
         if (firebase.apps.length > 0) {
           try {
             await firebase.app().delete();
-          } catch (cleanupError) {
-            console.warn("DB: Maintenance bypass on existing instance:", cleanupError);
+          } catch (e) {
+            console.warn("DB: Error cleaning up existing Firebase App instance:", e);
           }
         }
-
-        firebase.initializeApp(standaloneAtlasFirebaseSettings);
-
-        const targetDbClusterId = standaloneAtlasFirebaseSettings.databaseId || '(default)';
-        console.log("DB: Stored Project ID Verification:", standaloneAtlasFirebaseSettings.projectId);
-        console.log("DB: Stored API Key Verification:", standaloneAtlasFirebaseSettings.apiKey);
-        console.log("DB: Initializing Firestore connection with database ID:", targetDbClusterId);
-
-        this.firestoreRef = firebase.firestore(firebase.app());
+        firebase.initializeApp(config);
+        const dbId = config.databaseId || '(default)';
+        console.log("DB: Stored Project ID in LocalStorage:", config.projectId);
+        console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
+        console.log("DB: Initializing Firestore connection with database ID:", dbId);
+        this.firestoreRef = firebase.firestore(firebase.app(), dbId);
         this.isCloud = true;
-
-        this.firestoreRef.enablePersistence().catch(persistenceError => {
-          console.warn("Offline pipeline retention state deferred:", persistenceError.code);
+        
+        // Enable offline persistence
+        this.firestoreRef.enablePersistence().catch(err => {
+          console.warn("Firestore offline persistence failed:", err.code);
         });
-
-        if (statusDot) statusDot.style.background = "#10b981";
+        
+        if (statusDot) statusDot.style.background = "#10b981"; // green
         if (statusText) statusText.textContent = "Firebase Cloud (Online)";
-
-        registerSnapshotListener();
-
-        // Balanced and stitched migration pathway
+        
+        this.registerSnapshotListener();
+        
+        // Check for migration from local to cloud
         const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
         if (localQuotes.length > 0) {
           console.log(`DB: Found ${localQuotes.length} local quotes. Migrating to Firestore...`);
           try {
             const migrationPromises = localQuotes.map(async q => {
               if (!q.timestamp) q.timestamp = Date.now();
-              return db.collection("quotes").doc(q.id).set(q);
+              return this.firestoreRef.collection("quotes").doc(q.id).set(q);
             });
             await Promise.all(migrationPromises);
             console.log("DB: Local quotes migration succeeded!");
@@ -7360,88 +6766,400 @@ const DB = {
             console.error("DB: Migration of local quotes failed. Retaining local copy.", err);
           }
         }
-
-      } catch (globalInitError) {
-        console.error("Critical connection engine initialization halt:", globalInitError);
+        // Check for migration from local to cloud for NRS registry
+        const localNrs = JSON.parse(localStorage.getItem("gl_nrs_registry") || "[]");
+        if (localNrs.length > 0) {
+          console.log(`DB: Found ${localNrs.length} local NRS entries. Migrating to Firestore...`);
+          try {
+            const migrationPromises = localNrs.map(async entry => {
+              return this.firestoreRef.collection("nrs_registry").doc(entry.id).set(entry);
+            });
+            await Promise.all(migrationPromises);
+            console.log("DB: Local NRS registry migration succeeded!");
+            localStorage.removeItem("gl_nrs_registry");
+          } catch (err) {
+            console.error("DB: Migration of local NRS registry failed. Retaining local copy.", err);
+          }
+        }
+        
+        // Check for migration from local to cloud for amendment requests
+        const localReqs = JSON.parse(localStorage.getItem("gl_amendment_requests") || "[]");
+        if (localReqs.length > 0) {
+          console.log(`DB: Found ${localReqs.length} local amendment requests. Migrating to Firestore...`);
+          try {
+            const migrationPromises = localReqs.map(async r => {
+              return this.firestoreRef.collection("amendment_requests").doc(r.id).set(r);
+            });
+            await Promise.all(migrationPromises);
+            console.log("DB: Local amendment requests migration succeeded!");
+          } catch (err) {
+            console.error("DB: Migration of local amendment requests failed:", err);
+          }
+        }
+        return;
+      } catch (e) {
+        console.error("Failed to initialize Firebase:", e);
       }
     }
-    var type = 'global';
-    const tabIndia = document.getElementById("news-tab-india");
-    if (tabGlobal && tabIndia) {
-      if (type === 'global') {
-        const tabIndia = document.getElementById("news-tab-india");
-        if (tabGlobal && tabIndia) {
-          if (typeof type !== 'undefined' && type === 'global') {
-            tabGlobal.classList.add("active");
-            tabGlobal.style.borderColor = "var(--sky)";
-            tabGlobal.style.color = "var(--sky)";
-            tabIndia.classList.remove("active");
-            tabIndia.style.borderColor = "transparent";
-            tabIndia.style.color = "var(--t3)";
+    
+    // Fallback to local storage
+    this.fallbackToLocal();
+  },
+  
+  registerSnapshotListener() {
+    const statusDot = document.getElementById("db-connection-dot");
+    const statusText = document.getElementById("db-connection-text");
+    
+    console.log("DB: Registering Firestore snapshot listener...");
+    
+    // Sync users list from Firestore
+    this.syncUsers();
+    
+    // Sync customer controls list from Firestore
+    if (this.firestoreRef) {
+      this.firestoreRef.collection("customer_control").onSnapshot(snap => {
+        let controls = {};
+        snap.forEach(doc => {
+          controls[doc.id] = doc.data();
+        });
+        window._customerControls = controls;
+        localStorage.setItem("gl_customer_controls", JSON.stringify(controls));
+        renderAdminCustomerControlList();
+      }, err => {
+        console.warn("Firestore: customer_control listen failed, using local/cached records:", err);
+      });
+
+      // Sync amendment requests list from Firestore
+      this.firestoreRef.collection("amendment_requests").onSnapshot(snap => {
+        let reqs = [];
+        snap.forEach(doc => {
+          reqs.push(doc.data());
+        });
+        window._amendmentRequests = reqs;
+        localStorage.setItem("gl_amendment_requests", JSON.stringify(reqs));
+        
+        // Auto refresh dashboards dynamically
+        if (appState.currentUser) {
+          if (appState.currentUser === 'ganny') {
+            renderAdminDashboard();
           } else {
-            tabIndia.classList.add("active");
-            tabIndia.style.borderColor = "var(--sky)";
-            tabIndia.style.color = "var(--sky)";
-            tabGlobal.classList.remove("active");
-            tabGlobal.style.borderColor = "transparent";
-            tabGlobal.style.color = "var(--t3)";
+            renderMemberDashboard(appState.currentUser);
           }
         }
-
-        // Update Member tabs
-        const mTabGlobal = document.getElementById("member-news-tab-global");
-        const mTabIndia = document.getElementById("member-news-tab-india");
-        if (mTabGlobal && mTabIndia) {
-          if (type === 'global') {
-            mTabGlobal.classList.add("active");
-            mTabGlobal.style.borderColor = "var(--sky)";
-            mTabGlobal.style.color = "var(--sky)";
-            mTabIndia.classList.remove("active");
-            mTabIndia.style.borderColor = "transparent";
-            mTabIndia.style.color = "var(--t3)";
-          } else {
-            mTabIndia.classList.add("active");
-            mTabIndia.style.borderColor = "var(--sky)";
-            mTabIndia.style.color = "var(--sky)";
-            mTabGlobal.classList.remove("active");
-            mTabGlobal.style.borderColor = "transparent";
-            mTabGlobal.style.color = "var(--t3)";
-          }
+      }, err => {
+        console.warn("Firestore: amendment_requests listen failed, using local/cached records:", err);
+        window._amendmentRequestsError = err.message;
+        if (appState.currentUser === 'ganny') {
+          renderAdminDashboard();
         }
+      });
+    }
+    
+    // Unsubscribe from any existing listener if applicable
+    if (this.snapshotUnsubscribe) {
+      this.snapshotUnsubscribe();
+    }
+    
+    this.snapshotUnsubscribe = this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
+      console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
+      const list = [];
+      snapshot.forEach(doc => {
+        const q = doc.data();
+        this.sanitize(q, list.length);
+        list.push(q);
+      });
+      // Sort quotes chronologically (newest first)
+      list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      appState.quotes = list;
+      
+      // Update badge status to show online
+      if (statusDot) statusDot.style.background = "#10b981"; // green
+      if (statusText) statusText.textContent = "Firebase Cloud (Online)";
+      
+      // Refresh view
+      if (appState.currentUser) {
+        if (appState.currentUser === 'ganny') {
+          renderAdminDashboard();
+        } else {
+          renderMemberDashboard(appState.currentUser);
+        }
+      }
+    }, error => {
+      console.error("Firestore synchronization error:", error);
+      
+      // Self-healing: check if default database is missing and redirect to named 'default' database ID
+      if (error.message && error.message.includes("(default) does not exist") && !this.triedDefaultFallback) {
+        console.log("DB: Default database not found. Self-healing to connect to named database 'default'...");
+        this.triedDefaultFallback = true;
+        try {
+          this.firestoreRef = firebase.firestore(firebase.app(), 'default');
+          this.registerSnapshotListener();
+          return;
+        } catch (fallbackErr) {
+          console.error("DB: Self-healing fallback failed:", fallbackErr);
+        }
+      }
+      
+      if (statusDot) statusDot.style.background = "#ef4444"; // red
+      if (statusText) statusText.textContent = "Firebase: " + error.message;
+    });
+  },
+  
+  async syncUsers() {
+    if (!this.firestoreRef) return;
+    try {
+      const snapshot = await this.firestoreRef.collection("users").get();
+      if (snapshot.empty) {
+        // Auto-populate default roles if empty
+        const defaultUsers = [
+          { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin' },
+          { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
+          { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+          { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
+          { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
+        ];
+        for (const u of defaultUsers) {
+          await this.firestoreRef.collection("users").doc(u.username).set(u);
+        }
+        console.log("DB: Auto-populated default users in Firestore");
+      }
+      
+      // Set listener on users collection
+      this.firestoreRef.collection("users").onSnapshot(snap => {
+        let customUsers = [];
+        snap.forEach(doc => {
+          const u = doc.data();
+          customUsers.push(u);
+          
+          // Update TEAM_ROLES dynamically
+          TEAM_ROLES[u.username] = {
+            name: u.fullName,
+            type: u.role || 'member',
+            category: u.category || 'FREE HAND SALES (AIR/SEA)',
+            currency: u.currency || 'INR'
+          };
+        });
+        window._firebaseUsers = customUsers;
+        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+        console.log("DB: Synced users from Firestore count:", customUsers.length);
+      });
+    } catch (err) {
+      console.error("DB: Failed to sync users from Firestore:", err);
+    }
+  },
+  
+  fallbackToLocal() {
+    const statusDot = document.getElementById("db-connection-dot");
+    const statusText = document.getElementById("db-connection-text");
+    
+    this.isCloud = false;
+    if (statusDot) statusDot.style.background = "#38bdf8"; // sky blue
+    if (statusText) statusText.textContent = "LocalStorage (Offline)";
+    
+    // Load local storage quotes
+    const saved = localStorage.getItem("logistics_quotes");
+    if (saved) {
+      try {
+        appState.quotes = JSON.parse(saved);
+        if (appState.quotes.some(q => typeof q.id === 'string' && q.id.startsWith("q"))) {
+          appState.quotes = [];
+          localStorage.setItem("logistics_quotes", JSON.stringify([]));
+        }
+      } catch (e) {
+        appState.quotes = [];
+      }
+    } else {
+      appState.quotes = [];
+    }
+    
+    // Load local amendment requests cache
+    const storedReqs = localStorage.getItem("gl_amendment_requests");
+    if (storedReqs) {
+      try {
+        window._amendmentRequests = JSON.parse(storedReqs);
+      } catch (e) {
+        window._amendmentRequests = [];
+      }
+    } else {
+      window._amendmentRequests = [];
+    }
+    
+    // Sanitize quotes array
+    appState.quotes.forEach((q, idx) => {
+      this.sanitize(q, idx);
+    });
+  },
+  
+  sanitize(q, idx) {
+    const creatorMap = {
+      'air-nom': 'shashank',
+      'sea-nom': 'mahendra',
+      'air-local': 'jaya',
+      'sea-local': 'jaya'
+    };
+    if (creatorMap[q.creator]) {
+      q.creator = creatorMap[q.creator];
+    }
+    if (!q.quoteNumber) {
+      q.quoteNumber = idx + 1;
+    }
+    if (!q.timestamp) {
+      q.timestamp = Date.now() - (idx * 60 * 1000);
+    }
+  },
+  
+  async saveQuote(quote) {
+    if (!quote.timestamp) quote.timestamp = Date.now();
+    
+    // Local memory update immediately so the local user doesn't see lag
+    const idx = appState.quotes.findIndex(q => q.id === quote.id);
+    if (idx !== -1) {
+      appState.quotes[idx] = quote;
+    } else {
+      appState.quotes.push(quote);
+    }
+    
+    if (this.isCloud && this.firestoreRef) {
+      console.log("DB: Attempting to write quote to Firestore...", quote.id);
+      try {
+        await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
+        console.log("DB: Firestore write succeeded!");
+      } catch (err) {
+        console.error("DB: Firestore write failed:", err);
+        alert("Cloud Database Write Error: " + err.message);
+      }
+    } else {
+      localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+      if (appState.currentUser === 'ganny') {
+        renderAdminDashboard();
+      } else {
+        renderMemberDashboard(appState.currentUser);
+      }
+    }
+  },
+  
+  async deleteQuote(quoteId) {
+    appState.quotes = appState.quotes.filter(q => q.id !== quoteId);
+    
+    if (this.isCloud && this.firestoreRef) {
+      try {
+        await this.firestoreRef.collection("quotes").doc(quoteId).delete();
+      } catch (err) {
+        console.error("DB: Firestore delete failed:", err);
+        alert("Cloud Database Delete Error: " + err.message);
+      }
+    } else {
+      localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
+      if (appState.currentUser === 'ganny') {
+        renderAdminDashboard();
+      } else {
+        renderMemberDashboard(appState.currentUser);
+      }
+    }
+  },
+  
+  async clearAllQuotes() {
+    if (this.isCloud && this.firestoreRef) {
+      try {
+        const snapshot = await this.firestoreRef.collection("quotes").get();
+        const promises = [];
+        snapshot.forEach(doc => {
+          promises.push(doc.ref.delete());
+        });
+        await Promise.all(promises);
+        console.log("DB: All quotes deleted from Firestore.");
+      } catch (err) {
+        console.error("DB: Failed to clear Firestore quotes:", err);
+        throw err;
+      }
+    } else {
+      localStorage.removeItem("logistics_quotes");
+    }
+    appState.quotes = [];
+  }
+};
+window.DB = DB;
 
-        const loadingHtml = `
+async function loadLogisticsNews(type = 'global') {
+  const container1 = document.getElementById("logistics-news-list");
+  const container2 = document.getElementById("member-logistics-news-list");
+  if (!container1 && !container2) return;
+
+  // Update Admin tabs
+  const tabGlobal = document.getElementById("news-tab-global");
+  const tabIndia = document.getElementById("news-tab-india");
+  if (tabGlobal && tabIndia) {
+    if (type === 'global') {
+      tabGlobal.classList.add("active");
+      tabGlobal.style.borderColor = "var(--sky)";
+      tabGlobal.style.color = "var(--sky)";
+      tabIndia.classList.remove("active");
+      tabIndia.style.borderColor = "transparent";
+      tabIndia.style.color = "var(--t3)";
+    } else {
+      tabIndia.classList.add("active");
+      tabIndia.style.borderColor = "var(--sky)";
+      tabIndia.style.color = "var(--sky)";
+      tabGlobal.classList.remove("active");
+      tabGlobal.style.borderColor = "transparent";
+      tabGlobal.style.color = "var(--t3)";
+    }
+  }
+
+  // Update Member tabs
+  const mTabGlobal = document.getElementById("member-news-tab-global");
+  const mTabIndia = document.getElementById("member-news-tab-india");
+  if (mTabGlobal && mTabIndia) {
+    if (type === 'global') {
+      mTabGlobal.classList.add("active");
+      mTabGlobal.style.borderColor = "var(--sky)";
+      mTabGlobal.style.color = "var(--sky)";
+      mTabIndia.classList.remove("active");
+      mTabIndia.style.borderColor = "transparent";
+      mTabIndia.style.color = "var(--t3)";
+    } else {
+      mTabIndia.classList.add("active");
+      mTabIndia.style.borderColor = "var(--sky)";
+      mTabIndia.style.color = "var(--sky)";
+      mTabGlobal.classList.remove("active");
+      mTabGlobal.style.borderColor = "transparent";
+      mTabGlobal.style.color = "var(--t3)";
+    }
+  }
+
+  const loadingHtml = `
     <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
       <span style="display:inline-block; width:6px; height:6px; background:var(--sky); border-radius:50%; margin-right:4px;"></span>
       Fetching latest ${type === 'global' ? 'Global' : 'India'} news...
     </div>
   `;
-        if (container1) container1.innerHTML = loadingHtml;
-        if (container2) container2.innerHTML = loadingHtml;
+  if (container1) container1.innerHTML = loadingHtml;
+  if (container2) container2.innerHTML = loadingHtml;
 
-        const rssUrl = type === 'global'
-          ? "https://container-news.com/feed/"
-          : "https://www.logisticsinsider.in/feed/";
-        const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+  const rssUrl = type === 'global' 
+    ? "https://container-news.com/feed/" 
+    : "https://www.logisticsinsider.in/feed/";
+  const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
+  try {
+    const res = await fetch(feedUrl);
+    const data = await res.json();
+    
+    if (data && data.status === 'ok' && data.items && data.items.length > 0) {
+      const itemsHtml = data.items.map(item => {
+        let dateStr = "";
         try {
-          const res = await fetch(feedUrl);
-          const data = await res.json();
-
-          if (data && data.status === 'ok' && data.items && data.items.length > 0) {
-            const itemsHtml = data.items.map(item => {
-              let dateStr = "";
-              try {
-                const d = new Date(item.pubDate);
-                if (!isNaN(d.getTime())) {
-                  dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
-                }
-              } catch (e) { }
-
-              const title = item.title || "Logistics News Update";
-              const link = item.link || "#";
-              const author = item.author ? ` • By ${item.author}` : "";
-
-              return `
+          const d = new Date(item.pubDate);
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+          }
+        } catch(e) {}
+        
+        const title = item.title || "Logistics News Update";
+        const link = item.link || "#";
+        const author = item.author ? ` • By ${item.author}` : "";
+        
+        return `
           <a href="${link}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block; margin-bottom: 0.5rem;">
             <div class="news-feed-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.25rem; transition: all 0.2s; cursor: pointer;">
               <div style="font-weight: 750; font-size: 0.75rem; color: var(--t1); line-height: 1.3;">${title}</div>
@@ -7452,35 +7170,31 @@ const DB = {
             </div>
           </a>
         `;
-            }).join("");
+      }).join("");
 
-            if (container1) container1.innerHTML = itemsHtml;
-            if (container2) container2.innerHTML = itemsHtml;
-          } else {
-            throw new Error("Invalid RSS feed response");
-          }
-        } catch (err) {
-          console.error("Failed to load logistics news:", err);
-          const errorHtml = `
+      if (container1) container1.innerHTML = itemsHtml;
+      if (container2) container2.innerHTML = itemsHtml;
+    } else {
+      throw new Error("Invalid RSS feed response");
+    }
+  } catch (err) {
+    console.error("Failed to load logistics news:", err);
+    const errorHtml = `
       <div style="font-size: 0.72rem; color: var(--accent-error); font-style: italic; text-align: center; margin-top: 1.5rem;">
         ⚠️ Failed to load news feed.
       </div>
-   `;
-          if (container1) container1.innerHTML = errorHtml;
-          if (container2) container2.innerHTML = errorHtml;
-        }
-      }
-    } // Close the news-tab initialization block.
-  } // Close DB.init.
-}; // Close the DB repository object.
-
+    `;
+    if (container1) container1.innerHTML = errorHtml;
+    if (container2) container2.innerHTML = errorHtml;
+  }
+}
 window.loadLogisticsNews = loadLogisticsNews;
 
 // MODAL & SECURITY HANDLERS
 function toggleAdminSettingsModal() {
   const modal = document.getElementById("admin-settings-modal");
   if (!modal) return;
-
+  
   if (modal.style.display === "none" || !modal.style.display) {
     // Populate configurations dynamically inside modal inputs
     const savedNames = localStorage.getItem("gl_desk_names");
@@ -7491,12 +7205,12 @@ function toggleAdminSettingsModal() {
         if (parsed["mahendra"]) document.getElementById("cfg-mahendra").value = parsed["mahendra"];
         if (parsed["jaya"]) document.getElementById("cfg-jaya").value = parsed["jaya"];
         if (parsed["cathrina"]) document.getElementById("cfg-cathrina").value = parsed["cathrina"];
-      } catch (e) { }
+      } catch(e) {}
     }
-
+    
     document.getElementById("cfg-gmaps-key").value = localStorage.getItem("gl_gmaps_key") || "";
     document.getElementById("cfg-firebase-json").value = localStorage.getItem("gl_firebase_config_raw") || "";
-
+    
     renderAdminCustomerControlList();
     modal.style.display = "flex";
   } else {
@@ -7543,9 +7257,9 @@ async function saveNewPassword(e) {
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) {
-        try { customUsers = JSON.parse(stored); } catch (err) { }
+        try { customUsers = JSON.parse(stored); } catch(err) {}
       }
-
+      
       const matched = customUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === currentUser);
       if (matched) {
         matched.password = newPass;
@@ -7575,27 +7289,27 @@ document.addEventListener("keydown", (e) => {
   // ESC key: Exit modals and return to home from calculators
   if (e.key === "Escape") {
     const modalIds = [
-      "admin-settings-modal",
-      "change-password-modal",
-      "xe-rates-modal",
+      "admin-settings-modal", 
+      "change-password-modal", 
+      "xe-rates-modal", 
       "print-preview-modal",
       "won-booking-modal"
     ];
     let modalClosed = false;
-
+    
     for (const id of modalIds) {
       const modal = document.getElementById(id);
       if (modal && (modal.style.display === "flex" || modal.style.display === "block")) {
         modal.style.display = "none";
         modalClosed = true;
-
+        
         // Modal-specific cleanups
         if (id === "change-password-modal") {
           document.getElementById("new-pass-val").value = "";
         }
       }
     }
-
+    
     // If no modal was closed, but we are inside an active calculator desk, return back to main dashboard
     if (!modalClosed) {
       const activePanel = document.querySelector(".view-panel.active");
@@ -7658,11 +7372,6 @@ async function submitWonBookingDetails(e) {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
 
-  if (quote.paymentTerms === "ADVANCE REQUIRED" && quote.advancePaymentStatus !== "Collected") {
-    alert("Action Denied: Advance payment must be collected and marked as Collected in the system before this shipment can be Confirmed/Won.");
-    return;
-  }
-
   const shipperName = document.getElementById("won-shipper-name").value.trim();
   const shipperPhone = document.getElementById("won-shipper-phone").value.trim();
   const shipperEmail = document.getElementById("won-shipper-email").value.trim();
@@ -7675,8 +7384,8 @@ async function submitWonBookingDetails(e) {
 
   const commodity = document.getElementById("won-commodity").value.trim();
 
-  if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress ||
-    !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
+  if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress || 
+      !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
     alert("Please fill all exporter, importer and cargo details to proceed.");
     return;
   }
@@ -7706,12 +7415,12 @@ async function submitWonBookingDetails(e) {
   const customerName = quote.customer || "";
   const lower = customerName.toLowerCase().trim();
   const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-
+  
   const creatorRole = quote.creator;
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' ||
-    creatorRole === 'cathrina' ||
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
+    creatorRole === 'jaya' || 
+    creatorRole === 'cathrina' || 
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
     TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
@@ -7746,7 +7455,7 @@ async function submitWonBookingDetails(e) {
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch (e) { }
+        try { requests = JSON.parse(stored); } catch(e) {}
       }
     }
     const pending = requests.find(r => r.customer.toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
@@ -7901,7 +7610,7 @@ async function submitWonBookingDetails(e) {
       let offlineRegistry = [];
       const stored = localStorage.getItem("gl_nrs_registry");
       if (stored) {
-        try { offlineRegistry = JSON.parse(stored); } catch (err) { }
+        try { offlineRegistry = JSON.parse(stored); } catch(err) {}
       }
       const idx = offlineRegistry.findIndex(item => item.id === quote.id);
       if (idx !== -1) {
@@ -7968,7 +7677,7 @@ async function renderNrsRegistry() {
     } else {
       const stored = localStorage.getItem("gl_nrs_registry");
       if (stored) {
-        try { registryList = JSON.parse(stored); } catch (e) { }
+        try { registryList = JSON.parse(stored); } catch(e) {}
       }
     }
 
@@ -7993,7 +7702,7 @@ function previewPdfDataUrl(dataUrl, title = "Document Preview") {
     }
     const blob = new Blob([uInt8Array], { type: contentType });
     const blobUrl = URL.createObjectURL(blob);
-
+    
     const win = window.open();
     if (win) {
       win.document.write(`
@@ -8031,10 +7740,10 @@ window.previewPdfDataUrl = previewPdfDataUrl;
 function previewNrsAgreementPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-
+  
   let agreementData = item ? item.agencyAgreementData : null;
   let agreementName = item ? item.agencyAgreementName : null;
-
+  
   if (!agreementData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -8064,10 +7773,10 @@ window.previewNrsAgreementPdf = previewNrsAgreementPdf;
 function previewNrsInvoicePackingPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-
+  
   let invoicePackingData = item ? item.invoicePackingData : null;
   let invoicePackingName = item ? item.invoicePackingName : null;
-
+  
   if (!invoicePackingData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -8087,10 +7796,10 @@ window.previewNrsInvoicePackingPdf = previewNrsInvoicePackingPdf;
 function downloadNrsAgreementPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-
+  
   let agreementData = item ? item.agencyAgreementData : null;
   let agreementName = item ? item.agencyAgreementName : null;
-
+  
   if (!agreementData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -8127,10 +7836,10 @@ window.downloadNrsAgreementPdf = downloadNrsAgreementPdf;
 function downloadNrsInvoicePackingPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-
+  
   let invoicePackingData = item ? item.invoicePackingData : null;
   let invoicePackingName = item ? item.invoicePackingName : null;
-
+  
   if (!invoicePackingData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -8249,27 +7958,27 @@ function displayNrsRegistryItems(list) {
         </td>
         <td>
           ${(() => {
-        const followUps = item.followUps || [];
-        const latest = followUps.length > 0 ? followUps[followUps.length - 1] : null;
-        const statusColors = {
-          'Awaiting Response': { bg: 'rgba(245,158,11,0.12)', color: '#d97706' },
-          'Documents Pending': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
-          'Booking Confirmed by Shipper': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
-          'Shipment Dispatched': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
-          'Completed': { bg: 'rgba(34,197,94,0.12)', color: '#15803d' }
-        };
-        const sc = latest ? (statusColors[latest.status] || { bg: 'rgba(0,0,0,0.05)', color: 'var(--t3)' }) : null;
-        let badgeHtml = '';
-        if (latest) {
-          badgeHtml = `<div style="font-size: 0.58rem; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: ${sc.bg}; color: ${sc.color}; margin-bottom: 3px; white-space: nowrap;">${latest.status}</div>`;
-        }
-        return `
+            const followUps = item.followUps || [];
+            const latest = followUps.length > 0 ? followUps[followUps.length - 1] : null;
+            const statusColors = {
+              'Awaiting Response': { bg: 'rgba(245,158,11,0.12)', color: '#d97706' },
+              'Documents Pending': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
+              'Booking Confirmed by Shipper': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
+              'Shipment Dispatched': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
+              'Completed': { bg: 'rgba(34,197,94,0.12)', color: '#15803d' }
+            };
+            const sc = latest ? (statusColors[latest.status] || { bg: 'rgba(0,0,0,0.05)', color: 'var(--t3)' }) : null;
+            let badgeHtml = '';
+            if (latest) {
+              badgeHtml = `<div style="font-size: 0.58rem; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: ${sc.bg}; color: ${sc.color}; margin-bottom: 3px; white-space: nowrap;">${latest.status}</div>`;
+            }
+            return `
               ${badgeHtml}
               <button onclick="openNrsFollowUpModal('${item.id}')" style="font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--sky); cursor: pointer; font-weight: 700; white-space: nowrap;" title="View / Add Follow-ups">
                 📋 ${followUps.length > 0 ? followUps.length + ' note' + (followUps.length > 1 ? 's' : '') : 'Track'}
               </button>
             `;
-      })()}
+          })()}
         </td>
       </tr>
     `;
@@ -8449,7 +8158,7 @@ async function addNrsFollowUp() {
     } else {
       // Offline fallback — save to localStorage
       let offlineNrs = {};
-      try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch (e) { }
+      try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch(e) {}
       if (!offlineNrs[itemId]) offlineNrs[itemId] = {};
       offlineNrs[itemId].followUps = item.followUps;
       localStorage.setItem('gl_nrs_registry', JSON.stringify(offlineNrs));
@@ -8482,7 +8191,7 @@ window._uploadedAgreements = { air: null, sea: null };
 function handleAgreementUpload(mode, input) {
   if (!input.files || input.files.length === 0) return;
   const file = input.files[0];
-
+  
   if (!window._uploadedAgreements) window._uploadedAgreements = {};
   window._uploadedAgreements[mode] = {
     name: file.name,
@@ -8512,7 +8221,7 @@ async function renderAdminCustomerControlList() {
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch (e) { }
+    } catch(e) {}
   }
   const customers = Array.from(new Set([
     ...appState.quotes.map(q => q.customer.trim()),
@@ -8563,7 +8272,7 @@ async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
   if (!controls[lower]) {
     controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
   }
-
+  
   controls[lower].hasAgreement = true;
   controls[lower].agreementFile = fileName;
   controls[lower].agreementData = fileData;
@@ -8574,7 +8283,7 @@ async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
     try {
       await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
       console.log(`DB: Saved agency agreement for "${customerName}" to Firestore.`);
-    } catch (err) {
+    } catch(err) {
       console.error("DB: Failed to save agency agreement to Firestore:", err);
     }
   } else {
@@ -8582,7 +8291,7 @@ async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
+    } catch(e) {}
   }
 }
 window.saveCustomerAgreementRecord = saveCustomerAgreementRecord;
@@ -8596,7 +8305,7 @@ async function resetCustomerAgreement(customerName) {
     controls[lower].hasAgreement = false;
     delete controls[lower].agreementFile;
     delete controls[lower].agreementData;
-
+    
     // Sync to database
     if (DB.firestoreRef) {
       await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower]);
@@ -8605,7 +8314,7 @@ async function resetCustomerAgreement(customerName) {
         let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
         offlineControls[lower] = controls[lower];
         localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-      } catch (e) { }
+      } catch(e) {}
     }
     alert(`Successfully reset Agency Agreement for "${customerName}".`);
     renderAdminCustomerControlList();
@@ -8629,7 +8338,7 @@ function displayAdminCustomerControlList(list) {
     const pendingReqs = window._amendmentRequests || [];
     const hasPendingWaiver = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
 
-    const agreementCell = hasAgreement
+    const agreementCell = hasAgreement 
       ? `<div style="display: flex; align-items: center; gap: 0.4rem;">
            <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fileName}">${fileName}</span>
            <button class="btn-text" onclick="downloadAgreementPdf('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥 Download</button>
@@ -8703,7 +8412,7 @@ async function updateCustomerCreditPeriod(customerName, days) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
+    } catch(e) {}
   }
 }
 window.updateCustomerCreditPeriod = updateCustomerCreditPeriod;
@@ -8727,7 +8436,7 @@ async function updateCustomerCreditLimitValue(customerName, limit) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
+    } catch(e) {}
   }
 }
 window.updateCustomerCreditLimitValue = updateCustomerCreditLimitValue;
@@ -8748,7 +8457,7 @@ async function toggleCustomerAgreementWaiver(customerName) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch (e) { }
+    } catch(e) {}
     renderAdminCustomerControlList();
   }
 }
@@ -8787,7 +8496,7 @@ function resetDbConnectionLocal() {
     // Clear service worker registrations
     if (navigator.serviceWorker) {
       navigator.serviceWorker.getRegistrations().then(regs => {
-        for (let r of regs) r.unregister();
+        for(let r of regs) r.unregister();
       });
     }
 
@@ -8809,7 +8518,7 @@ window.resetDbConnectionLocal = resetDbConnectionLocal;
 function toggleDiagnosticsDrawer() {
   const drawer = document.getElementById("diagnostics-drawer");
   if (!drawer) return;
-
+  
   if (drawer.style.display === "none") {
     drawer.style.display = "block";
     updateDiagnosticsUI();
@@ -8826,7 +8535,7 @@ function updateDiagnosticsUI() {
   const diagStatus = document.getElementById("diag-status");
 
   if (diagConn) diagConn.textContent = DB.isCloud ? "Cloud (Online) 🟢" : "Offline (Local) 🔵";
-
+  
   let projectId = "None";
   try {
     const configRaw = localStorage.getItem("gl_firebase_config");
@@ -8834,7 +8543,7 @@ function updateDiagnosticsUI() {
       const config = JSON.parse(configRaw);
       if (config && config.projectId) projectId = config.projectId;
     }
-  } catch (e) { }
+  } catch(e) {}
   if (diagProj) diagProj.textContent = projectId;
 
   let dbUsers = window._firebaseUsers || [];
@@ -8842,7 +8551,7 @@ function updateDiagnosticsUI() {
     try {
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) dbUsers = JSON.parse(stored) || [];
-    } catch (e) { }
+    } catch(e) {}
   }
   if (diagUsers) diagUsers.textContent = `${dbUsers.length} users`;
 
@@ -8870,7 +8579,7 @@ async function resetCustomerCreditDirectory() {
       });
       await Promise.all(promises);
       console.log("DB: Successfully cleared customer_control collection from Firestore.");
-    } catch (err) {
+    } catch(err) {
       console.error("DB: Failed to clear customer_control from Firestore:", err);
       alert("Database error: " + err.message);
       return;
@@ -8908,7 +8617,7 @@ async function clearAllTestData() {
       await Promise.all(reqsPromises);
 
       console.log("DB: Cleared quotes, nrs_registry, and amendment_requests collections.");
-    } catch (err) {
+    } catch(err) {
       console.error("DB: Failed to clear test data from Firestore:", err);
       alert("Database error: " + err.message);
       return;
@@ -8922,7 +8631,7 @@ async function clearAllTestData() {
 
   appState.quotes = [];
   window._amendmentRequests = [];
-
+  
   alert("All test data has been cleared from database successfully!");
   renderAdminDashboard();
 }
@@ -8942,7 +8651,7 @@ async function runDbDiagnostics() {
 
   log("🔍 Starting Database Connection Diagnostics...");
   log(`• App Mode: ${DB.isCloud ? "Firebase Cloud (Online) 🟢" : "LocalStorage (Offline) 🔵"}`);
-
+  
   let configRaw = localStorage.getItem("gl_firebase_config");
   log(`• Custom config: ${configRaw ? "Yes" : "No (Using DEFAULT)"}`);
 
@@ -8957,7 +8666,7 @@ async function runDbDiagnostics() {
   try {
     const snap = await DB.firestoreRef.collection("quotes").limit(1).get();
     log(`✅ quotes collection read test: PASSED (Found ${snap.size} docs)`);
-  } catch (err) {
+  } catch(err) {
     log(`❌ quotes collection read test: FAILED - ${err.message}`);
   }
 
@@ -8975,13 +8684,13 @@ async function runDbDiagnostics() {
     // Clean it up
     await DB.firestoreRef.collection("amendment_requests").doc(testId).delete();
     log("✅ 'amendment_requests' delete test: PASSED");
-
+    
     // Clear any previous error warning banner
     delete window._amendmentRequestsError;
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
     }
-  } catch (err) {
+  } catch(err) {
     log(`❌ 'amendment_requests' write test: FAILED - ${err.message}`);
     log(`👉 Recommendation: Ask your developer to modify Firestore Security Rules to allow read, write on 'amendment_requests' collection.`);
   }
@@ -9009,7 +8718,7 @@ function toggleModulePathway(module, mode) {
   document.getElementById(`${module}-summary-inactive`).style.display = isBundled ? 'block' : 'none';
   document.getElementById(`${module}-summary-active`).style.display = isBundled ? 'none' : 'flex';
   document.getElementById(`${module}-save-btn-container`).style.display = isBundled ? 'none' : 'block';
-
+  
   if (module === 'custom') calculateCustomClearance();
   else if (module === 'transport') calculateTransportation();
   else if (module === 'warehouse') calculateWarehousing();
@@ -9017,122 +8726,59 @@ function toggleModulePathway(module, mode) {
 window.toggleModulePathway = toggleModulePathway;
 
 function calculateCustomClearance() {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-
-  const curSelect = document.getElementById("custom-currency");
-  if (!isNomUser && curSelect) {
-    curSelect.value = "INR";
-    curSelect.disabled = true;
-  } else if (curSelect) {
-    curSelect.disabled = false;
-  }
-
-  const cur = curSelect ? curSelect.value : "INR";
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
-
   const tbody = document.getElementById("custom-standalone-body");
-  let subtotalINR = 0;
+  let subtotal = 0;
   tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotalINR += parseFloat(input.value) || 0;
+    subtotal += parseFloat(input.value) || 0;
   });
-
-  const taxINR = subtotalINR * 0.18;
-  const totalINR = subtotalINR + taxINR;
-
-  let rateDivider = 1;
-  if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
-  else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
-  else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
-
-  const subtotal = subtotalINR / rateDivider;
-  const tax = taxINR / rateDivider;
+  
+  const tax = subtotal * 0.18;
   const total = subtotal + tax;
-
-  document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  const cur = document.getElementById("custom-currency").value;
+  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+  
+  document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 }
 window.calculateCustomClearance = calculateCustomClearance;
 
 function calculateTransportation() {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-
-  const curSelect = document.getElementById("transport-currency");
-  if (!isNomUser && curSelect) {
-    curSelect.value = "INR";
-    curSelect.disabled = true;
-  } else if (curSelect) {
-    curSelect.disabled = false;
-  }
-
-  const cur = curSelect ? curSelect.value : "INR";
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
-
   const tbody = document.getElementById("transport-standalone-body");
-  let subtotalINR = 0;
+  let subtotal = 0;
   tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotalINR += parseFloat(input.value) || 0;
+    subtotal += parseFloat(input.value) || 0;
   });
-
-  const taxINR = subtotalINR * 0.18;
-  const totalINR = subtotalINR + taxINR;
-
-  let rateDivider = 1;
-  if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
-  else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
-  else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
-
-  const subtotal = subtotalINR / rateDivider;
-  const tax = taxINR / rateDivider;
+  
+  const tax = subtotal * 0.18;
   const total = subtotal + tax;
-
-  document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  const cur = document.getElementById("transport-currency").value;
+  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+  
+  document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 }
 window.calculateTransportation = calculateTransportation;
 
 function calculateWarehousing() {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-
-  const curSelect = document.getElementById("warehouse-currency");
-  if (!isNomUser && curSelect) {
-    curSelect.value = "INR";
-    curSelect.disabled = true;
-  } else if (curSelect) {
-    curSelect.disabled = false;
-  }
-
-  const cur = curSelect ? curSelect.value : "INR";
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
-
   const tbody = document.getElementById("warehouse-standalone-body");
-  let subtotalINR = 0;
+  let subtotal = 0;
   tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotalINR += parseFloat(input.value) || 0;
+    subtotal += parseFloat(input.value) || 0;
   });
-
-  const taxINR = subtotalINR * 0.18;
-  const totalINR = subtotalINR + taxINR;
-
-  let rateDivider = 1;
-  if (cur === 'USD') rateDivider = EXCHANGE_RATES.USD_TO_INR || 83.50;
-  else if (cur === 'EUR') rateDivider = EXCHANGE_RATES.EUR_TO_INR || 90.20;
-  else if (cur === 'GBP') rateDivider = EXCHANGE_RATES.GBP_TO_INR || 106.10;
-
-  const subtotal = subtotalINR / rateDivider;
-  const tax = taxINR / rateDivider;
+  
+  const tax = subtotal * 0.18;
   const total = subtotal + tax;
-
-  document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  const cur = document.getElementById("warehouse-currency").value;
+  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
+  
+  document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 }
 window.calculateWarehousing = calculateWarehousing;
 
@@ -9156,7 +8802,7 @@ function injectModuleFeesToFreight(module, freightType, target = 'origin') {
   if (!fees) return;
 
   const isAir = (freightType === 'air');
-  const bodyId = isAir
+  const bodyId = isAir 
     ? (target === 'dest' ? "air-dest-surcharges-body" : "air-origin-surcharges-body")
     : (target === 'dest' ? "sea-dest-surcharges-body" : "sea-origin-surcharges-body");
   const body = document.getElementById(bodyId);
@@ -9203,7 +8849,7 @@ function injectModuleFeesToFreight(module, freightType, target = 'origin') {
   });
 
   alert(`Successfully added ${module === 'custom' ? 'Custom Clearance' : (module === 'transport' ? 'Transportation' : 'Warehousing')} fees to ${freightType === 'air' ? 'Air Freight' : 'Sea Freight'} ${target === 'dest' ? 'Destination Local' : 'Origin Local'} table!`);
-
+  
   if (isAir) {
     calculateAirFreight();
   } else {
@@ -9252,1260 +8898,3 @@ function convertToInr(amount, currency) {
   return amount;
 }
 window.convertToInr = convertToInr;
-
-function getQuoteBuyRate(quote) {
-  if (quote.confirmedBuyRate !== undefined && quote.confirmedBuyRate > 0) {
-    return quote.confirmedBuyRate;
-  }
-  if (!quote.details) return 0;
-  if (quote.type === 'air') {
-    if (quote.details.airlines && quote.details.airlines.length > 0) {
-      const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
-      if (activeAir) {
-        const brk = activeAir.usedBreak || 'min';
-        if (activeAir.breaks && activeAir.breaks[brk]) {
-          return activeAir.breaks[brk].buy || 0;
-        }
-      }
-    }
-    return quote.details.buyRate || 0;
-  } else {
-    if (quote.details.mode === 'fcl') {
-      if (quote.details.containerItems && quote.details.containerItems.length > 0) {
-        return quote.details.containerItems.reduce((sum, item) => sum + (item.buy || 0), 0);
-      }
-      return 0;
-    } else if (quote.details.mode === 'lcl') {
-      return quote.details.lclBuyRateApplied || 0;
-    } else {
-      return quote.details.bbBuyRateApplied || 0;
-    }
-  }
-}
-window.getQuoteBuyRate = getQuoteBuyRate;
-
-function getQuoteSellRate(quote) {
-  if (!quote.details) return quote.amount;
-  if (quote.type === 'air') {
-    if (quote.details.airlines && quote.details.airlines.length > 0) {
-      const activeAir = quote.details.airlines.find(a => a.selected) || quote.details.airlines[0];
-      return activeAir ? (activeAir.appliedRate || 0) : 0;
-    }
-    return quote.details.appliedRate || 0;
-  } else {
-    if (quote.details.mode === 'fcl') {
-      if (quote.details.containerItems && quote.details.containerItems.length > 0) {
-        return quote.details.containerItems.reduce((sum, item) => sum + (item.sell || item.rate || 0), 0);
-      }
-      return 0;
-    } else if (quote.details.mode === 'lcl') {
-      return quote.details.lclRateApplied || 0;
-    } else {
-      return quote.details.bbRateApplied || 0;
-    }
-  }
-}
-window.getQuoteSellRate = getQuoteSellRate;
-
-function getQuoteGP(quote) {
-  if (quote.grossProfit !== undefined) {
-    return quote.grossProfit;
-  }
-  if (!quote.details) return 0;
-  if (quote.type === 'air') {
-    const chgWt = quote.details.chargeableWeight || 0;
-    const sellRate = getQuoteSellRate(quote);
-    const buyRate = getQuoteBuyRate(quote);
-    return (sellRate - buyRate) * chgWt;
-  } else {
-    const sellBase = quote.details.baseFreight || 0;
-    const buyRate = getQuoteBuyRate(quote);
-    if (quote.details.mode === 'fcl') {
-      const qty = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
-      return sellBase - (qty * buyRate);
-    } else {
-      const rt = quote.details.lclChargeable || 0;
-      return sellBase - (rt * buyRate);
-    }
-  }
-}
-window.getQuoteGP = getQuoteGP;
-
-function getAllUsers() {
-  const defaultUsers = [
-    { username: 'ganny', fullName: 'Pricing Team (Admin)', password: 'password', role: 'admin', category: 'Admin' },
-    { username: 'shashank', fullName: 'Air Nomination', password: 'password', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-    { username: 'mahendra', fullName: 'Sea Nomination', password: 'password', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
-    { username: 'jaya', fullName: 'Free Hand Sales', password: 'password', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
-    { username: 'cathrina', fullName: 'NRS', password: 'password', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
-  ];
-
-  let customUsers = [];
-  try {
-    const stored = localStorage.getItem("gl_custom_users");
-    if (stored) {
-      customUsers = JSON.parse(stored);
-    }
-  } catch (e) { }
-
-  const allUsersMap = {};
-  defaultUsers.forEach(u => {
-    allUsersMap[u.username] = u;
-  });
-  customUsers.forEach(u => {
-    allUsersMap[u.username] = u;
-  });
-
-  return Object.values(allUsersMap);
-}
-window.getAllUsers = getAllUsers;
-
-window.togglePasswordVisibility = (btn) => {
-  const input = btn.previousElementSibling;
-  if (input.type === "password") {
-    input.type = "text";
-    btn.textContent = "Hide";
-  } else {
-    input.type = "password";
-    btn.textContent = "Show";
-  }
-};
-
-function resetCargoAndRatesForSea() {
-  calculateSeaFreight();
-}
-function resetCargoAndRatesForAir() {
-  calculateAirFreight();
-}
-window.resetCargoAndRatesForSea = resetCargoAndRatesForSea;
-window.resetCargoAndRatesForAir = resetCargoAndRatesForAir;
-
-
-/* ==================== ADVANCED CUSTOM FEATURES MODULE ==================== */
-
-let autofillRecords = {
-  customerNames: ["Zenith Electronics Ltd", "Adani Enterprises", "Tata Motors", "Samsung India", "Reliance Industries"],
-  agentNames: ["Adani Global Log", "Kuehne Nagel", "DHL Global Forwarding", "DB Schenker"],
-  contactNumbers: ["+919876543210", "+919999888877", "+15556667777"],
-  emailIds: ["logistics@zenith.com", "import@adani.com", "freight@tata.com", "export@samsung.com"],
-  officeAddresses: ["Sector 62, Noida, UP, India", "Adani House, Port Road, Mundra, Gujarat", "Chinchwad, Pune, Maharashtra", "Oragadam, Chennai, Tamil Nadu"]
-};
-
-function loadAutofillRecords() {
-  const stored = localStorage.getItem("gl_autofill_records");
-  if (stored) {
-    try {
-      autofillRecords = JSON.parse(stored);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-}
-function saveAutofillRecords() {
-  localStorage.setItem("gl_autofill_records", JSON.stringify(autofillRecords));
-}
-
-function registerAutofillValue(type, value) {
-  if (!value || typeof value !== 'string') return;
-  const val = value.trim();
-  if (!val || val.length < 2) return;
-  if (!autofillRecords[type]) autofillRecords[type] = [];
-  if (!autofillRecords[type].includes(val)) {
-    autofillRecords[type].push(val);
-    saveAutofillRecords();
-  }
-}
-
-function setupAutocompleteDropdown(inputId, recordKey) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-
-  const container = input.parentElement;
-  if (container) {
-    container.classList.add("autocomplete-container");
-    container.style.position = "relative";
-  }
-
-  let dropdown = container.querySelector(".autocomplete-dropdown");
-  if (!dropdown) {
-    dropdown = document.createElement("div");
-    dropdown.className = "autocomplete-dropdown";
-    container.appendChild(dropdown);
-  }
-
-  const showSuggestions = () => {
-    const val = input.value.trim().toLowerCase();
-    dropdown.innerHTML = "";
-    if (val.length === 0) {
-      dropdown.classList.remove("show");
-      dropdown.style.display = "none";
-      return;
-    }
-
-    const matches = (autofillRecords[recordKey] || []).filter(item => item.toLowerCase().includes(val));
-    if (matches.length === 0) {
-      dropdown.classList.remove("show");
-      dropdown.style.display = "none";
-      return;
-    }
-
-    matches.forEach(match => {
-      const div = document.createElement("div");
-      div.className = "autocomplete-item";
-      div.style.padding = "6px 12px";
-      div.style.cursor = "pointer";
-      div.style.color = "#000";
-      div.innerHTML = `<span>${match}</span>`;
-      div.addEventListener("click", () => {
-        input.value = match;
-        dropdown.classList.remove("show");
-        dropdown.style.display = "none";
-
-        const event = new Event('input', { bubbles: true });
-        input.dispatchEvent(event);
-        const changeEvent = new Event('change', { bubbles: true });
-        input.dispatchEvent(changeEvent);
-
-        registerAutofillValue(recordKey, match);
-      });
-      dropdown.appendChild(div);
-    });
-
-    dropdown.classList.add("show");
-    dropdown.style.display = "block";
-  };
-
-  input.addEventListener("input", showSuggestions);
-  input.addEventListener("focus", showSuggestions);
-
-  document.addEventListener("click", (e) => {
-    if (!container.contains(e.target)) {
-      dropdown.classList.remove("show");
-      dropdown.style.display = "none";
-    }
-  });
-}
-
-// 2. Timezone Port Clocks
-const CITY_TIMEZONES = {
-  "bom": "Asia/Kolkata", "del": "Asia/Kolkata", "maa": "Asia/Kolkata", "blr": "Asia/Kolkata",
-  "dxb": "Asia/Dubai", "sin": "Asia/Singapore", "lhr": "Europe/London", "jfk": "America/New_York",
-  "lax": "America/Los_Angeles", "fra": "Europe/Berlin", "hnd": "Asia/Tokyo", "cdg": "Europe/Paris",
-  "mumbai": "Asia/Kolkata", "nhava sheva": "Asia/Kolkata", "chennai": "Asia/Kolkata", "mundra": "Asia/Kolkata",
-  "singapore": "Asia/Singapore", "rotterdam": "Europe/Amsterdam", "shanghai": "Asia/Shanghai",
-  "dubai": "Asia/Dubai", "jebel ali": "Asia/Dubai", "new york": "America/New_York", "hamburg": "Europe/Berlin",
-  "antwerp": "Europe/Brussels", "felixstowe": "Europe/London", "busan": "Asia/Seoul", "port klang": "Asia/Kuala_Lumpur"
-};
-
-function getPortTimezone(portName) {
-  if (!portName) return null;
-  const clean = portName.toLowerCase().trim();
-  for (const [key, tz] of Object.entries(CITY_TIMEZONES)) {
-    if (clean.includes(key)) return tz;
-  }
-  return null;
-}
-
-function startPortClocks() {
-  setInterval(() => {
-    const airOriginVal = document.getElementById("air-origin")?.value || "London";
-    const airDestVal = document.getElementById("air-dest")?.value || "Singapore";
-    updateClock("air-clock-origin", airOriginVal, "Origin");
-    updateClock("air-clock-dest", airDestVal, "Dest");
-
-    const seaOriginVal = document.getElementById("sea-origin")?.value || "Rotterdam";
-    const seaDestVal = document.getElementById("sea-dest")?.value || "Shanghai";
-    updateClock("sea-clock-origin", seaOriginVal, "Origin");
-    updateClock("sea-clock-dest", seaDestVal, "Dest");
-  }, 1000);
-}
-
-function updateClock(elementId, cityName, label) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  const tz = getPortTimezone(cityName) || "UTC";
-  try {
-    const timeStr = new Date().toLocaleTimeString("en-US", { timeZone: tz, hour12: false });
-    el.textContent = `${label} (${cityName.split(' ')[0] || cityName}): ${timeStr}`;
-  } catch (e) {
-    const timeStr = new Date().toLocaleTimeString("en-US", { hour12: false });
-    el.textContent = `${label}: ${timeStr}`;
-  }
-}
-
-// 3. Transit ETA widget
-window.calculateTransitETA = function (mode) {
-  const originInput = document.getElementById(`${mode}-origin`);
-  const destInput = document.getElementById(`${mode}-dest`);
-  const incotermSelect = document.getElementById(`${mode}-incoterm`);
-  const displayEl = document.getElementById(`${mode}-transit-eta-display`);
-
-  if (!originInput || !destInput || !displayEl) return;
-
-  const origin = originInput.value.trim();
-  const dest = destInput.value.trim();
-  const incoterm = incotermSelect?.value || "EXW";
-
-  if (!origin || !dest) {
-    displayEl.style.display = "none";
-    return;
-  }
-
-  let baseDays = mode === 'air' ? 3 : 25;
-  const isSameRegion = origin.substring(0, 2).toLowerCase() === dest.substring(0, 2).toLowerCase();
-
-  if (isSameRegion) {
-    baseDays = mode === 'air' ? 1.5 : 8;
-  } else if ((origin.toLowerCase().includes("us") && dest.toLowerCase().includes("in")) ||
-    (origin.toLowerCase().includes("in") && dest.toLowerCase().includes("us"))) {
-    baseDays = mode === 'air' ? 5 : 40;
-  }
-
-  let extraDays = 0;
-  if (["EXW", "FCA", "FOB"].includes(incoterm)) {
-    extraDays += mode === 'air' ? 1 : 4;
-  }
-  if (["DAP", "DDU", "DDP"].includes(incoterm)) {
-    extraDays += mode === 'air' ? 2 : 5;
-  }
-
-  const totalDays = Math.ceil(baseDays + extraDays);
-  const now = new Date();
-  now.setDate(now.getDate() + totalDays);
-  const etaStr = now.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
-
-  displayEl.textContent = `⏱️ Est. Transit: ${totalDays} Days | Target ETA: ${etaStr}`;
-  displayEl.style.display = "block";
-
-  updateDocsChecklist(mode, incoterm);
-};
-
-const INCOTERM_DOCS = {
-  "EXW": ["Export customs declaration template", "Commercial Invoice", "Packing List", "Certificate of Origin (COO)", "Factory release note"],
-  "FCA": ["Export customs declaration", "Commercial Invoice", "Packing List", "Carrier booking confirmation", "Lorry receipt / FCR"],
-  "FOB": ["Bill of Lading / AWB template", "Export customs declaration", "Commercial Invoice", "Packing List", "Mate's receipt"],
-  "CIF": ["Bill of Lading / AWB", "Marine insurance certificate", "Export customs declaration", "Commercial Invoice", "Packing List"],
-  "DAP": ["Import customs entry", "Delivery Order (D/O)", "Bill of Lading / AWB", "Commercial Invoice", "Packing List"],
-  "DDU": ["Import customs entry checklist", "Delivery Order (D/O)", "Commercial Invoice", "Packing List", "Customs Bond (if applicable)"],
-  "DDP": ["Import duty payment receipt", "Import customs entry (cleared)", "Delivery Order (D/O)", "Commercial Invoice", "Packing List"]
-};
-
-function updateDocsChecklist(mode, incoterm) {
-  const labelEl = document.getElementById(`${mode}-docs-incoterm`);
-  const listEl = document.getElementById(`${mode}-docs-list`);
-  if (!listEl) return;
-
-  if (labelEl) labelEl.textContent = incoterm;
-  listEl.innerHTML = "";
-
-  const docs = INCOTERM_DOCS[incoterm] || INCOTERM_DOCS["EXW"];
-  docs.forEach(doc => {
-    const li = document.createElement("li");
-    li.style.display = "flex";
-    li.style.alignItems = "center";
-    li.style.gap = "6px";
-    li.innerHTML = `<span style="color:var(--accent-success);">✓</span> <span>${doc}</span>`;
-    listEl.appendChild(li);
-  });
-}
-
-// 4. Live Tracking Panel
-function renderTrackingControlCenter() {
-  const html = `
-    <div class="glass-card" style="padding: 1.5rem;">
-      <h3 style="font-weight: 800; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-        🌐 Global Cargo Operations Tracking Control Center
-      </h3>
-      
-      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem;">
-        <button type="button" class="tab-btn active-tracking-tab" id="tab-btn-ocean" onclick="switchTrackingTab('ocean')" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; background: var(--accent-sea); color: #fff; border: none; font-weight: 700;">🚢 Ocean Vessel Tracker</button>
-        <button type="button" class="tab-btn" id="tab-btn-air" onclick="switchTrackingTab('air')" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.05); color: var(--t1); border: 1px solid var(--border-1); font-weight: 700;">✈️ Air Cargo Freight Tracker</button>
-        <button type="button" class="tab-btn" id="tab-btn-map" onclick="switchTrackingTab('map')" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.05); color: var(--t1); border: 1px solid var(--border-1); font-weight: 700;">🗺️ Live Port Control Map</button>
-      </div>
-      
-      <div id="tracking-content-ocean" class="tracking-tab-content">
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-          <input type="text" id="ocean-tracking-input" placeholder="Enter Container (e.g. MSKU1234567) or Booking Number" style="background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.4rem 0.6rem; font-size: 0.8rem; flex: 1; outline: none;">
-          <button type="button" class="btn-primary" onclick="trackOceanCargo()" style="background: var(--accent-sea); border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Track Vessel</button>
-        </div>
-        <div id="ocean-tracking-results" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-1); border-radius: 8px; padding: 1rem; font-size: 0.8rem;"></div>
-      </div>
-      
-      <div id="tracking-content-air" class="tracking-tab-content" style="display: none;">
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-          <input type="text" id="air-tracking-input" placeholder="Enter AWB Number (e.g. 020-12345678)" style="background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #fff; padding: 0.4rem 0.6rem; font-size: 0.8rem; flex: 1; outline: none;" oninput="detectAwbPrefix()">
-          <button type="button" class="btn-primary" onclick="trackAirCargo()" style="background: var(--accent-air); border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">Track Flight</button>
-        </div>
-        <div id="air-awb-airline-detected" style="font-size: 0.7rem; color: var(--sky); font-weight: bold; margin-top: -0.75rem; margin-bottom: 0.75rem; display: none;"></div>
-        <div id="air-tracking-results" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-1); border-radius: 8px; padding: 1rem; font-size: 0.8rem;"></div>
-      </div>
-      
-      <div id="tracking-content-map" class="tracking-tab-content" style="display: none;">
-        <div style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-1); background: rgba(0,0,0,0.2); height: 350px;">
-          <iframe id="ais-map-frame" sandbox="allow-scripts allow-same-origin allow-popups" src="https://vesselfinder.com" width="100%" height="100%" frameborder="0" style="border: 0;"></iframe>
-        </div>
-      </div>
-    </div>
-  `;
-
-  const memberContainer = document.getElementById("member-tracking-control-center");
-  if (memberContainer) memberContainer.innerHTML = html;
-
-  const adminContainer = document.getElementById("admin-tracking-control-center");
-  if (adminContainer) {
-    const adminHtml = html
-      .replace(/ocean-tracking-input/g, "admin-ocean-input")
-      .replace(/ocean-tracking-results/g, "admin-ocean-results")
-      .replace(/air-tracking-input/g, "admin-air-input")
-      .replace(/air-awb-airline-detected/g, "admin-awb-detected")
-      .replace(/air-tracking-results/g, "admin-air-results")
-      .replace(/ais-map-frame/g, "admin-ais-map")
-      .replace(/switchTrackingTab\('/g, "switchTrackingTabAdmin('")
-      .replace(/trackOceanCargo\(\)/g, "trackOceanCargoAdmin()")
-      .replace(/detectAwbPrefix\(\)/g, "detectAwbPrefixAdmin()")
-      .replace(/trackAirCargo\(\)/g, "trackAirCargoAdmin()")
-      .replace(/tab-btn-ocean/g, "admin-tab-btn-ocean")
-      .replace(/tab-btn-air/g, "admin-tab-btn-air")
-      .replace(/tab-btn-map/g, "admin-tab-btn-map")
-      .replace(/tracking-content-ocean/g, "admin-tracking-content-ocean")
-      .replace(/tracking-content-air/g, "admin-tracking-content-air")
-      .replace(/tracking-content-map/g, "admin-tracking-content-map");
-
-    adminContainer.innerHTML = adminHtml;
-  }
-}
-
-window.switchTrackingTab = function (tabName) {
-  document.querySelectorAll(".tracking-tab-content").forEach(el => el.style.display = "none");
-  document.querySelectorAll(".tab-btn").forEach(el => {
-    el.style.background = "rgba(255,255,255,0.05)";
-    el.style.color = "var(--t1)";
-  });
-
-  const content = document.getElementById(`tracking-content-${tabName}`);
-  if (content) content.style.display = "block";
-
-  const btn = document.getElementById(`tab-btn-${tabName}`);
-  if (btn) {
-    btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
-    btn.style.color = '#fff';
-  }
-};
-
-window.switchTrackingTabAdmin = function (tabName) {
-  document.querySelectorAll("#admin-tracking-control-center .tracking-tab-content").forEach(el => el.style.display = "none");
-  document.querySelectorAll("#admin-tracking-control-center .tab-btn").forEach(el => {
-    el.style.background = "rgba(255,255,255,0.05)";
-    el.style.color = "var(--t1)";
-  });
-
-  const content = document.getElementById(`admin-tracking-content-${tabName}`);
-  if (content) content.style.display = "block";
-
-  const btn = document.getElementById(`admin-tab-btn-${tabName}`);
-  if (btn) {
-    btn.style.background = tabName === 'air' ? 'var(--accent-air)' : 'var(--accent-sea)';
-    btn.style.color = '#fff';
-  }
-};
-
-const SIMULATED_OCEAN_LOGS = [
-  "🚢 Booking Confirmed & Empty Container Released",
-  "📦 Container Loaded and Stuffed at Shipper Factory",
-  "🚛 Gated-In at Origin Port Terminal",
-  "⚓ Loaded onboard Vessel 'MSC AMALFI V.260'",
-  "🌊 Vessel Departed (In Transit)",
-  "⚓ Arrived at Transit Hub (Port of Singapore)",
-  "🌊 Departed Singapore onboard Vessel 'MSC OSCAR V.094'",
-  "🏁 Arrived at Destination Port (Port of Rotterdam)",
-  "🚛 Gated-Out for Final Door Delivery",
-  "✅ Delivered to Consignee Warehouse"
-];
-
-const SIMULATED_AIR_LOGS = [
-  "✈️ Booking Confirmed, AWB Issued",
-  "📦 Cargo Received at Origin Freight Station",
-  "🛃 Export Customs Clearance Completed",
-  "⚓ Gated in and Loaded on flight 'LH757'",
-  "🌊 Flight Departed",
-  "⚓ Arrived at Transit Hub (Frankfurt Airport FRA)",
-  "✈️ Loaded on connecting flight 'LH400'",
-  "🏁 Arrived at Destination Airport (New York JFK)",
-  "🛃 Import Customs Cleared",
-  "✅ Cargo Delivered to consignee"
-];
-
-function buildTimeline(logs, containerId) {
-  const div = document.getElementById(containerId);
-  if (!div) return;
-  div.style.display = "block";
-
-  let html = `<h4 style="margin: 0 0 0.75rem 0; font-weight: 700; color:var(--sky);">Tracking Timeline History</h4>`;
-  html += `<div style="display:flex; flex-direction:column; gap:0.5rem; position:relative; padding-left:1.25rem; border-left: 2px solid var(--border-2);">`;
-
-  logs.forEach((log, index) => {
-    const isCompleted = index < logs.length - 2;
-    const color = isCompleted ? "var(--accent-success)" : (index === logs.length - 2 ? "var(--accent-warning)" : "var(--text-dim)");
-    html += `
-      <div style="position:relative;">
-        <span style="position:absolute; left:-1.65rem; top:2px; height:10px; width:10px; background:${color}; border-radius:50%; box-shadow: 0 0 6px ${color};"></span>
-        <div style="font-weight:600; color: ${isCompleted ? '#fff' : 'var(--text-dim)'};">${log}</div>
-        <div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">Status Updated: 2026-07-16 12:${30 + index} PM</div>
-      </div>
-    `;
-  });
-
-  html += `</div>`;
-  div.innerHTML = html;
-}
-
-window.trackOceanCargo = function () {
-  const num = document.getElementById("ocean-tracking-input")?.value || "";
-  if (!num) return alert("Please enter a Container or Booking number.");
-  buildTimeline(SIMULATED_OCEAN_LOGS, "ocean-tracking-results");
-};
-
-window.trackOceanCargoAdmin = function () {
-  const num = document.getElementById("admin-ocean-input")?.value || "";
-  if (!num) return alert("Please enter a Container or Booking number.");
-  buildTimeline(SIMULATED_OCEAN_LOGS, "admin-ocean-results");
-};
-
-const AIRLINE_PREFIXES = {
-  "020": "Lufthansa Cargo (LH)",
-  "999": "Air India (AI)",
-  "125": "British Airways (BA)",
-  "074": "KLM Cargo (KL)",
-  "001": "American Airlines Cargo (AA)",
-  "176": "Emirates SkyCargo (EK)",
-  "016": "United Cargo (UA)"
-};
-
-window.detectAwbPrefix = function () {
-  const input = document.getElementById("air-tracking-input");
-  const detectEl = document.getElementById("air-awb-airline-detected");
-  if (!input || !detectEl) return;
-
-  const prefix = input.value.trim().substring(0, 3);
-  if (AIRLINE_PREFIXES[prefix]) {
-    detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
-    detectEl.style.display = "block";
-  } else {
-    detectEl.style.display = "none";
-  }
-};
-
-window.detectAwbPrefixAdmin = function () {
-  const input = document.getElementById("admin-air-input");
-  const detectEl = document.getElementById("admin-awb-detected");
-  if (!input || !detectEl) return;
-
-  const prefix = input.value.trim().substring(0, 3);
-  if (AIRLINE_PREFIXES[prefix]) {
-    detectEl.textContent = `Matched Carrier: ${AIRLINE_PREFIXES[prefix]}`;
-    detectEl.style.display = "block";
-  } else {
-    detectEl.style.display = "none";
-  }
-};
-
-window.trackAirCargo = function () {
-  const num = document.getElementById("air-tracking-input")?.value || "";
-  if (!num) return alert("Please enter AWB number.");
-  buildTimeline(SIMULATED_AIR_LOGS, "air-tracking-results");
-};
-
-window.trackAirCargoAdmin = function () {
-  const num = document.getElementById("admin-air-input")?.value || "";
-  if (!num) return alert("Please enter AWB number.");
-  buildTimeline(SIMULATED_AIR_LOGS, "admin-air-results");
-};
-
-// 5. Synced Scratchpads & Broadcast Hub
-window.syncScratchpad = function () {
-  const text = document.getElementById("dashboard-scratchpad").value;
-  const syncStatus = document.getElementById("scratchpad-sync-status");
-  const currentUser = appState.currentUser || "shashank";
-
-  if (syncStatus) syncStatus.textContent = "Syncing with cloud...";
-
-  // Save to active scratchpads in localStorage
-  let scratchpads = {};
-  try {
-    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-  } catch (e) { }
-
-  scratchpads[currentUser] = {
-    text: text,
-    user: TEAM_ROLES[currentUser]?.name || currentUser,
-    time: new Date().toLocaleTimeString()
-  };
-
-  localStorage.setItem("gl_active_scratchpads", JSON.stringify(scratchpads));
-
-  setTimeout(() => {
-    if (syncStatus) syncStatus.textContent = "All changes synced to database";
-    // If Admin view is active, update their viewer as well
-    if (appState.currentUser === 'ganny') {
-      updateAdminScratchpadViewer();
-    }
-  }, 400);
-};
-
-function updateAdminScratchpadViewer() {
-  const container = document.getElementById("admin-desk-scratchpads");
-  if (!container) return;
-
-  let scratchpads = {};
-  try {
-    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-  } catch (e) { }
-
-  const keys = Object.keys(scratchpads);
-  if (keys.length === 0) {
-    container.innerHTML = `<div style="font-style: italic; color: var(--text-dim);">No active reminder syncs yet.</div>`;
-    return;
-  }
-
-  let html = "";
-  keys.forEach(k => {
-    const pad = scratchpads[k];
-    html += `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); border-radius: 6px; padding: 6px 10px; margin-bottom: 0.4rem;">
-        <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--sky); font-size:0.75rem; margin-bottom:2px;">
-          <span>${pad.user}</span>
-          <span style="font-size:0.65rem; color:var(--text-dim);">${pad.time}</span>
-        </div>
-        <div style="color:#fff; white-space:pre-wrap; line-height:1.3; font-size:0.75rem;">${pad.text || "(empty notes)"}</div>
-      </div>
-    `;
-  });
-  container.innerHTML = html;
-}
-
-// Admin Broadcast notices
-window.sendAdminBroadcast = function () {
-  const type = document.getElementById("broadcast-type").value;
-  const msg = document.getElementById("broadcast-message").value.trim();
-
-  if (!msg) return alert("Please enter broadcast message.");
-
-  const broadcast = {
-    id: 'B' + Date.now(),
-    type: type,
-    message: msg,
-    timestamp: new Date().toLocaleTimeString(),
-    active: true
-  };
-
-  localStorage.setItem("gl_admin_broadcast", JSON.stringify(broadcast));
-  alert("📢 Broadcast notice pushed to all active screens!");
-  document.getElementById("broadcast-message").value = "";
-
-  // Instantly trigger overlay check
-  checkActiveBroadcast();
-};
-
-function checkActiveBroadcast() {
-  let broadcast = null;
-  try {
-    const data = localStorage.getItem("gl_admin_broadcast");
-    if (data) broadcast = JSON.parse(data);
-  } catch (e) { }
-
-  if (!broadcast || !broadcast.active) {
-    const overlay = document.getElementById("system-broadcast-overlay");
-    if (overlay) overlay.style.display = "none";
-    return;
-  }
-
-  // Render high visibility overlay banner if not already present
-  let overlay = document.getElementById("system-broadcast-overlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "system-broadcast-overlay";
-    overlay.style.cssText = "position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; font-family:'Outfit', sans-serif; font-size:0.85rem; font-weight:700; box-shadow:0 3px 15px rgba(0,0,0,0.3); transition:all 0.3s;";
-    document.body.appendChild(overlay);
-  }
-
-  // Set theme color depending on type
-  if (broadcast.type === 'mandate') {
-    overlay.style.background = "linear-gradient(90deg, #ef4444, #b91c1c)"; // Red
-    overlay.innerHTML = `<div>⚠️ SYSTEM MANDATE NOTICE: ${broadcast.message}</div>`;
-  } else if (broadcast.type === 'meeting') {
-    overlay.style.background = "linear-gradient(90deg, #f59e0b, #d97706)"; // Amber/Yellow
-    overlay.innerHTML = `<div>📅 CALENDAR VISIT REMINDER: ${broadcast.message}</div>`;
-  } else {
-    overlay.style.background = "linear-gradient(90deg, #10b981, #047857)"; // Green
-    overlay.innerHTML = `<div>🎉 HOLIDAY / LEAVE POPUP: ${broadcast.message}</div>`;
-  }
-
-  // Close / dismiss button
-  overlay.innerHTML += `
-    <button type="button" style="background:#fff; border:none; color:#000; font-size:0.65rem; font-weight:bold; cursor:pointer; padding:3px 8px; border-radius:4px;" onclick="dismissBroadcast()">
-      Dismiss / Close
-    </button>
-  `;
-  overlay.style.display = "flex";
-}
-
-window.dismissBroadcast = function () {
-  const overlay = document.getElementById("system-broadcast-overlay");
-  if (overlay) overlay.style.display = "none";
-
-  // Soft dismiss (mark as inactive in localStorage)
-  try {
-    const data = localStorage.getItem("gl_admin_broadcast");
-    if (data) {
-      const b = JSON.parse(data);
-      b.active = false;
-      localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
-    }
-  } catch (e) { }
-};
-
-// Check broadcast every 3 seconds
-setInterval(checkActiveBroadcast, 3000);
-
-// SMS Gateway browser deep-link
-window.triggerSmsGateway = function () {
-  const num = document.getElementById("sms-mobile")?.value || "";
-  const msg = document.getElementById("sms-text")?.value || "";
-
-  if (!num || !msg) return alert("Please enter mobile number and note text.");
-
-  // Launch system sms protocols
-  const url = `sms:${num}?&body=${encodeURIComponent(msg)}`;
-  window.location.href = url;
-};
-
-// 6. Share Quote Engine
-window.toggleShareDropdown = function (e) {
-  if (e) e.stopPropagation();
-  const dropdown = document.getElementById("share-dropdown-menu");
-  if (!dropdown) return;
-  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-};
-
-document.addEventListener("click", () => {
-  const dropdown = document.getElementById("share-dropdown-menu");
-  if (dropdown) dropdown.style.display = "none";
-});
-
-window.getQuoteSummaryTextFormatted = function () {
-  const modalTitle = document.getElementById("modal-header-title")?.textContent || "Official Pricing Quotation Summary";
-  const bodyText = document.getElementById("quote-print-card")?.innerText || "";
-  return `${modalTitle}\n\n${bodyText}`;
-};
-
-window.downloadQuotePDF = function () {
-  const printCard = document.getElementById("quote-print-card");
-  if (!printCard) return;
-
-  const generatePDF = (element) => {
-    const opt = {
-      margin: 10,
-      filename: 'Quotation_' + new Date().toISOString().slice(0, 10) + '.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    const wrapper = document.createElement('div');
-    wrapper.style.fontFamily = '"Plus Jakarta Sans", Arial, sans-serif';
-    wrapper.style.color = '#0f172a';
-    wrapper.style.background = '#ffffff';
-    wrapper.style.padding = '15mm';
-    wrapper.innerHTML = element.innerHTML;
-
-    html2pdf().set(opt).from(wrapper).save();
-  };
-
-  if (typeof html2pdf === 'undefined') {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = () => {
-      generatePDF(printCard);
-    };
-    document.head.appendChild(script);
-  } else {
-    generatePDF(printCard);
-  }
-};
-
-window.shareQuoteWhatsApp = function () {
-  const printCard = document.getElementById("quote-print-card");
-  if (!printCard) return;
-
-  const runShare = () => {
-    const opt = {
-      filename: 'Logistics_Pricing_Quotation.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jspdf: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(printCard).outputPdf('blob').then((pdfBlob) => {
-      const pdfFile = new File([pdfBlob], 'Logistics_Pricing_Quotation.pdf', { type: 'application/pdf' });
-      if (navigator.share) {
-        navigator.share({
-          files: [pdfFile],
-          title: 'Logistics Pricing Quotation'
-        }).catch((err) => {
-          console.error("Native share failed:", err);
-        });
-      } else {
-        alert("Your browser does not support the Web Share API for files.");
-      }
-    });
-  };
-
-  if (typeof html2pdf === 'undefined') {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = runShare;
-    document.head.appendChild(script);
-  } else {
-    runShare();
-  }
-};
-
-window.shareQuoteMail = window.shareQuoteWhatsApp;
-
-// 7. Core advanced initialization
-function initializeAdvancedFeatures() {
-  loadAutofillRecords();
-
-  // Setup search dropdown autocomplete lists
-  setupAutocompleteDropdown("air-cust-name", "customerNames");
-  setupAutocompleteDropdown("sea-cust-name", "customerNames");
-  setupAutocompleteDropdown("won-shipper-name", "agentNames");
-  setupAutocompleteDropdown("won-shipper-phone", "contactNumbers");
-  setupAutocompleteDropdown("won-shipper-email", "emailIds");
-  setupAutocompleteDropdown("won-shipper-address", "officeAddresses");
-  setupAutocompleteDropdown("won-cnee-name", "agentNames");
-  setupAutocompleteDropdown("won-cnee-phone", "contactNumbers");
-  setupAutocompleteDropdown("won-cnee-email", "emailIds");
-  setupAutocompleteDropdown("won-cnee-address", "officeAddresses");
-
-  // Port clocks
-  startPortClocks();
-
-  // Set initial clocks & ETAs
-  calculateTransitETA("air");
-  calculateTransitETA("sea");
-
-  // Connected Desks Scratchpads initial load
-  const user = appState.currentUser || "shashank";
-  let scratchpads = {};
-  try {
-    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-  } catch (e) { }
-
-  const pad = scratchpads[user];
-  const ta = document.getElementById("dashboard-scratchpad");
-  if (ta && pad) {
-    ta.value = pad.text;
-  }
-
-  // Render live tracking panels
-  renderTrackingControlCenter();
-
-  // Update admin viewer if admin
-  if (appState.currentUser === 'ganny') {
-    updateAdminScratchpadViewer();
-  }
-
-  // Bind live inputs listeners for calculations
-  document.getElementById("air-origin")?.addEventListener("input", () => calculateTransitETA("air"));
-  document.getElementById("air-dest")?.addEventListener("input", () => calculateTransitETA("air"));
-  document.getElementById("sea-origin")?.addEventListener("input", () => calculateTransitETA("sea"));
-  document.getElementById("sea-dest")?.addEventListener("input", () => calculateTransitETA("sea"));
-
-  // Update creator dropdown in Admin grid view dynamically
-  const filterCreator = document.getElementById("db-filter-creator");
-  if (filterCreator) {
-    filterCreator.innerHTML = `<option value="all" style="background:#1b1c5c; color:#fff;">All Agents</option>`;
-    Object.keys(TEAM_ROLES).forEach(k => {
-      if (k === 'ganny' || k === 'manager') return;
-      const opt = document.createElement("option");
-      opt.value = k;
-      opt.style.background = "#1b1c5c";
-      opt.style.color = "#fff";
-      opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
-      filterCreator.appendChild(opt);
-    });
-  }
-
-  // Update report user dropdown dynamically
-  const reportUser = document.getElementById("report-user");
-  if (reportUser) {
-    reportUser.innerHTML = `<option value="all">All Pricing Officers</option>`;
-    Object.keys(TEAM_ROLES).forEach(k => {
-      if (k === 'ganny' || k === 'manager') return;
-      const opt = document.createElement("option");
-      opt.value = k;
-      opt.textContent = TEAM_ROLES[k].name.replace(/\s*\(Free\s*Hand\)/i, "");
-      reportUser.appendChild(opt);
-    });
-  }
-
-  // Custom exchange rate listeners
-  document.getElementById("air-custom-exchange-rate")?.addEventListener("input", (e) => {
-    updateCustomExchangeRate(e.target.value);
-  });
-  document.getElementById("sea-custom-exchange-rate")?.addEventListener("input", (e) => {
-    updateCustomExchangeRate(e.target.value);
-  });
-}
-window.initializeAdvancedFeatures = initializeAdvancedFeatures;
-
-// CUSTOM CORE ADVANCED SYSTEM EXTENSIONS
-
-// 1. Update Custom Exchange Rate
-window.updateCustomExchangeRate = function (val) {
-  const rate = parseFloat(val) || 83.50;
-  EXCHANGE_RATES.USD_TO_INR = rate;
-  if (EXCHANGE_RATES.EUR_TO_USD) {
-    EXCHANGE_RATES.EUR_TO_INR = rate * EXCHANGE_RATES.EUR_TO_USD;
-  } else {
-    EXCHANGE_RATES.EUR_TO_INR = rate * (1.08);
-  }
-  if (EXCHANGE_RATES.GBP_TO_USD) {
-    EXCHANGE_RATES.GBP_TO_INR = rate * EXCHANGE_RATES.GBP_TO_USD;
-  } else {
-    EXCHANGE_RATES.GBP_TO_INR = rate * (1.25);
-  }
-
-  // Sync inputs
-  const airInput = document.getElementById("air-custom-exchange-rate");
-  const seaInput = document.getElementById("sea-custom-exchange-rate");
-  if (airInput && parseFloat(airInput.value) !== rate) airInput.value = rate.toFixed(2);
-  if (seaInput && parseFloat(seaInput.value) !== rate) seaInput.value = rate.toFixed(2);
-
-  // Recalculate
-  if (typeof calculateAirFreight === 'function') calculateAirFreight();
-  if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
-};
-
-// 2. Format Surcharge Rate Cell to support custom/native currency
-window.formatSurchargeRateCell = function (tr, isMultiCurrency, currencyVal) {
-  const rateInput = tr.querySelector(".chg-rate");
-  if (!rateInput) return;
-  const td = rateInput.closest("td");
-  if (!td) return;
-
-  if (td.dataset.currencyFormatted === "true") {
-    const select = td.querySelector(".chg-curr");
-    if (select && isMultiCurrency && currencyVal) {
-      if (select.value !== currencyVal) {
-        select.value = currencyVal;
-      }
-    }
-    return;
-  }
-
-  td.dataset.currencyFormatted = "true";
-  td.style.whiteSpace = "nowrap";
-
-  const currentVal = rateInput.value;
-  const callback = tr.closest("tbody").id.startsWith("air") ? calculateAirFreight : calculateSeaFreight;
-
-  if (isMultiCurrency) {
-    td.innerHTML = `
-      <div style="display: flex; gap: 4px; align-items: center;">
-        <select class="chg-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; width: 60px;">
-          <option value="USD" ${currencyVal === 'USD' ? 'selected' : ''}>USD</option>
-          <option value="EUR" ${currencyVal === 'EUR' ? 'selected' : ''}>EUR</option>
-          <option value="GBP" ${currencyVal === 'GBP' ? 'selected' : ''}>GBP</option>
-        </select>
-        <input type="number" class="chg-rate" value="${currentVal}" step="0.01" style="flex: 1; min-width: 60px;" required>
-      </div>
-    `;
-    td.querySelector(".chg-curr").addEventListener("change", callback);
-    td.querySelector(".chg-rate").addEventListener("input", callback);
-  } else {
-    td.innerHTML = `
-      <div style="display: flex; gap: 4px; align-items: center;">
-        <span style="font-size: 0.72rem; font-weight: bold; color: var(--sky);">${currencyVal}</span>
-        <input type="number" class="chg-rate" value="${currentVal}" step="0.01" style="flex: 1; min-width: 60px;" required>
-      </div>
-    `;
-    td.querySelector(".chg-rate").addEventListener("input", callback);
-  }
-};
-
-// 3. Sync Surcharges Currencies
-window.syncSurchargesCurrencies = function (freightType) {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-
-  const isAir = freightType.startsWith("air");
-  const state = isAir ? appState.currentAirFreight : appState.currentSeaFreight;
-  const direction = state.module || 'export';
-
-  const originBody = document.getElementById(`${freightType}-origin-surcharges-body`);
-  const destBody = document.getElementById(`${freightType}-dest-surcharges-body`);
-
-  if (isNomUser) {
-    const qCur = document.getElementById(`${isAir ? 'air' : 'sea'}-currency`).value;
-    if (originBody) {
-      originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, qCur));
-    }
-    if (destBody) {
-      destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, qCur));
-    }
-    return;
-  }
-
-  if (direction === 'export') {
-    if (originBody) {
-      originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, "INR"));
-    }
-    if (destBody) {
-      destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, true, "USD"));
-    }
-  } else {
-    if (originBody) {
-      originBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, true, "USD"));
-    }
-    if (destBody) {
-      destBody.querySelectorAll("tr").forEach(tr => formatSurchargeRateCell(tr, false, "INR"));
-    }
-  }
-};
-
-// 4. Update Advance Payment Status
-window.updateAdvancePaymentStatus = function (quoteId, status) {
-  const quote = appState.quotes.find(q => q.id === quoteId);
-  if (quote) {
-    quote.advancePaymentStatus = status;
-    DB.saveQuote(quote);
-    if (appState.currentUser === 'ganny') {
-      if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();
-    } else {
-      renderMemberDashboard(appState.currentUser);
-    }
-  }
-};
-
-// 5. Request Admin Approval Handler
-window.requestAdminApproval = function (id) {
-  const quote = appState.quotes.find(q => q.id === id);
-  if (quote) {
-    checkAndRequestEditPermission(quote, "edit/amend");
-  }
-};
-
-// 6. FCL, LCL, BB base freight currency selectors for Import direction
-window.ensureSeaBaseFreightCurrencySelectors = function () {
-  const activeRole = getActiveRole();
-  const role = TEAM_ROLES[activeRole];
-  const isNomUser = role && (role.category === 'AIR - NOMINATION' || role.category === 'SEA - NOMINATION');
-  const isImport = appState.currentSeaFreight.module === 'import';
-  const qCur = document.getElementById("sea-currency").value;
-
-  // FCL Container Rows
-  const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
-  fclRows.forEach(tr => {
-    const rateInput = tr.querySelector(".fcl-rate") || tr.querySelector(".fcl-sell-rate");
-    if (!rateInput) return;
-    const td = rateInput.closest("td");
-    if (!td) return;
-
-    if (isImport && !isNomUser) {
-      if (td.dataset.currencyFormatted !== "import") {
-        td.dataset.currencyFormatted = "import";
-        const currentVal = rateInput.value;
-        const isSell = rateInput.classList.contains("fcl-sell-rate");
-
-        td.innerHTML = `
-          <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
-            <select class="fcl-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; width: 60px;">
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-              <option value="INR">INR</option>
-            </select>
-            <input type="number" class="${isSell ? 'fcl-sell-rate' : 'fcl-rate'}" value="${currentVal}" min="0" style="width: 100%;">
-          </div>
-        `;
-        td.querySelector(".fcl-curr").addEventListener("change", calculateSeaFreight);
-        td.querySelector("input").addEventListener("input", calculateSeaFreight);
-      }
-    } else {
-      if (td.dataset.currencyFormatted !== "export") {
-        td.dataset.currencyFormatted = "export";
-        const currentVal = rateInput.value;
-        const isSell = rateInput.classList.contains("fcl-sell-rate");
-        td.innerHTML = `
-          <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
-            <span class="fcl-curr-label" style="font-size: 0.72rem; font-weight: bold; color: var(--sky);">${qCur}</span>
-            <input type="number" class="${isSell ? 'fcl-sell-rate' : 'fcl-rate'}" value="${currentVal}" min="0" style="width: 100%;">
-          </div>
-        `;
-        td.querySelector("input").addEventListener("input", calculateSeaFreight);
-      } else {
-        const label = td.querySelector(".fcl-curr-label");
-        if (label) label.textContent = qCur;
-      }
-    }
-  });
-
-  // LCL rates
-  const lclRate = document.getElementById("sea-lcl-rate");
-  if (lclRate) {
-    const parent = lclRate.closest(".form-group");
-    if (parent) {
-      if (isImport && !isNomUser) {
-        if (parent.dataset.currencyFormatted !== "import") {
-          parent.dataset.currencyFormatted = "import";
-          const currentVal = lclRate.value;
-          const label = document.getElementById("sea-lcl-rate-label");
-          if (label) label.innerHTML = 'LCL Freight Rate (Per Revenue Ton - RT)';
-          lclRate.outerHTML = `
-            <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
-              <select class="lcl-curr" id="sea-lcl-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; width: 80px;">
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="INR">INR</option>
-              </select>
-              <input type="number" id="sea-lcl-rate" value="${currentVal}" min="0" style="flex:1;">
-            </div>
-          `;
-          document.getElementById("sea-lcl-curr").addEventListener("change", calculateSeaFreight);
-          document.getElementById("sea-lcl-rate").addEventListener("input", calculateSeaFreight);
-        }
-      } else {
-        if (parent.dataset.currencyFormatted !== "export") {
-          parent.dataset.currencyFormatted = "export";
-          const currentVal = lclRate.value;
-          const label = document.getElementById("sea-lcl-rate-label");
-          if (label) label.innerHTML = `LCL Freight Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
-          parent.querySelector("div")?.remove();
-          const inp = document.createElement("input");
-          inp.type = "number";
-          inp.id = "sea-lcl-rate";
-          inp.value = currentVal;
-          inp.placeholder = "Rate";
-          inp.min = "0";
-          parent.appendChild(inp);
-          inp.addEventListener("input", calculateSeaFreight);
-        } else {
-          const label = document.getElementById("sea-lcl-rate-label");
-          if (label) {
-            const span = label.querySelector(".curr-label");
-            if (span) span.textContent = qCur;
-          }
-        }
-      }
-    }
-  }
-
-  // BB rates
-  const bbRate = document.getElementById("sea-bb-rate");
-  if (bbRate) {
-    const parent = bbRate.closest(".form-group");
-    if (parent) {
-      if (isImport && !isNomUser) {
-        if (parent.dataset.currencyFormatted !== "import") {
-          parent.dataset.currencyFormatted = "import";
-          const currentVal = bbRate.value;
-          const label = document.getElementById("sea-bb-rate-label");
-          if (label) label.innerHTML = 'Break Bulk Ocean Rate (Per Revenue Ton - RT)';
-          bbRate.outerHTML = `
-            <div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
-              <select class="bb-curr" id="sea-bb-curr" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; width: 80px;">
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="INR">INR</option>
-              </select>
-              <input type="number" id="sea-bb-rate" value="${currentVal}" min="0" style="flex:1;">
-            </div>
-          `;
-          HEAD
-          document.getElementById("sea-bb-curr").addEventListener("change", calculateSeaFreight);
-          document.getElementById("sea-bb-rate").addEventListener("input", calculateSeaFreight);
-        }
-      } else {
-        if (parent.dataset.currencyFormatted !== "export") {
-          parent.dataset.currencyFormatted = "export";
-          const currentVal = bbRate.value;
-          const label = document.getElementById("sea-bb-rate-label");
-          if (label) label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
-          parent.querySelector("div")?.remove();
-          const inp = document.createElement("input");
-          inp.type = "number";
-          inp.id = "sea-bb-rate";
-          inp.value = currentVal;
-          inp.placeholder = "Rate";
-          inp.min = "0";
-          parent.appendChild(inp);
-          inp.addEventListener("input", calculateSeaFreight);
-          saveRequestLocallyFallback(newReq);
-        }
-      }
-
-      // Safe fallback placeholders to prevent pre-login startup crashes
-      function loadLogisticsNews() {
-        console.log("Bypassing news feed loading.");
-      }
-      function registerSnapshotListener() {
-        console.log("Bypassing background snapshot listener layout.");
-      }
-      function calculateTransitETA() {
-        console.log("Bypassing transit calculations.");
-      }
-      var tabGlobal = tabGlobal || {};
-
-    }
-  }
-};
-// Safe fallback placeholders to prevent pre-login startup crashes
-
-document.getElementById("sea-bb-curr").addEventListener("change", calculateSeaFreight);
-document.getElementById("sea-bb-rate").addEventListener("input", calculateSeaFreight);
-
-if (parent.dataset.currencyFormatted !== "export") {
-  parent.dataset.currencyFormatted = "export";
-  const currentVal = bbRate.value;
-  const label = document.getElementById("sea-bb-rate-label");
-  if (label) {
-    label.innerHTML = `Break Bulk Ocean Rate (Per RT) (<span class="curr-label">${qCur}</span>)`;
-  }
-  parent.querySelector("div")?.remove();
-  const inp = document.createElement("input");
-  inp.type = "number";
-  inp.id = "sea-bb-rate";
-  inp.value = currentVal;
-  inp.placeholder = "Rate";
-  inp.min = "0";
-  parent.appendChild(inp);
-  inp.addEventListener("input", calculateSeaFreight);
-} else {
-  const label = document.getElementById("sea-bb-rate-label");
-  if (label) {
-    const span = label.querySelector(".curr-label");
-    if (span) {
-      span.textContent = qCur;
-    }
-  }
-}
-
-// Safe fallback placeholders to prevent pre-login startup crashes
-function loadLogisticsNews() {
-  console.log("Bypassing news feed loading.");
-}
-function registerSnapshotListener() {
-  console.log("Bypassing background snapshot listener layout.");
-}
-function calculateTransitETA() {
-  console.log("Bypassing transit calculations.");
-}
-
-var tabGlobal = tabGlobal || {};
-
-// Re-balancing the global application wrappers
