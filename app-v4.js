@@ -5723,9 +5723,8 @@ function applyDeskNames() {
       buttonsHtml += `<button class="role-btn" data-role="${u.id}">${u.icon}${name}</button>`;
     });
 
-    // Add custom registered users
     Object.keys(TEAM_ROLES).forEach(roleId => {
-      if (['ganny', 'shashank', 'shaheer', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
+      if (['ganny', 'shashank', 'shaheer', 'mahendra', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
       const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\(Free Hand\)/g, "");
       buttonsHtml += `<button class="role-btn" data-role="${roleId}">${name}</button>`;
     });
@@ -5753,7 +5752,7 @@ function applyDeskNames() {
   const reportUserSelect = document.getElementById("report-user");
   if (reportUserSelect) {
     const curVal = reportUserSelect.value;
-    const roles = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager');
+    const roles = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager' && roleId !== 'mahendra');
     let html = `<option value="all">All Pricing Officers</option>`;
     roles.forEach(roleId => {
       const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\s*\(Free\s*Hand\)/i, "");
