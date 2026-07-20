@@ -1903,7 +1903,7 @@ function calculateAirFreight() {
   let totalPackageQty = 0;
   
   const unit = appState.currentAirFreight.dimUnit;
-  const divisor = (unit === 'cms') ? 6000 : 360;
+  const divisor = (unit === 'cms') ? 6000 : 366;
 
   rows.forEach(row => {
     const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
