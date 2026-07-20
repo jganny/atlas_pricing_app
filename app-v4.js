@@ -4737,6 +4737,51 @@ function loadSavedQuotes() {
   DB.init();
 }
 
+async function restoreCachedQuotes() {
+  const saved = localStorage.getItem("logistics_quotes");
+  if (!saved) {
+    alert("No cached quotes found in this browser.");
+    return;
+  }
+  let quotes = [];
+  try {
+    quotes = JSON.parse(saved);
+  } catch (e) {
+    alert("Error reading cached quotes.");
+    return;
+  }
+  if (!quotes || quotes.length === 0) {
+    alert("No quotes found in local cache.");
+    return;
+  }
+
+  if (!confirm(`Found ${quotes.length} quotes in your browser cache. Do you want to restore them to the server?`)) {
+    return;
+  }
+
+  let successCount = 0;
+  for (const q of quotes) {
+    try {
+      if (DB.firestoreRef) {
+        await DB.firestoreRef.collection("quotes").doc(q.id).set(q);
+        successCount++;
+      }
+    } catch (e) {
+      console.error("Failed to restore quote:", q.id, e);
+    }
+  }
+
+  alert(`Successfully restored ${successCount} quotes! Please refresh your page.`);
+  if (appState.currentUser) {
+    if (appState.currentUser === 'ganny') {
+      renderAdminDashboard();
+    } else {
+      renderMemberDashboard(appState.currentUser);
+    }
+  }
+}
+
+window.restoreCachedQuotes = restoreCachedQuotes;
 window.handleLogin = handleLogin;
 window.logoutUser = logoutUser;
 window.openActiveCalculator = openActiveCalculator;
