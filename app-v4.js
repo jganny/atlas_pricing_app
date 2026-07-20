@@ -708,6 +708,16 @@ function switchRole(role) {
   // Currency Indicator rules based on Role
   updateCurrencyRules(roleLower);
 
+  // Show/Hide Global Module Navigation Tabs based on role (hide for admin to avoid duplicate row)
+  const globalModuleTabs = document.getElementById("global-module-tabs");
+  if (globalModuleTabs) {
+    if (roleLower === 'manager' || roleLower === 'ganny') {
+      globalModuleTabs.style.display = "none";
+    } else {
+      globalModuleTabs.style.display = "flex";
+    }
+  }
+
   // Show Selected view
   if (roleLower === 'manager' || roleLower === 'ganny') {
     document.getElementById("manager-panel").classList.add("active");
