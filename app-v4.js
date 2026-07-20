@@ -34,7 +34,10 @@ if (savedNames) {
   try {
     const parsed = JSON.parse(savedNames);
     if (parsed["shashank"]) TEAM_ROLES["shashank"].name = parsed["shashank"];
-    if (parsed["shaheer"]) TEAM_ROLES["shaheer"].name = parsed["shaheer"];
+    if (parsed["shaheer"]) {
+      const nameVal = parsed["shaheer"];
+      TEAM_ROLES["shaheer"].name = (nameVal.toLowerCase() === 'shaheer') ? 'Sea Nomination' : nameVal;
+    }
     if (parsed["jaya"]) TEAM_ROLES["jaya"].name = parsed["jaya"];
     if (parsed["cathrina"]) TEAM_ROLES["cathrina"].name = parsed["cathrina"];
   } catch (e) {
@@ -5765,7 +5768,10 @@ function applyDeskNames() {
     const roles = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager' && roleId !== 'mahendra');
     let html = `<option value="all">All Pricing Officers</option>`;
     roles.forEach(roleId => {
-      const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\s*\(Free\s*Hand\)/i, "");
+      let name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\s*\(Free\s*Hand\)/i, "");
+      if (roleId === 'shaheer' && name.toLowerCase() === 'shaheer') {
+        name = 'Sea Nomination';
+      }
       html += `<option value="${roleId}">${name}</option>`;
     });
     reportUserSelect.innerHTML = html;
