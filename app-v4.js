@@ -23,7 +23,7 @@ const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
 const TEAM_ROLES = {
   'ganny': { name: 'Pricing Team', type: 'admin' },
   'shashank': { name: 'Air Nom', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-  'mahendra': { name: 'Sea Nom', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+  'shaheer': { name: 'Sea Nom', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
   'jaya': { name: 'Free Hand', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
@@ -34,7 +34,7 @@ if (savedNames) {
   try {
     const parsed = JSON.parse(savedNames);
     if (parsed["shashank"]) TEAM_ROLES["shashank"].name = parsed["shashank"];
-    if (parsed["mahendra"]) TEAM_ROLES["mahendra"].name = parsed["mahendra"];
+    if (parsed["shaheer"]) TEAM_ROLES["shaheer"].name = parsed["shaheer"];
     if (parsed["jaya"]) TEAM_ROLES["jaya"].name = parsed["jaya"];
     if (parsed["cathrina"]) TEAM_ROLES["cathrina"].name = parsed["cathrina"];
   } catch (e) {
@@ -449,7 +449,7 @@ async function handleLogin(e) {
       }
 
       // Hardcoded defaults check
-      const validHardcoded = ["ganny", "ganesh", "shashank", "mahendra", "jaya", "cathrina"];
+      const validHardcoded = ["ganny", "ganesh", "shashank", "shaheer", "jaya", "cathrina"];
       if (validHardcoded.includes(user) && pass === "password") {
         matchedPass = true;
       }
@@ -495,7 +495,7 @@ async function handleLogin(e) {
     }
 
     const matched = dbUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === user);
-    const validHardcoded = ["ganny", "shashank", "mahendra", "jaya", "cathrina"];
+    const validHardcoded = ["ganny", "shashank", "shaheer", "jaya", "cathrina"];
 
     if (matched) {
       if (pass === matched.password || (validHardcoded.includes(user) && pass === "password")) {
@@ -591,17 +591,22 @@ function renderUserCredentialsList() {
   const defaultUsers = [
     { username: 'ganny', fullName: 'Pricing Team (Admin)', role: 'admin' },
     { username: 'shashank', fullName: 'Air Nomination', role: 'member', category: 'AIR - NOMINATION' },
-    { username: 'mahendra', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION' },
+    { username: 'shaheer', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION' },
     { username: 'jaya', fullName: 'Free Hand Sales', role: 'member', category: 'FREE HAND SALES (AIR/SEA)' },
     { username: 'cathrina', fullName: 'NRS', role: 'member', category: 'NRS (AIR/SEA)' }
   ];
   
   // Combine unique users
   const allUsersMap = {};
-  defaultUsers.forEach(u => allUsersMap[u.username] = u);
+  defaultUsers.forEach(u => allUsersMap[u.username.toLowerCase()] = u);
   dbUsers.forEach(u => {
     if (u && u.username) {
-      allUsersMap[u.username.toLowerCase()] = {
+      const usernameLower = u.username.toLowerCase();
+      // Remove duplicate shaheer user credentials
+      if (usernameLower === 'shaheer' || usernameLower === 'mahendra') {
+        return;
+      }
+      allUsersMap[usernameLower] = {
         username: u.username,
         fullName: u.fullName || u.username,
         role: u.role || 'member',
@@ -689,7 +694,7 @@ function switchRole(role) {
   if (roleLower.startsWith('air') || roleLower === 'shashank') {
     root.style.setProperty('--accent-current', 'var(--accent-air)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
-  } else if (roleLower.startsWith('sea') || roleLower === 'mahendra') {
+  } else if (roleLower.startsWith('sea') || roleLower === 'shaheer') {
     root.style.setProperty('--accent-current', 'var(--accent-sea)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
   } else if (roleLower === 'manager' || roleLower === 'ganny') {
@@ -3736,7 +3741,7 @@ function generatePerformanceReport() {
   const totalGP = filtered.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
 
   // Group stats by member for summary grids
-  const members = ['shashank', 'mahendra', 'jaya', 'cathrina'];
+  const members = ['shashank', 'shaheer', 'jaya', 'cathrina'];
   let breakdownRows = "";
 
   members.forEach(mId => {
@@ -5657,7 +5662,7 @@ function applyDeskNames() {
     // Add default users
     const defaultUsers = [
       { id: 'shashank', defaultName: 'Air Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
-      { id: 'mahendra', defaultName: 'Sea Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
+      { id: 'shaheer', defaultName: 'Sea Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
       { id: 'jaya', defaultName: 'Free Hand', icon: '' },
       { id: 'cathrina', defaultName: 'NRS', icon: '' }
     ];
@@ -5669,7 +5674,7 @@ function applyDeskNames() {
 
     // Add custom registered users
     Object.keys(TEAM_ROLES).forEach(roleId => {
-      if (['ganny', 'shashank', 'mahendra', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
+      if (['ganny', 'shashank', 'shaheer', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
       const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\(Free Hand\)/g, "");
       buttonsHtml += `<button class="role-btn" data-role="${roleId}">${name}</button>`;
     });
@@ -5695,8 +5700,8 @@ function applyDeskNames() {
   const optShashank = document.getElementById("opt-shashank");
   if (optShashank) optShashank.textContent = (TEAM_ROLES['shashank']?.name || 'Air Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
-  const optMahendra = document.getElementById("opt-mahendra");
-  if (optMahendra) optMahendra.textContent = (TEAM_ROLES['mahendra']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
+  const optShaheer = document.getElementById("opt-shaheer");
+  if (optShaheer) optShaheer.textContent = (TEAM_ROLES['shaheer']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optJaya = document.getElementById("opt-jaya");
   if (optJaya) optJaya.textContent = (TEAM_ROLES['jaya']?.name || 'Free Hand').replace(/\s*\(Free\s*Hand\)/i, "");
@@ -5708,8 +5713,8 @@ function applyDeskNames() {
   const cfgShashank = document.getElementById("cfg-shashank");
   if (cfgShashank) cfgShashank.value = (TEAM_ROLES['shashank']?.name || 'Air Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
-  const cfgMahendra = document.getElementById("cfg-mahendra");
-  if (cfgMahendra) cfgMahendra.value = (TEAM_ROLES['mahendra']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
+  const cfgShaheer = document.getElementById("cfg-shaheer");
+  if (cfgShaheer) cfgShaheer.value = (TEAM_ROLES['shaheer']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgJaya = document.getElementById("cfg-jaya");
   if (cfgJaya) cfgJaya.value = (TEAM_ROLES['jaya']?.name || 'Free Hand').replace(/\s*\(Free\s*Hand\)/i, "");
@@ -5732,23 +5737,23 @@ function saveDeskNames(e) {
   e.preventDefault();
   
   const shashank = document.getElementById("cfg-shashank").value.trim();
-  const mahendra = document.getElementById("cfg-mahendra").value.trim();
+  const shaheer = document.getElementById("cfg-shaheer").value.trim();
   const jaya = document.getElementById("cfg-jaya").value.trim();
   const cathrina = document.getElementById("cfg-cathrina").value.trim();
 
-  if (!shashank || !mahendra || !jaya || !cathrina) {
+  if (!shashank || !shaheer || !jaya || !cathrina) {
     alert("Please fill out all category names.");
     return;
   }
 
   TEAM_ROLES['shashank'].name = shashank;
-  TEAM_ROLES['mahendra'].name = mahendra;
+  TEAM_ROLES['shaheer'].name = shaheer;
   TEAM_ROLES['jaya'].name = jaya;
   TEAM_ROLES['cathrina'].name = cathrina;
 
   const names = {
     'shashank': shashank,
-    'mahendra': mahendra,
+    'shaheer': shaheer,
     'jaya': jaya,
     'cathrina': cathrina
   };
@@ -7174,7 +7179,7 @@ const DB = {
         const defaultUsers = [
           { username: 'ganny', fullName: 'Pricing Team (Admin)', role: 'admin' },
           { username: 'shashank', fullName: 'Air Nomination', role: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-          { username: 'mahendra', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+          { username: 'shaheer', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
           { username: 'jaya', fullName: 'Free Hand Sales', role: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
           { username: 'cathrina', fullName: 'NRS', role: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
         ];
@@ -7258,7 +7263,7 @@ const DB = {
   sanitize(q, idx) {
     const creatorMap = {
       'air-nom': 'shashank',
-      'sea-nom': 'mahendra',
+      'sea-nom': 'shaheer',
       'air-local': 'jaya',
       'sea-local': 'jaya'
     };
@@ -7467,7 +7472,7 @@ function toggleAdminSettingsModal() {
       try {
         const parsed = JSON.parse(savedNames);
         if (parsed["shashank"]) document.getElementById("cfg-shashank").value = parsed["shashank"];
-        if (parsed["mahendra"]) document.getElementById("cfg-mahendra").value = parsed["mahendra"];
+        if (parsed["shaheer"]) document.getElementById("cfg-shaheer").value = parsed["shaheer"];
         if (parsed["jaya"]) document.getElementById("cfg-jaya").value = parsed["jaya"];
         if (parsed["cathrina"]) document.getElementById("cfg-cathrina").value = parsed["cathrina"];
       } catch(e) {}
@@ -7885,7 +7890,7 @@ async function submitWonBookingDetails(e) {
     }
 
     // 3. Confirmation intimation alert to Cathrina (NRS)
-    if (quote.creator === 'shashank' || quote.creator === 'mahendra') {
+    if (quote.creator === 'shashank' || quote.creator === 'shaheer') {
       let alerts = [];
       const stored = localStorage.getItem("nrs_alerts");
       if (stored) {
