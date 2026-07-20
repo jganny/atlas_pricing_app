@@ -841,49 +841,29 @@ function updateCurrencyRules(role) {
   const lclRow = document.getElementById("sea-lcl-rates-row");
   const bbRow = document.getElementById("sea-bb-rates-row");
 
-  if (isEligibleDeskUser()) {
-    if (lclBuyGrp) lclBuyGrp.style.display = "block";
-    if (lclLabel) lclLabel.textContent = "LCL Sell Rate (Per Revenue Ton - RT)";
-    if (bbBuyGrp) bbBuyGrp.style.display = "block";
-    if (bbLabel) bbLabel.textContent = "Break Bulk Sell Rate (Per Revenue Ton - RT)";
-    if (lclRow) lclRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;";
-    if (bbRow) bbRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;";
-  } else {
-    if (lclBuyGrp) lclBuyGrp.style.display = "none";
-    if (lclLabel) lclLabel.textContent = "LCL Freight Rate (Per Revenue Ton - RT)";
-    if (bbBuyGrp) bbBuyGrp.style.display = "none";
-    if (bbLabel) bbLabel.textContent = "Break Bulk Ocean Rate (Per Revenue Ton - RT)";
-    if (lclRow) lclRow.style.cssText = "display: block;";
-    if (bbRow) bbRow.style.cssText = "display: block;";
-  }
+  if (lclBuyGrp) lclBuyGrp.style.display = "block";
+  if (lclLabel) lclLabel.textContent = "LCL Sell Rate (Per Revenue Ton - RT)";
+  if (bbBuyGrp) bbBuyGrp.style.display = "block";
+  if (bbLabel) bbLabel.textContent = "Break Bulk Sell Rate (Per Revenue Ton - RT)";
+  if (lclRow) lclRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;";
+  if (bbRow) bbRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;";
 
   const fclTable = document.querySelector("#sea-fcl-form table");
   if (fclTable) {
     const thead = fclTable.querySelector("thead");
     if (thead) {
-      const expectedHeaderType = isEligibleDeskUser() ? "gp" : "normal";
+      const expectedHeaderType = "gp";
       if (thead.getAttribute("data-header-type") !== expectedHeaderType) {
         thead.setAttribute("data-header-type", expectedHeaderType);
-        if (isEligibleDeskUser()) {
-          thead.innerHTML = `
-            <tr>
-              <th>Container Type</th>
-              <th>Quantity Needed</th>
-              <th>Sell Rate Per Container (<span class="curr-label">${currency}</span>)</th>
-              <th>Buy Rate Per Container (<span class="curr-label">${currency}</span>)</th>
-              <th>Action</th>
-            </tr>
-          `;
-        } else {
-          thead.innerHTML = `
-            <tr>
-              <th>Container Type</th>
-              <th>Quantity Needed</th>
-              <th>Rate Per Container (<span class="curr-label">${currency}</span>)</th>
-              <th>Action</th>
-            </tr>
-          `;
-        }
+        thead.innerHTML = `
+          <tr>
+            <th>Container Type</th>
+            <th>Quantity Needed</th>
+            <th>Sell Rate Per Container (<span class="curr-label">${currency}</span>)</th>
+            <th>Buy Rate Per Container (<span class="curr-label">${currency}</span>)</th>
+            <th>Action</th>
+          </tr>
+        `;
       }
     }
   }
@@ -1593,36 +1573,23 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
   wrapper.setAttribute("data-is-auto", isAuto ? "true" : "false");
   wrapper.style.cssText = "background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;";
 
-  if (isEligibleDeskUser()) {
-    const sellRate = (typeof rate === 'object' && rate !== null) ? (rate.sell || 0) : (parseFloat(rate) || 0);
-    const buyRate = (typeof rate === 'object' && rate !== null) ? (rate.buy || 0) : 0;
-    
-    wrapper.innerHTML = `
-      <span style="font-size: 0.72rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
-      <div style="display: flex; gap: 4px; align-items: center;">
-        <input type="number" class="break-rate-input break-sell-rate-input" placeholder="Sell" min="0" step="0.1" value="${sellRate > 0 ? sellRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Sell Rate per KG">
-        <input type="number" class="break-buy-rate-input" placeholder="Buy" min="0" step="0.1" value="${buyRate > 0 ? buyRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Buy Rate per KG">
-      </div>
-      <span class="remove-break-btn" style="cursor: pointer; color: var(--accent-error); font-size: 0.8rem; font-weight: 800; padding: 0 2px; ${isAuto ? 'display:none;' : ''}">×</span>
-    `;
-  } else {
-    const sellRate = (typeof rate === 'object' && rate !== null) ? (rate.sell || 0) : (parseFloat(rate) || 0);
-    wrapper.innerHTML = `
-      <span style="font-size: 0.72rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
-      <input type="number" class="break-rate-input" placeholder="Rate" min="0" step="0.1" value="${sellRate > 0 ? sellRate : ''}" style="width: 60px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;">
-      <span class="remove-break-btn" style="cursor: pointer; color: var(--accent-error); font-size: 0.8rem; font-weight: 800; padding: 0 2px; ${isAuto ? 'display:none;' : ''}">×</span>
-    `;
-  }
+  const sellRate = (typeof rate === 'object' && rate !== null) ? (rate.sell || 0) : (parseFloat(rate) || 0);
+  const buyRate = (typeof rate === 'object' && rate !== null) ? (rate.buy || 0) : 0;
+  
+  wrapper.innerHTML = `
+    <span style="font-size: 0.72rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
+    <div style="display: flex; gap: 4px; align-items: center;">
+      <input type="number" class="break-rate-input break-sell-rate-input" placeholder="Sell" min="0" step="0.1" value="${sellRate > 0 ? sellRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Sell Rate per KG">
+      <input type="number" class="break-buy-rate-input" placeholder="Buy" min="0" step="0.1" value="${buyRate > 0 ? buyRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Buy Rate per KG">
+    </div>
+    <span class="remove-break-btn" style="cursor: pointer; color: var(--accent-error); font-size: 0.8rem; font-weight: 800; padding: 0 2px; ${isAuto ? 'display:none;' : ''}">×</span>
+  `;
 
   container.appendChild(wrapper);
 
-  if (isEligibleDeskUser()) {
-    wrapper.querySelector(".break-sell-rate-input").addEventListener("input", calculateAirFreight);
-    const buyInp = wrapper.querySelector(".break-buy-rate-input");
-    if (buyInp) buyInp.addEventListener("input", calculateAirFreight);
-  } else {
-    wrapper.querySelector(".break-rate-input").addEventListener("input", calculateAirFreight);
-  }
+  wrapper.querySelector(".break-sell-rate-input").addEventListener("input", calculateAirFreight);
+  const buyInp = wrapper.querySelector(".break-buy-rate-input");
+  if (buyInp) buyInp.addEventListener("input", calculateAirFreight);
 
   if (!isAuto) {
     wrapper.querySelector(".remove-break-btn").addEventListener("click", () => {
@@ -1983,14 +1950,9 @@ function calculateAirFreight() {
     const breaksData = {};
     card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
       const bName = wrapper.getAttribute("data-break-name");
-      if (isEligibleDeskUser()) {
-        const sellRate = parseFloat(wrapper.querySelector(".break-sell-rate-input")?.value) || 0;
-        const buyRate = parseFloat(wrapper.querySelector(".break-buy-rate-input")?.value) || 0;
-        breaksData[bName] = { sell: sellRate, buy: buyRate };
-      } else {
-        const rateVal = parseFloat(wrapper.querySelector(".break-rate-input").value) || 0;
-        breaksData[bName] = rateVal;
-      }
+      const sellRate = parseFloat(wrapper.querySelector(".break-sell-rate-input")?.value) || 0;
+      const buyRate = parseFloat(wrapper.querySelector(".break-buy-rate-input")?.value) || 0;
+      breaksData[bName] = { sell: sellRate, buy: buyRate };
     });
 
     const creatorRole = appState.currentUser;
@@ -2008,13 +1970,9 @@ function calculateAirFreight() {
     let activeBuyRate = 0;
     let usedBreak = autoBreakName;
 
-    if (isEligibleDeskUser()) {
-      const activeBrVal = breaksData[autoBreakName] || { sell: 0, buy: 0 };
-      activeRate = activeBrVal.sell;
-      activeBuyRate = activeBrVal.buy;
-    } else {
-      activeRate = breaksData[autoBreakName] || 0;
-    }
+    const activeBrVal = breaksData[autoBreakName] || { sell: 0, buy: 0 };
+    activeRate = activeBrVal.sell;
+    activeBuyRate = activeBrVal.buy;
 
     if (isFreeHandOrNrs && activeRate === 0) {
       // Find the highest limit weight break that has a rate and is <= chargeable weight
@@ -2181,6 +2139,7 @@ function calculateAirFreight() {
       chargeableWeight: airlineChargeableWeight,
       baseFreight: baseFreightCost,
       appliedRate: isMinActive ? minSell : activeRate,
+      appliedBuyRate: isMinActive ? minBuy : activeBuyRate,
       surchargeTotal: airlineSurchargeTotal,
       surchargesCalculated: [...airlineOriginSurcharges, ...airlineDestSurcharges],
       originSurcharges: airlineOriginSurcharges,
@@ -2452,11 +2411,13 @@ function calculateAirFreight() {
       chargeableWeight: alt.chargeableWeight,
       baseFreight: alt.baseFreight,
       appliedRate: alt.appliedRate,
+      appliedBuyRate: alt.appliedBuyRate,
       surchargeTotal: alt.surchargeTotal,
       surchargesCalculated: alt.surchargesCalculated,
       originSurcharges: alt.originSurcharges,
       destSurcharges: alt.destSurcharges,
       grandTotal: alt.grandTotal,
+      baseBuyFreight: alt.baseBuyFreight,
       grossProfit: alt.grossProfit
     };
   });
@@ -2476,6 +2437,8 @@ function calculateAirFreight() {
   appState.currentAirFreight.surchargesCalculated = selectedAirlineData.surchargesCalculated;
   appState.currentAirFreight.usedBreak = selectedAirlineData.usedBreak;
   appState.currentAirFreight.appliedRate = selectedAirlineData.appliedRate;
+  appState.currentAirFreight.appliedBuyRate = selectedAirlineData.appliedBuyRate;
+  appState.currentAirFreight.baseBuyFreight = selectedAirlineData.baseBuyFreight;
   appState.currentAirFreight.pivotWeight = selectedAirlineData.pivotWeight;
   appState.currentAirFreight.routing = selectedAirlineData.routing;
   appState.currentAirFreight.tt = selectedAirlineData.tt;
@@ -2703,65 +2666,40 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
   const tr = document.createElement("tr");
   tr.className = "container-row";
   
-  if (isEligibleDeskUser()) {
-    tr.innerHTML = `
-      <td>
-        <select class="fcl-type table-select">
-          <option value="20'GP" ${typeVal === "20'GP" ? 'selected' : ''}>20'GP (General Purpose)</option>
-          <option value="40'GP" ${typeVal === "40'GP" ? 'selected' : ''}>40'GP (General Purpose)</option>
-          <option value="20'HC" ${typeVal === "20'HC" ? 'selected' : ''}>20'HC (High Cube)</option>
-          <option value="40'HC" ${typeVal === "40'HC" ? 'selected' : ''}>40'HC (High Cube)</option>
-          <option value="20'OT" ${typeVal === "20'OT" ? 'selected' : ''}>20'OT (Open Top)</option>
-          <option value="40'OT" ${typeVal === "40'OT" ? 'selected' : ''}>40'OT (Open Top)</option>
-          <option value="20'FR" ${typeVal === "20'FR" ? 'selected' : ''}>20'FR (Flat Rack)</option>
-          <option value="40'FR" ${typeVal === "40'FR" ? 'selected' : ''}>40'FR (Flat Rack)</option>
-          <option value="20'RF" ${typeVal === "20'RF" ? 'selected' : ''}>20'RF (Reefer)</option>
-          <option value="40'RF" ${typeVal === "40'RF" ? 'selected' : ''}>40'RF (Reefer)</option>
-          <option value="45'HC" ${typeVal === "45'HC" ? 'selected' : ''}>45'HC (High Cube)</option>
-        </select>
-      </td>
-      <td><input type="number" class="fcl-qty" value="${qtyVal}" min="1" style="width: 100%;"></td>
-      <td><input type="number" class="fcl-rate fcl-sell-rate" value="${sellRate}" min="0" style="width: 100%;"></td>
-      <td><input type="number" class="fcl-buy-rate" value="${buyRate}" min="0" style="width: 100%;"></td>
-      <td>
-        <button type="button" class="delete-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-        </button>
-      </td>
-    `;
-    tr.querySelector(".fcl-buy-rate").addEventListener("input", calculateSeaFreight);
-  } else {
-    tr.innerHTML = `
-      <td>
-        <select class="fcl-type table-select">
-          <option value="20'GP" ${typeVal === "20'GP" ? 'selected' : ''}>20'GP (General Purpose)</option>
-          <option value="40'GP" ${typeVal === "40'GP" ? 'selected' : ''}>40'GP (General Purpose)</option>
-          <option value="20'HC" ${typeVal === "20'HC" ? 'selected' : ''}>20'HC (High Cube)</option>
-          <option value="40'HC" ${typeVal === "40'HC" ? 'selected' : ''}>40'HC (High Cube)</option>
-          <option value="20'OT" ${typeVal === "20'OT" ? 'selected' : ''}>20'OT (Open Top)</option>
-          <option value="40'OT" ${typeVal === "40'OT" ? 'selected' : ''}>40'OT (Open Top)</option>
-          <option value="20'FR" ${typeVal === "20'FR" ? 'selected' : ''}>20'FR (Flat Rack)</option>
-          <option value="40'FR" ${typeVal === "40'FR" ? 'selected' : ''}>40'FR (Flat Rack)</option>
-          <option value="20'RF" ${typeVal === "20'RF" ? 'selected' : ''}>20'RF (Reefer)</option>
-          <option value="40'RF" ${typeVal === "40'RF" ? 'selected' : ''}>40'RF (Reefer)</option>
-          <option value="45'HC" ${typeVal === "45'HC" ? 'selected' : ''}>45'HC (High Cube)</option>
-        </select>
-      </td>
-      <td><input type="number" class="fcl-qty" value="${qtyVal}" min="1" style="width: 100%;"></td>
-      <td><input type="number" class="fcl-rate" value="${sellRate}" min="0" style="width: 100%;"></td>
-      <td>
-        <button type="button" class="delete-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-        </button>
-      </td>
-    `;
-  }
+  tr.innerHTML = `
+    <td>
+      <select class="fcl-type table-select">
+        <option value="20'GP" ${typeVal === "20'GP" ? 'selected' : ''}>20'GP (General Purpose)</option>
+        <option value="40'GP" ${typeVal === "40'GP" ? 'selected' : ''}>40'GP (General Purpose)</option>
+        <option value="20'HC" ${typeVal === "20'HC" ? 'selected' : ''}>20'HC (High Cube)</option>
+        <option value="40'HC" ${typeVal === "40'HC" ? 'selected' : ''}>40'HC (High Cube)</option>
+        <option value="20'OT" ${typeVal === "20'OT" ? 'selected' : ''}>20'OT (Open Top)</option>
+        <option value="40'OT" ${typeVal === "40'OT" ? 'selected' : ''}>40'OT (Open Top)</option>
+        <option value="20'FR" ${typeVal === "20'FR" ? 'selected' : ''}>20'FR (Flat Rack)</option>
+        <option value="40'FR" ${typeVal === "40'FR" ? 'selected' : ''}>40'FR (Flat Rack)</option>
+        <option value="20'RF" ${typeVal === "20'RF" ? 'selected' : ''}>20'RF (Reefer)</option>
+        <option value="40'RF" ${typeVal === "40'RF" ? 'selected' : ''}>40'RF (Reefer)</option>
+        <option value="45'HC" ${typeVal === "45'HC" ? 'selected' : ''}>45'HC (High Cube)</option>
+      </select>
+    </td>
+    <td><input type="number" class="fcl-qty" value="${qtyVal}" min="1" style="width: 100%;"></td>
+    <td><input type="number" class="fcl-rate fcl-sell-rate" value="${sellRate}" min="0" style="width: 100%;"></td>
+    <td><input type="number" class="fcl-buy-rate" value="${buyRate}" min="0" style="width: 100%;"></td>
+    <td>
+      <button type="button" class="delete-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+      </button>
+    </td>
+  `;
 
   tr.querySelector(".fcl-type").addEventListener("change", calculateSeaFreight);
   tr.querySelector(".fcl-qty").addEventListener("input", calculateSeaFreight);
   
   const rateInp = tr.querySelector(".fcl-sell-rate") || tr.querySelector(".fcl-rate");
   rateInp.addEventListener("input", calculateSeaFreight);
+
+  const buyInp = tr.querySelector(".fcl-buy-rate");
+  if (buyInp) buyInp.addEventListener("input", calculateSeaFreight);
 
   tr.querySelector(".delete-btn").addEventListener("click", () => {
     tr.remove();
@@ -2803,9 +2741,11 @@ function calculateSeaFreight() {
     fclRows.forEach(row => {
       const typeVal = row.querySelector(".fcl-type").value;
       const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
-      const rate = parseFloat(row.querySelector(".fcl-rate").value) || 0;
-      if (qty > 0 && rate > 0) {
-        baseFreight += (qty * rate);
+      const rate = parseFloat(row.querySelector(".fcl-sell-rate")?.value || row.querySelector(".fcl-rate")?.value) || 0;
+      const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
+      const activeRate = rate > 0 ? rate : (buy > 0 ? buy : 0);
+      if (qty > 0 && activeRate > 0) {
+        baseFreight += (qty * activeRate);
         totalContainersCount += qty;
         containerSummary.push(`${qty} x ${typeVal}`);
       }
@@ -2814,11 +2754,15 @@ function calculateSeaFreight() {
     appState.currentSeaFreight.fclSummary = containerSummary;
   } else if (type === 'lcl') {
     const rate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
-    baseFreight = chargeableCbm * rate;
+    const buy = parseFloat(document.getElementById("sea-lcl-buy-rate").value) || 0;
+    const activeRate = rate > 0 ? rate : buy;
+    baseFreight = chargeableCbm * activeRate;
     detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
   } else {
     const rate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
-    baseFreight = chargeableCbm * rate;
+    const buy = parseFloat(document.getElementById("sea-bb-buy-rate").value) || 0;
+    const activeRate = rate > 0 ? rate : buy;
+    baseFreight = chargeableCbm * activeRate;
     detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [Break Bulk]`;
   }
 
@@ -3601,110 +3545,172 @@ window.convertQuote = (id) => {
   const buyRateInput = document.getElementById("won-confirmed-buy-rate");
 
   if (carrierSection && carrierSelect && buyRateInput) {
-    if (isEligibleDeskUser(quote.creator)) {
-      carrierSection.style.display = "block";
-      carrierSelect.required = true;
-      buyRateInput.required = true;
+    carrierSection.style.display = "block";
+    carrierSelect.required = true;
 
-      // Update Labels
-      const carrierLabel = document.getElementById("won-confirmed-carrier-label");
-      const titleLabel = document.getElementById("won-carrier-section-title");
-      const buyRateLabel = document.getElementById("won-confirmed-buy-rate-label");
+    // Determine what is missing
+    let isBuyRateMissing = false;
+    let isSellRateMissing = false;
 
-      if (quote.type === 'air') {
-        if (titleLabel) titleLabel.textContent = "Confirmed Airline Details";
-        if (carrierLabel) carrierLabel.textContent = "Confirmed Airline *";
-        if (buyRateLabel) buyRateLabel.textContent = "Confirmed Buy Rate (per KG) *";
-      } else {
-        if (titleLabel) titleLabel.textContent = "Confirmed Shipping Line Details";
-        if (carrierLabel) carrierLabel.textContent = "Confirmed Shipping Line *";
-        if (buyRateLabel) buyRateLabel.textContent = "Confirmed Buy Rate *";
+    if (quote.type === 'air') {
+      const sellRate = quote.details.appliedRate || 0;
+      const buyRate = quote.details.appliedBuyRate || 0;
+      if (sellRate > 0 && buyRate === 0) {
+        isBuyRateMissing = true;
+      } else if (buyRate > 0 && sellRate === 0) {
+        isSellRateMissing = true;
       }
+    } else {
+      if (quote.details.mode === 'fcl') {
+        const hasSell = (quote.details.containerItems || []).some(item => (item.rate || 0) > 0);
+        const hasBuy = (quote.details.containerItems || []).some(item => (item.buy || 0) > 0);
+        if (hasSell && !hasBuy) {
+          isBuyRateMissing = true;
+        } else if (hasBuy && !hasSell) {
+          isSellRateMissing = true;
+        }
+      } else if (quote.details.mode === 'lcl') {
+        const sellRate = quote.details.lclRateApplied || 0;
+        const buyRate = quote.details.lclBuyRateApplied || 0;
+        if (sellRate > 0 && buyRate === 0) {
+          isBuyRateMissing = true;
+        } else if (buyRate > 0 && sellRate === 0) {
+          isSellRateMissing = true;
+        }
+      } else {
+        const sellRate = quote.details.bbRateApplied || 0;
+        const buyRate = quote.details.bbBuyRateApplied || 0;
+        if (sellRate > 0 && buyRate === 0) {
+          isBuyRateMissing = true;
+        } else if (buyRate > 0 && sellRate === 0) {
+          isSellRateMissing = true;
+        }
+      }
+    }
 
-      // Populate select dropdown options based on quote details
-      carrierSelect.innerHTML = "";
-      let carrierOptions = [];
+    const buyGrp = document.getElementById("won-confirmed-buy-rate-group");
+    const sellGrp = document.getElementById("won-confirmed-sell-rate-group");
+    const sellRateInput = document.getElementById("won-confirmed-sell-rate");
+
+    if (isSellRateMissing) {
+      if (buyGrp) buyGrp.style.display = "none";
+      if (sellGrp) sellGrp.style.display = "block";
+      if (sellRateInput) sellRateInput.required = true;
+      buyRateInput.required = false;
+    } else {
+      if (buyGrp) buyGrp.style.display = "block";
+      if (sellGrp) sellGrp.style.display = "none";
+      if (sellRateInput) sellRateInput.required = false;
+      buyRateInput.required = true;
+    }
+
+    // Update Labels
+    const carrierLabel = document.getElementById("won-confirmed-carrier-label");
+    const titleLabel = document.getElementById("won-carrier-section-title");
+    const buyRateLabel = document.getElementById("won-confirmed-buy-rate-label");
+    const sellRateLabel = document.getElementById("won-confirmed-sell-rate-label");
+
+    if (quote.type === 'air') {
+      if (titleLabel) titleLabel.textContent = "Confirmed Airline Details";
+      if (carrierLabel) carrierLabel.textContent = "Confirmed Airline *";
+      if (buyRateLabel) buyRateLabel.textContent = "Confirmed Buy Rate (per KG) *";
+      if (sellRateLabel) sellRateLabel.textContent = "Confirmed Sell Rate (per KG) *";
+    } else {
+      if (titleLabel) titleLabel.textContent = "Confirmed Shipping Line Details";
+      if (carrierLabel) carrierLabel.textContent = "Confirmed Shipping Line *";
+      if (buyRateLabel) buyRateLabel.textContent = "Confirmed Buy Rate *";
+      if (sellRateLabel) sellRateLabel.textContent = "Confirmed Sell Rate *";
+    }
+
+    // Populate select dropdown options based on quote details
+    carrierSelect.innerHTML = "";
+    let carrierOptions = [];
+    if (quote.type === 'air') {
+      if (quote.details.airlines && quote.details.airlines.length > 0) {
+        carrierOptions = quote.details.airlines.map(a => a.name);
+      } else if (quote.details.airline) {
+        carrierOptions = [quote.details.airline.split(" - ")[0]];
+      }
+    } else {
+      if (quote.details.shippingLine) {
+        carrierOptions.push(quote.details.shippingLine);
+      }
+      if (quote.details.alternatives && quote.details.alternatives.length > 0) {
+        quote.details.alternatives.forEach(alt => {
+          if (alt.carrier && !carrierOptions.includes(alt.carrier)) {
+            carrierOptions.push(alt.carrier);
+          }
+        });
+      }
+    }
+
+    // If no carriers were saved, let's allow a fallback
+    if (carrierOptions.length === 0) {
+      carrierOptions.push(quote.type === 'air' ? 'Any Airline' : 'Any Line');
+    }
+
+    carrierOptions.forEach(opt => {
+      const option = document.createElement("option");
+      option.value = opt;
+      option.textContent = opt;
+      carrierSelect.appendChild(option);
+    });
+
+    // Default buy/sell rate based on selection
+    const updateRateFromSelection = () => {
+      const selectedCarrier = document.getElementById("won-confirmed-carrier")?.value || "";
+      let defaultBuyRate = 0;
+      let defaultSellRate = 0;
+
       if (quote.type === 'air') {
         if (quote.details.airlines && quote.details.airlines.length > 0) {
-          carrierOptions = quote.details.airlines.map(a => a.name);
-        } else if (quote.details.airline) {
-          carrierOptions = [quote.details.airline.split(" - ")[0]];
+          const match = quote.details.airlines.find(a => a.name === selectedCarrier);
+          if (match) {
+            const activeBr = match.usedBreak || getWeightBreakBracket(match.chargeableWeight || quote.details.chargeableWeight || 0);
+            const brVal = match.breaks[activeBr];
+            defaultBuyRate = (typeof brVal === 'object' && brVal !== null) ? (brVal.buy || 0) : 0;
+            defaultSellRate = (typeof brVal === 'object' && brVal !== null) ? (brVal.sell || 0) : 0;
+          }
         }
       } else {
-        if (quote.details.shippingLine) {
-          carrierOptions.push(quote.details.shippingLine);
-        }
-        if (quote.details.alternatives && quote.details.alternatives.length > 0) {
-          quote.details.alternatives.forEach(alt => {
-            if (alt.carrier && !carrierOptions.includes(alt.carrier)) {
-              carrierOptions.push(alt.carrier);
-            }
-          });
-        }
-      }
-
-      // If no carriers were saved, let's allow a fallback
-      if (carrierOptions.length === 0) {
-        carrierOptions.push(quote.type === 'air' ? 'Any Airline' : 'Any Line');
-      }
-
-      carrierOptions.forEach(opt => {
-        const option = document.createElement("option");
-        option.value = opt;
-        option.textContent = opt;
-        carrierSelect.appendChild(option);
-      });
-
-      // Default buy rate based on selection
-      const updateBuyRateFromSelection = () => {
-        const selectedCarrier = document.getElementById("won-confirmed-carrier")?.value || "";
-        let defaultBuyRate = 0;
-
-        if (quote.type === 'air') {
-          if (quote.details.airlines && quote.details.airlines.length > 0) {
-            const match = quote.details.airlines.find(a => a.name === selectedCarrier);
-            if (match) {
-              const activeBr = match.usedBreak || getWeightBreakBracket(match.chargeableWeight || quote.details.chargeableWeight || 0);
-              const brVal = match.breaks[activeBr];
-              defaultBuyRate = (typeof brVal === 'object' && brVal !== null) ? (brVal.buy || 0) : 0;
-            }
+        // Sea
+        if (quote.details.mode === 'fcl') {
+          let sumBuy = 0;
+          let sumSell = 0;
+          if (quote.details.containerItems && quote.details.containerItems.length > 0) {
+            quote.details.containerItems.forEach(item => {
+              sumBuy += (item.buy || 0);
+              sumSell += (item.rate || 0);
+            });
           }
+          defaultBuyRate = sumBuy;
+          defaultSellRate = sumSell;
+        } else if (quote.details.mode === 'lcl') {
+          defaultBuyRate = quote.details.lclBuyRateApplied || 0;
+          defaultSellRate = quote.details.lclRateApplied || 0;
         } else {
-          // Sea
-          if (quote.details.mode === 'fcl') {
-            let sumBuy = 0;
-            if (quote.details.containerItems && quote.details.containerItems.length > 0) {
-              quote.details.containerItems.forEach(item => {
-                sumBuy += (item.buy || 0);
-              });
-            }
-            defaultBuyRate = sumBuy;
-          } else if (quote.details.mode === 'lcl') {
-            defaultBuyRate = quote.details.lclBuyRateApplied || 0;
-          } else {
-            defaultBuyRate = quote.details.bbBuyRateApplied || 0;
-          }
+          defaultBuyRate = quote.details.bbBuyRateApplied || 0;
+          defaultSellRate = quote.details.bbRateApplied || 0;
         }
-        const wonBuyRateInput = document.getElementById("won-confirmed-buy-rate");
-        if (wonBuyRateInput) {
-          wonBuyRateInput.value = defaultBuyRate > 0 ? defaultBuyRate : "";
-        }
-      };
+      }
 
-      // Remove existing listeners before adding
-      const newSelect = carrierSelect.cloneNode(true);
-      carrierSelect.parentNode.replaceChild(newSelect, carrierSelect);
-      newSelect.addEventListener("change", updateBuyRateFromSelection);
-      
-      // Auto-alert
-      alert(`⚠️ Please select the Confirmed ${quote.type === 'air' ? 'Airline' : 'Shipping Line'} and enter/verify the Confirmed Buy Rate.`);
+      if (buyRateInput) {
+        buyRateInput.value = defaultBuyRate > 0 ? defaultBuyRate : "";
+      }
+      if (sellRateInput) {
+        sellRateInput.value = defaultSellRate > 0 ? defaultSellRate : "";
+      }
+    };
 
-      updateBuyRateFromSelection();
-    } else {
-      carrierSection.style.display = "none";
-      carrierSelect.required = false;
-      buyRateInput.required = false;
-    }
+    // Remove existing listeners before adding
+    const newSelect = carrierSelect.cloneNode(true);
+    carrierSelect.parentNode.replaceChild(newSelect, carrierSelect);
+    newSelect.addEventListener("change", updateRateFromSelection);
+    
+    // Auto-alert
+    alert(`⚠️ Please select the Confirmed ${quote.type === 'air' ? 'Airline' : 'Shipping Line'} and enter/verify the Confirmed ${isSellRateMissing ? 'Sell' : 'Buy'} Rate.`);
+
+    updateRateFromSelection();
   }
 
   document.getElementById("won-booking-modal").style.display = "flex";
@@ -4009,8 +4015,15 @@ function saveCurrentQuote() {
       return;
     }
 
-    if (appState.currentAirFreight.appliedRate <= 0) {
-      alert("Please enter a valid rate for the active weight break under Tariffs.");
+    const sellRateVal = appState.currentAirFreight.appliedRate || 0;
+    const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
+
+    if (sellRateVal > 0 && buyRateVal > 0) {
+      alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+      return;
+    }
+    if (sellRateVal <= 0 && buyRateVal <= 0) {
+      alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
       return;
     }
 
@@ -4072,7 +4085,9 @@ function saveCurrentQuote() {
       cbm: appState.currentAirFreight.cbm,
       quantity: appState.currentAirFreight.quantity,
       appliedRate: appState.currentAirFreight.appliedRate,
+      appliedBuyRate: appState.currentAirFreight.appliedBuyRate || 0,
       baseFreight: appState.currentAirFreight.baseFreight,
+      baseBuyFreight: appState.currentAirFreight.baseBuyFreight || 0,
       originSurcharges: appState.currentAirFreight.originSurcharges,
       destSurcharges: appState.currentAirFreight.destSurcharges,
       surcharges: appState.currentAirFreight.surchargesCalculated,
@@ -4124,24 +4139,35 @@ function saveCurrentQuote() {
         return;
       }
       let hasInvalidFcl = false;
+      let hasBoth = false;
+      let hasNeither = false;
       fclRows.forEach(row => {
         const type = row.querySelector(".fcl-type").value;
         const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
         const rateInput = row.querySelector(".fcl-sell-rate") || row.querySelector(".fcl-rate");
         const rate = parseFloat(rateInput.value) || 0;
-        if (qty <= 0 || rate <= 0) {
+        const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
+        if (qty <= 0) {
           hasInvalidFcl = true;
-        } else {
-          if (isEligibleDeskUser()) {
-            const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
-            containerItems.push({ type, qty, rate, buy });
-          } else {
-            containerItems.push({ type, qty, rate });
-          }
         }
+        if (rate > 0 && buy > 0) {
+          hasBoth = true;
+        }
+        if (rate <= 0 && buy <= 0) {
+          hasNeither = true;
+        }
+        containerItems.push({ type, qty, rate, buy });
       });
       if (hasInvalidFcl) {
-        alert("Please fill in Container Quantity and Rate per Container for all container rows.");
+        alert("Please fill in Container Quantity for all container rows.");
+        return;
+      }
+      if (hasBoth) {
+        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+        return;
+      }
+      if (hasNeither) {
+        alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
         return;
       }
     }
@@ -4150,8 +4176,13 @@ function saveCurrentQuote() {
     const rows = document.querySelectorAll("#sea-cargo-body .sea-cargo-item-row");
     if (appState.currentSeaFreight.type === 'lcl') {
       const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
-      if (lclRate <= 0) {
-        alert("Please enter LCL Freight Rate per Revenue Ton (RT) greater than zero.");
+      const lclBuyRate = parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0;
+      if (lclRate > 0 && lclBuyRate > 0) {
+        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+        return;
+      }
+      if (lclRate <= 0 && lclBuyRate <= 0) {
+        alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
         return;
       }
       if (rows.length === 0) {
@@ -4176,8 +4207,13 @@ function saveCurrentQuote() {
       }
     } else if (appState.currentSeaFreight.type === 'bb') {
       const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
-      if (bbRate <= 0) {
-        alert("Please enter Break Bulk Ocean Rate per Revenue Ton (RT) greater than zero.");
+      const bbBuyRate = parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0;
+      if (bbRate > 0 && bbBuyRate > 0) {
+        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+        return;
+      }
+      if (bbRate <= 0 && bbBuyRate <= 0) {
+        alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
         return;
       }
       if (rows.length === 0) {
@@ -4272,8 +4308,8 @@ function saveCurrentQuote() {
       lclChargeable: Math.max(appState.currentSeaFreight.volumeCbm, appState.currentSeaFreight.grossWeight / 1000),
       lclRateApplied: parseFloat(document.getElementById("sea-lcl-rate").value) || 0,
       bbRateApplied: parseFloat(document.getElementById("sea-bb-rate").value) || 0,
-      lclBuyRateApplied: isEligibleDeskUser() ? (parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0) : 0,
-      bbBuyRateApplied: isEligibleDeskUser() ? (parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0) : 0,
+      lclBuyRateApplied: parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0,
+      bbBuyRateApplied: parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0,
       containerItems: containerItems,
       cargoItems: cargoItems,
       dimUnit: appState.currentSeaFreight.dimUnit || 'cms',
@@ -5142,11 +5178,27 @@ window.viewSavedQuote = (id) => {
     `;
   }
 
-  if (quote.status === 'converted' && isEligibleDeskUser(quote.creator)) {
+  if (quote.status === 'converted') {
+    const buyVal = quote.confirmedBuyRate || 0;
+    const sellVal = quote.confirmedSellRate || 0;
+    const gpVal = quote.grossProfit || 0;
+
     detailsRows += `
       <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
         <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Carrier</td>
         <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${quote.confirmedCarrier || 'N/A'}</strong></td>
+      </tr>
+      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
+        <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Buy Rate</td>
+        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${buyVal.toFixed(2)}</strong></td>
+      </tr>
+      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
+        <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Sell Rate</td>
+        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${sellVal.toFixed(2)}</strong></td>
+      </tr>
+      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
+        <td style="padding: 8px 12px; font-size: 0.72rem;">Gross Profit (GP)</td>
+        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${gpVal.toFixed(2)}</strong></td>
       </tr>
     `;
   }
@@ -7857,62 +7909,184 @@ async function submitWonBookingDetails(e) {
   quote.conversionDate = new Date().toISOString().split('T')[0];
   quote.date = new Date().toISOString().split('T')[0];
 
-  if (isEligibleDeskUser(quote.creator)) {
-    const confirmedCarrier = document.getElementById("won-confirmed-carrier").value;
-    const buyRateVal = parseFloat(document.getElementById("won-confirmed-buy-rate").value) || 0;
+  const confirmedCarrier = document.getElementById("won-confirmed-carrier").value;
 
-    if (!confirmedCarrier || buyRateVal <= 0) {
+  // Determine what was missing
+  let isBuyRateMissing = false;
+  let isSellRateMissing = false;
+
+  if (quote.type === 'air') {
+    const sellRate = quote.details.appliedRate || 0;
+    const buyRate = quote.details.appliedBuyRate || 0;
+    if (sellRate > 0 && buyRate === 0) {
+      isBuyRateMissing = true;
+    } else if (buyRate > 0 && sellRate === 0) {
+      isSellRateMissing = true;
+    }
+  } else {
+    if (quote.details.mode === 'fcl') {
+      const hasSell = (quote.details.containerItems || []).some(item => (item.rate || 0) > 0);
+      const hasBuy = (quote.details.containerItems || []).some(item => (item.buy || 0) > 0);
+      if (hasSell && !hasBuy) {
+        isBuyRateMissing = true;
+      } else if (hasBuy && !hasSell) {
+        isSellRateMissing = true;
+      }
+    } else if (quote.details.mode === 'lcl') {
+      const sellRate = quote.details.lclRateApplied || 0;
+      const buyRate = quote.details.lclBuyRateApplied || 0;
+      if (sellRate > 0 && buyRate === 0) {
+        isBuyRateMissing = true;
+      } else if (buyRate > 0 && sellRate === 0) {
+        isSellRateMissing = true;
+      }
+    } else {
+      const sellRate = quote.details.bbRateApplied || 0;
+      const buyRate = quote.details.bbBuyRateApplied || 0;
+      if (sellRate > 0 && buyRate === 0) {
+        isBuyRateMissing = true;
+      } else if (buyRate > 0 && sellRate === 0) {
+        isSellRateMissing = true;
+      }
+    }
+  }
+
+  let finalBuyRate = 0;
+  let finalSellRate = 0;
+
+  if (isSellRateMissing) {
+    finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate").value) || 0;
+    if (!confirmedCarrier || finalSellRate <= 0) {
+      alert("❌ COMPLIANCE ERROR: Please enter a valid Confirmed Airline/Shipping Line and Sell Rate.");
+      return;
+    }
+    if (quote.type === 'air') {
+      finalBuyRate = quote.details.appliedBuyRate || 0;
+    } else if (quote.details.mode === 'lcl') {
+      finalBuyRate = quote.details.lclBuyRateApplied || 0;
+    } else if (quote.details.mode === 'bb') {
+      finalBuyRate = quote.details.bbBuyRateApplied || 0;
+    }
+  } else {
+    finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate").value) || 0;
+    if (!confirmedCarrier || finalBuyRate <= 0) {
       alert("❌ COMPLIANCE ERROR: Please enter a valid Confirmed Airline/Shipping Line and Buy Rate.");
       return;
     }
-
-    quote.confirmedCarrier = confirmedCarrier;
-    quote.confirmedBuyRate = buyRateVal;
-
-    let sellBaseFreight = 0;
-    let buyBaseFreight = 0;
-    let grossProfit = 0;
-
     if (quote.type === 'air') {
-      let chargeableWeight = quote.details.chargeableWeight || 0;
-      let appliedSellRate = quote.details.appliedRate || 0;
+      finalSellRate = quote.details.appliedRate || 0;
+    } else if (quote.details.mode === 'lcl') {
+      finalSellRate = quote.details.lclRateApplied || 0;
+    } else if (quote.details.mode === 'bb') {
+      finalSellRate = quote.details.bbRateApplied || 0;
+    }
+  }
 
-      if (quote.details.airlines && quote.details.airlines.length > 0) {
-        const match = quote.details.airlines.find(a => a.name === confirmedCarrier);
-        if (match) {
-          appliedSellRate = match.appliedRate || appliedSellRate;
-          chargeableWeight = match.chargeableWeight || chargeableWeight;
+  quote.confirmedCarrier = confirmedCarrier;
+  quote.confirmedBuyRate = finalBuyRate;
+  quote.confirmedSellRate = finalSellRate;
+
+  // Update in quote details as well
+  if (quote.type === 'air') {
+    quote.details.appliedRate = finalSellRate;
+    quote.details.appliedBuyRate = finalBuyRate;
+    if (quote.details.airlines && quote.details.airlines.length > 0) {
+      const match = quote.details.airlines.find(a => a.name === confirmedCarrier);
+      if (match) {
+        match.appliedRate = finalSellRate;
+        match.appliedBuyRate = finalBuyRate;
+        const activeBr = match.usedBreak || getWeightBreakBracket(match.chargeableWeight || quote.details.chargeableWeight || 0);
+        if (!match.breaks) match.breaks = {};
+        if (typeof match.breaks[activeBr] !== 'object') {
+          match.breaks[activeBr] = { sell: finalSellRate, buy: finalBuyRate };
+        } else {
+          match.breaks[activeBr].sell = finalSellRate;
+          match.breaks[activeBr].buy = finalBuyRate;
         }
       }
-      sellBaseFreight = chargeableWeight * appliedSellRate;
-      buyBaseFreight = chargeableWeight * buyRateVal;
-      grossProfit = sellBaseFreight - buyBaseFreight;
-    } else {
-      // Sea
-      if (quote.details.mode === 'fcl') {
-        sellBaseFreight = quote.details.baseFreight || 0;
-        const totalContainers = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
-        buyBaseFreight = totalContainers * buyRateVal;
-        grossProfit = sellBaseFreight - buyBaseFreight;
+    }
+  } else {
+    if (quote.details.mode === 'fcl') {
+      if (isSellRateMissing) {
+        let calculatedBaseFreight = 0;
+        (quote.details.containerItems || []).forEach(item => {
+          item.rate = finalSellRate;
+          calculatedBaseFreight += (item.qty || 0) * finalSellRate;
+        });
+        quote.details.baseFreight = calculatedBaseFreight;
+        quote.amount = calculatedBaseFreight + (quote.details.surchargeTotal || 0);
+        if (quote.currency !== 'INR') {
+          quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+        } else {
+          quote.amountINR = quote.amount;
+        }
       } else {
-        // LCL or BB
+        (quote.details.containerItems || []).forEach(item => {
+          item.buy = finalBuyRate;
+        });
+      }
+    } else if (quote.details.mode === 'lcl') {
+      if (isSellRateMissing) {
+        quote.details.lclRateApplied = finalSellRate;
         const chargeableRT = quote.details.lclChargeable || 0;
-        const appliedSellRate = quote.details.mode === 'lcl' ? (quote.details.lclRateApplied || 0) : (quote.details.bbRateApplied || 0);
-        sellBaseFreight = chargeableRT * appliedSellRate;
-        buyBaseFreight = chargeableRT * buyRateVal;
-        grossProfit = sellBaseFreight - buyBaseFreight;
+        quote.details.baseFreight = chargeableRT * finalSellRate;
+        quote.amount = quote.details.baseFreight + (quote.details.surchargeTotal || 0);
+        if (quote.currency !== 'INR') {
+          quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+        } else {
+          quote.amountINR = quote.amount;
+        }
+      } else {
+        quote.details.lclBuyRateApplied = finalBuyRate;
+      }
+    } else {
+      if (isSellRateMissing) {
+        quote.details.bbRateApplied = finalSellRate;
+        const chargeableRT = quote.details.lclChargeable || 0;
+        quote.details.baseFreight = chargeableRT * finalSellRate;
+        quote.amount = quote.details.baseFreight + (quote.details.surchargeTotal || 0);
+        if (quote.currency !== 'INR') {
+          quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+        } else {
+          quote.amountINR = quote.amount;
+        }
+      } else {
+        quote.details.bbBuyRateApplied = finalBuyRate;
       }
     }
-
-    quote.grossProfit = grossProfit;
-    quote.grossProfitCurrency = quote.currency;
-
-    let grossProfitINR = grossProfit;
-    if (quote.currency !== 'INR') {
-      grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
-    }
-    quote.grossProfitINR = grossProfitINR;
   }
+
+  // Auto-calculate GP
+  let sellBaseFreight = 0;
+  let buyBaseFreight = 0;
+  let grossProfit = 0;
+
+  if (quote.type === 'air') {
+    let chargeableWeight = quote.details.chargeableWeight || 0;
+    sellBaseFreight = chargeableWeight * finalSellRate;
+    buyBaseFreight = chargeableWeight * finalBuyRate;
+    grossProfit = sellBaseFreight - buyBaseFreight;
+  } else {
+    if (quote.details.mode === 'fcl') {
+      sellBaseFreight = quote.details.baseFreight || 0;
+      buyBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.buy || 0), 0);
+      grossProfit = sellBaseFreight - buyBaseFreight;
+    } else {
+      const chargeableRT = quote.details.lclChargeable || 0;
+      sellBaseFreight = chargeableRT * finalSellRate;
+      buyBaseFreight = chargeableRT * finalBuyRate;
+      grossProfit = sellBaseFreight - buyBaseFreight;
+    }
+  }
+
+  quote.grossProfit = grossProfit;
+  quote.grossProfitCurrency = quote.currency;
+
+  let grossProfitINR = grossProfit;
+  if (quote.currency !== 'INR') {
+    grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+  }
+  quote.grossProfitINR = grossProfitINR;
 
   try {
     // 1. Save quote update (updates Firestore dynamically)
