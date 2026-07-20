@@ -1600,6 +1600,28 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
 }
 window.addWeightBreakRow = addWeightBreakRow;
 
+const IATA_AIRLINES = {
+  AA: "American Airlines",
+  EK: "Emirates",
+  LH: "Lufthansa",
+  QR: "Qatar Airways",
+  CX: "Cathay Pacific",
+  SQ: "Singapore Airlines",
+  BA: "British Airways",
+  AF: "Air France",
+  KL: "KLM Royal Dutch Airlines",
+  EY: "Etihad Airways",
+  TK: "Turkish Airlines",
+  NH: "All Nippon Airways",
+  JL: "Japan Airlines",
+  KE: "Korean Air",
+  TG: "Thai Airways",
+  QF: "Qantas Airways",
+  NZ: "Air New Zealand",
+  DL: "Delta Air Lines",
+  UA: "United Airlines"
+};
+
 function addAirlineCard(data = null) {
   const container = document.getElementById("air-airlines-list-container");
   if (!container) return;
@@ -1685,6 +1707,50 @@ function addAirlineCard(data = null) {
   `;
 
   container.appendChild(card);
+
+  const nameInput = card.querySelector(".air-name");
+  if (nameInput) {
+    const parent = nameInput.parentElement;
+    parent.style.position = "relative";
+    const dropdown = document.createElement("div");
+    dropdown.className = "iata-autocomplete-dropdown";
+    dropdown.style.display = "none";
+    parent.appendChild(dropdown);
+
+    nameInput.addEventListener("input", () => {
+      const val = nameInput.value.trim().toUpperCase();
+      dropdown.innerHTML = "";
+      if (val.length >= 2) {
+        const matches = Object.entries(IATA_AIRLINES).filter(([code, name]) => {
+          return code.startsWith(val) || name.toUpperCase().includes(val);
+        });
+        if (matches.length > 0) {
+          dropdown.style.display = "flex";
+          matches.forEach(([code, name]) => {
+            const item = document.createElement("div");
+            item.className = "iata-autocomplete-item";
+            item.textContent = `${code} - ${name}`;
+            item.addEventListener("click", () => {
+              nameInput.value = `${code} - ${name}`;
+              dropdown.style.display = "none";
+              calculateAirFreight();
+            });
+            dropdown.appendChild(item);
+          });
+        } else {
+          dropdown.style.display = "none";
+        }
+      } else {
+        dropdown.style.display = "none";
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (e.target !== nameInput && !dropdown.contains(e.target)) {
+        dropdown.style.display = "none";
+      }
+    });
+  }
 
   card.querySelectorAll("input, select").forEach(inp => {
     inp.addEventListener("input", calculateAirFreight);
@@ -1971,7 +2037,7 @@ function calculateAirFreight() {
     let usedBreak = autoBreakName;
 
     const activeBrVal = breaksData[autoBreakName] || { sell: 0, buy: 0 };
-    activeRate = activeBrVal.sell;
+    activeRate = activeBrVal.sell > 0 ? activeBrVal.sell : activeBrVal.buy;
     activeBuyRate = activeBrVal.buy;
 
     if (isFreeHandOrNrs && activeRate === 0) {
@@ -1987,26 +2053,26 @@ function calculateAirFreight() {
       let bestBracket = null;
       for (const br of brackets) {
         const val = breaksData[br.name];
-        const valNum = (typeof val === 'object' && val !== null) ? val.sell : (parseFloat(val) || 0);
+        const valNum = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
         if (valNum > 0 && airlineChargeableWeight >= br.limit) {
           bestBracket = br;
         }
       }
       if (bestBracket) {
         const val = breaksData[bestBracket.name];
-        activeRate = (typeof val === 'object' && val !== null) ? val.sell : (parseFloat(val) || 0);
+        activeRate = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
         activeBuyRate = (typeof val === 'object' && val !== null) ? val.buy : 0;
         usedBreak = bestBracket.name;
       } else {
         // Try any bracket that has a rate
         const bracketsWithRates = brackets.filter(br => {
           const val = breaksData[br.name];
-          const valNum = (typeof val === 'object' && val !== null) ? val.sell : (parseFloat(val) || 0);
+          const valNum = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
           return valNum > 0;
         });
         if (bracketsWithRates.length > 0) {
           const val = breaksData[bracketsWithRates[0].name];
-          activeRate = (typeof val === 'object' && val !== null) ? val.sell : (parseFloat(val) || 0);
+          activeRate = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
           activeBuyRate = (typeof val === 'object' && val !== null) ? val.buy : 0;
           usedBreak = bracketsWithRates[0].name;
         }
@@ -2017,7 +2083,7 @@ function calculateAirFreight() {
     
     let isMinActive = false;
     const minVal = breaksData['min'];
-    const minSell = (typeof minVal === 'object' && minVal !== null) ? minVal.sell : (parseFloat(minVal) || 0);
+    const minSell = (typeof minVal === 'object' && minVal !== null) ? (minVal.sell > 0 ? minVal.sell : minVal.buy) : (parseFloat(minVal) || 0);
     const minBuy = (typeof minVal === 'object' && minVal !== null) ? minVal.buy : 0;
 
     if (minSell > 0 && baseFreightCost < minSell) {
@@ -2385,7 +2451,7 @@ function calculateAirFreight() {
           </div>
           <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
             <span class="result-label" style="color: var(--t2);">Gross Profit (GP)</span>
-            <span class="result-value" style="color: var(--accent-success); font-weight: 700;">${curSymbol}${(alt.grossProfit || 0).toFixed(2)}</span>
+            <span class="result-value" style="color: var(--accent-success); font-weight: 700;">${curSymbol}${Math.abs(alt.grossProfit || 0).toFixed(2)}</span>
           </div>
           <div class="result-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.8rem; font-weight: bold; margin-top: 4px; border-bottom: none;">
             <span class="result-label" style="color: var(--t1);">Grand Total</span>
@@ -2883,7 +2949,7 @@ function calculateSeaFreight() {
   
   const resSeaGP = document.getElementById("res-sea-gp");
   if (resSeaGP) {
-    resSeaGP.textContent = `${curSymbol}${seaGP.toFixed(2)}`;
+    resSeaGP.textContent = `${curSymbol}${Math.abs(seaGP).toFixed(2)}`;
   }
 
   document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
@@ -3177,7 +3243,7 @@ function renderMemberDashboard(userId) {
         <div>${quoteAmount}</div>
         ${quote.grossProfit !== undefined ? `
           <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
-            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${quote.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
         ` : ''}
       </td>
@@ -3796,7 +3862,7 @@ function generatePerformanceReport() {
   if (filtered.length > 0) {
     filtered.forEach(q => {
       const curSym = q.currency === 'INR' ? '₹' : (q.currency === 'USD' ? '$' : (q.currency === 'EUR' ? '€' : '£'));
-      const gpValStr = q.grossProfit !== undefined ? `${q.grossProfitCurrency === 'INR' ? '₹' : (q.grossProfitCurrency === 'USD' ? '$' : (q.grossProfitCurrency === 'EUR' ? '€' : '£'))}${q.grossProfit.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '-';
+      const gpValStr = q.grossProfit !== undefined ? `${q.grossProfitCurrency === 'INR' ? '₹' : (q.grossProfitCurrency === 'USD' ? '$' : (q.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(q.grossProfit).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '-';
       detailRowsList += `
         <tr>
           <td>#${getQuoteRefId(q)}</td>
@@ -5198,7 +5264,7 @@ window.viewSavedQuote = (id) => {
       </tr>
       <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
         <td style="padding: 8px 12px; font-size: 0.72rem;">Gross Profit (GP)</td>
-        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${gpVal.toFixed(2)}</strong></td>
+        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${Math.abs(gpVal).toFixed(2)}</strong></td>
       </tr>
     `;
   }
@@ -5672,8 +5738,8 @@ window.applyDbFiltersAndSort = () => {
         ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
         ${quote.grossProfit !== undefined ? `
           <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
-            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${quote.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${quote.grossProfitINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
+            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${Math.abs(quote.grossProfitINR).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
           </div>
         ` : ''}
       </td>

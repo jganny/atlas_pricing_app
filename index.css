@@ -1609,3 +1609,41 @@ body.logged-out-blur #subheader-controls {
   }
 }
 
+/* IATA autocomplete dropdown styling conforming to Apple Liquid Glass */
+.iata-autocomplete-dropdown {
+  position: absolute;
+  z-index: 1000;
+  width: calc(100% - 16px);
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-1);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  padding: 8px; /* rigid 8px spatial inline layout grid */
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* rigid 8px spatial inline layout grid */
+}
+
+.iata-autocomplete-item {
+  padding: 8px 16px; /* rigid 8px spatial inline layout grid */
+  border-radius: 16px;
+  font-size: 0.75rem;
+  color: var(--t1);
+  cursor: pointer;
+  text-align: left; /* left-aligned typography lines */
+  white-space: nowrap; /* absolute 'white-space: nowrap;' */
+  text-overflow: ellipsis; /* 'text-overflow: ellipsis;' overflow boundaries */
+  overflow: hidden;
+  transition: background 0.2s;
+}
+
+.iata-autocomplete-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent-air);
+}
+
