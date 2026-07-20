@@ -1639,6 +1639,7 @@ function addAirlineCard(data = null) {
   const pivotWeight = data ? data.pivotWeight : "";
   const isSelected = data ? !!data.selected : (count === 1);
   const activeBreaks = data ? data.breaks : {};
+  const ams_fee = data ? (data.ams_fee !== undefined ? data.ams_fee : (data.amsFee !== undefined ? data.amsFee : "")) : "";
 
   const creatorRole = appState.currentUser;
   const isFreeHandOrNrs = creatorRole && (
@@ -1676,7 +1677,7 @@ function addAirlineCard(data = null) {
       </div>
     </div>
 
-    <div style="margin-top: 0.5rem; display: grid; grid-template-columns: ${isFreeHandOrNrs ? '1fr 1fr 1fr' : '1fr 1fr'}; gap: 1rem;">
+    <div style="margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
       <div class="form-group">
         <label>Quote Validity</label>
         <input type="date" class="air-validity" value="${validity}" required style="color-scheme: dark; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
@@ -1685,15 +1686,15 @@ function addAirlineCard(data = null) {
         <label>Pivot Weight (Kg)</label>
         <input type="number" class="air-pivot-weight" placeholder="optional" min="0" step="0.1" value="${pivotWeight}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
       </div>
-      <div class="form-group" style="display: ${isFreeHandOrNrs ? 'block' : 'none'};">
-        <label>AMS Fee</label>
-        <input type="number" class="air-ams-fee" placeholder="optional" min="0" step="0.01" value="${data && data.amsFee !== undefined ? data.amsFee : '0.00'}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-      </div>
     </div>
 
     <div style="margin-top: 0.75rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <span style="font-size: 0.75rem; font-weight: 700; color: #000;">${isEligibleDeskUser() ? 'Weight Break Tariffs (Sell Rate per KG)' : 'Weight Break Tariffs (Rate per KG)'}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; text-align: left;">
+          <span style="font-size: 0.75rem; font-weight: 700; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">${isEligibleDeskUser() ? 'Weight Break Tariffs (Sell Rate per KG)' : 'Weight Break Tariffs (Rate per KG)'}</span>
+          <span style="font-size: 0.75rem; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">AMS fee:</span>
+          <input type="text" class="air-ams-fee" placeholder="0.00" value="${ams_fee !== undefined && ams_fee !== '' ? ams_fee : '0.00'}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 24px; text-align: left; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 60px;">
+        </div>
         <button type="button" class="btn-text add-weight-break-btn" style="font-size: 0.7rem; color: var(--sky); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0;">+ Add Weight Break</button>
       </div>
       
@@ -1988,6 +1989,7 @@ function calculateAirFreight() {
     );
 
     const amsFee = isFreeHandOrNrs ? (parseFloat(card.querySelector(".air-ams-fee")?.value) || 0) : 0;
+    const ams_fee = parseFloat(card.querySelector(".air-ams-fee")?.value) || 0;
 
     let activeRate = 0;
     let activeBuyRate = 0;
@@ -2160,6 +2162,7 @@ function calculateAirFreight() {
       validity,
       pivotWeight,
       amsFee,
+      ams_fee,
       selected: isSelected,
       breaks: breaksData,
       chargeableWeight: airlineChargeableWeight,
@@ -2430,6 +2433,7 @@ function calculateAirFreight() {
       validity: alt.validity,
       pivotWeight: alt.pivotWeight,
       amsFee: alt.amsFee,
+      ams_fee: alt.ams_fee,
       selected: alt.selected,
       breaks: alt.breaks,
       chargeableWeight: alt.chargeableWeight,
