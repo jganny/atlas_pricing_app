@@ -23,7 +23,7 @@ const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
 const TEAM_ROLES = {
   'ganny': { name: 'Pricing Team', type: 'admin' },
   'shashank': { name: 'Air Nom', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
-  'shaheer': { name: 'Sea Nom', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+  'shaheer': { name: 'Sea Nomination', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
   'jaya': { name: 'Free Hand', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
@@ -782,26 +782,13 @@ function updateCurrencyRules(role) {
   if (airCurSelect && airCurSelect.getAttribute("data-role-type") !== targetType) {
     const val = airCurSelect.value;
     airCurSelect.setAttribute("data-role-type", targetType);
-    if (isNrs) {
-      airCurSelect.innerHTML = `
-        <option value="USD">USD - US Dollar</option>
-        <option value="INR">INR - Indian Rupee</option>
-      `;
-      airCurSelect.value = (val === 'USD' || val === 'INR') ? val : 'USD';
-    } else if (isLocal) {
-      airCurSelect.innerHTML = `
-        <option value="INR">INR - Indian Rupee</option>
-        <option value="USD">USD - US Dollar</option>
-      `;
-      airCurSelect.value = (val === 'USD' || val === 'INR') ? val : 'INR';
-    } else {
-      airCurSelect.innerHTML = `
-        <option value="USD">USD - US Dollar</option>
-        <option value="EUR">EUR - Euro</option>
-        <option value="GBP">GBP - British Pound</option>
-      `;
-      airCurSelect.value = (val === 'USD' || val === 'EUR' || val === 'GBP') ? val : 'USD';
-    }
+    airCurSelect.innerHTML = `
+      <option value="USD">USD - US Dollar</option>
+      <option value="EUR">EUR - Euro</option>
+      <option value="GBP">GBP - British Pound</option>
+      <option value="INR">INR - Indian Rupee</option>
+    `;
+    airCurSelect.value = ['USD', 'EUR', 'GBP', 'INR'].includes(val) ? val : (isLocal ? 'INR' : 'USD');
     airCurSelect.disabled = false;
   }
 
@@ -809,26 +796,13 @@ function updateCurrencyRules(role) {
   if (seaCurSelect && seaCurSelect.getAttribute("data-role-type") !== targetType) {
     const val = seaCurSelect.value;
     seaCurSelect.setAttribute("data-role-type", targetType);
-    if (isNrs) {
-      seaCurSelect.innerHTML = `
-        <option value="USD">USD - US Dollar</option>
-        <option value="INR">INR - Indian Rupee</option>
-      `;
-      seaCurSelect.value = (val === 'USD' || val === 'INR') ? val : 'USD';
-    } else if (isLocal) {
-      seaCurSelect.innerHTML = `
-        <option value="INR">INR - Indian Rupee</option>
-        <option value="USD">USD - US Dollar</option>
-      `;
-      seaCurSelect.value = (val === 'USD' || val === 'INR') ? val : 'INR';
-    } else {
-      seaCurSelect.innerHTML = `
-        <option value="USD">USD - US Dollar</option>
-        <option value="EUR">EUR - Euro</option>
-        <option value="GBP">GBP - British Pound</option>
-      `;
-      seaCurSelect.value = (val === 'USD' || val === 'EUR' || val === 'GBP') ? val : 'USD';
-    }
+    seaCurSelect.innerHTML = `
+      <option value="USD">USD - US Dollar</option>
+      <option value="EUR">EUR - Euro</option>
+      <option value="GBP">GBP - British Pound</option>
+      <option value="INR">INR - Indian Rupee</option>
+    `;
+    seaCurSelect.value = ['USD', 'EUR', 'GBP', 'INR'].includes(val) ? val : (isLocal ? 'INR' : 'USD');
     seaCurSelect.disabled = false;
   }
 
@@ -5662,13 +5636,14 @@ function applyDeskNames() {
     // Add default users
     const defaultUsers = [
       { id: 'shashank', defaultName: 'Air Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
-      { id: 'shaheer', defaultName: 'Sea Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
+      { id: 'shaheer', defaultName: 'Sea Nomination', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
       { id: 'jaya', defaultName: 'Free Hand', icon: '' },
       { id: 'cathrina', defaultName: 'NRS', icon: '' }
     ];
 
     defaultUsers.forEach(u => {
-      const name = (TEAM_ROLES[u.id]?.name || u.defaultName).replace(/\(Free Hand\)/g, "");
+      let name = (TEAM_ROLES[u.id]?.name || u.defaultName).replace(/\(Free Hand\)/g, "");
+      if (u.id === 'shaheer') name = 'Sea Nomination';
       buttonsHtml += `<button class="role-btn" data-role="${u.id}">${u.icon}${name}</button>`;
     });
 
@@ -5693,7 +5668,9 @@ function applyDeskNames() {
   const activeUser = appState.currentUser;
   if (activeUser && activeUser !== 'ganny') {
     const activeUserName = document.getElementById("active-user-name");
-    if (activeUserName) activeUserName.textContent = (TEAM_ROLES[activeUser]?.name || activeUser).replace(/\s*\(Free\s*Hand\)/i, "");
+    let name = (TEAM_ROLES[activeUser]?.name || activeUser).replace(/\s*\(Free\s*Hand\)/i, "");
+    if (activeUser === 'shaheer') name = 'Sea Nomination';
+    if (activeUserName) activeUserName.textContent = name;
   }
 
   // Update report user dropdown options
@@ -5701,7 +5678,7 @@ function applyDeskNames() {
   if (optShashank) optShashank.textContent = (TEAM_ROLES['shashank']?.name || 'Air Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optShaheer = document.getElementById("opt-shaheer");
-  if (optShaheer) optShaheer.textContent = (TEAM_ROLES['shaheer']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
+  if (optShaheer) optShaheer.textContent = (TEAM_ROLES['shaheer']?.name || 'Sea Nomination').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const optJaya = document.getElementById("opt-jaya");
   if (optJaya) optJaya.textContent = (TEAM_ROLES['jaya']?.name || 'Free Hand').replace(/\s*\(Free\s*Hand\)/i, "");
@@ -5714,7 +5691,7 @@ function applyDeskNames() {
   if (cfgShashank) cfgShashank.value = (TEAM_ROLES['shashank']?.name || 'Air Nom').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgShaheer = document.getElementById("cfg-shaheer");
-  if (cfgShaheer) cfgShaheer.value = (TEAM_ROLES['shaheer']?.name || 'Sea Nom').replace(/\s*\(Free\s*Hand\)/i, "");
+  if (cfgShaheer) cfgShaheer.value = (TEAM_ROLES['shaheer']?.name || 'Sea Nomination').replace(/\s*\(Free\s*Hand\)/i, "");
 
   const cfgJaya = document.getElementById("cfg-jaya");
   if (cfgJaya) cfgJaya.value = (TEAM_ROLES['jaya']?.name || 'Free Hand').replace(/\s*\(Free\s*Hand\)/i, "");
