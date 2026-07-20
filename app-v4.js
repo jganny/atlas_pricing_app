@@ -2813,6 +2813,12 @@ function calculateSeaFreight() {
   let originSurchargesList = [];
   let destSurchargesList = [];
 
+  const amsFee = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
+  if (amsFee > 0) {
+    totalSurcharges += amsFee;
+    originSurchargesList.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
+  }
+
   const originRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
   originRows.forEach(row => {
     const name = row.querySelector(".chg-name").value.trim();
@@ -3086,6 +3092,18 @@ function setupSurchargesEvents(freightType) {
 // MEMBER DASHBOARD RENDERING
 function renderMemberDashboard(userId) {
   renderNrsRegistry();
+
+  // Load member scratchpad content
+  const user = userId || appState.currentUser || "shashank";
+  let scratchpads = {};
+  try {
+    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+  } catch (e) { }
+  const pad = scratchpads[user];
+  const ta = document.getElementById("dashboard-scratchpad");
+  if (ta) {
+    ta.value = pad ? pad.text : "";
+  }
   if (!window._newsLoaded) {
     setTimeout(() => {
       loadLogisticsNews('global');
@@ -3298,6 +3316,9 @@ window.deleteNrsAlert = deleteNrsAlert;
 function renderAdminDashboard() {
   renderControlTowerFeed();
   renderNrsRegistry();
+  if (typeof updateAdminScratchpadViewer === 'function') {
+    updateAdminScratchpadViewer();
+  }
   if (!window._newsLoaded) {
     setTimeout(() => {
       loadLogisticsNews('global');
@@ -3327,8 +3348,14 @@ function renderAdminDashboard() {
   const leadBody = document.getElementById("admin-leaderboard-body");
   leadBody.innerHTML = "";
 
-  // Get all registered member user IDs (excluding manager/admin roles)
-  const desks = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager');
+  // Get all registered member user IDs (excluding manager/admin roles and shaheer)
+  const desks = Object.keys(TEAM_ROLES).filter(roleId => {
+    if (roleId === 'ganny' || roleId === 'manager') return false;
+    if (roleId.toLowerCase() === 'shaheer') return false;
+    const name = (TEAM_ROLES[roleId]?.name || '').toLowerCase();
+    if (name === 'shaheer' || name.startsWith('shaheer ')) return false;
+    return true;
+  });
 
   desks.forEach(deskId => {
     const deskIdLower = deskId.toLowerCase();
@@ -5722,18 +5749,23 @@ function applyDeskNames() {
     if (activeUserName) activeUserName.textContent = name;
   }
 
-  // Update report user dropdown options
-  const optShashank = document.getElementById("opt-shashank");
-  if (optShashank) optShashank.textContent = (TEAM_ROLES['shashank']?.name || 'Air Nom').replace(/\s*\(Free\s*Hand\)/i, "");
-
-  const optShaheer = document.getElementById("opt-shaheer");
-  if (optShaheer) optShaheer.textContent = (TEAM_ROLES['shaheer']?.name || 'Sea Nomination').replace(/\s*\(Free\s*Hand\)/i, "");
-
-  const optJaya = document.getElementById("opt-jaya");
-  if (optJaya) optJaya.textContent = (TEAM_ROLES['jaya']?.name || 'Free Hand').replace(/\s*\(Free\s*Hand\)/i, "");
-
-  const optCathrina = document.getElementById("opt-cathrina");
-  if (optCathrina) optCathrina.textContent = (TEAM_ROLES['cathrina']?.name || 'NRS').replace(/\s*\(Free\s*Hand\)/i, "");
+  // Update report user dropdown options dynamically with all Pricing Officers
+  const reportUserSelect = document.getElementById("report-user");
+  if (reportUserSelect) {
+    const curVal = reportUserSelect.value;
+    const roles = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager');
+    let html = `<option value="all">All Pricing Officers</option>`;
+    roles.forEach(roleId => {
+      const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\s*\(Free\s*Hand\)/i, "");
+      html += `<option value="${roleId}">${name}</option>`;
+    });
+    reportUserSelect.innerHTML = html;
+    if ([...reportUserSelect.options].some(opt => opt.value === curVal)) {
+      reportUserSelect.value = curVal;
+    } else {
+      reportUserSelect.value = "all";
+    }
+  }
 
   // Update text inputs on config forms
   const cfgShashank = document.getElementById("cfg-shashank");
@@ -9364,5 +9396,153 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("❌ Error performing administrative force reset: " + err.message);
     }
   };
+
+  // 5. Synced Scratchpads & Broadcast Hub
+  window.syncScratchpad = function () {
+    const text = document.getElementById("dashboard-scratchpad").value;
+    const syncStatus = document.getElementById("scratchpad-sync-status");
+    const currentUser = appState.currentUser || "shashank";
+
+    if (syncStatus) syncStatus.textContent = "Syncing with cloud...";
+
+    // Save to active scratchpads in localStorage
+    let scratchpads = {};
+    try {
+      scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+    } catch (e) { }
+
+    scratchpads[currentUser] = {
+      text: text,
+      user: TEAM_ROLES[currentUser]?.name || currentUser,
+      time: new Date().toLocaleTimeString()
+    };
+
+    localStorage.setItem("gl_active_scratchpads", JSON.stringify(scratchpads));
+
+    setTimeout(() => {
+      if (syncStatus) syncStatus.textContent = "All changes synced to database";
+      // If Admin view is active, update their viewer as well
+      if (appState.currentUser === 'ganny') {
+        updateAdminScratchpadViewer();
+      }
+    }, 400);
+  };
+
+  function updateAdminScratchpadViewer() {
+    const container = document.getElementById("admin-desk-scratchpads");
+    if (!container) return;
+
+    let scratchpads = {};
+    try {
+      scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+    } catch (e) { }
+
+    const keys = Object.keys(scratchpads);
+    if (keys.length === 0) {
+      container.innerHTML = `<div style="font-style: italic; color: var(--text-dim);">No active reminder syncs yet.</div>`;
+      return;
+    }
+
+    let html = "";
+    keys.forEach(k => {
+      const pad = scratchpads[k];
+      html += `
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); border-radius: 6px; padding: 6px 10px; margin-bottom: 0.4rem;">
+      <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--sky); font-size:0.75rem; margin-bottom:2px;">
+        <span>${pad.user}</span>
+        <span style="font-size:0.65rem; color:var(--text-dim);">${pad.time}</span>
+      </div>
+      <div style="color:#fff; white-space:pre-wrap; line-height:1.3; font-size:0.75rem;">${pad.text || "(empty notes)"}</div>
+    </div>
+  `;
+    });
+    container.innerHTML = html;
+  }
+  window.updateAdminScratchpadViewer = updateAdminScratchpadViewer;
+
+  // Admin Broadcast notices
+  window.sendAdminBroadcast = function () {
+    const type = document.getElementById("broadcast-type").value;
+    const msg = document.getElementById("broadcast-message").value.trim();
+
+    if (!msg) return alert("Please enter broadcast message.");
+
+    const broadcast = {
+      id: 'B' + Date.now(),
+      type: type,
+      message: msg,
+      timestamp: new Date().toLocaleTimeString(),
+      active: true
+    };
+
+    localStorage.setItem("gl_admin_broadcast", JSON.stringify(broadcast));
+    alert("📢 Broadcast notice pushed to all active screens!");
+    document.getElementById("broadcast-message").value = "";
+
+    // Instantly trigger overlay check
+    checkActiveBroadcast();
+  };
+
+  function checkActiveBroadcast() {
+    let broadcast = null;
+    try {
+      const data = localStorage.getItem("gl_admin_broadcast");
+      if (data) broadcast = JSON.parse(data);
+    } catch (e) { }
+
+    if (!broadcast || !broadcast.active) {
+      const overlay = document.getElementById("system-broadcast-overlay");
+      if (overlay) overlay.style.display = "none";
+      return;
+    }
+
+    // Render high visibility overlay banner if not already present
+    let overlay = document.getElementById("system-broadcast-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "system-broadcast-overlay";
+      overlay.style.cssText = "position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; font-family:'Outfit', sans-serif; font-size:0.85rem; font-weight:700; box-shadow:0 3px 15px rgba(0,0,0,0.3); transition:all 0.3s;";
+      document.body.appendChild(overlay);
+    }
+
+    // Set theme color depending on type
+    if (broadcast.type === 'mandate') {
+      overlay.style.background = "linear-gradient(90deg, #ef4444, #b91c1c)"; // Red
+      overlay.innerHTML = `<div>⚠️ SYSTEM MANDATE NOTICE: ${broadcast.message}</div>`;
+    } else if (broadcast.type === 'meeting') {
+      overlay.style.background = "linear-gradient(90deg, #f59e0b, #d97706)"; // Amber/Yellow
+      overlay.innerHTML = `<div>📅 CALENDAR VISIT REMINDER: ${broadcast.message}</div>`;
+    } else {
+      overlay.style.background = "linear-gradient(90deg, #10b981, #047857)"; // Green
+      overlay.innerHTML = `<div>🎉 HOLIDAY / LEAVE POPUP: ${broadcast.message}</div>`;
+    }
+
+    // Close / dismiss button
+    overlay.innerHTML += `
+  <button type="button" style="background:#fff; border:none; color:#000; font-size:0.65rem; font-weight:bold; cursor:pointer; padding:3px 8px; border-radius:4px;" onclick="dismissBroadcast()">
+    Dismiss / Close
+  </button>
+`;
+    overlay.style.display = "flex";
+  }
+  window.checkActiveBroadcast = checkActiveBroadcast;
+
+  window.dismissBroadcast = function () {
+    const overlay = document.getElementById("system-broadcast-overlay");
+    if (overlay) overlay.style.display = "none";
+
+    // Soft dismiss (mark as inactive in localStorage)
+    try {
+      const data = localStorage.getItem("gl_admin_broadcast");
+      if (data) {
+        const b = JSON.parse(data);
+        b.active = false;
+        localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
+      }
+    } catch (e) { }
+  };
+
+  // Check broadcast every 3 seconds
+  setInterval(checkActiveBroadcast, 3000);
 });
 
