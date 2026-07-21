@@ -1350,6 +1350,14 @@ function saveCustomEntry(type, value) {
   }
 
   localStorage.setItem(storageKey, JSON.stringify(customList));
+
+  if (DB.firestoreRef) {
+    DB.firestoreRef.collection("custom_autocomplete_entries").doc(type).set({
+      entries: customList
+    }, { merge: true }).catch(err => {
+      console.error("DB: Failed to upload custom autocomplete entry to Firestore:", err);
+    });
+  }
 }
 
 // Autocomplete Engine
@@ -8114,6 +8122,19 @@ const DB = {
     
     // Sync customer controls list from Firestore
     if (this.firestoreRef) {
+      // Sync custom autocomplete entries from Firestore
+      this.firestoreRef.collection("custom_autocomplete_entries").onSnapshot(snap => {
+        snap.forEach(doc => {
+          const type = doc.id;
+          const data = doc.data();
+          if (data && Array.isArray(data.entries)) {
+            localStorage.setItem("gl_custom_" + type, JSON.stringify(data.entries));
+          }
+        });
+      }, err => {
+        console.warn("Firestore: custom_autocomplete_entries listen failed, using local/cached records:", err);
+      });
+
       this.firestoreRef.collection("customer_control").onSnapshot(snap => {
         let controls = {};
         snap.forEach(doc => {
