@@ -414,20 +414,22 @@
           <div class="glass-card" style="flex: 2.2; min-width: 320px;">
             <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Staff
               Performance Leaderboard</h3>
-            <table class="leaderboard-table">
-              <thead>
-                <tr>
-                  <th>Pricing Officer / Desk</th>
-                  <th>Quotes</th>
-                  <th>Conversions</th>
-                  <th>Conv. Rate (%)</th>
-                  <th>Total Priced</th>
-                </tr>
-              </thead>
-              <tbody id="admin-leaderboard-body">
-                <!-- Populated dynamically -->
-              </tbody>
-            </table>
+            <div class="leaderboard-table-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+              <table class="leaderboard-table" style="width: 100%;">
+                <thead>
+                  <tr>
+                    <th>Pricing Officer / Desk</th>
+                    <th>Quotes</th>
+                    <th>Conversions</th>
+                    <th>Conv. Rate (%)</th>
+                    <th>Total Priced</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-leaderboard-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- Quick reporting filters and extractor -->

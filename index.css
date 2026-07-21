@@ -2108,14 +2108,29 @@ textarea:focus {
 .leaderboard-table tbody tr:hover td { background:rgba(27,28,92,0.03) !important; transition:background 0.12s; }
 
 .quotes-table-container,
-.cargo-table-container {
+.cargo-table-container,
+.leaderboard-table-container {
   border-radius: var(--r-md) !important;
   border: 1px solid rgba(27,28,92,0.07) !important;
-  overflow: auto !important;
+  overflow-x: auto !important;
+  max-width: 100% !important;
   background: rgba(255,255,255,0.82) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   box-shadow: 0 2px 16px rgba(27,28,92,0.05) !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Global table overflow safety across the pricing app */
+.glass-card {
+  max-width: 100%;
+}
+.glass-card table,
+.bento-cell table {
+  max-width: 100%;
+}
+table {
+  max-width: 100%;
 }
 
 .result-value, .stat-value, .bento-stat .bento-stat-value { font-variant-numeric:tabular-nums !important; }
