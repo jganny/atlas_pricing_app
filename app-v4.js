@@ -654,6 +654,7 @@ async function loadData() {
   setupAutocomplete(document.getElementById("air-origin"), "airports");
   setupAutocomplete(document.getElementById("air-dest"), "airports");
   setupAutocomplete(document.getElementById("air-airline"), "airlines");
+  setupAutocomplete(document.getElementById("air-commodity"), "air_commodities");
   
   setupAutocomplete(document.getElementById("sea-cust-name"), "customers");
   setupAutocomplete(document.getElementById("sea-origin"), "seaports");
@@ -661,6 +662,24 @@ async function loadData() {
   setupAutocomplete(document.getElementById("sea-line"), "shippinglines");
   setupAutocomplete(document.getElementById("sea-liner-name"), "linernames");
   setupAutocomplete(document.getElementById("sea-commodity"), "sea_commodities");
+
+  // Bind Commodity event listeners
+  const airComm = document.getElementById("air-commodity");
+  if (airComm) {
+    airComm.addEventListener("input", () => {
+      handleAirCommodityChange();
+      calculateAirFreight();
+    });
+    airComm.addEventListener("change", () => {
+      handleAirCommodityChange();
+      calculateAirFreight();
+    });
+  }
+  const seaComm = document.getElementById("sea-commodity");
+  if (seaComm) {
+    seaComm.addEventListener("input", calculateSeaFreight);
+    seaComm.addEventListener("change", calculateSeaFreight);
+  }
 }
 
 // Role Switcher Setup
@@ -1137,7 +1156,7 @@ function setupAutocomplete(inputEl, type) {
         e.preventDefault();
         const selectedItem = currentMatches[activeIndex];
         inputEl._programmaticSelection = true;
-        if (type === "customers" || type === "linernames" || type === "sea_commodities") {
+        if (type === "customers" || type === "linernames" || type === "sea_commodities" || type === "air_commodities") {
           inputEl.value = selectedItem.name;
         } else {
           inputEl.value = `${selectedItem.code} - ${selectedItem.name}`;
@@ -1274,20 +1293,154 @@ function setupAutocomplete(inputEl, type) {
         l.code.toLowerCase().includes(val) || 
         l.name.toLowerCase().includes(val)
       ).slice(0, 10);
+    } else if (type === "air_commodities") {
+      const defaultAirCommodities = [
+        { code: "GENERAL", name: "GENERAL (General Cargo)" },
+        { code: "LIVE ANIMALS", name: "LIVE ANIMALS" },
+        { code: "HAZARDOUS", name: "HAZARDOUS (DG)" },
+        { code: "PERISHABLES", name: "PERISHABLES" },
+        { code: "PHARMA", name: "PHARMA / Medical" },
+        { code: "0101", name: "0101 | Live Horses & Asses" },
+        { code: "0201", name: "0201 | Fresh / Chilled Beef" },
+        { code: "0301", name: "0301 | Live Fish" },
+        { code: "0401", name: "0401 | Milk & Cream" },
+        { code: "0901", name: "0901 | Coffee, Raw / Roasted" },
+        { code: "1006", name: "1006 | Rice" },
+        { code: "1201", name: "1201 | Soya Beans" },
+        { code: "3002", name: "3002 | Blood / Vaccines / Antisera" },
+        { code: "3004", name: "3004 | Medicaments (Retail Packs)" },
+        { code: "3208", name: "3208 | Paints & Varnishes" },
+        { code: "3901", name: "3901 | Polyethylene, Primary Form" },
+        { code: "3904", name: "3904 | PVC & Vinyl Copolymers" },
+        { code: "5201", name: "5201 | Cotton, Not Carded" },
+        { code: "5208", name: "5208 | Woven Cotton Fabrics" },
+        { code: "6101", name: "6101 | Overcoats / Jackets, Knitted" },
+        { code: "6201", name: "6201 | Overcoats / Jackets, Woven" },
+        { code: "6401", name: "6401 | Waterproof Footwear" },
+        { code: "6402", name: "6402 | Sports / Casual Footwear" },
+        { code: "7101", name: "7101 | Pearls, Natural / Cultured" },
+        { code: "7108", name: "7108 | Gold (including Gold Plated)" },
+        { code: "8401", name: "8401 | Nuclear Reactors / Boilers" },
+        { code: "8415", name: "8415 | Air-Conditioning Units" },
+        { code: "8471", name: "8471 | Automatic Data Processing Machines" },
+        { code: "8517", name: "8517 | Telephones / Smartphones" },
+        { code: "8528", name: "8528 | Monitors / Projectors / TVs" },
+        { code: "8541", name: "8541 | Semiconductors / Diodes / LEDs" },
+        { code: "8544", name: "8544 | Insulated Wire / Cable" },
+        { code: "8701", name: "8701 | Tractors" },
+        { code: "8703", name: "8703 | Passenger Cars / SUVs" },
+        { code: "8802", name: "8802 | Aircraft / Helicopters" },
+        { code: "9001", name: "9001 | Optical Fibres / Cables" },
+        { code: "9018", name: "9018 | Instruments for Medical Science" },
+        { code: "9401", name: "9401 | Seats (Aircraft, Vehicle, Household)" },
+        { code: "9403", name: "9403 | Office / Kitchen / Bedroom Furniture" },
+        { code: "9503", name: "9503 | Tricycles, Scooters, Puzzles, Toys" }
+      ];
+      let customCommodities = [];
+      const stored = localStorage.getItem("gl_custom_air_commodities");
+      if (stored) {
+        try { customCommodities = JSON.parse(stored); } catch(err) {}
+      }
+      const combined = [...defaultAirCommodities, ...customCommodities];
+      matches = combined.filter(c => 
+        c.code.toLowerCase().includes(val) || 
+        c.name.toLowerCase().includes(val)
+      ).slice(0, 10);
     } else if (type === "sea_commodities") {
       const defaultCommodities = [
-        { code: "GEN", name: "General Cargo" },
-        { code: "FAK", name: "Freight All Kinds (FAK)" },
-        { code: "GAR", name: "Garments / Textiles" },
-        { code: "CHM", name: "Chemicals (Non-Haz)" },
-        { code: "HAZ", name: "Hazardous Cargo (DG)" },
-        { code: "FST", name: "Foodstuff" },
-        { code: "PHR", name: "Pharma / Medical" },
-        { code: "AUT", name: "Auto Parts" },
-        { code: "MCH", name: "Machinery / Equipment" },
-        { code: "ELC", name: "Electronics" },
-        { code: "PER", name: "Perishables" },
-        { code: "SCR", name: "Metal Scrap" }
+        { code: "0101", name: "0101 | Live Horses & Asses" },
+        { code: "0201", name: "0201 | Fresh / Chilled Beef" },
+        { code: "0301", name: "0301 | Live Fish" },
+        { code: "0401", name: "0401 | Milk & Cream" },
+        { code: "0501", name: "0501 | Human Hair, Unworked" },
+        { code: "0701", name: "0701 | Potatoes, Fresh / Chilled" },
+        { code: "0901", name: "0901 | Coffee, Raw / Roasted" },
+        { code: "1001", name: "1001 | Wheat & Meslin" },
+        { code: "1006", name: "1006 | Rice" },
+        { code: "1201", name: "1201 | Soya Beans" },
+        { code: "1511", name: "1511 | Palm Oil & Fractions" },
+        { code: "1514", name: "1514 | Rapeseed / Colza Oil" },
+        { code: "1601", name: "1601 | Sausages & Similar Products" },
+        { code: "1701", name: "1701 | Cane / Beet Sugar" },
+        { code: "1901", name: "1901 | Malt Extract, Cereal Preparations" },
+        { code: "2009", name: "2009 | Fruit Juices, Unfermented" },
+        { code: "2101", name: "2101 | Coffee / Tea Extracts" },
+        { code: "2201", name: "2201 | Mineral / Aerated Water" },
+        { code: "2501", name: "2501 | Salt, Pure Sodium Chloride" },
+        { code: "2601", name: "2601 | Iron Ores & Concentrates" },
+        { code: "2701", name: "2701 | Coal, Briquettes, Ovoids" },
+        { code: "2709", name: "2709 | Crude Petroleum Oils" },
+        { code: "2710", name: "2710 | Petroleum Distillates (HSD/MS)" },
+        { code: "2801", name: "2801 | Fluorine / Chlorine / Bromine" },
+        { code: "2814", name: "2814 | Ammonia, Anhydrous" },
+        { code: "2901", name: "2901 | Acyclic Hydrocarbons" },
+        { code: "3002", name: "3002 | Blood / Vaccines / Antisera" },
+        { code: "3004", name: "3004 | Medicaments (Retail Packs)" },
+        { code: "3208", name: "3208 | Paints & Varnishes" },
+        { code: "3401", name: "3401 | Soap, Organic Surfactants" },
+        { code: "3901", name: "3901 | Polyethylene, Primary Form" },
+        { code: "3904", name: "3904 | PVC & Vinyl Copolymers" },
+        { code: "4001", name: "4001 | Natural Rubber, Latex" },
+        { code: "4002", name: "4002 | Synthetic Rubber" },
+        { code: "4101", name: "4101 | Raw Bovine / Equine Hides" },
+        { code: "4104", name: "4104 | Tanned / Crust Leather" },
+        { code: "4401", name: "4401 | Fuel Wood / Sawdust" },
+        { code: "4407", name: "4407 | Sawn / Sliced Timber" },
+        { code: "4412", name: "4412 | Plywood, Veneered Panels" },
+        { code: "4701", name: "4701 | Mechanical Wood Pulp" },
+        { code: "4802", name: "4802 | Uncoated Paper / Paperboard" },
+        { code: "4901", name: "4901 | Printed Books / Brochures" },
+        { code: "5201", name: "5201 | Cotton, Not Carded" },
+        { code: "5208", name: "5208 | Woven Cotton Fabrics" },
+        { code: "5402", name: "5402 | Synthetic Filament Yarn" },
+        { code: "5801", name: "5801 | Woven Pile Fabrics" },
+        { code: "6101", name: "6101 | Overcoats / Jackets, Knitted" },
+        { code: "6201", name: "6201 | Overcoats / Jackets, Woven" },
+        { code: "6301", name: "6301 | Blankets & Travel Rugs" },
+        { code: "6401", name: "6401 | Waterproof Footwear" },
+        { code: "6402", name: "6402 | Sports / Casual Footwear" },
+        { code: "6501", name: "6501 | Hat Forms / Hat Bodies" },
+        { code: "6801", name: "6801 | Setts, Curbstones, Flagstones" },
+        { code: "6907", name: "6907 | Unglazed Ceramic Tiles" },
+        { code: "7001", name: "7001 | Cullet / Other Waste Glass" },
+        { code: "7003", name: "7003 | Cast / Rolled Glass Sheets" },
+        { code: "7101", name: "7101 | Pearls, Natural / Cultured" },
+        { code: "7108", name: "7108 | Gold (including Gold Plated)" },
+        { code: "7201", name: "7201 | Pig Iron & Spiegeleisen" },
+        { code: "7207", name: "7207 | Semi-Finished Steel Products" },
+        { code: "7210", name: "7210 | Flat-Rolled Steel (Coated)" },
+        { code: "7301", name: "7301 | Sheet Piling & Angles" },
+        { code: "7601", name: "7601 | Unwrought Aluminium" },
+        { code: "8301", name: "8301 | Padlocks, Locks, Keys" },
+        { code: "8401", name: "8401 | Nuclear Reactors / Boilers" },
+        { code: "8408", name: "8408 | Diesel / Semi-Diesel Engines" },
+        { code: "8415", name: "8415 | Air-Conditioning Units" },
+        { code: "8418", name: "8418 | Refrigerators / Freezers" },
+        { code: "8471", name: "8471 | Automatic Data Processing Machines" },
+        { code: "8517", name: "8517 | Telephones / Smartphones" },
+        { code: "8528", name: "8528 | Monitors / Projectors / TVs" },
+        { code: "8541", name: "8541 | Semiconductors / Diodes / LEDs" },
+        { code: "8544", name: "8544 | Insulated Wire / Cable" },
+        { code: "8601", name: "8601 | Rail Locomotives (Electric)" },
+        { code: "8701", name: "8701 | Tractors" },
+        { code: "8702", name: "8702 | Motor Buses / Coaches" },
+        { code: "8703", name: "8703 | Passenger Cars / SUVs" },
+        { code: "8704", name: "8704 | Motor Vehicles for Goods" },
+        { code: "8802", name: "8802 | Aircraft / Helicopters" },
+        { code: "8901", name: "8901 | Cruise / Passenger Ships" },
+        { code: "8902", name: "8902 | Fishing Vessels" },
+        { code: "9001", name: "9001 | Optical Fibres / Cables" },
+        { code: "9018", name: "9018 | Instruments for Medical Science" },
+        { code: "9026", name: "9026 | Instruments for Measuring Flow" },
+        { code: "9301", name: "9301 | Military Weapons" },
+        { code: "9401", name: "9401 | Seats (Aircraft, Vehicle, Household)" },
+        { code: "9403", name: "9403 | Office / Kitchen / Bedroom Furniture" },
+        { code: "9503", name: "9503 | Tricycles, Scooters, Puzzles, Toys" },
+        { code: "9601", name: "9601 | Worked Ivory / Bone / Tortoise-shell" },
+        { code: "GENERAL CARGO", name: "General Cargo (Non-Specific)" },
+        { code: "HAZARDOUS CARGO", name: "Hazardous / DG Cargo" },
+        { code: "PERISHABLES", name: "Perishables / Cold Chain" },
+        { code: "PROJECT CARGO", name: "Project Cargo / ODC" }
       ];
       let customCommodities = [];
       const stored = localStorage.getItem("gl_custom_sea_commodities");
@@ -1310,8 +1463,7 @@ function setupAutocomplete(inputEl, type) {
         const div = document.createElement("div");
         div.className = "autocomplete-item";
         
-        let label = "";
-        if (type === "customers" || type === "linernames" || type === "sea_commodities") {
+        if (type === "customers" || type === "linernames" || type === "sea_commodities" || type === "air_commodities") {
           label = `<div>${item.name}</div>`;
         } else if (type === "airlines" || type === "shippinglines") {
           label = `<div>${item.name}</div><div class="code-badge">${item.code}</div>`;
@@ -1322,7 +1474,7 @@ function setupAutocomplete(inputEl, type) {
         div.innerHTML = label;
         div.addEventListener("click", () => {
           inputEl._programmaticSelection = true;
-          if (type === "customers" || type === "linernames" || type === "sea_commodities") {
+          if (type === "customers" || type === "linernames" || type === "sea_commodities" || type === "air_commodities") {
             inputEl.value = item.name;
           } else {
             inputEl.value = `${item.code} - ${item.name}`;
@@ -2041,8 +2193,8 @@ function calculateAirFreight() {
   airlineCards.forEach(card => {
     const isSelected = card.querySelector(".select-airline-radio").checked;
     const name = card.querySelector(".air-name").value.trim();
-    const routing = card.querySelector(".air-routing").value.trim();
-    const tt = card.querySelector(".air-tt").value.trim();
+    const routing = formatRoutingDisplay(card.querySelector(".air-routing").value.trim());
+    const tt = formatTransitTimeDisplay(card.querySelector(".air-tt").value.trim());
     const validity = card.querySelector(".air-validity").value;
     const pivotWeight = parseFloat(card.querySelector(".air-pivot-weight").value) || 0;
 
@@ -3012,17 +3164,14 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-vol").textContent = `${cbm.toFixed(2)} CBM`;
   document.getElementById("res-sea-qty").textContent = `${pkgQty} Pkgs`;
 
-  const routing = document.getElementById("sea-routing")?.value || "";
+  const routing = formatRoutingDisplay(document.getElementById("sea-routing")?.value || "");
   const rawTt = document.getElementById("sea-tt")?.value || "";
-  let tt = rawTt.trim();
-  if (tt && !tt.toLowerCase().includes("day")) {
-    tt = `${tt} Days`;
-  }
+  const tt = formatTransitTimeDisplay(rawTt);
   const validity = document.getElementById("sea-validity")?.value || "";
   const resRouting = document.getElementById("res-sea-routing-val");
   const resTT = document.getElementById("res-sea-tt-val");
   const resValidity = document.getElementById("res-sea-validity-val");
-  if (resRouting) resRouting.textContent = formatRoutingDisplay(routing);
+  if (resRouting) resRouting.textContent = routing;
   if (resTT) resTT.textContent = tt || "-";
   if (resValidity) resValidity.textContent = validity || "-";
 
@@ -7509,6 +7658,22 @@ function formatRoutingDisplay(routing) {
   return "via " + r.toUpperCase();
 }
 window.formatRoutingDisplay = formatRoutingDisplay;
+
+function formatTransitTimeDisplay(tt) {
+  if (!tt) return "-";
+  const trimmed = tt.trim();
+  if (trimmed.toLowerCase() === "direct") return trimmed.toUpperCase();
+  
+  const clean = trimmed.replace(/\s*days?\s*$/i, "");
+  if (/^\d+([\s\-\.\/]\d+)*$/.test(clean)) {
+    return clean + " Days";
+  }
+  if (trimmed && !trimmed.toLowerCase().includes("day")) {
+    return trimmed + " Days";
+  }
+  return trimmed;
+}
+window.formatTransitTimeDisplay = formatTransitTimeDisplay;
 
 // ==================== GOOGLE MAPS DIRECTORY LOOKUP ====================
 
