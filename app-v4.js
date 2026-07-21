@@ -1040,7 +1040,6 @@ function openActiveCalculator(type) {
   // Hide all panels
   document.getElementById("air-freight-panel").classList.remove("active");
   document.getElementById("sea-freight-panel").classList.remove("active");
-  document.getElementById("custom-clearance-panel").classList.remove("active");
   document.getElementById("transportation-panel").classList.remove("active");
   document.getElementById("warehousing-panel").classList.remove("active");
 
@@ -1056,11 +1055,6 @@ function openActiveCalculator(type) {
     document.getElementById("sea-freight-panel").classList.add("active");
     root.style.setProperty('--accent-current', 'var(--accent-sea)');
     root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
-  } else if (type === 'custom') {
-    document.getElementById("custom-clearance-panel").classList.add("active");
-    root.style.setProperty('--accent-current', 'var(--accent-success)');
-    root.style.setProperty('--accent-current-glow', 'var(--accent-success-glow)');
-    calculateCustomClearance();
   } else if (type === 'transport') {
     document.getElementById("transportation-panel").classList.add("active");
     root.style.setProperty('--accent-current', 'var(--violet)');
@@ -1078,7 +1072,6 @@ function openActiveCalculator(type) {
 function returnToWorkspace() {
   document.getElementById("air-freight-panel").classList.remove("active");
   document.getElementById("sea-freight-panel").classList.remove("active");
-  document.getElementById("custom-clearance-panel").classList.remove("active");
   document.getElementById("transportation-panel").classList.remove("active");
   document.getElementById("warehousing-panel").classList.remove("active");
   
@@ -1933,6 +1926,40 @@ function calculateAirFreight() {
   updateCurrencyRules(appState.currentUser);
   updateCartageRowVisibility();
 
+  // Read section enable/disable states
+  const tariffsEnabled = document.getElementById("air-enable-tariffs")?.checked ?? true;
+  const originFeesEnabled = document.getElementById("air-enable-origin-fees")?.checked ?? true;
+  const destFeesEnabled = document.getElementById("air-enable-dest-fees")?.checked ?? true;
+
+  const tariffsBody = document.getElementById("air-tariffs-content-body");
+  const originBody = document.getElementById("air-origin-fees-content-body");
+  const destBody = document.getElementById("air-dest-fees-content-body");
+
+  const tariffsBadge = document.getElementById("air-tariffs-status-badge");
+  const originBadge = document.getElementById("air-origin-status-badge");
+  const destBadge = document.getElementById("air-dest-status-badge");
+
+  if (tariffsBody) tariffsBody.classList.toggle("box-disabled", !tariffsEnabled);
+  if (tariffsBadge) {
+    tariffsBadge.textContent = tariffsEnabled ? "✓ Included" : "✕ Excluded";
+    tariffsBadge.style.color = tariffsEnabled ? "#10b981" : "#ef4444";
+    tariffsBadge.style.background = tariffsEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+  }
+
+  if (originBody) originBody.classList.toggle("box-disabled", !originFeesEnabled);
+  if (originBadge) {
+    originBadge.textContent = originFeesEnabled ? "✓ Included" : "✕ Excluded";
+    originBadge.style.color = originFeesEnabled ? "#10b981" : "#ef4444";
+    originBadge.style.background = originFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+  }
+
+  if (destBody) destBody.classList.toggle("box-disabled", !destFeesEnabled);
+  if (destBadge) {
+    destBadge.textContent = destFeesEnabled ? "✓ Included" : "✕ Excluded";
+    destBadge.style.color = destFeesEnabled ? "#10b981" : "#ef4444";
+    destBadge.style.background = destFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+  }
+
   const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
   let totalGrossWeight = 0;
   let totalVolume = 0;
@@ -2080,14 +2107,14 @@ function calculateAirFreight() {
       }
     }
 
-    let baseFreightCost = airlineChargeableWeight * activeRate;
+    let baseFreightCost = tariffsEnabled ? (airlineChargeableWeight * activeRate) : 0;
     
     let isMinActive = false;
     const minVal = breaksData['min'];
     const minSell = (typeof minVal === 'object' && minVal !== null) ? (minVal.sell > 0 ? minVal.sell : minVal.buy) : (parseFloat(minVal) || 0);
     const minBuy = (typeof minVal === 'object' && minVal !== null) ? minVal.buy : 0;
 
-    if (minSell > 0 && baseFreightCost < minSell) {
+    if (tariffsEnabled && minSell > 0 && baseFreightCost < minSell) {
       baseFreightCost = minSell;
       isMinActive = true;
     }
@@ -2121,75 +2148,79 @@ function calculateAirFreight() {
     const airlineDestSurcharges = [];
 
     // Origin local surcharges
-    const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
-    originRows.forEach(row => {
-      const surchargeNameInput = row.querySelector(".chg-name");
-      const surchargeName = surchargeNameInput.value.trim();
-      const surchargeNameLower = surchargeName.toLowerCase();
-      
-      let rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-      let unit = row.querySelector(".chg-unit").value;
+    if (originFeesEnabled) {
+      const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+      originRows.forEach(row => {
+        const surchargeNameInput = row.querySelector(".chg-name");
+        const surchargeName = surchargeNameInput.value.trim();
+        const surchargeNameLower = surchargeName.toLowerCase();
+        
+        let rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
+        let unit = row.querySelector(".chg-unit").value;
 
-      const creatorRole = appState.currentUser;
-      const isFreeHandOrNrs = creatorRole && (
-        creatorRole === 'jaya' || 
-        creatorRole === 'cathrina' || 
-        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
-        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
-      );
+        const creatorRole = appState.currentUser;
+        const isFreeHandOrNrs = creatorRole && (
+          creatorRole === 'jaya' || 
+          creatorRole === 'cathrina' || 
+          TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+          TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+        );
 
-      if (surchargeNameLower === "cartage" || surchargeNameLower === "misc") {
-        if (!isFreeHandOrNrs) {
-          if (airlineChargeableWeight < 500) {
-            if (airlineChargeableWeight <= 150) {
-              rate = 6.00;
-              unit = "flat";
+        if (surchargeNameLower === "cartage" || surchargeNameLower === "misc") {
+          if (!isFreeHandOrNrs) {
+            if (airlineChargeableWeight < 500) {
+              if (airlineChargeableWeight <= 150) {
+                rate = 6.00;
+                unit = "flat";
+              } else {
+                rate = 0.04;
+                unit = "kg";
+              }
             } else {
-              rate = 0.04;
-              unit = "kg";
+              rate = 0.00;
+              unit = "flat";
             }
-          } else {
-            rate = 0.00;
-            unit = "flat";
+          }
+        } else if (surchargeNameLower === "xray") {
+          if (!isFreeHandOrNrs) {
+            if (airlineChargeableWeight >= 500) {
+              rate = 0.00;
+            }
           }
         }
-      } else if (surchargeNameLower === "xray") {
-        if (!isFreeHandOrNrs) {
-          if (airlineChargeableWeight >= 500) {
-            rate = 0.00;
-          }
-        }
-      }
 
-      if (surchargeName && rate > 0) {
-        let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
-        airlineSurchargeTotal += cost;
-        airlineOriginSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
-      }
-    });
+        if (surchargeName && rate > 0) {
+          let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
+          airlineSurchargeTotal += cost;
+          airlineOriginSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
+        }
+      });
+    }
 
     // Destination local surcharges
-    const destRows = document.querySelectorAll("#air-dest-surcharges-body tr");
-    destRows.forEach(row => {
-      const surchargeName = row.querySelector(".chg-name").value.trim();
-      const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-      const unit = row.querySelector(".chg-unit").value;
+    if (destFeesEnabled) {
+      const destRows = document.querySelectorAll("#air-dest-surcharges-body tr");
+      destRows.forEach(row => {
+        const surchargeName = row.querySelector(".chg-name").value.trim();
+        const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
+        const unit = row.querySelector(".chg-unit").value;
 
-      if (surchargeName && rate > 0) {
-        let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
-        airlineSurchargeTotal += cost;
-        airlineDestSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
-      }
-    });
+        if (surchargeName && rate > 0) {
+          let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
+          airlineSurchargeTotal += cost;
+          airlineDestSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
+        }
+      });
+    }
 
-    if (amsFee > 0) {
+    if (originFeesEnabled && amsFee > 0) {
       airlineSurchargeTotal += amsFee;
       airlineOriginSurcharges.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
     }
 
     const airlineGrandTotal = baseFreightCost + airlineSurchargeTotal;
 
-    const optionBaseBuyFreight = isMinActive ? minBuy : (airlineChargeableWeight * activeBuyRate);
+    const optionBaseBuyFreight = tariffsEnabled ? (isMinActive ? minBuy : (airlineChargeableWeight * activeBuyRate)) : 0;
     const optionGrossProfit = baseFreightCost - optionBaseBuyFreight;
 
     const dataObj = {
@@ -2785,6 +2816,40 @@ function calculateSeaFreight() {
   // Sync page currency labels and units
   updateCurrencyRules(appState.currentUser);
 
+  // Read section enable/disable states
+  const tariffsEnabled = document.getElementById("sea-enable-tariffs")?.checked ?? true;
+  const originFeesEnabled = document.getElementById("sea-enable-origin-fees")?.checked ?? true;
+  const destFeesEnabled = document.getElementById("sea-enable-dest-fees")?.checked ?? true;
+
+  const tariffsBody = document.getElementById("sea-tariffs-content-body");
+  const originBody = document.getElementById("sea-origin-fees-content-body");
+  const destBody = document.getElementById("sea-dest-fees-content-body");
+
+  const tariffsBadge = document.getElementById("sea-tariffs-status-badge");
+  const originBadge = document.getElementById("sea-origin-status-badge");
+  const destBadge = document.getElementById("sea-dest-status-badge");
+
+  if (tariffsBody) tariffsBody.classList.toggle("box-disabled", !tariffsEnabled);
+  if (tariffsBadge) {
+    tariffsBadge.textContent = tariffsEnabled ? "✓ Included" : "✕ Excluded";
+    tariffsBadge.style.color = tariffsEnabled ? "#10b981" : "#ef4444";
+    tariffsBadge.style.background = tariffsEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+  }
+
+  if (originBody) originBody.classList.toggle("box-disabled", !originFeesEnabled);
+  if (originBadge) {
+    originBadge.textContent = originFeesEnabled ? "✓ Included" : "✕ Excluded";
+    originBadge.style.color = originFeesEnabled ? "#10b981" : "#ef4444";
+    originBadge.style.background = originFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+  }
+
+  if (destBody) destBody.classList.toggle("box-disabled", !destFeesEnabled);
+  if (destBadge) {
+    destBadge.textContent = destFeesEnabled ? "✓ Included" : "✕ Excluded";
+    destBadge.style.color = destFeesEnabled ? "#10b981" : "#ef4444";
+    destBadge.style.background = destFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+  }
+
   const type = appState.currentSeaFreight.type; // 'fcl', 'lcl', or 'bb'
   const isFcl = (type === 'fcl');
   const currency = document.getElementById("sea-currency").value;
@@ -2813,7 +2878,9 @@ function calculateSeaFreight() {
       const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
       const activeRate = rate > 0 ? rate : (buy > 0 ? buy : 0);
       if (qty > 0 && activeRate > 0) {
-        baseFreight += (qty * activeRate);
+        if (tariffsEnabled) {
+          baseFreight += (qty * activeRate);
+        }
         totalContainersCount += qty;
         containerSummary.push(`${qty} x ${typeVal}`);
       }
@@ -2824,13 +2891,17 @@ function calculateSeaFreight() {
     const rate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
     const buy = parseFloat(document.getElementById("sea-lcl-buy-rate").value) || 0;
     const activeRate = rate > 0 ? rate : buy;
-    baseFreight = chargeableCbm * activeRate;
+    if (tariffsEnabled) {
+      baseFreight = chargeableCbm * activeRate;
+    }
     detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
   } else {
     const rate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
     const buy = parseFloat(document.getElementById("sea-bb-buy-rate").value) || 0;
     const activeRate = rate > 0 ? rate : buy;
-    baseFreight = chargeableCbm * activeRate;
+    if (tariffsEnabled) {
+      baseFreight = chargeableCbm * activeRate;
+    }
     detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [Break Bulk]`;
   }
 
@@ -2839,54 +2910,58 @@ function calculateSeaFreight() {
   let destSurchargesList = [];
 
   const amsFee = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
-  if (amsFee > 0) {
+  if (originFeesEnabled && amsFee > 0) {
     totalSurcharges += amsFee;
     originSurchargesList.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
   }
 
-  const originRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
-  originRows.forEach(row => {
-    const name = row.querySelector(".chg-name").value.trim();
-    const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-    const unit = row.querySelector(".chg-unit")?.value || 'flat';
-    
-    if (name && rate > 0) {
-      let cost = 0;
-      if (unit === 'container') {
-        cost = isFcl ? totalContainersCount * rate : rate; // default LCL to 1 unit
-      } else if (unit === 'rt') {
-        cost = isFcl ? cbm * rate : chargeableCbm * rate;
-      } else if (unit === 'kg') {
-        cost = weightKg * rate;
-      } else {
-        cost = rate;
+  if (originFeesEnabled) {
+    const originRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
+    originRows.forEach(row => {
+      const name = row.querySelector(".chg-name").value.trim();
+      const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
+      const unit = row.querySelector(".chg-unit")?.value || 'flat';
+      
+      if (name && rate > 0) {
+        let cost = 0;
+        if (unit === 'container') {
+          cost = isFcl ? totalContainersCount * rate : rate; // default LCL to 1 unit
+        } else if (unit === 'rt') {
+          cost = isFcl ? cbm * rate : chargeableCbm * rate;
+        } else if (unit === 'kg') {
+          cost = weightKg * rate;
+        } else {
+          cost = rate;
+        }
+        totalSurcharges += cost;
+        originSurchargesList.push({ name, rate, unit, calculatedCost: cost });
       }
-      totalSurcharges += cost;
-      originSurchargesList.push({ name, rate, unit, calculatedCost: cost });
-    }
-  });
+    });
+  }
 
-  const destRows = document.querySelectorAll("#sea-dest-surcharges-body tr");
-  destRows.forEach(row => {
-    const name = row.querySelector(".chg-name").value.trim();
-    const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-    const unit = row.querySelector(".chg-unit")?.value || 'flat';
-    
-    if (name && rate > 0) {
-      let cost = 0;
-      if (unit === 'container') {
-        cost = isFcl ? totalContainersCount * rate : rate; // default LCL to 1 unit
-      } else if (unit === 'rt') {
-        cost = isFcl ? cbm * rate : chargeableCbm * rate;
-      } else if (unit === 'kg') {
-        cost = weightKg * rate;
-      } else {
-        cost = rate;
+  if (destFeesEnabled) {
+    const destRows = document.querySelectorAll("#sea-dest-surcharges-body tr");
+    destRows.forEach(row => {
+      const name = row.querySelector(".chg-name").value.trim();
+      const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
+      const unit = row.querySelector(".chg-unit")?.value || 'flat';
+      
+      if (name && rate > 0) {
+        let cost = 0;
+        if (unit === 'container') {
+          cost = isFcl ? totalContainersCount * rate : rate; // default LCL to 1 unit
+        } else if (unit === 'rt') {
+          cost = isFcl ? cbm * rate : chargeableCbm * rate;
+        } else if (unit === 'kg') {
+          cost = weightKg * rate;
+        } else {
+          cost = rate;
+        }
+        totalSurcharges += cost;
+        destSurchargesList.push({ name, rate, unit, calculatedCost: cost });
       }
-      totalSurcharges += cost;
-      destSurchargesList.push({ name, rate, unit, calculatedCost: cost });
-    }
-  });
+    });
+  }
 
   const surchargesList = [...originSurchargesList, ...destSurchargesList];
 
@@ -9602,8 +9677,7 @@ function toggleModulePathway(module, mode) {
   document.getElementById(`${module}-summary-active`).style.display = isBundled ? 'none' : 'flex';
   document.getElementById(`${module}-save-btn-container`).style.display = isBundled ? 'none' : 'block';
   
-  if (module === 'custom') calculateCustomClearance();
-  else if (module === 'transport') calculateTransportation();
+  if (module === 'transport') calculateTransportation();
   else if (module === 'warehouse') calculateWarehousing();
 }
 window.toggleModulePathway = toggleModulePathway;
@@ -9615,7 +9689,7 @@ function updateAdminModulePermissions() {
     btn.style.display = isAdmin ? "inline-block" : "none";
   });
 
-  ["custom-standalone-body", "transport-standalone-body", "warehouse-standalone-body"].forEach(bodyId => {
+  ["transport-standalone-body", "warehouse-standalone-body"].forEach(bodyId => {
     const body = document.getElementById(bodyId);
     if (body) {
       body.querySelectorAll(".chg-name").forEach(input => {
@@ -9633,45 +9707,6 @@ function updateAdminModulePermissions() {
   });
 }
 window.updateAdminModulePermissions = updateAdminModulePermissions;
-
-function updateCustomClearanceOptions() {
-  calculateCustomClearance();
-}
-window.updateCustomClearanceOptions = updateCustomClearanceOptions;
-
-function addCustomRow() {
-  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
-  if (!isAdmin) {
-    alert("Permission Denied: Only Admin can add or delete rows.");
-    return;
-  }
-  const tbody = document.getElementById("custom-standalone-body");
-  if (!tbody) return;
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td><input type="text" class="chg-name" value="Custom Surcharge" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-    <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateCustomClearance()"></td>
-    <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-    <td style="text-align: center;">
-      <button type="button" class="btn-admin-action delete-btn" onclick="removeCustomRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-    </td>
-  `;
-  tbody.appendChild(tr);
-  updateAdminModulePermissions();
-  calculateCustomClearance();
-}
-window.addCustomRow = addCustomRow;
-
-function removeCustomRow(btn) {
-  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
-  if (!isAdmin) {
-    alert("Permission Denied: Only Admin can add or delete rows.");
-    return;
-  }
-  btn.closest("tr").remove();
-  calculateCustomClearance();
-}
-window.removeCustomRow = removeCustomRow;
 
 function addTransportRow(type = 'surcharge') {
   const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
@@ -9748,27 +9783,6 @@ function removeWarehouseRow(btn) {
 }
 window.removeWarehouseRow = removeWarehouseRow;
 
-function calculateCustomClearance() {
-  const tbody = document.getElementById("custom-standalone-body");
-  let subtotal = 0;
-  if (tbody) {
-    tbody.querySelectorAll(".chg-rate").forEach(input => {
-      subtotal += parseFloat(input.value) || 0;
-    });
-  }
-  
-  const tax = subtotal * 0.18;
-  const total = subtotal + tax;
-  
-  const cur = document.getElementById("custom-currency")?.value || 'INR';
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
-  
-  if (document.getElementById("res-custom-subtotal")) document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  if (document.getElementById("res-custom-tax")) document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  if (document.getElementById("res-custom-total")) document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-}
-window.calculateCustomClearance = calculateCustomClearance;
-
 function calculateTransportation() {
   const tbody = document.getElementById("transport-standalone-body");
   let subtotal = 0;
@@ -9827,16 +9841,10 @@ function saveStandaloneQuote(module) {
 
   const rateInr = convertToInr(total, cur);
 
-  let modeTitle = "Custom Clearance";
+  let modeTitle = "Services";
   let routingInfo = `${module.toUpperCase()} Standalone Services`;
 
-  if (module === 'custom') {
-    modeTitle = "Custom Clearance";
-    const handling = document.querySelector('input[name="custom-handling"]:checked')?.value || "freehand";
-    const direction = document.querySelector('input[name="custom-direction"]:checked')?.value || "export";
-    const customMode = document.querySelector('input[name="custom-mode"]:checked')?.value || "air";
-    routingInfo = `${handling.toUpperCase()} | ${direction.toUpperCase()} (${customMode.toUpperCase()})`;
-  } else if (module === 'transport') {
+  if (module === 'transport') {
     modeTitle = "Transportation";
     const pPin = document.getElementById("transport-pickup-pin")?.value || "";
     const dPin = document.getElementById("transport-delivery-pin")?.value || "";

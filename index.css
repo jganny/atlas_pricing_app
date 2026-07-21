@@ -2356,3 +2356,16 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
 }
 
 /* ── END OF ADAPTIVE LIGHT UI UPGRADE ── */
+
+/* Section Box Enable/Disable Styles */
+.section-card {
+  transition: opacity 0.3s ease, filter 0.3s ease, border-color 0.3s ease;
+}
+
+.box-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(0.5);
+}
+
