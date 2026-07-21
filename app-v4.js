@@ -4205,13 +4205,27 @@ function saveCurrentQuote() {
       const sellRateVal = appState.currentAirFreight.appliedRate || 0;
       const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
 
+      const activeUser = appState.currentUser;
+      const isNominationUser = activeUser && (
+        activeUser === 'shashank' || 
+        activeUser === 'shaheer' || 
+        (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
+      );
+
       if (sellRateVal > 0 && buyRateVal > 0) {
         alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
         return;
       }
-      if (sellRateVal <= 0 && buyRateVal <= 0) {
-        alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
-        return;
+      if (isNominationUser) {
+        if (sellRateVal <= 0 && buyRateVal <= 0) {
+          alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
+          return;
+        }
+      } else {
+        if (sellRateVal <= 0) {
+          alert("❌ Sell rate must be entered for the quote to Save to database.");
+          return;
+        }
       }
     }
 
@@ -4342,6 +4356,7 @@ function saveCurrentQuote() {
       let hasInvalidFcl = false;
       let hasBoth = false;
       let hasNeither = false;
+      let hasMissingSellRate = false;
       fclRows.forEach(row => {
         const type = row.querySelector(".fcl-type").value;
         const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
@@ -4357,6 +4372,9 @@ function saveCurrentQuote() {
         if (rate <= 0 && buy <= 0) {
           hasNeither = true;
         }
+        if (rate <= 0) {
+          hasMissingSellRate = true;
+        }
         containerItems.push({ type, qty, rate, buy });
       });
       if (tariffsEnabled) {
@@ -4364,13 +4382,26 @@ function saveCurrentQuote() {
           alert("Please fill in Container Quantity for all container rows.");
           return;
         }
+        const activeUser = appState.currentUser;
+        const isNominationUser = activeUser && (
+          activeUser === 'shashank' || 
+          activeUser === 'shaheer' || 
+          (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
+        );
         if (hasBoth) {
           alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
           return;
         }
-        if (hasNeither) {
-          alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
-          return;
+        if (isNominationUser) {
+          if (hasNeither) {
+            alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
+            return;
+          }
+        } else {
+          if (hasMissingSellRate) {
+            alert("❌ Sell rate must be entered for all container rows.");
+            return;
+          }
         }
       }
     }
@@ -4381,13 +4412,28 @@ function saveCurrentQuote() {
       if (tariffsEnabled) {
         const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
         const lclBuyRate = parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0;
+
+        const activeUser = appState.currentUser;
+        const isNominationUser = activeUser && (
+          activeUser === 'shashank' || 
+          activeUser === 'shaheer' || 
+          (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
+        );
+
         if (lclRate > 0 && lclBuyRate > 0) {
           alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
           return;
         }
-        if (lclRate <= 0 && lclBuyRate <= 0) {
-          alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
-          return;
+        if (isNominationUser) {
+          if (lclRate <= 0 && lclBuyRate <= 0) {
+            alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
+            return;
+          }
+        } else {
+          if (lclRate <= 0) {
+            alert("❌ Sell rate must be entered for the quote to Save to database.");
+            return;
+          }
         }
       }
       if (rows.length === 0) {
@@ -4414,13 +4460,28 @@ function saveCurrentQuote() {
       if (tariffsEnabled) {
         const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
         const bbBuyRate = parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0;
+
+        const activeUser = appState.currentUser;
+        const isNominationUser = activeUser && (
+          activeUser === 'shashank' || 
+          activeUser === 'shaheer' || 
+          (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
+        );
+
         if (bbRate > 0 && bbBuyRate > 0) {
           alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
           return;
         }
-        if (bbRate <= 0 && bbBuyRate <= 0) {
-          alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
-          return;
+        if (isNominationUser) {
+          if (bbRate <= 0 && bbBuyRate <= 0) {
+            alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
+            return;
+          }
+        } else {
+          if (bbRate <= 0) {
+            alert("❌ Sell rate must be entered for the quote to Save to database.");
+            return;
+          }
         }
       }
       if (rows.length === 0) {
