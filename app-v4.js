@@ -730,14 +730,10 @@ function switchRole(role) {
   // Currency Indicator rules based on Role
   updateCurrencyRules(roleLower);
 
-  // Show/Hide Global Module Navigation Tabs based on role (hide for admin to avoid duplicate row)
+  // Show/Hide Global Module Navigation Tabs based on role (hide for all to avoid duplicate row)
   const globalModuleTabs = document.getElementById("global-module-tabs");
   if (globalModuleTabs) {
-    if (roleLower === 'manager' || roleLower === 'ganny') {
-      globalModuleTabs.style.display = "none";
-    } else {
-      globalModuleTabs.style.display = "flex";
-    }
+    globalModuleTabs.style.display = "none";
   }
 
   // Show Selected view
@@ -1111,6 +1107,251 @@ function returnToWorkspace() {
   updateModuleTabs('dashboard');
 }
 
+// Global HS / HSN Chapters List (Chapters 01 to 99)
+const globalHSNChapters = [
+  { code: "01", name: "Chapter 01 | Live Animals" },
+  { code: "02", name: "Chapter 02 | Meat and edible meat offal" },
+  { code: "03", name: "Chapter 03 | Fish & crustaceans, molluscs & other aquatic invertebrates" },
+  { code: "04", name: "Chapter 04 | Dairy produce; birds' eggs; natural honey; edible products of animal origin" },
+  { code: "05", name: "Chapter 05 | Products of animal origin, not elsewhere specified or included" },
+  { code: "06", name: "Chapter 06 | Live trees & other plants; bulbs, roots; cut flowers & ornamental foliage" },
+  { code: "07", name: "Chapter 07 | Edible vegetables and certain roots and tubers" },
+  { code: "08", name: "Chapter 08 | Edible fruit and nuts; peel of citrus fruit or melons" },
+  { code: "09", name: "Chapter 09 | Coffee, tea, maté and spices" },
+  { code: "10", name: "Chapter 10 | Cereals" },
+  { code: "11", name: "Chapter 11 | Products of the milling industry; malt; starches; inulin; wheat gluten" },
+  { code: "12", name: "Chapter 12 | Oil seeds & oleaginous fruits; miscellaneous grains, seeds & fruit; industrial/medicinal plants; straw" },
+  { code: "13", name: "Chapter 13 | Lac; gums, resins and other vegetable saps and extracts" },
+  { code: "14", name: "Chapter 14 | Vegetable plaiting materials; vegetable products not elsewhere specified or included" },
+  { code: "15", name: "Chapter 15 | Animal or vegetable fats and oils and their cleavage products; prepared edible fats" },
+  { code: "16", name: "Chapter 16 | Preparations of meat, fish, crustaceans, molluscs or other aquatic invertebrates" },
+  { code: "17", name: "Chapter 17 | Sugars and sugar confectionery" },
+  { code: "18", name: "Chapter 18 | Cocoa and cocoa preparations" },
+  { code: "19", name: "Chapter 19 | Preparations of cereals, flour, starch or milk; pastrycooks' products" },
+  { code: "20", name: "Chapter 20 | Preparations of vegetables, fruit, nuts or other parts of plants" },
+  { code: "21", name: "Chapter 21 | Miscellaneous edible preparations" },
+  { code: "22", name: "Chapter 22 | Beverages, spirits and vinegar" },
+  { code: "23", name: "Chapter 23 | Residues & waste from the food industries; prepared animal fodder" },
+  { code: "24", name: "Chapter 24 | Tobacco and manufactured tobacco substitutes" },
+  { code: "25", name: "Chapter 25 | Salt; sulphur; earths & stone; plastering materials, lime and cement" },
+  { code: "26", name: "Chapter 26 | Ores, slag and ash" },
+  { code: "27", name: "Chapter 27 | Mineral fuels, mineral oils & products of their distillation; bituminous substances" },
+  { code: "28", name: "Chapter 28 | Inorganic chemicals; organic/inorganic compounds of precious metals, isotopes" },
+  { code: "29", name: "Chapter 29 | Organic chemicals" },
+  { code: "30", name: "Chapter 30 | Pharmaceutical products" },
+  { code: "31", name: "Chapter 31 | Fertilizers" },
+  { code: "32", name: "Chapter 32 | Tanning/dyeing extracts; tannins & derivatives; dyes, pigments, paints, varnishes, putty, inks" },
+  { code: "33", name: "Chapter 33 | Essential oils & resinoids; perfumery, cosmetic or toilet preparations" },
+  { code: "34", name: "Chapter 34 | Soap, organic surface-active agents, washing/lubricating prep, waxes, polishing prep, candles" },
+  { code: "35", name: "Chapter 35 | Albuminoidal substances; modified starches; glues; enzymes" },
+  { code: "36", name: "Chapter 36 | Explosives; pyrotechnic products; matches; pyrophoric alloys; certain combustible preparations" },
+  { code: "37", name: "Chapter 37 | Photographic or cinematographic goods" },
+  { code: "38", name: "Chapter 38 | Miscellaneous chemical products" },
+  { code: "39", name: "Chapter 39 | Plastics and articles thereof" },
+  { code: "40", name: "Chapter 40 | Rubber and articles thereof" },
+  { code: "41", name: "Chapter 41 | Raw hides and skins (other than furskins) and leather" },
+  { code: "42", name: "Chapter 42 | Articles of leather; saddlery & harness; travel goods, handbags; articles of animal gut" },
+  { code: "43", name: "Chapter 43 | Furskins and artificial fur; manufactures thereof" },
+  { code: "44", name: "Chapter 44 | Wood and articles of wood; wood charcoal" },
+  { code: "45", name: "Chapter 45 | Cork and articles of cork" },
+  { code: "46", name: "Chapter 46 | Manufactures of straw, esparto or other plaiting materials; basketware & wickerwork" },
+  { code: "47", name: "Chapter 47 | Pulp of wood/other fibrous cellulosic material; recovered paper/paperboard" },
+  { code: "48", name: "Chapter 48 | Paper & paperboard; articles of paper pulp, paper or paperboard" },
+  { code: "49", name: "Chapter 49 | Printed books, newspapers, pictures & other products of printing industry; manuscripts" },
+  { code: "50", name: "Chapter 50 | Silk" },
+  { code: "51", name: "Chapter 51 | Wool, fine/coarse animal hair; horsehair yarn & woven fabric" },
+  { code: "52", name: "Chapter 52 | Cotton" },
+  { code: "53", name: "Chapter 53 | Other vegetable textile fibres; paper yarn and woven fabrics of paper yarn" },
+  { code: "54", name: "Chapter 54 | Man-made filaments; strip and the like of man-made textile materials" },
+  { code: "55", name: "Chapter 55 | Man-made staple fibres" },
+  { code: "56", name: "Chapter 56 | Wadding, felt & nonwovens; special yarns; twine, cordage, ropes & cables" },
+  { code: "57", name: "Chapter 57 | Carpets and other textile floor coverings" },
+  { code: "58", name: "Chapter 58 | Special woven fabrics; tufted textile fabrics; lace; tapestries; trimmings; embroidery" },
+  { code: "59", name: "Chapter 59 | Impregnated, coated, covered/laminated textile fabrics; textile articles for industrial use" },
+  { code: "60", name: "Chapter 60 | Knitted or crocheted fabrics" },
+  { code: "61", name: "Chapter 61 | Articles of apparel and clothing accessories, knitted or crocheted" },
+  { code: "62", name: "Chapter 62 | Articles of apparel and clothing accessories, not knitted or crocheted" },
+  { code: "63", name: "Chapter 63 | Other made up textile articles; sets; worn clothing and worn textile articles; rags" },
+  { code: "64", name: "Chapter 64 | Footwear, gaiters and the like; parts of such articles" },
+  { code: "65", name: "Chapter 65 | Headgear and parts thereof" },
+  { code: "66", name: "Chapter 66 | Umbrellas, sun umbrellas, walking-sticks, seat-sticks, whips, riding-crops" },
+  { code: "67", name: "Chapter 67 | Prepared feathers & down & articles made of feathers/down; artificial flowers; articles of human hair" },
+  { code: "68", name: "Chapter 68 | Articles of stone, plaster, cement, asbestos, mica or similar materials" },
+  { code: "69", name: "Chapter 69 | Ceramic products" },
+  { code: "70", name: "Chapter 70 | Glass and glassware" },
+  { code: "71", name: "Chapter 71 | Natural/cultured pearls, precious/semi-precious stones, precious metals & articles" },
+  { code: "72", name: "Chapter 72 | Iron and steel" },
+  { code: "73", name: "Chapter 73 | Articles of iron or steel" },
+  { code: "74", name: "Chapter 74 | Copper and articles thereof" },
+  { code: "75", name: "Chapter 75 | Nickel and articles thereof" },
+  { code: "76", name: "Chapter 76 | Aluminium and articles thereof" },
+  { code: "77", name: "Chapter 77 | Reserved for possible future use" },
+  { code: "78", name: "Chapter 78 | Lead and articles thereof" },
+  { code: "79", name: "Chapter 79 | Zinc and articles thereof" },
+  { code: "80", name: "Chapter 80 | Tin and articles thereof" },
+  { code: "81", name: "Chapter 81 | Other base metals; cermets; articles thereof" },
+  { code: "82", name: "Chapter 82 | Tools, implements, cutlery, spoons & forks of base metal; parts thereof" },
+  { code: "83", name: "Chapter 83 | Miscellaneous articles of base metal" },
+  { code: "84", name: "Chapter 84 | Nuclear reactors, boilers, machinery and mechanical appliances; parts thereof" },
+  { code: "85", name: "Chapter 85 | Electrical machinery & equipment and parts thereof; sound/television recorders/reproducers" },
+  { code: "86", name: "Chapter 86 | Railway/tramway locomotives, rolling-stock and parts; track fixtures; traffic signalling equipment" },
+  { code: "87", name: "Chapter 87 | Vehicles other than railway/tramway rolling-stock, and parts and accessories thereof" },
+  { code: "88", name: "Chapter 88 | Aircraft, spacecraft, and parts thereof" },
+  { code: "89", name: "Chapter 89 | Ships, boats and floating structures" },
+  { code: "90", name: "Chapter 90 | Optical, photographic, cinematographic, measuring, checking, medical/surgical instruments" },
+  { code: "91", name: "Chapter 91 | Clocks and watches and parts thereof" },
+  { code: "92", name: "Chapter 92 | Musical instruments; parts and accessories of such articles" },
+  { code: "93", name: "Chapter 93 | Arms and ammunition; parts and accessories thereof" },
+  { code: "94", name: "Chapter 94 | Furniture; bedding, cushions; lamps & lighting; illuminated signs; prefabricated buildings" },
+  { code: "95", name: "Chapter 95 | Toys, games and sports requisites; parts and accessories thereof" },
+  { code: "96", name: "Chapter 96 | Miscellaneous manufactured articles" },
+  { code: "97", name: "Chapter 97 | Works of art, collectors' pieces and antiques" },
+  { code: "98", name: "Chapter 98 | Special classification provisions (national use)" },
+  { code: "99", name: "Chapter 99 | Special classification provisions (national use)" }
+];
+
+const globalHSNHeadings = [
+  { code: "2201", name: "2201 | Waters, mineral waters and aerated waters" },
+  { code: "2202", name: "2202 | Sweetened or flavoured waters & non-alcoholic beverages" },
+  { code: "2203", name: "2203 | Beer made from malt" },
+  { code: "2204", name: "2204 | Wine of fresh grapes, including fortified wines" },
+  { code: "2205", name: "2205 | Vermouth and other wine of fresh grapes" },
+  { code: "2206", name: "2206 | Other fermented beverages (cider, perry, mead, sake)" },
+  { code: "2207", name: "2207 | Undenatured ethyl alcohol of an alcoholic strength by volume of 80% vol. or higher; ethyl alcohol and other spirits, denatured, of any strength" },
+  { code: "2208", name: "2208 | Undenatured ethyl alcohol of an alcoholic strength by volume of less than 80% vol.; spirits, liqueurs" },
+  { code: "2209", name: "2209 | Vinegar and substitutes for vinegar obtained from acetic acid" }
+];
+
+// Helper to save custom entries in localStorage
+function saveCustomEntry(type, value) {
+  if (!value || typeof value !== 'string') return;
+  const valTrimmed = value.trim();
+  if (!valTrimmed) return;
+
+  let storageKey = "";
+  let defaultList = [];
+  let isObjectList = true;
+
+  if (type === "airports") {
+    storageKey = "gl_custom_airports";
+    defaultList = appState.airports || [];
+  } else if (type === "airlines") {
+    storageKey = "gl_custom_airlines";
+    defaultList = appState.airlines || [];
+  } else if (type === "customers") {
+    storageKey = "gl_custom_customers";
+    defaultList = [];
+    isObjectList = false;
+  } else if (type === "seaports") {
+    storageKey = "gl_custom_seaports";
+    defaultList = [
+      { code: "CNSHA", name: "Shanghai Port" },
+      { code: "SGPIN", name: "Singapore Port" },
+      { code: "NLRTM", name: "Port of Rotterdam" },
+      { code: "BEANR", name: "Port of Antwerp" },
+      { code: "AEDXB", name: "Jebel Ali Port" },
+      { code: "USLAX", name: "Port of Los Angeles" },
+      { code: "GBFXT", name: "Felixstowe Port" },
+      { code: "INNSA", name: "Nhava Sheva (JNPT)" },
+      { code: "INMAA", name: "Chennai Port" },
+      { code: "LKCMB", name: "Colombo Port" },
+      { code: "DEHAM", name: "Hamburg Port" }
+    ];
+  } else if (type === "shippinglines") {
+    storageKey = "gl_custom_shippinglines";
+    defaultList = [
+      { code: "MSC", name: "MSC (Mediterranean Shipping Company)" },
+      { code: "MSK", name: "Maersk Line" },
+      { code: "CMA", name: "CMA CGM" },
+      { code: "COS", name: "COSCO Shipping" },
+      { code: "HLD", name: "Hapag-Lloyd" },
+      { code: "ONE", name: "ONE (Ocean Network Express)" },
+      { code: "EVG", name: "Evergreen Line" },
+      { code: "HMM", name: "HMM Co., Ltd." },
+      { code: "YML", name: "Yang Ming Marine Transport" },
+      { code: "ZIM", name: "ZIM Integrated Shipping" },
+      { code: "WHL", name: "Wan Hai Lines" },
+      { code: "PIL", name: "PIL (Pacific International Lines)" }
+    ];
+  } else if (type === "linernames") {
+    storageKey = "gl_custom_linernames";
+    defaultList = [
+      { code: "MSC", name: "MSC" },
+      { code: "MSK", name: "Maersk" },
+      { code: "CMA", name: "CMA CGM" },
+      { code: "HPL", name: "Hapag-Lloyd" },
+      { code: "ONE", name: "ONE" },
+      { code: "EMC", name: "Evergreen" },
+      { code: "COS", name: "COSCO" },
+      { code: "OOCL", name: "OOCL" },
+      { code: "HMM", name: "HMM" },
+      { code: "ZIM", name: "ZIM" },
+      { code: "PIL", name: "PIL" },
+      { code: "YML", name: "Yang Ming" }
+    ];
+  } else if (type === "air_commodities" || type === "sea_commodities") {
+    storageKey = type === "air_commodities" ? "gl_custom_air_commodities" : "gl_custom_sea_commodities";
+    defaultList = [
+      { code: "GENERAL", name: "GENERAL (General Cargo)" },
+      { code: "LIVE ANIMALS", name: "LIVE ANIMALS" },
+      { code: "HAZARDOUS", name: "HAZARDOUS (DG)" },
+      { code: "PERISHABLES", name: "PERISHABLES" },
+      { code: "PHARMA", name: "PHARMA / Medical" },
+      ...globalHSNChapters,
+      ...globalHSNHeadings
+    ];
+  }
+
+  if (!storageKey) return;
+
+  let customList = [];
+  const stored = localStorage.getItem(storageKey);
+  if (stored) {
+    try { customList = JSON.parse(stored); } catch(e) {}
+  }
+
+  const normalizedInput = valTrimmed.toLowerCase();
+
+  if (isObjectList) {
+    const existsInDefault = defaultList.some(item => 
+      item.name.toLowerCase() === normalizedInput || 
+      item.code.toLowerCase() === normalizedInput ||
+      `${item.code} - ${item.name}`.toLowerCase() === normalizedInput ||
+      `${item.code} | ${item.name}`.toLowerCase() === normalizedInput
+    );
+    const existsInCustom = customList.some(item => 
+      item.name.toLowerCase() === normalizedInput || 
+      item.code.toLowerCase() === normalizedInput ||
+      `${item.code} - ${item.name}`.toLowerCase() === normalizedInput ||
+      `${item.code} | ${item.name}`.toLowerCase() === normalizedInput
+    );
+
+    if (existsInDefault || existsInCustom) return;
+
+    let code = "CUSTOM";
+    let name = valTrimmed;
+    const splitIndex = valTrimmed.indexOf(" - ");
+    const pipeIndex = valTrimmed.indexOf(" | ");
+    if (splitIndex > 0) {
+      code = valTrimmed.substring(0, splitIndex).trim();
+      name = valTrimmed.substring(splitIndex + 3).trim();
+    } else if (pipeIndex > 0) {
+      code = valTrimmed.substring(0, pipeIndex).trim();
+      name = valTrimmed.substring(pipeIndex + 3).trim();
+    } else if (valTrimmed.length <= 6) {
+      code = valTrimmed.toUpperCase();
+    }
+
+    customList.push({ code, name });
+  } else {
+    const existsInCustom = customList.some(c => c.toLowerCase() === normalizedInput);
+    if (existsInCustom) return;
+    customList.push(valTrimmed);
+  }
+
+  localStorage.setItem(storageKey, JSON.stringify(customList));
+}
+
 // Autocomplete Engine
 function setupAutocomplete(inputEl, type) {
   if (!inputEl) return;
@@ -1137,8 +1378,6 @@ function setupAutocomplete(inputEl, type) {
       }
     });
   };
-
-
 
   inputEl.addEventListener("keydown", (e) => {
     if (!dropdown.classList.contains("show")) return;
@@ -1167,7 +1406,6 @@ function setupAutocomplete(inputEl, type) {
         const event = new Event('change');
         inputEl.dispatchEvent(event);
         
-        // Also trigger input event for live calculations if applicable
         const inputEvent = new Event('input');
         inputEl.dispatchEvent(inputEvent);
 
@@ -1194,14 +1432,26 @@ function setupAutocomplete(inputEl, type) {
 
     let matches = [];
     if (type === "airports") {
-      matches = appState.airports.filter(ap => 
+      let customAirports = [];
+      const stored = localStorage.getItem("gl_custom_airports");
+      if (stored) {
+        try { customAirports = JSON.parse(stored); } catch(err) {}
+      }
+      const combined = [...(appState.airports || []), ...customAirports];
+      matches = combined.filter(ap => 
         ap.code.toLowerCase().includes(val) || 
         ap.city.toLowerCase().includes(val) || 
         ap.country.toLowerCase().includes(val) || 
         ap.name.toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "airlines") {
-      matches = appState.airlines.filter(al => 
+      let customAirlines = [];
+      const stored = localStorage.getItem("gl_custom_airlines");
+      if (stored) {
+        try { customAirlines = JSON.parse(stored); } catch(err) {}
+      }
+      const combined = [...(appState.airlines || []), ...customAirlines];
+      matches = combined.filter(al => 
         al.code.toLowerCase().includes(val) || 
         al.name.toLowerCase().includes(val)
       ).slice(0, 10);
@@ -1229,7 +1479,6 @@ function setupAutocomplete(inputEl, type) {
         { code: "LKCMB", name: "Colombo Port", city: "Colombo", country: "Sri Lanka" },
         { code: "DEHAM", name: "Hamburg Port", city: "Hamburg", country: "Germany" }
       ];
-      // Load custom seaports
       let customPorts = [];
       const stored = localStorage.getItem("gl_custom_seaports");
       if (stored) {
@@ -1257,7 +1506,6 @@ function setupAutocomplete(inputEl, type) {
         { code: "WHL", name: "Wan Hai Lines" },
         { code: "PIL", name: "PIL (Pacific International Lines)" }
       ];
-      // Load custom shipping lines
       let customLines = [];
       const stored = localStorage.getItem("gl_custom_shippinglines");
       if (stored) {
@@ -1293,165 +1541,48 @@ function setupAutocomplete(inputEl, type) {
         l.code.toLowerCase().includes(val) || 
         l.name.toLowerCase().includes(val)
       ).slice(0, 10);
-    } else if (type === "air_commodities") {
+    } else if (type === "air_commodities" || type === "sea_commodities") {
       const defaultAirCommodities = [
         { code: "GENERAL", name: "GENERAL (General Cargo)" },
         { code: "LIVE ANIMALS", name: "LIVE ANIMALS" },
         { code: "HAZARDOUS", name: "HAZARDOUS (DG)" },
         { code: "PERISHABLES", name: "PERISHABLES" },
-        { code: "PHARMA", name: "PHARMA / Medical" },
-        { code: "0101", name: "0101 | Live Horses & Asses" },
-        { code: "0201", name: "0201 | Fresh / Chilled Beef" },
-        { code: "0301", name: "0301 | Live Fish" },
-        { code: "0401", name: "0401 | Milk & Cream" },
-        { code: "0901", name: "0901 | Coffee, Raw / Roasted" },
-        { code: "1006", name: "1006 | Rice" },
-        { code: "1201", name: "1201 | Soya Beans" },
-        { code: "3002", name: "3002 | Blood / Vaccines / Antisera" },
-        { code: "3004", name: "3004 | Medicaments (Retail Packs)" },
-        { code: "3208", name: "3208 | Paints & Varnishes" },
-        { code: "3901", name: "3901 | Polyethylene, Primary Form" },
-        { code: "3904", name: "3904 | PVC & Vinyl Copolymers" },
-        { code: "5201", name: "5201 | Cotton, Not Carded" },
-        { code: "5208", name: "5208 | Woven Cotton Fabrics" },
-        { code: "6101", name: "6101 | Overcoats / Jackets, Knitted" },
-        { code: "6201", name: "6201 | Overcoats / Jackets, Woven" },
-        { code: "6401", name: "6401 | Waterproof Footwear" },
-        { code: "6402", name: "6402 | Sports / Casual Footwear" },
-        { code: "7101", name: "7101 | Pearls, Natural / Cultured" },
-        { code: "7108", name: "7108 | Gold (including Gold Plated)" },
-        { code: "8401", name: "8401 | Nuclear Reactors / Boilers" },
-        { code: "8415", name: "8415 | Air-Conditioning Units" },
-        { code: "8471", name: "8471 | Automatic Data Processing Machines" },
-        { code: "8517", name: "8517 | Telephones / Smartphones" },
-        { code: "8528", name: "8528 | Monitors / Projectors / TVs" },
-        { code: "8541", name: "8541 | Semiconductors / Diodes / LEDs" },
-        { code: "8544", name: "8544 | Insulated Wire / Cable" },
-        { code: "8701", name: "8701 | Tractors" },
-        { code: "8703", name: "8703 | Passenger Cars / SUVs" },
-        { code: "8802", name: "8802 | Aircraft / Helicopters" },
-        { code: "9001", name: "9001 | Optical Fibres / Cables" },
-        { code: "9018", name: "9018 | Instruments for Medical Science" },
-        { code: "9401", name: "9401 | Seats (Aircraft, Vehicle, Household)" },
-        { code: "9403", name: "9403 | Office / Kitchen / Bedroom Furniture" },
-        { code: "9503", name: "9503 | Tricycles, Scooters, Puzzles, Toys" }
+        { code: "PHARMA", name: "PHARMA / Medical" }
       ];
       let customCommodities = [];
-      const stored = localStorage.getItem("gl_custom_air_commodities");
+      const storageKey = type === "air_commodities" ? "gl_custom_air_commodities" : "gl_custom_sea_commodities";
+      const stored = localStorage.getItem(storageKey);
       if (stored) {
         try { customCommodities = JSON.parse(stored); } catch(err) {}
       }
-      const combined = [...defaultAirCommodities, ...customCommodities];
-      matches = combined.filter(c => 
-        c.code.toLowerCase().includes(val) || 
-        c.name.toLowerCase().includes(val)
-      ).slice(0, 10);
-    } else if (type === "sea_commodities") {
-      const defaultCommodities = [
-        { code: "0101", name: "0101 | Live Horses & Asses" },
-        { code: "0201", name: "0201 | Fresh / Chilled Beef" },
-        { code: "0301", name: "0301 | Live Fish" },
-        { code: "0401", name: "0401 | Milk & Cream" },
-        { code: "0501", name: "0501 | Human Hair, Unworked" },
-        { code: "0701", name: "0701 | Potatoes, Fresh / Chilled" },
-        { code: "0901", name: "0901 | Coffee, Raw / Roasted" },
-        { code: "1001", name: "1001 | Wheat & Meslin" },
-        { code: "1006", name: "1006 | Rice" },
-        { code: "1201", name: "1201 | Soya Beans" },
-        { code: "1511", name: "1511 | Palm Oil & Fractions" },
-        { code: "1514", name: "1514 | Rapeseed / Colza Oil" },
-        { code: "1601", name: "1601 | Sausages & Similar Products" },
-        { code: "1701", name: "1701 | Cane / Beet Sugar" },
-        { code: "1901", name: "1901 | Malt Extract, Cereal Preparations" },
-        { code: "2009", name: "2009 | Fruit Juices, Unfermented" },
-        { code: "2101", name: "2101 | Coffee / Tea Extracts" },
-        { code: "2201", name: "2201 | Mineral / Aerated Water" },
-        { code: "2501", name: "2501 | Salt, Pure Sodium Chloride" },
-        { code: "2601", name: "2601 | Iron Ores & Concentrates" },
-        { code: "2701", name: "2701 | Coal, Briquettes, Ovoids" },
-        { code: "2709", name: "2709 | Crude Petroleum Oils" },
-        { code: "2710", name: "2710 | Petroleum Distillates (HSD/MS)" },
-        { code: "2801", name: "2801 | Fluorine / Chlorine / Bromine" },
-        { code: "2814", name: "2814 | Ammonia, Anhydrous" },
-        { code: "2901", name: "2901 | Acyclic Hydrocarbons" },
-        { code: "3002", name: "3002 | Blood / Vaccines / Antisera" },
-        { code: "3004", name: "3004 | Medicaments (Retail Packs)" },
-        { code: "3208", name: "3208 | Paints & Varnishes" },
-        { code: "3401", name: "3401 | Soap, Organic Surfactants" },
-        { code: "3901", name: "3901 | Polyethylene, Primary Form" },
-        { code: "3904", name: "3904 | PVC & Vinyl Copolymers" },
-        { code: "4001", name: "4001 | Natural Rubber, Latex" },
-        { code: "4002", name: "4002 | Synthetic Rubber" },
-        { code: "4101", name: "4101 | Raw Bovine / Equine Hides" },
-        { code: "4104", name: "4104 | Tanned / Crust Leather" },
-        { code: "4401", name: "4401 | Fuel Wood / Sawdust" },
-        { code: "4407", name: "4407 | Sawn / Sliced Timber" },
-        { code: "4412", name: "4412 | Plywood, Veneered Panels" },
-        { code: "4701", name: "4701 | Mechanical Wood Pulp" },
-        { code: "4802", name: "4802 | Uncoated Paper / Paperboard" },
-        { code: "4901", name: "4901 | Printed Books / Brochures" },
-        { code: "5201", name: "5201 | Cotton, Not Carded" },
-        { code: "5208", name: "5208 | Woven Cotton Fabrics" },
-        { code: "5402", name: "5402 | Synthetic Filament Yarn" },
-        { code: "5801", name: "5801 | Woven Pile Fabrics" },
-        { code: "6101", name: "6101 | Overcoats / Jackets, Knitted" },
-        { code: "6201", name: "6201 | Overcoats / Jackets, Woven" },
-        { code: "6301", name: "6301 | Blankets & Travel Rugs" },
-        { code: "6401", name: "6401 | Waterproof Footwear" },
-        { code: "6402", name: "6402 | Sports / Casual Footwear" },
-        { code: "6501", name: "6501 | Hat Forms / Hat Bodies" },
-        { code: "6801", name: "6801 | Setts, Curbstones, Flagstones" },
-        { code: "6907", name: "6907 | Unglazed Ceramic Tiles" },
-        { code: "7001", name: "7001 | Cullet / Other Waste Glass" },
-        { code: "7003", name: "7003 | Cast / Rolled Glass Sheets" },
-        { code: "7101", name: "7101 | Pearls, Natural / Cultured" },
-        { code: "7108", name: "7108 | Gold (including Gold Plated)" },
-        { code: "7201", name: "7201 | Pig Iron & Spiegeleisen" },
-        { code: "7207", name: "7207 | Semi-Finished Steel Products" },
-        { code: "7210", name: "7210 | Flat-Rolled Steel (Coated)" },
-        { code: "7301", name: "7301 | Sheet Piling & Angles" },
-        { code: "7601", name: "7601 | Unwrought Aluminium" },
-        { code: "8301", name: "8301 | Padlocks, Locks, Keys" },
-        { code: "8401", name: "8401 | Nuclear Reactors / Boilers" },
-        { code: "8408", name: "8408 | Diesel / Semi-Diesel Engines" },
-        { code: "8415", name: "8415 | Air-Conditioning Units" },
-        { code: "8418", name: "8418 | Refrigerators / Freezers" },
-        { code: "8471", name: "8471 | Automatic Data Processing Machines" },
-        { code: "8517", name: "8517 | Telephones / Smartphones" },
-        { code: "8528", name: "8528 | Monitors / Projectors / TVs" },
-        { code: "8541", name: "8541 | Semiconductors / Diodes / LEDs" },
-        { code: "8544", name: "8544 | Insulated Wire / Cable" },
-        { code: "8601", name: "8601 | Rail Locomotives (Electric)" },
-        { code: "8701", name: "8701 | Tractors" },
-        { code: "8702", name: "8702 | Motor Buses / Coaches" },
-        { code: "8703", name: "8703 | Passenger Cars / SUVs" },
-        { code: "8704", name: "8704 | Motor Vehicles for Goods" },
-        { code: "8802", name: "8802 | Aircraft / Helicopters" },
-        { code: "8901", name: "8901 | Cruise / Passenger Ships" },
-        { code: "8902", name: "8902 | Fishing Vessels" },
-        { code: "9001", name: "9001 | Optical Fibres / Cables" },
-        { code: "9018", name: "9018 | Instruments for Medical Science" },
-        { code: "9026", name: "9026 | Instruments for Measuring Flow" },
-        { code: "9301", name: "9301 | Military Weapons" },
-        { code: "9401", name: "9401 | Seats (Aircraft, Vehicle, Household)" },
-        { code: "9403", name: "9403 | Office / Kitchen / Bedroom Furniture" },
-        { code: "9503", name: "9503 | Tricycles, Scooters, Puzzles, Toys" },
-        { code: "9601", name: "9601 | Worked Ivory / Bone / Tortoise-shell" },
-        { code: "GENERAL CARGO", name: "General Cargo (Non-Specific)" },
-        { code: "HAZARDOUS CARGO", name: "Hazardous / DG Cargo" },
-        { code: "PERISHABLES", name: "Perishables / Cold Chain" },
-        { code: "PROJECT CARGO", name: "Project Cargo / ODC" }
+
+      // Combine operational defaults, full HS chapters list, specific headings list, and custom commodities
+      const combined = [
+        ...defaultAirCommodities,
+        ...globalHSNChapters,
+        ...globalHSNHeadings,
+        ...customCommodities
       ];
-      let customCommodities = [];
-      const stored = localStorage.getItem("gl_custom_sea_commodities");
-      if (stored) {
-        try { customCommodities = JSON.parse(stored); } catch(err) {}
-      }
-      const combined = [...defaultCommodities, ...customCommodities];
+
       matches = combined.filter(c => 
         c.code.toLowerCase().includes(val) || 
         c.name.toLowerCase().includes(val)
-      ).slice(0, 10);
+      );
+
+      // Dynamically add heading if typing a 4-digit code and no heading is explicitly matched
+      if (/^\d{4}$/.test(val)) {
+        const chapterCode = val.substring(0, 2);
+        const chapter = globalHSNChapters.find(ch => ch.code === chapterCode);
+        const hasDirectHeading = combined.some(h => h.code === val);
+        if (chapter && !hasDirectHeading) {
+          matches.unshift({
+            code: val,
+            name: `${val} | ${chapter.name.replace(/^Chapter \d{2} \| /, "")} (Heading)`
+          });
+        }
+      }
+
+      matches = matches.slice(0, 10);
     }
 
     currentMatches = matches;
@@ -1463,6 +1594,7 @@ function setupAutocomplete(inputEl, type) {
         const div = document.createElement("div");
         div.className = "autocomplete-item";
         
+        let label = "";
         if (type === "customers" || type === "linernames" || type === "sea_commodities" || type === "air_commodities") {
           label = `<div>${item.name}</div>`;
         } else if (type === "airlines" || type === "shippinglines") {
@@ -1496,6 +1628,16 @@ function setupAutocomplete(inputEl, type) {
     } else {
       dropdown.classList.remove("show");
     }
+  });
+
+  inputEl.addEventListener("blur", () => {
+    setTimeout(() => {
+      saveCustomEntry(type, inputEl.value);
+    }, 250);
+  });
+
+  inputEl.addEventListener("change", () => {
+    saveCustomEntry(type, inputEl.value);
   });
 
   document.addEventListener("click", (e) => {
@@ -1839,7 +1981,7 @@ function addAirlineCard(data = null) {
       <div class="form-group">
         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; font-weight: 700;">
           <input type="checkbox" class="air-enable-ams-fee" ${amsFeeEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
-          <span>AMS Fee ($)</span>
+          <span>AMS Fee</span>
         </label>
         <input type="number" step="0.01" min="0" class="air-ams-fee" placeholder="0.00" value="${ams_fee !== undefined && ams_fee !== '' ? ams_fee : '0.00'}" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; width: 100%;">
       </div>
