@@ -5642,70 +5642,244 @@ function printQuote() {
   printWindow.document.close();
 }
 
+// --- Column Header Filter State & Handlers ---
+window.hdrFilterState = {
+  refid: 'all', search_refid: '',
+  date: 'all', search_date: '',
+  mode: 'all', search_mode: '',
+  agentroute: 'all', search_agentroute: '',
+  desk: 'all', search_desk: '',
+  carrier: 'all', search_carrier: '',
+  buyrate: 'all', search_buyrate: '',
+  sellrate: 'all', search_sellrate: '',
+  gp: 'all', search_gp: '',
+  status: 'all', search_status: '',
+  actions: 'date-desc', search_actions: ''
+};
+
+window.toggleHdrFilterMenu = (event, key) => {
+  if (event) event.stopPropagation();
+  const menuId = `hdr-menu-${key}`;
+  const targetMenu = document.getElementById(menuId);
+  const isOpen = targetMenu?.classList.contains('open');
+
+  document.querySelectorAll('.hdr-filter-menu').forEach(m => m.classList.remove('open'));
+
+  if (!isOpen && targetMenu) {
+    targetMenu.classList.add('open');
+    const input = document.getElementById(`hdr-search-${key}`);
+    if (input) input.focus();
+  }
+};
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.hdr-filter-dropdown')) {
+    document.querySelectorAll('.hdr-filter-menu').forEach(m => m.classList.remove('open'));
+  }
+});
+
+window.onHdrSearchInput = (key, val) => {
+  window.hdrFilterState[`search_${key}`] = val.toLowerCase().trim();
+  
+  const optionsList = document.getElementById(`hdr-options-${key}`);
+  if (optionsList) {
+    const opts = optionsList.querySelectorAll('.hdr-filter-opt');
+    opts.forEach(opt => {
+      const txt = opt.textContent.toLowerCase();
+      if (!val || txt.includes(val.toLowerCase())) {
+        opt.style.display = '';
+      } else {
+        opt.style.display = 'none';
+      }
+    });
+  }
+  
+  applyDbFiltersAndSort();
+};
+
+window.selectHdrFilter = (key, value, label) => {
+  window.hdrFilterState[key] = value;
+  const btnLabel = document.getElementById(`hdr-label-${key}`);
+  const dropdownBtn = document.querySelector(`#dropdown-hdr-${key} .hdr-filter-btn`);
+  
+  if (btnLabel) btnLabel.textContent = label;
+  if (dropdownBtn) {
+    if (value !== 'all') {
+      dropdownBtn.classList.add('active-filter');
+    } else {
+      dropdownBtn.classList.remove('active-filter');
+    }
+  }
+
+  const optionsList = document.getElementById(`hdr-options-${key}`);
+  if (optionsList) {
+    optionsList.querySelectorAll('.hdr-filter-opt').forEach(opt => {
+      if (opt.getAttribute('onclick')?.includes(`'${value}'`)) {
+        opt.classList.add('active');
+      } else {
+        opt.classList.remove('active');
+      }
+    });
+  }
+
+  document.getElementById(`hdr-menu-${key}`)?.classList.remove('open');
+  applyDbFiltersAndSort();
+};
+
+window.selectHdrSort = (sortField, label) => {
+  window.hdrFilterState.actions = sortField;
+  const btnLabel = document.getElementById('hdr-label-sort');
+  if (btnLabel) btnLabel.textContent = label;
+
+  const optionsList = document.getElementById('hdr-options-actions');
+  if (optionsList) {
+    optionsList.querySelectorAll('.hdr-filter-opt').forEach(opt => {
+      if (opt.getAttribute('onclick')?.includes(`'${sortField}'`)) {
+        opt.classList.add('active');
+      } else {
+        opt.classList.remove('active');
+      }
+    });
+  }
+
+  document.getElementById('hdr-menu-actions')?.classList.remove('open');
+  applyDbFiltersAndSort();
+};
+
+window.resetAllHdrFilters = () => {
+  window.hdrFilterState = {
+    refid: 'all', search_refid: '',
+    date: 'all', search_date: '',
+    mode: 'all', search_mode: '',
+    agentroute: 'all', search_agentroute: '',
+    desk: 'all', search_desk: '',
+    carrier: 'all', search_carrier: '',
+    buyrate: 'all', search_buyrate: '',
+    sellrate: 'all', search_sellrate: '',
+    gp: 'all', search_gp: '',
+    status: 'all', search_status: '',
+    actions: 'date-desc', search_actions: ''
+  };
+
+  const keys = ['refid', 'date', 'mode', 'agentroute', 'desk', 'carrier', 'buyrate', 'sellrate', 'gp', 'status'];
+  keys.forEach(k => {
+    const searchInput = document.getElementById(`hdr-search-${k}`);
+    const btn = document.querySelector(`#dropdown-hdr-${k} .hdr-filter-btn`);
+    if (searchInput) searchInput.value = '';
+    if (btn) btn.classList.remove('active-filter');
+  });
+
+  if (document.getElementById('hdr-label-refid')) document.getElementById('hdr-label-refid').textContent = 'Ref ID';
+  if (document.getElementById('hdr-label-date')) document.getElementById('hdr-label-date').textContent = 'All Dates';
+  if (document.getElementById('hdr-label-mode')) document.getElementById('hdr-label-mode').textContent = 'All Modes';
+  if (document.getElementById('hdr-label-agentroute')) document.getElementById('hdr-label-agentroute').textContent = 'Agent/Route';
+  if (document.getElementById('hdr-label-desk')) document.getElementById('hdr-label-desk').textContent = 'All Desks';
+  if (document.getElementById('hdr-label-carrier')) document.getElementById('hdr-label-carrier').textContent = 'All Carriers';
+  if (document.getElementById('hdr-label-buyrate')) document.getElementById('hdr-label-buyrate').textContent = 'Buy Rate';
+  if (document.getElementById('hdr-label-sellrate')) document.getElementById('hdr-label-sellrate').textContent = 'Sell Rate';
+  if (document.getElementById('hdr-label-gp')) document.getElementById('hdr-label-gp').textContent = 'GP Profit';
+  if (document.getElementById('hdr-label-status')) document.getElementById('hdr-label-status').textContent = 'All Statuses';
+  if (document.getElementById('hdr-label-sort')) document.getElementById('hdr-label-sort').textContent = 'Sort By: Date (Newest)';
+
+  const startDate = document.getElementById('db-filter-start-date');
+  const endDate = document.getElementById('db-filter-end-date');
+  if (startDate) startDate.value = '';
+  if (endDate) endDate.value = '';
+
+  const topSearch = document.getElementById('db-search-input');
+  if (topSearch) topSearch.value = '';
+
+  document.querySelectorAll('.hdr-filter-menu').forEach(m => m.classList.remove('open'));
+  applyDbFiltersAndSort();
+};
+
 window.applyDbFiltersAndSort = () => {
   const tbody = document.getElementById("admin-quotes-body");
   if (!tbody) return;
 
-  const searchQuery = (document.getElementById("db-search-input")?.value || "").toLowerCase().trim();
-  const filterMode = document.getElementById("db-filter-mode")?.value || "all";
-  const filterStatus = document.getElementById("db-filter-status")?.value || "all";
-  const filterCreator = document.getElementById("db-filter-creator")?.value || "all";
-  const sortField = document.getElementById("db-sort-field")?.value || "date-desc";
+  const topSearch = (document.getElementById("db-search-input")?.value || "").toLowerCase().trim();
+  const st = window.hdrFilterState || {};
+  const startDateVal = document.getElementById("db-filter-start-date")?.value;
+  const endDateVal = document.getElementById("db-filter-end-date")?.value;
 
-  // Filter
-  let filtered = appState.quotes.filter(q => {
-    // Mode match
-    if (filterMode !== "all" && q.type !== filterMode) return false;
-    
-    // Status match
-    if (filterStatus !== "all" && q.status !== filterStatus) return false;
+  let filtered = (appState.quotes || []).filter(q => {
+    const refIdStr = (getQuoteRefId(q) || q.id || "").toLowerCase();
+    const dateStr = (q.date || "").toLowerCase();
+    const typeStr = (q.type || "").toLowerCase();
+    const creatorStr = (q.creator || "").toLowerCase();
+    const creatorName = (TEAM_ROLES[q.creator]?.name || "").toLowerCase();
+    const customerStr = (q.customer || "").toLowerCase();
+    const routeStr = (q.route || "").toLowerCase();
+    const originStr = (q.details?.origin || "").toLowerCase();
+    const destStr = (q.details?.destination || "").toLowerCase();
+    const carrierStr = (q.details?.airline || q.details?.shippingLine || "").toLowerCase();
+    const statusStr = (q.status || "").toLowerCase();
+    const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
+    const sellRateStr = (q.amount || "").toString().toLowerCase();
+    const gpStr = (q.grossProfit || "").toString().toLowerCase();
 
-    // Creator match
-    if (filterCreator !== "all" && q.creator !== filterCreator) return false;
+    // Mode filter
+    if (st.mode && st.mode !== 'all' && typeStr !== st.mode) return false;
 
-    // Search query match
-    if (searchQuery) {
-      const creatorName = (TEAM_ROLES[q.creator]?.name || "").toLowerCase();
-      const customer = (q.customer || "").toLowerCase();
-      const refId = q.id.toLowerCase();
-      const type = (q.type || "").toLowerCase();
-      const route = (q.route || "").toLowerCase();
-      const origin = (q.details?.origin || "").toLowerCase();
-      const destination = (q.details?.destination || "").toLowerCase();
-      const carrier = (q.details?.airline || q.details?.shippingLine || "").toLowerCase();
-      const incoterm = (q.details?.incoterm || "").toLowerCase();
-      
-      const isMatch = 
-        customer.includes(searchQuery) ||
-        refId.includes(searchQuery) ||
-        type.includes(searchQuery) ||
-        route.includes(searchQuery) ||
-        origin.includes(searchQuery) ||
-        destination.includes(searchQuery) ||
-        creatorName.includes(searchQuery) ||
-        carrier.includes(searchQuery) ||
-        incoterm.includes(searchQuery);
-        
-      if (!isMatch) return false;
+    // Status filter
+    if (st.status && st.status !== 'all' && statusStr !== st.status) return false;
+
+    // Desk filter
+    if (st.desk && st.desk !== 'all' && creatorStr !== st.desk) return false;
+
+    // Date year filter
+    if (st.date && st.date !== 'all') {
+      if (!dateStr.includes(st.date)) return false;
+    }
+
+    // Date range filter
+    if (startDateVal && new Date(q.date) < new Date(startDateVal)) return false;
+    if (endDateVal && new Date(q.date) > new Date(endDateVal)) return false;
+
+    // Search query matches for individual header filters
+    if (st.search_refid && !refIdStr.includes(st.search_refid)) return false;
+    if (st.search_date && !dateStr.includes(st.search_date)) return false;
+    if (st.search_mode && !typeStr.includes(st.search_mode)) return false;
+    if (st.search_agentroute && !customerStr.includes(st.search_agentroute) && !routeStr.includes(st.search_agentroute) && !originStr.includes(st.search_agentroute) && !destStr.includes(st.search_agentroute)) return false;
+    if (st.search_desk && !creatorName.includes(st.search_desk) && !creatorStr.includes(st.search_desk)) return false;
+    if (st.search_carrier && !carrierStr.includes(st.search_carrier)) return false;
+    if (st.search_buyrate && !buyRateStr.includes(st.search_buyrate)) return false;
+    if (st.search_sellrate && !sellRateStr.includes(st.search_sellrate)) return false;
+    if (st.search_gp && !gpStr.includes(st.search_gp)) return false;
+    if (st.search_status && !statusStr.includes(st.search_status)) return false;
+
+    // Global Top Search Bar match
+    if (topSearch) {
+      const match = 
+        customerStr.includes(topSearch) ||
+        refIdStr.includes(topSearch) ||
+        typeStr.includes(topSearch) ||
+        routeStr.includes(topSearch) ||
+        originStr.includes(topSearch) ||
+        destStr.includes(topSearch) ||
+        creatorName.includes(topSearch) ||
+        carrierStr.includes(topSearch);
+      if (!match) return false;
     }
 
     return true;
   });
 
-  // Sort
+  // Sort logic
+  const sortField = st.actions || "date-desc";
   filtered.sort((a, b) => {
     if (sortField === "date-desc") {
       return new Date(b.date) - new Date(a.date) || b.id.localeCompare(a.id);
     } else if (sortField === "date-asc") {
       return new Date(a.date) - new Date(b.date) || a.id.localeCompare(b.id);
     } else if (sortField === "customer-asc") {
-      return a.customer.toLowerCase().localeCompare(b.customer.toLowerCase());
+      return (a.customer || '').toLowerCase().localeCompare((b.customer || '').toLowerCase());
     } else if (sortField === "customer-desc") {
-      return b.customer.toLowerCase().localeCompare(a.customer.toLowerCase());
+      return (b.customer || '').toLowerCase().localeCompare((a.customer || '').toLowerCase());
     } else if (sortField === "amount-desc") {
-      return b.amountINR - a.amountINR;
+      return (b.amountINR || 0) - (a.amountINR || 0);
     } else if (sortField === "amount-asc") {
-      return a.amountINR - b.amountINR;
+      return (a.amountINR || 0) - (b.amountINR || 0);
     }
     return 0;
   });

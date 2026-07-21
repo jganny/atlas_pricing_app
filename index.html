@@ -543,78 +543,10 @@
             </div>
           </div>
 
-          <!-- Filter & Sort Controls Row -->
-          <div class="db-filters-row"
-            style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem 0; padding: 0.5rem; background: rgba(255,255,255,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.5); border-radius: 8px; align-items: center; justify-content: space-between;">
-            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
-              <span
-                style="font-size: 0.7rem; color: var(--t2); text-transform: uppercase; font-weight: bold; letter-spacing: 0.05em; font-family: 'Outfit', sans-serif;">Filters:</span>
-              <select id="db-filter-mode" onchange="applyDbFiltersAndSort()"
-                style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); color: #000; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer; max-width: 130px;">
-                <option value="all" style="background:#fff; color:#000;">All Modes</option>
-                <option value="air" style="background:#fff; color:#000;">Air Freight</option>
-                <option value="sea" style="background:#fff; color:#000;">Sea Freight</option>
-                <option value="custom" style="background:#fff; color:#000;">Custom Clearance</option>
-                <option value="transport" style="background:#fff; color:#000;">Transportation</option>
-                <option value="warehouse" style="background:#fff; color:#000;">Warehousing</option>
-              </select>
-
-              <select id="db-filter-status" onchange="applyDbFiltersAndSort()"
-                style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); color: #000; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer; max-width: 130px;">
-                <option value="all" style="background:#fff; color:#000;">All Statuses</option>
-                <option value="quoted" style="background:#fff; color:#000;">Quoted</option>
-                <option value="converted" style="background:#fff; color:#000;">Converted (Won)</option>
-                <option value="cancelled" style="background:#fff; color:#000;">Cancelled</option>
-                <option value="lost" style="background:#fff; color:#000;">Lost</option>
-              </select>
-
-              <select id="db-filter-creator" onchange="applyDbFiltersAndSort()"
-                style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); color: #000; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer; max-width: 130px;">
-                <option value="all" style="background:#fff; color:#000;">All Agents</option>
-                <option value="shashank" style="background:#fff; color:#000;">Shashank</option>
-                <option value="shaheer" style="background:#fff; color:#000;">Sea Nomination</option>
-                <option value="jaya" style="background:#fff; color:#000;">Jaya</option>
-                <option value="cathrina" style="background:#fff; color:#000;">Cathrina</option>
-              </select>
-
-              <!-- Granular Date Metrics -->
-              <input type="date" id="db-filter-start-date" onchange="applyDbFiltersAndSort()" placeholder="Start Date"
-                style="background: rgba(255, 255, 255, 0.7); color: #000; border: 1px solid rgba(255, 255, 255, 0.5); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; outline: none; cursor: pointer; max-width: 120px;">
-              <span style="font-size: 0.7rem; color: var(--text-dim);">to</span>
-              <input type="date" id="db-filter-end-date" onchange="applyDbFiltersAndSort()" placeholder="End Date"
-                style="background: rgba(255, 255, 255, 0.7); color: #000; border: 1px solid rgba(255, 255, 255, 0.5); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; outline: none; cursor: pointer; max-width: 120px;">
-
-              <input type="month" id="db-filter-month" onchange="applyDbFiltersAndSort()"
-                style="background: rgba(255, 255, 255, 0.7); color: #000; border: 1px solid rgba(255, 255, 255, 0.5); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; outline: none; cursor: pointer; max-width: 110px;">
-              <select id="db-filter-year" onchange="applyDbFiltersAndSort()"
-                style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); color: #000; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer; max-width: 110px;">
-                <option value="all" style="background:#fff; color:#000;">All Years</option>
-                <option value="2026" style="background:#fff; color:#000;">2026</option>
-                <option value="2025" style="background:#fff; color:#000;">2025</option>
-                <option value="2024" style="background:#fff; color:#000;">2024</option>
-              </select>
-            </div>
-
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <span
-                style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; letter-spacing: 0.05em; font-family: 'Outfit', sans-serif;">Sort
-                By:</span>
-              <select id="db-sort-field" onchange="applyDbFiltersAndSort()"
-                style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); color: #000; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: inherit; outline: none; cursor: pointer; max-width: 150px;">
-                <option value="date-desc" style="background:#fff; color:#000;">Date (Newest First)</option>
-                <option value="date-asc" style="background:#fff; color:#000;">Date (Oldest First)</option>
-                <option value="customer-asc" style="background:#fff; color:#000;">Customer (A-Z)</option>
-                <option value="customer-desc" style="background:#fff; color:#000;">Customer (Z-A)</option>
-                <option value="amount-desc" style="background:#fff; color:#000;">Amount (Highest First)</option>
-                <option value="amount-asc" style="background:#fff; color:#000;">Amount (Lowest First)</option>
-              </select>
-            </div>
-          </div>
-
           <div class="quotes-table-container">
             <table class="quotes-table">
               <thead>
-                <tr>
+                <tr class="table-header-titles">
                   <th>Ref ID</th>
                   <th>Date</th>
                   <th>Mode</th>
@@ -626,6 +558,224 @@
                   <th>GP</th>
                   <th>Status</th>
                   <th>Actions</th>
+                </tr>
+                <tr class="table-header-filters">
+                  <!-- REF ID Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-refid">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'refid')">
+                        <span id="hdr-label-refid">Ref ID</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-refid" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-refid" placeholder="Search Ref ID..." oninput="onHdrSearchInput('refid', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-refid">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('refid', 'all', 'All Ref IDs')">All Ref IDs</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- DATE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-date">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'date')">
+                        <span id="hdr-label-date">All Dates</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-date" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-date" placeholder="Search Date..." oninput="onHdrSearchInput('date', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-date">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('date', 'all', 'All Dates')">All Dates</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('date', '2026', '2026')">2026</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('date', '2025', '2025')">2025</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('date', '2024', '2024')">2024</div>
+                        </div>
+                        <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); display: flex; flex-direction: column; gap: 4px;">
+                          <span style="font-size: 0.65rem; color: var(--t2); font-weight: 700;">Range:</span>
+                          <input type="date" id="db-filter-start-date" class="hdr-date-input" onchange="applyDbFiltersAndSort()" placeholder="Start Date">
+                          <input type="date" id="db-filter-end-date" class="hdr-date-input" onchange="applyDbFiltersAndSort()" placeholder="End Date">
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- MODE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-mode">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'mode')">
+                        <span id="hdr-label-mode">All Modes</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-mode" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-mode" placeholder="Search Mode..." oninput="onHdrSearchInput('mode', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-mode">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('mode', 'all', 'All Modes')">All Modes</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'air', 'Air Freight')">Air Freight</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'sea', 'Sea Freight')">Sea Freight</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'custom', 'Custom Clearance')">Custom Clearance</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'transport', 'Transportation')">Transportation</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'warehouse', 'Warehousing')">Warehousing</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- AGENT & ROUTE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-agentroute">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'agentroute')">
+                        <span id="hdr-label-agentroute">Agent/Route</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-agentroute" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-agentroute" placeholder="Search Agent/Route..." oninput="onHdrSearchInput('agentroute', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-agentroute">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('agentroute', 'all', 'All Routes')">All Routes</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- PRICED BY DESK Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-desk">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'desk')">
+                        <span id="hdr-label-desk">All Desks</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-desk" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-desk" placeholder="Search Desk..." oninput="onHdrSearchInput('desk', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-desk">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('desk', 'all', 'All Desks')">All Desks</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'shashank', 'Shashank')">Shashank</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'shaheer', 'Sea Nomination')">Sea Nomination</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'jaya', 'Jaya')">Jaya</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'cathrina', 'Cathrina')">Cathrina</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- CARRIER Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-carrier">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'carrier')">
+                        <span id="hdr-label-carrier">All Carriers</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-carrier" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-carrier" placeholder="Search Carrier..." oninput="onHdrSearchInput('carrier', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-carrier">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- BUY RATE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-buyrate">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'buyrate')">
+                        <span id="hdr-label-buyrate">Buy Rate</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-buyrate" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-buyrate" placeholder="Filter Buy Rate..." oninput="onHdrSearchInput('buyrate', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-buyrate">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('buyrate', 'all', 'All Rates')">All Rates</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- SELL RATE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-sellrate">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'sellrate')">
+                        <span id="hdr-label-sellrate">Sell Rate</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-sellrate" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-sellrate" placeholder="Filter Sell Rate..." oninput="onHdrSearchInput('sellrate', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-sellrate">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('sellrate', 'all', 'All Rates')">All Rates</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- GP Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-gp">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'gp')">
+                        <span id="hdr-label-gp">GP Profit</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-gp" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-gp" placeholder="Filter GP..." oninput="onHdrSearchInput('gp', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-gp">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('gp', 'all', 'All Profit')">All Profit</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- STATUS Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-status">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'status')">
+                        <span id="hdr-label-status">All Statuses</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-status" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-status" placeholder="Search Status..." oninput="onHdrSearchInput('status', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-status">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('status', 'all', 'All Statuses')">All Statuses</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'quoted', 'Quoted')">Quoted</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'converted', 'Converted (Won)')">Converted (Won)</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'cancelled', 'Cancelled')">Cancelled</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'lost', 'Lost')">Lost</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- ACTIONS & SORT BY Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-actions">
+                      <button type="button" class="hdr-filter-btn" style="background: rgba(79, 70, 229, 0.1); color: var(--indigo);" onclick="toggleHdrFilterMenu(event, 'actions')">
+                        <span id="hdr-label-sort">Sort By: Date (Newest)</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-actions" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-actions" placeholder="Search Sort option..." oninput="onHdrSearchInput('actions', this.value)">
+                        </div>
+                        <div style="padding: 4px 8px; font-size: 0.65rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Sort By:</div>
+                        <div class="hdr-filter-options-list" id="hdr-options-actions">
+                          <div class="hdr-filter-opt active" onclick="selectHdrSort('date-desc', 'Sort: Date (Newest)')">Date (Newest First)</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrSort('date-asc', 'Sort: Date (Oldest)')">Date (Oldest First)</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrSort('customer-asc', 'Sort: Customer (A-Z)')">Customer (A-Z)</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrSort('customer-desc', 'Sort: Customer (Z-A)')">Customer (Z-A)</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrSort('amount-desc', 'Sort: Amount (Highest)')">Amount (Highest First)</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrSort('amount-asc', 'Sort: Amount (Lowest)')">Amount (Lowest First)</div>
+                        </div>
+                        <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); text-align: center;">
+                          <button type="button" style="background: var(--accent-error); color: #fff; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: 600; padding: 4px 8px; cursor: pointer; width: 100%;" onclick="resetAllHdrFilters()">Reset All Filters</button>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody id="admin-quotes-body">
