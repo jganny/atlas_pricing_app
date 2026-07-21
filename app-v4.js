@@ -1636,6 +1636,8 @@ function addAirlineCard(data = null) {
   const isSelected = data ? !!data.selected : (count === 1);
   const activeBreaks = data ? data.breaks : {};
   const ams_fee = data ? (data.ams_fee !== undefined ? data.ams_fee : (data.amsFee !== undefined ? data.amsFee : "")) : "";
+  const amsFeeEnabled = data && data.amsFeeEnabled !== undefined ? !!data.amsFeeEnabled : true;
+  const wbEnabled = data && data.wbEnabled !== undefined ? !!data.wbEnabled : true;
 
   const creatorRole = appState.currentUser;
   const isFreeHandOrNrs = creatorRole && (
@@ -1673,7 +1675,7 @@ function addAirlineCard(data = null) {
       </div>
     </div>
 
-    <div style="margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div style="margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
       <div class="form-group">
         <label>Quote Validity</label>
         <input type="date" class="air-validity" value="${validity}" required style="color-scheme: dark; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
@@ -1682,15 +1684,21 @@ function addAirlineCard(data = null) {
         <label>Pivot Weight (Kg)</label>
         <input type="number" class="air-pivot-weight" placeholder="optional" min="0" step="0.1" value="${pivotWeight}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
       </div>
+      <div class="form-group">
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; font-weight: 700;">
+          <input type="checkbox" class="air-enable-ams-fee" ${amsFeeEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
+          <span>AMS Fee ($)</span>
+        </label>
+        <input type="number" step="0.01" min="0" class="air-ams-fee" placeholder="0.00" value="${ams_fee !== undefined && ams_fee !== '' ? ams_fee : '0.00'}" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; width: 100%;">
+      </div>
     </div>
 
     <div style="margin-top: 0.75rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 8px;">
-        <div style="display: flex; align-items: center; gap: 8px; text-align: left;">
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-align: left; margin: 0;">
+          <input type="checkbox" class="air-enable-weight-breaks" ${wbEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
           <span style="font-size: 0.75rem; font-weight: 700; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">${isEligibleDeskUser() ? 'Weight Break Tariffs (Sell Rate per KG)' : 'Weight Break Tariffs (Rate per KG)'}</span>
-          <span style="font-size: 0.75rem; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">AMS fee:</span>
-          <input type="text" class="air-ams-fee" placeholder="0.00" value="${ams_fee !== undefined && ams_fee !== '' ? ams_fee : '0.00'}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 24px; text-align: left; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 60px;">
-        </div>
+        </label>
         <button type="button" class="btn-text add-weight-break-btn" style="font-size: 0.7rem; color: var(--sky); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0;">+ Add Weight Break</button>
       </div>
       
@@ -2057,8 +2065,14 @@ function calculateAirFreight() {
       TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
     );
 
-    const amsFee = parseFloat(card.querySelector(".air-ams-fee")?.value) || 0;
-    const ams_fee = amsFee;
+    const amsFeeCheckbox = card.querySelector(".air-enable-ams-fee");
+    const amsFeeEnabled = amsFeeCheckbox ? amsFeeCheckbox.checked : true;
+    const wbCheckbox = card.querySelector(".air-enable-weight-breaks");
+    const wbEnabled = wbCheckbox ? wbCheckbox.checked : true;
+
+    const rawAmsFee = parseFloat(card.querySelector(".air-ams-fee")?.value) || 0;
+    const amsFee = amsFeeEnabled ? rawAmsFee : 0;
+    const ams_fee = rawAmsFee;
 
     let activeRate = 0;
     let activeBuyRate = 0;
@@ -2107,14 +2121,14 @@ function calculateAirFreight() {
       }
     }
 
-    let baseFreightCost = tariffsEnabled ? (airlineChargeableWeight * activeRate) : 0;
+    let baseFreightCost = (tariffsEnabled && wbEnabled) ? (airlineChargeableWeight * activeRate) : 0;
     
     let isMinActive = false;
     const minVal = breaksData['min'];
     const minSell = (typeof minVal === 'object' && minVal !== null) ? (minVal.sell > 0 ? minVal.sell : minVal.buy) : (parseFloat(minVal) || 0);
     const minBuy = (typeof minVal === 'object' && minVal !== null) ? minVal.buy : 0;
 
-    if (tariffsEnabled && minSell > 0 && baseFreightCost < minSell) {
+    if (tariffsEnabled && wbEnabled && minSell > 0 && baseFreightCost < minSell) {
       baseFreightCost = minSell;
       isMinActive = true;
     }
@@ -2213,7 +2227,7 @@ function calculateAirFreight() {
       });
     }
 
-    if (originFeesEnabled && amsFee > 0) {
+    if (originFeesEnabled && amsFeeEnabled && amsFee > 0) {
       airlineSurchargeTotal += amsFee;
       airlineOriginSurcharges.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
     }
@@ -2232,6 +2246,8 @@ function calculateAirFreight() {
       pivotWeight,
       amsFee,
       ams_fee,
+      amsFeeEnabled,
+      wbEnabled,
       selected: isSelected,
       breaks: breaksData,
       chargeableWeight: airlineChargeableWeight,
@@ -2909,8 +2925,10 @@ function calculateSeaFreight() {
   let originSurchargesList = [];
   let destSurchargesList = [];
 
-  const amsFee = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
-  if (originFeesEnabled && amsFee > 0) {
+  const isSeaAmsEnabled = document.getElementById("sea-enable-ams-fee") ? document.getElementById("sea-enable-ams-fee").checked : true;
+  const rawSeaAms = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
+  const amsFee = isSeaAmsEnabled ? rawSeaAms : 0;
+  if (originFeesEnabled && isSeaAmsEnabled && amsFee > 0) {
     totalSurcharges += amsFee;
     originSurchargesList.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
   }
