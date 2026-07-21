@@ -3213,7 +3213,7 @@ function renderMemberDashboard(userId) {
   tbody.innerHTML = "";
 
   if (myQuotes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries priced yet. Click a button above to start pricing.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries priced yet. Click a button above to start pricing.</td></tr>`;
     return;
   }
 
@@ -3225,6 +3225,8 @@ function renderMemberDashboard(userId) {
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
     const quoteAmount = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
+    const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
     
     const isQuoted = quote.status === 'quoted';
     const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
@@ -3241,13 +3243,15 @@ function renderMemberDashboard(userId) {
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
       </td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
+      <td><div>${quoteAmount}</div></td>
       <td>
-        <div>${quoteAmount}</div>
         ${quote.grossProfit !== undefined ? `
-          <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
-            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
+            ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
-        ` : ''}
+        ` : '-'}
       </td>
       <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
       <td class="actions-cell">
@@ -5886,7 +5890,7 @@ window.applyDbFiltersAndSort = () => {
 
   tbody.innerHTML = "";
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
     return;
   }
 
@@ -5896,6 +5900,8 @@ window.applyDbFiltersAndSort = () => {
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
     const amountStr = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
+    const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
     
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
@@ -5909,17 +5915,21 @@ window.applyDbFiltersAndSort = () => {
         <div style="font-weight: 600;">${quote.customer}</div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
       </td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t1);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${carrierName}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
       <td>
         <div>${amountStr}</div>
         ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
-        ${quote.grossProfit !== undefined ? `
-          <div style="font-size:0.75rem; color:var(--accent-success); font-weight:700; margin-top:2px;" title="Gross Profit based on Confirmed Airline/Shipping Line">
-            GP: ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${Math.abs(quote.grossProfitINR).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
-          </div>
-        ` : ''}
       </td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
+      <td>
+        ${quote.grossProfit !== undefined ? `
+          <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
+            ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${Math.abs(quote.grossProfitINR || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
+          </div>
+        ` : '-'}
+      </td>
       <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
       <td class="actions-cell">
         <button class="action-icon-btn amend" style="background: rgba(245, 158, 11, 0.25); color: var(--accent-warning);" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
