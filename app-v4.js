@@ -9391,7 +9391,7 @@ function injectModuleFeesToFreight(module, freightType, target = 'origin') {
       { name: "Fuel Surcharge", rate: 3200.00, unit: "flat" }
     ],
     warehouse: [
-      { name: "Monthly Space Storage", rate: 8500.00, unit: "flat" },
+      { name: "Space Storage", rate: 8500.00, unit: "flat" },
       { name: "Handling In/Out", rate: 2000.00, unit: "flat" }
     ]
   };
