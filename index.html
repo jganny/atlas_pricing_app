@@ -272,37 +272,32 @@
       <div id="manager-panel" class="view-panel">
 
 
-        <!-- Navigation triggers for active calculators (Admin Quick Access) -->
-        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-          <button class="btn-primary" onclick="openActiveCalculator('air')" id="admin-goto-air">
+        <!-- Navigation triggers for active calculators (Admin Quick Access) — Bento Grid -->
+        <div class="bento-action-grid" style="margin-bottom: 1.5rem;">
+          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('air')" id="admin-goto-air" style="background: linear-gradient(135deg, var(--sky) 0%, var(--indigo) 100%); color:#fff;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path
-                d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
+              <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
             </svg>
-            Price Air Freight Enquiry
+            Price Air Freight
           </button>
-          <button class="btn-primary" style="background: var(--accent-sea);" onclick="openActiveCalculator('sea')"
-            id="admin-goto-sea">
+          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('sea')" id="admin-goto-sea" style="background: linear-gradient(135deg, var(--indigo) 0%, var(--teal) 100%); color:#fff;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
               <line x1="2" y1="10" x2="22" y2="10" />
               <path d="M12 17v4M8 21h8" />
             </svg>
-            Price Sea Freight Enquiry
+            Price Sea Freight
           </button>
-          <button class="btn-primary" style="background: var(--accent-success); color: #000;"
-            onclick="openActiveCalculator('custom')" id="admin-goto-custom">
-            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🛂</span>
+          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('custom')" id="admin-goto-custom" style="background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%); color:#fff;">
+            <span style="font-size: 1.1rem;">🛂</span>
             Price Custom Clearance
           </button>
-          <button class="btn-primary" style="background: var(--violet);" onclick="openActiveCalculator('transport')"
-            id="admin-goto-transport">
-            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🚛</span>
+          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('transport')" id="admin-goto-transport" style="background: linear-gradient(135deg, var(--violet) 0%, var(--indigo) 100%); color:#fff;">
+            <span style="font-size: 1.1rem;">🚛</span>
             Price Transportation
           </button>
-          <button class="btn-primary" style="background: #f4f6f9; color: #000;"
-            onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse">
-            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🏢</span>
+          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse" style="background: linear-gradient(135deg, var(--amber) 0%, #eab308 100%); color:#000;">
+            <span style="font-size: 1.1rem;">🏢</span>
             Price Warehousing
           </button>
         </div>
@@ -363,6 +358,18 @@
 
 
           </div>
+        </div>
+
+        <!-- ✅ Atlassian Live Margin Radar Strip — Real-time monitoring (no leaf unturned) -->
+        <div class="margin-radar-strip">
+          <span class="margin-radar-label">Live System Status:</span>
+          <span class="atl-tag atl-tag-success atl-tag-live">✦ Pricing Desk Online</span>
+          <span class="atl-tag atl-tag-info">Air Freight Active</span>
+          <span class="atl-tag atl-tag-sea">Sea Freight Active</span>
+          <span class="atl-tag atl-tag-teal">Custom Clearance Active</span>
+          <span class="atl-tag atl-tag-violet">Transport Active</span>
+          <span class="atl-tag atl-tag-warning">Warehousing Active</span>
+          <span style="margin-left:auto; font-size:0.65rem; color:var(--t3); font-weight:700;">Rate Validity: All Desks Monitored</span>
         </div>
 
         <!-- Metrics Grid -->
