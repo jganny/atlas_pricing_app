@@ -4144,18 +4144,24 @@ function saveCurrentQuote() {
     if (!originVal) { alert("Please fill in Origin Airport."); return; }
     if (!destVal) { alert("Please fill in Destination Airport."); return; }
     
+    const tariffsEnabled = document.getElementById("air-enable-tariffs")?.checked ?? true;
+    const originFeesEnabled = document.getElementById("air-enable-origin-fees")?.checked ?? true;
+    const destFeesEnabled = document.getElementById("air-enable-dest-fees")?.checked ?? true;
+
     const primaryAirline = appState.currentAirFreight.airline || "";
     const routing = appState.currentAirFreight.routing || "";
     const tt = appState.currentAirFreight.tt || "";
     const validity = appState.currentAirFreight.validity || "";
 
-    if (!primaryAirline || primaryAirline === "N/A") {
-      alert("Please enter Carrier / Airline in the selected airline option.");
-      return;
+    if (tariffsEnabled) {
+      if (!primaryAirline || primaryAirline === "N/A") {
+        alert("Please enter Carrier / Airline in the selected airline option.");
+        return;
+      }
+      if (!routing) { alert("Please fill in Routing Details in the selected airline option."); return; }
+      if (!tt) { alert("Please fill in Transit Time (TT) in the selected airline option."); return; }
+      if (!validity) { alert("Please fill in Quote Validity in the selected airline option."); return; }
     }
-    if (!routing) { alert("Please fill in Routing Details in the selected airline option."); return; }
-    if (!tt) { alert("Please fill in Transit Time (TT) in the selected airline option."); return; }
-    if (!validity) { alert("Please fill in Quote Validity in the selected airline option."); return; }
 
     const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
     if (rows.length === 0) {
@@ -4180,42 +4186,48 @@ function saveCurrentQuote() {
       return;
     }
 
-    const sellRateVal = appState.currentAirFreight.appliedRate || 0;
-    const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
+    if (tariffsEnabled) {
+      const sellRateVal = appState.currentAirFreight.appliedRate || 0;
+      const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
 
-    if (sellRateVal > 0 && buyRateVal > 0) {
-      alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
-      return;
-    }
-    if (sellRateVal <= 0 && buyRateVal <= 0) {
-      alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
-      return;
-    }
-
-    const airOriginRows = document.querySelectorAll("#air-origin-surcharges-body tr");
-    let hasEmptyAirOrigin = false;
-    airOriginRows.forEach(row => {
-      const rateInput = row.querySelector(".chg-rate");
-      if (rateInput && rateInput.value.trim() === "") {
-        hasEmptyAirOrigin = true;
+      if (sellRateVal > 0 && buyRateVal > 0) {
+        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+        return;
       }
-    });
-    if (hasEmptyAirOrigin) {
-      alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
-      return;
+      if (sellRateVal <= 0 && buyRateVal <= 0) {
+        alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
+        return;
+      }
     }
 
-    const airDestRows = document.querySelectorAll("#air-dest-surcharges-body tr");
-    let hasEmptyAirDest = false;
-    airDestRows.forEach(row => {
-      const rateInput = row.querySelector(".chg-rate");
-      if (rateInput && rateInput.value.trim() === "") {
-        hasEmptyAirDest = true;
+    if (originFeesEnabled) {
+      const airOriginRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+      let hasEmptyAirOrigin = false;
+      airOriginRows.forEach(row => {
+        const rateInput = row.querySelector(".chg-rate");
+        if (rateInput && rateInput.value.trim() === "") {
+          hasEmptyAirOrigin = true;
+        }
+      });
+      if (hasEmptyAirOrigin) {
+        alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
+        return;
       }
-    });
-    if (hasEmptyAirDest) {
-      alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
-      return;
+    }
+
+    if (destFeesEnabled) {
+      const airDestRows = document.querySelectorAll("#air-dest-surcharges-body tr");
+      let hasEmptyAirDest = false;
+      airDestRows.forEach(row => {
+        const rateInput = row.querySelector(".chg-rate");
+        if (rateInput && rateInput.value.trim() === "") {
+          hasEmptyAirDest = true;
+        }
+      });
+      if (hasEmptyAirDest) {
+        alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
+        return;
+      }
     }
 
     const origin = originVal.split(" - ")[0];
@@ -4284,13 +4296,20 @@ function saveCurrentQuote() {
 
     if (!originVal) { alert("Please fill in Port of Loading (POL)."); return; }
     if (!destVal) { alert("Please fill in Port of Discharge (POD)."); return; }
-    if (!shippingLineVal) { alert("Please fill in Shipping Carrier (Line)."); return; }
     if (grossWeight <= 0) { alert("Please enter Total Gross Weight greater than zero."); return; }
     if (volume <= 0) { alert("Please enter Total Volume (CBM) greater than zero."); return; }
     if (pkgQty <= 0) { alert("Please enter Total Package Quantity greater than zero."); return; }
-    if (!routing) { alert("Please fill in Routing Details."); return; }
-    if (!tt) { alert("Please fill in Transit Time (TT)."); return; }
-    if (!validity) { alert("Please fill in Quote Validity."); return; }
+
+    const tariffsEnabled = document.getElementById("sea-enable-tariffs")?.checked ?? true;
+    const originFeesEnabled = document.getElementById("sea-enable-origin-fees")?.checked ?? true;
+    const destFeesEnabled = document.getElementById("sea-enable-dest-fees")?.checked ?? true;
+
+    if (tariffsEnabled) {
+      if (!shippingLineVal) { alert("Please fill in Shipping Carrier (Line)."); return; }
+      if (!routing) { alert("Please fill in Routing Details."); return; }
+      if (!tt) { alert("Please fill in Transit Time (TT)."); return; }
+      if (!validity) { alert("Please fill in Quote Validity."); return; }
+    }
 
     const origin = originVal.split(" - ")[0];
     const dest = destVal.split(" - ")[0];
@@ -4299,9 +4318,11 @@ function saveCurrentQuote() {
     const containerItems = [];
     if (appState.currentSeaFreight.type === 'fcl') {
       const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
-      if (fclRows.length === 0) {
-        alert("Please add at least one Container Line for FCL ocean freight.");
-        return;
+      if (tariffsEnabled) {
+        if (fclRows.length === 0) {
+          alert("Please add at least one Container Line for FCL ocean freight.");
+          return;
+        }
       }
       let hasInvalidFcl = false;
       let hasBoth = false;
@@ -4323,32 +4344,36 @@ function saveCurrentQuote() {
         }
         containerItems.push({ type, qty, rate, buy });
       });
-      if (hasInvalidFcl) {
-        alert("Please fill in Container Quantity for all container rows.");
-        return;
-      }
-      if (hasBoth) {
-        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
-        return;
-      }
-      if (hasNeither) {
-        alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
-        return;
+      if (tariffsEnabled) {
+        if (hasInvalidFcl) {
+          alert("Please fill in Container Quantity for all container rows.");
+          return;
+        }
+        if (hasBoth) {
+          alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+          return;
+        }
+        if (hasNeither) {
+          alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
+          return;
+        }
       }
     }
 
     const cargoItems = [];
     const rows = document.querySelectorAll("#sea-cargo-body .sea-cargo-item-row");
     if (appState.currentSeaFreight.type === 'lcl') {
-      const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
-      const lclBuyRate = parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0;
-      if (lclRate > 0 && lclBuyRate > 0) {
-        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
-        return;
-      }
-      if (lclRate <= 0 && lclBuyRate <= 0) {
-        alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
-        return;
+      if (tariffsEnabled) {
+        const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
+        const lclBuyRate = parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0;
+        if (lclRate > 0 && lclBuyRate > 0) {
+          alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+          return;
+        }
+        if (lclRate <= 0 && lclBuyRate <= 0) {
+          alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
+          return;
+        }
       }
       if (rows.length === 0) {
         alert("Please add at least one Cargo Line in the Dimensions Calculator.");
@@ -4371,15 +4396,17 @@ function saveCurrentQuote() {
         return;
       }
     } else if (appState.currentSeaFreight.type === 'bb') {
-      const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
-      const bbBuyRate = parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0;
-      if (bbRate > 0 && bbBuyRate > 0) {
-        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
-        return;
-      }
-      if (bbRate <= 0 && bbBuyRate <= 0) {
-        alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
-        return;
+      if (tariffsEnabled) {
+        const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
+        const bbBuyRate = parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0;
+        if (bbRate > 0 && bbBuyRate > 0) {
+          alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+          return;
+        }
+        if (bbRate <= 0 && bbBuyRate <= 0) {
+          alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
+          return;
+        }
       }
       if (rows.length === 0) {
         alert("Please add at least one Cargo Line in the Dimensions Calculator.");
@@ -4418,30 +4445,34 @@ function saveCurrentQuote() {
       });
     }
 
-    const seaOriginRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
-    let hasEmptySeaOrigin = false;
-    seaOriginRows.forEach(row => {
-      const rateInput = row.querySelector(".chg-rate");
-      if (rateInput && rateInput.value.trim() === "") {
-        hasEmptySeaOrigin = true;
+    if (originFeesEnabled) {
+      const seaOriginRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
+      let hasEmptySeaOrigin = false;
+      seaOriginRows.forEach(row => {
+        const rateInput = row.querySelector(".chg-rate");
+        if (rateInput && rateInput.value.trim() === "") {
+          hasEmptySeaOrigin = true;
+        }
+      });
+      if (hasEmptySeaOrigin) {
+        alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
+        return;
       }
-    });
-    if (hasEmptySeaOrigin) {
-      alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
-      return;
     }
 
-    const seaDestRows = document.querySelectorAll("#sea-dest-surcharges-body tr");
-    let hasEmptySeaDest = false;
-    seaDestRows.forEach(row => {
-      const rateInput = row.querySelector(".chg-rate");
-      if (rateInput && rateInput.value.trim() === "") {
-        hasEmptySeaDest = true;
+    if (destFeesEnabled) {
+      const seaDestRows = document.querySelectorAll("#sea-dest-surcharges-body tr");
+      let hasEmptySeaDest = false;
+      seaDestRows.forEach(row => {
+        const rateInput = row.querySelector(".chg-rate");
+        if (rateInput && rateInput.value.trim() === "") {
+          hasEmptySeaDest = true;
+        }
+      });
+      if (hasEmptySeaDest) {
+        alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
+        return;
       }
-    });
-    if (hasEmptySeaDest) {
-      alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
-      return;
     }
 
     quoteData.type = "sea";
