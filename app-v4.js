@@ -1879,6 +1879,7 @@ function updateCartageRowVisibility() {
         row.innerHTML = `
           <td><input type="text" class="chg-name" value="Cartage" required></td>
           <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg">Per kg</option>
@@ -1895,6 +1896,7 @@ function updateCartageRowVisibility() {
         row.innerHTML = `
           <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td>
             <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
               <option value="kg">Per kg</option>
@@ -2171,6 +2173,8 @@ function calculateAirFreight() {
         
         let rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
         let unit = row.querySelector(".chg-unit").value;
+        const buyRateInput = row.querySelector(".chg-buy-rate");
+        const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
 
         const creatorRole = appState.currentUser;
         const isFreeHandOrNrs = creatorRole && (
@@ -2206,7 +2210,7 @@ function calculateAirFreight() {
         if (surchargeName && rate > 0) {
           let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
           airlineSurchargeTotal += cost;
-          airlineOriginSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
+          airlineOriginSurcharges.push({ name: surchargeName, rate, buyRate, unit, calculatedCost: cost });
         }
       });
     }
@@ -2218,11 +2222,13 @@ function calculateAirFreight() {
         const surchargeName = row.querySelector(".chg-name").value.trim();
         const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
         const unit = row.querySelector(".chg-unit").value;
+        const buyRateInput = row.querySelector(".chg-buy-rate");
+        const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
 
         if (surchargeName && rate > 0) {
           let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
           airlineSurchargeTotal += cost;
-          airlineDestSurcharges.push({ name: surchargeName, rate, unit, calculatedCost: cost });
+          airlineDestSurcharges.push({ name: surchargeName, rate, buyRate, unit, calculatedCost: cost });
         }
       });
     }
@@ -2939,6 +2945,8 @@ function calculateSeaFreight() {
       const name = row.querySelector(".chg-name").value.trim();
       const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
       const unit = row.querySelector(".chg-unit")?.value || 'flat';
+      const buyRateInput = row.querySelector(".chg-buy-rate");
+      const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
       
       if (name && rate > 0) {
         let cost = 0;
@@ -2952,7 +2960,7 @@ function calculateSeaFreight() {
           cost = rate;
         }
         totalSurcharges += cost;
-        originSurchargesList.push({ name, rate, unit, calculatedCost: cost });
+        originSurchargesList.push({ name, rate, buyRate, unit, calculatedCost: cost });
       }
     });
   }
@@ -2963,6 +2971,8 @@ function calculateSeaFreight() {
       const name = row.querySelector(".chg-name").value.trim();
       const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
       const unit = row.querySelector(".chg-unit")?.value || 'flat';
+      const buyRateInput = row.querySelector(".chg-buy-rate");
+      const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
       
       if (name && rate > 0) {
         let cost = 0;
@@ -2976,7 +2986,7 @@ function calculateSeaFreight() {
           cost = rate;
         }
         totalSurcharges += cost;
-        destSurchargesList.push({ name, rate, unit, calculatedCost: cost });
+        destSurchargesList.push({ name, rate, buyRate, unit, calculatedCost: cost });
       }
     });
   }
@@ -3133,6 +3143,7 @@ function setupSurchargesEvents(freightType) {
       row.innerHTML = `
         <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
         <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Rate" required></td>
+        <td><input type="number" class="chg-buy-rate" min="0" step="0.01" placeholder="Cost" value="0.00" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit">
             <option value="kg">Per kg</option>
@@ -3149,6 +3160,7 @@ function setupSurchargesEvents(freightType) {
       row.innerHTML = `
         <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
         <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Cost" required></td>
+        <td><input type="number" class="chg-buy-rate" min="0" step="0.01" placeholder="Cost" value="0.00" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
@@ -4661,6 +4673,7 @@ function resetSurchargesToDefaults() {
         <tr>
           <td><input type="text" class="chg-name" value="Xray" required></td>
           <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg" selected>Per kg</option>
@@ -4676,6 +4689,7 @@ function resetSurchargesToDefaults() {
         <tr>
           <td><input type="text" class="chg-name" value="Cartage" required></td>
           <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg">Per kg</option>
@@ -4691,6 +4705,7 @@ function resetSurchargesToDefaults() {
         <tr>
           <td><input type="text" class="chg-name" value="Misc" required></td>
           <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg">Per kg</option>
@@ -4709,6 +4724,7 @@ function resetSurchargesToDefaults() {
         <tr>
           <td><input type="text" class="chg-name" value="Xray" required></td>
           <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg" selected>Per kg</option>
@@ -4724,6 +4740,7 @@ function resetSurchargesToDefaults() {
         <tr>
           <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td>
             <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
               <option value="kg">Per kg</option>
@@ -4739,6 +4756,7 @@ function resetSurchargesToDefaults() {
         <tr>
           <td><input type="text" class="chg-name" value="Misc" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td>
             <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
               <option value="kg">Per kg</option>
@@ -4783,6 +4801,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -4800,6 +4819,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
@@ -4820,6 +4840,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -4837,6 +4858,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
@@ -4854,6 +4876,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Port Handling Charges" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -4874,6 +4897,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Lashing & Securing" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -4891,6 +4915,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Stevedoring" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -4908,6 +4933,7 @@ function populateSeaSurcharges(mode) {
       <tr>
         <td><input type="text" class="chg-name" value="Port Handling" required></td>
         <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -6549,6 +6575,7 @@ function repopulateSurchargesTable(tableBodyId, surchargesList) {
     tr.innerHTML = `
       <td><input type="text" class="chg-name" list="${autocompleteList}" value="${s.name}" required></td>
       <td><input type="number" class="chg-rate" step="0.01" value="${s.rate}" required></td>
+      <td><input type="number" class="chg-buy-rate" step="0.01" value="${s.buyRate || 0.00}" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
       <td>
         <select class="chg-unit">
           <option value="flat" ${s.unit === 'flat' ? 'selected' : ''}>Flat Fee</option>
