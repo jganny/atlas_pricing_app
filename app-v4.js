@@ -5797,9 +5797,83 @@ window.resetAllHdrFilters = () => {
   applyDbFiltersAndSort();
 };
 
+window.populateAllHeaderFilterDropdowns = () => {
+  const quotes = appState.quotes || [];
+
+  // 1. REF ID
+  const refIdOptions = document.getElementById('hdr-options-refid');
+  if (refIdOptions) {
+    const uniqueRefIds = Array.from(new Set(quotes.map(q => getQuoteRefId(q)).filter(Boolean))).sort();
+    let html = `<div class="hdr-filter-opt ${window.hdrFilterState.refid === 'all' ? 'active' : ''}" onclick="selectHdrFilter('refid', 'all', 'All Ref IDs')">All Ref IDs</div>`;
+    uniqueRefIds.forEach(id => {
+      const active = window.hdrFilterState.refid === id ? 'active' : '';
+      const displayId = `#${id}`;
+      const escapedId = id.replace(/'/g, "\\'");
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectHdrFilter('refid', '${escapedId}', '${displayId}')">${displayId}</div>`;
+    });
+    refIdOptions.innerHTML = html;
+  }
+
+  // 2. PRICED BY DESK (Show ALL Users/Creators)
+  const deskOptions = document.getElementById('hdr-options-desk');
+  if (deskOptions) {
+    const creatorsSet = new Set(Object.keys(TEAM_ROLES));
+    quotes.forEach(q => { if (q.creator) creatorsSet.add(q.creator); });
+    
+    let html = `<div class="hdr-filter-opt ${window.hdrFilterState.desk === 'all' ? 'active' : ''}" onclick="selectHdrFilter('desk', 'all', 'All Desks')">All Desks</div>`;
+    Array.from(creatorsSet).forEach(cId => {
+      const name = (TEAM_ROLES[cId]?.name || cId).replace(/\(Free Hand\)/g, "").trim();
+      const active = window.hdrFilterState.desk === cId ? 'active' : '';
+      const escapedId = cId.replace(/'/g, "\\'");
+      const escapedName = name.replace(/'/g, "\\'");
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectHdrFilter('desk', '${escapedId}', '${escapedName}')">${name}</div>`;
+    });
+    deskOptions.innerHTML = html;
+  }
+
+  // 3. CARRIER (Show ALL Airlines & Shipping Lines)
+  const carrierOptions = document.getElementById('hdr-options-carrier');
+  if (carrierOptions) {
+    const carrierSet = new Set();
+    quotes.forEach(q => {
+      const c = q.details?.airline || q.details?.shippingLine || q.details?.carrier;
+      if (c && c.trim()) carrierSet.add(c.trim());
+    });
+    const sortedCarriers = Array.from(carrierSet).sort();
+    let html = `<div class="hdr-filter-opt ${window.hdrFilterState.carrier === 'all' ? 'active' : ''}" onclick="selectHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>`;
+    sortedCarriers.forEach(c => {
+      const active = window.hdrFilterState.carrier === c ? 'active' : '';
+      const escapedC = c.replace(/'/g, "\\'");
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectHdrFilter('carrier', '${escapedC}', '${escapedC}')">${c}</div>`;
+    });
+    carrierOptions.innerHTML = html;
+  }
+
+  // 4. AGENT & ROUTE DETAILS (Show ALL Customers/Agents & Routes)
+  const agentRouteOptions = document.getElementById('hdr-options-agentroute');
+  if (agentRouteOptions) {
+    const itemsSet = new Set();
+    quotes.forEach(q => {
+      if (q.customer && q.customer.trim()) itemsSet.add(q.customer.trim());
+      if (q.route && q.route.trim()) itemsSet.add(q.route.trim());
+    });
+    const sortedItems = Array.from(itemsSet).sort();
+    let html = `<div class="hdr-filter-opt ${window.hdrFilterState.agentroute === 'all' ? 'active' : ''}" onclick="selectHdrFilter('agentroute', 'all', 'All Agents & Routes')">All Agents & Routes</div>`;
+    sortedItems.forEach(item => {
+      const active = window.hdrFilterState.agentroute === item ? 'active' : '';
+      const escapedItem = item.replace(/'/g, "\\'");
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectHdrFilter('agentroute', '${escapedItem}', '${escapedItem}')">${item}</div>`;
+    });
+    agentRouteOptions.innerHTML = html;
+  }
+};
+
 window.applyDbFiltersAndSort = () => {
   const tbody = document.getElementById("admin-quotes-body");
   if (!tbody) return;
+
+  // Populate dynamic filter option lists
+  populateAllHeaderFilterDropdowns();
 
   const topSearch = (document.getElementById("db-search-input")?.value || "").toLowerCase().trim();
   const st = window.hdrFilterState || {};
@@ -5816,7 +5890,7 @@ window.applyDbFiltersAndSort = () => {
     const routeStr = (q.route || "").toLowerCase();
     const originStr = (q.details?.origin || "").toLowerCase();
     const destStr = (q.details?.destination || "").toLowerCase();
-    const carrierStr = (q.details?.airline || q.details?.shippingLine || "").toLowerCase();
+    const carrierStr = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "").toLowerCase();
     const statusStr = (q.status || "").toLowerCase();
     const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
     const sellRateStr = (q.amount || "").toString().toLowerCase();
@@ -5828,8 +5902,33 @@ window.applyDbFiltersAndSort = () => {
     // Status filter
     if (st.status && st.status !== 'all' && statusStr !== st.status) return false;
 
-    // Desk filter
-    if (st.desk && st.desk !== 'all' && creatorStr !== st.desk) return false;
+    // Desk filter (match creator ID or name)
+    if (st.desk && st.desk !== 'all') {
+      const targetDesk = st.desk.toLowerCase();
+      const deskRoleName = (TEAM_ROLES[st.desk]?.name || '').toLowerCase();
+      if (creatorStr !== targetDesk && creatorName !== targetDesk && !deskRoleName.includes(creatorName) && !creatorName.includes(targetDesk)) {
+        return false;
+      }
+    }
+
+    // Carrier filter (match exact carrier name)
+    if (st.carrier && st.carrier !== 'all') {
+      if (carrierStr !== st.carrier.toLowerCase()) return false;
+    }
+
+    // Agent & Route filter (match customer or route)
+    if (st.agentroute && st.agentroute !== 'all') {
+      const targetAR = st.agentroute.toLowerCase();
+      if (customerStr !== targetAR && routeStr !== targetAR && !customerStr.includes(targetAR) && !routeStr.includes(targetAR)) {
+        return false;
+      }
+    }
+
+    // Ref ID filter (match ref ID)
+    if (st.refid && st.refid !== 'all') {
+      const targetRef = st.refid.toLowerCase().replace('#', '');
+      if (refIdStr !== targetRef && !refIdStr.includes(targetRef)) return false;
+    }
 
     // Date year filter
     if (st.date && st.date !== 'all') {
