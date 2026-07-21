@@ -2029,8 +2029,8 @@ function calculateAirFreight() {
       TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
     );
 
-    const amsFee = isFreeHandOrNrs ? (parseFloat(card.querySelector(".air-ams-fee")?.value) || 0) : 0;
-    const ams_fee = parseFloat(card.querySelector(".air-ams-fee")?.value) || 0;
+    const amsFee = parseFloat(card.querySelector(".air-ams-fee")?.value) || 0;
+    const ams_fee = amsFee;
 
     let activeRate = 0;
     let activeBuyRate = 0;
@@ -2181,7 +2181,7 @@ function calculateAirFreight() {
       }
     });
 
-    if (isFreeHandOrNrs && amsFee > 0) {
+    if (amsFee > 0) {
       airlineSurchargeTotal += amsFee;
       airlineOriginSurcharges.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
     }
@@ -2602,6 +2602,7 @@ function setupSeaFreightEvents() {
   document.getElementById("sea-routing")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-tt")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-validity")?.addEventListener("input", calculateSeaFreight);
+  document.getElementById("sea-ams-fee")?.addEventListener("input", calculateSeaFreight);
 
   // Bind cargo parameter dropdowns (universal — FCL / LCL / BB)
   const seaCargoParamIds = [
