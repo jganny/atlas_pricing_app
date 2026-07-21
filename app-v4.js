@@ -10498,8 +10498,62 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  window.updateArchiveLookupSuggestions = async function(val) {
+    const datalist = document.getElementById("archive-lookup-suggestions");
+    if (!datalist) return;
+    datalist.innerHTML = "";
+    if (!val || val.trim().length < 2) return;
+    
+    const searchVal = val.toLowerCase().trim();
+    const suggestions = new Set();
+    
+    // 1. Memory quotes
+    (appState.quotes || []).forEach(q => {
+      const refId = (getQuoteRefId(q) || q.id || "").toLowerCase();
+      const customer = (q.customer || "").toLowerCase();
+      if (refId.includes(searchVal) || customer.includes(searchVal)) {
+        suggestions.add(getQuoteRefId(q) || q.id);
+      }
+    });
+    
+    // 2. Offline archive
+    try {
+      const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
+      offlineArchive.forEach(q => {
+        const refId = (getQuoteRefId(q) || q.id || "").toLowerCase();
+        const customer = (q.customer || "").toLowerCase();
+        if (refId.includes(searchVal) || customer.includes(searchVal)) {
+          suggestions.add(getQuoteRefId(q) || q.id);
+        }
+      });
+    } catch(e) {}
+    
+    // 3. Firestore archive
+    if (DB.isCloud && DB.firestoreRef) {
+      try {
+        const snapshot = await DB.firestoreRef.collection("archive_quotes")
+          .limit(20)
+          .get();
+        snapshot.forEach(doc => {
+          const q = doc.data();
+          const refId = (getQuoteRefId(q) || q.id || "").toLowerCase();
+          const customer = (q.customer || "").toLowerCase();
+          if (refId.includes(searchVal) || customer.includes(searchVal)) {
+            suggestions.add(getQuoteRefId(q) || q.id);
+          }
+        });
+      } catch(e) {}
+    }
+    
+    Array.from(suggestions).slice(0, 15).forEach(s => {
+      const option = document.createElement("option");
+      option.value = s;
+      datalist.appendChild(option);
+    });
+  };
+
   window.runAutoArchival = async function() {
-    const thresholdDays = 180;
+    const thresholdDays = 90;
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - thresholdDays);
     
@@ -10516,11 +10570,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     
     if (toArchive.length === 0) {
-      alert("No quotes older than 180 days found to archive.");
+      alert("No quotes older than 90 days found to archive.");
       return;
     }
     
-    if (!confirm(`Are you sure you want to archive ${toArchive.length} quotes older than 180 days? They will be moved to the archival database to speed up the app.`)) {
+    if (!confirm(`Are you sure you want to archive ${toArchive.length} quotes older than 90 days? They will be moved to the archival database to speed up the app.`)) {
       return;
     }
     
@@ -10554,5 +10608,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Check broadcast every 3 seconds
   setInterval(checkActiveBroadcast, 3000);
+
+  // Populate users dropdown immediately on load
+  if (typeof populateReportUsers === 'function') {
+    populateReportUsers();
+  }
 });
 
