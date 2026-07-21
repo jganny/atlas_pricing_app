@@ -757,6 +757,7 @@ function goHome() {
     document.getElementById("member-dashboard-panel").classList.add("active");
     renderMemberDashboard(appState.currentUser);
   }
+  if (typeof updateAdminModulePermissions === 'function') updateAdminModulePermissions();
 }
 window.goHome = goHome;
 
@@ -9324,149 +9325,243 @@ function toggleModulePathway(module, mode) {
 }
 window.toggleModulePathway = toggleModulePathway;
 
+function updateAdminModulePermissions() {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  const adminButtons = document.querySelectorAll(".btn-admin-action");
+  adminButtons.forEach(btn => {
+    btn.style.display = isAdmin ? "inline-block" : "none";
+  });
+
+  ["custom-standalone-body", "transport-standalone-body", "warehouse-standalone-body"].forEach(bodyId => {
+    const body = document.getElementById(bodyId);
+    if (body) {
+      body.querySelectorAll(".chg-name").forEach(input => {
+        if (!isAdmin) {
+          input.setAttribute("readonly", true);
+          input.style.background = "rgba(255,255,255,0.01)";
+          input.style.color = "var(--text-dim)";
+        } else {
+          input.removeAttribute("readonly");
+          input.style.background = "rgba(255,255,255,0.03)";
+          input.style.color = "var(--t1)";
+        }
+      });
+    }
+  });
+}
+window.updateAdminModulePermissions = updateAdminModulePermissions;
+
+function updateCustomClearanceOptions() {
+  calculateCustomClearance();
+}
+window.updateCustomClearanceOptions = updateCustomClearanceOptions;
+
+function addCustomRow() {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    alert("Permission Denied: Only Admin can add or delete rows.");
+    return;
+  }
+  const tbody = document.getElementById("custom-standalone-body");
+  if (!tbody) return;
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input type="text" class="chg-name" value="Custom Surcharge" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+    <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateCustomClearance()"></td>
+    <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+    <td style="text-align: center;">
+      <button type="button" class="btn-admin-action delete-btn" onclick="removeCustomRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  updateAdminModulePermissions();
+  calculateCustomClearance();
+}
+window.addCustomRow = addCustomRow;
+
+function removeCustomRow(btn) {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    alert("Permission Denied: Only Admin can add or delete rows.");
+    return;
+  }
+  btn.closest("tr").remove();
+  calculateCustomClearance();
+}
+window.removeCustomRow = removeCustomRow;
+
+function addTransportRow(type = 'surcharge') {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    alert("Permission Denied: Only Admin can add or delete rows.");
+    return;
+  }
+  const tbody = document.getElementById("transport-standalone-body");
+  if (!tbody) return;
+  const tr = document.createElement("tr");
+  const defaultName = type === 'metric' ? "Line-Haul Routing Metric" : "Transport Fee";
+  tr.innerHTML = `
+    <td><input type="text" class="chg-name" value="${defaultName}" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+    <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
+    <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+    <td style="text-align: center;">
+      <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  updateAdminModulePermissions();
+  calculateTransportation();
+}
+window.addTransportRow = addTransportRow;
+
+function removeTransportRow(btn) {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    alert("Permission Denied: Only Admin can add or delete rows.");
+    return;
+  }
+  btn.closest("tr").remove();
+  calculateTransportation();
+}
+window.removeTransportRow = removeTransportRow;
+
+function addWarehouseRow(type = 'surcharge') {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    alert("Permission Denied: Only Admin can add or delete rows.");
+    return;
+  }
+  const tbody = document.getElementById("warehouse-standalone-body");
+  if (!tbody) return;
+  const tr = document.createElement("tr");
+  const defaultName = type === 'metric' ? "Fulfillment Metric" : "Warehouse Charge";
+  tr.innerHTML = `
+    <td><input type="text" class="chg-name" value="${defaultName}" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+    <td>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 90px; flex-shrink: 0;">
+        <input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem;">
+      </div>
+    </td>
+    <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+    <td style="text-align: center;">
+      <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  updateAdminModulePermissions();
+  calculateWarehousing();
+}
+window.addWarehouseRow = addWarehouseRow;
+
+function removeWarehouseRow(btn) {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    alert("Permission Denied: Only Admin can add or delete rows.");
+    return;
+  }
+  btn.closest("tr").remove();
+  calculateWarehousing();
+}
+window.removeWarehouseRow = removeWarehouseRow;
+
 function calculateCustomClearance() {
   const tbody = document.getElementById("custom-standalone-body");
   let subtotal = 0;
-  tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotal += parseFloat(input.value) || 0;
-  });
+  if (tbody) {
+    tbody.querySelectorAll(".chg-rate").forEach(input => {
+      subtotal += parseFloat(input.value) || 0;
+    });
+  }
   
   const tax = subtotal * 0.18;
   const total = subtotal + tax;
   
-  const cur = document.getElementById("custom-currency").value;
+  const cur = document.getElementById("custom-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
   
-  document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-custom-subtotal")) document.getElementById("res-custom-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-custom-tax")) document.getElementById("res-custom-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-custom-total")) document.getElementById("res-custom-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 }
 window.calculateCustomClearance = calculateCustomClearance;
 
 function calculateTransportation() {
   const tbody = document.getElementById("transport-standalone-body");
   let subtotal = 0;
-  tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotal += parseFloat(input.value) || 0;
-  });
+  if (tbody) {
+    tbody.querySelectorAll(".chg-rate").forEach(input => {
+      subtotal += parseFloat(input.value) || 0;
+    });
+  }
   
   const tax = subtotal * 0.18;
   const total = subtotal + tax;
   
-  const cur = document.getElementById("transport-currency").value;
+  const cur = document.getElementById("transport-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
   
-  document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-transport-subtotal")) document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-transport-tax")) document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-transport-total")) document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 }
 window.calculateTransportation = calculateTransportation;
 
 function calculateWarehousing() {
   const tbody = document.getElementById("warehouse-standalone-body");
   let subtotal = 0;
-  tbody.querySelectorAll(".chg-rate").forEach(input => {
-    subtotal += parseFloat(input.value) || 0;
-  });
+  if (tbody) {
+    tbody.querySelectorAll(".chg-rate").forEach(input => {
+      subtotal += parseFloat(input.value) || 0;
+    });
+  }
   
   const tax = subtotal * 0.18;
   const total = subtotal + tax;
   
-  const cur = document.getElementById("warehouse-currency").value;
+  const cur = document.getElementById("warehouse-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
   
-  document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-warehouse-subtotal")) document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-warehouse-tax")) document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-warehouse-total")) document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 }
 window.calculateWarehousing = calculateWarehousing;
 
 function injectModuleFeesToFreight(module, freightType, target = 'origin') {
-  const feesMap = {
-    custom: [
-      { name: "Customs Agency Fee", rate: 5500.00, unit: "flat" },
-      { name: "Documentation Charges", rate: 1200.00, unit: "flat" }
-    ],
-    transport: [
-      { name: "Trucking Base Freight", rate: 18500.00, unit: "flat" },
-      { name: "Fuel Surcharge", rate: 3200.00, unit: "flat" }
-    ],
-    warehouse: [
-      { name: "Space Storage", rate: 8500.00, unit: "flat" },
-      { name: "Handling In/Out", rate: 2000.00, unit: "flat" }
-    ]
-  };
-
-  const fees = feesMap[module];
-  if (!fees) return;
-
-  const isAir = (freightType === 'air');
-  const bodyId = isAir 
-    ? (target === 'dest' ? "air-dest-surcharges-body" : "air-origin-surcharges-body")
-    : (target === 'dest' ? "sea-dest-surcharges-body" : "sea-origin-surcharges-body");
-  const body = document.getElementById(bodyId);
-  if (!body) return;
-
-  fees.forEach(fee => {
-    const row = document.createElement("tr");
-    if (isAir) {
-      row.innerHTML = `
-        <td><input type="text" class="chg-name" value="${fee.name}" required></td>
-        <td><input type="number" class="chg-rate" value="${fee.rate.toFixed(2)}" step="0.01" required></td>
-        <td>
-          <select class="chg-unit">
-            <option value="kg" ${fee.unit === 'kg' ? 'selected' : ''}>Per kg</option>
-            <option value="flat" ${fee.unit === 'flat' ? 'selected' : ''}>Flat</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      `;
-    } else {
-      row.innerHTML = `
-        <td><input type="text" class="chg-name" value="${fee.name}" required></td>
-        <td><input type="number" class="chg-rate" value="${fee.rate.toFixed(2)}" step="0.01" required></td>
-        <td>
-          <select class="chg-unit table-select">
-            <option value="flat" ${fee.unit === 'flat' ? 'selected' : ''}>Flat Fee</option>
-            <option value="container" ${fee.unit === 'container' ? 'selected' : ''}>Per Container</option>
-            <option value="rt" ${fee.unit === 'rt' ? 'selected' : ''}>Per RT</option>
-            <option value="kg" ${fee.unit === 'kg' ? 'selected' : ''}>Per Kg</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="delete-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      `;
-    }
-    body.appendChild(row);
-  });
-
-  alert(`Successfully added ${module === 'custom' ? 'Custom Clearance' : (module === 'transport' ? 'Transportation' : 'Warehousing')} fees to ${freightType === 'air' ? 'Air Freight' : 'Sea Freight'} ${target === 'dest' ? 'Destination Local' : 'Origin Local'} table!`);
-  
-  if (isAir) {
-    calculateAirFreight();
-  } else {
-    calculateSeaFreight();
-  }
+  alert("Pathway A (Bundled) has been disabled in this workspace. Standard standalone calculations are active.");
 }
 window.injectModuleFeesToFreight = injectModuleFeesToFreight;
 
 function saveStandaloneQuote(module) {
-  const cur = document.getElementById(`${module}-currency`).value;
-  const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`).textContent.replace(/[^0-9.]/g, '')) || 0;
-  const tax = parseFloat(document.getElementById(`res-${module}-tax`).textContent.replace(/[^0-9.]/g, '')) || 0;
-  const total = parseFloat(document.getElementById(`res-${module}-total`).textContent.replace(/[^0-9.]/g, '')) || 0;
+  const cur = document.getElementById(`${module}-currency`)?.value || 'INR';
+  const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
+  const tax = parseFloat(document.getElementById(`res-${module}-tax`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
+  const total = parseFloat(document.getElementById(`res-${module}-total`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
 
   const customerName = prompt("Please enter Customer Name for this standalone quote:", "Walk-in Customer");
   if (!customerName) return;
 
   const rateInr = convertToInr(total, cur);
+
+  let modeTitle = "Custom Clearance";
+  let routingInfo = `${module.toUpperCase()} Standalone Services`;
+
+  if (module === 'custom') {
+    modeTitle = "Custom Clearance";
+    const handling = document.querySelector('input[name="custom-handling"]:checked')?.value || "freehand";
+    const direction = document.querySelector('input[name="custom-direction"]:checked')?.value || "export";
+    const customMode = document.querySelector('input[name="custom-mode"]:checked')?.value || "air";
+    routingInfo = `${handling.toUpperCase()} | ${direction.toUpperCase()} (${customMode.toUpperCase()})`;
+  } else if (module === 'transport') {
+    modeTitle = "Transportation";
+    const pPin = document.getElementById("transport-pickup-pin")?.value || "";
+    const dPin = document.getElementById("transport-delivery-pin")?.value || "";
+    routingInfo = `Pickup PIN ${pPin} ➔ Delivery PIN ${dPin}`;
+  } else if (module === 'warehouse') {
+    modeTitle = "Warehousing";
+    routingInfo = `Warehousing Storage & Operations`;
+  }
 
   const quoteData = {
     id: 'Q' + Math.random().toString(36).substr(2, 9),
@@ -9475,16 +9570,18 @@ function saveStandaloneQuote(module) {
     creator: appState.currentUser || "jaya",
     status: 'quoted',
     quoteNumber: appState.quotes.length + 1,
-    mode: module,
+    mode: modeTitle,
+    type: module,
     amount: total,
     currency: cur,
     amountINR: rateInr,
-    routingDetails: `${module.toUpperCase()} Standalone Services`,
+    route: routingInfo,
+    routingDetails: routingInfo,
     notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
   };
 
   DB.saveQuote(quoteData);
-  alert(`${module.toUpperCase()} Standalone Quotation saved successfully!`);
+  alert(`${modeTitle} Standalone Quotation saved successfully!`);
   returnToWorkspace();
 }
 window.saveStandaloneQuote = saveStandaloneQuote;
