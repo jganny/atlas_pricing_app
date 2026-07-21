@@ -784,6 +784,95 @@
               </tbody>
             </table>
           </div>
+          <!-- Pagination Controls -->
+          <div class="pagination-controls" style="margin-top: 1rem;">
+            <button class="pagination-btn" id="db-prev-btn" onclick="changeDbPage(-1)">
+              ◀ Previous
+            </button>
+            <span class="pagination-info" id="db-pagination-info">
+              Page 1 of 1 (Showing 0-0 of 0 entries)
+            </span>
+            <button class="pagination-btn" id="db-next-btn" onclick="changeDbPage(1)">
+              Next ▶
+            </button>
+          </div>
+        </div>
+
+        <!-- Financial Reports & Archive Query Panel -->
+        <div class="glass-card" style="margin-top: 1.5rem;">
+          <div style="border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <span style="font-size: 0.65rem; font-weight: 800; color: var(--accent-warning); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Admin Intelligence Hub</span>
+              <h3 style="font-weight: 700; margin: 0.15rem 0 0 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem;">Financial Reports & Archival Suite</h3>
+            </div>
+            <button onclick="runAutoArchival()" class="btn-primary" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; background: var(--accent-warning); color: #000; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              📦 Archive Old Quotes (>180 Days)
+            </button>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 1.25rem; margin-bottom: 1.25rem;">
+            <!-- Timeframe Filter -->
+            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Reporting Period</label>
+              <select id="report-period" onchange="toggleCustomDateFields()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
+                <option value="current-fy">📅 Current Financial Year (FY26-27)</option>
+                <option value="previous-fy">📅 Previous Financial Year (FY25-26)</option>
+                <option value="current-h1">📅 Current FY - H1 (Apr-Sept)</option>
+                <option value="current-h2">📅 Current FY - H2 (Oct-Mar)</option>
+                <option value="custom">📅 Custom Date Range</option>
+              </select>
+              <div id="report-custom-dates" style="display: none; gap: 8px; margin-top: 6px;">
+                <input type="date" id="report-start-date" style="flex:1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 5px; border-radius: 6px; font-size: 0.75rem; color:#000;">
+                <input type="date" id="report-end-date" style="flex:1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 5px; border-radius: 6px; font-size: 0.75rem; color:#000;">
+              </div>
+            </div>
+
+            <!-- User Filter -->
+            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">User / Desk</label>
+              <select id="report-user" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
+                <option value="all">👥 All Desks / Users</option>
+              </select>
+            </div>
+
+            <!-- Single Quote Lookup (by Ref ID) -->
+            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Direct Archive Lookup</label>
+              <div style="display: flex; gap: 6px;">
+                <input type="text" id="report-lookup-ref" placeholder="Ref ID (e.g. AE-1002)" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color:#000; outline: none;">
+                <button onclick="lookupSingleArchivedQuote()" class="btn-primary" style="background: var(--sky); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 700;">Find</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <button onclick="generateReportSummary()" class="btn-primary" style="background: var(--sky); color: #fff; font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
+              📊 Generate Summary
+            </button>
+            <button onclick="exportReportToCSV()" class="btn-primary" style="background: var(--accent-success); color: #000; font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
+              📥 Export to CSV / Excel
+            </button>
+          </div>
+
+          <!-- Report Statistics Output Cards -->
+          <div class="report-grid" id="report-results-grid" style="display: none;">
+            <div class="report-card">
+              <div class="report-card-lbl">Enquiries Matched</div>
+              <div class="report-card-val" id="rep-stat-count">0</div>
+            </div>
+            <div class="report-card">
+              <div class="report-card-lbl">Total Sell Value</div>
+              <div class="report-card-val" id="rep-stat-revenue">₹0</div>
+            </div>
+            <div class="report-card">
+              <div class="report-card-lbl">Total Buy Cost</div>
+              <div class="report-card-val" id="rep-stat-buy">₹0</div>
+            </div>
+            <div class="report-card">
+              <div class="report-card-lbl">Gross Profit (GP)</div>
+              <div class="report-card-val" id="rep-stat-gp">₹0</div>
+            </div>
+          </div>
         </div>
       </div>
 

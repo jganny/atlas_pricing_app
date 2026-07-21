@@ -3441,6 +3441,9 @@ function renderAdminDashboard() {
   if (typeof updateAdminScratchpadViewer === 'function') {
     updateAdminScratchpadViewer();
   }
+  if (typeof populateReportUsers === 'function') {
+    populateReportUsers();
+  }
   if (!window._newsLoaded) {
     setTimeout(() => {
       loadLogisticsNews('global');
@@ -5992,9 +5995,22 @@ window.populateAllHeaderFilterDropdowns = () => {
   }
 };
 
+window.dbCurrentPage = 1;
+window.dbRowsPerPage = 25;
+window.changeDbPage = (dir) => {
+  window._isPaging = true;
+  window.dbCurrentPage += dir;
+  window.applyDbFiltersAndSort();
+  window._isPaging = false;
+};
+
 window.applyDbFiltersAndSort = () => {
   const tbody = document.getElementById("admin-quotes-body");
   if (!tbody) return;
+
+  if (!window._isPaging) {
+    window.dbCurrentPage = 1;
+  }
 
   // Populate dynamic filter option lists
   populateAllHeaderFilterDropdowns();
@@ -6111,13 +6127,34 @@ window.applyDbFiltersAndSort = () => {
     return 0;
   });
 
+  const totalMatched = filtered.length;
+  const totalPages = Math.ceil(totalMatched / window.dbRowsPerPage) || 1;
+  if (window.dbCurrentPage > totalPages) window.dbCurrentPage = totalPages;
+  if (window.dbCurrentPage < 1) window.dbCurrentPage = 1;
+
+  const startIdx = (window.dbCurrentPage - 1) * window.dbRowsPerPage;
+  const endIdx = startIdx + window.dbRowsPerPage;
+  const pageFiltered = filtered.slice(startIdx, endIdx);
+
+  // Update pagination controls UI
+  const prevBtn = document.getElementById("db-prev-btn");
+  const nextBtn = document.getElementById("db-next-btn");
+  const pagInfo = document.getElementById("db-pagination-info");
+  if (prevBtn) prevBtn.disabled = (window.dbCurrentPage === 1);
+  if (nextBtn) nextBtn.disabled = (window.dbCurrentPage === totalPages);
+  if (pagInfo) {
+    const showStart = totalMatched === 0 ? 0 : startIdx + 1;
+    const showEnd = Math.min(endIdx, totalMatched);
+    pagInfo.textContent = `Page ${window.dbCurrentPage} of ${totalPages} (Showing ${showStart}-${showEnd} of ${totalMatched} entries)`;
+  }
+
   tbody.innerHTML = "";
-  if (filtered.length === 0) {
+  if (pageFiltered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
     return;
   }
 
-  filtered.forEach(quote => {
+  pageFiltered.forEach(quote => {
     const tr = document.createElement("tr");
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
@@ -10249,6 +10286,270 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
       }
     } catch (e) { }
+  };
+
+  // ══════════════════════════════════════════════════
+  // REPORTING & ARCHIVING FUNCTIONS
+  // ══════════════════════════════════════════════════
+  window.populateReportUsers = function() {
+    const selectEl = document.getElementById("report-user");
+    if (!selectEl) return;
+    selectEl.innerHTML = '<option value="all">👥 All Desks / Users</option>';
+    Object.keys(TEAM_ROLES).forEach(roleId => {
+      const option = document.createElement("option");
+      option.value = roleId;
+      option.textContent = TEAM_ROLES[roleId]?.name || roleId;
+      selectEl.appendChild(option);
+    });
+  };
+
+  window.toggleCustomDateFields = function() {
+    const period = document.getElementById("report-period")?.value;
+    const div = document.getElementById("report-custom-dates");
+    if (div) {
+      div.style.display = (period === 'custom') ? 'flex' : 'none';
+    }
+  };
+
+  function getReportDateRange(period) {
+    const now = new Date();
+    let currentYear = now.getFullYear();
+    if (now.getMonth() < 3) {
+      currentYear -= 1;
+    }
+    
+    let startDate, endDate;
+    if (period === 'current-fy') {
+      startDate = new Date(currentYear, 3, 1);
+      endDate = new Date(currentYear + 1, 2, 31, 23, 59, 59);
+    } else if (period === 'previous-fy') {
+      startDate = new Date(currentYear - 1, 3, 1);
+      endDate = new Date(currentYear, 2, 31, 23, 59, 59);
+    } else if (period === 'current-h1') {
+      startDate = new Date(currentYear, 3, 1);
+      endDate = new Date(currentYear, 8, 30, 23, 59, 59);
+    } else if (period === 'current-h2') {
+      startDate = new Date(currentYear, 9, 1);
+      endDate = new Date(currentYear + 1, 2, 31, 23, 59, 59);
+    } else if (period === 'custom') {
+      const startVal = document.getElementById("report-start-date")?.value;
+      const endVal = document.getElementById("report-end-date")?.value;
+      startDate = startVal ? new Date(startVal) : new Date(0);
+      endDate = endVal ? new Date(endVal + "T23:59:59") : new Date();
+    }
+    return { startDate, endDate };
+  }
+
+  async function fetchQuotesForReport(startDate, endDate, userFilter) {
+    let allQuotes = [...appState.quotes];
+    
+    if (DB.isCloud && DB.firestoreRef) {
+      try {
+        const snapshot = await DB.firestoreRef.collection("archive_quotes")
+          .where("timestamp", ">=", startDate.getTime())
+          .where("timestamp", "<=", endDate.getTime())
+          .get();
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (!allQuotes.some(q => q.id === data.id)) {
+            allQuotes.push(data);
+          }
+        });
+      } catch (e) {
+        console.error("Failed to query archive_quotes from Firestore:", e);
+      }
+    } else {
+      try {
+        const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
+        offlineArchive.forEach(q => {
+          if (!allQuotes.some(aq => aq.id === q.id)) {
+            allQuotes.push(q);
+          }
+        });
+      } catch(e) {}
+    }
+    
+    return allQuotes.filter(q => {
+      const qDate = new Date(q.date);
+      if (qDate < startDate || qDate > endDate) return false;
+      if (userFilter !== 'all') {
+        if (!q.creator || q.creator.toLowerCase() !== userFilter.toLowerCase()) return false;
+      }
+      return true;
+    });
+  }
+
+  window.generateReportSummary = async function() {
+    const period = document.getElementById("report-period")?.value;
+    const userFilter = document.getElementById("report-user")?.value;
+    const { startDate, endDate } = getReportDateRange(period);
+    
+    const resultsGrid = document.getElementById("report-results-grid");
+    if (resultsGrid) resultsGrid.style.display = 'grid';
+    
+    const matched = await fetchQuotesForReport(startDate, endDate, userFilter);
+    
+    let totalSell = 0;
+    let totalBuy = 0;
+    let totalGp = 0;
+    
+    matched.forEach(q => {
+      totalSell += q.amountINR || 0;
+      const buyRate = q.buyRate || q.details?.buyRate || 0;
+      if (q.grossProfit !== undefined) {
+        totalGp += q.grossProfit;
+        totalBuy += (q.amountINR - q.grossProfit);
+      } else {
+        totalBuy += buyRate;
+        totalGp += (q.amountINR - buyRate);
+      }
+    });
+    
+    document.getElementById("rep-stat-count").textContent = matched.length;
+    document.getElementById("rep-stat-revenue").textContent = `₹${totalSell.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    document.getElementById("rep-stat-buy").textContent = `₹${totalBuy.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    document.getElementById("rep-stat-gp").textContent = `₹${totalGp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  };
+
+  window.exportReportToCSV = async function() {
+    const period = document.getElementById("report-period")?.value;
+    const userFilter = document.getElementById("report-user")?.value;
+    const { startDate, endDate } = getReportDateRange(period);
+    
+    const matched = await fetchQuotesForReport(startDate, endDate, userFilter);
+    if (matched.length === 0) {
+      alert("No quotes found matching the report criteria.");
+      return;
+    }
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Ref ID,Date,Mode,Customer,Route,Creator,Carrier,Buy Rate,Sell Rate,GP,Status\n";
+    
+    matched.forEach(q => {
+      const refId = getQuoteRefId(q) || q.id || "";
+      const date = q.date || "";
+      const mode = q.type || "";
+      const customer = (q.customer || "").replace(/,/g, " ");
+      const route = (q.route || "").replace(/,/g, " ");
+      const creator = TEAM_ROLES[q.creator]?.name || q.creator || "";
+      const carrier = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "-").replace(/,/g, " ");
+      const buyRate = q.buyRate || q.details?.buyRate || 0;
+      const sellRate = q.amount || 0;
+      const gp = q.grossProfit !== undefined ? q.grossProfit : (sellRate - buyRate);
+      const status = q.status || "";
+      
+      csvContent += `${refId},${date},${mode},${customer},${route},${creator},${carrier},${buyRate},${sellRate},${gp},${status}\n`;
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `pricing_report_${period}_${userFilter}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  window.lookupSingleArchivedQuote = async function() {
+    const refInput = document.getElementById("report-lookup-ref")?.value.trim().replace("#", "");
+    if (!refInput) {
+      alert("Please enter a Reference ID to look up.");
+      return;
+    }
+    
+    let foundQuote = null;
+    foundQuote = appState.quotes.find(q => (getQuoteRefId(q) || "").toLowerCase() === refInput.toLowerCase() || q.id.toLowerCase() === refInput.toLowerCase());
+    
+    if (!foundQuote && DB.isCloud && DB.firestoreRef) {
+      try {
+        const docRef = DB.firestoreRef.collection("archive_quotes").doc(refInput);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          foundQuote = docSnap.data();
+        } else {
+          const snapshot = await DB.firestoreRef.collection("archive_quotes").where("id", "==", refInput).get();
+          if (!snapshot.empty) {
+            foundQuote = snapshot.docs[0].data();
+          } else {
+            const snapshot2 = await DB.firestoreRef.collection("archive_quotes").where("quoteRefNo", "==", parseInt(refInput) || refInput).get();
+            if (!snapshot2.empty) foundQuote = snapshot2.docs[0].data();
+          }
+        }
+      } catch(e) {
+        console.error("Failed to lookup archive:", e);
+      }
+    }
+    
+    if (!foundQuote) {
+      try {
+        const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
+        foundQuote = offlineArchive.find(q => (getQuoteRefId(q) || "").toLowerCase() === refInput.toLowerCase() || q.id.toLowerCase() === refInput.toLowerCase());
+      } catch(e) {}
+    }
+    
+    if (foundQuote) {
+      if (typeof printQuoteSheet === 'function') {
+        printQuoteSheet(foundQuote);
+      } else {
+        alert(`Found Quote #${getQuoteRefId(foundQuote)} for ${foundQuote.customer}. Sell Amount: ${foundQuote.amount}. Status: ${foundQuote.status}`);
+      }
+    } else {
+      alert("Quote not found in active database or archives.");
+    }
+  };
+
+  window.runAutoArchival = async function() {
+    const thresholdDays = 180;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - thresholdDays);
+    
+    const toArchive = [];
+    const remaining = [];
+    
+    appState.quotes.forEach(q => {
+      const qDate = new Date(q.date);
+      if (qDate < cutoffDate) {
+        toArchive.push(q);
+      } else {
+        remaining.push(q);
+      }
+    });
+    
+    if (toArchive.length === 0) {
+      alert("No quotes older than 180 days found to archive.");
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to archive ${toArchive.length} quotes older than 180 days? They will be moved to the archival database to speed up the app.`)) {
+      return;
+    }
+    
+    let successCount = 0;
+    if (DB.isCloud && DB.firestoreRef) {
+      for (const q of toArchive) {
+        try {
+          await DB.firestoreRef.collection("archive_quotes").doc(q.id).set(q);
+          await DB.firestoreRef.collection("quotes").doc(q.id).delete();
+          successCount++;
+        } catch(e) {
+          console.error("Failed to archive quote:", q.id, e);
+        }
+      }
+    } else {
+      try {
+        const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
+        const updatedArchive = [...offlineArchive, ...toArchive];
+        localStorage.setItem("logistics_archive_quotes", JSON.stringify(updatedArchive));
+        localStorage.setItem("logistics_quotes", JSON.stringify(remaining));
+        successCount = toArchive.length;
+      } catch(e) {
+        console.error("Failed to update offline archive:", e);
+      }
+    }
+    
+    appState.quotes = remaining;
+    applyDbFiltersAndSort();
+    alert(`Successfully archived ${successCount} quotes!`);
   };
 
   // Check broadcast every 3 seconds
