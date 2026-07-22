@@ -1990,6 +1990,48 @@ const IATA_AIRLINES = {
   UA: "United Airlines"
 };
 
+function createAirSurchargeRow(surcharge = {}) {
+  const tr = document.createElement("tr");
+  const name = surcharge.name !== undefined ? surcharge.name : "";
+  const sellRate = surcharge.rate !== undefined ? surcharge.rate : (surcharge.sell !== undefined ? surcharge.sell : "0.00");
+  const buyRate = surcharge.buyRate !== undefined ? surcharge.buyRate : (surcharge.buy !== undefined ? surcharge.buy : "0.00");
+  const unit = surcharge.unit || "kg";
+  const remarks = surcharge.remarks || "";
+  const readOnlyName = surcharge.readOnlyName || false;
+
+  tr.innerHTML = `
+    <td><input type="text" class="chg-name" value="${name}" ${readOnlyName ? 'readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"' : ''} required></td>
+    <td><input type="number" class="chg-rate" value="${sellRate}" step="0.01" required></td>
+    <td><input type="number" class="chg-buy-rate" value="${buyRate}" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+    <td>
+      <select class="chg-unit">
+        <option value="kg" ${unit === 'kg' ? 'selected' : ''}>Per kg</option>
+        <option value="flat" ${unit === 'flat' ? 'selected' : ''}>Flat</option>
+      </select>
+    </td>
+    <td><input type="text" class="chg-remarks" value="${remarks}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+    <td>
+      <button type="button" class="delete-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+        </svg>
+      </button>
+    </td>
+  `;
+
+  tr.querySelectorAll("input, select").forEach(inp => {
+    inp.addEventListener("input", calculateAirFreight);
+    inp.addEventListener("change", calculateAirFreight);
+  });
+
+  tr.querySelector(".delete-btn").addEventListener("click", () => {
+    tr.remove();
+    calculateAirFreight();
+  });
+
+  return tr;
+}
+
 function addAirlineCard(data = null) {
   const container = document.getElementById("air-airlines-list-container");
   if (!container) return;
@@ -2012,6 +2054,8 @@ function addAirlineCard(data = null) {
   const ams_fee = data ? (data.ams_fee !== undefined ? data.ams_fee : (data.amsFee !== undefined ? data.amsFee : "")) : "";
   const amsFeeEnabled = data && data.amsFeeEnabled !== undefined ? !!data.amsFeeEnabled : true;
   const wbEnabled = data && data.wbEnabled !== undefined ? !!data.wbEnabled : true;
+  const originFeesEnabled = data && data.originFeesEnabled !== undefined ? !!data.originFeesEnabled : true;
+  const destFeesEnabled = data && data.destFeesEnabled !== undefined ? !!data.destFeesEnabled : true;
 
   const creatorRole = appState.currentUser;
   const isFreeHandOrNrs = creatorRole && (
@@ -2083,34 +2127,198 @@ function addAirlineCard(data = null) {
         <!-- Dynamic breaks will be appended here -->
       </div>
     </div>
+
+    <!-- Embedded Surcharges (Origin Local & Destination Local) per Airline -->
+    <div class="air-card-surcharges-wrapper" style="margin-top: 1rem; border-top: 1px dashed var(--border-1); padding-top: 0.75rem;">
+      <!-- Origin Local Section -->
+      <div class="air-card-local-block" style="background: rgba(0, 0, 0, 0.12); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+        <div class="air-card-origin-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--sky); margin: 0; cursor: pointer;" onclick="event.stopPropagation();">
+              <input type="checkbox" class="air-card-enable-origin-fees" ${originFeesEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 15px; height: 15px; accent-color: var(--sky);">
+              Origin Local Fees & Surcharges
+            </label>
+            <span class="air-card-origin-status-badge" style="font-size: 0.65rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 1px 6px; border-radius: 4px;">✓ Included</span>
+          </div>
+          <button type="button" class="btn-text toggle-origin-collapse-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
+          </button>
+        </div>
+        
+        <div class="air-card-origin-content-body" style="margin-top: 0.5rem; display: block;">
+          <div class="cargo-table-container" style="border: none; margin-bottom: 0.5rem;">
+            <table class="cargo-table">
+              <thead>
+                <tr>
+                  <th>Surcharge Name</th>
+                  <th>Sell Rate</th>
+                  <th>Buy Rate</th>
+                  <th>Billing Unit</th>
+                  <th>Remarks</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody class="air-card-origin-surcharges-body">
+              </tbody>
+            </table>
+          </div>
+          <button type="button" class="add-row-btn add-air-card-origin-surcharge" style="font-size: 0.72rem; padding: 3px 8px;">
+            + Add Origin Surcharge
+          </button>
+        </div>
+      </div>
+
+      <!-- Destination Local Section -->
+      <div class="air-card-local-block" style="background: rgba(0, 0, 0, 0.12); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.75rem;">
+        <div class="air-card-dest-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--sky); margin: 0; cursor: pointer;" onclick="event.stopPropagation();">
+              <input type="checkbox" class="air-card-enable-dest-fees" ${destFeesEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 15px; height: 15px; accent-color: var(--sky);">
+              Destination Local Fees & Surcharges
+            </label>
+            <span class="air-card-dest-status-badge" style="font-size: 0.65rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 1px 6px; border-radius: 4px;">✓ Included</span>
+          </div>
+          <button type="button" class="btn-text toggle-dest-collapse-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
+          </button>
+        </div>
+        
+        <div class="air-card-dest-content-body" style="margin-top: 0.5rem; display: block;">
+          <div class="cargo-table-container" style="border: none; margin-bottom: 0.5rem;">
+            <table class="cargo-table">
+              <thead>
+                <tr>
+                  <th>Surcharge Name</th>
+                  <th>Sell Rate</th>
+                  <th>Buy Rate</th>
+                  <th>Billing Unit</th>
+                  <th>Remarks</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody class="air-card-dest-surcharges-body">
+              </tbody>
+            </table>
+          </div>
+          <button type="button" class="add-row-btn add-air-card-dest-surcharge" style="font-size: 0.72rem; padding: 3px 8px;">
+            + Add Destination Surcharge
+          </button>
+        </div>
+      </div>
+    </div>
   `;
 
   container.appendChild(card);
+
+  // Expand/Collapse Origin Local
+  const originHeader = card.querySelector(".air-card-origin-header");
+  const originContentBody = card.querySelector(".air-card-origin-content-body");
+  const originToggleBtn = card.querySelector(".toggle-origin-collapse-btn");
+
+  const toggleOriginCollapse = () => {
+    const isHidden = originContentBody.style.display === "none";
+    originContentBody.style.display = isHidden ? "block" : "none";
+    originToggleBtn.querySelector(".collapse-icon").textContent = isHidden ? "▼" : "▲";
+    originToggleBtn.querySelector(".collapse-text").textContent = isHidden ? "Collapse" : "Expand";
+  };
+
+  originHeader.addEventListener("click", toggleOriginCollapse);
+  originToggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleOriginCollapse();
+  });
+
+  // Expand/Collapse Destination Local
+  const destHeader = card.querySelector(".air-card-dest-header");
+  const destContentBody = card.querySelector(".air-card-dest-content-body");
+  const destToggleBtn = card.querySelector(".toggle-dest-collapse-btn");
+
+  const toggleDestCollapse = () => {
+    const isHidden = destContentBody.style.display === "none";
+    destContentBody.style.display = isHidden ? "block" : "none";
+    destToggleBtn.querySelector(".collapse-icon").textContent = isHidden ? "▼" : "▲";
+    destToggleBtn.querySelector(".collapse-text").textContent = isHidden ? "Collapse" : "Expand";
+  };
+
+  destHeader.addEventListener("click", toggleDestCollapse);
+  destToggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleDestCollapse();
+  });
+
+  // Populate surcharges inside card
+  const originTbody = card.querySelector(".air-card-origin-surcharges-body");
+  const destTbody = card.querySelector(".air-card-dest-surcharges-body");
+
+  const originSurchargesList = data ? (data.originSurcharges || data.origin_surcharges) : null;
+  const destSurchargesList = data ? (data.destSurcharges || data.dest_surcharges) : null;
+
+  if (originSurchargesList && Array.isArray(originSurchargesList) && originSurchargesList.length > 0) {
+    originSurchargesList.forEach(sch => {
+      originTbody.appendChild(createAirSurchargeRow(sch));
+    });
+  } else {
+    originTbody.appendChild(createAirSurchargeRow({ name: "Xray", rate: "0.00", buyRate: "0.00", unit: "kg" }));
+    originTbody.appendChild(createAirSurchargeRow({ name: "Cartage", rate: "6.00", buyRate: "4.00", unit: "flat", readOnlyName: !isFreeHandOrNrs }));
+    originTbody.appendChild(createAirSurchargeRow({ name: "Misc", rate: "6.00", buyRate: "4.00", unit: "flat", readOnlyName: !isFreeHandOrNrs }));
+  }
+
+  if (destSurchargesList && Array.isArray(destSurchargesList) && destSurchargesList.length > 0) {
+    destSurchargesList.forEach(sch => {
+      destTbody.appendChild(createAirSurchargeRow(sch));
+    });
+  }
+
+  card.querySelector(".add-air-card-origin-surcharge").addEventListener("click", () => {
+    originTbody.appendChild(createAirSurchargeRow({ name: "", rate: "0.00", buyRate: "0.00", unit: "kg" }));
+    calculateAirFreight();
+  });
+
+  card.querySelector(".add-air-card-dest-surcharge").addEventListener("click", () => {
+    destTbody.appendChild(createAirSurchargeRow({ name: "", rate: "0.00", buyRate: "0.00", unit: "kg" }));
+    calculateAirFreight();
+  });
 
   const nameInput = card.querySelector(".air-name");
   if (nameInput) {
     const parent = nameInput.parentElement;
     parent.style.position = "relative";
-    const dropdown = document.createElement("div");
-    dropdown.className = "iata-autocomplete-dropdown";
-    dropdown.style.display = "none";
-    parent.appendChild(dropdown);
+    let dropdown = parent.querySelector(".iata-autocomplete-dropdown");
+    if (!dropdown) {
+      dropdown = document.createElement("div");
+      dropdown.className = "iata-autocomplete-dropdown";
+      dropdown.style.display = "none";
+      parent.appendChild(dropdown);
+    }
 
     nameInput.addEventListener("input", () => {
       const val = nameInput.value.trim().toUpperCase();
       dropdown.innerHTML = "";
-      if (val.length >= 2) {
-        const matches = Object.entries(IATA_AIRLINES).filter(([code, name]) => {
-          return code.startsWith(val) || name.toUpperCase().includes(val);
-        });
+      if (val.length >= 1) {
+        let customAirlines = [];
+        try {
+          const stored = localStorage.getItem("gl_custom_airlines");
+          if (stored) customAirlines = JSON.parse(stored);
+        } catch(e) {}
+        
+        let allAirlines = [...(appState.airlines || []), ...customAirlines];
+        if (allAirlines.length === 0) {
+          allAirlines = Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name }));
+        }
+
+        const matches = allAirlines.filter(al => 
+          (al.code && al.code.toUpperCase().includes(val)) ||
+          (al.name && al.name.toUpperCase().includes(val))
+        ).slice(0, 15);
+
         if (matches.length > 0) {
           dropdown.style.display = "flex";
-          matches.forEach(([code, name]) => {
+          matches.forEach(al => {
             const item = document.createElement("div");
             item.className = "iata-autocomplete-item";
-            item.textContent = `${code} - ${name}`;
+            item.textContent = `${al.code} - ${al.name}`;
             item.addEventListener("click", () => {
-              nameInput.value = `${code} - ${name}`;
+              nameInput.value = `${al.code} - ${al.name}`;
               dropdown.style.display = "none";
               calculateAirFreight();
             });
@@ -2253,77 +2461,44 @@ window.getAirlineColor = getAirlineColor;
 function updateCartageRowVisibility() {
   const originVal = document.getElementById("air-origin")?.value.trim().toUpperCase() || "";
   const isBOM = originVal.startsWith("BOM");
-  const airOriginBody = document.getElementById("air-origin-surcharges-body");
-  if (!airOriginBody) return;
+  const originBodies = document.querySelectorAll(".air-card-origin-surcharges-body, #air-origin-surcharges-body");
+  if (!originBodies || originBodies.length === 0) return;
 
-  const rows = Array.from(airOriginBody.querySelectorAll("tr"));
-  const cartageRow = rows.find(row => row.querySelector(".chg-name")?.value.trim().toLowerCase() === "cartage");
+  originBodies.forEach(airOriginBody => {
+    const rows = Array.from(airOriginBody.querySelectorAll("tr"));
+    const cartageRow = rows.find(row => row.querySelector(".chg-name")?.value.trim().toLowerCase() === "cartage");
 
-  if (isBOM) {
-    if (!cartageRow) {
-      const creatorRole = appState.currentUser;
-      const isFreeHandOrNrs = creatorRole && (
-        creatorRole === 'jaya' || 
-        creatorRole === 'cathrina' || 
-        TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
-        TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
-      );
+    if (isBOM) {
+      if (!cartageRow) {
+        const creatorRole = appState.currentUser;
+        const isFreeHandOrNrs = creatorRole && (
+          creatorRole === 'jaya' || 
+          creatorRole === 'cathrina' || 
+          TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+          TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
+        );
 
-      const row = document.createElement("tr");
-      if (isFreeHandOrNrs) {
-        row.innerHTML = `
-          <td><input type="text" class="chg-name" value="Cartage" required></td>
-          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-          <td>
-            <select class="chg-unit">
-              <option value="kg">Per kg</option>
-              <option value="flat" selected>Flat</option>
-            </select>
-          </td>
-          <td>
-            <button type="button" class="delete-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-            </button>
-          </td>
-        `;
-      } else {
-        row.innerHTML = `
-          <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td>
-            <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
-              <option value="kg">Per kg</option>
-              <option value="flat" selected>Flat</option>
-            </select>
-          </td>
-          <td>
-            <button type="button" class="delete-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-            </button>
-          </td>
-        `;
+        const newRow = createAirSurchargeRow({
+          name: "Cartage",
+          rate: isFreeHandOrNrs ? "0.00" : "6.00",
+          buyRate: isFreeHandOrNrs ? "0.00" : "4.00",
+          unit: "flat",
+          readOnlyName: !isFreeHandOrNrs
+        });
+
+        const xrayRow = rows.find(r => r.querySelector(".chg-name")?.value.trim().toLowerCase() === "xray");
+        if (xrayRow) {
+          xrayRow.after(newRow);
+        } else {
+          airOriginBody.insertBefore(newRow, airOriginBody.firstChild);
+        }
       }
-      
-      const nameInput = row.querySelector(".chg-name");
-      if (nameInput) {
-        nameInput.setAttribute("list", "air-origin-charges-list");
-      }
-
-      // Find if Xray row exists, insert after it
-      const xrayRow = rows.find(r => r.querySelector(".chg-name")?.value.trim().toLowerCase() === "xray");
-      if (xrayRow) {
-        xrayRow.after(row);
-      } else {
-        airOriginBody.insertBefore(row, airOriginBody.firstChild);
+    } else {
+      if (cartageRow) {
+        cartageRow.remove();
       }
     }
-  } else {
-    if (cartageRow) {
-      cartageRow.remove();
-    }
-  }
+  });
 }
 window.updateCartageRowVisibility = updateCartageRowVisibility;
 
@@ -2553,21 +2728,43 @@ function calculateAirFreight() {
       }
     });
 
-    // Calculate surcharges for this specific airline based on its specific chargeable weight
+    // Calculate surcharges for this specific airline based on its specific chargeable weight and embedded surcharge tables
     let airlineSurchargeTotal = 0;
     const airlineOriginSurcharges = [];
     const airlineDestSurcharges = [];
 
-    // Origin local surcharges
-    if (originFeesEnabled) {
-      const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+    const originCardCheckbox = card.querySelector(".air-card-enable-origin-fees");
+    const originCardEnabled = originCardCheckbox ? originCardCheckbox.checked : originFeesEnabled;
+    const originBadge = card.querySelector(".air-card-origin-status-badge");
+    if (originBadge) {
+      originBadge.textContent = originCardEnabled ? "✓ Included" : "✕ Excluded";
+      originBadge.style.color = originCardEnabled ? "#10b981" : "#ef4444";
+      originBadge.style.background = originCardEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+    }
+
+    const destCardCheckbox = card.querySelector(".air-card-enable-dest-fees");
+    const destCardEnabled = destCardCheckbox ? destCardCheckbox.checked : destFeesEnabled;
+    const destBadge = card.querySelector(".air-card-dest-status-badge");
+    if (destBadge) {
+      destBadge.textContent = destCardEnabled ? "✓ Included" : "✕ Excluded";
+      destBadge.style.color = destCardEnabled ? "#10b981" : "#ef4444";
+      destBadge.style.background = destCardEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+    }
+
+    // Origin local surcharges for this airline
+    if (originCardEnabled) {
+      let originRows = card.querySelectorAll(".air-card-origin-surcharges-body tr");
+      if (originRows.length === 0) {
+        originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+      }
       originRows.forEach(row => {
         const surchargeNameInput = row.querySelector(".chg-name");
+        if (!surchargeNameInput) return;
         const surchargeName = surchargeNameInput.value.trim();
         const surchargeNameLower = surchargeName.toLowerCase();
         
-        let rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-        let unit = row.querySelector(".chg-unit").value;
+        let rate = parseFloat(row.querySelector(".chg-rate")?.value) || 0;
+        let unit = row.querySelector(".chg-unit")?.value || "kg";
         const buyRateInput = row.querySelector(".chg-buy-rate");
         const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
         const remarksInput = row.querySelector(".chg-remarks");
@@ -2612,13 +2809,18 @@ function calculateAirFreight() {
       });
     }
 
-    // Destination local surcharges
-    if (destFeesEnabled) {
-      const destRows = document.querySelectorAll("#air-dest-surcharges-body tr");
+    // Destination local surcharges for this airline
+    if (destCardEnabled) {
+      let destRows = card.querySelectorAll(".air-card-dest-surcharges-body tr");
+      if (destRows.length === 0) {
+        destRows = document.querySelectorAll("#air-dest-surcharges-body tr");
+      }
       destRows.forEach(row => {
-        const surchargeName = row.querySelector(".chg-name").value.trim();
-        const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-        const unit = row.querySelector(".chg-unit").value;
+        const surchargeNameInput = row.querySelector(".chg-name");
+        if (!surchargeNameInput) return;
+        const surchargeName = surchargeNameInput.value.trim();
+        const rate = parseFloat(row.querySelector(".chg-rate")?.value) || 0;
+        const unit = row.querySelector(".chg-unit")?.value || "kg";
         const buyRateInput = row.querySelector(".chg-buy-rate");
         const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
         const remarksInput = row.querySelector(".chg-remarks");
@@ -2632,7 +2834,7 @@ function calculateAirFreight() {
       });
     }
 
-    if (originFeesEnabled && amsFeeEnabled && amsFee > 0) {
+    if (originCardEnabled && amsFeeEnabled && amsFee > 0) {
       airlineSurchargeTotal += amsFee;
       airlineOriginSurcharges.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
     }
@@ -2653,6 +2855,8 @@ function calculateAirFreight() {
       ams_fee,
       amsFeeEnabled,
       wbEnabled,
+      originFeesEnabled: originCardEnabled,
+      destFeesEnabled: destCardEnabled,
       selected: isSelected,
       breaks: breaksData,
       chargeableWeight: airlineChargeableWeight,
@@ -2925,6 +3129,10 @@ function calculateAirFreight() {
       pivotWeight: alt.pivotWeight,
       amsFee: alt.amsFee,
       ams_fee: alt.ams_fee,
+      amsFeeEnabled: alt.amsFeeEnabled,
+      wbEnabled: alt.wbEnabled,
+      originFeesEnabled: alt.originFeesEnabled,
+      destFeesEnabled: alt.destFeesEnabled,
       selected: alt.selected,
       breaks: alt.breaks,
       chargeableWeight: alt.chargeableWeight,
