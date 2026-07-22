@@ -1098,41 +1098,63 @@ function resetSeaFreightDeskForm() {
 
 // Sub-navigation triggers for Calculators inside Member dashboard
 function openActiveCalculator(type) {
-  document.getElementById("member-dashboard-panel").classList.remove("active");
-  const managerPanel = document.getElementById("manager-panel");
-  if (managerPanel) managerPanel.classList.remove("active");
-  
-  // Hide all panels
-  document.getElementById("air-freight-panel").classList.remove("active");
-  document.getElementById("sea-freight-panel").classList.remove("active");
-  document.getElementById("transportation-panel").classList.remove("active");
-  document.getElementById("warehousing-panel").classList.remove("active");
+  try {
+    const memberPanel = document.getElementById("member-dashboard-panel");
+    if (memberPanel) memberPanel.classList.remove("active");
+    const managerPanel = document.getElementById("manager-panel");
+    if (managerPanel) managerPanel.classList.remove("active");
+    
+    // Hide all panels safely
+    const airPanel = document.getElementById("air-freight-panel");
+    const seaPanel = document.getElementById("sea-freight-panel");
+    const transportPanel = document.getElementById("transportation-panel");
+    const warehousePanel = document.getElementById("warehousing-panel");
 
-  const root = document.documentElement;
+    if (airPanel) airPanel.classList.remove("active");
+    if (seaPanel) seaPanel.classList.remove("active");
+    if (transportPanel) transportPanel.classList.remove("active");
+    if (warehousePanel) warehousePanel.classList.remove("active");
 
-  if (type === 'air') {
-    resetAirFreightDeskForm();
-    document.getElementById("air-freight-panel").classList.add("active");
-    root.style.setProperty('--accent-current', 'var(--accent-air)');
-    root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
-  } else if (type === 'sea') {
-    resetSeaFreightDeskForm();
-    document.getElementById("sea-freight-panel").classList.add("active");
-    root.style.setProperty('--accent-current', 'var(--accent-sea)');
-    root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
-  } else if (type === 'transport') {
-    document.getElementById("transportation-panel").classList.add("active");
-    root.style.setProperty('--accent-current', 'var(--violet)');
-    root.style.setProperty('--accent-current-glow', 'rgba(124, 58, 237, 0.2)');
-    calculateTransportation();
-  } else if (type === 'warehouse') {
-    document.getElementById("warehousing-panel").classList.add("active");
-    root.style.setProperty('--accent-current', 'var(--sky)');
-    root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
-    calculateWarehousing();
+    const root = document.documentElement;
+
+    if (type === 'air') {
+      if (airPanel) airPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--accent-air)');
+      root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
+      try { resetAirFreightDeskForm(); } catch(e) { console.error("resetAirFreightDeskForm error:", e); }
+    } else if (type === 'sea') {
+      if (seaPanel) seaPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--accent-sea)');
+      root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
+      try { resetSeaFreightDeskForm(); } catch(e) { console.error("resetSeaFreightDeskForm error:", e); }
+    } else if (type === 'transport') {
+      if (transportPanel) transportPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--violet)');
+      root.style.setProperty('--accent-current-glow', 'rgba(124, 58, 237, 0.2)');
+      try { calculateTransportation(); } catch(e) { console.error("calculateTransportation error:", e); }
+    } else if (type === 'warehouse') {
+      if (warehousePanel) warehousePanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--sky)');
+      root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
+      try { calculateWarehousing(); } catch(e) { console.error("calculateWarehousing error:", e); }
+    }
+    updateModuleTabs(type);
+  } catch(err) {
+    console.error("Critical error in openActiveCalculator:", err);
+    if (type === 'sea') {
+      const seaPanel = document.getElementById("sea-freight-panel");
+      if (seaPanel) seaPanel.classList.add("active");
+    }
   }
-  updateModuleTabs(type);
 }
+
+window.resetFreightForm = function(type) {
+  if (type === 'air') {
+    try { resetAirFreightDeskForm(); } catch(e) {}
+  } else if (type === 'sea') {
+    try { resetSeaFreightDeskForm(); } catch(e) {}
+  }
+};
 
 function returnToWorkspace() {
   document.getElementById("air-freight-panel").classList.remove("active");
