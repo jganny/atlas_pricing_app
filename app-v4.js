@@ -11070,6 +11070,59 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==================== ADMIN AGENT & CUSTOMER DIRECTORY LOGIC ====================
 window._dirGrouping = 'agents'; // Default grouping
 window._dirSelectedItem = null; // { type: 'agent'|'customer', name: '...' }
+window._dirCollapsedNodes = window._dirCollapsedNodes || new Set();
+
+function toggleDirNodeCollapse(event, nodeKey) {
+  if (event) event.stopPropagation();
+  if (window._dirCollapsedNodes.has(nodeKey)) {
+    window._dirCollapsedNodes.delete(nodeKey);
+  } else {
+    window._dirCollapsedNodes.add(nodeKey);
+  }
+  updateAdminDirectoryView();
+}
+window.toggleDirNodeCollapse = toggleDirNodeCollapse;
+
+function expandAllDirNodes() {
+  window._dirCollapsedNodes.clear();
+  updateAdminDirectoryView();
+}
+window.expandAllDirNodes = expandAllDirNodes;
+
+function collapseAllDirNodes() {
+  const quotes = appState.quotes || [];
+  let controls = window._customerControls || {};
+  if (Object.keys(controls).length === 0) {
+    try {
+      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+    } catch(e) {}
+  }
+  
+  window._dirCollapsedNodes.clear();
+  
+  if (window._dirGrouping === 'agents') {
+    Object.keys(TEAM_ROLES).forEach(roleId => {
+      if (roleId === 'ganny' || roleId === 'manager') return;
+      const agentName = TEAM_ROLES[roleId].name || roleId;
+      window._dirCollapsedNodes.add(`agent_${agentName}`);
+    });
+    quotes.forEach(q => {
+      const creator = q.creator || 'unknown';
+      const agentName = TEAM_ROLES[creator.toLowerCase()]?.name || q.creator || 'Unknown';
+      window._dirCollapsedNodes.add(`agent_${agentName}`);
+    });
+  } else {
+    const allCustomers = Array.from(new Set([
+      ...quotes.map(q => q.customer.trim()),
+      ...Object.values(controls).map(c => c.customer.trim())
+    ]));
+    allCustomers.forEach(cust => {
+      window._dirCollapsedNodes.add(`customer_${cust}`);
+    });
+  }
+  updateAdminDirectoryView();
+}
+window.collapseAllDirNodes = collapseAllDirNodes;
 
 function toggleDirGrouping(mode) {
   window._dirGrouping = mode;
@@ -11182,10 +11235,18 @@ function updateAdminDirectoryView() {
         const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
         const border = isSelected ? 'var(--sky)' : 'transparent';
         
+        const nodeKey = `agent_${agentName}`;
+        const isCollapsed = window._dirCollapsedNodes.has(nodeKey);
+        const arrow = isCollapsed ? '▶' : '▼';
+        const displayStyle = isCollapsed ? 'none' : 'flex';
+        
         html += `
           <div class="dir-tree-node-wrapper" style="margin-bottom: 0.5rem;">
             <div id="dir-node-agent-${agentName.replace(/\s+/g, '_')}" class="dir-tree-node" onclick="selectDirectoryItem('agent', '${agentName}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid ${border}; background: ${bg}; cursor: pointer; transition: all 0.2s;" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.05)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
-              <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--t1); font-weight: 700; font-size: 0.8rem;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--t1); font-weight: 700; font-size: 0.8rem;">
+                <button onclick="toggleDirNodeCollapse(event, '${nodeKey}')" style="background: transparent; border: none; color: var(--t2); cursor: pointer; font-size: 0.65rem; padding: 2px 4px; display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; transition: transform 0.2s;">
+                  ${arrow}
+                </button>
                 <span>👤</span>
                 <span>${agentName}</span>
               </div>
@@ -11193,7 +11254,7 @@ function updateAdminDirectoryView() {
             </div>
             
             <!-- Children (Customers under this Agent) -->
-            <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: flex; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 0.75rem;">
+            <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: ${displayStyle}; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 1.25rem;">
               ${customersList.map(cust => {
                 const matchesCust = !query || cust.toLowerCase().includes(query) || matchesAgent;
                 if (!matchesCust) return '';
@@ -11265,10 +11326,18 @@ function updateAdminDirectoryView() {
         const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
         const border = isSelected ? 'var(--sky)' : 'transparent';
         
+        const nodeKey = `customer_${cust}`;
+        const isCollapsed = window._dirCollapsedNodes.has(nodeKey);
+        const arrow = isCollapsed ? '▶' : '▼';
+        const displayStyle = isCollapsed ? 'none' : 'flex';
+        
         html += `
           <div class="dir-tree-node-wrapper" style="margin-bottom: 0.5rem;">
             <div id="dir-node-customer-${cust.replace(/\s+/g, '_')}" class="dir-tree-node" onclick="selectDirectoryItem('customer', '${cust}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid ${border}; background: ${bg}; cursor: pointer; transition: all 0.2s;" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.05)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
-              <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--t1); font-weight: 700; font-size: 0.8rem;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--t1); font-weight: 700; font-size: 0.8rem;">
+                <button onclick="toggleDirNodeCollapse(event, '${nodeKey}')" style="background: transparent; border: none; color: var(--t2); cursor: pointer; font-size: 0.65rem; padding: 2px 4px; display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; transition: transform 0.2s;">
+                  ${arrow}
+                </button>
                 <span>🏢</span>
                 <span style="max-width: 170px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${cust}</span>
               </div>
@@ -11276,7 +11345,7 @@ function updateAdminDirectoryView() {
             </div>
             
             <!-- Children (Agents under this Customer) -->
-            <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: flex; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 0.75rem;">
+            <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: ${displayStyle}; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 1.25rem;">
               ${agentsList.map(agent => {
                 const matchesAgent = !query || agent.toLowerCase().includes(query) || matchesCust;
                 if (!matchesAgent) return '';
