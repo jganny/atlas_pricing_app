@@ -2204,258 +2204,288 @@
               Add Cargo Line
             </button>
 
-            <!-- Carrier / Shipping Line Tariffs Section -->
-            <div class="section-card" id="sea-tariffs-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-sea); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="sea-enable-tariffs" checked onchange="calculateSeaFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Carrier / Shipping Line Tariffs
-                </label>
-                <span id="sea-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="sea-tariffs-content-body">
-                <!-- FCL vs LCL vs Break Bulk toggle tab -->
-                <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
-                  <div class="toggle-option active" id="sea-tab-fcl">FCL (Full Container Load)</div>
-                  <div class="toggle-option" id="sea-tab-lcl">LCL (Less Container Load)</div>
-                  <div class="toggle-option" id="sea-tab-bb">Break Bulk</div>
-                </div>
-
-                <!-- FCL Fields -->
-                <div id="sea-fcl-form">
-                  <div id="sea-fcl-stuffing-container" style="margin-bottom: 1.2rem; display: none;">
-                    <label for="sea-fcl-stuffing">Stuffing Option</label>
-                    <select id="sea-fcl-stuffing"
-                      style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
-                      <option value="factory" selected>Factory Stuffing</option>
-                      <option value="cfs_icd">CFS/ICD Stuffing</option>
-                    </select>
-                  </div>
-                  <h4
-                    style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
-                    Ocean Freight Tariff Per Container</h4>
-                  <div class="cargo-table-container">
-                    <table class="cargo-table" style="min-width: unset; table-layout: fixed; width: 100%;">
-                      <thead>
-                        <tr>
-                          <th style="width: 32%;">Container Type</th>
-                          <th style="width: 16%; text-align: center;">Quantity Needed</th>
-                          <th style="width: 21%; text-align: center;">Sell Rate Per Container (<span class="curr-label">USD</span>)</th>
-                          <th style="width: 21%; text-align: center;">Buy Rate Per Container (<span class="curr-label">USD</span>)</th>
-                          <th style="width: 10%; text-align: center;">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody id="sea-fcl-body">
-                        <!-- Dynamic Rows populated by JS -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <button type="button" class="add-row-btn" id="sea-add-container"
-                    style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
+            <!-- Dynamic Liners / Coloaders / BreakBulk Operators Container -->
+            <div id="sea-liners-container">
+              <!-- Primary Liner Block (Liner #1) -->
+              <div class="liner-card" id="sea-liner-card-1" data-liner-index="1">
+                <div class="liner-card-header">
+                  <div class="liner-card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/>
                     </svg>
-                    Add Container Line
-                  </button>
-                </div>
-
-                <!-- LCL Fields -->
-                <div id="sea-lcl-form" style="display: none;">
-                  <h4
-                    style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
-                    LCL Freight Pricing</h4>
-                  <div class="form-row" id="sea-lcl-rates-row">
-                    <div class="form-group" style="margin-bottom: 0;">
-                      <label for="sea-lcl-rate" id="sea-lcl-rate-label">LCL Freight Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="0">
-                    </div>
-                    <div class="form-group" id="sea-lcl-buy-group" style="margin-bottom: 0; display: none;">
-                      <label for="sea-lcl-buy-rate">LCL Buy Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-lcl-buy-rate" placeholder="Buy Rate" min="0" value="0">
-                    </div>
+                    <span class="liner-label-text">Liner 1 / Primary Operator</span>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="text" class="liner-name-input" id="sea-liner-name-1" placeholder="Carrier Name e.g. Maersk / MSC / Coloader" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 220px;">
                   </div>
                 </div>
 
-                <!-- Break Bulk Fields -->
-                <div id="sea-bb-form" style="display: none;">
-                  <h4
-                    style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-sea);">
-                    Break Bulk Freight Pricing</h4>
-                  <div class="form-row" id="sea-bb-rates-row">
-                    <div class="form-group" style="margin-bottom: 0;">
-                      <label for="sea-bb-rate" id="sea-bb-rate-label">Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-bb-rate" placeholder="Rate" min="0" value="0">
+                <!-- Liner Accordions Group -->
+                <div class="liner-accordions-group">
+                  <!-- 1. FREIGHT ACCORDION -->
+                  <div class="liner-accordion-item">
+                    <div class="liner-accordion-header" onclick="toggleLinerAccordion(this)">
+                      <div class="liner-accordion-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <rect x="1" y="3" width="22" height="18" rx="2" ry="2" />
+                          <line x1="1" y1="10" x2="23" y2="10" />
+                        </svg>
+                        📦 Freight (Ocean Freight Tariffs)
+                      </div>
+                      <button type="button" class="liner-accordion-toggle-btn">
+                        <span class="toggle-icon">▼</span> <span class="toggle-text">Collapse</span>
+                      </button>
                     </div>
-                    <div class="form-group" id="sea-bb-buy-group" style="margin-bottom: 0; display: none;">
-                      <label for="sea-bb-buy-rate">Break Bulk Buy Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="0">
+                    <div class="liner-accordion-content">
+                      <div class="section-card" id="sea-tariffs-card-1" style="background: transparent; border: none; padding: 0;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
+                          <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-sea); cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="sea-enable-tariffs-1" class="sea-enable-tariffs" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                            Include Freight Tariff
+                          </label>
+                          <span id="sea-tariffs-status-badge-1" class="sea-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                        </div>
+                        <div id="sea-tariffs-content-body-1" class="sea-tariffs-content-body">
+                          <!-- FCL vs LCL vs Break Bulk toggle tab for Liner 1 -->
+                          <div class="toggle-group liner-mode-toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+                            <div class="toggle-option active sea-tab-fcl-btn" onclick="switchLinerMode(1, 'fcl')">FCL (Full Container Load)</div>
+                            <div class="toggle-option sea-tab-lcl-btn" onclick="switchLinerMode(1, 'lcl')">LCL (Less Container Load)</div>
+                            <div class="toggle-option sea-tab-bb-btn" onclick="switchLinerMode(1, 'bb')">Break Bulk</div>
+                          </div>
+
+                          <!-- FCL Fields -->
+                          <div class="sea-fcl-form" id="sea-fcl-form-1">
+                            <div class="sea-fcl-stuffing-container" id="sea-fcl-stuffing-container-1" style="margin-bottom: 1.2rem; display: none;">
+                              <label for="sea-fcl-stuffing-1">Stuffing Option</label>
+                              <select id="sea-fcl-stuffing-1" class="sea-fcl-stuffing-select"
+                                style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                                <option value="factory" selected>Factory Stuffing</option>
+                                <option value="cfs_icd">CFS/ICD Stuffing</option>
+                              </select>
+                            </div>
+                            <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
+                              Ocean Freight Tariff Per Container</h4>
+                            <div class="cargo-table-container">
+                              <table class="cargo-table" style="min-width: unset; table-layout: fixed; width: 100%;">
+                                <thead>
+                                  <tr>
+                                    <th style="width: 32%;">Container Type</th>
+                                    <th style="width: 16%; text-align: center;">Qty</th>
+                                    <th style="width: 21%; text-align: center;">Sell Rate (<span class="curr-label">USD</span>)</th>
+                                    <th style="width: 21%; text-align: center;">Buy Rate (<span class="curr-label">USD</span>)</th>
+                                    <th style="width: 10%; text-align: center;">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="sea-fcl-body" id="sea-fcl-body-1">
+                                  <!-- Dynamic Container Rows -->
+                                </tbody>
+                              </table>
+                            </div>
+                            <button type="button" class="add-row-btn" onclick="addFclContainerRowToLiner(1)" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                              </svg>
+                              Add Container Line
+                            </button>
+                          </div>
+
+                          <!-- LCL Fields -->
+                          <div class="sea-lcl-form" id="sea-lcl-form-1" style="display: none;">
+                            <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
+                              LCL Freight Pricing</h4>
+                            <div class="form-row">
+                              <div class="form-group" style="margin-bottom: 0;">
+                                <label>LCL Freight Rate (Per Revenue Ton - RT)</label>
+                                <input type="number" class="sea-lcl-rate" placeholder="Rate" min="0" value="0" oninput="calculateSeaFreight()">
+                              </div>
+                              <div class="form-group" style="margin-bottom: 0;">
+                                <label>LCL Buy Rate (Per Revenue Ton - RT)</label>
+                                <input type="number" class="sea-lcl-buy-rate" placeholder="Buy Rate" min="0" value="0" oninput="calculateSeaFreight()">
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Break Bulk Fields -->
+                          <div class="sea-bb-form" id="sea-bb-form-1" style="display: none;">
+                            <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-sea);">
+                              Break Bulk Freight Pricing</h4>
+                            <div class="form-row">
+                              <div class="form-group" style="margin-bottom: 0;">
+                                <label>Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
+                                <input type="number" class="sea-bb-rate" placeholder="Rate" min="0" value="0" oninput="calculateSeaFreight()">
+                              </div>
+                              <div class="form-group" style="margin-bottom: 0;">
+                                <label>Break Bulk Buy Rate (Per Revenue Ton - RT)</label>
+                                <input type="number" class="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="0" oninput="calculateSeaFreight()">
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <!-- ===== BB-ONLY EXTENDED PARAMETERS ===== -->
-                  <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed rgba(56,189,248,0.25);">
-                    <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 800; color: var(--accent-sea); margin-bottom: 0.85rem;">⚓ Break Bulk Operational Parameters</h4>
-                    <div class="form-grid-3">
-                      <div class="form-group">
-                        <label for="sea-bb-operational-mode">Operational Mode</label>
-                        <select id="sea-bb-operational-mode" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
-                          <option value="Hook to Hook" selected>Hook to Hook</option>
-                          <option value="Standard Wharfage">Standard Wharfage</option>
-                        </select>
+                  <!-- 2. ORIGIN LOCAL FEES ACCORDION -->
+                  <div class="liner-accordion-item">
+                    <div class="liner-accordion-header" onclick="toggleLinerAccordion(this)">
+                      <div class="liner-accordion-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                          <path d="M2 12h20" />
+                        </svg>
+                        ⚓ Origin Local Fees & Surcharges
                       </div>
-                      <div class="form-group">
-                        <label for="sea-bb-stowage">Stowage Configuration</label>
-                        <select id="sea-bb-stowage" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
-                          <option value="Under Deck" selected>Under Deck</option>
-                          <option value="On Deck">On Deck</option>
-                        </select>
-                      </div>
+                      <button type="button" class="liner-accordion-toggle-btn">
+                        <span class="toggle-icon">▼</span> <span class="toggle-text">Collapse</span>
+                      </button>
                     </div>
-                    <!-- LayCan Dual-Calendar Window -->
-                    <div style="margin-top: 0.5rem;">
-                      <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--sky); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">⚓ LayCan Window (Laydays / Cancelling)</label>
-                      <div class="form-grid-3">
-                        <div class="form-group" style="margin-bottom: 0;">
-                          <label for="sea-bb-laydays">Laydays (Earliest)</label>
-                          <input type="date" id="sea-bb-laydays" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
+                    <div class="liner-accordion-content">
+                      <div class="section-card" id="sea-origin-fees-card-1" style="background: transparent; border: none; padding: 0;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
+                          <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="sea-enable-origin-fees-1" class="sea-enable-origin-fees" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                            Include Origin Local Fees
+                          </label>
+                          <span id="sea-origin-status-badge-1" class="sea-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                          <label for="sea-bb-cancelling">Cancelling (Latest)</label>
-                          <input type="date" id="sea-bb-cancelling" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                          <label style="display: block; margin-bottom: 0.35rem;">LayCan Duration</label>
-                          <div id="sea-bb-laycan-duration" style="padding: 0.65rem 0.9rem; background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2); border-radius: var(--r-sm); font-size: 0.82rem; font-weight: 700; color: var(--sky); min-height: 42px; display: flex; align-items: center;">— days</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Split Surcharges (Origin vs Destination) -->
-            <!-- 1. Origin Surcharges & Port Fees -->
-            <div class="section-card" id="sea-origin-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="sea-enable-origin-fees" checked onchange="calculateSeaFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Origin Local Fees & Surcharges
-                </label>
-                <span id="sea-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="sea-origin-fees-content-body">
-                <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
-                  <table class="cargo-table">
-                    <thead>
-                      <tr>
-                        <th>Surcharge Name</th>
-                        <th>Sell Cost (<span class="curr-label">USD</span>)</th>
-                        <th>Buy Rate</th>
-                        <th>Billing Unit</th>
-                        <th>Remarks</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="sea-origin-surcharges-body">
-                      <tr>
-                        <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
-                        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-                        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                        <td>
-                          <select class="chg-unit"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
-                            <option value="flat">Flat Fee</option>
-                            <option value="container" selected>Per Container</option>
-                            <option value="rt">Per RT (Revenue Ton)</option>
-                            <option value="kg">Per Kg (Gross Weight)</option>
-                          </select>
-                        </td>
-                        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                        <td>
-                          <button type="button" class="delete-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              stroke-width="2">
-                              <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        <div id="sea-origin-fees-content-body-1" class="sea-origin-fees-content-body">
+                          <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+                            <table class="cargo-table">
+                              <thead>
+                                <tr>
+                                  <th>Surcharge Name</th>
+                                  <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                                  <th>Buy Rate</th>
+                                  <th>Billing Unit</th>
+                                  <th>Remarks</th>
+                                  <th>Action</th>
+                                </tr>
+                              </thead>
+                              <tbody class="sea-origin-surcharges-body" id="sea-origin-surcharges-body-1">
+                                <tr>
+                                  <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required oninput="calculateSeaFreight()"></td>
+                                  <td><input type="number" class="chg-rate" value="0.00" step="0.01" required oninput="calculateSeaFreight()"></td>
+                                  <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);" oninput="calculateSeaFreight()"></td>
+                                  <td>
+                                    <select class="chg-unit" onchange="calculateSeaFreight()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+                                      <option value="flat">Flat Fee</option>
+                                      <option value="container" selected>Per Container</option>
+                                      <option value="rt">Per RT (Revenue Ton)</option>
+                                      <option value="kg">Per Kg (Gross Weight)</option>
+                                    </select>
+                                  </td>
+                                  <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+                                  <td>
+                                    <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaFreight();">
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                                      </svg>
+                                    </button>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td><input type="text" class="chg-name" value="Documentation Fee" required oninput="calculateSeaFreight()"></td>
+                                  <td><input type="number" class="chg-rate" value="0.00" step="0.01" required oninput="calculateSeaFreight()"></td>
+                                  <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);" oninput="calculateSeaFreight()"></td>
+                                  <td>
+                                    <select class="chg-unit" onchange="calculateSeaFreight()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+                                      <option value="flat" selected>Flat Fee</option>
+                                      <option value="container">Per Container</option>
+                                      <option value="rt">Per RT (Revenue Ton)</option>
+                                      <option value="kg">Per Kg (Gross Weight)</option>
+                                    </select>
+                                  </td>
+                                  <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+                                  <td>
+                                    <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaFreight();">
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                                      </svg>
+                                    </button>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <button type="button" class="add-row-btn" onclick="addSeaSurchargeRowToLiner(1, 'origin')" style="margin-bottom: 0.5rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                              <line x1="12" y1="5" x2="12" y2="19" />
+                              <line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
+                            Add Origin Surcharge
                           </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
-                        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-                        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                        <td>
-                          <select class="chg-unit"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
-                            <option value="flat" selected>Flat Fee</option>
-                            <option value="container">Per Container</option>
-                            <option value="rt">Per RT (Revenue Ton)</option>
-                            <option value="kg">Per Kg (Gross Weight)</option>
-                          </select>
-                        </td>
-                        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                        <td>
-                          <button type="button" class="delete-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              stroke-width="2">
-                              <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 3. DESTINATION LOCAL FEES ACCORDION -->
+                  <div class="liner-accordion-item">
+                    <div class="liner-accordion-header" onclick="toggleLinerAccordion(this)">
+                      <div class="liner-accordion-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        📍 Destination Local Fees & Surcharges
+                      </div>
+                      <button type="button" class="liner-accordion-toggle-btn">
+                        <span class="toggle-icon">▼</span> <span class="toggle-text">Collapse</span>
+                      </button>
+                    </div>
+                    <div class="liner-accordion-content">
+                      <div class="section-card" id="sea-dest-fees-card-1" style="background: transparent; border: none; padding: 0;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
+                          <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="sea-enable-dest-fees-1" class="sea-enable-dest-fees" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                            Include Destination Local Fees
+                          </label>
+                          <span id="sea-dest-status-badge-1" class="sea-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                        </div>
+                        <div id="sea-dest-fees-content-body-1" class="sea-dest-fees-content-body">
+                          <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+                            <table class="cargo-table">
+                              <thead>
+                                <tr>
+                                  <th>Surcharge Name</th>
+                                  <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                                  <th>Buy Rate</th>
+                                  <th>Billing Unit</th>
+                                  <th>Remarks</th>
+                                  <th>Action</th>
+                                </tr>
+                              </thead>
+                              <tbody class="sea-dest-surcharges-body" id="sea-dest-surcharges-body-1">
+                                <!-- Dynamic Destination Charges -->
+                              </tbody>
+                            </table>
+                          </div>
+                          <button type="button" class="add-row-btn" onclick="addSeaSurchargeRowToLiner(1, 'dest')" style="margin-bottom: 0.5rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                              <line x1="12" y1="5" x2="12" y2="19" />
+                              <line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
+                            Add Destination Surcharge
                           </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <button type="button" class="add-row-btn" id="add-sea-origin-surcharge" style="margin-bottom: 0.5rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Origin Surcharge
-                </button>
               </div>
             </div>
 
-            <!-- 2. Destination Surcharges & Port Fees -->
-            <div class="section-card" id="sea-dest-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="sea-enable-dest-fees" checked onchange="calculateSeaFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Destination Local Fees & Surcharges
-                </label>
-                <span id="sea-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="sea-dest-fees-content-body">
-                <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
-                  <table class="cargo-table">
-                    <thead>
-                      <tr>
-                        <th>Surcharge Name</th>
-                        <th>Sell Cost (<span class="curr-label">USD</span>)</th>
-                        <th>Buy Rate</th>
-                        <th>Billing Unit</th>
-                        <th>Remarks</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="sea-dest-surcharges-body">
-                      <!-- Add destination charges dynamically -->
-                    </tbody>
-                  </table>
-                </div>
-                <button type="button" class="add-row-btn" id="add-sea-dest-surcharge" style="margin-bottom: 0.5rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Destination Surcharge
-                </button>
-              </div>
-            </div>
+            <!-- Button to Add Additional Liner / Coloader / BreakBulk -->
+            <button type="button" class="add-row-btn" id="sea-add-liner-btn" onclick="addNewLinerCard()" style="margin-top: 1rem; margin-bottom: 1.5rem; background: rgba(56, 189, 248, 0.12); border: 1px dashed var(--sky); color: var(--sky); font-weight: 700; width: 100%; justify-content: center; padding: 0.85rem; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              + Add Additional Shipping Line / Coloader / BreakBulk Rate Option
+            </button>
+
 
             <!-- Alternative Carrier Option Rates -->
             <div style="margin-top: 1.5rem; margin-bottom: 1rem;">
@@ -2553,9 +2583,13 @@
               <span class="result-value" id="res-sea-gp"
                 style="color: var(--accent-success); font-weight: 700;">$0.00</span>
             </div>
-            <div class="result-row" style="border-bottom: none;">
-              <span class="result-label">Estimated Grand Total</span>
-              <span class="result-value-highlight" id="res-sea-total">$0.00</span>
+            <!-- Dynamic Multi-Liner Rate Options Summary in Results Panel -->
+            <div id="sea-multi-liner-results-container" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem; display: block;">
+              <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-sea); margin-bottom: 0.5rem; font-weight: 800; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: space-between;">
+                <span>Liner / Coloader Rate Comparisons</span>
+                <span id="sea-liner-count-badge" style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: var(--sky); padding: 2px 6px; border-radius: 4px;">1 Option</span>
+              </h4>
+              <div id="sea-multi-liner-results-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
             </div>
 
             <!-- Dynamic Alternative Carrier Options Summary -->

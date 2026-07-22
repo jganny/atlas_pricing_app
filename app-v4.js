@@ -3166,8 +3166,333 @@ function setupSeaFreightEvents() {
   }
 }
 
-function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
-  const tbody = document.getElementById("sea-fcl-body");
+
+// ══════════════════════════════════════════════════
+// MULTI-LINER & ACCORDION SYSTEM FOR SEA FREIGHT
+// ══════════════════════════════════════════════════
+
+window.toggleLinerAccordion = function(headerEl) {
+  const contentEl = headerEl.nextElementSibling;
+  const toggleBtn = headerEl.querySelector(".liner-accordion-toggle-btn");
+  if (!contentEl) return;
+
+  const isCollapsed = contentEl.classList.contains("collapsed");
+  if (isCollapsed) {
+    contentEl.classList.remove("collapsed");
+    if (toggleBtn) {
+      toggleBtn.querySelector(".toggle-icon").textContent = "▼";
+      toggleBtn.querySelector(".toggle-text").textContent = "Collapse";
+    }
+  } else {
+    contentEl.classList.add("collapsed");
+    if (toggleBtn) {
+      toggleBtn.querySelector(".toggle-icon").textContent = "▲";
+      toggleBtn.querySelector(".toggle-text").textContent = "Expand";
+    }
+  }
+};
+
+window.switchLinerMode = function(linerIndex, mode) {
+  const card = document.getElementById(`sea-liner-card-${linerIndex}`);
+  if (!card) return;
+
+  const fclBtn = card.querySelector(`.sea-tab-fcl-btn`);
+  const lclBtn = card.querySelector(`.sea-tab-lcl-btn`);
+  const bbBtn = card.querySelector(`.sea-tab-bb-btn`);
+
+  if (fclBtn) fclBtn.classList.toggle("active", mode === 'fcl');
+  if (lclBtn) lclBtn.classList.toggle("active", mode === 'lcl');
+  if (bbBtn) bbBtn.classList.toggle("active", mode === 'bb');
+
+  const fclForm = document.getElementById(`sea-fcl-form-${linerIndex}`);
+  const lclForm = document.getElementById(`sea-lcl-form-${linerIndex}`);
+  const bbForm = document.getElementById(`sea-bb-form-${linerIndex}`);
+
+  if (fclForm) fclForm.style.display = (mode === 'fcl') ? "block" : "none";
+  if (lclForm) lclForm.style.display = (mode === 'lcl') ? "block" : "none";
+  if (bbForm) bbForm.style.display = (mode === 'bb') ? "block" : "none";
+
+  card.dataset.mode = mode;
+  calculateSeaFreight();
+};
+
+let linerCardCounter = 1;
+
+window.addNewLinerCard = function(data = null) {
+  linerCardCounter++;
+  const index = linerCardCounter;
+  const container = document.getElementById("sea-liners-container");
+  if (!container) return;
+
+  const linerCard = document.createElement("div");
+  linerCard.className = "liner-card";
+  linerCard.id = `sea-liner-card-${index}`;
+  linerCard.dataset.linerIndex = index;
+  linerCard.dataset.mode = data?.mode || appState.currentSeaFreight.type || 'fcl';
+
+  const linerName = data?.linerName || `Liner ${index}`;
+  const isFcl = (linerCard.dataset.mode === 'fcl');
+  const isLcl = (linerCard.dataset.mode === 'lcl');
+  const isBb = (linerCard.dataset.mode === 'bb');
+
+  linerCard.innerHTML = `
+    <div class="liner-card-header">
+      <div class="liner-card-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/>
+        </svg>
+        <span class="liner-label-text">Liner ${index} / Additional Operator</span>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <input type="text" class="liner-name-input" id="sea-liner-name-${index}" value="${linerName}" placeholder="Carrier Name e.g. MSC / ONE / Coloader" oninput="calculateSeaFreight()" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 220px;">
+        <button type="button" class="delete-btn" onclick="removeLinerCard(${index})" style="background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight: 700;">
+          🗑 Delete Liner
+        </button>
+      </div>
+    </div>
+
+    <!-- Liner Accordions Group -->
+    <div class="liner-accordions-group">
+      <!-- 1. FREIGHT ACCORDION -->
+      <div class="liner-accordion-item">
+        <div class="liner-accordion-header" onclick="toggleLinerAccordion(this)">
+          <div class="liner-accordion-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="3" width="22" height="18" rx="2" ry="2" />
+              <line x1="1" y1="10" x2="23" y2="10" />
+            </svg>
+            📦 Freight (Ocean Freight Tariffs)
+          </div>
+          <button type="button" class="liner-accordion-toggle-btn">
+            <span class="toggle-icon">▼</span> <span class="toggle-text">Collapse</span>
+          </button>
+        </div>
+        <div class="liner-accordion-content">
+          <div class="section-card" id="sea-tariffs-card-${index}" style="background: transparent; border: none; padding: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-sea); cursor: pointer; margin: 0;">
+                <input type="checkbox" id="sea-enable-tariffs-${index}" class="sea-enable-tariffs" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                Include Freight Tariff
+              </label>
+              <span id="sea-tariffs-status-badge-${index}" class="sea-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+            </div>
+            <div id="sea-tariffs-content-body-${index}" class="sea-tariffs-content-body">
+              <div class="toggle-group liner-mode-toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+                <div class="toggle-option ${isFcl ? 'active' : ''} sea-tab-fcl-btn" onclick="switchLinerMode(${index}, 'fcl')">FCL (Full Container Load)</div>
+                <div class="toggle-option ${isLcl ? 'active' : ''} sea-tab-lcl-btn" onclick="switchLinerMode(${index}, 'lcl')">LCL (Less Container Load)</div>
+                <div class="toggle-option ${isBb ? 'active' : ''} sea-tab-bb-btn" onclick="switchLinerMode(${index}, 'bb')">Break Bulk</div>
+              </div>
+
+              <!-- FCL Fields -->
+              <div class="sea-fcl-form" id="sea-fcl-form-${index}" style="display: ${isFcl ? 'block' : 'none'};">
+                <div class="sea-fcl-stuffing-container" id="sea-fcl-stuffing-container-${index}" style="margin-bottom: 1.2rem; display: none;">
+                  <label for="sea-fcl-stuffing-${index}">Stuffing Option</label>
+                  <select id="sea-fcl-stuffing-${index}" class="sea-fcl-stuffing-select" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                    <option value="factory" selected>Factory Stuffing</option>
+                    <option value="cfs_icd">CFS/ICD Stuffing</option>
+                  </select>
+                </div>
+                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
+                  Ocean Freight Tariff Per Container</h4>
+                <div class="cargo-table-container">
+                  <table class="cargo-table" style="min-width: unset; table-layout: fixed; width: 100%;">
+                    <thead>
+                      <tr>
+                        <th style="width: 32%;">Container Type</th>
+                        <th style="width: 16%; text-align: center;">Qty</th>
+                        <th style="width: 21%; text-align: center;">Sell Rate (<span class="curr-label">USD</span>)</th>
+                        <th style="width: 21%; text-align: center;">Buy Rate (<span class="curr-label">USD</span>)</th>
+                        <th style="width: 10%; text-align: center;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody class="sea-fcl-body" id="sea-fcl-body-${index}">
+                    </tbody>
+                  </table>
+                </div>
+                <button type="button" class="add-row-btn" onclick="addFclContainerRowToLiner(${index})" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Add Container Line
+                </button>
+              </div>
+
+              <!-- LCL Fields -->
+              <div class="sea-lcl-form" id="sea-lcl-form-${index}" style="display: ${isLcl ? 'block' : 'none'};">
+                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
+                  LCL Freight Pricing</h4>
+                <div class="form-row">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label>LCL Freight Rate (Per Revenue Ton - RT)</label>
+                    <input type="number" class="sea-lcl-rate" placeholder="Rate" min="0" value="${data?.lclRate || 0}" oninput="calculateSeaFreight()">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label>LCL Buy Rate (Per Revenue Ton - RT)</label>
+                    <input type="number" class="sea-lcl-buy-rate" placeholder="Buy Rate" min="0" value="${data?.lclBuyRate || 0}" oninput="calculateSeaFreight()">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Break Bulk Fields -->
+              <div class="sea-bb-form" id="sea-bb-form-${index}" style="display: ${isBb ? 'block' : 'none'};">
+                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-sea);">
+                  Break Bulk Freight Pricing</h4>
+                <div class="form-row">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label>Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
+                    <input type="number" class="sea-bb-rate" placeholder="Rate" min="0" value="${data?.bbRate || 0}" oninput="calculateSeaFreight()">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label>Break Bulk Buy Rate (Per Revenue Ton - RT)</label>
+                    <input type="number" class="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="${data?.bbBuyRate || 0}" oninput="calculateSeaFreight()">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ORIGIN LOCAL FEES ACCORDION -->
+      <div class="liner-accordion-item">
+        <div class="liner-accordion-header" onclick="toggleLinerAccordion(this)">
+          <div class="liner-accordion-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+              <path d="M2 12h20" />
+            </svg>
+            ⚓ Origin Local Fees & Surcharges
+          </div>
+          <button type="button" class="liner-accordion-toggle-btn">
+            <span class="toggle-icon">▼</span> <span class="toggle-text">Collapse</span>
+          </button>
+        </div>
+        <div class="liner-accordion-content">
+          <div class="section-card" id="sea-origin-fees-card-${index}" style="background: transparent; border: none; padding: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
+                <input type="checkbox" id="sea-enable-origin-fees-${index}" class="sea-enable-origin-fees" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                Include Origin Local Fees
+              </label>
+              <span id="sea-origin-status-badge-${index}" class="sea-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+            </div>
+            <div id="sea-origin-fees-content-body-${index}" class="sea-origin-fees-content-body">
+              <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th>Surcharge Name</th>
+                      <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                      <th>Buy Rate</th>
+                      <th>Billing Unit</th>
+                      <th>Remarks</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="sea-origin-surcharges-body" id="sea-origin-surcharges-body-${index}">
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn" onclick="addSeaSurchargeRowToLiner(${index}, 'origin')" style="margin-bottom: 0.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Origin Surcharge
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. DESTINATION LOCAL FEES ACCORDION -->
+      <div class="liner-accordion-item">
+        <div class="liner-accordion-header" onclick="toggleLinerAccordion(this)">
+          <div class="liner-accordion-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            📍 Destination Local Fees & Surcharges
+          </div>
+          <button type="button" class="liner-accordion-toggle-btn">
+            <span class="toggle-icon">▼</span> <span class="toggle-text">Collapse</span>
+          </button>
+        </div>
+        <div class="liner-accordion-content">
+          <div class="section-card" id="sea-dest-fees-card-${index}" style="background: transparent; border: none; padding: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
+                <input type="checkbox" id="sea-enable-dest-fees-${index}" class="sea-enable-dest-fees" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                Include Destination Local Fees
+              </label>
+              <span id="sea-dest-status-badge-${index}" class="sea-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+            </div>
+            <div id="sea-dest-fees-content-body-${index}" class="sea-dest-fees-content-body">
+              <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th>Surcharge Name</th>
+                      <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                      <th>Buy Rate</th>
+                      <th>Billing Unit</th>
+                      <th>Remarks</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="sea-dest-surcharges-body" id="sea-dest-surcharges-body-${index}">
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn" onclick="addSeaSurchargeRowToLiner(${index}, 'dest')" style="margin-bottom: 0.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Destination Surcharge
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(linerCard);
+
+  if (data?.containers && data.containers.length > 0) {
+    data.containers.forEach(c => addFclContainerRowToLiner(index, c.type, c.qty, c.rate));
+  } else {
+    addFclContainerRowToLiner(index, "20'GP", 1, 0);
+  }
+
+  if (data?.originSurcharges && data.originSurcharges.length > 0) {
+    data.originSurcharges.forEach(s => addSeaSurchargeRowToLiner(index, 'origin', s.name, s.rate, s.buyRate, s.unit, s.remarks));
+  } else {
+    addSeaSurchargeRowToLiner(index, 'origin', 'Terminal Handling Charges (THC)', 0, 0, 'container', '');
+    addSeaSurchargeRowToLiner(index, 'origin', 'Documentation Fee', 0, 0, 'flat', '');
+  }
+
+  if (data?.destSurcharges && data.destSurcharges.length > 0) {
+    data.destSurcharges.forEach(s => addSeaSurchargeRowToLiner(index, 'dest', s.name, s.rate, s.buyRate, s.unit, s.remarks));
+  }
+
+  calculateSeaFreight();
+};
+
+window.removeLinerCard = function(linerIndex) {
+  const card = document.getElementById(`sea-liner-card-${linerIndex}`);
+  if (card) {
+    card.remove();
+    calculateSeaFreight();
+  }
+};
+
+window.addFclContainerRowToLiner = function(linerIndex, typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
+  const tbody = document.getElementById(`sea-fcl-body-${linerIndex}`);
   if (!tbody) return;
 
   const sellRate = (typeof rateVal === 'object' && rateVal !== null) ? (rateVal.sell || rateVal.rate || 0) : (parseFloat(rateVal) || 0);
@@ -3178,7 +3503,7 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
   
   tr.innerHTML = `
     <td>
-      <select class="fcl-type table-select">
+      <select class="fcl-type table-select" onchange="calculateSeaFreight()">
         <option value="20'GP" ${typeVal === "20'GP" ? 'selected' : ''}>20'GP (General Purpose)</option>
         <option value="40'GP" ${typeVal === "40'GP" ? 'selected' : ''}>40'GP (General Purpose)</option>
         <option value="20'HC" ${typeVal === "20'HC" ? 'selected' : ''}>20'HC (High Cube)</option>
@@ -3192,77 +3517,62 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
         <option value="45'HC" ${typeVal === "45'HC" ? 'selected' : ''}>45'HC (High Cube)</option>
       </select>
     </td>
-    <td><input type="number" class="fcl-qty" value="${qtyVal}" min="1" style="width: 100%; text-align: center;"></td>
-    <td><input type="number" class="fcl-rate fcl-sell-rate" value="${sellRate}" min="0" style="width: 100%; text-align: right;"></td>
-    <td><input type="number" class="fcl-buy-rate" value="${buyRate}" min="0" style="width: 100%; text-align: right;"></td>
+    <td><input type="number" class="fcl-qty" value="${qtyVal}" min="1" oninput="calculateSeaFreight()" style="width: 100%; text-align: center;"></td>
+    <td><input type="number" class="fcl-rate fcl-sell-rate" value="${sellRate}" min="0" oninput="calculateSeaFreight()" style="width: 100%; text-align: right;"></td>
+    <td><input type="number" class="fcl-buy-rate" value="${buyRate}" min="0" oninput="calculateSeaFreight()" style="width: 100%; text-align: right;"></td>
     <td style="text-align: center;">
-      <button type="button" class="delete-btn" style="margin: 0 auto;">
+      <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaFreight();" style="margin: 0 auto;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
       </button>
     </td>
   `;
 
-  tr.querySelector(".fcl-type").addEventListener("change", calculateSeaFreight);
-  tr.querySelector(".fcl-qty").addEventListener("input", calculateSeaFreight);
-  
-  const rateInp = tr.querySelector(".fcl-sell-rate") || tr.querySelector(".fcl-rate");
-  rateInp.addEventListener("input", calculateSeaFreight);
+  tbody.appendChild(tr);
+  calculateSeaFreight();
+};
 
-  const buyInp = tr.querySelector(".fcl-buy-rate");
-  if (buyInp) buyInp.addEventListener("input", calculateSeaFreight);
+window.addSeaSurchargeRowToLiner = function(linerIndex, type, nameVal = "", sellVal = 0, buyVal = 0, unitVal = "flat", remarksVal = "") {
+  const tbodyId = type === 'origin' ? `sea-origin-surcharges-body-${linerIndex}` : `sea-dest-surcharges-body-${linerIndex}`;
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
 
-  tr.querySelector(".delete-btn").addEventListener("click", () => {
-    tr.remove();
-    calculateSeaFreight();
-  });
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input type="text" class="chg-name" value="${nameVal}" placeholder="Surcharge Name" required oninput="calculateSeaFreight()"></td>
+    <td><input type="number" class="chg-rate" value="${sellVal}" step="0.01" required oninput="calculateSeaFreight()"></td>
+    <td><input type="number" class="chg-buy-rate" value="${buyVal}" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);" oninput="calculateSeaFreight()"></td>
+    <td>
+      <select class="chg-unit" onchange="calculateSeaFreight()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+        <option value="flat" ${unitVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
+        <option value="container" ${unitVal === 'container' ? 'selected' : ''}>Per Container</option>
+        <option value="rt" ${unitVal === 'rt' ? 'selected' : ''}>Per RT (Revenue Ton)</option>
+        <option value="kg" ${unitVal === 'kg' ? 'selected' : ''}>Per Kg (Gross Weight)</option>
+      </select>
+    </td>
+    <td><input type="text" class="chg-remarks" value="${remarksVal}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+    <td>
+      <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaFreight();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+        </svg>
+      </button>
+    </td>
+  `;
 
   tbody.appendChild(tr);
   calculateSeaFreight();
-}
+};
 
+function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
+  addFclContainerRowToLiner(1, typeVal, qtyVal, rateVal);
+}
 window.addFclContainerRow = addFclContainerRow;
 
 function calculateSeaFreight() {
   updateSeaFclStuffingVisibility();
-  // Sync page currency labels and units
   updateCurrencyRules(appState.currentUser);
 
-  // Read section enable/disable states
-  const tariffsEnabled = document.getElementById("sea-enable-tariffs")?.checked ?? true;
-  const originFeesEnabled = document.getElementById("sea-enable-origin-fees")?.checked ?? true;
-  const destFeesEnabled = document.getElementById("sea-enable-dest-fees")?.checked ?? true;
-
-  const tariffsBody = document.getElementById("sea-tariffs-content-body");
-  const originBody = document.getElementById("sea-origin-fees-content-body");
-  const destBody = document.getElementById("sea-dest-fees-content-body");
-
-  const tariffsBadge = document.getElementById("sea-tariffs-status-badge");
-  const originBadge = document.getElementById("sea-origin-status-badge");
-  const destBadge = document.getElementById("sea-dest-status-badge");
-
-  if (tariffsBody) tariffsBody.classList.toggle("box-disabled", !tariffsEnabled);
-  if (tariffsBadge) {
-    tariffsBadge.textContent = tariffsEnabled ? "✓ Included" : "✕ Excluded";
-    tariffsBadge.style.color = tariffsEnabled ? "#10b981" : "#ef4444";
-    tariffsBadge.style.background = tariffsEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
-  }
-
-  if (originBody) originBody.classList.toggle("box-disabled", !originFeesEnabled);
-  if (originBadge) {
-    originBadge.textContent = originFeesEnabled ? "✓ Included" : "✕ Excluded";
-    originBadge.style.color = originFeesEnabled ? "#10b981" : "#ef4444";
-    originBadge.style.background = originFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
-  }
-
-  if (destBody) destBody.classList.toggle("box-disabled", !destFeesEnabled);
-  if (destBadge) {
-    destBadge.textContent = destFeesEnabled ? "✓ Included" : "✕ Excluded";
-    destBadge.style.color = destFeesEnabled ? "#10b981" : "#ef4444";
-    destBadge.style.background = destFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
-  }
-
   const type = appState.currentSeaFreight.type; // 'fcl', 'lcl', or 'bb'
-  const isFcl = (type === 'fcl');
   const currency = document.getElementById("sea-currency").value;
   const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
   
@@ -3275,122 +3585,200 @@ function calculateSeaFreight() {
   const weightTons = weightKg / 1000;
   const chargeableCbm = Math.max(cbm, weightTons);
 
-  let baseFreight = 0;
-  let detailsText = '';
-  let totalContainersCount = 0;
-
-  if (type === 'fcl') {
-    const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
-    let containerSummary = [];
-    fclRows.forEach(row => {
-      const typeVal = row.querySelector(".fcl-type").value;
-      const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
-      const rate = parseFloat(row.querySelector(".fcl-sell-rate")?.value || row.querySelector(".fcl-rate")?.value) || 0;
-      const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
-      const activeRate = rate > 0 ? rate : (buy > 0 ? buy : 0);
-      if (qty > 0 && activeRate > 0) {
-        if (tariffsEnabled) {
-          baseFreight += (qty * activeRate);
-        }
-        totalContainersCount += qty;
-        containerSummary.push(`${qty} x ${typeVal}`);
-      }
-    });
-    detailsText = containerSummary.join(", ") || 'No Containers Selected';
-    appState.currentSeaFreight.fclSummary = containerSummary;
-  } else if (type === 'lcl') {
-    const rate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
-    const buy = parseFloat(document.getElementById("sea-lcl-buy-rate").value) || 0;
-    const activeRate = rate > 0 ? rate : buy;
-    if (tariffsEnabled) {
-      baseFreight = chargeableCbm * activeRate;
-    }
-    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
-  } else {
-    const rate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
-    const buy = parseFloat(document.getElementById("sea-bb-buy-rate").value) || 0;
-    const activeRate = rate > 0 ? rate : buy;
-    if (tariffsEnabled) {
-      baseFreight = chargeableCbm * activeRate;
-    }
-    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [Break Bulk]`;
-  }
-
-  let totalSurcharges = 0;
-  let originSurchargesList = [];
-  let destSurchargesList = [];
-
   const isSeaAmsEnabled = document.getElementById("sea-enable-ams-fee") ? document.getElementById("sea-enable-ams-fee").checked : true;
   const rawSeaAms = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
   const amsFee = isSeaAmsEnabled ? rawSeaAms : 0;
-  if (originFeesEnabled && isSeaAmsEnabled && amsFee > 0) {
-    totalSurcharges += amsFee;
-    originSurchargesList.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
-  }
 
-  if (originFeesEnabled) {
-    const originRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
-    originRows.forEach(row => {
-      const name = row.querySelector(".chg-name").value.trim();
-      const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-      const unit = row.querySelector(".chg-unit")?.value || 'flat';
-      const buyRateInput = row.querySelector(".chg-buy-rate");
-      const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
-      const remarksInput = row.querySelector(".chg-remarks");
-      const remarks = remarksInput ? remarksInput.value.trim() : "";
-      
-      if (name && rate > 0) {
-        let cost = 0;
-        if (unit === 'container') {
-          cost = isFcl ? totalContainersCount * rate : rate; // default LCL to 1 unit
-        } else if (unit === 'rt') {
-          cost = isFcl ? cbm * rate : chargeableCbm * rate;
-        } else if (unit === 'kg') {
-          cost = weightKg * rate;
-        } else {
-          cost = rate;
+  const linerCards = document.querySelectorAll("#sea-liners-container .liner-card");
+  let calculatedLiners = [];
+
+  linerCards.forEach((card, idx) => {
+    const linerIndex = card.dataset.linerIndex;
+    const linerNameInput = card.querySelector(".liner-name-input") || document.getElementById(`sea-liner-name-${linerIndex}`);
+    const mainCarrierName = document.getElementById("sea-line")?.value.trim() || "";
+    let linerName = linerNameInput?.value.trim();
+    if (!linerName) {
+      linerName = (idx === 0 && mainCarrierName) ? mainCarrierName : `Liner ${idx + 1}`;
+    }
+
+    const tariffsEnabled = card.querySelector(".sea-enable-tariffs")?.checked ?? true;
+    const originFeesEnabled = card.querySelector(".sea-enable-origin-fees")?.checked ?? true;
+    const destFeesEnabled = card.querySelector(".sea-enable-dest-fees")?.checked ?? true;
+
+    // Badges update
+    const tariffsBadge = card.querySelector(".sea-tariffs-status-badge");
+    const originBadge = card.querySelector(".sea-origin-status-badge");
+    const destBadge = card.querySelector(".sea-dest-status-badge");
+
+    if (tariffsBadge) {
+      tariffsBadge.textContent = tariffsEnabled ? "✓ Included" : "✕ Excluded";
+      tariffsBadge.style.color = tariffsEnabled ? "#10b981" : "#ef4444";
+      tariffsBadge.style.background = tariffsEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+    }
+    if (originBadge) {
+      originBadge.textContent = originFeesEnabled ? "✓ Included" : "✕ Excluded";
+      originBadge.style.color = originFeesEnabled ? "#10b981" : "#ef4444";
+      originBadge.style.background = originFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+    }
+    if (destBadge) {
+      destBadge.textContent = destFeesEnabled ? "✓ Included" : "✕ Excluded";
+      destBadge.style.color = destFeesEnabled ? "#10b981" : "#ef4444";
+      destBadge.style.background = destFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+    }
+
+    const linerMode = card.dataset.mode || appState.currentSeaFreight.type || 'fcl';
+    const isLinerFcl = (linerMode === 'fcl');
+
+    let linerBaseFreight = 0;
+    let linerContainersCount = 0;
+    let linerContainerSummary = [];
+    let containersList = [];
+
+    if (linerMode === 'fcl') {
+      const fclRows = card.querySelectorAll(".sea-fcl-body .container-row, tbody[id^='sea-fcl-body'] .container-row");
+      fclRows.forEach(row => {
+        const typeVal = row.querySelector(".fcl-type")?.value || "20'GP";
+        const qty = parseInt(row.querySelector(".fcl-qty")?.value) || 0;
+        const rate = parseFloat(row.querySelector(".fcl-sell-rate")?.value || row.querySelector(".fcl-rate")?.value) || 0;
+        const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
+        const activeRate = rate > 0 ? rate : (buy > 0 ? buy : 0);
+        containersList.push({ type: typeVal, qty, rate, buy });
+        if (qty > 0 && activeRate > 0) {
+          if (tariffsEnabled) {
+            linerBaseFreight += (qty * activeRate);
+          }
+          linerContainersCount += qty;
+          linerContainerSummary.push(`${qty} x ${typeVal}`);
         }
-        totalSurcharges += cost;
-        originSurchargesList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
+      });
+    } else if (linerMode === 'lcl') {
+      const rate = parseFloat(card.querySelector(".sea-lcl-rate")?.value) || 0;
+      const buy = parseFloat(card.querySelector(".sea-lcl-buy-rate")?.value) || 0;
+      const activeRate = rate > 0 ? rate : buy;
+      if (tariffsEnabled) {
+        linerBaseFreight = chargeableCbm * activeRate;
       }
-    });
-  }
+    } else {
+      const rate = parseFloat(card.querySelector(".sea-bb-rate")?.value) || 0;
+      const buy = parseFloat(card.querySelector(".sea-bb-buy-rate")?.value) || 0;
+      const activeRate = rate > 0 ? rate : buy;
+      if (tariffsEnabled) {
+        linerBaseFreight = chargeableCbm * activeRate;
+      }
+    }
 
-  if (destFeesEnabled) {
-    const destRows = document.querySelectorAll("#sea-dest-surcharges-body tr");
-    destRows.forEach(row => {
-      const name = row.querySelector(".chg-name").value.trim();
-      const rate = parseFloat(row.querySelector(".chg-rate").value) || 0;
-      const unit = row.querySelector(".chg-unit")?.value || 'flat';
-      const buyRateInput = row.querySelector(".chg-buy-rate");
-      const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
-      const remarksInput = row.querySelector(".chg-remarks");
-      const remarks = remarksInput ? remarksInput.value.trim() : "";
-      
-      if (name && rate > 0) {
-        let cost = 0;
-        if (unit === 'container') {
-          cost = isFcl ? totalContainersCount * rate : rate; // default LCL to 1 unit
-        } else if (unit === 'rt') {
-          cost = isFcl ? cbm * rate : chargeableCbm * rate;
-        } else if (unit === 'kg') {
-          cost = weightKg * rate;
-        } else {
-          cost = rate;
+    let linerOriginTotal = 0;
+    let linerOriginList = [];
+    if (originFeesEnabled) {
+      if (isSeaAmsEnabled && amsFee > 0) {
+        linerOriginTotal += amsFee;
+        linerOriginList.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
+      }
+      const originRows = card.querySelectorAll(".sea-origin-surcharges-body tr, tbody[id^='sea-origin-surcharges-body'] tr");
+      originRows.forEach(row => {
+        const name = row.querySelector(".chg-name")?.value.trim();
+        const rate = parseFloat(row.querySelector(".chg-rate")?.value) || 0;
+        const buyRate = parseFloat(row.querySelector(".chg-buy-rate")?.value) || 0;
+        const unit = row.querySelector(".chg-unit")?.value || 'flat';
+        const remarks = row.querySelector(".chg-remarks")?.value.trim() || "";
+
+        if (name && rate > 0) {
+          let cost = 0;
+          if (unit === 'container') {
+            cost = isLinerFcl ? linerContainersCount * rate : rate;
+          } else if (unit === 'rt') {
+            cost = chargeableCbm * rate;
+          } else if (unit === 'kg') {
+            cost = weightKg * rate;
+          } else {
+            cost = rate;
+          }
+          linerOriginTotal += cost;
+          linerOriginList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
         }
-        totalSurcharges += cost;
-        destSurchargesList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
-      }
-    });
-  }
+      });
+    }
 
+    let linerDestTotal = 0;
+    let linerDestList = [];
+    if (destFeesEnabled) {
+      const destRows = card.querySelectorAll(".sea-dest-surcharges-body tr, tbody[id^='sea-dest-surcharges-body'] tr");
+      destRows.forEach(row => {
+        const name = row.querySelector(".chg-name")?.value.trim();
+        const rate = parseFloat(row.querySelector(".chg-rate")?.value) || 0;
+        const buyRate = parseFloat(row.querySelector(".chg-buy-rate")?.value) || 0;
+        const unit = row.querySelector(".chg-unit")?.value || 'flat';
+        const remarks = row.querySelector(".chg-remarks")?.value.trim() || "";
+
+        if (name && rate > 0) {
+          let cost = 0;
+          if (unit === 'container') {
+            cost = isLinerFcl ? linerContainersCount * rate : rate;
+          } else if (unit === 'rt') {
+            cost = chargeableCbm * rate;
+          } else if (unit === 'kg') {
+            cost = weightKg * rate;
+          } else {
+            cost = rate;
+          }
+          linerDestTotal += cost;
+          linerDestList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
+        }
+      });
+    }
+
+    const linerGrandTotal = (tariffsEnabled ? linerBaseFreight : 0) + (originFeesEnabled ? linerOriginTotal : 0) + (destFeesEnabled ? linerDestTotal : 0);
+    let linerGrandTotalINR = linerGrandTotal;
+    if (currency !== 'INR') {
+      linerGrandTotalINR = linerGrandTotal * EXCHANGE_RATES[`${currency}_TO_INR`];
+    }
+
+    calculatedLiners.push({
+      linerIndex,
+      linerName,
+      mode: linerMode,
+      tariffsEnabled,
+      originFeesEnabled,
+      destFeesEnabled,
+      baseFreight: linerBaseFreight,
+      containers: containersList,
+      fclSummary: linerContainerSummary,
+      originSurcharges: linerOriginList,
+      originTotal: linerOriginTotal,
+      destSurcharges: linerDestList,
+      destTotal: linerDestTotal,
+      grandTotal: linerGrandTotal,
+      grandTotalINR: linerGrandTotalINR
+    });
+  });
+
+  const primaryLiner = calculatedLiners[0] || {
+    baseFreight: 0,
+    originSurcharges: [],
+    destSurcharges: [],
+    originTotal: 0,
+    destTotal: 0,
+    grandTotal: 0,
+    grandTotalINR: 0,
+    fclSummary: []
+  };
+
+  const baseFreight = primaryLiner.baseFreight;
+  const totalSurcharges = primaryLiner.originTotal + primaryLiner.destTotal;
+  const grandTotal = primaryLiner.grandTotal;
+  const totalINR = primaryLiner.grandTotalINR;
+  const originSurchargesList = primaryLiner.originSurcharges;
+  const destSurchargesList = primaryLiner.destSurcharges;
   const surchargesList = [...originSurchargesList, ...destSurchargesList];
 
-  const grandTotal = baseFreight + totalSurcharges;
-  
-  let totalINR = grandTotal;
-  if (currency !== 'INR') {
-    totalINR = grandTotal * EXCHANGE_RATES[`${currency}_TO_INR`];
+  let detailsText = '';
+  if (type === 'fcl') {
+    detailsText = primaryLiner.fclSummary.join(", ") || 'No Containers Selected';
+    appState.currentSeaFreight.fclSummary = primaryLiner.fclSummary;
+  } else if (type === 'lcl') {
+    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
+  } else {
+    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [Break Bulk]`;
   }
 
   let typeLabel = "FCL (Full Container)";
@@ -3416,38 +3804,32 @@ function calculateSeaFreight() {
   if (resTT) resTT.textContent = tt || "-";
   if (resValidity) resValidity.textContent = validity || "-";
 
-  let buyBaseFreight = 0;
-  if (type === 'fcl') {
-    const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
-    fclRows.forEach(row => {
-      const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
-      const buyRateInput = row.querySelector(".fcl-buy-rate");
-      const buyRate = buyRateInput ? (parseFloat(buyRateInput.value) || 0) : 0;
-      if (qty > 0 && buyRate > 0) {
-        buyBaseFreight += (qty * buyRate);
-      }
-    });
-  } else if (type === 'lcl') {
-    const buyRateInput = document.getElementById("sea-lcl-buy-rate");
-    const buyRate = buyRateInput ? (parseFloat(buyRateInput.value) || 0) : 0;
-    buyBaseFreight = chargeableCbm * buyRate;
-  } else {
-    const buyRateInput = document.getElementById("sea-bb-buy-rate");
-    const buyRate = buyRateInput ? (parseFloat(buyRateInput.value) || 0) : 0;
-    buyBaseFreight = chargeableCbm * buyRate;
-  }
-
-  const seaGP = baseFreight - buyBaseFreight;
-
   document.getElementById("res-sea-base").textContent = `${curSymbol}${baseFreight.toFixed(2)}`;
   document.getElementById("res-sea-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
-  
-  const resSeaGP = document.getElementById("res-sea-gp");
-  if (resSeaGP) {
-    resSeaGP.textContent = `${curSymbol}${Math.abs(seaGP).toFixed(2)}`;
-  }
-
   document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
+
+  // Render Multi-Liner Comparison Cards in Results Panel
+  const multiLinerResultsList = document.getElementById("sea-multi-liner-results-list");
+  const linerCountBadge = document.getElementById("sea-liner-count-badge");
+  if (linerCountBadge) {
+    linerCountBadge.textContent = `${calculatedLiners.length} Option${calculatedLiners.length > 1 ? 's' : ''}`;
+  }
+  if (multiLinerResultsList) {
+    multiLinerResultsList.innerHTML = calculatedLiners.map((l, i) => `
+      <div class="liner-result-card ${i === 0 ? 'primary-liner' : ''}">
+        <div class="liner-result-title">
+          <span>🚢 ${l.linerName} ${i === 0 ? '(Primary)' : ''}</span>
+          <span style="font-weight: 900; color: #10b981;">${curSymbol}${l.grandTotal.toFixed(2)}</span>
+        </div>
+        <div style="font-size: 0.68rem; color: var(--t2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px;">
+          <span>Freight: ${curSymbol}${l.baseFreight.toFixed(2)}</span>
+          <span>Origin Fees: ${curSymbol}${l.originTotal.toFixed(2)}</span>
+          <span>Dest Fees: ${curSymbol}${l.destTotal.toFixed(2)}</span>
+          <span>INR Total: ₹${l.grandTotalINR.toFixed(2)}</span>
+        </div>
+      </div>
+    `).join("");
+  }
 
   // Update Alternative Sea Options Summary Live Results
   const altContainer = document.getElementById("sea-alternatives-results-container");
@@ -3485,6 +3867,7 @@ function calculateSeaFreight() {
     }
   }
 
+  appState.currentSeaFreight.liners = calculatedLiners;
   appState.currentSeaFreight.grossWeight = weightKg;
   appState.currentSeaFreight.volumeCbm = cbm;
   appState.currentSeaFreight.packagesQuantity = pkgQty;
@@ -3492,7 +3875,6 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.surchargeTotal = totalSurcharges;
   appState.currentSeaFreight.grandTotal = grandTotal;
   appState.currentSeaFreight.grandTotalINR = totalINR;
-  appState.currentSeaFreight.grossProfit = seaGP;
   appState.currentSeaFreight.currency = currency;
   appState.currentSeaFreight.originSurcharges = originSurchargesList;
   appState.currentSeaFreight.destSurcharges = destSurchargesList;
@@ -3502,19 +3884,12 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.validity = validity;
   appState.currentSeaFreight.alternatives = alts;
 
-  // Capture new cargo parameter values into state
   appState.currentSeaFreight.handlingProfile = document.getElementById("sea-handling-profile")?.value || "Stackable";
   appState.currentSeaFreight.orientationProfile = document.getElementById("sea-orientation-profile")?.value || "Tiltable";
   appState.currentSeaFreight.cargoRisk = document.getElementById("sea-cargo-risk")?.value || "Non Hazardous";
   appState.currentSeaFreight.climateConstraint = document.getElementById("sea-climate-constraint")?.value || "Ambient (15-25 DEG)";
-  // BB-only params
-  if (type === 'bb') {
-    appState.currentSeaFreight.bbOperationalMode = document.getElementById("sea-bb-operational-mode")?.value || "Hook to Hook";
-    appState.currentSeaFreight.bbStowage = document.getElementById("sea-bb-stowage")?.value || "Under Deck";
-    appState.currentSeaFreight.bbLaydays = document.getElementById("sea-bb-laydays")?.value || "";
-    appState.currentSeaFreight.bbCancelling = document.getElementById("sea-bb-cancelling")?.value || "";
-  }
 }
+
 
 function setupSurchargesEvents(freightType) {
   const body = document.getElementById(`${freightType}-surcharges-body`);
@@ -4960,7 +5335,7 @@ function saveCurrentQuote() {
       incoterm: incoterm,
       mode: appState.currentSeaFreight.type,
       module: appState.currentSeaFreight.module || 'export',
-      termsAndConditions: document.getElementById("sea-terms").value.trim() || DEFAULT_SEA_TERMS,
+      liners: appState.currentSeaFreight.liners || [],
       grossWeight: appState.currentSeaFreight.grossWeight,
       volumeCbm: appState.currentSeaFreight.volumeCbm,
       packagesQuantity: appState.currentSeaFreight.packagesQuantity,
@@ -7683,33 +8058,29 @@ function amendQuote(id) {
     const lclSection = document.getElementById("sea-lcl-section");
     const bbForm = document.getElementById("sea-bb-form");
     
-    if (mode === 'fcl') {
-      if (fclSection) fclSection.style.display = "block";
-      if (lclSection) lclSection.style.display = "none";
-      if (bbForm) bbForm.style.display = "none";
-      appState.currentSeaFreight.type = "fcl";
-      
-      const fclBody = document.getElementById("sea-fcl-body");
-      if (fclBody && quote.details.containerItems && quote.details.containerItems.length > 0) {
-        fclBody.innerHTML = "";
-        quote.details.containerItems.forEach(item => {
-          addFclContainerRow(item.type, item.qty, item);
+    const container = document.getElementById("sea-liners-container");
+    if (container) {
+      container.innerHTML = "";
+      linerCardCounter = 0;
+      if (quote.details.liners && quote.details.liners.length > 0) {
+        quote.details.liners.forEach(l => {
+          addNewLinerCard({
+            linerName: l.linerName,
+            mode: l.mode || mode,
+            containers: l.containers,
+            originSurcharges: l.originSurcharges,
+            destSurcharges: l.destSurcharges
+          });
+        });
+      } else {
+        addNewLinerCard({
+          linerName: quote.details.shippingLine || quote.details.linerName || "Primary Liner",
+          mode: mode,
+          containers: quote.details.containerItems || [],
+          originSurcharges: quote.details.originSurcharges || [],
+          destSurcharges: quote.details.destSurcharges || []
         });
       }
-    } else if (mode === 'lcl') {
-      if (fclSection) fclSection.style.display = "none";
-      if (lclSection) lclSection.style.display = "block";
-      if (bbForm) bbForm.style.display = "none";
-      appState.currentSeaFreight.type = "lcl";
-      
-      document.getElementById("sea-lcl-rate").value = quote.details.lclRateApplied || "";
-    } else {
-      if (fclSection) fclSection.style.display = "none";
-      if (lclSection) lclSection.style.display = "none";
-      if (bbForm) bbForm.style.display = "block";
-      appState.currentSeaFreight.type = "bb";
-      
-      document.getElementById("sea-bb-rate").value = quote.details.bbRateApplied || "";
     }
     
     // Repopulate cargo dimensions if exists
@@ -7750,9 +8121,6 @@ function amendQuote(id) {
       });
     }
 
-    repopulateSurchargesTable("sea-origin-surcharges-body", quote.details.originSurcharges);
-    repopulateSurchargesTable("sea-dest-surcharges-body", quote.details.destSurcharges);
-    
     // Alternative carrier options
     repopulateAlternativesTable("sea-alternatives-body", quote.details.alternatives);
     
