@@ -2001,7 +2001,10 @@ function addAirlineCard(data = null) {
           <input type="checkbox" class="air-enable-weight-breaks" ${wbEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
           <span style="font-size: 0.75rem; font-weight: 700; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">${isEligibleDeskUser() ? 'Weight Break Tariffs (Sell Rate per KG)' : 'Weight Break Tariffs (Rate per KG)'}</span>
         </label>
-        <button type="button" class="btn-text add-weight-break-btn" style="font-size: 0.7rem; color: var(--sky); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0;">+ Add Weight Break</button>
+        <div style="position: relative; display: inline-block;">
+          <button type="button" class="btn-text add-weight-break-btn" style="font-size: 0.7rem; color: var(--sky); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0;">+ Add Weight Break</button>
+          <div class="weight-break-dropdown" style="display: none; position: absolute; right: 0; top: 100%; z-index: 1000; background: var(--bg-surface, #fff); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-1, #ccc); border-radius: 8px; box-shadow: var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); padding: 6px; min-width: 140px; flex-direction: column; gap: 2px;"></div>
+        </div>
       </div>
       
       <div class="airline-breaks-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
@@ -2077,47 +2080,65 @@ function addAirlineCard(data = null) {
   });
 
   const addBreakBtn = card.querySelector(".add-weight-break-btn");
-  addBreakBtn.addEventListener("click", () => {
-    const breakOpts = {
-      'min': 'Minimum (Flat)',
-      'minus45': '-45 kg',
-      'plus45': '+45 kg',
-      'plus100': '+100 kg',
-      'plus300': '+300 kg',
-      'plus500': '+500 kg',
-      'plus1000': '+1000 kg'
-    };
+  const dropdown = card.querySelector(".weight-break-dropdown");
+  if (addBreakBtn && dropdown) {
+    addBreakBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const breakOpts = {
+        'min': 'Minimum (Flat)',
+        'minus45': '-45 kg',
+        'plus45': '+45 kg',
+        'plus100': '+100 kg',
+        'plus300': '+300 kg',
+        'plus500': '+500 kg',
+        'plus1000': '+1000 kg'
+      };
 
-    const currentBreaks = Array.from(card.querySelectorAll(".dynamic-break-wrapper")).map(x => x.getAttribute("data-break-name"));
-    const available = Object.keys(breakOpts).filter(k => !currentBreaks.includes(k));
+      const currentBreaks = Array.from(card.querySelectorAll(".dynamic-break-wrapper")).map(x => x.getAttribute("data-break-name"));
+      const available = Object.keys(breakOpts).filter(k => !currentBreaks.includes(k));
 
-    if (available.length === 0) {
-      alert("All weight breaks have already been added.");
-      return;
-    }
-
-    const availableLabels = available.map(k => `${k}: ${breakOpts[k]}`).join("\n");
-    const choice = prompt(`Enter the break code to add:\n\nAvailable:\n${availableLabels}`);
-    if (choice) {
-      let cleaned = choice.trim().toLowerCase();
-      
-      // Map variations/shorthands to correct keys
-      if (cleaned === 'minimum' || cleaned === 'flat') cleaned = 'min';
-      else if (cleaned === '-45' || cleaned === '45-' || cleaned === 'minus45' || cleaned === 'minus 45') cleaned = 'minus45';
-      else if (cleaned === '+45' || cleaned === '45+' || cleaned === 'plus45' || cleaned === 'plus 45' || cleaned === '45') cleaned = 'plus45';
-      else if (cleaned === '+100' || cleaned === '100+' || cleaned === 'plus100' || cleaned === 'plus 100' || cleaned === '100') cleaned = 'plus100';
-      else if (cleaned === '+300' || cleaned === '300+' || cleaned === 'plus300' || cleaned === 'plus 300' || cleaned === '300') cleaned = 'plus300';
-      else if (cleaned === '+500' || cleaned === '500+' || cleaned === 'plus500' || cleaned === 'plus 500' || cleaned === '500') cleaned = 'plus500';
-      else if (cleaned === '+1000' || cleaned === '1000+' || cleaned === 'plus1000' || cleaned === 'plus 1000' || cleaned === '1000') cleaned = 'plus1000';
-
-      if (available.includes(cleaned)) {
-        addWeightBreakRow(card, cleaned, 0);
-        calculateAirFreight();
-      } else {
-        alert("Invalid selection or weight break already exists.");
+      if (available.length === 0) {
+        alert("All weight breaks have already been added.");
+        dropdown.style.display = "none";
+        return;
       }
-    }
-  });
+
+      if (dropdown.style.display === "flex") {
+        dropdown.style.display = "none";
+        return;
+      }
+
+      dropdown.innerHTML = "";
+      dropdown.style.display = "flex";
+
+      available.forEach(k => {
+        const item = document.createElement("div");
+        item.style.cssText = "padding: 6px 10px; font-size: 0.72rem; color: var(--t1, #000); cursor: pointer; border-radius: 4px; transition: background 0.2s; text-align: left;";
+        item.textContent = breakOpts[k];
+        
+        item.addEventListener("mouseenter", () => {
+          item.style.background = "var(--border-1, #eee)";
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.background = "transparent";
+        });
+
+        item.addEventListener("click", (evt) => {
+          evt.stopPropagation();
+          addWeightBreakRow(card, k, 0);
+          calculateAirFreight();
+          dropdown.style.display = "none";
+        });
+        dropdown.appendChild(item);
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (dropdown && !dropdown.contains(e.target) && e.target !== addBreakBtn) {
+        dropdown.style.display = "none";
+      }
+    });
+  }
 
   if (data && Object.keys(activeBreaks).length > 0) {
     for (const bName in activeBreaks) {
