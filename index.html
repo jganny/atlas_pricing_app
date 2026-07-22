@@ -3133,6 +3133,13 @@
               </tbody>
             </table>
           </div>
+          
+          <!-- Close button at the bottom of settings -->
+          <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; border-top: 1px solid var(--border-1); padding-top: 1rem;">
+            <button type="button" class="btn-primary" onclick="toggleAdminSettingsModal()" style="background: var(--sky); color: #fff; padding: 0.5rem 1.5rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; font-size: 0.8rem;">
+              Close Admin Console
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -3487,6 +3494,7 @@
                 <input type="password" id="admin-passkey-input" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 1rem; box-sizing: border-box; outline: none;">
               </div>
               <button onclick="window.verifyAdminPasskey()" style="width: 100%; background: #0f172a; color: #fff; padding: 0.75rem; border: none; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Verify Identity</button>
+              <button onclick="window.closeAdminResetOverlay()" style="width: 100%; margin-top: 0.5rem; background: transparent; border: 1.5px solid #cbd5e1; color: #64748b; padding: 0.75rem; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Close Console</button>
             </div>
 
             <div id="admin-inputs-sec" style="display: none;">
@@ -3508,6 +3516,7 @@
                 <input type="password" id="admin-target-pass" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.95rem; box-sizing: border-box; outline: none;">
               </div>
               <button onclick="window.executeForceReset()" style="width: 100%; background: #ef4444; color: #fff; padding: 0.75rem; border: none; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Force Reset</button>
+              <button onclick="window.closeAdminResetOverlay()" style="width: 100%; margin-top: 0.5rem; background: transparent; border: 1.5px solid #cbd5e1; color: #64748b; padding: 0.75rem; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Close Console</button>
             </div>
           </div>
         `;

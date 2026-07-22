@@ -8620,6 +8620,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     const modalIds = [
       "admin-settings-modal", 
+      "admin-reset-overlay",
       "change-password-modal", 
       "xe-rates-modal", 
       "print-preview-modal",
