@@ -233,11 +233,13 @@
           <button class="role-btn" data-role="cathrina">NRS</button>
         </div>
 
-        <!-- Global Operational Modules Navigation Tabs (Hidden - Duplicate tab lane) -->
-        <div class="module-navigation-tabs" id="global-module-tabs" style="display: none !important;">
+        <!-- Global Operational Modules Navigation Tabs -->
+        <div class="module-navigation-tabs" id="global-module-tabs" style="display: flex;">
           <button class="module-tab active" data-module="dashboard" onclick="goHome()">Home</button>
           <button class="module-tab" data-module="air" onclick="openActiveCalculator('air')">Air Freight</button>
           <button class="module-tab" data-module="sea" onclick="openActiveCalculator('sea')">Sea Freight</button>
+          <button class="module-tab" data-module="custom" onclick="openActiveCalculator('custom')">Custom
+            Clearance</button>
           <button class="module-tab" data-module="transport"
             onclick="openActiveCalculator('transport')">Transportation</button>
           <button class="module-tab" data-module="warehouse"
@@ -270,28 +272,37 @@
       <div id="manager-panel" class="view-panel">
 
 
-        <!-- Navigation triggers for active calculators (Admin Quick Access) — Bento Grid -->
-        <div class="bento-action-grid" style="margin-bottom: 1.5rem;">
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('air')" id="admin-goto-air" style="background: linear-gradient(135deg, var(--sky) 0%, var(--indigo) 100%); color:#fff;">
+        <!-- Navigation triggers for active calculators (Admin Quick Access) -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+          <button class="btn-primary" onclick="openActiveCalculator('air')" id="admin-goto-air">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
+              <path
+                d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
             </svg>
-            Price Air Freight
+            Price Air Freight Enquiry
           </button>
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('sea')" id="admin-goto-sea" style="background: linear-gradient(135deg, var(--indigo) 0%, var(--teal) 100%); color:#fff;">
+          <button class="btn-primary" style="background: var(--accent-sea);" onclick="openActiveCalculator('sea')"
+            id="admin-goto-sea">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
               <line x1="2" y1="10" x2="22" y2="10" />
               <path d="M12 17v4M8 21h8" />
             </svg>
-            Price Sea Freight
+            Price Sea Freight Enquiry
           </button>
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('transport')" id="admin-goto-transport" style="background: linear-gradient(135deg, var(--violet) 0%, var(--indigo) 100%); color:#fff;">
-            <span style="font-size: 1.1rem;">🚛</span>
+          <button class="btn-primary" style="background: var(--accent-success); color: #000;"
+            onclick="openActiveCalculator('custom')" id="admin-goto-custom">
+            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🛂</span>
+            Price Custom Clearance
+          </button>
+          <button class="btn-primary" style="background: var(--violet);" onclick="openActiveCalculator('transport')"
+            id="admin-goto-transport">
+            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🚛</span>
             Price Transportation
           </button>
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse" style="background: linear-gradient(135deg, var(--amber) 0%, #eab308 100%); color:#000;">
-            <span style="font-size: 1.1rem;">🏢</span>
+          <button class="btn-primary" style="background: #f4f6f9; color: #000;"
+            onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse">
+            <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🏢</span>
             Price Warehousing
           </button>
         </div>
@@ -354,17 +365,6 @@
           </div>
         </div>
 
-        <!-- ✅ Atlassian Live Margin Radar Strip — Real-time monitoring (no leaf unturned) -->
-        <div class="margin-radar-strip">
-          <span class="margin-radar-label">Live System Status:</span>
-          <span class="atl-tag atl-tag-success atl-tag-live">✦ Pricing Desk Online</span>
-          <span class="atl-tag atl-tag-info">Air Freight Active</span>
-          <span class="atl-tag atl-tag-sea">Sea Freight Active</span>
-          <span class="atl-tag atl-tag-violet">Transport Active</span>
-          <span class="atl-tag atl-tag-warning">Warehousing Active</span>
-          <span style="margin-left:auto; font-size:0.65rem; color:var(--t3); font-weight:700;">Rate Validity: All Desks Monitored</span>
-        </div>
-
         <!-- Metrics Grid -->
         <div class="stats-grid">
           <div class="glass-card stat-card" data-type="total">
@@ -414,22 +414,20 @@
           <div class="glass-card" style="flex: 2.2; min-width: 320px;">
             <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase;">Staff
               Performance Leaderboard</h3>
-            <div class="leaderboard-table-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-              <table class="leaderboard-table" style="width: 100%;">
-                <thead>
-                  <tr>
-                    <th>Pricing Officer / Desk</th>
-                    <th>Quotes</th>
-                    <th>Conversions</th>
-                    <th>Conv. Rate (%)</th>
-                    <th>Total Priced</th>
-                  </tr>
-                </thead>
-                <tbody id="admin-leaderboard-body">
-                  <!-- Populated dynamically -->
-                </tbody>
-              </table>
-            </div>
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Pricing Officer / Desk</th>
+                  <th>Quotes</th>
+                  <th>Conversions</th>
+                  <th>Conv. Rate (%)</th>
+                  <th>Total Priced</th>
+                </tr>
+              </thead>
+              <tbody id="admin-leaderboard-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
           </div>
 
           <!-- Quick reporting filters and extractor -->
@@ -521,49 +519,6 @@
                 style="background: var(--accent-warning); color: #000; font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">
                 📢 Broadcast Notice to All Users
               </button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Admin Agent & Customer Directory Dashboard -->
-        <div class="glass-card" id="admin-directory-dashboard" style="margin-bottom: 2rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-2); border-radius: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-1); padding-bottom: 0.75rem; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Workspace Registry</div>
-              <h3 style="font-weight: 800; margin: 0; font-size: 1.2rem; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 0.5rem; color: var(--t1); text-transform: uppercase;">
-                📁 Agent & Customer Directory
-              </h3>
-            </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-              <!-- Search Input -->
-              <input type="text" id="dir-search-input" placeholder="Search directory..." oninput="updateAdminDirectoryView()" style="font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--t1); width: 200px; outline: none;">
-              
-              <!-- View Grouping Toggle -->
-              <div style="display: flex; background: var(--border-1); border-radius: 8px; padding: 2px;">
-                <button type="button" id="dir-toggle-agents" onclick="toggleDirGrouping('agents')" class="active" style="border: none; padding: 6px 12px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; cursor: pointer; background: var(--sky); color: #fff; transition: all 0.2s;">Group by Agents</button>
-                <button type="button" id="dir-toggle-customers" onclick="toggleDirGrouping('customers')" style="border: none; padding: 6px 12px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; cursor: pointer; background: transparent; color: var(--t2); transition: all 0.2s;">Group by Customers</button>
-              </div>
-              
-              <!-- Extract Directory -->
-              <button onclick="exportDirectoryCSV()" class="btn-primary" style="background: var(--accent-success); color: #000; font-size: 0.72rem; padding: 6px 12px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
-                📥 Extract Directory
-              </button>
-            </div>
-          </div>
-          
-          <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: stretch; min-height: 380px;">
-            <!-- Left Side: Directory Tree list -->
-            <div style="flex: 1.2; min-width: 280px; display: flex; flex-direction: column; gap: 0.5rem; max-height: 450px; overflow-y: auto; border-right: 1px solid var(--border-1); padding-right: 1rem;" id="dir-list-container">
-              <!-- Dynamically populated tree -->
-            </div>
-            
-            <!-- Right Side: Details Pane -->
-            <div style="flex: 1.8; min-width: 320px; display: flex; flex-direction: column; gap: 1rem;" id="dir-details-container">
-              <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: var(--text-dim); text-align: center; border: 2px dashed var(--border-1); border-radius: 12px; padding: 2rem; background: rgba(255,255,255,0.02); min-height: 300px;">
-                <span style="font-size: 2rem;">🗂️</span>
-                <div style="font-weight: 700; margin-top: 0.5rem;">No Selection</div>
-                <div style="font-size: 0.72rem; margin-top: 0.25rem;">Select an Agent or Customer from the directory to view details and history.</div>
-              </div>
             </div>
           </div>
         </div>
@@ -661,6 +616,7 @@
                           <div class="hdr-filter-opt active" onclick="selectHdrFilter('mode', 'all', 'All Modes')">All Modes</div>
                           <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'air', 'Air Freight')">Air Freight</div>
                           <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'sea', 'Sea Freight')">Sea Freight</div>
+                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'custom', 'Custom Clearance')">Custom Clearance</div>
                           <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'transport', 'Transportation')">Transportation</div>
                           <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'warehouse', 'Warehousing')">Warehousing</div>
                         </div>
@@ -827,96 +783,6 @@
               </tbody>
             </table>
           </div>
-          <!-- Pagination Controls -->
-          <div class="pagination-controls" style="margin-top: 1rem;">
-            <button class="pagination-btn" id="db-prev-btn" onclick="changeDbPage(-1)">
-              ◀ Previous
-            </button>
-            <span class="pagination-info" id="db-pagination-info">
-              Page 1 of 1 (Showing 0-0 of 0 entries)
-            </span>
-            <button class="pagination-btn" id="db-next-btn" onclick="changeDbPage(1)">
-              Next ▶
-            </button>
-          </div>
-        </div>
-
-        <!-- Financial Reports & Archive Query Panel -->
-        <div class="glass-card" style="margin-top: 1.5rem;">
-          <div style="border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div>
-              <span style="font-size: 0.65rem; font-weight: 800; color: var(--accent-warning); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Admin Intelligence Hub</span>
-              <h3 style="font-weight: 700; margin: 0.15rem 0 0 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem;">Financial Reports & Archival Suite</h3>
-            </div>
-            <button onclick="runAutoArchival()" class="btn-primary" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; background: var(--accent-warning); color: #000; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-              📦 Archive Old Quotes (>90 Days)
-            </button>
-          </div>
-
-          <div style="display: flex; flex-wrap: wrap; gap: 1.25rem; margin-bottom: 1.25rem;">
-            <!-- Timeframe Filter -->
-            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Reporting Period</label>
-              <select id="report-period" onchange="toggleCustomDateFields()" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
-                <option value="current-fy">📅 Current Financial Year (FY26-27)</option>
-                <option value="previous-fy">📅 Previous Financial Year (FY25-26)</option>
-                <option value="current-h1">📅 Current FY - H1 (Apr-Sept)</option>
-                <option value="current-h2">📅 Current FY - H2 (Oct-Mar)</option>
-                <option value="custom">📅 Custom Date Range</option>
-              </select>
-              <div id="report-custom-dates" style="display: none; gap: 8px; margin-top: 6px;">
-                <input type="date" id="report-start-date" style="flex:1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 5px; border-radius: 6px; font-size: 0.75rem; color:#000;">
-                <input type="date" id="report-end-date" style="flex:1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 5px; border-radius: 6px; font-size: 0.75rem; color:#000;">
-              </div>
-            </div>
-
-            <!-- User Filter -->
-            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">User / Desk</label>
-              <select id="report-user" style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
-                <option value="all">👥 All Desks / Users</option>
-              </select>
-            </div>
-
-            <!-- Single Quote Lookup (by Ref ID) -->
-            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Direct Archive Lookup</label>
-              <div style="display: flex; gap: 6px; position: relative;">
-                <input type="text" id="report-lookup-ref" list="archive-lookup-suggestions" placeholder="Ref ID (e.g. AE-1002)" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color:#000; outline: none;" oninput="updateArchiveLookupSuggestions(this.value)">
-                <datalist id="archive-lookup-suggestions"></datalist>
-                <button onclick="lookupSingleArchivedQuote()" class="btn-primary" style="background: var(--sky); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 700;">Find</button>
-              </div>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <button onclick="generateReportSummary()" class="btn-primary" style="background: var(--sky); color: #fff; font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
-              📊 Generate Summary
-            </button>
-            <button onclick="exportReportToCSV()" class="btn-primary" style="background: var(--accent-success); color: #000; font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
-              📥 Export to CSV / Excel
-            </button>
-          </div>
-
-          <!-- Report Statistics Output Cards -->
-          <div class="report-grid" id="report-results-grid" style="display: none;">
-            <div class="report-card">
-              <div class="report-card-lbl">Enquiries Matched</div>
-              <div class="report-card-val" id="rep-stat-count">0</div>
-            </div>
-            <div class="report-card">
-              <div class="report-card-lbl">Total Sell Value</div>
-              <div class="report-card-val" id="rep-stat-revenue">₹0</div>
-            </div>
-            <div class="report-card">
-              <div class="report-card-lbl">Total Buy Cost</div>
-              <div class="report-card-val" id="rep-stat-buy">₹0</div>
-            </div>
-            <div class="report-card">
-              <div class="report-card-lbl">Gross Profit (GP)</div>
-              <div class="report-card-val" id="rep-stat-gp">₹0</div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1010,6 +876,12 @@
                 <path d="M12 17v4M8 21h8" />
               </svg>
               Price Sea Freight Enquiry
+            </button>
+            <button class="btn-primary"
+              style="background: #FFF9E6; color: #0F172A; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1.5px solid #d97706;"
+              onclick="openActiveCalculator('custom')" id="btn-goto-custom">
+              <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🛂</span>
+              Price Custom Clearance
             </button>
             <button class="btn-primary"
               style="background: #F4EBFB; color: #0F172A; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1.5px solid #9333ea;"
@@ -1293,9 +1165,74 @@
                 </div>
                 <input type="text" id="air-dest" placeholder="Type Airport code or city..." autocomplete="off">
               </div>
-              <div class="form-group autocomplete-container">
+              <div class="form-group">
                 <label for="air-commodity">Commodity Type / HSN Code</label>
-                <input type="text" id="air-commodity" placeholder="Search or enter commodity/HSN code..." value="GENERAL" autocomplete="off">
+                <select id="air-commodity" style="font-size: 0.82rem;">
+                  <optgroup label="Operational Commodity Types">
+                    <option value="GENERAL" selected>GENERAL (General Cargo)</option>
+                    <option value="LIVE ANIMALS">LIVE ANIMALS</option>
+                    <option value="HAZARDOUS">HAZARDOUS (DG)</option>
+                    <option value="PERISHABLES">PERISHABLES</option>
+                    <option value="PHARMA">PHARMA / Medical</option>
+                  </optgroup>
+                  <optgroup label="Chapter 01-05 | Live Animals &amp; Animal Products">
+                    <option value="0101 | Live Horses">0101 | Live Horses &amp; Asses</option>
+                    <option value="0201 | Fresh/Chilled Beef">0201 | Fresh / Chilled Beef</option>
+                    <option value="0301 | Live Fish">0301 | Live Fish</option>
+                    <option value="0401 | Milk &amp; Cream">0401 | Milk &amp; Cream</option>
+                  </optgroup>
+                  <optgroup label="Chapter 06-14 | Vegetable Products">
+                    <option value="0901 | Coffee">0901 | Coffee, Raw / Roasted</option>
+                    <option value="1006 | Rice">1006 | Rice</option>
+                    <option value="1201 | Soyabeans">1201 | Soya Beans</option>
+                  </optgroup>
+                  <optgroup label="Chapter 28-38 | Chemicals">
+                    <option value="3002 | Blood Vaccines">3002 | Blood / Vaccines / Antisera</option>
+                    <option value="3004 | Medicines (Retail)">3004 | Medicaments (Retail Packs)</option>
+                    <option value="3208 | Paints &amp; Varnishes">3208 | Paints &amp; Varnishes</option>
+                  </optgroup>
+                  <optgroup label="Chapter 39-40 | Plastics &amp; Rubber">
+                    <option value="3901 | Polyethylene">3901 | Polyethylene, Primary Form</option>
+                    <option value="3904 | PVC">3904 | PVC &amp; Vinyl Copolymers</option>
+                  </optgroup>
+                  <optgroup label="Chapter 50-63 | Textiles &amp; Apparel">
+                    <option value="5201 | Raw Cotton">5201 | Cotton, Not Carded</option>
+                    <option value="5208 | Woven Cotton Fabrics">5208 | Woven Cotton Fabrics</option>
+                    <option value="6101 | Overcoats / Jackets">6101 | Overcoats / Jackets, Knitted</option>
+                    <option value="6201 | Overcoats, Woven">6201 | Overcoats / Jackets, Woven</option>
+                  </optgroup>
+                  <optgroup label="Chapter 64-67 | Footwear, Headgear">
+                    <option value="6401 | Waterproof Footwear">6401 | Waterproof Footwear</option>
+                    <option value="6402 | Sports / Casual Footwear">6402 | Sports / Casual Footwear</option>
+                  </optgroup>
+                  <optgroup label="Chapter 71 | Precious Metals &amp; Stones">
+                    <option value="7101 | Pearls">7101 | Pearls, Natural / Cultured</option>
+                    <option value="7108 | Gold">7108 | Gold (including Gold Plated)</option>
+                  </optgroup>
+                  <optgroup label="Chapter 84-85 | Machinery &amp; Electronics">
+                    <option value="8401 | Nuclear Reactors">8401 | Nuclear Reactors / Boilers</option>
+                    <option value="8415 | Air Conditioning">8415 | Air-Conditioning Units</option>
+                    <option value="8471 | Computers">8471 | Automatic Data Processing Machines</option>
+                    <option value="8517 | Telephones">8517 | Telephones / Smartphones</option>
+                    <option value="8528 | Monitors / Projectors">8528 | Monitors / Projectors / TVs</option>
+                    <option value="8541 | Semiconductors">8541 | Semiconductors / Diodes / LEDs</option>
+                    <option value="8544 | Insulated Wire">8544 | Insulated Wire / Cable</option>
+                  </optgroup>
+                  <optgroup label="Chapter 86-89 | Transport Equipment">
+                    <option value="8701 | Tractors">8701 | Tractors</option>
+                    <option value="8703 | Passenger Cars">8703 | Passenger Cars / SUVs</option>
+                    <option value="8802 | Aircraft">8802 | Aircraft / Helicopters</option>
+                  </optgroup>
+                  <optgroup label="Chapter 90-92 | Instruments &amp; Optics">
+                    <option value="9001 | Optical Fibre">9001 | Optical Fibres / Cables</option>
+                    <option value="9018 | Medical Instruments">9018 | Instruments for Medical Science</option>
+                  </optgroup>
+                  <optgroup label="Chapter 94-96 | Miscellaneous Manufactured Goods">
+                    <option value="9401 | Seats / Chairs">9401 | Seats (Aircraft, Vehicle, Household)</option>
+                    <option value="9403 | Other Furniture">9403 | Office / Kitchen / Bedroom Furniture</option>
+                    <option value="9503 | Toys">9503 | Tricycles, Scooters, Puzzles, Toys</option>
+                  </optgroup>
+                </select>
               </div>
 
             </div>
@@ -1424,164 +1361,142 @@
               Add Cargo Line
             </button>
 
-            <!-- Dynamic Airlines Container (Carrier Tariffs) -->
-            <div class="section-card" id="air-tariffs-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-air); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="air-enable-tariffs" checked onchange="calculateAirFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Airline / Carrier Tariffs
-                </label>
-                <span id="air-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+            <!-- Dynamic Airlines Container -->
+            <div style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+              <label
+                style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-air);">Airlines
+                / Carrier Tariffs</label>
+              <div id="air-airlines-list-container">
+                <!-- Airline cards will be dynamically added here -->
               </div>
-              <div id="air-tariffs-content-body">
-                <div id="air-airlines-list-container">
-                  <!-- Airline cards will be dynamically added here -->
-                </div>
-                <button type="button" class="add-row-btn" id="air-add-airline-btn" style="margin-top: 0.5rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Airline
-                </button>
-              </div>
+              <button type="button" class="add-row-btn" id="air-add-airline-btn" style="margin-top: 0.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Airline
+              </button>
             </div>
 
             <!-- Split Surcharges (Origin vs Destination) -->
             <!-- 1. Origin Surcharges & Airport Fees -->
-            <div class="section-card" id="air-origin-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="air-enable-origin-fees" checked onchange="calculateAirFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Origin Local Fees & Surcharges
-                </label>
-                <span id="air-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="air-origin-fees-content-body">
-                <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
-                  <table class="cargo-table">
-                    <thead>
-                      <tr>
-                        <th>Surcharge Name</th>
-                        <th>Sell Rate</th>
-                        <th>Buy Rate</th>
-                        <th>Billing Unit</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="air-origin-surcharges-body">
-                      <tr>
-                        <td><input type="text" class="chg-name" value="Xray" required></td>
-                        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-                        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                        <td>
-                          <select class="chg-unit">
-                            <option value="kg" selected>Per kg</option>
-                            <option value="flat">Flat</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button type="button" class="delete-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              stroke-width="2">
-                              <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><input type="text" class="chg-name" value="Cartage" required readonly
-                            style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-                        <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly
-                            style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-                        <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                        <td>
-                          <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
-                            <option value="kg">Per kg</option>
-                            <option value="flat" selected>Flat</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button type="button" class="delete-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              stroke-width="2">
-                              <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><input type="text" class="chg-name" value="Misc" required readonly
-                            style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-                        <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly
-                            style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-                        <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                        <td>
-                          <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
-                            <option value="kg">Per kg</option>
-                            <option value="flat" selected>Flat</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button type="button" class="delete-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              stroke-width="2">
-                              <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <button type="button" class="add-row-btn" id="add-air-origin-surcharge" style="margin-bottom: 0.5rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Origin Surcharge
-                </button>
-              </div>
+            <h4
+              style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem;">
+              Origin Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Sell Rate</th>
+                    <th>Buy Rate</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="air-origin-surcharges-body">
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Xray" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+                    <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                    <td>
+                      <select class="chg-unit">
+                        <option value="kg" selected>Per kg</option>
+                        <option value="flat">Flat</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
+                          <path
+                            d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Cartage" required readonly
+                        style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                    <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly
+                        style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                    <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                    <td>
+                      <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+                        <option value="kg">Per kg</option>
+                        <option value="flat" selected>Flat</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
+                          <path
+                            d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Misc" required readonly
+                        style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                    <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly
+                        style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+                    <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                    <td>
+                      <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+                        <option value="kg">Per kg</option>
+                        <option value="flat" selected>Flat</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
+                          <path
+                            d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
+            <button type="button" class="add-row-btn" id="add-air-origin-surcharge" style="margin-bottom: 2rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Origin Surcharge
+            </button>
 
             <!-- 2. Destination Surcharges & Airport Fees -->
-            <div class="section-card" id="air-dest-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="air-enable-dest-fees" checked onchange="calculateAirFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Destination Local Fees & Surcharges
-                </label>
-                <span id="air-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="air-dest-fees-content-body">
-                <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
-                  <table class="cargo-table">
-                    <thead>
-                      <tr>
-                        <th>Surcharge Name</th>
-                        <th>Sell Rate</th>
-                        <th>Buy Rate</th>
-                        <th>Billing Unit</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="air-dest-surcharges-body">
-                      <!-- Empty by default -->
-                    </tbody>
-                  </table>
-                </div>
-                <button type="button" class="add-row-btn" id="add-air-dest-surcharge" style="margin-bottom: 0.5rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Destination Surcharge
-                </button>
-              </div>
+            <h4
+              style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1rem; margin-bottom: 0.75rem;">
+              Destination Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Sell Rate</th>
+                    <th>Buy Rate</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="air-dest-surcharges-body">
+                  <!-- Empty by default -->
+                </tbody>
+              </table>
             </div>
+            <button type="button" class="add-row-btn" id="add-air-dest-surcharge" style="margin-bottom: 1.5rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Destination Surcharge
+            </button>
 
             <!-- Editable Terms & Conditions -->
             <div style="margin-top: 1.5rem;">
@@ -1589,7 +1504,7 @@
                 style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-air);">Editable
                 Terms & Conditions</label>
               <textarea id="air-terms" rows="6"
-                style="width: 100%; background: #ffffff !important; border: 1px solid #cbd5e1; color: #000000 !important; font-weight: 600; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
+                style="width: 100%; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
                 placeholder="Add custom terms..."></textarea>
             </div>
           </div>
@@ -1817,9 +1732,148 @@
                 <label for="sea-liner-name">Liner Name</label>
                 <input type="text" id="sea-liner-name" placeholder="e.g. MSC, Hapag-Lloyd" autocomplete="off">
               </div>
-              <div class="form-group autocomplete-container">
+              <div class="form-group">
                 <label for="sea-commodity">Commodity / HSN Code</label>
-                <input type="text" id="sea-commodity" placeholder="Search or enter commodity/HSN code..." autocomplete="off">
+                <div style="position: relative;">
+                  <select id="sea-commodity" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%; font-size: 0.85rem;">
+                    <option value="">-- Select Commodity --</option>
+                    <optgroup label="Chapter 01-05 | Live Animals &amp; Animal Products">
+                      <option value="0101 | Live Horses">0101 | Live Horses &amp; Asses</option>
+                      <option value="0201 | Fresh/Chilled Beef">0201 | Fresh / Chilled Beef</option>
+                      <option value="0301 | Live Fish">0301 | Live Fish</option>
+                      <option value="0401 | Milk &amp; Cream">0401 | Milk &amp; Cream</option>
+                      <option value="0501 | Human Hair">0501 | Human Hair, Unworked</option>
+                    </optgroup>
+                    <optgroup label="Chapter 06-14 | Vegetable Products">
+                      <option value="0701 | Potatoes">0701 | Potatoes, Fresh / Chilled</option>
+                      <option value="0901 | Coffee">0901 | Coffee, Raw / Roasted</option>
+                      <option value="1001 | Wheat">1001 | Wheat &amp; Meslin</option>
+                      <option value="1006 | Rice">1006 | Rice</option>
+                      <option value="1201 | Soyabeans">1201 | Soya Beans</option>
+                    </optgroup>
+                    <optgroup label="Chapter 15 | Animal &amp; Vegetable Fats / Oils">
+                      <option value="1511 | Palm Oil">1511 | Palm Oil &amp; Fractions</option>
+                      <option value="1514 | Rapeseed Oil">1514 | Rapeseed / Colza Oil</option>
+                    </optgroup>
+                    <optgroup label="Chapter 16-24 | Prepared Foodstuffs">
+                      <option value="1601 | Sausages">1601 | Sausages &amp; Similar Products</option>
+                      <option value="1701 | Cane / Beet Sugar">1701 | Cane / Beet Sugar</option>
+                      <option value="1901 | Malt Extract">1901 | Malt Extract, Cereal Preparations</option>
+                      <option value="2009 | Fruit Juices">2009 | Fruit Juices, Unfermented</option>
+                      <option value="2101 | Coffee Extracts">2101 | Coffee / Tea Extracts</option>
+                      <option value="2201 | Mineral Water">2201 | Mineral / Aerated Water</option>
+                    </optgroup>
+                    <optgroup label="Chapter 25-27 | Minerals &amp; Fuels">
+                      <option value="2501 | Salt">2501 | Salt, Pure Sodium Chloride</option>
+                      <option value="2601 | Iron Ores">2601 | Iron Ores &amp; Concentrates</option>
+                      <option value="2701 | Coal">2701 | Coal, Briquettes, Ovoids</option>
+                      <option value="2709 | Crude Petroleum">2709 | Crude Petroleum Oils</option>
+                      <option value="2710 | Petroleum Distillates">2710 | Petroleum Distillates (HSD/MS)</option>
+                    </optgroup>
+                    <optgroup label="Chapter 28-38 | Chemicals">
+                      <option value="2801 | Fluorine / Chlorine">2801 | Fluorine / Chlorine / Bromine</option>
+                      <option value="2814 | Ammonia">2814 | Ammonia, Anhydrous</option>
+                      <option value="2901 | Acyclic Hydrocarbons">2901 | Acyclic Hydrocarbons</option>
+                      <option value="3002 | Blood Vaccines">3002 | Blood / Vaccines / Antisera</option>
+                      <option value="3004 | Medicines (Retail)">3004 | Medicaments (Retail Packs)</option>
+                      <option value="3208 | Paints &amp; Varnishes">3208 | Paints &amp; Varnishes</option>
+                      <option value="3401 | Soap">3401 | Soap, Organic Surfactants</option>
+                    </optgroup>
+                    <optgroup label="Chapter 39-40 | Plastics &amp; Rubber">
+                      <option value="3901 | Polyethylene">3901 | Polyethylene, Primary Form</option>
+                      <option value="3904 | PVC">3904 | PVC &amp; Vinyl Copolymers</option>
+                      <option value="4001 | Natural Rubber">4001 | Natural Rubber, Latex</option>
+                      <option value="4002 | Synthetic Rubber">4002 | Synthetic Rubber</option>
+                    </optgroup>
+                    <optgroup label="Chapter 41-43 | Hides, Leather &amp; Furs">
+                      <option value="4101 | Bovine Hides">4101 | Raw Bovine / Equine Hides</option>
+                      <option value="4104 | Tanned Leather">4104 | Tanned / Crust Leather</option>
+                    </optgroup>
+                    <optgroup label="Chapter 44-46 | Wood &amp; Cork">
+                      <option value="4401 | Fuel Wood">4401 | Fuel Wood / Sawdust</option>
+                      <option value="4407 | Sawn Timber">4407 | Sawn / Sliced Timber</option>
+                      <option value="4412 | Plywood">4412 | Plywood, Veneered Panels</option>
+                    </optgroup>
+                    <optgroup label="Chapter 47-49 | Pulp, Paper &amp; Paperboard">
+                      <option value="4701 | Mechanical Wood Pulp">4701 | Mechanical Wood Pulp</option>
+                      <option value="4802 | Uncoated Paper">4802 | Uncoated Paper / Paperboard</option>
+                      <option value="4901 | Printed Books">4901 | Printed Books / Brochures</option>
+                    </optgroup>
+                    <optgroup label="Chapter 50-63 | Textiles &amp; Apparel">
+                      <option value="5201 | Raw Cotton">5201 | Cotton, Not Carded</option>
+                      <option value="5208 | Woven Cotton Fabrics">5208 | Woven Cotton Fabrics</option>
+                      <option value="5402 | Synthetic Filament Yarn">5402 | Synthetic Filament Yarn</option>
+                      <option value="5801 | Woven Pile Fabrics">5801 | Woven Pile Fabrics</option>
+                      <option value="6101 | Overcoats / Jackets">6101 | Overcoats / Jackets, Knitted</option>
+                      <option value="6201 | Overcoats, Woven">6201 | Overcoats / Jackets, Woven</option>
+                      <option value="6301 | Blankets">6301 | Blankets &amp; Travel Rugs</option>
+                    </optgroup>
+                    <optgroup label="Chapter 64-67 | Footwear, Headgear">
+                      <option value="6401 | Waterproof Footwear">6401 | Waterproof Footwear</option>
+                      <option value="6402 | Sports / Casual Footwear">6402 | Sports / Casual Footwear</option>
+                      <option value="6501 | Hat Forms">6501 | Hat Forms / Hat Bodies</option>
+                    </optgroup>
+                    <optgroup label="Chapter 68-70 | Stone, Glass &amp; Ceramics">
+                      <option value="6801 | Natural Stone Slabs">6801 | Setts, Curbstones, Flagstones</option>
+                      <option value="6907 | Ceramic Tiles">6907 | Unglazed Ceramic Tiles</option>
+                      <option value="7001 | Glass Cullet">7001 | Cullet / Other Waste Glass</option>
+                      <option value="7003 | Cast Glass Sheets">7003 | Cast / Rolled Glass Sheets</option>
+                    </optgroup>
+                    <optgroup label="Chapter 71 | Precious Metals &amp; Stones">
+                      <option value="7101 | Pearls">7101 | Pearls, Natural / Cultured</option>
+                      <option value="7108 | Gold">7108 | Gold (including Gold Plated)</option>
+                    </optgroup>
+                    <optgroup label="Chapter 72-83 | Base Metals">
+                      <option value="7201 | Pig Iron">7201 | Pig Iron &amp; Spiegeleisen</option>
+                      <option value="7207 | Steel Billets">7207 | Semi-Finished Steel Products</option>
+                      <option value="7210 | Flat Rolled Steel">7210 | Flat-Rolled Steel (Coated)</option>
+                      <option value="7301 | Sheet Piling">7301 | Sheet Piling &amp; Angles</option>
+                      <option value="7601 | Unwrought Aluminium">7601 | Unwrought Aluminium</option>
+                      <option value="8301 | Padlocks">8301 | Padlocks, Locks, Keys</option>
+                    </optgroup>
+                    <optgroup label="Chapter 84-85 | Machinery &amp; Electronics">
+                      <option value="8401 | Nuclear Reactors">8401 | Nuclear Reactors / Boilers</option>
+                      <option value="8408 | Diesel Engines">8408 | Diesel / Semi-Diesel Engines</option>
+                      <option value="8415 | Air Conditioning">8415 | Air-Conditioning Units</option>
+                      <option value="8418 | Refrigerators">8418 | Refrigerators / Freezers</option>
+                      <option value="8471 | Computers">8471 | Automatic Data Processing Machines</option>
+                      <option value="8517 | Telephones">8517 | Telephones / Smartphones</option>
+                      <option value="8528 | Monitors / Projectors">8528 | Monitors / Projectors / TVs</option>
+                      <option value="8541 | Semiconductors">8541 | Semiconductors / Diodes / LEDs</option>
+                      <option value="8544 | Insulated Wire">8544 | Insulated Wire / Cable</option>
+                    </optgroup>
+                    <optgroup label="Chapter 86-89 | Transport Equipment">
+                      <option value="8601 | Rail Locomotives">8601 | Rail Locomotives (Electric)</option>
+                      <option value="8701 | Tractors">8701 | Tractors</option>
+                      <option value="8702 | Motor Buses">8702 | Motor Buses / Coaches</option>
+                      <option value="8703 | Passenger Cars">8703 | Passenger Cars / SUVs</option>
+                      <option value="8704 | Trucks / Lorries">8704 | Motor Vehicles for Goods</option>
+                      <option value="8802 | Aircraft">8802 | Aircraft / Helicopters</option>
+                      <option value="8901 | Cargo Ships">8901 | Cruise / Passenger Ships</option>
+                      <option value="8902 | Fishing Vessels">8902 | Fishing Vessels</option>
+                    </optgroup>
+                    <optgroup label="Chapter 90-92 | Instruments &amp; Optics">
+                      <option value="9001 | Optical Fibre">9001 | Optical Fibres / Cables</option>
+                      <option value="9018 | Medical Instruments">9018 | Instruments for Medical Science</option>
+                      <option value="9026 | Flow Meters">9026 | Instruments for Measuring Flow</option>
+                    </optgroup>
+                    <optgroup label="Chapter 93 | Arms &amp; Ammunition">
+                      <option value="9301 | Military Weapons">9301 | Military Weapons</option>
+                    </optgroup>
+                    <optgroup label="Chapter 94-96 | Miscellaneous Manufactured Goods">
+                      <option value="9401 | Seats / Chairs">9401 | Seats (Aircraft, Vehicle, Household)</option>
+                      <option value="9403 | Other Furniture">9403 | Office / Kitchen / Bedroom Furniture</option>
+                      <option value="9503 | Toys">9503 | Tricycles, Scooters, Puzzles, Toys</option>
+                      <option value="9601 | Worked Ivory">9601 | Worked Ivory / Bone / Tortoise-shell</option>
+                    </optgroup>
+                    <optgroup label="General / Other">
+                      <option value="GENERAL CARGO">General Cargo (Non-Specific)</option>
+                      <option value="HAZARDOUS CARGO">Hazardous / DG Cargo</option>
+                      <option value="PERISHABLES">Perishables / Cold Chain</option>
+                      <option value="PROJECT CARGO">Project Cargo / ODC</option>
+                    </optgroup>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -1934,10 +1988,7 @@
 
             <div class="form-grid-3" style="margin-top: 1rem;">
               <div class="form-group">
-                <label for="sea-ams-fee" style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">
-                  <input type="checkbox" id="sea-enable-ams-fee" checked onchange="calculateSeaFreight()" style="width: 14px; height: 14px; accent-color: var(--accent-sea); cursor: pointer;">
-                  <span>AMS Fee</span>
-                </label>
+                <label for="sea-ams-fee" style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">AMS Fee</label>
                 <input type="number" id="sea-ams-fee" class="sea-ams-fee" placeholder="0.00" min="0" step="0.01" value="0.00" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 8px 16px; border-radius: 24px; text-align: left; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 100%;">
               </div>
             </div>
@@ -2000,130 +2051,118 @@
               Add Cargo Line
             </button>
 
-            <!-- Carrier / Shipping Line Tariffs Section -->
-            <div class="section-card" id="sea-tariffs-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-sea); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="sea-enable-tariffs" checked onchange="calculateSeaFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Carrier / Shipping Line Tariffs
-                </label>
-                <span id="sea-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="sea-tariffs-content-body">
-                <!-- FCL vs LCL vs Break Bulk toggle tab -->
-                <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
-                  <div class="toggle-option active" id="sea-tab-fcl">FCL (Full Container Load)</div>
-                  <div class="toggle-option" id="sea-tab-lcl">LCL (Less Container Load)</div>
-                  <div class="toggle-option" id="sea-tab-bb">Break Bulk</div>
-                </div>
+            <!-- FCL vs LCL vs Break Bulk toggle tab -->
+            <div class="toggle-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+              <div class="toggle-option active" id="sea-tab-fcl">FCL (Full Container Load)</div>
+              <div class="toggle-option" id="sea-tab-lcl">LCL (Less Container Load)</div>
+              <div class="toggle-option" id="sea-tab-bb">Break Bulk</div>
+            </div>
 
-                <!-- FCL Fields -->
-                <div id="sea-fcl-form">
-                  <div id="sea-fcl-stuffing-container" style="margin-bottom: 1.2rem; display: none;">
-                    <label for="sea-fcl-stuffing">Stuffing Option</label>
-                    <select id="sea-fcl-stuffing"
-                      style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
-                      <option value="factory" selected>Factory Stuffing</option>
-                      <option value="cfs_icd">CFS/ICD Stuffing</option>
+            <!-- FCL Fields -->
+            <div id="sea-fcl-form">
+              <div id="sea-fcl-stuffing-container" style="margin-bottom: 1.2rem; display: none;">
+                <label for="sea-fcl-stuffing">Stuffing Option</label>
+                <select id="sea-fcl-stuffing"
+                  style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                  <option value="factory" selected>Factory Stuffing</option>
+                  <option value="cfs_icd">CFS/ICD Stuffing</option>
+                </select>
+              </div>
+              <h4
+                style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
+                Ocean Freight Tariff Per Container</h4>
+              <div class="cargo-table-container">
+                <table class="cargo-table" style="min-width: unset;">
+                  <thead>
+                    <tr>
+                      <th>Container Type</th>
+                      <th>Quantity Needed</th>
+                      <th>Rate Per Container (<span class="curr-label">USD</span>)</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sea-fcl-body">
+                    <!-- Dynamic Rows populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn" id="sea-add-container"
+                style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Container Line
+              </button>
+            </div>
+
+            <!-- LCL Fields -->
+            <div id="sea-lcl-form" style="display: none;">
+              <h4
+                style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
+                LCL Freight Pricing</h4>
+              <div class="form-row" id="sea-lcl-rates-row">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="sea-lcl-rate" id="sea-lcl-rate-label">LCL Freight Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="0">
+                </div>
+                <div class="form-group" id="sea-lcl-buy-group" style="margin-bottom: 0; display: none;">
+                  <label for="sea-lcl-buy-rate">LCL Buy Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-lcl-buy-rate" placeholder="Buy Rate" min="0" value="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Break Bulk Fields -->
+            <div id="sea-bb-form" style="display: none;">
+              <h4
+                style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-sea);">
+                Break Bulk Freight Pricing</h4>
+              <div class="form-row" id="sea-bb-rates-row">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="sea-bb-rate" id="sea-bb-rate-label">Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-bb-rate" placeholder="Rate" min="0" value="0">
+                </div>
+                <div class="form-group" id="sea-bb-buy-group" style="margin-bottom: 0; display: none;">
+                  <label for="sea-bb-buy-rate">Break Bulk Buy Rate (Per Revenue Ton - RT)</label>
+                  <input type="number" id="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="0">
+                </div>
+              </div>
+
+              <!-- ===== BB-ONLY EXTENDED PARAMETERS ===== -->
+              <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed rgba(56,189,248,0.25);">
+                <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 800; color: var(--accent-sea); margin-bottom: 0.85rem;">⚓ Break Bulk Operational Parameters</h4>
+                <div class="form-grid-3">
+                  <div class="form-group">
+                    <label for="sea-bb-operational-mode">Operational Mode</label>
+                    <select id="sea-bb-operational-mode" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                      <option value="Hook to Hook" selected>Hook to Hook</option>
+                      <option value="Standard Wharfage">Standard Wharfage</option>
                     </select>
                   </div>
-                  <h4
-                    style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
-                    Ocean Freight Tariff Per Container</h4>
-                  <div class="cargo-table-container">
-                    <table class="cargo-table" style="min-width: unset;">
-                      <thead>
-                        <tr>
-                          <th>Container Type</th>
-                          <th>Quantity Needed</th>
-                          <th>Rate Per Container (<span class="curr-label">USD</span>)</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody id="sea-fcl-body">
-                        <!-- Dynamic Rows populated by JS -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <button type="button" class="add-row-btn" id="sea-add-container"
-                    style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Add Container Line
-                  </button>
-                </div>
-
-                <!-- LCL Fields -->
-                <div id="sea-lcl-form" style="display: none;">
-                  <h4
-                    style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem;">
-                    LCL Freight Pricing</h4>
-                  <div class="form-row" id="sea-lcl-rates-row">
-                    <div class="form-group" style="margin-bottom: 0;">
-                      <label for="sea-lcl-rate" id="sea-lcl-rate-label">LCL Freight Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-lcl-rate" placeholder="Rate" min="0" value="0">
-                    </div>
-                    <div class="form-group" id="sea-lcl-buy-group" style="margin-bottom: 0; display: none;">
-                      <label for="sea-lcl-buy-rate">LCL Buy Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-lcl-buy-rate" placeholder="Buy Rate" min="0" value="0">
-                    </div>
+                  <div class="form-group">
+                    <label for="sea-bb-stowage">Stowage Configuration</label>
+                    <select id="sea-bb-stowage" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
+                      <option value="Under Deck" selected>Under Deck</option>
+                      <option value="On Deck">On Deck</option>
+                    </select>
                   </div>
                 </div>
-
-                <!-- Break Bulk Fields -->
-                <div id="sea-bb-form" style="display: none;">
-                  <h4
-                    style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-sea);">
-                    Break Bulk Freight Pricing</h4>
-                  <div class="form-row" id="sea-bb-rates-row">
+                <!-- LayCan Dual-Calendar Window -->
+                <div style="margin-top: 0.5rem;">
+                  <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--sky); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">⚓ LayCan Window (Laydays / Cancelling)</label>
+                  <div class="form-grid-3">
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label for="sea-bb-rate" id="sea-bb-rate-label">Break Bulk Ocean Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-bb-rate" placeholder="Rate" min="0" value="0">
+                      <label for="sea-bb-laydays">Laydays (Earliest)</label>
+                      <input type="date" id="sea-bb-laydays" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
                     </div>
-                    <div class="form-group" id="sea-bb-buy-group" style="margin-bottom: 0; display: none;">
-                      <label for="sea-bb-buy-rate">Break Bulk Buy Rate (Per Revenue Ton - RT)</label>
-                      <input type="number" id="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="0">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label for="sea-bb-cancelling">Cancelling (Latest)</label>
+                      <input type="date" id="sea-bb-cancelling" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
                     </div>
-                  </div>
-
-                  <!-- ===== BB-ONLY EXTENDED PARAMETERS ===== -->
-                  <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed rgba(56,189,248,0.25);">
-                    <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 800; color: var(--accent-sea); margin-bottom: 0.85rem;">⚓ Break Bulk Operational Parameters</h4>
-                    <div class="form-grid-3">
-                      <div class="form-group">
-                        <label for="sea-bb-operational-mode">Operational Mode</label>
-                        <select id="sea-bb-operational-mode" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
-                          <option value="Hook to Hook" selected>Hook to Hook</option>
-                          <option value="Standard Wharfage">Standard Wharfage</option>
-                        </select>
-                      </div>
-                      <div class="form-group">
-                        <label for="sea-bb-stowage">Stowage Configuration</label>
-                        <select id="sea-bb-stowage" onchange="calculateSeaFreight()" style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm); width: 100%;">
-                          <option value="Under Deck" selected>Under Deck</option>
-                          <option value="On Deck">On Deck</option>
-                        </select>
-                      </div>
-                    </div>
-                    <!-- LayCan Dual-Calendar Window -->
-                    <div style="margin-top: 0.5rem;">
-                      <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--sky); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">⚓ LayCan Window (Laydays / Cancelling)</label>
-                      <div class="form-grid-3">
-                        <div class="form-group" style="margin-bottom: 0;">
-                          <label for="sea-bb-laydays">Laydays (Earliest)</label>
-                          <input type="date" id="sea-bb-laydays" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                          <label for="sea-bb-cancelling">Cancelling (Latest)</label>
-                          <input type="date" id="sea-bb-cancelling" onchange="calculateSeaFreight()" style="color-scheme: dark; width: 100%; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); padding: 0.65rem 0.9rem; border-radius: var(--r-sm);">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                          <label style="display: block; margin-bottom: 0.35rem;">LayCan Duration</label>
-                          <div id="sea-bb-laycan-duration" style="padding: 0.65rem 0.9rem; background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2); border-radius: var(--r-sm); font-size: 0.82rem; font-weight: 700; color: var(--sky); min-height: 42px; display: flex; align-items: center;">— days</div>
-                        </div>
-                      </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label style="display: block; margin-bottom: 0.35rem;">LayCan Duration</label>
+                      <div id="sea-bb-laycan-duration" style="padding: 0.65rem 0.9rem; background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2); border-radius: var(--r-sm); font-size: 0.82rem; font-weight: 700; color: var(--sky); min-height: 42px; display: flex; align-items: center;">— days</div>
                     </div>
                   </div>
                 </div>
@@ -2132,121 +2171,105 @@
 
             <!-- Split Surcharges (Origin vs Destination) -->
             <!-- 1. Origin Surcharges & Port Fees -->
-            <div class="section-card" id="sea-origin-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="sea-enable-origin-fees" checked onchange="calculateSeaFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Origin Local Fees & Surcharges
-                </label>
-                <span id="sea-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="sea-origin-fees-content-body">
-                <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
-                  <table class="cargo-table">
-                    <thead>
-                      <tr>
-                        <th>Surcharge Name</th>
-                        <th>Sell Cost (<span class="curr-label">USD</span>)</th>
-                        <th>Buy Rate</th>
-                        <th>Billing Unit</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="sea-origin-surcharges-body">
-                      <tr>
-                        <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
-                        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-                        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                        <td>
-                          <select class="chg-unit"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
-                            <option value="flat">Flat Fee</option>
-                            <option value="container" selected>Per Container</option>
-                            <option value="rt">Per RT (Revenue Ton)</option>
-                            <option value="kg">Per Kg (Gross Weight)</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button type="button" class="delete-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              stroke-width="2">
-                              <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
-                        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
-                        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                        <td>
-                          <select class="chg-unit"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
-                            <option value="flat" selected>Flat Fee</option>
-                            <option value="container">Per Container</option>
-                            <option value="rt">Per RT (Revenue Ton)</option>
-                            <option value="kg">Per Kg (Gross Weight)</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button type="button" class="delete-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              stroke-width="2">
-                              <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <button type="button" class="add-row-btn" id="add-sea-origin-surcharge" style="margin-bottom: 0.5rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Origin Surcharge
-                </button>
-              </div>
+            <h4
+              style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem;">
+              Origin Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                    <th>Buy Rate</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="sea-origin-surcharges-body">
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+                    <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                    <td>
+                      <select class="chg-unit"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+                        <option value="flat">Flat Fee</option>
+                        <option value="container" selected>Per Container</option>
+                        <option value="rt">Per RT (Revenue Ton)</option>
+                        <option value="kg">Per Kg (Gross Weight)</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
+                          <path
+                            d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
+                    <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+                    <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                    <td>
+                      <select class="chg-unit"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
+                        <option value="flat" selected>Flat Fee</option>
+                        <option value="container">Per Container</option>
+                        <option value="rt">Per RT (Revenue Ton)</option>
+                        <option value="kg">Per Kg (Gross Weight)</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button type="button" class="delete-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
+                          <path
+                            d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
+            <button type="button" class="add-row-btn" id="add-sea-origin-surcharge" style="margin-bottom: 2rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Origin Surcharge
+            </button>
 
             <!-- 2. Destination Surcharges & Port Fees -->
-            <div class="section-card" id="sea-dest-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                  <input type="checkbox" id="sea-enable-dest-fees" checked onchange="calculateSeaFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
-                  Destination Local Fees & Surcharges
-                </label>
-                <span id="sea-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
-              </div>
-              <div id="sea-dest-fees-content-body">
-                <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
-                  <table class="cargo-table">
-                    <thead>
-                      <tr>
-                        <th>Surcharge Name</th>
-                        <th>Sell Cost (<span class="curr-label">USD</span>)</th>
-                        <th>Buy Rate</th>
-                        <th>Billing Unit</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="sea-dest-surcharges-body">
-                      <!-- Add destination charges dynamically -->
-                    </tbody>
-                  </table>
-                </div>
-                <button type="button" class="add-row-btn" id="add-sea-dest-surcharge" style="margin-bottom: 0.5rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Destination Surcharge
-                </button>
-              </div>
+            <h4
+              style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-top: 1rem; margin-bottom: 0.75rem;">
+              Destination Local Fees & Surcharges</h4>
+            <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
+              <table class="cargo-table">
+                <thead>
+                  <tr>
+                    <th>Surcharge Name</th>
+                    <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                    <th>Buy Rate</th>
+                    <th>Billing Unit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="sea-dest-surcharges-body">
+                  <!-- Add destination charges dynamically -->
+                </tbody>
+              </table>
             </div>
+            <button type="button" class="add-row-btn" id="add-sea-dest-surcharge" style="margin-bottom: 1.5rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Destination Surcharge
+            </button>
 
             <!-- Alternative Carrier Option Rates -->
             <div style="margin-top: 1.5rem; margin-bottom: 1rem;">
@@ -2284,7 +2307,7 @@
                 style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-sea);">Editable
                 Terms & Conditions</label>
               <textarea id="sea-terms" rows="6"
-                style="width: 100%; background: #ffffff !important; border: 1px solid #cbd5e1; color: #000000 !important; font-weight: 600; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
+                style="width: 100%; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
                 placeholder="Add custom terms..."></textarea>
             </div>
           </div>
@@ -2374,12 +2397,171 @@
         </div>
       </div>
 
+      <!-- ==================== CUSTOM CLEARANCE PANEL ==================== -->
+      <div id="custom-clearance-panel" class="view-panel">
+        <div class="calculator-header"
+          style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+          <div>
+            <div
+              style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+              Operational Desk</div>
+            <h2
+              style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
+              CUSTOM CLEARANCE DESK</h2>
+          </div>
+          <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
+        </div>
+
+        <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+          <div class="glass-card" style="padding: 2rem;">
+            <!-- Custom Clearance Options: Handling, Direction, Mode -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between; align-items: center;">
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">Handling Option</label>
+                <div style="display: flex; gap: 0.75rem;">
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; font-weight: 700; color: var(--t2); cursor: pointer;">
+                    <input type="radio" name="custom-handling" value="freehand" checked onchange="updateCustomClearanceOptions()"> Free Hand
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; font-weight: 700; color: var(--t2); cursor: pointer;">
+                    <input type="radio" name="custom-handling" value="nomination" onchange="updateCustomClearanceOptions()"> Nomination
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">Direction</label>
+                <div style="display: flex; gap: 0.75rem;">
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; font-weight: 700; color: var(--t2); cursor: pointer;">
+                    <input type="radio" name="custom-direction" value="export" checked onchange="updateCustomClearanceOptions()"> Export
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; font-weight: 700; color: var(--t2); cursor: pointer;">
+                    <input type="radio" name="custom-direction" value="import" onchange="updateCustomClearanceOptions()"> Import
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">Transport Mode</label>
+                <div style="display: flex; gap: 0.75rem;">
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; font-weight: 700; color: var(--t2); cursor: pointer;">
+                    <input type="radio" name="custom-mode" value="air" checked onchange="updateCustomClearanceOptions()"> ✈️ Air
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; font-weight: 700; color: var(--t2); cursor: pointer;">
+                    <input type="radio" name="custom-mode" value="sea" onchange="updateCustomClearanceOptions()"> 🚢 Sea
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Custom Clearance Table -->
+            <div id="custom-path-standalone-container" style="display: block;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: var(--sky); margin: 0;">
+                  Custom Clearance Breakup Calculations</h4>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <button type="button" class="btn-admin-action add-custom-row-btn" onclick="addCustomRow()" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Row</button>
+                  <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
+                  <select id="custom-currency" onchange="calculateCustomClearance()"
+                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
+                    <option value="INR" selected>INR - Indian Rupee (₹)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="cargo-table-container" style="border: none; margin-bottom: 0;">
+                <table class="cargo-table" id="custom-standalone-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 35%;">Surcharge / Fee Name</th>
+                      <th style="width: 25%;">Rate / Fee</th>
+                      <th style="width: 30%;">Remarks</th>
+                      <th style="width: 10%; text-align: center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="custom-standalone-body">
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Custom Clearance" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+                      <td style="text-align: center;">
+                        <button type="button" class="btn-admin-action delete-btn" onclick="removeCustomRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Custom Assessment" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+                      <td style="text-align: center;">
+                        <button type="button" class="btn-admin-action delete-btn" onclick="removeCustomRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Custom Examination" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+                      <td style="text-align: center;">
+                        <button type="button" class="btn-admin-action delete-btn" onclick="removeCustomRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Custodian Charges" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+                      <td style="text-align: center;">
+                        <button type="button" class="btn-admin-action delete-btn" onclick="removeCustomRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><input type="text" class="chg-name" value="Terminal Charges" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateCustomClearance()"></td>
+                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+                      <td style="text-align: center;">
+                        <button type="button" class="btn-admin-action delete-btn" onclick="removeCustomRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary sidebar -->
+          <div class="glass-card results-panel"
+            style="padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3
+                style="font-weight: 800; margin-bottom: 1.25rem; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                Pricing Summary</h3>
+              <div id="custom-summary-active" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div class="result-row">
+                  <span class="result-label">Subtotal</span>
+                  <span class="result-value" id="res-custom-subtotal">₹0.00</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">GST / Service Tax (18%)</span>
+                  <span class="result-value" id="res-custom-tax">₹0.00</span>
+                </div>
+                <div class="result-row"
+                  style="border-bottom: none; margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                  <span class="result-label">Estimated Grand Total</span>
+                  <span class="result-value-highlight" id="res-custom-total">₹0.00</span>
+                </div>
+              </div>
+            </div>
+            <div class="action-buttons" id="custom-save-btn-container" style="display: block; margin-top: 1.5rem;">
+              <button class="btn-primary" onclick="saveStandaloneQuote('custom')" style="width: 100%;">
+                Save Standalone Quote
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ==================== TRANSPORTATION PANEL ==================== -->
       <div id="transportation-panel" class="view-panel">
-        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
-            onclick="returnToWorkspace()">← Back to Dashboard</button>
-        </div>
         <div class="calculator-header"
           style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
@@ -2390,7 +2572,7 @@
               style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
               TRANSPORTATION DESK</h2>
           </div>
-          <button class="btn-secondary" onclick="returnToWorkspace()">← Back to Dashboard</button>
+          <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
         </div>
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
@@ -2588,10 +2770,6 @@
 
       <!-- ==================== WAREHOUSING PANEL ==================== -->
       <div id="warehousing-panel" class="view-panel">
-        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
-            onclick="returnToWorkspace()">← Back to Dashboard</button>
-        </div>
         <div class="calculator-header"
           style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
@@ -2602,7 +2780,7 @@
               style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
               WAREHOUSING DESK</h2>
           </div>
-          <button class="btn-secondary" onclick="returnToWorkspace()">← Back to Dashboard</button>
+          <button class="btn-secondary" onclick="returnToWorkspace()">Return to Workspace</button>
         </div>
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">

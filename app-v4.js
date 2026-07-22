@@ -3749,6 +3749,9 @@ window.deleteNrsAlert = deleteNrsAlert;
 function renderAdminDashboard() {
   renderControlTowerFeed();
   renderNrsRegistry();
+  if (typeof updateAdminDirectoryView === 'function') {
+    updateAdminDirectoryView();
+  }
   if (typeof updateAdminScratchpadViewer === 'function') {
     updateAdminScratchpadViewer();
   }
@@ -8515,6 +8518,12 @@ window.loadLogisticsNews = loadLogisticsNews;
 
 // MODAL & SECURITY HANDLERS
 function toggleAdminSettingsModal() {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    alert("Access Denied: Admin privileges required.");
+    return;
+  }
+
   const modal = document.getElementById("admin-settings-modal");
   if (!modal) return;
   
@@ -9672,6 +9681,11 @@ function handleAgreementUpload(mode, input) {
 window.handleAgreementUpload = handleAgreementUpload;
 
 async function renderAdminCustomerControlList() {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) {
+    return;
+  }
+
   const tbody = document.getElementById("admin-customer-control-body");
   if (!tbody) return;
 
@@ -11030,4 +11044,536 @@ document.addEventListener("DOMContentLoaded", () => {
     populateReportUsers();
   }
 });
+
+// ==================== ADMIN AGENT & CUSTOMER DIRECTORY LOGIC ====================
+window._dirGrouping = 'agents'; // Default grouping
+window._dirSelectedItem = null; // { type: 'agent'|'customer', name: '...' }
+
+function toggleDirGrouping(mode) {
+  window._dirGrouping = mode;
+  
+  const btnAgents = document.getElementById("dir-toggle-agents");
+  const btnCustomers = document.getElementById("dir-toggle-customers");
+  
+  if (btnAgents && btnCustomers) {
+    if (mode === 'agents') {
+      btnAgents.classList.add("active");
+      btnAgents.style.background = "var(--sky)";
+      btnAgents.style.color = "#fff";
+      btnCustomers.classList.remove("active");
+      btnCustomers.style.background = "transparent";
+      btnCustomers.style.color = "var(--t2)";
+    } else {
+      btnCustomers.classList.add("active");
+      btnCustomers.style.background = "var(--sky)";
+      btnCustomers.style.color = "#fff";
+      btnAgents.classList.remove("active");
+      btnAgents.style.background = "transparent";
+      btnAgents.style.color = "var(--t2)";
+    }
+  }
+  updateAdminDirectoryView();
+}
+window.toggleDirGrouping = toggleDirGrouping;
+
+function selectDirectoryItem(type, name) {
+  window._dirSelectedItem = { type, name };
+  
+  // Highlight active item in the list
+  const allItems = document.querySelectorAll(".dir-tree-node");
+  allItems.forEach(item => {
+    item.classList.remove("active-node");
+    item.style.background = "transparent";
+    item.style.borderColor = "transparent";
+  });
+  
+  const activeEl = document.getElementById(`dir-node-${type}-${name.replace(/\s+/g, '_')}`);
+  if (activeEl) {
+    activeEl.classList.add("active-node");
+    activeEl.style.background = "rgba(14, 165, 233, 0.15)";
+    activeEl.style.borderColor = "var(--sky)";
+  }
+  
+  showDirectoryItemDetails(type, name);
+}
+window.selectDirectoryItem = selectDirectoryItem;
+
+function updateAdminDirectoryView() {
+  const listContainer = document.getElementById("dir-list-container");
+  if (!listContainer) return;
+  
+  const searchInput = document.getElementById("dir-search-input");
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  
+  const quotes = appState.quotes || [];
+  let controls = window._customerControls || {};
+  if (Object.keys(controls).length === 0) {
+    try {
+      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+    } catch(e) {}
+  }
+  
+  if (window._dirGrouping === 'agents') {
+    // Group by Agents (creator of the quotes)
+    const agentMap = {};
+    
+    // Add all registered team roles to make sure they appear
+    Object.keys(TEAM_ROLES).forEach(roleId => {
+      if (roleId === 'ganny' || roleId === 'manager') return;
+      const agentName = TEAM_ROLES[roleId].name || roleId;
+      agentMap[agentName] = {
+        roleId: roleId,
+        customers: new Set(),
+        quotesCount: 0
+      };
+    });
+    
+    // Populate from quotes
+    quotes.forEach(q => {
+      const creator = q.creator || 'unknown';
+      const agentName = TEAM_ROLES[creator.toLowerCase()]?.name || q.creator || 'Unknown';
+      if (!agentMap[agentName]) {
+        agentMap[agentName] = { roleId: creator, customers: new Set(), quotesCount: 0 };
+      }
+      agentMap[agentName].quotesCount++;
+      if (q.customer) {
+        agentMap[agentName].customers.add(q.customer.trim());
+      }
+    });
+    
+    // Build HTML
+    let html = '';
+    const sortedAgents = Object.keys(agentMap).sort();
+    
+    let filteredCount = 0;
+    sortedAgents.forEach(agentName => {
+      const data = agentMap[agentName];
+      const customersList = Array.from(data.customers).sort();
+      
+      // Filter logic
+      const matchesAgent = agentName.toLowerCase().includes(query);
+      const matchingCustomers = customersList.filter(c => c.toLowerCase().includes(query));
+      
+      if (!query || matchesAgent || matchingCustomers.length > 0) {
+        filteredCount++;
+        const isSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'agent' && window._dirSelectedItem.name === agentName;
+        const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
+        const border = isSelected ? 'var(--sky)' : 'transparent';
+        
+        html += `
+          <div class="dir-tree-node-wrapper" style="margin-bottom: 0.5rem;">
+            <div id="dir-node-agent-${agentName.replace(/\s+/g, '_')}" class="dir-tree-node" onclick="selectDirectoryItem('agent', '${agentName}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid ${border}; background: ${bg}; cursor: pointer; transition: all 0.2s;" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.05)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
+              <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--t1); font-weight: 700; font-size: 0.8rem;">
+                <span>👤</span>
+                <span>${agentName}</span>
+              </div>
+              <span style="font-size: 0.7rem; background: var(--border-2); color: var(--t2); padding: 2px 6px; border-radius: 10px; font-weight: 600;">${data.quotesCount} Quotes</span>
+            </div>
+            
+            <!-- Children (Customers under this Agent) -->
+            <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: flex; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 0.75rem;">
+              ${customersList.map(cust => {
+                const matchesCust = !query || cust.toLowerCase().includes(query) || matchesAgent;
+                if (!matchesCust) return '';
+                const isCustSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'customer' && window._dirSelectedItem.name === cust;
+                const cBg = isCustSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
+                const cBorder = isCustSelected ? 'var(--sky)' : 'transparent';
+                return `
+                  <div id="dir-node-customer-${cust.replace(/\s+/g, '_')}" class="dir-tree-node child-node" onclick="event.stopPropagation(); selectDirectoryItem('customer', '${cust}')" style="display: flex; align-items: center; gap: 0.4rem; padding: 4px 8px; border-radius: 6px; border: 1px solid ${cBorder}; background: ${cBg}; cursor: pointer; font-size: 0.75rem; color: var(--t2);" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
+                    <span>🏢</span>
+                    <span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${cust}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+    });
+    
+    if (filteredCount === 0) {
+      listContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); font-size: 0.75rem; padding: 2rem;">No matching agents found.</div>`;
+    } else {
+      listContainer.innerHTML = html;
+    }
+    
+  } else {
+    // Group by Customers
+    const customerMap = {};
+    
+    // Populate unique customers from quotes and controls
+    const allCustomers = Array.from(new Set([
+      ...quotes.map(q => q.customer.trim()),
+      ...Object.values(controls).map(c => c.customer.trim())
+    ]));
+    
+    allCustomers.forEach(cust => {
+      customerMap[cust] = {
+        agents: new Set(),
+        quotesCount: 0
+      };
+    });
+    
+    quotes.forEach(q => {
+      if (q.customer) {
+        const cust = q.customer.trim();
+        if (customerMap[cust]) {
+          customerMap[cust].quotesCount++;
+          const creator = q.creator || 'unknown';
+          const agentName = TEAM_ROLES[creator.toLowerCase()]?.name || q.creator || 'Unknown';
+          customerMap[cust].agents.add(agentName);
+        }
+      }
+    });
+    
+    let html = '';
+    const sortedCusts = Object.keys(customerMap).sort();
+    let filteredCount = 0;
+    
+    sortedCusts.forEach(cust => {
+      const data = customerMap[cust];
+      const agentsList = Array.from(data.agents).sort();
+      
+      const matchesCust = cust.toLowerCase().includes(query);
+      const matchingAgents = agentsList.filter(a => a.toLowerCase().includes(query));
+      
+      if (!query || matchesCust || matchingAgents.length > 0) {
+        filteredCount++;
+        const isSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'customer' && window._dirSelectedItem.name === cust;
+        const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
+        const border = isSelected ? 'var(--sky)' : 'transparent';
+        
+        html += `
+          <div class="dir-tree-node-wrapper" style="margin-bottom: 0.5rem;">
+            <div id="dir-node-customer-${cust.replace(/\s+/g, '_')}" class="dir-tree-node" onclick="selectDirectoryItem('customer', '${cust}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid ${border}; background: ${bg}; cursor: pointer; transition: all 0.2s;" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.05)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
+              <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--t1); font-weight: 700; font-size: 0.8rem;">
+                <span>🏢</span>
+                <span style="max-width: 170px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${cust}</span>
+              </div>
+              <span style="font-size: 0.7rem; background: var(--border-2); color: var(--t2); padding: 2px 6px; border-radius: 10px; font-weight: 600;">${data.quotesCount} Quotes</span>
+            </div>
+            
+            <!-- Children (Agents under this Customer) -->
+            <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: flex; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 0.75rem;">
+              ${agentsList.map(agent => {
+                const matchesAgent = !query || agent.toLowerCase().includes(query) || matchesCust;
+                if (!matchesAgent) return '';
+                const isAgentSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'agent' && window._dirSelectedItem.name === agent;
+                const aBg = isAgentSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
+                const aBorder = isAgentSelected ? 'var(--sky)' : 'transparent';
+                return `
+                  <div id="dir-node-agent-${agent.replace(/\s+/g, '_')}" class="dir-tree-node child-node" onclick="event.stopPropagation(); selectDirectoryItem('agent', '${agent}')" style="display: flex; align-items: center; gap: 0.4rem; padding: 4px 8px; border-radius: 6px; border: 1px solid ${aBorder}; background: ${aBg}; cursor: pointer; font-size: 0.75rem; color: var(--t2);" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
+                    <span>👤</span>
+                    <span>${agent}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+    });
+    
+    if (filteredCount === 0) {
+      listContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); font-size: 0.75rem; padding: 2rem;">No matching customers found.</div>`;
+    } else {
+      listContainer.innerHTML = html;
+    }
+  }
+}
+window.updateAdminDirectoryView = updateAdminDirectoryView;
+
+function showDirectoryItemDetails(type, name) {
+  const detailsContainer = document.getElementById("dir-details-container");
+  if (!detailsContainer) return;
+  
+  const quotes = appState.quotes || [];
+  let controls = window._customerControls || {};
+  if (Object.keys(controls).length === 0) {
+    try {
+      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+    } catch(e) {}
+  }
+  
+  if (type === 'agent') {
+    // Render Agent details
+    const agentQuotes = quotes.filter(q => {
+      const agentName = TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
+      return agentName.toLowerCase().trim() === name.toLowerCase().trim();
+    });
+    
+    const uniqueCustomers = Array.from(new Set(agentQuotes.map(q => q.customer).filter(Boolean))).sort();
+    const totalCount = agentQuotes.length;
+    const convertedCount = agentQuotes.filter(q => q.status === 'converted').length;
+    const conversionRate = totalCount > 0 ? ((convertedCount / totalCount) * 100).toFixed(1) : '0.0';
+    
+    let quotesRows = agentQuotes.map(q => {
+      const refId = q.refid || `Q-${q.id.substring(0,6)}`;
+      const amtStr = q.amountINR ? `₹${q.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'N/A';
+      const dateStr = q.timestamp ? new Date(q.timestamp).toLocaleDateString() : 'N/A';
+      const statusColor = q.status === 'converted' ? 'var(--accent-success)' : (q.status === 'expired' ? 'var(--accent-error)' : 'var(--accent-warning)');
+      return `
+        <tr>
+          <td style="font-weight:700; color:var(--sky);">${refId}</td>
+          <td>${dateStr}</td>
+          <td>${q.customer || 'N/A'}</td>
+          <td>${q.mode?.toUpperCase() || 'N/A'}</td>
+          <td>${amtStr}</td>
+          <td><span style="color:${statusColor}; font-weight:700;">${q.status?.toUpperCase() || 'PENDING'}</span></td>
+        </tr>
+      `;
+    }).join('');
+    
+    if (!quotesRows) {
+      quotesRows = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:1rem;">No quotes generated by this agent.</td></tr>`;
+    }
+    
+    detailsContainer.innerHTML = `
+      <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; background: rgba(255,255,255,0.01); border: 1px solid var(--border-1); border-radius: 12px; height: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem;">
+          <div>
+            <div style="font-size: 0.65rem; color: var(--sky); font-weight: 800; text-transform: uppercase;">Agent Profile</div>
+            <h4 style="font-size: 1.15rem; font-weight: 800; margin: 0.1rem 0 0; color: var(--t1);">${name}</h4>
+          </div>
+          <span style="font-size: 0.7rem; font-weight: 700; background: rgba(14, 165, 233, 0.1); color: var(--sky); padding: 4px 8px; border-radius: 6px;">Pricing Officer</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+          <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid var(--border-1);">
+            <div style="font-size: 0.65rem; color: var(--text-dim); font-weight: 600;">Total Quotes</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: var(--t1); margin-top: 2px;">${totalCount}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid var(--border-1);">
+            <div style="font-size: 0.65rem; color: var(--text-dim); font-weight: 600;">Conversions</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent-success); margin-top: 2px;">${convertedCount}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid var(--border-1);">
+            <div style="font-size: 0.65rem; color: var(--text-dim); font-weight: 600;">Conversion Rate</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent-warning); margin-top: 2px;">${conversionRate}%</div>
+          </div>
+        </div>
+        
+        <div>
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--t2); margin-bottom: 0.4rem; text-transform: uppercase;">Priced Customers (${uniqueCustomers.length})</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; max-height: 80px; overflow-y: auto; padding: 4px;">
+            ${uniqueCustomers.map(c => `<span style="font-size: 0.68rem; padding: 3px 8px; border-radius: 4px; background: var(--border-1); color: var(--t1); border: 1px solid var(--border-2);">${c}</span>`).join('') || '<span style="font-size: 0.7rem; color: var(--text-dim); font-style: italic;">No customers priced yet.</span>'}
+          </div>
+        </div>
+        
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 180px;">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Recent Quotes Activity</div>
+          <div class="quotes-table-container" style="flex: 1; max-height: 220px; overflow-y: auto;">
+            <table class="quotes-table" style="font-size: 0.7rem; width: 100%;">
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Mode</th>
+                  <th>Value</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${quotesRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+    
+  } else {
+    // Render Customer details
+    const customerLower = name.toLowerCase().trim();
+    const ctrl = controls[customerLower] || {
+      customer: name,
+      creditDays: 30,
+      creditLimit: 0,
+      blocked: false,
+      waiveAgreement: false,
+      hasAgreement: false
+    };
+    
+    const customerQuotes = quotes.filter(q => q.customer?.toLowerCase().trim() === customerLower);
+    const totalCount = customerQuotes.length;
+    const totalValue = customerQuotes.reduce((acc, q) => acc + (q.amountINR || 0), 0);
+    
+    // Associated agents
+    const associatedAgents = Array.from(new Set(customerQuotes.map(q => {
+      return TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
+    }).filter(Boolean))).sort();
+    
+    const statusText = ctrl.blocked ? 'BLOCKED' : 'ACTIVE';
+    const statusBg = ctrl.blocked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+    const statusColor = ctrl.blocked ? 'var(--accent-error)' : 'var(--accent-success)';
+    
+    const complianceText = ctrl.hasAgreement ? 'COMPLIANT' : (ctrl.waiveAgreement ? 'WAIVED' : 'NON-COMPLIANT');
+    const complianceColor = ctrl.hasAgreement ? 'var(--accent-success)' : (ctrl.waiveAgreement ? 'var(--accent-warning)' : 'var(--accent-error)');
+    
+    let quotesRows = customerQuotes.map(q => {
+      const refId = q.refid || `Q-${q.id.substring(0,6)}`;
+      const amtStr = q.amountINR ? `₹${q.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'N/A';
+      const dateStr = q.timestamp ? new Date(q.timestamp).toLocaleDateString() : 'N/A';
+      const creatorName = TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
+      const statusColor = q.status === 'converted' ? 'var(--accent-success)' : (q.status === 'expired' ? 'var(--accent-error)' : 'var(--accent-warning)');
+      return `
+        <tr>
+          <td style="font-weight:700; color:var(--sky);">${refId}</td>
+          <td>${dateStr}</td>
+          <td>${creatorName}</td>
+          <td>${q.mode?.toUpperCase() || 'N/A'}</td>
+          <td>${amtStr}</td>
+          <td><span style="color:${statusColor}; font-weight:700;">${q.status?.toUpperCase() || 'PENDING'}</span></td>
+        </tr>
+      `;
+    }).join('');
+    
+    if (!quotesRows) {
+      quotesRows = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:1rem;">No quotes generated for this customer.</td></tr>`;
+    }
+    
+    detailsContainer.innerHTML = `
+      <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; background: rgba(255,255,255,0.01); border: 1px solid var(--border-1); border-radius: 12px; height: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem;">
+          <div>
+            <div style="font-size: 0.65rem; color: var(--sky); font-weight: 800; text-transform: uppercase;">Customer Profile</div>
+            <h4 style="font-size: 1.15rem; font-weight: 800; margin: 0.1rem 0 0; color: var(--t1);">${name}</h4>
+          </div>
+          <span style="font-size: 0.7rem; font-weight: 700; background: ${statusBg}; color: ${statusColor}; padding: 4px 8px; border-radius: 6px;">${statusText}</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+          <div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px solid var(--border-1);">
+            <div style="font-size: 0.6rem; color: var(--text-dim); font-weight: 600;">Credit Period</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--t1); margin-top: 2px;">${ctrl.creditDays || 30} Days</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px solid var(--border-1);">
+            <div style="font-size: 0.6rem; color: var(--text-dim); font-weight: 600;">Credit Limit</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--t1); margin-top: 2px;">$${(ctrl.creditLimit || 0).toLocaleString()}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px solid var(--border-1);">
+            <div style="font-size: 0.6rem; color: var(--text-dim); font-weight: 600;">Compliance</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: ${complianceColor}; margin-top: 2px;">${complianceText}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px solid var(--border-1);">
+            <div style="font-size: 0.6rem; color: var(--text-dim); font-weight: 600;">Total Business</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: var(--sky); margin-top: 2px;">₹${totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+          </div>
+        </div>
+        
+        <div>
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--t2); margin-bottom: 0.4rem; text-transform: uppercase;">Assigned Agents (${associatedAgents.length})</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+            ${associatedAgents.map(a => `<span style="font-size: 0.68rem; padding: 3px 8px; border-radius: 4px; background: rgba(27,28,92,0.04); color: var(--sky); border: 1px solid var(--border-1); font-weight:600;">${a}</span>`).join('') || '<span style="font-size: 0.7rem; color: var(--text-dim); font-style: italic;">No agents assigned yet.</span>'}
+          </div>
+        </div>
+        
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 180px;">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Quotes History (${totalCount})</div>
+          <div class="quotes-table-container" style="flex: 1; max-height: 220px; overflow-y: auto;">
+            <table class="quotes-table" style="font-size: 0.7rem; width: 100%;">
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Date</th>
+                  <th>Agent (Desk)</th>
+                  <th>Mode</th>
+                  <th>Value</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${quotesRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+window.showDirectoryItemDetails = showDirectoryItemDetails;
+
+function exportDirectoryCSV() {
+  const quotes = appState.quotes || [];
+  let controls = window._customerControls || {};
+  if (Object.keys(controls).length === 0) {
+    try {
+      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+    } catch(e) {}
+  }
+  
+  let csvContent = "data:text/csv;charset=utf-8,";
+  
+  if (window._dirGrouping === 'agents') {
+    csvContent += "Agent Name,Desk,Total Quotes,Customer Assigned\n";
+    
+    const agentMap = {};
+    Object.keys(TEAM_ROLES).forEach(roleId => {
+      if (roleId === 'ganny' || roleId === 'manager') return;
+      const agentName = TEAM_ROLES[roleId].name || roleId;
+      agentMap[agentName] = { roleId: roleId, customers: new Set(), quotesCount: 0 };
+    });
+    
+    quotes.forEach(q => {
+      const creator = q.creator || 'unknown';
+      const agentName = TEAM_ROLES[creator.toLowerCase()]?.name || q.creator || 'Unknown';
+      if (!agentMap[agentName]) {
+        agentMap[agentName] = { roleId: creator, customers: new Set(), quotesCount: 0 };
+      }
+      agentMap[agentName].quotesCount++;
+      if (q.customer) {
+        agentMap[agentName].customers.add(q.customer.trim());
+      }
+    });
+    
+    Object.keys(agentMap).sort().forEach(agentName => {
+      const data = agentMap[agentName];
+      const category = TEAM_ROLES[data.roleId?.toLowerCase()]?.category || 'Custom Desk';
+      const customersList = Array.from(data.customers);
+      
+      if (customersList.length === 0) {
+        csvContent += `"${agentName}","${category}",${data.quotesCount},"None"\n`;
+      } else {
+        customersList.forEach(cust => {
+          csvContent += `"${agentName}","${category}",${data.quotesCount},"${cust}"\n`;
+        });
+      }
+    });
+  } else {
+    csvContent += "Customer Name,Credit Period (Days),Credit Limit (USD),Compliance,Total Quotes,Associated Agents\n";
+    
+    const allCustomers = Array.from(new Set([
+      ...quotes.map(q => q.customer.trim()),
+      ...Object.values(controls).map(c => c.customer.trim())
+    ])).sort();
+    
+    allCustomers.forEach(cust => {
+      const customerLower = cust.toLowerCase().trim();
+      const ctrl = controls[customerLower] || { creditDays: 30, creditLimit: 0 };
+      
+      const customerQuotes = quotes.filter(q => q.customer?.toLowerCase().trim() === customerLower);
+      const quotesCount = customerQuotes.length;
+      
+      const associatedAgents = Array.from(new Set(customerQuotes.map(q => {
+        return TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
+      }).filter(Boolean))).sort().join(' | ');
+      
+      const complianceText = ctrl.hasAgreement ? 'Compliant' : (ctrl.waiveAgreement ? 'Waived' : 'Non-Compliant');
+      
+      csvContent += `"${cust}",${ctrl.creditDays || 30},${ctrl.creditLimit || 0},"${complianceText}",${quotesCount},"${associatedAgents || 'None'}"\n`;
+    });
+  }
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `agent_customer_directory_${window._dirGrouping}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+window.exportDirectoryCSV = exportDirectoryCSV;
+// ===============================================================================
 

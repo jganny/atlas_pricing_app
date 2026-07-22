@@ -1,0 +1,39 @@
+[debug] [2026-07-21T14:06:55.633Z] ----------------------------------------------------------------------
+[debug] [2026-07-21T14:06:55.640Z] Command:       /opt/homebrew/Cellar/node/26.5.0/bin/node /Users/jganny/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only hosting
+[debug] [2026-07-21T14:06:55.640Z] CLI Version:   15.24.0
+[debug] [2026-07-21T14:06:55.640Z] Platform:      darwin
+[debug] [2026-07-21T14:06:55.640Z] Node Version:  v26.5.0
+[debug] [2026-07-21T14:06:55.641Z] Detected Agent: antigravity
+[debug] [2026-07-21T14:06:55.641Z] Time:          Tue Jul 21 2026 19:36:55 GMT+0530 (India Standard Time)
+[debug] [2026-07-21T14:06:55.641Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-21T14:06:56.974Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-21T14:06:56.974Z] > authorizing via signed-in user (jganny6@gmail.com)
+[debug] [2026-07-21T14:06:56.974Z] [iam] checking project vertex-35d95 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-07-21T14:06:56.996Z] Checked if tokens are valid: true, expires at: 1784645726577
+[debug] [2026-07-21T14:06:56.997Z] Checked if tokens are valid: true, expires at: 1784645726577
+[debug] [2026-07-21T14:06:56.998Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/vertex-35d95:testIamPermissions [none]
+[debug] [2026-07-21T14:06:56.998Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/vertex-35d95:testIamPermissions  x-goog-user-project=vertex-35d95
+[debug] [2026-07-21T14:06:56.998Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/vertex-35d95:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-07-21T14:06:57.058Z] *** [apiv2] error from fetch(https://cloudresourcemanager.googleapis.com/v1/projects/vertex-35d95:testIamPermissions, {"headers":{},"method":"POST","body":"{\"permissions\":[\"firebase.projects.get\",\"firebasehosting.sites.update\"]}"}): Error: getaddrinfo ENOTFOUND cloudresourcemanager.googleapis.com
+[debug] [2026-07-21T14:06:57.058Z] [iam] error while checking permissions, command may fail: Failed to make request to https://cloudresourcemanager.googleapis.com/v1/projects/vertex-35d95:testIamPermissions
+[debug] [2026-07-21T14:06:57.059Z] Checked if tokens are valid: true, expires at: 1784645726577
+[debug] [2026-07-21T14:06:57.059Z] Checked if tokens are valid: true, expires at: 1784645726577
+[debug] [2026-07-21T14:06:57.059Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vertex-35d95 [none]
+[debug] [2026-07-21T14:06:57.063Z] *** [apiv2] error from fetch(https://firebase.googleapis.com/v1beta1/projects/vertex-35d95, {"headers":{},"method":"GET","signal":{}}): Error: getaddrinfo ENOTFOUND firebase.googleapis.com
+[debug] [2026-07-21T14:06:57.063Z] Failed to make request to https://firebase.googleapis.com/v1beta1/projects/vertex-35d95 (original: getaddrinfo ENOTFOUND firebase.googleapis.com)
+[error] 
+[error] Error: Assertion failed: resolving hosting target of a site with no site name or target name. This should have caused an error earlier
+[debug] [2026-07-21T14:06:57.335Z] Error: EPERM: operation not permitted, open '/Users/jganny/.config/configstore/firebase-tools.json.1297319318'
+    at Object.openSync (node:fs:697:18)
+    at writeFile.writeFileSync [as sync] (/Users/jganny/.npm/_npx/ba4f1959e38407b5/node_modules/write-file-atomic/index.js:205:13)
+    at set all (/Users/jganny/.npm/_npx/ba4f1959e38407b5/node_modules/configstore/index.js:61:20)
+    at Configstore.delete (/Users/jganny/.npm/_npx/ba4f1959e38407b5/node_modules/configstore/index.js:101:12)
+    at process.<anonymous> (/Users/jganny/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/bin/cli.js:95:45)
+    at process.emit (node:events:521:24)
+    at process.exit (node:internal/process/per_thread:236:15)
+    at Timeout._onTimeout (/Users/jganny/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/errorOut.js:20:17)
+    at listOnTimeout (node:internal/timers:635:17)
+    at process.processTimers (node:internal/timers:571:7)
+[error] 
+[error] Error: An unexpected error has occurred.
