@@ -1991,7 +1991,7 @@
               </div>
             </div>
 
-            <div class="form-grid-3">
+            <div class="form-grid-2">
               <div class="form-group autocomplete-container">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <label for="sea-origin">Port of Loading (POL)</label>
@@ -2010,17 +2010,9 @@
                 </div>
                 <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
               </div>
-              <div class="form-group autocomplete-container">
-                <label for="sea-line">Shipping Carrier (Line)</label>
-                <input type="text" id="sea-line" placeholder="e.g. Maersk, MSC, CMA CGM" autocomplete="off">
-              </div>
             </div>
 
-            <div class="form-grid-3" style="margin-top: 1rem;">
-              <div class="form-group autocomplete-container" style="display: none;">
-                <label for="sea-liner-name">Liner Name</label>
-                <input type="text" id="sea-liner-name" placeholder="e.g. MSC, Hapag-Lloyd" autocomplete="off">
-              </div>
+            <div class="form-grid-1" style="margin-top: 1rem;">
               <div class="form-group autocomplete-container">
                 <label for="sea-commodity">Commodity / HSN Code</label>
                 <input type="text" id="sea-commodity" placeholder="Search or enter commodity/HSN code..." autocomplete="off">
@@ -2215,8 +2207,71 @@
                     </svg>
                     <span class="liner-label-text">Liner 1 / Primary Operator</span>
                   </div>
-                  <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="text" class="liner-name-input" id="sea-liner-name-1" placeholder="Carrier Name e.g. Maersk / MSC / Coloader" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 220px;">
+                  <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <select class="liner-name-select table-select" id="sea-liner-select-1" onchange="handleLinerSelectChange(1)" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); min-width: 240px; font-weight: 600;">
+                      <option value="">-- Select Shipping Line / Coloader / BreakBulk --</option>
+                      <optgroup label="🚢 Shipping Lines">
+                        <option value="MSC (Mediterranean Shipping Company)">MSC (Mediterranean Shipping Company)</option>
+                        <option value="Maersk Line">Maersk Line</option>
+                        <option value="CMA CGM">CMA CGM</option>
+                        <option value="COSCO Shipping">COSCO Shipping</option>
+                        <option value="Hapag-Lloyd">Hapag-Lloyd</option>
+                        <option value="ONE (Ocean Network Express)">ONE (Ocean Network Express)</option>
+                        <option value="Evergreen Line">Evergreen Line</option>
+                        <option value="HMM Co., Ltd.">HMM Co., Ltd.</option>
+                        <option value="Yang Ming Marine Transport">Yang Ming Marine Transport</option>
+                        <option value="ZIM Integrated Shipping">ZIM Integrated Shipping</option>
+                        <option value="Wan Hai Lines">Wan Hai Lines</option>
+                        <option value="PIL (Pacific International Lines)">PIL (Pacific International Lines)</option>
+                        <option value="OOCL (Orient Overseas Container Line)">OOCL (Orient Overseas Container Line)</option>
+                        <option value="KMTC (Korea Marine Transport Co.)">KMTC (Korea Marine Transport Co.)</option>
+                        <option value="SITC Container Lines">SITC Container Lines</option>
+                        <option value="TS Lines">TS Lines</option>
+                        <option value="RCL (Regional Container Lines)">RCL (Regional Container Lines)</option>
+                        <option value="X-Press Feeders">X-Press Feeders</option>
+                        <option value="Sinokor Merchant Marine">Sinokor Merchant Marine</option>
+                        <option value="SM Line">SM Line</option>
+                        <option value="Turkon Line">Turkon Line</option>
+                        <option value="Grimaldi Lines">Grimaldi Lines</option>
+                      </optgroup>
+                      <optgroup label="📦 Coloaders & NVOCCs">
+                        <option value="Vanguard Logistics">Vanguard Logistics</option>
+                        <option value="ECU Worldwide">ECU Worldwide</option>
+                        <option value="CWT Globelink">CWT Globelink</option>
+                        <option value="Shipco Transport">Shipco Transport</option>
+                        <option value="FPS (Famous Pacific Shipping)">FPS (Famous Pacific Shipping)</option>
+                        <option value="SACO Shipping">SACO Shipping</option>
+                        <option value="CFR Rinkens / CFR Freight">CFR Rinkens / CFR Freight</option>
+                        <option value="Oceanus Coloaders">Oceanus Coloaders</option>
+                        <option value="Cargo Services Far East">Cargo Services Far East</option>
+                        <option value="Allcargo Logistics">Allcargo Logistics</option>
+                        <option value="Caravel Logistics">Caravel Logistics</option>
+                        <option value="Conship">Conship</option>
+                        <option value="FreightConsol">FreightConsol</option>
+                      </optgroup>
+                      <optgroup label="🏗 Breakbulk Operators">
+                        <option value="BBC Chartering">BBC Chartering</option>
+                        <option value="Spliethoff Group">Spliethoff Group</option>
+                        <option value="dship Carriers">dship Carriers</option>
+                        <option value="AAL Shipping (Austral Asia Line)">AAL Shipping (Austral Asia Line)</option>
+                        <option value="Saga Welco">Saga Welco</option>
+                        <option value="MACS Maritime Carrier Shipping">MACS Maritime Carrier Shipping</option>
+                        <option value="Swire Shipping">Swire Shipping</option>
+                        <option value="G2 Ocean">G2 Ocean</option>
+                        <option value="Chipolbrok">Chipolbrok</option>
+                        <option value="BigLift Shipping">BigLift Shipping</option>
+                        <option value="Jumbo-SAL Maritime">Jumbo-SAL Maritime</option>
+                        <option value="United Heavy Lift (UHL)">United Heavy Lift (UHL)</option>
+                        <option value="Fednav">Fednav</option>
+                        <option value="Intermarine">Intermarine</option>
+                        <option value="Harren Group">Harren Group</option>
+                        <option value="Thorco Maritime">Thorco Maritime</option>
+                      </optgroup>
+                      <optgroup label="✏️ Custom Operator">
+                        <option value="__custom__">+ Add Custom / Unlisted Carrier...</option>
+                      </optgroup>
+                    </select>
+                    <input type="text" class="liner-name-input" id="sea-liner-name-1" placeholder="Enter Custom Carrier Name..." oninput="calculateSeaFreight()" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 180px; display: none;">
                   </div>
                 </div>
 
@@ -3698,7 +3753,7 @@
   <datalist id="sea-dest-charges-list"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=126.0"></script>
+  <script src="app-v4.js?v=127.0"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {

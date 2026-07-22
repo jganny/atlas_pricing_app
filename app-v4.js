@@ -3226,6 +3226,71 @@ window.switchLinerMode = function(linerIndex, mode) {
   calculateSeaFreight();
 };
 
+function buildLinerOptionsHTML(selectedName = "") {
+  const options = [
+    { group: "🚢 Shipping Lines", items: [
+      "MSC (Mediterranean Shipping Company)", "Maersk Line", "CMA CGM", "COSCO Shipping",
+      "Hapag-Lloyd", "ONE (Ocean Network Express)", "Evergreen Line", "HMM Co., Ltd.",
+      "Yang Ming Marine Transport", "ZIM Integrated Shipping", "Wan Hai Lines",
+      "PIL (Pacific International Lines)", "OOCL (Orient Overseas Container Line)",
+      "KMTC (Korea Marine Transport Co.)", "SITC Container Lines", "TS Lines",
+      "RCL (Regional Container Lines)", "X-Press Feeders", "Sinokor Merchant Marine",
+      "SM Line", "Turkon Line", "Grimaldi Lines"
+    ]},
+    { group: "📦 Coloaders & NVOCCs", items: [
+      "Vanguard Logistics", "ECU Worldwide", "CWT Globelink", "Shipco Transport",
+      "FPS (Famous Pacific Shipping)", "SACO Shipping", "CFR Rinkens / CFR Freight",
+      "Oceanus Coloaders", "Cargo Services Far East", "Allcargo Logistics",
+      "Caravel Logistics", "Conship", "FreightConsol"
+    ]},
+    { group: "🏗 Breakbulk Operators", items: [
+      "BBC Chartering", "Spliethoff Group", "dship Carriers", "AAL Shipping (Austral Asia Line)",
+      "Saga Welco", "MACS Maritime Carrier Shipping", "Swire Shipping", "G2 Ocean",
+      "Chipolbrok", "BigLift Shipping", "Jumbo-SAL Maritime", "United Heavy Lift (UHL)",
+      "Fednav", "Intermarine", "Harren Group", "Thorco Maritime"
+    ]}
+  ];
+
+  let html = `<option value="">-- Select Shipping Line / Coloader / BreakBulk --</option>`;
+  let isFound = false;
+
+  options.forEach(grp => {
+    html += `<optgroup label="${grp.group}">`;
+    grp.items.forEach(item => {
+      const isSel = (item === selectedName);
+      if (isSel) isFound = true;
+      html += `<option value="${item}" ${isSel ? 'selected' : ''}>${item}</option>`;
+    });
+    html += `</optgroup>`;
+  });
+
+  const isCustom = !isFound && selectedName && !selectedName.startsWith("Liner ");
+  html += `<optgroup label="✏️ Custom / Unlisted">`;
+  html += `<option value="__custom__" ${isCustom ? 'selected' : ''}>+ Add Custom / Unlisted Carrier...</option>`;
+  html += `</optgroup>`;
+
+  return { html, isCustom };
+}
+
+window.handleLinerSelectChange = function(index) {
+  const card = document.getElementById(`sea-liner-card-${index}`);
+  if (!card) return;
+  const select = card.querySelector(".liner-name-select");
+  const input = card.querySelector(".liner-name-input");
+  if (!select || !input) return;
+
+  if (select.value === "__custom__") {
+    input.style.display = "inline-block";
+    input.focus();
+  } else {
+    input.style.display = "none";
+    if (select.value) {
+      input.value = select.value;
+    }
+  }
+  calculateSeaFreight();
+};
+
 let linerCardCounter = 1;
 
 window.addNewLinerCard = function(data = null) {
@@ -3240,7 +3305,8 @@ window.addNewLinerCard = function(data = null) {
   linerCard.dataset.linerIndex = index;
   linerCard.dataset.mode = data?.mode || appState.currentSeaFreight.type || 'fcl';
 
-  const linerName = data?.linerName || `Liner ${index}`;
+  const linerName = data?.linerName || "";
+  const opts = buildLinerOptionsHTML(linerName);
   const isFcl = (linerCard.dataset.mode === 'fcl');
   const isLcl = (linerCard.dataset.mode === 'lcl');
   const isBb = (linerCard.dataset.mode === 'bb');
@@ -3251,10 +3317,13 @@ window.addNewLinerCard = function(data = null) {
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/>
         </svg>
-        <span class="liner-label-text">Liner ${index} / Additional Operator</span>
+        <span class="liner-label-text">Liner ${index} Option</span>
       </div>
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <input type="text" class="liner-name-input" id="sea-liner-name-${index}" value="${linerName}" placeholder="Carrier Name e.g. MSC / ONE / Coloader" oninput="calculateSeaFreight()" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 220px;">
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <select class="liner-name-select table-select" id="sea-liner-select-${index}" onchange="handleLinerSelectChange(${index})" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); min-width: 230px; font-weight: 600;">
+          ${opts.html}
+        </select>
+        <input type="text" class="liner-name-input" id="sea-liner-name-${index}" value="${linerName}" placeholder="Enter Custom Carrier Name..." oninput="calculateSeaFreight()" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 180px; display: ${opts.isCustom ? 'inline-block' : 'none'};">
         <button type="button" class="delete-btn" onclick="removeLinerCard(${index})" style="background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight: 700;">
           🗑 Delete Liner
         </button>
@@ -3604,11 +3673,17 @@ function calculateSeaFreight() {
 
   linerCards.forEach((card, idx) => {
     const linerIndex = card.dataset.linerIndex;
+    const linerSelect = card.querySelector(".liner-name-select") || document.getElementById(`sea-liner-select-${linerIndex}`);
     const linerNameInput = card.querySelector(".liner-name-input") || document.getElementById(`sea-liner-name-${linerIndex}`);
-    const mainCarrierName = document.getElementById("sea-line")?.value.trim() || "";
-    let linerName = linerNameInput?.value.trim();
+    
+    let linerName = "";
+    if (linerSelect && linerSelect.value && linerSelect.value !== "__custom__") {
+      linerName = linerSelect.value;
+    } else if (linerNameInput && linerNameInput.value.trim()) {
+      linerName = linerNameInput.value.trim();
+    }
     if (!linerName) {
-      linerName = (idx === 0 && mainCarrierName) ? mainCarrierName : `Liner ${idx + 1}`;
+      linerName = `Liner ${idx + 1}`;
     }
 
     const tariffsEnabled = card.querySelector(".sea-enable-tariffs")?.checked ?? true;
@@ -5094,7 +5169,7 @@ function saveCurrentQuote() {
   } else {
     const originVal = document.getElementById("sea-origin").value.trim();
     const destVal = document.getElementById("sea-dest").value.trim();
-    const shippingLineVal = document.getElementById("sea-line").value.trim();
+    const shippingLineVal = appState.currentSeaFreight.liners?.[0]?.linerName || "";
     const incoterm = document.getElementById("sea-incoterm").value;
     const grossWeight = parseFloat(document.getElementById("sea-gross-weight").value) || 0;
     const volume = parseFloat(document.getElementById("sea-volume").value) || 0;
@@ -5114,7 +5189,7 @@ function saveCurrentQuote() {
     const destFeesEnabled = document.getElementById("sea-enable-dest-fees")?.checked ?? true;
 
     if (tariffsEnabled) {
-      if (!shippingLineVal) { alert("Please fill in Shipping Carrier (Line)."); return; }
+      if (!shippingLineVal) { alert("Please select or enter Shipping Line / Coloader / Operator for Liner 1."); return; }
       if (!routing) { alert("Please fill in Routing Details."); return; }
       if (!tt) { alert("Please fill in Transit Time (TT)."); return; }
       if (!validity) { alert("Please fill in Quote Validity."); return; }
