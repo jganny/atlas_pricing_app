@@ -2469,4 +2469,72 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
   color: var(--sky);
 }
 
+/* ══════════════════════════════════════════════════
+   OCEAN FREIGHT TARIFF PER CONTAINER STATIC TABLE (NO HORIZONTAL SCROLL)
+   ══════════════════════════════════════════════════ */
+#sea-fcl-form .cargo-table-container {
+  overflow-x: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#sea-fcl-form .cargo-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  table-layout: fixed !important;
+}
+
+#sea-fcl-form .cargo-table th {
+  padding: 6px 4px !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  font-size: 0.65rem !important;
+  line-height: 1.25 !important;
+  vertical-align: middle !important;
+}
+
+#sea-fcl-form .cargo-table td {
+  padding: 5px 3px !important;
+  vertical-align: middle !important;
+}
+
+#sea-fcl-form .cargo-table th:nth-child(1),
+#sea-fcl-form .cargo-table td:nth-child(1) {
+  width: 32% !important;
+  text-align: left !important;
+}
+
+#sea-fcl-form .cargo-table th:nth-child(2),
+#sea-fcl-form .cargo-table td:nth-child(2) {
+  width: 16% !important;
+  text-align: center !important;
+}
+
+#sea-fcl-form .cargo-table th:nth-child(3),
+#sea-fcl-form .cargo-table td:nth-child(3) {
+  width: 21% !important;
+  text-align: center !important;
+}
+
+#sea-fcl-form .cargo-table th:nth-child(4),
+#sea-fcl-form .cargo-table td:nth-child(4) {
+  width: 21% !important;
+  text-align: center !important;
+}
+
+#sea-fcl-form .cargo-table th:nth-child(5),
+#sea-fcl-form .cargo-table td:nth-child(5) {
+  width: 10% !important;
+  text-align: center !important;
+}
+
+#sea-fcl-form .cargo-table input,
+#sea-fcl-form .cargo-table select {
+  padding: 0.35rem 0.35rem !important;
+  font-size: 0.75rem !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+
 

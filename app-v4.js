@@ -935,11 +935,11 @@ function updateCurrencyRules(role) {
         thead.setAttribute("data-header-type", expectedHeaderType);
         thead.innerHTML = `
           <tr>
-            <th>Container Type</th>
-            <th>Quantity Needed</th>
-            <th>Sell Rate Per Container (<span class="curr-label">${currency}</span>)</th>
-            <th>Buy Rate Per Container (<span class="curr-label">${currency}</span>)</th>
-            <th>Action</th>
+            <th style="width: 32%;">Container Type</th>
+            <th style="width: 16%; text-align: center;">Quantity Needed</th>
+            <th style="width: 21%; text-align: center;">Sell Rate Per Container (<span class="curr-label">${currency}</span>)</th>
+            <th style="width: 21%; text-align: center;">Buy Rate Per Container (<span class="curr-label">${currency}</span>)</th>
+            <th style="width: 10%; text-align: center;">Action</th>
           </tr>
         `;
       }
@@ -3192,11 +3192,11 @@ function addFclContainerRow(typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
         <option value="45'HC" ${typeVal === "45'HC" ? 'selected' : ''}>45'HC (High Cube)</option>
       </select>
     </td>
-    <td><input type="number" class="fcl-qty" value="${qtyVal}" min="1" style="width: 100%;"></td>
-    <td><input type="number" class="fcl-rate fcl-sell-rate" value="${sellRate}" min="0" style="width: 100%;"></td>
-    <td><input type="number" class="fcl-buy-rate" value="${buyRate}" min="0" style="width: 100%;"></td>
-    <td>
-      <button type="button" class="delete-btn">
+    <td><input type="number" class="fcl-qty" value="${qtyVal}" min="1" style="width: 100%; text-align: center;"></td>
+    <td><input type="number" class="fcl-rate fcl-sell-rate" value="${sellRate}" min="0" style="width: 100%; text-align: right;"></td>
+    <td><input type="number" class="fcl-buy-rate" value="${buyRate}" min="0" style="width: 100%; text-align: right;"></td>
+    <td style="text-align: center;">
+      <button type="button" class="delete-btn" style="margin: 0 auto;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
       </button>
     </td>

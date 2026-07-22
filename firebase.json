@@ -5,8 +5,12 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
+      "node_modules/**",
       "functions/**",
-      "*.bak"
+      "*.bak",
+      "**/*.bak",
+      "*.py",
+      "deploy.sh"
     ]
   },
   "functions": {
