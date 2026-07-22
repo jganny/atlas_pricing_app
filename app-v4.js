@@ -6449,7 +6449,6 @@ window.populateAllHeaderFilterDropdowns = () => {
   }
 
   // 4. AGENT & ROUTE DETAILS (Show ALL Customers/Agents & Routes)
-  }
 };
 
 // --- User Column Header Filter State & Handlers ---
