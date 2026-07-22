@@ -6513,7 +6513,9 @@ window.applyDbFiltersAndSort = () => {
     const statusStr = (q.status || "").toLowerCase();
     const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
     const sellRateStr = (q.amount || "").toString().toLowerCase();
-    const gpStr = (q.grossProfit || "").toString().toLowerCase();
+    const gpStr = st.gp === 'percent' ? 
+      (q.grossProfit !== undefined && q.amount ? `${((q.grossProfit / q.amount) * 100).toFixed(2)}%` : '0.00%').toLowerCase() :
+      (q.grossProfit || "").toString().toLowerCase();
 
     // Mode filter
     if (st.mode && st.mode !== 'all' && typeStr !== st.mode) return false;
@@ -6664,8 +6666,10 @@ window.applyDbFiltersAndSort = () => {
       <td>
         ${quote.grossProfit !== undefined ? `
           <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
-            ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            ${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${Math.abs(quote.grossProfitINR || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}
+            ${window.hdrFilterState.gp === 'percent' ? 
+              (quote.amount ? `${((quote.grossProfit / quote.amount) * 100).toFixed(2)}%` : '0.00%') :
+              `${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${Math.abs(quote.grossProfitINR || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}`
+            }
           </div>
         ` : '-'}
       </td>
