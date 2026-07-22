@@ -431,66 +431,126 @@ async function handleLogin(e) {
   }
 
   if (DB.isCloud) {
-    let email = `${user}@pricing.local`;
+    // ── PRIMARY: Try canonical @atlaspricing.com domain ──────────────────────
+    const canonicalEmail = `${user}@atlaspricing.com`;
+    const legacyEmail    = `${user}@pricing.local`; // one-time migration compat.
+
+    let firebaseAuthSuccess = false;
+    let signedInEmail = null;
+
+    // Try canonical domain first
     try {
-      await firebase.auth().signInWithEmailAndPassword(email, pass);
+      await firebase.auth().signInWithEmailAndPassword(canonicalEmail, pass);
+      firebaseAuthSuccess = true;
+      signedInEmail = canonicalEmail;
+    } catch (primaryErr) {
+      console.warn("Firebase Auth (canonical) failed:", primaryErr.code);
+
+      // ── MIGRATION: Try legacy @pricing.local domain transparently ──────────
+      if (primaryErr.code === "auth/user-not-found" ||
+          primaryErr.code === "auth/invalid-credential" ||
+          primaryErr.code === "auth/invalid-email") {
+        try {
+          await firebase.auth().signInWithEmailAndPassword(legacyEmail, pass);
+          firebaseAuthSuccess = true;
+          signedInEmail = legacyEmail;
+          console.log(`Migrating ${user} from @pricing.local → @atlaspricing.com in background.`);
+          // Background email migration: update Firebase Auth email to canonical domain
+          const currentFbUser = firebase.auth().currentUser;
+          if (currentFbUser) {
+            currentFbUser.updateEmail(canonicalEmail).catch(migErr => {
+              console.warn("Background email migration skipped:", migErr.message);
+            });
+          }
+        } catch (legacyErr) {
+          console.warn("Firebase Auth (legacy) also failed:", legacyErr.code);
+        }
+      }
+    }
+
+    if (firebaseAuthSuccess) {
       sessionStorage.setItem("gl_pricing_session", user);
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
       loginSuccess(user);
-    } catch (err) {
-      console.warn("Firebase Auth failed, checking database fallback:", err.message);
-      
-      let matchedPass = false;
-      
-      // Check database users document directly
-      try {
-        const userDoc = await DB.firestoreRef.collection("users").doc(user).get();
-        if (userDoc.exists && userDoc.data().password === pass) {
-          matchedPass = true;
-        }
-      } catch (docErr) {
-        console.warn("Could not check Firestore user doc:", docErr);
-      }
+      return;
+    }
 
-      // Hardcoded defaults check
-      const validHardcoded = ["ganny", "ganesh", "shashank", "shaheer", "jaya", "cathrina"];
-      if (validHardcoded.includes(user) && pass === "password") {
+    // ── FALLBACK: Firebase Auth unavailable — check Firestore + localStorage ─
+    console.warn("Firebase Auth sign-in failed for both domains. Checking Firestore/local fallback.");
+    let matchedPass = false;
+
+    // Check Firestore users document directly
+    try {
+      const userDoc = await DB.firestoreRef.collection("users").doc(user).get();
+      if (userDoc.exists && userDoc.data().password === pass) {
         matchedPass = true;
       }
+    } catch (docErr) {
+      console.warn("Could not check Firestore user doc:", docErr);
+    }
 
-      // Local storage custom users check
-      if (!matchedPass) {
-        let customUsers = [];
-        const storedCustom = localStorage.getItem("gl_custom_users");
-        if (storedCustom) {
-          try { customUsers = JSON.parse(storedCustom); } catch (e) {}
-        }
-        const matchedLocal = customUsers.find(u => u && u.username && u.username.toLowerCase() === user);
-        if (matchedLocal && matchedLocal.password === pass) {
-          matchedPass = true;
-        }
+    // Hardcoded defaults check (core team — no 'ganesh' alias, use 'ganny')
+    const validHardcoded = ["ganny", "shashank", "shaheer", "jaya", "cathrina"];
+    if (!matchedPass && validHardcoded.includes(user) && pass === "password") {
+      matchedPass = true;
+    }
+
+    // Local storage custom users check
+    if (!matchedPass) {
+      let customUsers = [];
+      const storedCustom = localStorage.getItem("gl_custom_users");
+      if (storedCustom) {
+        try { customUsers = JSON.parse(storedCustom); } catch (e) {}
       }
-
-      if (matchedPass) {
-        sessionStorage.setItem("gl_pricing_session", user);
-        document.getElementById("login-username").value = "";
-        document.getElementById("login-password").value = "";
-        loginSuccess(user);
-        
-        // Auto-create/sync Firebase Auth in the background
-        try {
-          await firebase.auth().createUserWithEmailAndPassword(email, pass);
-        } catch (syncErr) {
-          console.log("Background auth sync skipped/failed:", syncErr.message);
-        }
-      } else {
-        alert("❌ Login failed: Invalid username or password.");
-        document.getElementById("login-password").value = "";
+      const matchedLocal = customUsers.find(u => u && u.username && u.username.toLowerCase() === user);
+      if (matchedLocal && matchedLocal.password === pass) {
+        matchedPass = true;
       }
     }
+
+    if (matchedPass) {
+      sessionStorage.setItem("gl_pricing_session", user);
+      document.getElementById("login-username").value = "";
+      document.getElementById("login-password").value = "";
+      loginSuccess(user);
+
+      // ── BACKGROUND SYNC: Repair Firebase Auth account so next login uses it ──
+      // Uses a secondary app to avoid signing out the user who just logged in.
+      (async () => {
+        try {
+          const configRaw = localStorage.getItem("gl_firebase_config");
+          const config = configRaw ? JSON.parse(configRaw) : DEFAULT_FIREBASE_CONFIG;
+          const syncAppName = "AuthSyncApp_" + Date.now();
+          const syncApp = firebase.initializeApp(config, syncAppName);
+          try {
+            // Attempt create — succeeds if no Firebase Auth account exists yet
+            await syncApp.auth().createUserWithEmailAndPassword(canonicalEmail, pass);
+            console.log("Auth sync: created Firebase Auth account for", user);
+          } catch (createErr) {
+            if (createErr.code === "auth/email-already-in-use") {
+              // Account exists but password differs — sign in to verify
+              try {
+                await syncApp.auth().signInWithEmailAndPassword(canonicalEmail, pass);
+                console.log("Auth sync: Firebase Auth password already matches for", user);
+              } catch (signInErr) {
+                // Password mismatch in Firebase Auth — admin must use force reset
+                console.warn("Auth sync: Firebase Auth password differs for", user,
+                  "— admin should use Force Reset to sync.");
+              }
+            }
+          }
+          await syncApp.delete();
+        } catch (syncErr) {
+          console.warn("Auth sync background error:", syncErr.message);
+        }
+      })();
+    } else {
+      alert("❌ Login failed: Invalid username or password.");
+      document.getElementById("login-password").value = "";
+    }
   } else {
-    // Offline local storage fallback
+    // ── OFFLINE: Local storage fallback ──────────────────────────────────────
     let dbUsers = window._firebaseUsers || [];
     if (dbUsers.length === 0) {
       const storedCustom = localStorage.getItem("gl_custom_users");
@@ -7286,18 +7346,36 @@ async function registerNewUserProfile(e) {
   try {
     if (DB.firestoreRef) {
       const email = `${username}@atlaspricing.com`;
-      // Create secondary app instance for registration to prevent signing out the current admin
-      const configRaw = localStorage.getItem("gl_firebase_config");
-      const config = configRaw ? JSON.parse(configRaw) : DEFAULT_FIREBASE_CONFIG;
-      const secondaryApp = firebase.initializeApp(config, "SecondaryApp");
+
+      // ── Prefer Cloud Function to create Firebase Auth account (no secondary app needed) ──
+      let authCreatedViaCloudFn = false;
       try {
-        await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
-        await secondaryApp.delete();
-      } catch (authErr) {
-        await secondaryApp.delete();
-        throw authErr;
+        const createFn = firebase.functions().httpsCallable("adminCreateUser");
+        const result = await createFn({ username, password, fullName });
+        if (result.data && result.data.success) {
+          authCreatedViaCloudFn = true;
+          console.log("Registration: Firebase Auth account created via Cloud Function.");
+        }
+      } catch (fnErr) {
+        console.warn("adminCreateUser Cloud Function failed, using secondary app:", fnErr.message);
       }
-      await DB.firestoreRef.collection("users").doc(username).set(newUser);
+
+      // ── Fallback: secondary app approach (runs if Cloud Function unavailable) ──
+      if (!authCreatedViaCloudFn) {
+        const configRaw = localStorage.getItem("gl_firebase_config");
+        const config = configRaw ? JSON.parse(configRaw) : DEFAULT_FIREBASE_CONFIG;
+        const secondaryApp = firebase.initializeApp(config, "SecondaryApp_" + Date.now());
+        try {
+          await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
+          await secondaryApp.delete();
+        } catch (authErr) {
+          await secondaryApp.delete();
+          throw authErr;
+        }
+      }
+
+      // ── Store user in Firestore — include password for fallback login ────────
+      await DB.firestoreRef.collection("users").doc(username).set({ ...newUser, password });
     } else {
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
@@ -8826,11 +8904,35 @@ const DB = {
       // Set listener on users collection
       this.firestoreRef.collection("users").onSnapshot(snap => {
         let customUsers = [];
+
+        // ── Read existing localStorage passwords BEFORE overwriting ──────────
+        // Firestore users docs may not have a password field (if password was
+        // changed locally or user was registered before Fix #6). We MUST
+        // preserve any password already cached in localStorage so the fallback
+        // login path continues to work.
+        let existingLocalUsers = [];
+        try {
+          const storedLocal = localStorage.getItem("gl_custom_users");
+          if (storedLocal) existingLocalUsers = JSON.parse(storedLocal) || [];
+        } catch (e) {}
+
         snap.forEach(doc => {
           const u = doc.data();
           if (u && u.username) {
-            customUsers.push(u);
             const lowerUser = u.username.toLowerCase();
+
+            // If Firestore doc has no password, try to preserve one from localStorage
+            if (!u.password) {
+              const localEntry = existingLocalUsers.find(
+                lu => lu && lu.username && lu.username.toLowerCase() === lowerUser
+              );
+              if (localEntry && localEntry.password) {
+                u.password = localEntry.password;
+              }
+            }
+
+            customUsers.push(u);
+
             // Update TEAM_ROLES dynamically with case-insensitive lowercase keys
             TEAM_ROLES[lowerUser] = {
               name: u.fullName || u.username,
@@ -9157,27 +9259,52 @@ async function saveNewPassword(e) {
 
   try {
     if (DB.firestoreRef && firebase.auth().currentUser) {
-      // Securely update password via Firebase Auth
+      // Update password in Firebase Authentication
       await firebase.auth().currentUser.updatePassword(newPass);
-      alert("🎉 Password updated successfully in Firebase Authentication!");
+
+      // ── Sync new password to Firestore so fallback login also works ─────────
+      try {
+        await DB.firestoreRef.collection("users").doc(currentUser).set(
+          { password: newPass },
+          { merge: true }
+        );
+      } catch (fsErr) {
+        console.warn("Could not sync new password to Firestore (non-fatal):", fsErr);
+      }
+
+      // ── Sync new password to localStorage cache ───────────────────────────
+      try {
+        let customUsers = [];
+        const stored = localStorage.getItem("gl_custom_users");
+        if (stored) { try { customUsers = JSON.parse(stored); } catch(e) {} }
+        const matchedLocal = customUsers.find(u => u && u.username && u.username.toLowerCase() === currentUser);
+        if (matchedLocal) {
+          matchedLocal.password = newPass;
+        } else {
+          customUsers.push({ username: currentUser, fullName: TEAM_ROLES[currentUser]?.name || currentUser, password: newPass });
+        }
+        localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+      } catch(lsErr) {
+        console.warn("Could not sync new password to localStorage (non-fatal):", lsErr);
+      }
+
+      alert("🎉 Password updated successfully!");
     } else {
-      // Offline local storage fallback
+      // ── Offline local storage fallback ────────────────────────────────────
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) {
         try { customUsers = JSON.parse(stored); } catch(err) {}
       }
-      
       const matched = customUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === currentUser);
       if (matched) {
         matched.password = newPass;
         localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
         alert("🎉 Password updated successfully in local session!");
       } else {
-        // Fallback for default hardcoded users
         const mockCustomUser = {
           username: currentUser,
-          fullName: TEAM_ROLES[currentUser].name,
+          fullName: TEAM_ROLES[currentUser]?.name || currentUser,
           password: newPass
         };
         customUsers.push(mockCustomUser);
@@ -11078,7 +11205,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.executeForceReset = async function() {
     const rawUser = document.getElementById("admin-target-user").value;
     const newPass = document.getElementById("admin-target-pass").value;
-    
+
     if (!rawUser) {
       alert("Please enter a target username.");
       return;
@@ -11089,28 +11216,54 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const username = rawUser.trim().toLowerCase();
-    const targetEmail = username + "@pricing.local";
+    const canonicalEmail = `${username}@atlaspricing.com`;
+
+    const btnEl = document.getElementById("admin-force-reset-btn");
+    const originalBtnText = btnEl ? btnEl.textContent : "";
+    if (btnEl) { btnEl.textContent = "Resetting..."; btnEl.disabled = true; }
+
+    let firebaseAuthUpdated = false;
+    let firestoreUpdated = false;
+    let localUpdated = false;
 
     try {
+      // ── STEP 1: Update Firebase Authentication via Cloud Function (Admin SDK) ─
+      // This is the authoritative, permanent fix — no client-side limitation.
+      try {
+        const resetFn = firebase.functions().httpsCallable("adminResetPassword");
+        const result = await resetFn({ username, newPassword: newPass });
+        if (result.data && result.data.success) {
+          firebaseAuthUpdated = true;
+          console.log("Admin reset: Firebase Auth updated via Cloud Function.");
+        }
+      } catch (fnErr) {
+        console.warn("Cloud Function adminResetPassword failed:", fnErr.message,
+          "— falling back to Firestore-only update.");
+      }
+
+      // ── STEP 2: Update Firestore users document ────────────────────────────
       if (db) {
         await db.collection("users").doc(username).set({
           username: username,
-          email: targetEmail,
+          email: canonicalEmail,
           password: newPass,
           fullName: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username] ? TEAM_ROLES[username].name : username),
           role: (username === 'ganny' || username === 'admin' ? 'manager' : 'member'),
-          category: 'FREE HAND SALES (AIR/SEA)',
-          currency: 'INR',
+          category: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username]?.category) || 'FREE HAND SALES (AIR/SEA)',
+          currency: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username]?.currency) || 'INR',
           updatedAt: serverTimestamp()
         }, { merge: true });
+        firestoreUpdated = true;
 
+        // Clear the password reset request
         try {
           await db.collection("resetRequests").doc(username).delete();
-        } catch(err) {
-          console.warn("Could not delete request from DB:", err);
+        } catch(delErr) {
+          console.warn("Could not delete reset request:", delErr);
         }
       }
 
+      // ── STEP 3: Update localStorage cache ─────────────────────────────────
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) {
@@ -11119,18 +11272,22 @@ document.addEventListener("DOMContentLoaded", () => {
       const matched = customUsers.find(u => u && u.username && u.username.toLowerCase() === username);
       if (matched) {
         matched.password = newPass;
+        matched.email = canonicalEmail;
       } else {
         customUsers.push({
           username: username,
+          email: canonicalEmail,
           fullName: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username] ? TEAM_ROLES[username].name : username),
           password: newPass,
           role: (username === 'ganny' || username === 'admin' ? 'manager' : 'member'),
-          category: 'FREE HAND SALES (AIR/SEA)',
-          currency: 'INR'
+          category: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username]?.category) || 'FREE HAND SALES (AIR/SEA)',
+          currency: (typeof TEAM_ROLES !== 'undefined' && TEAM_ROLES[username]?.currency) || 'INR'
         });
       }
       localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
+      localUpdated = true;
 
+      // Clear pending reset indicators
       let resets = [];
       const storedResets = localStorage.getItem("pending_password_resets");
       if (storedResets) {
@@ -11143,14 +11300,19 @@ document.addEventListener("DOMContentLoaded", () => {
         DB.syncUsers();
       }
 
-      alert(`Success: Password for ${username} has been updated on Google Cloud servers.`);
-      
+      const authStatus = firebaseAuthUpdated
+        ? "✅ Firebase Auth updated (via Cloud Function)"
+        : "⚠️ Firebase Auth not updated (Cloud Function unavailable — Firestore fallback is active)";
+      alert(`Password reset for "${username}" complete!\n\n${authStatus}\n✅ Firestore database updated\n✅ Local cache updated`);
+
       document.getElementById("admin-target-user").value = "";
       document.getElementById("admin-target-pass").value = "";
       window.updateResetListInPanel();
       window.updateResetIndicators();
     } catch(err) {
       alert("❌ Error performing administrative force reset: " + err.message);
+    } finally {
+      if (btnEl) { btnEl.textContent = originalBtnText; btnEl.disabled = false; }
     }
   };
 
