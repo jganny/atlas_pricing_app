@@ -3939,13 +3939,24 @@ function renderAdminDashboard() {
           details = `Quote ID: #<strong>${getQuoteRefIdById(req.quoteId)}</strong> (${req.customer})`;
         }
 
+        const isCreditOverride = req.requestType === 'credit_override';
+        const cardStyle = isCreditOverride
+          ? `background: #ffffff; color: #000000; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #000000; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.15);`
+          : `background: rgba(255,255,255,0.04); padding: 12px 14px; border-radius: 8px; border-left: 4px solid ${color}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);`;
+
+        const labelStyle = isCreditOverride ? `color: #000000;` : `color: ${color};`;
+        const mutedStyle = isCreditOverride ? `color: #000000;` : `color: var(--text-muted);`;
+        const reasonStyle = isCreditOverride
+          ? `font-size: 0.72rem; color: #000000; margin-top: 4px; padding: 2px 6px; background: rgba(0, 0, 0, 0.05); border-radius: 4px; border: 1px solid rgba(0, 0, 0, 0.15); width: fit-content;`
+          : `font-size: 0.72rem; color: var(--accent-warning); margin-top: 4px; padding: 2px 6px; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.2); width: fit-content;`;
+
         return `
-          <div class="req-item-card" style="background: rgba(255,255,255,0.04); padding: 12px 14px; border-radius: 8px; border-left: 4px solid ${color}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+          <div class="req-item-card" style="${cardStyle}">
             <div>
-              <strong style="color: ${color};">[${typeLabel}]</strong> 
+              <strong style="${labelStyle}">[${typeLabel}]</strong> 
               ${details}<br>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">Requested by: ${req.creatorName} on ${req.date}</span>
-              ${req.reason ? `<div style="font-size: 0.72rem; color: var(--accent-warning); margin-top: 4px; padding: 2px 6px; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.2); width: fit-content;"><strong>Reason:</strong> ${req.reason}</div>` : ''}
+              <span style="font-size: 0.75rem; ${mutedStyle}">Requested by: ${req.creatorName} on ${req.date}</span>
+              ${req.reason ? `<div style="${reasonStyle}"><strong>Reason:</strong> ${req.reason}</div>` : ''}
             </div>
             <div style="display: flex; gap: 0.5rem;">
               <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-success); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight:700;" onclick="approveAmendment('${req.id}')">Approve</button>
@@ -3958,14 +3969,8 @@ function renderAdminDashboard() {
       listHtml = `<div style="color: var(--text-dim); font-style: italic;">No pending approval requests.</div>`;
     }
 
-    // Prepend sound alert test button and system diagnostics warning to listHtml
-    let warningPrefix = `
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 0.6rem;">
-        <button class="btn-secondary" style="font-size: 0.68rem; padding: 4px 10px; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 0.3rem; cursor: pointer; border: 1px solid var(--border-1); background: rgba(255,255,255,0.02); color: var(--t1); transition: all 0.2s;" onclick="playNotificationSound()" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-          🔊 Test Sound Alert
-        </button>
-      </div>
-    `;
+    // Prepend system diagnostics warning to listHtml
+    let warningPrefix = ``;
     if (!DB.isCloud) {
       warningPrefix += `
         <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--sky); color: var(--sky); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem; margin-bottom: 0.5rem; line-height: 1.3;">
@@ -11907,28 +11912,58 @@ window.exportDirectoryCSV = exportDirectoryCSV;
 let _previousPendingReqIds = new Set();
 let _isRequestsInitDone = false;
 
+let globalAudioCtx = null;
+function initAudio() {
+  if (!globalAudioCtx) {
+    globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+    globalAudioCtx.resume().catch(e => console.warn(e));
+  }
+}
+document.addEventListener('click', initAudio, { once: false });
+document.addEventListener('touchstart', initAudio, { once: false });
+
 function playNotificationSound() {
   try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    initAudio();
+    const ctx = globalAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(e => console.warn(e));
+    }
     
-    // Play double beep (high pitch)
-    const playBeep = (freq, duration, delay) => {
-      setTimeout(() => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+    // Play realistic cricket chirp sound: high-pitched pulses repeating
+    const playChirp = (startTime) => {
+      const numSyllables = 4;
+      const syllableDuration = 0.015; // 15ms
+      const syllableGap = 0.01;      // 10ms
+      const frequency = 4500;        // 4.5 kHz (typical cricket frequency)
+
+      for (let i = 0; i < numSyllables; i++) {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      }, delay);
+        osc.frequency.setValueAtTime(frequency, ctx.currentTime + startTime + i * (syllableDuration + syllableGap));
+        
+        const sTime = ctx.currentTime + startTime + i * (syllableDuration + syllableGap);
+        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0, sTime);
+        gainNode.gain.linearRampToValueAtTime(0.04, sTime + 0.002);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, sTime + syllableDuration);
+        
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        osc.start(sTime);
+        osc.stop(sTime + syllableDuration);
+      }
     };
 
-    playBeep(587.33, 0.25, 0);   // Note D5
-    playBeep(880.00, 0.30, 200); // Note A5
+    // Play a sequence of 3 chirps
+    playChirp(0);
+    playChirp(0.18);
+    playChirp(0.36);
   } catch (e) {
     console.warn("Web Audio alert sound blocked or unsupported:", e);
   }
