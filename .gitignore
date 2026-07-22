@@ -6,3 +6,13 @@ __pycache__/
 .pytest_cache/
 .vscode/
 .idea/
+
+# Node / Cloud Functions
+node_modules/
+functions/node_modules/
+functions/package-lock.json
+npm-debug.log*
+
+# Firebase
+.firebase/
+firebase-debug.log
