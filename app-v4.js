@@ -1029,23 +1029,23 @@ function resetAirFreightDeskForm() {
 function resetSeaFreightDeskForm() {
   appState.editingQuoteId = null;
 
-  // Clear inputs
-  document.getElementById("sea-cust-name").value = "";
-  document.getElementById("sea-origin").value = "";
-  document.getElementById("sea-dest").value = "";
-  document.getElementById("sea-line").value = "";
-  document.getElementById("sea-liner-name").value = "";
-  document.getElementById("sea-commodity").value = "";
-  document.getElementById("sea-incoterm").value = "EXW";
-  document.getElementById("sea-gross-weight").value = "0";
-  document.getElementById("sea-volume").value = "0";
-  document.getElementById("sea-pkg-qty").value = "0";
-  document.getElementById("sea-routing").value = "";
-  document.getElementById("sea-tt").value = "";
-  document.getElementById("sea-validity").value = "";
-  document.getElementById("sea-lcl-rate").value = "0";
-  document.getElementById("sea-bb-rate").value = "0";
-  document.getElementById("sea-terms").value = DEFAULT_SEA_TERMS;
+  // Clear inputs safely
+  if (document.getElementById("sea-cust-name")) document.getElementById("sea-cust-name").value = "";
+  if (document.getElementById("sea-origin")) document.getElementById("sea-origin").value = "";
+  if (document.getElementById("sea-dest")) document.getElementById("sea-dest").value = "";
+  if (document.getElementById("sea-line")) document.getElementById("sea-line").value = "";
+  if (document.getElementById("sea-liner-name")) document.getElementById("sea-liner-name").value = "";
+  if (document.getElementById("sea-commodity")) document.getElementById("sea-commodity").value = "";
+  if (document.getElementById("sea-incoterm")) document.getElementById("sea-incoterm").value = "EXW";
+  if (document.getElementById("sea-gross-weight")) document.getElementById("sea-gross-weight").value = "0";
+  if (document.getElementById("sea-volume")) document.getElementById("sea-volume").value = "0";
+  if (document.getElementById("sea-pkg-qty")) document.getElementById("sea-pkg-qty").value = "0";
+  if (document.getElementById("sea-routing")) document.getElementById("sea-routing").value = "";
+  if (document.getElementById("sea-tt")) document.getElementById("sea-tt").value = "";
+  if (document.getElementById("sea-validity")) document.getElementById("sea-validity").value = "";
+  if (document.getElementById("sea-lcl-rate")) document.getElementById("sea-lcl-rate").value = "0";
+  if (document.getElementById("sea-bb-rate")) document.getElementById("sea-bb-rate").value = "0";
+  if (document.getElementById("sea-terms")) document.getElementById("sea-terms").value = DEFAULT_SEA_TERMS;
 
   // Reset module switcher
   appState.currentSeaFreight.module = 'export';
@@ -1077,28 +1077,16 @@ function resetSeaFreightDeskForm() {
     });
   }
 
-  // Clear FCL container matrix and load default 20'GP
-  const fclBody = document.getElementById("sea-fcl-body");
-  if (fclBody) {
-    fclBody.innerHTML = "";
-    addFclContainerRow("20'GP", 1, 0);
+  // Reset multi-liner container
+  const linersContainer = document.getElementById("sea-liners-container");
+  if (linersContainer) {
+    linersContainer.innerHTML = "";
+    linerCardCounter = 0;
+    addNewLinerCard({
+      linerName: "Liner 1 / Primary Operator",
+      mode: "fcl"
+    });
   }
-
-  // Reset tab to default FCL
-  const tabFcl = document.getElementById("sea-tab-fcl");
-  const tabLcl = document.getElementById("sea-tab-lcl");
-  const fclForm = document.getElementById("sea-fcl-form");
-  const lclForm = document.getElementById("sea-lcl-form");
-  if (tabFcl && tabLcl && fclForm && lclForm) {
-    tabFcl.classList.add("active");
-    tabLcl.classList.remove("active");
-    fclForm.style.display = "block";
-    lclForm.style.display = "none";
-    appState.currentSeaFreight.type = "fcl";
-  }
-
-  // Surcharges reset to default
-  resetSurchargesToDefaults();
 
   // Clear alternatives table
   const seaAltBody = document.getElementById("sea-alternatives-body");
@@ -5330,7 +5318,7 @@ function saveCurrentQuote() {
       origin: document.getElementById("sea-origin").value,
       destination: document.getElementById("sea-dest").value,
       shippingLine: shippingLine,
-      linerName: document.getElementById("sea-liner-name").value.trim(),
+      linerName: document.getElementById("sea-liner-name")?.value.trim() || shippingLine || "",
       commodity: document.getElementById("sea-commodity").value.trim(),
       incoterm: incoterm,
       mode: appState.currentSeaFreight.type,
@@ -5348,8 +5336,8 @@ function saveCurrentQuote() {
       lclCbm: appState.currentSeaFreight.volumeCbm,
       lclWeight: appState.currentSeaFreight.grossWeight,
       lclChargeable: Math.max(appState.currentSeaFreight.volumeCbm, appState.currentSeaFreight.grossWeight / 1000),
-      lclRateApplied: parseFloat(document.getElementById("sea-lcl-rate").value) || 0,
-      bbRateApplied: parseFloat(document.getElementById("sea-bb-rate").value) || 0,
+      lclRateApplied: parseFloat(document.getElementById("sea-lcl-rate")?.value) || 0,
+      bbRateApplied: parseFloat(document.getElementById("sea-bb-rate")?.value) || 0,
       lclBuyRateApplied: parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0,
       bbBuyRateApplied: parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0,
       containerItems: containerItems,
@@ -5443,22 +5431,7 @@ function saveCurrentQuote() {
       setupAirFreightEvents();
     }
   } else {
-    document.getElementById("sea-origin").value = "";
-    document.getElementById("sea-dest").value = "";
-    document.getElementById("sea-line").value = "";
-    document.getElementById("sea-liner-name").value = "";
-    document.getElementById("sea-commodity").value = "";
-    document.getElementById("sea-incoterm").value = "EXW";
-    document.getElementById("sea-gross-weight").value = "0";
-    document.getElementById("sea-volume").value = "0";
-    document.getElementById("sea-pkg-qty").value = "0";
-    document.getElementById("sea-lcl-rate").value = "0";
-    document.getElementById("sea-bb-rate").value = "0";
-    const fclBody = document.getElementById("sea-fcl-body");
-    if (fclBody) {
-      fclBody.innerHTML = "";
-      addFclContainerRow("20'GP", 1, 0);
-    }
+    resetSeaFreightDeskForm();
   }
   
   resetSurchargesToDefaults();
