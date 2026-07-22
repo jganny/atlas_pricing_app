@@ -1124,7 +1124,7 @@
           <div class="quotes-table-container">
             <table class="quotes-table">
               <thead>
-                <tr>
+                <tr class="table-header-titles">
                   <th>Ref ID</th>
                   <th>Date</th>
                   <th>Mode</th>
@@ -1135,6 +1135,194 @@
                   <th>GP</th>
                   <th>Status</th>
                   <th>Actions</th>
+                </tr>
+                <tr class="table-header-filters">
+                  <!-- REF ID Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-refid">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'refid')">
+                        <span id="user-hdr-label-refid">Ref ID</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-refid" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-refid" placeholder="Search Ref ID..." oninput="onUserHdrSearchInput('refid', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-refid">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('refid', 'all', 'All Ref IDs')">All Ref IDs</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- DATE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-date">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'date')">
+                        <span id="user-hdr-label-date">All Dates</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-date" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-date" placeholder="Search Date..." oninput="onUserHdrSearchInput('date', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-date">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('date', 'all', 'All Dates')">All Dates</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('date', '2026', '2026')">2026</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('date', '2025', '2025')">2025</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('date', '2024', '2024')">2024</div>
+                        </div>
+                        <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); display: flex; flex-direction: column; gap: 4px;">
+                          <span style="font-size: 0.65rem; color: var(--t2); font-weight: 700;">Range:</span>
+                          <input type="date" id="user-db-filter-start-date" class="hdr-date-input" onchange="applyUserDbFiltersAndSort()" placeholder="Start Date">
+                          <input type="date" id="user-db-filter-end-date" class="hdr-date-input" onchange="applyUserDbFiltersAndSort()" placeholder="End Date">
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- MODE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-mode">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'mode')">
+                        <span id="user-hdr-label-mode">All Modes</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-mode" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-mode" placeholder="Search Mode..." oninput="onUserHdrSearchInput('mode', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-mode">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('mode', 'all', 'All Modes')">All Modes</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('mode', 'air', 'Air')">Air</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('mode', 'sea', 'Sea')">Sea</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- AGENT & ROUTE DETAILS Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-agentroute">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'agentroute')">
+                        <span id="user-hdr-label-agentroute">Agent/Route</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-agentroute" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-agentroute" placeholder="Filter Route..." oninput="onUserHdrSearchInput('agentroute', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-agentroute">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('agentroute', 'all', 'All Agents & Routes')">All Agents & Routes</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- CARRIER Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-carrier">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'carrier')">
+                        <span id="user-hdr-label-carrier">All Carriers</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-carrier" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-carrier" placeholder="Search Carrier..." oninput="onUserHdrSearchInput('carrier', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-carrier">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- BUY RATE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-buyrate">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'buyrate')">
+                        <span id="user-hdr-label-buyrate">Buy Rate</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-buyrate" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-buyrate" placeholder="Filter Buy Rate..." oninput="onUserHdrSearchInput('buyrate', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-buyrate">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('buyrate', 'all', 'All Rates')">All Rates</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- SELL RATE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-sellrate">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'sellrate')">
+                        <span id="user-hdr-label-sellrate">Sell Rate</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-sellrate" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-sellrate" placeholder="Filter Sell Rate..." oninput="onUserHdrSearchInput('sellrate', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-sellrate">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('sellrate', 'all', 'All Rates')">All Rates</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- GP Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-gp">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'gp')">
+                        <span id="user-hdr-label-gp">GP Profit</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-gp" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-gp" placeholder="Filter GP..." oninput="onUserHdrSearchInput('gp', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-gp">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('gp', 'all', 'All Profit')">All Profit</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('gp', 'percent', '%')">%</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- STATUS Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-status">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'status')">
+                        <span id="user-hdr-label-status">All Statuses</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-status" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-status" placeholder="Search Status..." oninput="onUserHdrSearchInput('status', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-status">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('status', 'all', 'All Statuses')">All Statuses</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('status', 'quoted', 'Quoted')">Quoted</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('status', 'converted', 'Converted (Won)')">Converted (Won)</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('status', 'cancelled', 'Cancelled')">Cancelled</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('status', 'lost', 'Lost')">Lost</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- ACTIONS & SORT BY Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-actions">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'actions')">
+                        <span id="user-hdr-label-sort">Sort By: Date (Newest)</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-actions" onclick="event.stopPropagation()" style="right: 0; left: auto; min-width: 170px;">
+                        <div class="hdr-filter-options-list" id="user-hdr-options-actions">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrSort('date-desc', 'Sort: Date (Newest)')">Date (Newest)</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrSort('date-asc', 'Sort: Date (Oldest)')">Date (Oldest)</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrSort('customer-asc', 'Sort: Customer A-Z')">Customer A-Z</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrSort('customer-desc', 'Sort: Customer Z-A')">Customer Z-A</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrSort('amount-desc', 'Sort: Sell Rate (High-Low)')">Sell Rate (High-Low)</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrSort('amount-asc', 'Sort: Sell Rate (Low-High)')">Sell Rate (Low-High)</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody id="user-quotes-body">

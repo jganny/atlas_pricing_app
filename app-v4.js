@@ -3632,82 +3632,13 @@ function renderMemberDashboard(userId) {
   document.getElementById("user-stat-conversions").textContent = conversions;
   document.getElementById("user-stat-rate").textContent = `${conversionRate.toFixed(1)}%`;
 
-  // Render Table
-  const tbody = document.getElementById("user-quotes-body");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  if (myQuotes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries priced yet. Click a button above to start pricing.</td></tr>`;
-    return;
+  // Render Table via filters and sorting
+  window.userDashboardId = userId;
+  if (!window.userHdrFilterState) {
+    window.resetAllUserHdrFilters();
+  } else {
+    window.applyUserDbFiltersAndSort();
   }
-
-  // Newest first
-  const sortedQuotes = [...myQuotes].reverse();
-
-  sortedQuotes.forEach(quote => {
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-quote-id", quote.id);
-    const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-    const quoteAmount = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
-    const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
-    
-    const isQuoted = quote.status === 'quoted';
-    const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
-    
-    tr.innerHTML = `
-      <td><strong>#${getQuoteRefId(quote)}</strong></td>
-      <td>${quote.date}</td>
-      <td><span class="quote-type-badge ${quote.type}">
-        ${quote.type === 'air' ? 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
-        }</span></td>
-      <td>
-        <div style="font-weight: 600;">${quote.customer}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
-      </td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
-      <td><div>${quoteAmount}</div></td>
-      <td>
-        ${quote.grossProfit !== undefined ? `
-          <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
-            ${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </div>
-        ` : '-'}
-      </td>
-      <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
-      <td class="actions-cell">
-        <button class="action-icon-btn amend" style="background: ${quote.amendmentAllowed ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-        ${isQuoted ? `
-        <button class="action-icon-btn convert" style="background: rgba(74, 222, 128, 0.2); color: var(--accent-success);" title="Convert Quote to Won" onclick="convertQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        </button>
-        <button class="action-icon-btn delete" style="background: ${quote.amendmentAllowed ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-        </button>
-        <button class="action-icon-btn view" style="background: ${quote.amendmentAllowed ? 'rgba(156, 163, 175, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--t1)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost'}" onclick="markQuoteLost('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </button>
-        ` : `
-        <button class="action-icon-btn convert" style="background: ${quote.amendmentAllowed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert'}" onclick="revertQuoteToOriginal('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-        </button>
-        `}
-        <button class="action-icon-btn delete" style="background: ${quote.deletionAllowed ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.deletionAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.deletionAllowed ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete'}" onclick="deleteQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
 
   // Render NRS alerts if applicable
   const nrsPanel = document.getElementById("nrs-notifications-panel");
@@ -6456,7 +6387,189 @@ window.populateAllHeaderFilterDropdowns = () => {
   }
 
   // 4. AGENT & ROUTE DETAILS (Show ALL Customers/Agents & Routes)
-  const agentRouteOptions = document.getElementById('hdr-options-agentroute');
+  }
+};
+
+// --- User Column Header Filter State & Handlers ---
+window.userHdrFilterState = {
+  refid: 'all', search_refid: '',
+  date: 'all', search_date: '',
+  mode: 'all', search_mode: '',
+  agentroute: 'all', search_agentroute: '',
+  carrier: 'all', search_carrier: '',
+  buyrate: 'all', search_buyrate: '',
+  sellrate: 'all', search_sellrate: '',
+  gp: 'all', search_gp: '',
+  status: 'all', search_status: '',
+  actions: 'date-desc', search_actions: '',
+  search_global: ''
+};
+
+window.toggleUserHdrFilterMenu = (event, key) => {
+  if (event) event.stopPropagation();
+  const menuId = `user-hdr-menu-${key}`;
+  const targetMenu = document.getElementById(menuId);
+  const isOpen = targetMenu?.classList.contains('open');
+
+  document.querySelectorAll('.hdr-filter-menu').forEach(m => m.classList.remove('open'));
+
+  if (!isOpen && targetMenu) {
+    targetMenu.classList.add('open');
+    const input = document.getElementById(`user-hdr-search-${key}`);
+    if (input) input.focus();
+  }
+};
+
+window.onUserHdrSearchInput = (key, val) => {
+  if (!window.userHdrFilterState) window.userHdrFilterState = {};
+  window.userHdrFilterState[`search_${key}`] = val.toLowerCase().trim();
+  
+  const optionsList = document.getElementById(`user-hdr-options-${key}`);
+  if (optionsList) {
+    const opts = optionsList.querySelectorAll('.hdr-filter-opt');
+    opts.forEach(opt => {
+      const txt = opt.textContent.toLowerCase();
+      if (!val || txt.includes(val.toLowerCase())) {
+        opt.style.display = '';
+      } else {
+        opt.style.display = 'none';
+      }
+    });
+  }
+  
+  applyUserDbFiltersAndSort();
+};
+
+window.selectUserHdrFilter = (key, value, label) => {
+  if (!window.userHdrFilterState) window.userHdrFilterState = {};
+  window.userHdrFilterState[key] = value;
+  const btnLabel = document.getElementById(`user-hdr-label-${key}`);
+  const dropdownBtn = document.querySelector(`#dropdown-user-hdr-${key} .hdr-filter-btn`);
+  
+  if (btnLabel) btnLabel.textContent = label;
+  if (dropdownBtn) {
+    if (value !== 'all') {
+      dropdownBtn.classList.add('active-filter');
+    } else {
+      dropdownBtn.classList.remove('active-filter');
+    }
+  }
+
+  const optionsList = document.getElementById(`user-hdr-options-${key}`);
+  if (optionsList) {
+    optionsList.querySelectorAll('.hdr-filter-opt').forEach(opt => {
+      if (opt.getAttribute('onclick')?.includes(`'${value}'`)) {
+        opt.classList.add('active');
+      } else {
+        opt.classList.remove('active');
+      }
+    });
+  }
+
+  document.getElementById(`user-hdr-menu-${key}`)?.classList.remove('open');
+  applyUserDbFiltersAndSort();
+};
+
+window.selectUserHdrSort = (sortField, label) => {
+  if (!window.userHdrFilterState) window.userHdrFilterState = {};
+  window.userHdrFilterState.actions = sortField;
+  const btnLabel = document.getElementById('user-hdr-label-sort');
+  if (btnLabel) btnLabel.textContent = label;
+
+  const optionsList = document.getElementById('user-hdr-options-actions');
+  if (optionsList) {
+    optionsList.querySelectorAll('.hdr-filter-opt').forEach(opt => {
+      if (opt.getAttribute('onclick')?.includes(`'${sortField}'`)) {
+        opt.classList.add('active');
+      } else {
+        opt.classList.remove('active');
+      }
+    });
+  }
+
+  document.getElementById('user-hdr-menu-actions')?.classList.remove('open');
+  applyUserDbFiltersAndSort();
+};
+
+window.resetAllUserHdrFilters = () => {
+  window.userHdrFilterState = {
+    refid: 'all', search_refid: '',
+    date: 'all', search_date: '',
+    mode: 'all', search_mode: '',
+    agentroute: 'all', search_agentroute: '',
+    carrier: 'all', search_carrier: '',
+    buyrate: 'all', search_buyrate: '',
+    sellrate: 'all', search_sellrate: '',
+    gp: 'all', search_gp: '',
+    status: 'all', search_status: '',
+    actions: 'date-desc', search_actions: '',
+    search_global: ''
+  };
+
+  const keys = ['refid', 'date', 'mode', 'agentroute', 'carrier', 'buyrate', 'sellrate', 'gp', 'status'];
+  keys.forEach(k => {
+    const searchInput = document.getElementById(`user-hdr-search-${k}`);
+    const btn = document.querySelector(`#dropdown-user-hdr-${k} .hdr-filter-btn`);
+    if (searchInput) searchInput.value = '';
+    if (btn) btn.classList.remove('active-filter');
+  });
+
+  if (document.getElementById('user-hdr-label-refid')) document.getElementById('user-hdr-label-refid').textContent = 'Ref ID';
+  if (document.getElementById('user-hdr-label-date')) document.getElementById('user-hdr-label-date').textContent = 'All Dates';
+  if (document.getElementById('user-hdr-label-mode')) document.getElementById('user-hdr-label-mode').textContent = 'All Modes';
+  if (document.getElementById('user-hdr-label-agentroute')) document.getElementById('user-hdr-label-agentroute').textContent = 'Agent/Route';
+  if (document.getElementById('user-hdr-label-carrier')) document.getElementById('user-hdr-label-carrier').textContent = 'All Carriers';
+  if (document.getElementById('user-hdr-label-buyrate')) document.getElementById('user-hdr-label-buyrate').textContent = 'Buy Rate';
+  if (document.getElementById('user-hdr-label-sellrate')) document.getElementById('user-hdr-label-sellrate').textContent = 'Sell Rate';
+  if (document.getElementById('user-hdr-label-gp')) document.getElementById('user-hdr-label-gp').textContent = 'GP Profit';
+  if (document.getElementById('user-hdr-label-status')) document.getElementById('user-hdr-label-status').textContent = 'All Statuses';
+  if (document.getElementById('user-hdr-label-sort')) document.getElementById('user-hdr-label-sort').textContent = 'Sort By: Date (Newest)';
+
+  const startDate = document.getElementById('user-db-filter-start-date');
+  const endDate = document.getElementById('user-db-filter-end-date');
+  if (startDate) startDate.value = '';
+  if (endDate) endDate.value = '';
+
+  applyUserDbFiltersAndSort();
+};
+
+window.populateAllUserHeaderFilterDropdowns = (myQuotes) => {
+  const quotes = myQuotes || [];
+
+  // 1. REF ID
+  const refIdOptions = document.getElementById('user-hdr-options-refid');
+  if (refIdOptions) {
+    const uniqueRefIds = Array.from(new Set(quotes.map(q => getQuoteRefId(q)).filter(Boolean))).sort();
+    let html = `<div class="hdr-filter-opt ${window.userHdrFilterState.refid === 'all' ? 'active' : ''}" onclick="selectUserHdrFilter('refid', 'all', 'All Ref IDs')">All Ref IDs</div>`;
+    uniqueRefIds.forEach(id => {
+      const active = window.userHdrFilterState.refid === id ? 'active' : '';
+      const displayId = `#${id}`;
+      const escapedId = id.replace(/'/g, "\\'");
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectUserHdrFilter('refid', '${escapedId}', '${displayId}')">${displayId}</div>`;
+    });
+    refIdOptions.innerHTML = html;
+  }
+
+  // 2. CARRIER
+  const carrierOptions = document.getElementById('user-hdr-options-carrier');
+  if (carrierOptions) {
+    const carrierSet = new Set();
+    quotes.forEach(q => {
+      const c = q.details?.airline || q.details?.shippingLine || q.details?.carrier;
+      if (c && c.trim()) carrierSet.add(c.trim());
+    });
+    const sortedCarriers = Array.from(carrierSet).sort();
+    let html = `<div class="hdr-filter-opt ${window.userHdrFilterState.carrier === 'all' ? 'active' : ''}" onclick="selectUserHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>`;
+    sortedCarriers.forEach(c => {
+      const active = window.userHdrFilterState.carrier === c ? 'active' : '';
+      const escapedC = c.replace(/'/g, "\\'");
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectUserHdrFilter('carrier', '${escapedC}', '${escapedC}')">${c}</div>`;
+    });
+    carrierOptions.innerHTML = html;
+  }
+
+  // 3. AGENT & ROUTE DETAILS
+  const agentRouteOptions = document.getElementById('user-hdr-options-agentroute');
   if (agentRouteOptions) {
     const itemsSet = new Set();
     quotes.forEach(q => {
@@ -6464,13 +6577,213 @@ window.populateAllHeaderFilterDropdowns = () => {
       if (q.route && q.route.trim()) itemsSet.add(q.route.trim());
     });
     const sortedItems = Array.from(itemsSet).sort();
-    let html = `<div class="hdr-filter-opt ${window.hdrFilterState.agentroute === 'all' ? 'active' : ''}" onclick="selectHdrFilter('agentroute', 'all', 'All Agents & Routes')">All Agents & Routes</div>`;
+    let html = `<div class="hdr-filter-opt ${window.userHdrFilterState.agentroute === 'all' ? 'active' : ''}" onclick="selectUserHdrFilter('agentroute', 'all', 'All Agents & Routes')">All Agents & Routes</div>`;
     sortedItems.forEach(item => {
-      const active = window.hdrFilterState.agentroute === item ? 'active' : '';
+      const active = window.userHdrFilterState.agentroute === item ? 'active' : '';
       const escapedItem = item.replace(/'/g, "\\'");
-      html += `<div class="hdr-filter-opt ${active}" onclick="selectHdrFilter('agentroute', '${escapedItem}', '${escapedItem}')">${item}</div>`;
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectUserHdrFilter('agentroute', '${escapedItem}', '${escapedItem}')">${item}</div>`;
     });
     agentRouteOptions.innerHTML = html;
+  }
+};
+
+window.applyUserDbFiltersAndSort = () => {
+  const tbody = document.getElementById("user-quotes-body");
+  if (!tbody) return;
+
+  const userId = window.userDashboardId || appState.currentUser;
+  const myQuotes = appState.quotes.filter(q => q.creator === userId);
+
+  populateAllUserHeaderFilterDropdowns(myQuotes);
+
+  const st = window.userHdrFilterState || {};
+  const startDateVal = document.getElementById("user-db-filter-start-date")?.value;
+  const endDateVal = document.getElementById("user-db-filter-end-date")?.value;
+
+  let filtered = myQuotes.filter(q => {
+    const refIdStr = (getQuoteRefId(q) || q.id || "").toLowerCase();
+    const dateStr = (q.date || "").toLowerCase();
+    const typeStr = (q.type || "").toLowerCase();
+    const customerStr = (q.customer || "").toLowerCase();
+    const routeStr = (q.route || "").toLowerCase();
+    const originStr = (q.details?.origin || "").toLowerCase();
+    const destStr = (q.details?.destination || "").toLowerCase();
+    const carrierStr = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "").toLowerCase();
+    const statusStr = (q.status || "").toLowerCase();
+    const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
+    const sellRateStr = (q.amount || "").toString().toLowerCase();
+    
+    const gpStr = st.gp === 'percent' ? 
+      (q.grossProfit !== undefined && q.amount ? `${((q.grossProfit / q.amount) * 100).toFixed(2)}%` : '0.00%').toLowerCase() :
+      (q.grossProfit || "").toString().toLowerCase();
+
+    // Mode filter
+    if (st.mode && st.mode !== 'all' && typeStr !== st.mode) return false;
+
+    // Status filter
+    if (st.status && st.status !== 'all' && statusStr !== st.status) return false;
+
+    // Carrier filter
+    if (st.carrier && st.carrier !== 'all') {
+      if (carrierStr !== st.carrier.toLowerCase()) return false;
+    }
+
+    // Agent & Route filter
+    if (st.agentroute && st.agentroute !== 'all') {
+      const targetAR = st.agentroute.toLowerCase();
+      if (customerStr !== targetAR && routeStr !== targetAR && !customerStr.includes(targetAR) && !routeStr.includes(targetAR)) {
+        return false;
+      }
+    }
+
+    // Ref ID filter
+    if (st.refid && st.refid !== 'all') {
+      const targetRef = st.refid.toLowerCase().replace('#', '');
+      if (refIdStr !== targetRef && !refIdStr.includes(targetRef)) return false;
+    }
+
+    // Date year filter
+    if (st.date && st.date !== 'all') {
+      if (!dateStr.includes(st.date)) return false;
+    }
+
+    // Date range filter
+    if (startDateVal && new Date(q.date) < new Date(startDateVal)) return false;
+    if (endDateVal && new Date(q.date) > new Date(endDateVal)) return false;
+
+    // Search query matches
+    if (st.search_refid && !refIdStr.includes(st.search_refid)) return false;
+    if (st.search_date && !dateStr.includes(st.search_date)) return false;
+    if (st.search_mode && !typeStr.includes(st.search_mode)) return false;
+    if (st.search_agentroute && !customerStr.includes(st.search_agentroute) && !routeStr.includes(st.search_agentroute) && !originStr.includes(st.search_agentroute) && !destStr.includes(st.search_agentroute)) return false;
+    if (st.search_carrier && !carrierStr.includes(st.search_carrier)) return false;
+    if (st.search_buyrate && !buyRateStr.includes(st.search_buyrate)) return false;
+    if (st.search_sellrate && !sellRateStr.includes(st.search_sellrate)) return false;
+    if (st.search_gp && !gpStr.includes(st.search_gp)) return false;
+    if (st.search_status && !statusStr.includes(st.search_status)) return false;
+
+    // Global Search match
+    if (st.search_global) {
+      const topSearch = st.search_global;
+      const match = 
+        customerStr.includes(topSearch) ||
+        refIdStr.includes(topSearch) ||
+        typeStr.includes(topSearch) ||
+        routeStr.includes(topSearch) ||
+        originStr.includes(topSearch) ||
+        destStr.includes(topSearch) ||
+        carrierStr.includes(topSearch);
+      if (!match) return false;
+    }
+
+    return true;
+  });
+
+  // Sort logic
+  const sortField = st.actions || "date-desc";
+  filtered.sort((a, b) => {
+    if (sortField === "date-desc") {
+      return new Date(b.date) - new Date(a.date) || b.id.localeCompare(a.id);
+    } else if (sortField === "date-asc") {
+      return new Date(a.date) - new Date(b.date) || a.id.localeCompare(b.id);
+    } else if (sortField === "customer-asc") {
+      return (a.customer || '').toLowerCase().localeCompare((b.customer || '').toLowerCase());
+    } else if (sortField === "customer-desc") {
+      return (b.customer || '').toLowerCase().localeCompare((a.customer || '').toLowerCase());
+    } else if (sortField === "amount-desc") {
+      return (b.amountINR || 0) - (a.amountINR || 0);
+    } else if (sortField === "amount-asc") {
+      return (a.amountINR || 0) - (b.amountINR || 0);
+    }
+    return 0;
+  });
+
+  tbody.innerHTML = "";
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
+    return;
+  }
+
+  filtered.forEach(quote => {
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-quote-id", quote.id);
+    const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
+    const quoteAmount = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
+    const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
+    
+    const isQuoted = quote.status === 'quoted';
+    const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
+    
+    tr.innerHTML = `
+      <td><strong>#${getQuoteRefId(quote)}</strong></td>
+      <td>${quote.date}</td>
+      <td><span class="quote-type-badge ${quote.type}">
+        ${quote.type === 'air' ? 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        }</span></td>
+      <td>
+        <div style="font-weight: 600;">${quote.customer}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
+      </td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
+      <td><div>${quoteAmount}</div></td>
+      <td>
+        ${quote.grossProfit !== undefined ? `
+          <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
+            ${st.gp === 'percent' ? 
+              (quote.amount ? `${((quote.grossProfit / quote.amount) * 100).toFixed(2)}%` : '0.00%') :
+              `${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            }
+          </div>
+        ` : '-'}
+      </td>
+      <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
+      <td class="actions-cell">
+        <button class="action-icon-btn amend" style="background: ${quote.amendmentAllowed ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        ${isQuoted ? `
+        <button class="action-icon-btn convert" style="background: rgba(74, 222, 128, 0.2); color: var(--accent-success);" title="Convert Quote to Won" onclick="convertQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+        <button class="action-icon-btn delete" style="background: ${quote.amendmentAllowed ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        </button>
+        <button class="action-icon-btn view" style="background: ${quote.amendmentAllowed ? 'rgba(156, 163, 175, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--t1)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost'}" onclick="markQuoteLost('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+        ` : `
+        <button class="action-icon-btn convert" style="background: ${quote.amendmentAllowed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert'}" onclick="revertQuoteToOriginal('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+        </button>
+        `}
+        <button class="action-icon-btn delete" style="background: ${quote.deletionAllowed ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.deletionAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.deletionAllowed ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete'}" onclick="deleteQuote('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
+
+window.filterQuotes = (val) => {
+  if (!window.userHdrFilterState) window.userHdrFilterState = {};
+  const cleanVal = val.toLowerCase().trim();
+  if (appState.currentUser === 'ganny') {
+    const topSearch = document.getElementById("db-search-input");
+    if (topSearch) {
+      topSearch.value = val;
+      applyDbFiltersAndSort();
+    }
+  } else {
+    window.userHdrFilterState.search_global = cleanVal;
+    applyUserDbFiltersAndSort();
   }
 };
 
