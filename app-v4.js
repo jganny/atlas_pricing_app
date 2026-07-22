@@ -434,8 +434,10 @@ async function handleLogin(e) {
     let email = `${user}@pricing.local`;
     try {
       await firebase.auth().signInWithEmailAndPassword(email, pass);
+      sessionStorage.setItem("gl_pricing_session", user);
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
+      loginSuccess(user);
     } catch (err) {
       console.warn("Firebase Auth failed, checking database fallback:", err.message);
       
