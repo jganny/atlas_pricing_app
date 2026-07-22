@@ -12558,3 +12558,157 @@ function checkAndNotifyNewRequests(reqs) {
 }
 window.checkAndNotifyNewRequests = checkAndNotifyNewRequests;
 
+/* ==================== INDIAN PIN CODES DIRECTORY MODULE ==================== */
+let pincodesData = [];
+let pincodeSearchTarget = 'pickup'; // 'pickup' or 'delivery'
+let pincodesLoaded = false;
+
+async function loadPincodesData() {
+  if (pincodesLoaded && pincodesData.length > 0) return pincodesData;
+  try {
+    const res = await fetch("data/pincodes.json");
+    if (res.ok) {
+      pincodesData = await res.json();
+      pincodesLoaded = true;
+      console.log(`Loaded ${pincodesData.length} Indian PIN codes.`);
+    }
+  } catch (err) {
+    console.error("Failed to load pincodes data:", err);
+  }
+  return pincodesData;
+}
+window.loadPincodesData = loadPincodesData;
+
+// Auto load pincodes when DOM content loaded
+document.addEventListener("DOMContentLoaded", () => {
+  loadPincodesData();
+});
+
+function openPincodeSearchModal(targetField) {
+  pincodeSearchTarget = targetField || 'pickup';
+  const modal = document.getElementById("pincode-search-modal");
+  const title = document.getElementById("pincode-modal-title");
+  const searchInput = document.getElementById("pincode-search-input");
+  
+  if (title) {
+    const label = pincodeSearchTarget === 'pickup' ? '📍 Pickup Location' : '🏁 Delivery Location';
+    title.innerHTML = `🔍 Search India PIN Codes (${label})`;
+  }
+  
+  if (modal) {
+    modal.style.display = "flex";
+  }
+  
+  if (searchInput) {
+    searchInput.value = "";
+    setTimeout(() => searchInput.focus(), 100);
+  }
+  
+  if (!pincodesLoaded || pincodesData.length === 0) {
+    loadPincodesData().then(() => {
+      filterPincodes();
+    });
+  } else {
+    filterPincodes();
+  }
+}
+window.openPincodeSearchModal = openPincodeSearchModal;
+
+function closePincodeSearchModal(event) {
+  if (event && event.target && event.target.id !== "pincode-search-modal" && !event.target.onclick) {
+    return;
+  }
+  const modal = document.getElementById("pincode-search-modal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+window.closePincodeSearchModal = closePincodeSearchModal;
+
+function filterPincodes() {
+  const query = (document.getElementById("pincode-search-input")?.value || "").trim().toLowerCase();
+  const container = document.getElementById("pincode-results-container");
+  const countEl = document.getElementById("pincode-results-count");
+  if (!container) return;
+
+  if (pincodesData.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding: 2rem; color: #94a3b8;">Loading PIN code dataset...</div>`;
+    return;
+  }
+
+  let matches = [];
+  if (!query) {
+    // Default show top 50 major pincodes
+    matches = pincodesData.slice(0, 50);
+    if (countEl) countEl.textContent = `Showing top 50 of ${pincodesData.length.toLocaleString()} registered PIN codes`;
+  } else {
+    const queryParts = query.split(/\s+/).filter(Boolean);
+    matches = pincodesData.filter(item => {
+      return queryParts.every(part => item.all.includes(part));
+    }).slice(0, 100);
+    if (countEl) countEl.textContent = `Found ${matches.length}${matches.length === 100 ? '+' : ''} matching locations for "${query}"`;
+  }
+
+  if (matches.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 2.5rem; color: #94a3b8;">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+        <div style="font-weight: 600; color: #f1f5f9;">No matching PIN codes found</div>
+        <div style="font-size: 0.8rem; margin-top: 0.25rem;">Try searching by 6-digit PIN, city name, district, or state.</div>
+      </div>`;
+    return;
+  }
+
+  let html = `<div style="display: flex; flex-direction: column; gap: 0.4rem;">`;
+  matches.forEach(item => {
+    const pinBadge = `<span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 800; font-size: 0.82rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-family: monospace;">${item.p}</span>`;
+    const stateBadge = item.s ? `<span style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px;">${item.s}</span>` : '';
+    const districtText = item.d ? `<span style="font-size: 0.78rem; color: #94a3b8;">• Dist: ${item.d}</span>` : '';
+    const escapedLabel = item.l.replace(/'/g, "\\'");
+
+    html += `
+      <div onclick="selectPincodeItem('${item.p}', '${escapedLabel}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.9rem; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='rgba(56, 189, 248, 0.12)'; this.style.borderColor='rgba(56, 189, 248, 0.4)';" onmouseout="this.style.background='rgba(30, 41, 59, 0.5)'; this.style.borderColor='rgba(255, 255, 255, 0.06)';">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          ${pinBadge}
+          <div>
+            <div style="font-weight: 700; font-size: 0.85rem; color: #f8fafc;">${item.place}</div>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.1rem;">
+              ${districtText}
+            </div>
+          </div>
+        </div>
+        <div>
+          ${stateBadge}
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+window.filterPincodes = filterPincodes;
+
+function selectPincodeItem(pin, fullLabel) {
+  const selectId = pincodeSearchTarget === 'pickup' ? "transport-pickup-pin" : "transport-delivery-pin";
+  const selectEl = document.getElementById(selectId);
+
+  if (selectEl) {
+    let exists = Array.from(selectEl.options).some(opt => opt.value === pin);
+    if (!exists) {
+      const opt = document.createElement("option");
+      opt.value = pin;
+      opt.textContent = fullLabel || pin;
+      selectEl.appendChild(opt);
+    }
+    selectEl.value = pin;
+    
+    selectEl.dispatchEvent(new Event('change'));
+    if (typeof window.calculateTransportation === 'function') {
+      window.calculateTransportation();
+    }
+  }
+
+  closePincodeSearchModal();
+}
+window.selectPincodeItem = selectPincodeItem;
+
+
