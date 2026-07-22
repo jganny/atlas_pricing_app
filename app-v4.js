@@ -2560,6 +2560,8 @@ function calculateAirFreight() {
         let unit = row.querySelector(".chg-unit").value;
         const buyRateInput = row.querySelector(".chg-buy-rate");
         const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
+        const remarksInput = row.querySelector(".chg-remarks");
+        const remarks = remarksInput ? remarksInput.value.trim() : "";
 
         const creatorRole = appState.currentUser;
         const isFreeHandOrNrs = creatorRole && (
@@ -2595,7 +2597,7 @@ function calculateAirFreight() {
         if (surchargeName && rate > 0) {
           let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
           airlineSurchargeTotal += cost;
-          airlineOriginSurcharges.push({ name: surchargeName, rate, buyRate, unit, calculatedCost: cost });
+          airlineOriginSurcharges.push({ name: surchargeName, rate, buyRate, unit, remarks, calculatedCost: cost });
         }
       });
     }
@@ -2609,11 +2611,13 @@ function calculateAirFreight() {
         const unit = row.querySelector(".chg-unit").value;
         const buyRateInput = row.querySelector(".chg-buy-rate");
         const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
+        const remarksInput = row.querySelector(".chg-remarks");
+        const remarks = remarksInput ? remarksInput.value.trim() : "";
 
         if (surchargeName && rate > 0) {
           let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
           airlineSurchargeTotal += cost;
-          airlineDestSurcharges.push({ name: surchargeName, rate, buyRate, unit, calculatedCost: cost });
+          airlineDestSurcharges.push({ name: surchargeName, rate, buyRate, unit, remarks, calculatedCost: cost });
         }
       });
     }
@@ -3332,6 +3336,8 @@ function calculateSeaFreight() {
       const unit = row.querySelector(".chg-unit")?.value || 'flat';
       const buyRateInput = row.querySelector(".chg-buy-rate");
       const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
+      const remarksInput = row.querySelector(".chg-remarks");
+      const remarks = remarksInput ? remarksInput.value.trim() : "";
       
       if (name && rate > 0) {
         let cost = 0;
@@ -3345,7 +3351,7 @@ function calculateSeaFreight() {
           cost = rate;
         }
         totalSurcharges += cost;
-        originSurchargesList.push({ name, rate, buyRate, unit, calculatedCost: cost });
+        originSurchargesList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
       }
     });
   }
@@ -3358,6 +3364,8 @@ function calculateSeaFreight() {
       const unit = row.querySelector(".chg-unit")?.value || 'flat';
       const buyRateInput = row.querySelector(".chg-buy-rate");
       const buyRate = buyRateInput ? parseFloat(buyRateInput.value) || 0 : 0;
+      const remarksInput = row.querySelector(".chg-remarks");
+      const remarks = remarksInput ? remarksInput.value.trim() : "";
       
       if (name && rate > 0) {
         let cost = 0;
@@ -3371,7 +3379,7 @@ function calculateSeaFreight() {
           cost = rate;
         }
         totalSurcharges += cost;
-        destSurchargesList.push({ name, rate, buyRate, unit, calculatedCost: cost });
+        destSurchargesList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
       }
     });
   }
@@ -3532,6 +3540,7 @@ function setupSurchargesEvents(freightType) {
             <option value="flat">Flat</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -3551,6 +3560,7 @@ function setupSurchargesEvents(freightType) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5126,6 +5136,7 @@ function resetSurchargesToDefaults() {
               <option value="flat">Flat</option>
             </select>
           </td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td>
             <button type="button" class="delete-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5142,6 +5153,7 @@ function resetSurchargesToDefaults() {
               <option value="flat" selected>Flat</option>
             </select>
           </td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td>
             <button type="button" class="delete-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5158,6 +5170,7 @@ function resetSurchargesToDefaults() {
               <option value="flat" selected>Flat</option>
             </select>
           </td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td>
             <button type="button" class="delete-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5177,6 +5190,7 @@ function resetSurchargesToDefaults() {
               <option value="flat">Flat</option>
             </select>
           </td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td>
             <button type="button" class="delete-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5193,6 +5207,7 @@ function resetSurchargesToDefaults() {
               <option value="flat" selected>Flat</option>
             </select>
           </td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td>
             <button type="button" class="delete-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5209,6 +5224,7 @@ function resetSurchargesToDefaults() {
               <option value="flat" selected>Flat</option>
             </select>
           </td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td>
             <button type="button" class="delete-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5256,6 +5272,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5274,6 +5291,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5295,6 +5313,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5313,6 +5332,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5331,6 +5351,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5352,6 +5373,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5370,6 +5392,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -5388,6 +5411,7 @@ function populateSeaSurcharges(mode) {
             <option value="kg">Per Kg (Gross Weight)</option>
           </select>
         </td>
+        <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
         <td>
           <button type="button" class="delete-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
@@ -7437,6 +7461,7 @@ function repopulateSurchargesTable(tableBodyId, surchargesList) {
           `}
         </select>
       </td>
+      <td><input type="text" class="chg-remarks" value="${s.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
       <td>
         <button type="button" class="delete-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
