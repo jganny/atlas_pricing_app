@@ -3862,10 +3862,58 @@ function renderAdminDashboard() {
       }
     }
     const pending = requests.filter(r => r.status === 'pending');
+
+    // Ensure audio & animation helper styles exist
+    if (!document.getElementById("admin-dynamic-deck-styles")) {
+      const style = document.createElement("style");
+      style.id = "admin-dynamic-deck-styles";
+      style.textContent = `
+        @keyframes pulse-ring {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .pending-badge-pulse {
+          display: inline-flex;
+          align-items: center;
+          background: var(--accent-error);
+          color: #fff;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: 800;
+          margin-left: 0.5rem;
+          animation: pulse-ring 1.5s infinite;
+        }
+        .req-item-card {
+          animation: slideUpFade 0.3s ease-out;
+          transition: all 0.25s ease;
+        }
+        .req-item-card:hover {
+          transform: translateX(4px);
+          background: rgba(255,255,255,0.08) !important;
+        }
+        @keyframes slideUpFade {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Update dynamic badge in heading
+    const heading = reqPanel.querySelector("h3");
+    if (heading) {
+      const count = pending.length;
+      if (count > 0) {
+        heading.innerHTML = `Admin Approvals Control Deck <span class="pending-badge-pulse">${count} PENDING</span>`;
+      } else {
+        heading.innerHTML = `Admin Approvals Control Deck <span style="background: rgba(255,255,255,0.08); color: var(--text-dim); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 0.5rem;">0 PENDING</span>`;
+      }
+    }
     
     let listHtml = "";
-    // EXCLUDE credit_override from this list (they go to Customer Credit Control & Compliance panel)
-    const filteredPending = pending.filter(r => r.requestType !== 'credit_override');
+    const filteredPending = pending;
 
     if (filteredPending.length > 0) {
       listHtml = filteredPending.map(req => {
@@ -3877,6 +3925,10 @@ function renderAdminDashboard() {
           typeLabel = 'AGREEMENT WAIVER';
           color = 'var(--accent-air)';
           details = `Customer: <strong>${req.customer}</strong> (Quote #${getQuoteRefIdById(req.quoteId)})`;
+        } else if (req.requestType === 'credit_override') {
+          typeLabel = 'CREDIT OVERRIDE';
+          color = 'var(--accent-warning)';
+          details = `Customer/Agent: <strong>${req.customer || req.agent}</strong> (Crossing credit period)`;
         } else if (req.requestType === 'customer_release') {
           typeLabel = 'CUSTOMER UNBLOCK';
           color = 'var(--accent-success)';
@@ -3888,7 +3940,7 @@ function renderAdminDashboard() {
         }
 
         return `
-          <div style="background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 6px; border-left: 3px solid ${color}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <div class="req-item-card" style="background: rgba(255,255,255,0.04); padding: 12px 14px; border-radius: 8px; border-left: 4px solid ${color}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
             <div>
               <strong style="color: ${color};">[${typeLabel}]</strong> 
               ${details}<br>
@@ -3906,8 +3958,14 @@ function renderAdminDashboard() {
       listHtml = `<div style="color: var(--text-dim); font-style: italic;">No pending approval requests.</div>`;
     }
 
-    // Prepend system diagnostics warning to listHtml
-    let warningPrefix = "";
+    // Prepend sound alert test button and system diagnostics warning to listHtml
+    let warningPrefix = `
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 0.6rem;">
+        <button class="btn-secondary" style="font-size: 0.68rem; padding: 4px 10px; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 0.3rem; cursor: pointer; border: 1px solid var(--border-1); background: rgba(255,255,255,0.02); color: var(--t1); transition: all 0.2s;" onclick="playNotificationSound()" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+          🔊 Test Sound Alert
+        </button>
+      </div>
+    `;
     if (!DB.isCloud) {
       warningPrefix += `
         <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--sky); color: var(--sky); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem; margin-bottom: 0.5rem; line-height: 1.3;">
@@ -7291,7 +7349,7 @@ function approveAmendment(reqId) {
     if (req.requestType === 'agreement_waiver') {
       let controls = window._customerControls || {};
       if (!controls[lower]) {
-        controls[lower] = { customer: req.customer, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+        controls[lower] = { customer: req.customer, creditDays: 36, creditLimit: 0, blocked: false, waiveAgreement: false };
       }
       controls[lower].waiveAgreement = true;
       window._customerControls = controls;
@@ -7306,6 +7364,8 @@ function approveAmendment(reqId) {
         } catch(e) {}
       }
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been APPROVED.`);
+    } else if (req.requestType === 'credit_override') {
+      alert(`Credit override request for "${req.customer || req.agent || 'Customer/Agent'}" has been APPROVED.`);
     } else {
       // Unlock the quote
       const quote = appState.quotes.find(q => q.id === req.quoteId);
@@ -7350,6 +7410,8 @@ function rejectAmendment(reqId) {
     
     if (req.requestType === 'agreement_waiver') {
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been REJECTED.`);
+    } else if (req.requestType === 'credit_override') {
+      alert(`Credit override request for "${req.customer || req.agent || 'Customer/Agent'}" has been REJECTED.`);
     } else {
       alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been REJECTED.`);
     }
@@ -7985,8 +8047,169 @@ function convertAmountToUSD(amount, currency) {
 window.convertAmountToUSD = convertAmountToUSD;
 
 function validateCreditCompliance(quoteData) {
-  // Credit control blocking has been removed per user request.
-  return true;
+  const customerName = quoteData.customer;
+  if (!customerName) return true;
+  const lowerCust = customerName.toLowerCase().trim();
+  const agentUsername = (quoteData.creator || appState.currentUser || "").toLowerCase().trim();
+  const agentRoleName = (TEAM_ROLES[agentUsername]?.name || "").toLowerCase().trim();
+
+  // Load customer controls
+  let controls = window._customerControls || {};
+  if (Object.keys(controls).length === 0) {
+    try {
+      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+    } catch(e) {}
+  }
+
+  // Get allowed credit period (defaults to 36)
+  const customerAllowedDays = controls[lowerCust] ? (controls[lowerCust].creditDays || 36) : 36;
+  const agentAllowedDays = (controls[agentUsername] ? (controls[agentUsername].creditDays || 36) : 
+                            (controls[agentRoleName] ? (controls[agentRoleName].creditDays || 36) : 36));
+
+  // Get all quotes
+  const allQuotes = appState.quotes || [];
+
+  // Calculate age of oldest converted quote for Customer
+  const customerQuotes = allQuotes.filter(q => q.customer.toLowerCase().trim() === lowerCust);
+  const oldestCustConfirmed = customerQuotes
+    .filter(q => q.status === 'converted' && q.conversionDate)
+    .sort((a, b) => new Date(a.conversionDate) - new Date(b.conversionDate))[0];
+
+  let oldestCustDays = 0;
+  let customerCrossed = false;
+  if (oldestCustConfirmed) {
+    const oldestDate = new Date(oldestCustConfirmed.conversionDate);
+    const currentDate = new Date();
+    const diffTime = Math.abs(currentDate - oldestDate);
+    oldestCustDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (oldestCustDays > customerAllowedDays) {
+      customerCrossed = true;
+    }
+  }
+
+  // Calculate age of oldest converted quote for Agent
+  const agentQuotes = allQuotes.filter(q => {
+    const creator = (q.creator || "").toLowerCase().trim();
+    return creator === agentUsername || (TEAM_ROLES[creator]?.name || "").toLowerCase().trim() === agentRoleName;
+  });
+  const oldestAgentConfirmed = agentQuotes
+    .filter(q => q.status === 'converted' && q.conversionDate)
+    .sort((a, b) => new Date(a.conversionDate) - new Date(b.conversionDate))[0];
+
+  let oldestAgentDays = 0;
+  let agentCrossed = false;
+  if (oldestAgentConfirmed) {
+    const oldestDate = new Date(oldestAgentConfirmed.conversionDate);
+    const currentDate = new Date();
+    const diffTime = Math.abs(currentDate - oldestDate);
+    oldestAgentDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (oldestAgentDays > agentAllowedDays) {
+      agentCrossed = true;
+    }
+  }
+
+  // If neither crossed credit limits, allow saving
+  if (!customerCrossed && !agentCrossed) {
+    return true;
+  }
+
+  // If user is Admin, they can bypass
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (isAdmin) {
+    console.warn(`Admin Warning: Customer (${customerName}) or Agent (${agentUsername}) is crossing credit terms, but allowed because user is Admin.`);
+    return true;
+  }
+
+  // Non-Admin: Check for approved override request
+  let requests = window._amendmentRequests || [];
+  if (requests.length === 0) {
+    const stored = localStorage.getItem("gl_amendment_requests");
+    if (stored) {
+      try { requests = JSON.parse(stored); } catch(e) {}
+    }
+  }
+
+  // Check if there is an approved credit_override request matching customer or agent
+  const matchedApprovedReq = requests.find(r => 
+    r.requestType === 'credit_override' && 
+    r.status === 'approved' &&
+    ((r.customer && r.customer.toLowerCase().trim() === lowerCust) ||
+     (r.agent && r.agent.toLowerCase().trim() === agentUsername))
+  );
+
+  if (matchedApprovedReq) {
+    // Consume/complete the approved request
+    matchedApprovedReq.status = 'completed';
+    if (DB.firestoreRef) {
+      DB.firestoreRef.collection("amendment_requests").doc(matchedApprovedReq.id).set(matchedApprovedReq, { merge: true })
+        .catch(err => console.error("DB: failed to mark credit override request completed:", err));
+    } else {
+      localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+    }
+    return true;
+  }
+
+  // Check if there is a pending request
+  const matchedPendingReq = requests.find(r => 
+    r.requestType === 'credit_override' && 
+    r.status === 'pending' &&
+    ((r.customer && r.customer.toLowerCase().trim() === lowerCust) ||
+     (r.agent && r.agent.toLowerCase().trim() === agentUsername))
+  );
+
+  if (matchedPendingReq) {
+    alert(`❌ Action Denied: Credit control block active.\n\nYour request for Admin Credit Override is still pending Ganny's approval.\n- Customer oldest shipment: ${oldestCustDays} days (allowed: ${customerAllowedDays})\n- Agent oldest shipment: ${oldestAgentDays} days (allowed: ${agentAllowedDays})`);
+    return false;
+  }
+
+  // Ask to submit a new credit override request
+  let msg = `⚠️ Credit Control Alert:\n`;
+  if (customerCrossed) {
+    msg += `- Customer "${customerName}" oldest shipment is ${oldestCustDays} days old (Allowed credit period: ${customerAllowedDays} days).\n`;
+  }
+  if (agentCrossed) {
+    msg += `- Agent/Desk "${TEAM_ROLES[agentUsername]?.name || agentUsername}" oldest shipment is ${oldestAgentDays} days old (Allowed credit period: ${agentAllowedDays} days).\n`;
+  }
+  msg += `\nDo you want to submit a Credit Override Request to Ganny (Admin) to execute this quote?`;
+
+  if (confirm(msg)) {
+    const reason = prompt("Enter a reason for requesting this Credit Override:");
+    if (reason === null) return false;
+    if (!reason.trim()) {
+      alert("A reason is required to submit the request.");
+      return false;
+    }
+
+    const newReq = {
+      id: 'REQ' + Math.random().toString(36).substr(2, 9),
+      requestType: 'credit_override',
+      customer: customerName,
+      agent: agentUsername,
+      creator: appState.currentUser,
+      creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
+      date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+      status: 'pending',
+      reason: reason.trim(),
+      acknowledged: false
+    };
+
+    if (DB.firestoreRef) {
+      DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
+        .then(() => {
+          alert("Credit override request submitted successfully to Ganny.");
+        })
+        .catch(err => {
+          console.error("DB: failed to save credit override request:", err);
+          alert("Failed to submit request to cloud. Saving locally...");
+          saveRequestLocallyFallback(newReq);
+        });
+    } else {
+      saveRequestLocallyFallback(newReq);
+      alert("Credit override request submitted successfully to Ganny (Offline).");
+    }
+  }
+
+  return false;
 }
 window.validateCreditCompliance = validateCreditCompliance;
 
@@ -8177,6 +8400,10 @@ const DB = {
         snap.forEach(doc => {
           reqs.push(doc.data());
         });
+        // Check and notify Ganny of new pending requests
+        if (typeof checkAndNotifyNewRequests === 'function') {
+          checkAndNotifyNewRequests(reqs);
+        }
         window._amendmentRequests = reqs;
         localStorage.setItem("gl_amendment_requests", JSON.stringify(reqs));
         
@@ -9720,7 +9947,9 @@ async function renderAdminCustomerControlList() {
   }
   const customers = Array.from(new Set([
     ...appState.quotes.map(q => q.customer.trim()),
-    ...Object.values(controls).map(c => c.customer.trim())
+    ...Object.values(controls).map(c => c.customer.trim()),
+    ...Object.keys(TEAM_ROLES).map(k => TEAM_ROLES[k].name),
+    ...Object.keys(TEAM_ROLES)
   ]));
 
   if (customers.length === 0) {
@@ -9732,7 +9961,7 @@ async function renderAdminCustomerControlList() {
     const lower = name.toLowerCase();
     const ctrl = controls[lower] || {
       customer: name,
-      creditDays: 30,
+      creditDays: 36,
       creditLimit: 0,
       blocked: false,
       waiveAgreement: false
@@ -9765,7 +9994,7 @@ async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
   const lower = customerName.toLowerCase().trim();
   let controls = window._customerControls || {};
   if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+    controls[lower] = { customer: customerName, creditDays: 36, creditLimit: 0, blocked: false, waiveAgreement: false };
   }
   
   controls[lower].hasAgreement = true;
@@ -9823,7 +10052,7 @@ function displayAdminCustomerControlList(list) {
 
   tbody.innerHTML = list.map(ctrl => {
     const waiveAgreement = !!ctrl.waiveAgreement;
-    const creditDays = ctrl.creditDays || 30;
+    const creditDays = ctrl.creditDays || 36;
     const creditLimit = ctrl.creditLimit || 0;
     const hasAgreement = !!ctrl.hasAgreement;
     const fileName = ctrl.agreementFile || "";
@@ -9895,7 +10124,7 @@ async function updateCustomerCreditPeriod(customerName, days) {
 
   let controls = window._customerControls || {};
   if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+    controls[lower] = { customer: customerName, creditDays: 36, creditLimit: 0, blocked: false, waiveAgreement: false };
   }
   controls[lower].creditDays = val;
   window._customerControls = controls;
@@ -9919,7 +10148,7 @@ async function updateCustomerCreditLimitValue(customerName, limit) {
 
   let controls = window._customerControls || {};
   if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, creditLimit: 0, blocked: false, waiveAgreement: false };
+    controls[lower] = { customer: customerName, creditDays: 36, creditLimit: 0, blocked: false, waiveAgreement: false };
   }
   controls[lower].creditLimit = val;
   window._customerControls = controls;
@@ -9940,7 +10169,7 @@ async function toggleCustomerAgreementWaiver(customerName) {
   const lower = customerName.toLowerCase();
   let controls = window._customerControls || {};
   if (!controls[lower]) {
-    controls[lower] = { customer: customerName, creditDays: 30, blocked: false, waiveAgreement: false };
+    controls[lower] = { customer: customerName, creditDays: 36, blocked: false, waiveAgreement: false };
   }
   controls[lower].waiveAgreement = !controls[lower].waiveAgreement;
   window._customerControls = controls;
@@ -11479,7 +11708,7 @@ function showDirectoryItemDetails(type, name) {
     const customerLower = name.toLowerCase().trim();
     const ctrl = controls[customerLower] || {
       customer: name,
-      creditDays: 30,
+      creditDays: 36,
       creditLimit: 0,
       blocked: false,
       waiveAgreement: false,
@@ -11537,7 +11766,7 @@ function showDirectoryItemDetails(type, name) {
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
           <div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px solid var(--border-1);">
             <div style="font-size: 0.6rem; color: var(--text-dim); font-weight: 600;">Credit Period</div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: var(--t1); margin-top: 2px;">${ctrl.creditDays || 30} Days</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--t1); margin-top: 2px;">${ctrl.creditDays || 36} Days</div>
           </div>
           <div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px solid var(--border-1);">
             <div style="font-size: 0.6rem; color: var(--text-dim); font-weight: 600;">Credit Limit</div>
@@ -11642,7 +11871,7 @@ function exportDirectoryCSV() {
     
     allCustomers.forEach(cust => {
       const customerLower = cust.toLowerCase().trim();
-      const ctrl = controls[customerLower] || { creditDays: 30, creditLimit: 0 };
+      const ctrl = controls[customerLower] || { creditDays: 36, creditLimit: 0 };
       
       const customerQuotes = quotes.filter(q => q.customer?.toLowerCase().trim() === customerLower);
       const quotesCount = customerQuotes.length;
@@ -11653,7 +11882,7 @@ function exportDirectoryCSV() {
       
       const complianceText = ctrl.hasAgreement ? 'Compliant' : (ctrl.waiveAgreement ? 'Waived' : 'Non-Compliant');
       
-      csvContent += `"${cust}",${ctrl.creditDays || 30},${ctrl.creditLimit || 0},"${complianceText}",${quotesCount},"${associatedAgents || 'None'}"\n`;
+      csvContent += `"${cust}",${ctrl.creditDays || 36},${ctrl.creditLimit || 0},"${complianceText}",${quotesCount},"${associatedAgents || 'None'}"\n`;
     });
   }
   
@@ -11667,4 +11896,144 @@ function exportDirectoryCSV() {
 }
 window.exportDirectoryCSV = exportDirectoryCSV;
 // ===============================================================================
+
+// Dynamic Audio and Toast Notifications for Admin Approvals
+let _previousPendingReqIds = new Set();
+let _isRequestsInitDone = false;
+
+function playNotificationSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Play double beep (high pitch)
+    const playBeep = (freq, duration, delay) => {
+      setTimeout(() => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      }, delay);
+    };
+
+    playBeep(587.33, 0.25, 0);   // Note D5
+    playBeep(880.00, 0.30, 200); // Note A5
+  } catch (e) {
+    console.warn("Web Audio alert sound blocked or unsupported:", e);
+  }
+}
+window.playNotificationSound = playNotificationSound;
+
+function showToastNotification(message) {
+  let container = document.getElementById("toast-notification-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-notification-container";
+    container.style.cssText = `
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    `;
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.style.cssText = `
+    background: rgba(30, 41, 59, 0.95);
+    color: #ffffff;
+    padding: 14px 20px;
+    border-radius: 10px;
+    border-left: 5px solid var(--accent-error);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    min-width: 280px;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    opacity: 0;
+    transform: translateX(50px);
+    transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: auto;
+    backdrop-filter: blur(10px);
+  `;
+  
+  toast.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 1.1rem;">🔔</span>
+      <span>${message}</span>
+    </div>
+    <button style="background:transparent; border:none; color:rgba(255,255,255,0.6); cursor:pointer; font-weight:bold; font-size:1.1rem; padding: 0 4px;" onclick="this.parentElement.remove()">×</button>
+  `;
+  
+  container.appendChild(toast);
+  
+  // Trigger animation
+  setTimeout(() => {
+    toast.style.opacity = "1";
+    toast.style.transform = "translateX(0)";
+  }, 10);
+
+  // Auto remove after 6 seconds
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(50px)";
+    setTimeout(() => {
+      toast.remove();
+    }, 400);
+  }, 6000);
+}
+window.showToastNotification = showToastNotification;
+
+function checkAndNotifyNewRequests(reqs) {
+  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
+  if (!isAdmin) return;
+
+  const currentPending = reqs.filter(r => r.status === 'pending');
+  
+  if (!_isRequestsInitDone) {
+    currentPending.forEach(r => _previousPendingReqIds.add(r.id));
+    _isRequestsInitDone = true;
+    return;
+  }
+
+  let hasNew = false;
+  let newReqNames = [];
+
+  currentPending.forEach(r => {
+    if (!_previousPendingReqIds.has(r.id)) {
+      hasNew = true;
+      const typeStr = r.requestType ? r.requestType.toUpperCase().replace('_', ' ') : 'REQUEST';
+      newReqNames.push(`${typeStr} from ${r.creatorName || 'agent'}`);
+      _previousPendingReqIds.add(r.id);
+    }
+  });
+
+  // Clean up resolved IDs
+  const currentPendingIds = new Set(currentPending.map(r => r.id));
+  for (let id of _previousPendingReqIds) {
+    if (!currentPendingIds.has(id)) {
+      _previousPendingReqIds.delete(id);
+    }
+  }
+
+  if (hasNew) {
+    playNotificationSound();
+    showToastNotification(`New Request: ${newReqNames.join(", ")}`);
+  }
+}
+window.checkAndNotifyNewRequests = checkAndNotifyNewRequests;
 
