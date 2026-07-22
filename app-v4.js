@@ -4326,7 +4326,13 @@ function generatePerformanceReport() {
   const totalGP = filtered.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
 
   // Group stats by member for summary grids
-  const members = ['shashank', 'shaheer', 'jaya', 'cathrina'];
+  const membersSet = new Set(Object.keys(TEAM_ROLES));
+  if (appState.quotes && Array.isArray(appState.quotes)) {
+    appState.quotes.forEach(q => {
+      if (q.creator) membersSet.add(q.creator);
+    });
+  }
+  const members = Array.from(membersSet).filter(roleId => roleId !== 'ganny' && roleId !== 'manager' && roleId !== 'mahendra');
   let breakdownRows = "";
 
   members.forEach(mId => {
@@ -4342,7 +4348,7 @@ function generatePerformanceReport() {
 
     breakdownRows += `
       <tr>
-        <td><strong>${TEAM_ROLES[mId].name}</strong></td>
+        <td><strong>${TEAM_ROLES[mId]?.name || mId}</strong></td>
         <td>${dCount}</td>
         <td>${dConv}</td>
         <td><strong>${dRate.toFixed(1)}%</strong></td>
