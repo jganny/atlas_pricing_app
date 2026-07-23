@@ -4789,7 +4789,15 @@ window.convertQuote = (id) => {
     let isBuyRateMissing = false;
     let isSellRateMissing = false;
 
-    if (quote.type === 'air') {
+    const isNominationCreator = quote.creator && (
+      quote.creator === 'shashank' || 
+      quote.creator === 'shaheer' || 
+      (TEAM_ROLES[quote.creator] && (TEAM_ROLES[quote.creator].category === 'AIR - NOMINATION' || TEAM_ROLES[quote.creator].category === 'SEA - NOMINATION'))
+    );
+
+    if (isNominationCreator) {
+      isSellRateMissing = true;
+    } else if (quote.type === 'air') {
       const sellRate = quote.details.appliedRate || 0;
       const buyRate = quote.details.appliedBuyRate || 0;
       if (sellRate > 0 && buyRate === 0) {
@@ -5748,8 +5756,8 @@ function saveCurrentQuote() {
   if (!isAir) {
     const originVal = document.getElementById("sea-origin").value.trim();
     const destVal = document.getElementById("sea-dest").value.trim();
-    const lineVal = document.getElementById("sea-line").value.trim();
-    const linerVal = document.getElementById("sea-liner-name").value.trim();
+    const lineVal = document.getElementById("sea-line")?.value.trim() || "";
+    const linerVal = document.getElementById("sea-liner-name")?.value.trim() || "";
     const commodityVal = document.getElementById("sea-commodity").value.trim();
     saveCustomSeaAutocompletes(originVal, destVal, lineVal, linerVal, commodityVal);
   }
@@ -10320,7 +10328,15 @@ async function submitWonBookingDetails(e) {
   let isBuyRateMissing = false;
   let isSellRateMissing = false;
 
-  if (quote.type === 'air') {
+  const isNominationCreator = quote.creator && (
+    quote.creator === 'shashank' || 
+    quote.creator === 'shaheer' || 
+    (TEAM_ROLES[quote.creator] && (TEAM_ROLES[quote.creator].category === 'AIR - NOMINATION' || TEAM_ROLES[quote.creator].category === 'SEA - NOMINATION'))
+  );
+
+  if (isNominationCreator) {
+    isSellRateMissing = true;
+  } else if (quote.type === 'air') {
     const sellRate = quote.details.appliedRate || 0;
     const buyRate = quote.details.appliedBuyRate || 0;
     if (sellRate > 0 && buyRate === 0) {
@@ -10371,6 +10387,8 @@ async function submitWonBookingDetails(e) {
       finalBuyRate = quote.details.lclBuyRateApplied || 0;
     } else if (quote.details.mode === 'bb') {
       finalBuyRate = quote.details.bbBuyRateApplied || 0;
+    } else if (quote.details.mode === 'fcl') {
+      finalBuyRate = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.buy || 0), 0);
     }
   } else {
     finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate").value) || 0;
@@ -10483,6 +10501,58 @@ async function submitWonBookingDetails(e) {
       grossProfit = sellBaseFreight - buyBaseFreight;
     }
   }
+
+  // Calculate local fees / surcharges GP contribution
+  let surchargeSell = 0;
+  let surchargeBuy = 0;
+  const allSurcharges = [
+    ...(quote.details.originSurcharges || []),
+    ...(quote.details.destSurcharges || [])
+  ];
+
+  if (quote.type === 'air') {
+    const chargeableWeight = quote.details.chargeableWeight || 0;
+    allSurcharges.forEach(sch => {
+      const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
+      const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
+      if (sch.unit === 'kg') {
+        surchargeSell += chargeableWeight * sellRate;
+        surchargeBuy += chargeableWeight * buyRate;
+      } else {
+        surchargeSell += sellRate;
+        surchargeBuy += buyRate;
+      }
+    });
+  } else {
+    const weightKg = quote.details.grossWeight || 0;
+    const weightTons = weightKg / 1000;
+    const cbm = quote.details.volumeCbm || 0;
+    const chargeableCbm = Math.max(cbm, weightTons);
+    const containerCount = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
+    const isSeaFcl = quote.details.mode === 'fcl';
+
+    allSurcharges.forEach(sch => {
+      const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
+      const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
+      const unit = sch.unit || 'flat';
+
+      if (unit === 'container') {
+        surchargeSell += isSeaFcl ? containerCount * sellRate : sellRate;
+        surchargeBuy += isSeaFcl ? containerCount * buyRate : buyRate;
+      } else if (unit === 'rt') {
+        surchargeSell += chargeableCbm * sellRate;
+        surchargeBuy += chargeableCbm * buyRate;
+      } else if (unit === 'kg') {
+        surchargeSell += weightKg * sellRate;
+        surchargeBuy += weightKg * buyRate;
+      } else {
+        surchargeSell += sellRate;
+        surchargeBuy += buyRate;
+      }
+    });
+  }
+
+  grossProfit += surchargeSell - surchargeBuy;
 
   quote.grossProfit = grossProfit;
   quote.grossProfitCurrency = quote.currency;
