@@ -1,0 +1,9806 @@
+[
+  {
+    "code": "AEAJM",
+    "name": "Ajman",
+    "city": "Ajman",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEAUH",
+    "name": "Abu Dhabi",
+    "city": "Abu Dhabi",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEDXB",
+    "name": "Dubai",
+    "city": "Dubai",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEFJR",
+    "name": "Al Fujayrah",
+    "city": "Al Fujayrah",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEJEA",
+    "name": "Jebel Ali",
+    "city": "Jebel Ali",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEJED",
+    "name": "Jebel Dhanna",
+    "city": "Jebel Dhanna",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEKLF",
+    "name": "Khor al Fakkan",
+    "city": "Khor al Fakkan",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEPRA",
+    "name": "Port Rashid",
+    "city": "Port Rashid",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AEQIW",
+    "name": "Umm al Qaiwain",
+    "city": "Umm al Qaiwain",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AERKT",
+    "name": "Ras al Khaimah",
+    "city": "Ras al Khaimah",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AERUW",
+    "name": "Ar Ruways",
+    "city": "Ar Ruways",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AESHJ",
+    "name": "Sharjah",
+    "city": "Sharjah",
+    "country": "United Arab Emirates"
+  },
+  {
+    "code": "AGANU",
+    "name": "Antigua",
+    "city": "Antigua",
+    "country": "Antigua and Barbuda"
+  },
+  {
+    "code": "AGSJO",
+    "name": "Saint John's",
+    "city": "Saint John's",
+    "country": "Antigua and Barbuda"
+  },
+  {
+    "code": "AIBLP",
+    "name": "Blowing Point",
+    "city": "Blowing Point",
+    "country": "Anguilla"
+  },
+  {
+    "code": "AIRBY",
+    "name": "Road Bay",
+    "city": "Road Bay",
+    "country": "Anguilla"
+  },
+  {
+    "code": "ALDRZ",
+    "name": "Durres",
+    "city": "Durrës",
+    "country": "Albania"
+  },
+  {
+    "code": "ANBON",
+    "name": "Bonaire",
+    "city": "Bonaire",
+    "country": "Netherlands Antilles"
+  },
+  {
+    "code": "ANCUR",
+    "name": "Curacao",
+    "city": "Curacao",
+    "country": "Netherlands Antilles"
+  },
+  {
+    "code": "ANEUX",
+    "name": "Sint Eustatius (Antilles)",
+    "city": "Sint Eustatius (Antilles)",
+    "country": "Netherlands"
+  },
+  {
+    "code": "ANGSB",
+    "name": "Galisby",
+    "city": "Galisby",
+    "country": "Netherlands Antilles"
+  },
+  {
+    "code": "ANPHI",
+    "name": "Philipsburg",
+    "city": "Philipsburg",
+    "country": "Netherlands Antilles"
+  },
+  {
+    "code": "ANSXM",
+    "name": "St Maarten",
+    "city": "St Maarten",
+    "country": "Netherlands Antilles"
+  },
+  {
+    "code": "ANWIL",
+    "name": "Willemstad",
+    "city": "Willemstad",
+    "country": "Netherlands Antilles"
+  },
+  {
+    "code": "AOCAB",
+    "name": "Cabinda",
+    "city": "Cabinda",
+    "country": "Angola"
+  },
+  {
+    "code": "AOLAD",
+    "name": "Luanda",
+    "city": "Luanda",
+    "country": "Angola"
+  },
+  {
+    "code": "AOLOB",
+    "name": "Lobito",
+    "city": "Lobito",
+    "country": "Angola"
+  },
+  {
+    "code": "AOMSZ",
+    "name": "Namibe",
+    "city": "Namibe",
+    "country": "Angola"
+  },
+  {
+    "code": "AOSZA",
+    "name": "Soyo",
+    "city": "Soyo",
+    "country": "Angola"
+  },
+  {
+    "code": "ARBHI",
+    "name": "Bahia Blanca",
+    "city": "Bahía Blanca",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARBUE",
+    "name": "Buenos Aires",
+    "city": "Buenos Aires",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARCMP",
+    "name": "Campana",
+    "city": "Campana",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARCNQ",
+    "name": "Corrientes",
+    "city": "Corrientes",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARCRD",
+    "name": "Comodoro Rivadavia",
+    "city": "Comodoro Rivadavia",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARCVI",
+    "name": "Caleta Olivia",
+    "city": "Caleta Olivia",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARDDC",
+    "name": "Delta Dock",
+    "city": "Delta Dock",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARLPG",
+    "name": "La Plata",
+    "city": "La Plata",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARMDQ",
+    "name": "Mar del Plata",
+    "city": "Mar del Plata",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARNEC",
+    "name": "Necochea",
+    "city": "Necochea",
+    "country": "Argentina"
+  },
+  {
+    "code": "AROYA",
+    "name": "Goya",
+    "city": "Goya",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARPMY",
+    "name": "Puerto Madryn",
+    "city": "Puerto Madryn",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARPUD",
+    "name": "Puerto Deseado",
+    "city": "Puerto Deseado",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARRGA",
+    "name": "Rio Grande",
+    "city": "Río Grande",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARRGL",
+    "name": "Rio Gallegos",
+    "city": "Río Gallegos",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARRIC",
+    "name": "Rio Cullen",
+    "city": "Rio Cullen",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARROS",
+    "name": "Rosario",
+    "city": "Rosario",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARSAE",
+    "name": "San Antonio Este",
+    "city": "San Antonio Este",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARSFN",
+    "name": "Santa Fe",
+    "city": "Santa Fe",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARSLO",
+    "name": "San Lorenzo",
+    "city": "San Lorenzo",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARSNS",
+    "name": "San Nicolas de los Arroyos",
+    "city": "San Nicolás de los Arroyos",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARSPD",
+    "name": "San Pedro",
+    "city": "San Pedro",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARUSH",
+    "name": "Ushuaia",
+    "city": "Ushuaia",
+    "country": "Argentina"
+  },
+  {
+    "code": "ARZAE",
+    "name": "Zarate",
+    "city": "Zárate",
+    "country": "Argentina"
+  },
+  {
+    "code": "ASPPG",
+    "name": "Pago Pago",
+    "city": "Pago Pago",
+    "country": "American Samoa"
+  },
+  {
+    "code": "ATLTX",
+    "name": "Hainfeld",
+    "city": "Hainfeld",
+    "country": "Austria"
+  },
+  {
+    "code": "AUABP",
+    "name": "Abbot Point",
+    "city": "Abbot Point",
+    "country": "Australia"
+  },
+  {
+    "code": "AUADL",
+    "name": "Adelaide",
+    "city": "Adelaide",
+    "country": "Australia"
+  },
+  {
+    "code": "AUARD",
+    "name": "Ardrossan",
+    "city": "Ardrossan",
+    "country": "Australia"
+  },
+  {
+    "code": "AUBBY",
+    "name": "Bremer Bay",
+    "city": "Bremer Bay",
+    "country": "Australia"
+  },
+  {
+    "code": "AUBEL",
+    "name": "Bell Bay",
+    "city": "Bell Bay",
+    "country": "Australia"
+  },
+  {
+    "code": "AUBNE",
+    "name": "Brisbane",
+    "city": "Brisbane",
+    "country": "Australia"
+  },
+  {
+    "code": "AUBOO",
+    "name": "Booby Island",
+    "city": "Booby Island",
+    "country": "Australia"
+  },
+  {
+    "code": "AUBWT",
+    "name": "Burnie",
+    "city": "Burnie",
+    "country": "Australia"
+  },
+  {
+    "code": "AUCHT",
+    "name": "Chittering",
+    "city": "Chittering",
+    "country": "Australia"
+  },
+  {
+    "code": "AUCNS",
+    "name": "Cairns",
+    "city": "Cairns",
+    "country": "Australia"
+  },
+  {
+    "code": "AUDPO",
+    "name": "Devonport",
+    "city": "Devonport",
+    "country": "Australia"
+  },
+  {
+    "code": "AUDRW",
+    "name": "Darwin",
+    "city": "Darwin",
+    "country": "Australia"
+  },
+  {
+    "code": "AUFRE",
+    "name": "Fremantle",
+    "city": "Fremantle",
+    "country": "Australia"
+  },
+  {
+    "code": "AUGLT",
+    "name": "Gladstone",
+    "city": "Gladstone",
+    "country": "Australia"
+  },
+  {
+    "code": "AUGOV",
+    "name": "Gove",
+    "city": "Gove",
+    "country": "Australia"
+  },
+  {
+    "code": "AUHBA",
+    "name": "Hobart",
+    "city": "Hobart",
+    "country": "Australia"
+  },
+  {
+    "code": "AUHPT",
+    "name": "Hay Point",
+    "city": "Hay Point",
+    "country": "Australia"
+  },
+  {
+    "code": "AULST",
+    "name": "Launceston",
+    "city": "Launceston",
+    "country": "Australia"
+  },
+  {
+    "code": "AUMEL",
+    "name": "Melbourne",
+    "city": "Melbourne",
+    "country": "Australia"
+  },
+  {
+    "code": "AUNLK",
+    "name": "New Norfolk",
+    "city": "New Norfolk",
+    "country": "Australia"
+  },
+  {
+    "code": "AUNTL",
+    "name": "Newcastle",
+    "city": "Newcastle",
+    "country": "Australia"
+  },
+  {
+    "code": "AUPAE",
+    "name": "Port Adelaide",
+    "city": "Port Adelaide",
+    "country": "Australia"
+  },
+  {
+    "code": "AUPHE",
+    "name": "Port Hedland",
+    "city": "Port Hedland",
+    "country": "Australia"
+  },
+  {
+    "code": "AUPKL",
+    "name": "Port Kembla",
+    "city": "Port Kembla",
+    "country": "Australia"
+  },
+  {
+    "code": "AUSYD",
+    "name": "Sydney",
+    "city": "Sydney",
+    "country": "Australia"
+  },
+  {
+    "code": "AUTSV",
+    "name": "Townsville",
+    "city": "Townsville",
+    "country": "Australia"
+  },
+  {
+    "code": "AUWEI",
+    "name": "Weipa",
+    "city": "Weipa",
+    "country": "Australia"
+  },
+  {
+    "code": "AWAUA",
+    "name": "Aruba",
+    "city": "Aruba",
+    "country": "Aruba"
+  },
+  {
+    "code": "AWORJ",
+    "name": "Oranjestad",
+    "city": "Oranjestad",
+    "country": "Aruba"
+  },
+  {
+    "code": "AZBAK",
+    "name": "Baku",
+    "city": "Baku",
+    "country": "Azerbaijan"
+  },
+  {
+    "code": "BBBGI",
+    "name": "Bridgetown",
+    "city": "Bridgetown",
+    "country": "Barbados"
+  },
+  {
+    "code": "BDCGP",
+    "name": "Chittagong",
+    "city": "Chittagong",
+    "country": "Bangladesh"
+  },
+  {
+    "code": "BDCHL",
+    "name": "Chalna",
+    "city": "Chalna",
+    "country": "Bangladesh"
+  },
+  {
+    "code": "BDDAC",
+    "name": "Dhaka",
+    "city": "Dhaka",
+    "country": "Bangladesh"
+  },
+  {
+    "code": "BDMGL",
+    "name": "Mongla",
+    "city": "Mongla",
+    "country": "Bangladesh"
+  },
+  {
+    "code": "BEANR",
+    "name": "Antwerpen",
+    "city": "Antwerpen",
+    "country": "Belgium"
+  },
+  {
+    "code": "BEBSU",
+    "name": "Bossuit",
+    "city": "Bossuit",
+    "country": "Belgium"
+  },
+  {
+    "code": "BEDEL",
+    "name": "Doel",
+    "city": "Doel",
+    "country": "Belgium"
+  },
+  {
+    "code": "BEGNE",
+    "name": "Gent (Ghent)",
+    "city": "Gent (Ghent)",
+    "country": "Belgium"
+  },
+  {
+    "code": "BEOST",
+    "name": "Oostende (Ostend)",
+    "city": "Oostende (Ostend)",
+    "country": "Belgium"
+  },
+  {
+    "code": "BEZEE",
+    "name": "Zeebrugge",
+    "city": "Zeebrugge",
+    "country": "Belgium"
+  },
+  {
+    "code": "BFOUA",
+    "name": "Ouagadougou",
+    "city": "Ouagadougou",
+    "country": "Burkina Faso"
+  },
+  {
+    "code": "BGBOJ",
+    "name": "Burgas",
+    "city": "Burgas",
+    "country": "Bulgaria"
+  },
+  {
+    "code": "BGVAR",
+    "name": "Varna",
+    "city": "Varna",
+    "country": "Bulgaria"
+  },
+  {
+    "code": "BHAHD",
+    "name": "Al Hidd",
+    "city": "Al HIdd",
+    "country": "Bahrain"
+  },
+  {
+    "code": "BHBAH",
+    "name": "Bahrain",
+    "city": "Bahrain",
+    "country": "Bahrain"
+  },
+  {
+    "code": "BHKBS",
+    "name": "Khalifa Bin Salman Port",
+    "city": "Khalifa Bin Salman",
+    "country": "Bahrain"
+  },
+  {
+    "code": "BHMAN",
+    "name": "Manama",
+    "city": "Manama",
+    "country": "Bahrain"
+  },
+  {
+    "code": "BHSIT",
+    "name": "Sitrah",
+    "city": "Sitrah",
+    "country": "Bahrain"
+  },
+  {
+    "code": "BJCOO",
+    "name": "Cotonou",
+    "city": "Cotonou",
+    "country": "Benin"
+  },
+  {
+    "code": "BMBDA",
+    "name": "Hamilton",
+    "city": "Hamilton",
+    "country": "Bermuda"
+  },
+  {
+    "code": "BMSOU",
+    "name": "Southampton",
+    "city": "Southampton",
+    "country": "Bermuda"
+  },
+  {
+    "code": "BNBWN",
+    "name": "Bandar Seri Begawan",
+    "city": "Bandar Seri Begawan",
+    "country": "Brunei Darussalam"
+  },
+  {
+    "code": "BNKUB",
+    "name": "Kuala Belait",
+    "city": "Kuala Belait",
+    "country": "Brunei Darussalam"
+  },
+  {
+    "code": "BNMUA",
+    "name": "Muara",
+    "city": "Muara",
+    "country": "Brunei Darussalam"
+  },
+  {
+    "code": "BOPBU",
+    "name": "Puerto Busch",
+    "city": "Puerto Busch",
+    "country": "Bolivia, Plurinational State of"
+  },
+  {
+    "code": "BOSRZ",
+    "name": "Santa Cruz",
+    "city": "Santa Cruz",
+    "country": "Bolivia, Plurinational State of"
+  },
+  {
+    "code": "BRARB",
+    "name": "Aratu",
+    "city": "Aratu",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRARE",
+    "name": "Areia Branca",
+    "city": "Areia Branca",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRBEL",
+    "name": "Belem",
+    "city": "Belem",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRCDO",
+    "name": "Cabedelo",
+    "city": "Cabedelo",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRFNO",
+    "name": "Forno",
+    "city": "Forno",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRFOR",
+    "name": "Fortaleza",
+    "city": "Fortaleza",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRIBB",
+    "name": "Imbituba",
+    "city": "Imbituba",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRIGI",
+    "name": "Itaguai",
+    "city": "Itaguaí",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRIOA",
+    "name": "Itapoa",
+    "city": "Itapoá",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRIOS",
+    "name": "Ilheus",
+    "city": "Ilheus",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRIRO",
+    "name": "Itabirito",
+    "city": "Itabirito",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRITJ",
+    "name": "Itajai",
+    "city": "Itajai",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRITQ",
+    "name": "Itaqui",
+    "city": "Itaqui",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRITZ",
+    "name": "Itapemirim",
+    "city": "Itapemirim",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRMAO",
+    "name": "Manaus",
+    "city": "Manaus",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRMCZ",
+    "name": "Maceio",
+    "city": "Maceió",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRNAT",
+    "name": "Natal",
+    "city": "Natal",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRNVT",
+    "name": "Navegantes",
+    "city": "Navegantes",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRPCL",
+    "name": "Portocel",
+    "city": "Portocel",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRPEC",
+    "name": "Pecem",
+    "city": "Pecém",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRPNG",
+    "name": "Paranagua",
+    "city": "Paranaguá",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRPNN",
+    "name": "Paranã",
+    "city": "Paranã",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRPOA",
+    "name": "Porto Alegre",
+    "city": "Pôrto Alegre",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRREC",
+    "name": "Recife",
+    "city": "Recife",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRRIG",
+    "name": "Rio Grande",
+    "city": "Rio Grande",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRRIO",
+    "name": "Rio de Janeiro",
+    "city": "Rio de Janeiro",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSAL",
+    "name": "Salto Grande",
+    "city": "Salto Grande",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSFS",
+    "name": "Sao Francisco do Sul",
+    "city": "São Francisco do Sul",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSPB",
+    "name": "Porto de Itaguai",
+    "city": "Porto de Itaguaí",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSSA",
+    "name": "Salvador",
+    "city": "Salvador",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSSO",
+    "name": "Sao Sebastiao",
+    "city": "São Sebastião",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSSZ",
+    "name": "Santos",
+    "city": "Santos",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSTM",
+    "name": "Santarem",
+    "city": "Santarem",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRSUA",
+    "name": "Suape",
+    "city": "Suape",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRVDC",
+    "name": "Vitoria da Conquista",
+    "city": "Vitória da Conquista",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRVIC",
+    "name": "Vila do Conde",
+    "city": "Vila do Conde",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRVIX",
+    "name": "Vitoria",
+    "city": "Vitoria",
+    "country": "Brazil"
+  },
+  {
+    "code": "BRVLC",
+    "name": "Vila do Conde",
+    "city": "Vila do Conde",
+    "country": "Brazil"
+  },
+  {
+    "code": "BSFPO",
+    "name": "Freeport, Grand Bahama",
+    "city": "Freeport, Grand Bahama",
+    "country": "Bahamas"
+  },
+  {
+    "code": "BSNAS",
+    "name": "Nassau",
+    "city": "Nassau",
+    "country": "Bahamas"
+  },
+  {
+    "code": "BYMSQ",
+    "name": "Minsk",
+    "city": "Minsk",
+    "country": "Belarus"
+  },
+  {
+    "code": "BZBZE",
+    "name": "Belize City",
+    "city": "Belize City",
+    "country": "Belize"
+  },
+  {
+    "code": "CABAT",
+    "name": "Bathurst",
+    "city": "Bathurst",
+    "country": "Canada"
+  },
+  {
+    "code": "CABCK",
+    "name": "Brockville",
+    "city": "Brockville",
+    "country": "Canada"
+  },
+  {
+    "code": "CABDU",
+    "name": "Baie d'Urfe",
+    "city": "Baie d'Urfé",
+    "country": "Canada"
+  },
+  {
+    "code": "CABEC",
+    "name": "Becancour",
+    "city": "Bécancour",
+    "country": "Canada"
+  },
+  {
+    "code": "CABJO",
+    "name": "Baie-Johan-Beetz",
+    "city": "Baie-Johan-Beetz",
+    "country": "Canada"
+  },
+  {
+    "code": "CABRL",
+    "name": "Burlington",
+    "city": "Burlington",
+    "country": "Canada"
+  },
+  {
+    "code": "CACAL",
+    "name": "Calgary",
+    "city": "Calgary",
+    "country": "Canada"
+  },
+  {
+    "code": "CACBK",
+    "name": "Corner Brook",
+    "city": "Corner Brook",
+    "country": "Canada"
+  },
+  {
+    "code": "CACCB",
+    "name": "Cowichan Bay",
+    "city": "Cowichan Bay",
+    "country": "Canada"
+  },
+  {
+    "code": "CACOL",
+    "name": "Collingwood",
+    "city": "Collingwood",
+    "country": "Canada"
+  },
+  {
+    "code": "CACRO",
+    "name": "Crofton",
+    "city": "Crofton",
+    "country": "Canada"
+  },
+  {
+    "code": "CACWL",
+    "name": "Cornwall",
+    "city": "Cornwall",
+    "country": "Canada"
+  },
+  {
+    "code": "CADOR",
+    "name": "Dorval",
+    "city": "Dorval",
+    "country": "Canada"
+  },
+  {
+    "code": "CADRU",
+    "name": "Drummondville",
+    "city": "Drummondville",
+    "country": "Canada"
+  },
+  {
+    "code": "CAEDM",
+    "name": "Edmonton",
+    "city": "Edmonton",
+    "country": "Canada"
+  },
+  {
+    "code": "CAHAL",
+    "name": "Halifax",
+    "city": "Halifax",
+    "country": "Canada"
+  },
+  {
+    "code": "CAHAM",
+    "name": "Hamilton",
+    "city": "Hamilton",
+    "country": "Canada"
+  },
+  {
+    "code": "CAHMC",
+    "name": "Harmac",
+    "city": "Harmac",
+    "country": "Canada"
+  },
+  {
+    "code": "CAKVL",
+    "name": "Kingsville",
+    "city": "Kingsville",
+    "country": "Canada"
+  },
+  {
+    "code": "CAMAG",
+    "name": "Magog",
+    "city": "Magog",
+    "country": "Canada"
+  },
+  {
+    "code": "CAMNT",
+    "name": "Moncton",
+    "city": "Moncton",
+    "country": "Canada"
+  },
+  {
+    "code": "CAMTR",
+    "name": "Montreal",
+    "city": "Montreal",
+    "country": "Canada"
+  },
+  {
+    "code": "CANIA",
+    "name": "Niagara Falls",
+    "city": "Niagara Falls",
+    "country": "Canada"
+  },
+  {
+    "code": "CANNO",
+    "name": "Nanaimo",
+    "city": "Nanaimo",
+    "country": "Canada"
+  },
+  {
+    "code": "CANOR",
+    "name": "North Bay",
+    "city": "North Bay",
+    "country": "Canada"
+  },
+  {
+    "code": "CANWE",
+    "name": "New Westminster",
+    "city": "New Westminster",
+    "country": "Canada"
+  },
+  {
+    "code": "CAOAK",
+    "name": "Oakville",
+    "city": "Oakville",
+    "country": "Canada"
+  },
+  {
+    "code": "CAODE",
+    "name": "Odessa",
+    "city": "Odessa",
+    "country": "Canada"
+  },
+  {
+    "code": "CAOSH",
+    "name": "Oshawa",
+    "city": "Oshawa",
+    "country": "Canada"
+  },
+  {
+    "code": "CAPCR",
+    "name": "Port Credit",
+    "city": "Port Credit",
+    "country": "Canada"
+  },
+  {
+    "code": "CAPDV",
+    "name": "Port Dover",
+    "city": "Port Dover",
+    "country": "Canada"
+  },
+  {
+    "code": "CAPML",
+    "name": "Port Mellon",
+    "city": "Port Mellon",
+    "country": "Canada"
+  },
+  {
+    "code": "CAPOI",
+    "name": "Pointe-Claire",
+    "city": "Pointe-Claire",
+    "country": "Canada"
+  },
+  {
+    "code": "CAPRR",
+    "name": "Prince Rupert",
+    "city": "Prince Rupert",
+    "country": "Canada"
+  },
+  {
+    "code": "CAQUE",
+    "name": "Quebec",
+    "city": "Quebec",
+    "country": "Canada"
+  },
+  {
+    "code": "CASAK",
+    "name": "Saskatoon",
+    "city": "Saskatoon",
+    "country": "Canada"
+  },
+  {
+    "code": "CASCA",
+    "name": "Saint-Catharines",
+    "city": "Saint-Catharines",
+    "country": "Canada"
+  },
+  {
+    "code": "CASJB",
+    "name": "Saint-John",
+    "city": "Saint-John",
+    "country": "Canada"
+  },
+  {
+    "code": "CASJF",
+    "name": "Saint-John's",
+    "city": "Saint-John's",
+    "country": "Canada"
+  },
+  {
+    "code": "CASNI",
+    "name": "Sarnia",
+    "city": "Sarnia",
+    "country": "Canada"
+  },
+  {
+    "code": "CASOR",
+    "name": "Sorel",
+    "city": "Sorel",
+    "country": "Canada"
+  },
+  {
+    "code": "CASSM",
+    "name": "Sault-Sainte-Marie",
+    "city": "Sault-Sainte-Marie",
+    "country": "Canada"
+  },
+  {
+    "code": "CASTC",
+    "name": "Stoney Creek",
+    "city": "Stoney Creek",
+    "country": "Canada"
+  },
+  {
+    "code": "CASUM",
+    "name": "Summerside",
+    "city": "Summerside",
+    "country": "Canada"
+  },
+  {
+    "code": "CATEX",
+    "name": "Texada Island",
+    "city": "Texada Island",
+    "country": "Canada"
+  },
+  {
+    "code": "CATHU",
+    "name": "Thunder Bay",
+    "city": "Thunder Bay",
+    "country": "Canada"
+  },
+  {
+    "code": "CATOR",
+    "name": "Toronto",
+    "city": "Toronto",
+    "country": "Canada"
+  },
+  {
+    "code": "CATRR",
+    "name": "Trois-Rivieres (Three Rivers)",
+    "city": "Trois-Rivieres (Three Rivers)",
+    "country": "Canada"
+  },
+  {
+    "code": "CATTC",
+    "name": "Trenton",
+    "city": "Trenton",
+    "country": "Canada"
+  },
+  {
+    "code": "CAVAN",
+    "name": "Vancouver",
+    "city": "Vancouver",
+    "country": "Canada"
+  },
+  {
+    "code": "CAVLF",
+    "name": "Valleyfield",
+    "city": "Valleyfield",
+    "country": "Canada"
+  },
+  {
+    "code": "CAWIN",
+    "name": "Winona",
+    "city": "Winona",
+    "country": "Canada"
+  },
+  {
+    "code": "CAWNP",
+    "name": "Winnipeg",
+    "city": "Winnipeg",
+    "country": "Canada"
+  },
+  {
+    "code": "CDBOA",
+    "name": "Boma",
+    "city": "Boma",
+    "country": "Congo, The Democratic Republic of the"
+  },
+  {
+    "code": "CDMAT",
+    "name": "Matadi",
+    "city": "Matadi",
+    "country": "Congo, The Democratic Republic of the"
+  },
+  {
+    "code": "CGPNR",
+    "name": "Pointe Noire",
+    "city": "Pointe Noire",
+    "country": "Congo"
+  },
+  {
+    "code": "CIABJ",
+    "name": "Abidjan",
+    "city": "Abidjan",
+    "country": "Côte d'Ivoire"
+  },
+  {
+    "code": "CISPY",
+    "name": "San-Pedro",
+    "city": "San-Pédro",
+    "country": "Côte d'Ivoire"
+  },
+  {
+    "code": "CLANF",
+    "name": "Antofagasta",
+    "city": "Antofagasta",
+    "country": "Chile"
+  },
+  {
+    "code": "CLARI",
+    "name": "Arica",
+    "city": "Arica",
+    "country": "Chile"
+  },
+  {
+    "code": "CLBAG",
+    "name": "Bahia San Gregorio",
+    "city": "Bahía San Gregorio",
+    "country": "Chile"
+  },
+  {
+    "code": "CLBAR",
+    "name": "Barquito",
+    "city": "Barquito",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCAP",
+    "name": "San Vicente",
+    "city": "San Vicente",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCBC",
+    "name": "Calbuco",
+    "city": "Calbuco",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCCL",
+    "name": "Caleta Coloso",
+    "city": "Caleta Coloso",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCHB",
+    "name": "Chacabuco",
+    "city": "Chacabuco",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCLD",
+    "name": "Caldera",
+    "city": "Caldera",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCNL",
+    "name": "Coronel",
+    "city": "Coronel",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCNR",
+    "name": "Chanaral",
+    "city": "Chañaral",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCNX",
+    "name": "Cabo Negro",
+    "city": "Cabo Negro",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCQQ",
+    "name": "Coquimbo",
+    "city": "Coquimbo",
+    "country": "Chile"
+  },
+  {
+    "code": "CLCRR",
+    "name": "Corral",
+    "city": "Corral",
+    "country": "Chile"
+  },
+  {
+    "code": "CLDCH",
+    "name": "Dalcahue",
+    "city": "Dalcahue",
+    "country": "Chile"
+  },
+  {
+    "code": "CLGYC",
+    "name": "Guayacan",
+    "city": "Guayacán",
+    "country": "Chile"
+  },
+  {
+    "code": "CLHSO",
+    "name": "Huasco",
+    "city": "Huasco",
+    "country": "Chile"
+  },
+  {
+    "code": "CLIPC",
+    "name": "Isla de Pascua",
+    "city": "Isla de Pascua",
+    "country": "Chile"
+  },
+  {
+    "code": "CLIQQ",
+    "name": "Iquique",
+    "city": "Iquique",
+    "country": "Chile"
+  },
+  {
+    "code": "CLJRL",
+    "name": "Jureles",
+    "city": "Jureles",
+    "country": "Chile"
+  },
+  {
+    "code": "CLLOS",
+    "name": "Los Vilos",
+    "city": "Los Vilos",
+    "country": "Chile"
+  },
+  {
+    "code": "CLLQN",
+    "name": "Lirquen",
+    "city": "Lirquén",
+    "country": "Chile"
+  },
+  {
+    "code": "CLLVS",
+    "name": "Las Ventanas",
+    "city": "Las Ventanas",
+    "country": "Chile"
+  },
+  {
+    "code": "CLMCH",
+    "name": "Michilla",
+    "city": "Michilla",
+    "country": "Chile"
+  },
+  {
+    "code": "CLMJS",
+    "name": "Mejillones",
+    "city": "Mejillones",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPAG",
+    "name": "Puerto Angamos",
+    "city": "Puerto Angamos",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPCH",
+    "name": "Puerto Chacabuco",
+    "city": "Puerto Chacabuco",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPEO",
+    "name": "Penco",
+    "city": "Penco",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPGO",
+    "name": "Punta Chungo",
+    "city": "Punta Chungo",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPMC",
+    "name": "Puerto Montt",
+    "city": "Puerto Montt",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPNT",
+    "name": "Puerto Natales",
+    "city": "Puerto Natales",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPPC",
+    "name": "Punta Patache",
+    "city": "Punta Patache",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPPD",
+    "name": "Punta Padrones",
+    "city": "Punta Padrones",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPTE",
+    "name": "Quellon (Puerto Quellon)",
+    "city": "Quellón (Puerto Quellón)",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPTI",
+    "name": "Patillos",
+    "city": "Patillos",
+    "country": "Chile"
+  },
+  {
+    "code": "CLPUQ",
+    "name": "Punta Arenas",
+    "city": "Punta Arenas",
+    "country": "Chile"
+  },
+  {
+    "code": "CLQMC",
+    "name": "Quemchi",
+    "city": "Quemchi",
+    "country": "Chile"
+  },
+  {
+    "code": "CLQTV",
+    "name": "Quintero",
+    "city": "Quintero",
+    "country": "Chile"
+  },
+  {
+    "code": "CLSAI",
+    "name": "San Antonio",
+    "city": "San Antonio",
+    "country": "Chile"
+  },
+  {
+    "code": "CLSVE",
+    "name": "San Vicente",
+    "city": "San Vicente",
+    "country": "Chile"
+  },
+  {
+    "code": "CLTAL",
+    "name": "Talcahuano",
+    "city": "Talcahuano",
+    "country": "Chile"
+  },
+  {
+    "code": "CLTHO",
+    "name": "Talcahuano",
+    "city": "Talcahuano",
+    "country": "Chile"
+  },
+  {
+    "code": "CLTOM",
+    "name": "Tome",
+    "city": "Tomé",
+    "country": "Chile"
+  },
+  {
+    "code": "CLTOQ",
+    "name": "Tocopilla",
+    "city": "Tocopilla",
+    "country": "Chile"
+  },
+  {
+    "code": "CLTTC",
+    "name": "Taltal",
+    "city": "Taltal",
+    "country": "Chile"
+  },
+  {
+    "code": "CLVAP",
+    "name": "Valparaiso",
+    "city": "Valparaiso",
+    "country": "Chile"
+  },
+  {
+    "code": "CLWCA",
+    "name": "Castro",
+    "city": "Castro",
+    "country": "Chile"
+  },
+  {
+    "code": "CLWCH",
+    "name": "Chaiten",
+    "city": "Chaitén",
+    "country": "Chile"
+  },
+  {
+    "code": "CLWPA",
+    "name": "Puerto Aisen",
+    "city": "Puerto Aisén",
+    "country": "Chile"
+  },
+  {
+    "code": "CLWPU",
+    "name": "Puerto Williams",
+    "city": "Puerto Williams",
+    "country": "Chile"
+  },
+  {
+    "code": "CLZUD",
+    "name": "Ancud",
+    "city": "Ancud",
+    "country": "Chile"
+  },
+  {
+    "code": "CMDLA",
+    "name": "Douala",
+    "city": "Douala",
+    "country": "Cameroon"
+  },
+  {
+    "code": "CNBAY",
+    "name": "Bayuquan",
+    "city": "Bayuquan",
+    "country": "China"
+  },
+  {
+    "code": "CNBHY",
+    "name": "Beihai Fucheng Apt",
+    "city": "Beihai Fucheng Apt",
+    "country": "China"
+  },
+  {
+    "code": "CNBJO",
+    "name": "Beijiao",
+    "city": "Beijiao",
+    "country": "China"
+  },
+  {
+    "code": "CNCAN",
+    "name": "Guangzhou",
+    "city": "Guangzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNCGU",
+    "name": "Changshu",
+    "city": "Changshu",
+    "country": "China"
+  },
+  {
+    "code": "CNCKG",
+    "name": "Chongqing",
+    "city": "Chongqing",
+    "country": "China"
+  },
+  {
+    "code": "CNCOZ",
+    "name": "Chaozhou Port",
+    "city": "Chaozhou",
+    "country": "China"
+  },
+  {
+    "code": "CNCSX",
+    "name": "Changsha",
+    "city": "Changsha",
+    "country": "China"
+  },
+  {
+    "code": "CNCTU",
+    "name": "Chengdu",
+    "city": "Chengdu",
+    "country": "China"
+  },
+  {
+    "code": "CNCWN",
+    "name": "Chiwan Port",
+    "city": "Chiwan",
+    "country": "China"
+  },
+  {
+    "code": "CNDAA",
+    "name": "Dagang",
+    "city": "Dagang",
+    "country": "China"
+  },
+  {
+    "code": "CNDAL",
+    "name": "Dalian",
+    "city": "Dalian",
+    "country": "China"
+  },
+  {
+    "code": "CNDCB",
+    "name": "Da Chan Bay",
+    "city": "Da Chan Bay",
+    "country": "China"
+  },
+  {
+    "code": "CNDGG",
+    "name": "Dongguan Port",
+    "city": "Dongguan",
+    "country": "China"
+  },
+  {
+    "code": "CNDLC",
+    "name": "Dalian",
+    "city": "Dalian",
+    "country": "China"
+  },
+  {
+    "code": "CNDOU",
+    "name": "Doumen Port",
+    "city": "Doumen",
+    "country": "China"
+  },
+  {
+    "code": "CNFAN",
+    "name": "Fangcheng Port",
+    "city": "Fangcheng",
+    "country": "China"
+  },
+  {
+    "code": "CNFNG",
+    "name": "Fuyong",
+    "city": "Fuyong",
+    "country": "China"
+  },
+  {
+    "code": "CNFOC",
+    "name": "Fuzhou",
+    "city": "Fuzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNFOS",
+    "name": "Foshan",
+    "city": "Foshanzhan",
+    "country": "China"
+  },
+  {
+    "code": "CNFUG",
+    "name": "Fuqing",
+    "city": "Fuqing",
+    "country": "China"
+  },
+  {
+    "code": "CNGGY",
+    "name": "Gongyi",
+    "city": "Gongyi",
+    "country": "China"
+  },
+  {
+    "code": "CNGOG",
+    "name": "Gongming",
+    "city": "Gongming",
+    "country": "China"
+  },
+  {
+    "code": "CNGOM",
+    "name": "Gaoming Port",
+    "city": "Gaoming",
+    "country": "China"
+  },
+  {
+    "code": "CNGUG",
+    "name": "Guigang",
+    "city": "Guigang",
+    "country": "China"
+  },
+  {
+    "code": "CNHAK",
+    "name": "Haikou",
+    "city": "Haikou",
+    "country": "China"
+  },
+  {
+    "code": "CNHDU",
+    "name": "Huadu",
+    "city": "Huadu",
+    "country": "China"
+  },
+  {
+    "code": "CNHEB",
+    "name": "Hebei",
+    "city": "Hebei",
+    "country": "China"
+  },
+  {
+    "code": "CNHGH",
+    "name": "Hangzhou",
+    "city": "Hangzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNHME",
+    "name": "Haimen",
+    "city": "Haimen",
+    "country": "China"
+  },
+  {
+    "code": "CNHMN",
+    "name": "Humen Port",
+    "city": "Humen",
+    "country": "China"
+  },
+  {
+    "code": "CNHSN",
+    "name": "Heshan Port",
+    "city": "Heshan",
+    "country": "China"
+  },
+  {
+    "code": "CNHUA",
+    "name": "Huangpu Port",
+    "city": "Huangpu",
+    "country": "China"
+  },
+  {
+    "code": "CNHUD",
+    "name": "Huludao Port",
+    "city": "Huludao",
+    "country": "China"
+  },
+  {
+    "code": "CNHUI",
+    "name": "Huizhou Port",
+    "city": "Huizhou",
+    "country": "China"
+  },
+  {
+    "code": "CNJGZ",
+    "name": "Jingzhou",
+    "city": "Jingzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNJIA",
+    "name": "Jiangyin Port",
+    "city": "Jiangyin",
+    "country": "China"
+  },
+  {
+    "code": "CNJIN",
+    "name": "Jian",
+    "city": "Jian",
+    "country": "China"
+  },
+  {
+    "code": "CNJIU",
+    "name": "Jiujiang Port",
+    "city": "Jiujiang",
+    "country": "China"
+  },
+  {
+    "code": "CNJMN",
+    "name": "Jiangmen Port",
+    "city": "Jiangmen",
+    "country": "China"
+  },
+  {
+    "code": "CNJNZ",
+    "name": "Jinzhou Port",
+    "city": "Jinzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNJXN",
+    "name": "Jiao Xin",
+    "city": "Jiao Xin",
+    "country": "China"
+  },
+  {
+    "code": "CNJZU",
+    "name": "Jiuzhou Port",
+    "city": "Jiuzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNKHN",
+    "name": "Nanchang",
+    "city": "Nanchang",
+    "country": "China"
+  },
+  {
+    "code": "CNKMG",
+    "name": "Kunming",
+    "city": "Kunming",
+    "country": "China"
+  },
+  {
+    "code": "CNKPN",
+    "name": "Kaiping",
+    "city": "Kaiping",
+    "country": "China"
+  },
+  {
+    "code": "CNLAN",
+    "name": "Lanshi Port",
+    "city": "Lanshi",
+    "country": "China"
+  },
+  {
+    "code": "CNLGH",
+    "name": "Longhua",
+    "city": "Longhua",
+    "country": "China"
+  },
+  {
+    "code": "CNLIH",
+    "name": "Lianhuashan Port",
+    "city": "Lianhuashan",
+    "country": "China"
+  },
+  {
+    "code": "CNLKU",
+    "name": "Longkou Port",
+    "city": "Longkou",
+    "country": "China"
+  },
+  {
+    "code": "CNLSI",
+    "name": "Lanshi",
+    "city": "Lanshi",
+    "country": "China"
+  },
+  {
+    "code": "CNLYG",
+    "name": "Lianyungang",
+    "city": "Lianyungang",
+    "country": "China"
+  },
+  {
+    "code": "CNLZH",
+    "name": "Liuzhou Port",
+    "city": "Liuzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNMAW",
+    "name": "Mawei Port",
+    "city": "Mawei",
+    "country": "China"
+  },
+  {
+    "code": "CNMMI",
+    "name": "Maoming",
+    "city": "Maoming",
+    "country": "China"
+  },
+  {
+    "code": "CNMWN",
+    "name": "Mawan Port",
+    "city": "Mawan",
+    "country": "China"
+  },
+  {
+    "code": "CNMYG",
+    "name": "Mianyang",
+    "city": "Mianyang",
+    "country": "China"
+  },
+  {
+    "code": "CNNAH",
+    "name": "Nanhai Port",
+    "city": "Nanhai",
+    "country": "China"
+  },
+  {
+    "code": "CNNBO",
+    "name": "Ningbo",
+    "city": "Ningbo",
+    "country": "China"
+  },
+  {
+    "code": "CNNGB",
+    "name": "Ningbo",
+    "city": "Ningbo",
+    "country": "China"
+  },
+  {
+    "code": "CNNGG",
+    "name": "Nangang",
+    "city": "Nangang",
+    "country": "China"
+  },
+  {
+    "code": "CNNKG",
+    "name": "Nanjing",
+    "city": "Nanjing",
+    "country": "China"
+  },
+  {
+    "code": "CNNNG",
+    "name": "Nanning",
+    "city": "Nanning",
+    "country": "China"
+  },
+  {
+    "code": "CNNSA",
+    "name": "Nansha Port",
+    "city": "Nansha",
+    "country": "China"
+  },
+  {
+    "code": "CNNTG",
+    "name": "Nantong Port",
+    "city": "Nantong",
+    "country": "China"
+  },
+  {
+    "code": "CNPNY",
+    "name": "Shiqiao",
+    "city": "Shiqiao",
+    "country": "China"
+  },
+  {
+    "code": "CNPUT",
+    "name": "Putian",
+    "city": "Putian",
+    "country": "China"
+  },
+  {
+    "code": "CNQAW",
+    "name": "Qianwan",
+    "city": "Qianwan",
+    "country": "China"
+  },
+  {
+    "code": "CNQIN",
+    "name": "Qingdao",
+    "city": "Qingdao",
+    "country": "China"
+  },
+  {
+    "code": "CNQYN",
+    "name": "Qingyuan",
+    "city": "Qingyuan",
+    "country": "China"
+  },
+  {
+    "code": "CNQZJ",
+    "name": "Quanzhou Port",
+    "city": "Quanzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNROQ",
+    "name": "Rongqi Port",
+    "city": "Rongqi",
+    "country": "China"
+  },
+  {
+    "code": "CNRZH",
+    "name": "Rizhao Port",
+    "city": "Rizhao",
+    "country": "China"
+  },
+  {
+    "code": "CNSBU",
+    "name": "Sanbu Port",
+    "city": "Sanbu",
+    "country": "China"
+  },
+  {
+    "code": "CNSDG",
+    "name": "Shuidong Port",
+    "city": "Shuidong",
+    "country": "China"
+  },
+  {
+    "code": "CNSGH",
+    "name": "Shanghai",
+    "city": "Shanghai",
+    "country": "China"
+  },
+  {
+    "code": "CNSHA",
+    "name": "Shanghai",
+    "city": "Shanghai",
+    "country": "China"
+  },
+  {
+    "code": "CNSHK",
+    "name": "Shekou Port",
+    "city": "Shekou",
+    "country": "China"
+  },
+  {
+    "code": "CNSHP",
+    "name": "Qinhuangdao Port",
+    "city": "Qinhuangdao",
+    "country": "China"
+  },
+  {
+    "code": "CNSIN",
+    "name": "Shatian",
+    "city": "Shatian",
+    "country": "China"
+  },
+  {
+    "code": "CNSJQ",
+    "name": "Sanshui",
+    "city": "Sanshui",
+    "country": "China"
+  },
+  {
+    "code": "CNSNW",
+    "name": "Shenwan",
+    "city": "Shenwan",
+    "country": "China"
+  },
+  {
+    "code": "CNSSH",
+    "name": "Sanshan (Nanhai)",
+    "city": "Sanshan (Nanhai)",
+    "country": "China"
+  },
+  {
+    "code": "CNSTG",
+    "name": "Port of Shantou",
+    "city": "Shantou",
+    "country": "China"
+  },
+  {
+    "code": "CNSUD",
+    "name": "Shunde Port",
+    "city": "Shunde",
+    "country": "China"
+  },
+  {
+    "code": "CNSWA",
+    "name": "Jieyang Chaoshan Apt",
+    "city": "Jieyang Chaoshan Apt",
+    "country": "China"
+  },
+  {
+    "code": "CNSWE",
+    "name": "Shanwei Port",
+    "city": "Shanwei",
+    "country": "China"
+  },
+  {
+    "code": "CNSZX",
+    "name": "Shenzhen Baoan",
+    "city": "Shenzhen Baoan",
+    "country": "China"
+  },
+  {
+    "code": "CNTAG",
+    "name": "Taicang",
+    "city": "Taicang",
+    "country": "China"
+  },
+  {
+    "code": "CNTAO",
+    "name": "Qingdao",
+    "city": "Qingdao",
+    "country": "China"
+  },
+  {
+    "code": "CNTAP",
+    "name": "Taiping",
+    "city": "Taiping",
+    "country": "China"
+  },
+  {
+    "code": "CNTHG",
+    "name": "Taicheng (Taishan)",
+    "city": "Taicheng (Taishan)",
+    "country": "China"
+  },
+  {
+    "code": "CNTSN",
+    "name": "Tianjin",
+    "city": "Tianjin",
+    "country": "China"
+  },
+  {
+    "code": "CNTXG",
+    "name": "Tianjin New Port",
+    "city": "Tianjin New",
+    "country": "China"
+  },
+  {
+    "code": "CNTZO",
+    "name": "Taizhou",
+    "city": "Taizhou",
+    "country": "China"
+  },
+  {
+    "code": "CNWAZ",
+    "name": "Wanzai",
+    "city": "Wanzai",
+    "country": "China"
+  },
+  {
+    "code": "CNWEI",
+    "name": "Weihai",
+    "city": "Weihai",
+    "country": "China"
+  },
+  {
+    "code": "CNWHI",
+    "name": "Wuhu Port",
+    "city": "Wuhu",
+    "country": "China"
+  },
+  {
+    "code": "CNWNZ",
+    "name": "Wenzhou",
+    "city": "Wenzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNWUH",
+    "name": "Wuhan",
+    "city": "Wuhan",
+    "country": "China"
+  },
+  {
+    "code": "CNXAB",
+    "name": "Xinfeng",
+    "city": "Xinfeng",
+    "country": "China"
+  },
+  {
+    "code": "CNXAM",
+    "name": "Xiamen",
+    "city": "Xiamen",
+    "country": "China"
+  },
+  {
+    "code": "CNXGA",
+    "name": "Xingang",
+    "city": "Xingang",
+    "country": "China"
+  },
+  {
+    "code": "CNXGG",
+    "name": "Xingang",
+    "city": "Xingang",
+    "country": "China"
+  },
+  {
+    "code": "CNXIL",
+    "name": "Xiaolan",
+    "city": "Xiaolan",
+    "country": "China"
+  },
+  {
+    "code": "CNXIN",
+    "name": "Xinhui Port",
+    "city": "Xinhui",
+    "country": "China"
+  },
+  {
+    "code": "CNXIT",
+    "name": "Xintang Port",
+    "city": "Xintang",
+    "country": "China"
+  },
+  {
+    "code": "CNXMN",
+    "name": "Xiamen",
+    "city": "Xiamen",
+    "country": "China"
+  },
+  {
+    "code": "CNYAN",
+    "name": "Yangshan",
+    "city": "Yangshan",
+    "country": "China"
+  },
+  {
+    "code": "CNYIC",
+    "name": "Yichang",
+    "city": "Yichang",
+    "country": "China"
+  },
+  {
+    "code": "CNYIK",
+    "name": "Yingkou Port",
+    "city": "Yingkou",
+    "country": "China"
+  },
+  {
+    "code": "CNYJI",
+    "name": "Yangjiang Port",
+    "city": "Yangjiang",
+    "country": "China"
+  },
+  {
+    "code": "CNYNF",
+    "name": "Yunfu",
+    "city": "Yunfu",
+    "country": "China"
+  },
+  {
+    "code": "CNYNT",
+    "name": "Yantai",
+    "city": "Yantai",
+    "country": "China"
+  },
+  {
+    "code": "CNYPG",
+    "name": "Yangpu Port",
+    "city": "Yangpu",
+    "country": "China"
+  },
+  {
+    "code": "CNYQS",
+    "name": "Beijiao",
+    "city": "Beijiao",
+    "country": "China"
+  },
+  {
+    "code": "CNYTG",
+    "name": "Yantai",
+    "city": "Yantai",
+    "country": "China"
+  },
+  {
+    "code": "CNYTN",
+    "name": "Yantian Port",
+    "city": "Yantian",
+    "country": "China"
+  },
+  {
+    "code": "CNYZH",
+    "name": "Yangzhou Port",
+    "city": "Yangzhou",
+    "country": "China"
+  },
+  {
+    "code": "CNZAP",
+    "name": "Zhapu (Zhejiang)",
+    "city": "Zhapu (Zhejiang)",
+    "country": "China"
+  },
+  {
+    "code": "CNZHA",
+    "name": "Zhanjiang Potou Apt",
+    "city": "Zhanjiang Potou Apt",
+    "country": "China"
+  },
+  {
+    "code": "CNZHE",
+    "name": "Zhenjiang Port",
+    "city": "Zhenjiang",
+    "country": "China"
+  },
+  {
+    "code": "CNZJG",
+    "name": "Zhangjiagang",
+    "city": "Zhangjiagang",
+    "country": "China"
+  },
+  {
+    "code": "CNZOS",
+    "name": "Zhoushan Port",
+    "city": "Zhoushan",
+    "country": "China"
+  },
+  {
+    "code": "CNZQG",
+    "name": "Zhaoqing Port",
+    "city": "Zhaoqing",
+    "country": "China"
+  },
+  {
+    "code": "CNZSN",
+    "name": "Zhongshan Port",
+    "city": "Zhongshan",
+    "country": "China"
+  },
+  {
+    "code": "CNZUH",
+    "name": "Zhuhai Port",
+    "city": "Zhuhai",
+    "country": "China"
+  },
+  {
+    "code": "COBAQ",
+    "name": "Barranquilla",
+    "city": "Barranquilla",
+    "country": "Colombia"
+  },
+  {
+    "code": "COBUN",
+    "name": "Buenaventura",
+    "city": "Buenaventura",
+    "country": "Colombia"
+  },
+  {
+    "code": "COCTG",
+    "name": "Cartagena",
+    "city": "Cartagena",
+    "country": "Colombia"
+  },
+  {
+    "code": "COPBO",
+    "name": "Puerto Bolivar",
+    "city": "Puerto Bolívar",
+    "country": "Colombia"
+  },
+  {
+    "code": "COSMR",
+    "name": "Santa Marta",
+    "city": "Santa Marta",
+    "country": "Colombia"
+  },
+  {
+    "code": "COTCO",
+    "name": "Tumaco",
+    "city": "Tumaco",
+    "country": "Colombia"
+  },
+  {
+    "code": "CRCAL",
+    "name": "Caldera",
+    "city": "Caldera",
+    "country": "Costa Rica"
+  },
+  {
+    "code": "CRGLF",
+    "name": "Golfito",
+    "city": "Golfito",
+    "country": "Costa Rica"
+  },
+  {
+    "code": "CRLIO",
+    "name": "Puerto Limon",
+    "city": "Puerto Limón",
+    "country": "Costa Rica"
+  },
+  {
+    "code": "CRMOB",
+    "name": "Moin",
+    "city": "Moín",
+    "country": "Costa Rica"
+  },
+  {
+    "code": "CRPAS",
+    "name": "Puntarenas",
+    "city": "Puntarenas",
+    "country": "Costa Rica"
+  },
+  {
+    "code": "CRPCA",
+    "name": "Puerto Caldera",
+    "city": "Puerto Caldera",
+    "country": "Costa Rica"
+  },
+  {
+    "code": "CRSJO",
+    "name": "San Jose",
+    "city": "San José",
+    "country": "Costa Rica"
+  },
+  {
+    "code": "CUHAV",
+    "name": "La Habana",
+    "city": "La Habana",
+    "country": "Cuba"
+  },
+  {
+    "code": "CUMAR",
+    "name": "Mariel",
+    "city": "Mariel",
+    "country": "Cuba"
+  },
+  {
+    "code": "CUQMA",
+    "name": "Matanzas",
+    "city": "Matanzas",
+    "country": "Cuba"
+  },
+  {
+    "code": "CUSCU",
+    "name": "Santiago de Cuba",
+    "city": "Santiago de Cuba",
+    "country": "Cuba"
+  },
+  {
+    "code": "CVMIN",
+    "name": "Mindelo",
+    "city": "Mindelo",
+    "country": "Cape Verde"
+  },
+  {
+    "code": "CVPAL",
+    "name": "Palmeira",
+    "city": "Palmeira",
+    "country": "Cape Verde"
+  },
+  {
+    "code": "CVRAI",
+    "name": "Praia",
+    "city": "Praia",
+    "country": "Cape Verde"
+  },
+  {
+    "code": "CYLMS",
+    "name": "Limassol",
+    "city": "Limassol",
+    "country": "Cyprus"
+  },
+  {
+    "code": "CYNIC",
+    "name": "Nicosia",
+    "city": "Nicosia",
+    "country": "Cyprus"
+  },
+  {
+    "code": "CYPFO",
+    "name": "Paphos",
+    "city": "Paphos",
+    "country": "Cyprus"
+  },
+  {
+    "code": "DEBEZ",
+    "name": "Bahlingen",
+    "city": "Bahlingen",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBIN",
+    "name": "Bingen am Rhein",
+    "city": "Bingen am Rhein",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBKE",
+    "name": "Brake",
+    "city": "Brake",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBOY",
+    "name": "Bad Oeynhausen",
+    "city": "Bad Oeynhausen",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBRA",
+    "name": "Bramel",
+    "city": "Bramel",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBRB",
+    "name": "Brunsbuttel",
+    "city": "Brunsbüttel",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBRE",
+    "name": "Bremen",
+    "city": "Bremen",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBRV",
+    "name": "Bremerhaven",
+    "city": "Bremerhaven",
+    "country": "Germany"
+  },
+  {
+    "code": "DEBSK",
+    "name": "Burgstaaken/Fehmarn",
+    "city": "Burgstaaken/Fehmarn",
+    "country": "Germany"
+  },
+  {
+    "code": "DECGN",
+    "name": "Koln",
+    "city": "Köln",
+    "country": "Germany"
+  },
+  {
+    "code": "DECUX",
+    "name": "Cuxhaven",
+    "city": "Cuxhaven",
+    "country": "Germany"
+  },
+  {
+    "code": "DEDUS",
+    "name": "Dusseldorf",
+    "city": "Düsseldorf",
+    "country": "Germany"
+  },
+  {
+    "code": "DEELS",
+    "name": "Elsfleth",
+    "city": "Elsfleth",
+    "country": "Germany"
+  },
+  {
+    "code": "DEEME",
+    "name": "Emden",
+    "city": "Emden",
+    "country": "Germany"
+  },
+  {
+    "code": "DEFLF",
+    "name": "Flensburg",
+    "city": "Flensburg",
+    "country": "Germany"
+  },
+  {
+    "code": "DEHAM",
+    "name": "Hamburg",
+    "city": "Hamburg",
+    "country": "Germany"
+  },
+  {
+    "code": "DEHBU",
+    "name": "Harburg",
+    "city": "Harburg",
+    "country": "Germany"
+  },
+  {
+    "code": "DEHMM",
+    "name": "Hamm",
+    "city": "Hamm",
+    "country": "Germany"
+  },
+  {
+    "code": "DEKEL",
+    "name": "Kiel",
+    "city": "Kiel",
+    "country": "Germany"
+  },
+  {
+    "code": "DEKGU",
+    "name": "Kriegenbrunn",
+    "city": "Kriegenbrunn",
+    "country": "Germany"
+  },
+  {
+    "code": "DEKHO",
+    "name": "Kochendorf",
+    "city": "Kochendorf",
+    "country": "Germany"
+  },
+  {
+    "code": "DELBC",
+    "name": "Lubeck",
+    "city": "Lübeck",
+    "country": "Germany"
+  },
+  {
+    "code": "DELEE",
+    "name": "Leer",
+    "city": "Leer",
+    "country": "Germany"
+  },
+  {
+    "code": "DEMHG",
+    "name": "Mannheim",
+    "city": "Mannheim",
+    "country": "Germany"
+  },
+  {
+    "code": "DENHA",
+    "name": "Nordenham",
+    "city": "Nordenham",
+    "country": "Germany"
+  },
+  {
+    "code": "DENOR",
+    "name": "Nordstrand",
+    "city": "Nordstrand",
+    "country": "Germany"
+  },
+  {
+    "code": "DEPFR",
+    "name": "Pfronten",
+    "city": "Pfronten",
+    "country": "Germany"
+  },
+  {
+    "code": "DERSK",
+    "name": "Rostock",
+    "city": "Rostock",
+    "country": "Germany"
+  },
+  {
+    "code": "DEWED",
+    "name": "Wedel",
+    "city": "Wedel",
+    "country": "Germany"
+  },
+  {
+    "code": "DEWOR",
+    "name": "Worms",
+    "city": "Worms",
+    "country": "Germany"
+  },
+  {
+    "code": "DEWVN",
+    "name": "Wilhelmshaven",
+    "city": "Wilhelmshaven",
+    "country": "Germany"
+  },
+  {
+    "code": "DJJIB",
+    "name": "Djibouti",
+    "city": "Djibouti",
+    "country": "Djibouti"
+  },
+  {
+    "code": "DJPOD",
+    "name": "Djibouti",
+    "city": "Djibouti",
+    "country": "Djibouti"
+  },
+  {
+    "code": "DKAAL",
+    "name": "Aalborg",
+    "city": "Aalborg",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKAAR",
+    "name": "Aarhus",
+    "city": "Aarhus",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKASN",
+    "name": "Assens",
+    "city": "Assens",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKCPH",
+    "name": "Kobenhavn",
+    "city": "København",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKEBJ",
+    "name": "Esbjerg",
+    "city": "Esbjerg",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKFRC",
+    "name": "Fredericia",
+    "city": "Fredericia",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKHIR",
+    "name": "Hirtshals",
+    "city": "Hirtshals",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKHLS",
+    "name": "Helsingor",
+    "city": "Helsingør",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKHSB",
+    "name": "Holstebro",
+    "city": "Holstebro",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKKAL",
+    "name": "Kalundborg",
+    "city": "Kalundborg",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKKTD",
+    "name": "Kerteminde",
+    "city": "Kerteminde",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKNBG",
+    "name": "Nyborg",
+    "city": "Nyborg",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKODE",
+    "name": "Odense",
+    "city": "Odense",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKRUG",
+    "name": "Rungsted",
+    "city": "Rungsted",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKSKA",
+    "name": "Skagen",
+    "city": "Skagen",
+    "country": "Denmark"
+  },
+  {
+    "code": "DKSVE",
+    "name": "Svendborg",
+    "city": "Svendborg",
+    "country": "Denmark"
+  },
+  {
+    "code": "DMRSU",
+    "name": "Roseau",
+    "city": "Roseau",
+    "country": "Dominica"
+  },
+  {
+    "code": "DOCAU",
+    "name": "Caucedo",
+    "city": "Caucedo",
+    "country": "Dominican Republic"
+  },
+  {
+    "code": "DOHAI",
+    "name": "Rio Haina",
+    "city": "Rio Haina",
+    "country": "Dominican Republic"
+  },
+  {
+    "code": "DOMAN",
+    "name": "Manzanillo",
+    "city": "Manzanillo",
+    "country": "Dominican Republic"
+  },
+  {
+    "code": "DOPOP",
+    "name": "Puerto Plata",
+    "city": "Puerto Plata",
+    "country": "Dominican Republic"
+  },
+  {
+    "code": "DOSDQ",
+    "name": "Santo Domingo",
+    "city": "Santo Domingo",
+    "country": "Dominican Republic"
+  },
+  {
+    "code": "DOSPM",
+    "name": "San Pedro de Macoris",
+    "city": "San Pedro de Macorís",
+    "country": "Dominican Republic"
+  },
+  {
+    "code": "DZAAE",
+    "name": "Annaba (ex Bone)",
+    "city": "Annaba (ex Bone)",
+    "country": "Algeria"
+  },
+  {
+    "code": "DZALG",
+    "name": "Alger (Algiers)",
+    "city": "Alger (Algiers)",
+    "country": "Algeria"
+  },
+  {
+    "code": "DZBJA",
+    "name": "Bejaia (ex Bougie)",
+    "city": "Bejaia (ex Bougie)",
+    "country": "Algeria"
+  },
+  {
+    "code": "DZGHA",
+    "name": "Ghardaia",
+    "city": "Ghardaïa",
+    "country": "Algeria"
+  },
+  {
+    "code": "DZMOS",
+    "name": "Mostaganem",
+    "city": "Mostaganem",
+    "country": "Algeria"
+  },
+  {
+    "code": "DZORN",
+    "name": "Oran",
+    "city": "Oran",
+    "country": "Algeria"
+  },
+  {
+    "code": "DZSKI",
+    "name": "Skikda (ex Philippeville)",
+    "city": "Skikda (ex Philippeville)",
+    "country": "Algeria"
+  },
+  {
+    "code": "ECBHA",
+    "name": "Bahia de Caraquez",
+    "city": "Bahía de Caráquez",
+    "country": "Ecuador"
+  },
+  {
+    "code": "ECCHA",
+    "name": "Chanduy",
+    "city": "Chanduy",
+    "country": "Ecuador"
+  },
+  {
+    "code": "ECESM",
+    "name": "Esmeraldas",
+    "city": "Esmeraldas",
+    "country": "Ecuador"
+  },
+  {
+    "code": "ECGYE",
+    "name": "Guayaquil",
+    "city": "Guayaquil",
+    "country": "Ecuador"
+  },
+  {
+    "code": "ECLLD",
+    "name": "La Libertad",
+    "city": "La Libertad",
+    "country": "Ecuador"
+  },
+  {
+    "code": "ECMEC",
+    "name": "Manta",
+    "city": "Manta",
+    "country": "Ecuador"
+  },
+  {
+    "code": "ECMTV",
+    "name": "Monteverde",
+    "city": "Monteverde",
+    "country": "Ecuador"
+  },
+  {
+    "code": "ECPBO",
+    "name": "Puerto Bolivar",
+    "city": "Puerto Bolívar",
+    "country": "Ecuador"
+  },
+  {
+    "code": "EEHLD",
+    "name": "Haldi",
+    "city": "Haldi",
+    "country": "Estonia"
+  },
+  {
+    "code": "EEMUG",
+    "name": "Muuga",
+    "city": "Muuga",
+    "country": "Estonia"
+  },
+  {
+    "code": "EETLL",
+    "name": "Tallinn",
+    "city": "Tallinn",
+    "country": "Estonia"
+  },
+  {
+    "code": "EGAIS",
+    "name": "Ain Sukhna",
+    "city": "Ain Sukhna",
+    "country": "Egypt"
+  },
+  {
+    "code": "EGALY",
+    "name": "El Iskandariya (Alexandria)",
+    "city": "El Iskandariya (Alexandria)",
+    "country": "Egypt"
+  },
+  {
+    "code": "EGDAM",
+    "name": "Dumyat (Damietta)",
+    "city": "Dumyat (Damietta)",
+    "country": "Egypt"
+  },
+  {
+    "code": "EGEDK",
+    "name": "El Dekheila",
+    "city": "El Dekheila",
+    "country": "Egypt"
+  },
+  {
+    "code": "EGPSD",
+    "name": "Port Said",
+    "city": "Port Said",
+    "country": "Egypt"
+  },
+  {
+    "code": "EGSOK",
+    "name": "Sokhna Port",
+    "city": "Sokhna",
+    "country": "Egypt"
+  },
+  {
+    "code": "EGSUZ",
+    "name": "As Suways (Suez)",
+    "city": "As Suways (Suez)",
+    "country": "Egypt"
+  },
+  {
+    "code": "ERASA",
+    "name": "Assab",
+    "city": "Assab",
+    "country": "Eritrea"
+  },
+  {
+    "code": "ERMSW",
+    "name": "Massawa (Mitsiwa)",
+    "city": "Massawa (Mitsiwa)",
+    "country": "Eritrea"
+  },
+  {
+    "code": "ESACE",
+    "name": "Lanzarote",
+    "city": "Lanzarote",
+    "country": "Spain"
+  },
+  {
+    "code": "ESAGP",
+    "name": "Malaga",
+    "city": "Málaga",
+    "country": "Spain"
+  },
+  {
+    "code": "ESALC",
+    "name": "Alicante",
+    "city": "Alicante",
+    "country": "Spain"
+  },
+  {
+    "code": "ESALG",
+    "name": "Algeciras",
+    "city": "Algeciras",
+    "country": "Spain"
+  },
+  {
+    "code": "ESAVS",
+    "name": "Aviles",
+    "city": "Aviles",
+    "country": "Spain"
+  },
+  {
+    "code": "ESBCN",
+    "name": "Barcelona",
+    "city": "Barcelona",
+    "country": "Spain"
+  },
+  {
+    "code": "ESBIO",
+    "name": "Bilbao",
+    "city": "Bilbao",
+    "country": "Spain"
+  },
+  {
+    "code": "ESBRM",
+    "name": "Bermeo",
+    "city": "Bermeo",
+    "country": "Spain"
+  },
+  {
+    "code": "ESCAD",
+    "name": "Cadiz",
+    "city": "Cadiz",
+    "country": "Spain"
+  },
+  {
+    "code": "ESCAR",
+    "name": "Cartagena",
+    "city": "Cartagena",
+    "country": "Spain"
+  },
+  {
+    "code": "ESCAS",
+    "name": "Castellon de la Plana",
+    "city": "Castellón de la Plana",
+    "country": "Spain"
+  },
+  {
+    "code": "ESCEU",
+    "name": "Ceuta",
+    "city": "Ceuta",
+    "country": "Spain"
+  },
+  {
+    "code": "ESEBO",
+    "name": "Cebolla",
+    "city": "Cebolla",
+    "country": "Spain"
+  },
+  {
+    "code": "ESFER",
+    "name": "Ferez",
+    "city": "Ferez",
+    "country": "Spain"
+  },
+  {
+    "code": "ESFUE",
+    "name": "Puerto del Rosario-Fuerteventura",
+    "city": "Puerto del Rosario-Fuerteventura",
+    "country": "Spain"
+  },
+  {
+    "code": "ESGIJ",
+    "name": "Gijon",
+    "city": "Gijón",
+    "country": "Spain"
+  },
+  {
+    "code": "ESHUV",
+    "name": "Huelva",
+    "city": "Huelva",
+    "country": "Spain"
+  },
+  {
+    "code": "ESIBZ",
+    "name": "Ibiza",
+    "city": "Ibiza",
+    "country": "Spain"
+  },
+  {
+    "code": "ESLCG",
+    "name": "La Coruna (A Coruna)",
+    "city": "La Coruña (A Coruña)",
+    "country": "Spain"
+  },
+  {
+    "code": "ESLEI",
+    "name": "Almeria",
+    "city": "Almería",
+    "country": "Spain"
+  },
+  {
+    "code": "ESLPA",
+    "name": "Las Palmas de Gran Canaria",
+    "city": "Las Palmas de Gran Canaria",
+    "country": "Spain"
+  },
+  {
+    "code": "ESMAD",
+    "name": "Madrid",
+    "city": "Madrid",
+    "country": "Spain"
+  },
+  {
+    "code": "ESMAH",
+    "name": "Mahon, Menorca",
+    "city": "Mahón, Menorca",
+    "country": "Spain"
+  },
+  {
+    "code": "ESMLN",
+    "name": "Melilla",
+    "city": "Melilla",
+    "country": "Spain"
+  },
+  {
+    "code": "ESMOT",
+    "name": "Motril",
+    "city": "Motril",
+    "country": "Spain"
+  },
+  {
+    "code": "ESMPG",
+    "name": "Marin, Pontevedra",
+    "city": "Marin, Pontevedra",
+    "country": "Spain"
+  },
+  {
+    "code": "ESPAL",
+    "name": "Palamos",
+    "city": "Palamós",
+    "country": "Spain"
+  },
+  {
+    "code": "ESPAS",
+    "name": "Pasajes",
+    "city": "Pasajes",
+    "country": "Spain"
+  },
+  {
+    "code": "ESPMI",
+    "name": "Palma de Mallorca",
+    "city": "Palma de Mallorca",
+    "country": "Spain"
+  },
+  {
+    "code": "ESSCT",
+    "name": "Santa Cruz de Tenerife",
+    "city": "Santa Cruz de Tenerife",
+    "country": "Spain"
+  },
+  {
+    "code": "ESSDR",
+    "name": "Santander",
+    "city": "Santander",
+    "country": "Spain"
+  },
+  {
+    "code": "ESSNR",
+    "name": "Santurce",
+    "city": "Santurce",
+    "country": "Spain"
+  },
+  {
+    "code": "ESSPC",
+    "name": "Santa Cruz de La Palma",
+    "city": "Santa Cruz de La Palma",
+    "country": "Spain"
+  },
+  {
+    "code": "ESSVQ",
+    "name": "Sevilla",
+    "city": "Sevilla",
+    "country": "Spain"
+  },
+  {
+    "code": "ESTAR",
+    "name": "Tarragona",
+    "city": "Tarragona",
+    "country": "Spain"
+  },
+  {
+    "code": "ESTBZ",
+    "name": "Tabuenca",
+    "city": "Tabuenca",
+    "country": "Spain"
+  },
+  {
+    "code": "ESTCI",
+    "name": "Tenerife",
+    "city": "Tenerife",
+    "country": "Spain"
+  },
+  {
+    "code": "ESTOT",
+    "name": "Tortosa",
+    "city": "Tortosa",
+    "country": "Spain"
+  },
+  {
+    "code": "ESVGO",
+    "name": "Vigo",
+    "city": "Vigo",
+    "country": "Spain"
+  },
+  {
+    "code": "ESVLC",
+    "name": "Valencia",
+    "city": "Valencia",
+    "country": "Spain"
+  },
+  {
+    "code": "ESZAZ",
+    "name": "Zaragoza",
+    "city": "Zaragoza",
+    "country": "Spain"
+  },
+  {
+    "code": "FIHEL",
+    "name": "Helsingfors (Helsinki)",
+    "city": "Helsingfors (Helsinki)",
+    "country": "Finland"
+  },
+  {
+    "code": "FIHKO",
+    "name": "Hango (Hanko)",
+    "city": "Hangö (Hanko)",
+    "country": "Finland"
+  },
+  {
+    "code": "FIHMN",
+    "name": "Fredrikshamn (Hamina)",
+    "city": "Fredrikshamn (Hamina)",
+    "country": "Finland"
+  },
+  {
+    "code": "FIKEM",
+    "name": "Kemi/Tornea (Kemi/Tornio)",
+    "city": "Kemi/Torneå (Kemi/Tornio)",
+    "country": "Finland"
+  },
+  {
+    "code": "FIKOK",
+    "name": "Karleby (Kokkola)",
+    "city": "Karleby (Kokkola)",
+    "country": "Finland"
+  },
+  {
+    "code": "FIKTK",
+    "name": "Kotka",
+    "city": "Kotka",
+    "country": "Finland"
+  },
+  {
+    "code": "FIMTL",
+    "name": "Mantyluoto",
+    "city": "Mantyluoto",
+    "country": "Finland"
+  },
+  {
+    "code": "FIOLU",
+    "name": "Oulu",
+    "city": "Oulu",
+    "country": "Finland"
+  },
+  {
+    "code": "FIOUL",
+    "name": "Oulu (Uleaborg)",
+    "city": "Oulu (Uleåborg)",
+    "country": "Finland"
+  },
+  {
+    "code": "FIPOR",
+    "name": "Bjorneborg (Pori)",
+    "city": "Björneborg (Pori)",
+    "country": "Finland"
+  },
+  {
+    "code": "FIRAU",
+    "name": "Rauma (Raumo)",
+    "city": "Rauma (Raumo)",
+    "country": "Finland"
+  },
+  {
+    "code": "FITKU",
+    "name": "Abo (Turku)",
+    "city": "Åbo (Turku)",
+    "country": "Finland"
+  },
+  {
+    "code": "FITOR",
+    "name": "Tornea (Tornio)",
+    "city": "Torneå (Tornio)",
+    "country": "Finland"
+  },
+  {
+    "code": "FJLTK",
+    "name": "Lautoka",
+    "city": "Lautoka",
+    "country": "Fiji"
+  },
+  {
+    "code": "FJSUV",
+    "name": "Suva",
+    "city": "Suva",
+    "country": "Fiji"
+  },
+  {
+    "code": "FKPSY",
+    "name": "Port Stanley",
+    "city": "Port Stanley",
+    "country": "Falkland Islands (Malvinas)"
+  },
+  {
+    "code": "FMPNI",
+    "name": "Pohnpei (ex Ponape)",
+    "city": "Pohnpei (ex Ponape)",
+    "country": "Micronesia, Federated States of"
+  },
+  {
+    "code": "FOTHO",
+    "name": "Thorshavn",
+    "city": "Thorshavn",
+    "country": "Faroe Islands"
+  },
+  {
+    "code": "FRBAS",
+    "name": "Bassens",
+    "city": "Bassens",
+    "country": "France"
+  },
+  {
+    "code": "FRBAY",
+    "name": "Bayonne",
+    "city": "Bayonne",
+    "country": "France"
+  },
+  {
+    "code": "FRBES",
+    "name": "Brest",
+    "city": "Brest",
+    "country": "France"
+  },
+  {
+    "code": "FRBOD",
+    "name": "Bordeaux",
+    "city": "Bordeaux",
+    "country": "France"
+  },
+  {
+    "code": "FRBOL",
+    "name": "Boulogne-sur-Mer",
+    "city": "Boulogne-sur-Mer",
+    "country": "France"
+  },
+  {
+    "code": "FRCQF",
+    "name": "Calais",
+    "city": "Calais",
+    "country": "France"
+  },
+  {
+    "code": "FRDKK",
+    "name": "Dunkerque",
+    "city": "Dunkerque",
+    "country": "France"
+  },
+  {
+    "code": "FRDPE",
+    "name": "Dieppe",
+    "city": "Dieppe",
+    "country": "France"
+  },
+  {
+    "code": "FRFOS",
+    "name": "Fos-sur-Mer",
+    "city": "Fos-sur-Mer",
+    "country": "France"
+  },
+  {
+    "code": "FRHGT",
+    "name": "Chitry",
+    "city": "Chitry",
+    "country": "France"
+  },
+  {
+    "code": "FRHON",
+    "name": "Honfleur",
+    "city": "Honfleur",
+    "country": "France"
+  },
+  {
+    "code": "FRJAV",
+    "name": "Javrezac",
+    "city": "Javrezac",
+    "country": "France"
+  },
+  {
+    "code": "FRLCT",
+    "name": "La Ciotat",
+    "city": "La Ciotat",
+    "country": "France"
+  },
+  {
+    "code": "FRLEH",
+    "name": "Le Havre",
+    "city": "Le Havre",
+    "country": "France"
+  },
+  {
+    "code": "FRLPC",
+    "name": "La Planche",
+    "city": "La Planche",
+    "country": "France"
+  },
+  {
+    "code": "FRLPE",
+    "name": "La Pallice",
+    "city": "La Pallice",
+    "country": "France"
+  },
+  {
+    "code": "FRLRH",
+    "name": "La Rochelle",
+    "city": "La Rochelle",
+    "country": "France"
+  },
+  {
+    "code": "FRLRT",
+    "name": "Lorient",
+    "city": "Lorient",
+    "country": "France"
+  },
+  {
+    "code": "FRLTR",
+    "name": "Le Treport",
+    "city": "Le Tréport",
+    "country": "France"
+  },
+  {
+    "code": "FRLVE",
+    "name": "Le Verdon-sur-Mer",
+    "city": "Le Verdon-sur-Mer",
+    "country": "France"
+  },
+  {
+    "code": "FRMDH",
+    "name": "Mundolsheim",
+    "city": "Mundolsheim",
+    "country": "France"
+  },
+  {
+    "code": "FRMRS",
+    "name": "Marseille",
+    "city": "Marseille",
+    "country": "France"
+  },
+  {
+    "code": "FRMT7",
+    "name": "Monteton",
+    "city": "Monteton",
+    "country": "France"
+  },
+  {
+    "code": "FRMTX",
+    "name": "Montoir-de-Bretagne",
+    "city": "Montoir-de-Bretagne",
+    "country": "France"
+  },
+  {
+    "code": "FRNTE",
+    "name": "Nantes",
+    "city": "Nantes",
+    "country": "France"
+  },
+  {
+    "code": "FROR6",
+    "name": "La Groise",
+    "city": "La Groise",
+    "country": "France"
+  },
+  {
+    "code": "FRPAR",
+    "name": "Paris",
+    "city": "Paris",
+    "country": "France"
+  },
+  {
+    "code": "FRPIR",
+    "name": "Piriac-sur-Mer",
+    "city": "Piriac-sur-Mer",
+    "country": "France"
+  },
+  {
+    "code": "FRPOV",
+    "name": "Port-Vendres",
+    "city": "Port-Vendres",
+    "country": "France"
+  },
+  {
+    "code": "FRSET",
+    "name": "Sete",
+    "city": "Sète",
+    "country": "France"
+  },
+  {
+    "code": "FRSNR",
+    "name": "Saint-Nazaire",
+    "city": "Saint-Nazaire",
+    "country": "France"
+  },
+  {
+    "code": "FRTLN",
+    "name": "Toulon",
+    "city": "Toulon",
+    "country": "France"
+  },
+  {
+    "code": "FRURO",
+    "name": "Rouen",
+    "city": "Rouen",
+    "country": "France"
+  },
+  {
+    "code": "FRUSJ",
+    "name": "Mus",
+    "city": "Mus",
+    "country": "France"
+  },
+  {
+    "code": "GACLZ",
+    "name": "Cap Lopez",
+    "city": "Cap Lopez",
+    "country": "Gabon"
+  },
+  {
+    "code": "GALBV",
+    "name": "Libreville",
+    "city": "Libreville",
+    "country": "Gabon"
+  },
+  {
+    "code": "GAOWE",
+    "name": "Owendo",
+    "city": "Owendo",
+    "country": "Gabon"
+  },
+  {
+    "code": "GAPOG",
+    "name": "Port Gentil",
+    "city": "Port Gentil",
+    "country": "Gabon"
+  },
+  {
+    "code": "GBABD",
+    "name": "Aberdeen",
+    "city": "Aberdeen",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBAVO",
+    "name": "Avonmouth",
+    "city": "Avonmouth",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBAD",
+    "name": "Barry Dock",
+    "city": "Barry Dock",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBDT",
+    "name": "Broadstairs",
+    "city": "Broadstairs",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBEL",
+    "name": "Belfast",
+    "city": "Belfast",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBOC",
+    "name": "Burnham on Crouch",
+    "city": "Burnham on Crouch",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBOE",
+    "name": "Bootle",
+    "city": "Bootle",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBOS",
+    "name": "Boston",
+    "city": "Boston",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBRK",
+    "name": "Birkenhead",
+    "city": "Birkenhead",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBRS",
+    "name": "Bristol",
+    "city": "Bristol",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBRT",
+    "name": "Bridlington",
+    "city": "Bridlington",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBBRW",
+    "name": "Bridgwater",
+    "city": "Bridgwater",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBCDF",
+    "name": "Cardiff",
+    "city": "Cardiff",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBCFG",
+    "name": "Carrickfergus",
+    "city": "Carrickfergus",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBCHD",
+    "name": "Charleston",
+    "city": "Charleston",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBCYN",
+    "name": "Cairnryan",
+    "city": "Cairnryan",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBDUN",
+    "name": "Dundee",
+    "city": "Dundee",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBDVR",
+    "name": "Dover",
+    "city": "Dover",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBEDI",
+    "name": "Edinburgh",
+    "city": "Edinburgh",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBEIL",
+    "name": "Sheildaig",
+    "city": "Sheildaig",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBELL",
+    "name": "Ellesmere Port",
+    "city": "Ellesmere",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBEON",
+    "name": "Seaton",
+    "city": "Seaton",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBFAL",
+    "name": "Falmouth",
+    "city": "Falmouth",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBFAW",
+    "name": "Fawley",
+    "city": "Fawley",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBFRB",
+    "name": "Fraserburgh",
+    "city": "Fraserburgh",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBFXT",
+    "name": "Felixstowe",
+    "city": "Felixstowe",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGCI",
+    "name": "Guernsey",
+    "city": "Guernsey",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGLW",
+    "name": "Glasgow",
+    "city": "Glasgow",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGOO",
+    "name": "Goole",
+    "city": "Goole",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGRG",
+    "name": "Grangemouth",
+    "city": "Grangemouth",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGRK",
+    "name": "Greenock",
+    "city": "Greenock",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGSY",
+    "name": "Grimsby",
+    "city": "Grimsby",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGTY",
+    "name": "Great Yarmouth",
+    "city": "Great Yarmouth",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBGVS",
+    "name": "Gravesend",
+    "city": "Gravesend",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBHRW",
+    "name": "Harwich",
+    "city": "Harwich",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBHUL",
+    "name": "Hull",
+    "city": "Hull",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBIMM",
+    "name": "Immingham",
+    "city": "Immingham",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBINK",
+    "name": "Inverkeithing",
+    "city": "Inverkeithing",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBINV",
+    "name": "Inverness",
+    "city": "Inverness",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBIPS",
+    "name": "Ipswich",
+    "city": "Ipswich",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBIRL",
+    "name": "Irlam",
+    "city": "Irlam",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBKLN",
+    "name": "King's Lynn",
+    "city": "King's Lynn",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBLAN",
+    "name": "Lancaster",
+    "city": "Lancaster",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBLGP",
+    "name": "London Gateway Port",
+    "city": "London Gateway",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBLIV",
+    "name": "Liverpool",
+    "city": "Liverpool",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBLON",
+    "name": "London",
+    "city": "London",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBMAL",
+    "name": "Maldon",
+    "city": "Maldon",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBMCD",
+    "name": "Macduff",
+    "city": "Macduff",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBMID",
+    "name": "Middlesbrough",
+    "city": "Middlesbrough",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBMNS",
+    "name": "Moaness, Hoy",
+    "city": "Moaness, Hoy",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBMON",
+    "name": "Montrose",
+    "city": "Montrose",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBMRY",
+    "name": "Maryport",
+    "city": "Maryport",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBNCL",
+    "name": "Newcastle upon Tyne",
+    "city": "Newcastle upon Tyne",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBNFT",
+    "name": "Northfleet",
+    "city": "Northfleet",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBNHV",
+    "name": "Newhaven",
+    "city": "Newhaven",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBNLN",
+    "name": "Nelson",
+    "city": "Nelson",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBNPT",
+    "name": "Newport",
+    "city": "Newport",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPDD",
+    "name": "Pen-Clawdd",
+    "city": "Pen-Clawdd",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPFT",
+    "name": "Purfleet",
+    "city": "Purfleet",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPLY",
+    "name": "Plymouth",
+    "city": "Plymouth",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPME",
+    "name": "Portsmouth",
+    "city": "Portsmouth",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPOO",
+    "name": "Poole",
+    "city": "Poole",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPRE",
+    "name": "Preston",
+    "city": "Preston",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPRU",
+    "name": "Portbury",
+    "city": "Portbury",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBPST",
+    "name": "Parkeston Quay",
+    "city": "Parkeston Quay",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBQUB",
+    "name": "Queenborough",
+    "city": "Queenborough",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBRYE",
+    "name": "Rye",
+    "city": "Rye",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSCA",
+    "name": "Scarborough",
+    "city": "Scarborough",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSHS",
+    "name": "Sheerness",
+    "city": "Sheerness",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSOU",
+    "name": "Southampton",
+    "city": "Southampton",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSOW",
+    "name": "Stanlow",
+    "city": "Stanlow",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSSH",
+    "name": "South Shields",
+    "city": "South Shields",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSUN",
+    "name": "Sunderland",
+    "city": "Sunderland",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSVT",
+    "name": "Silvertown",
+    "city": "Silvertown",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBSWA",
+    "name": "Swansea",
+    "city": "Swansea",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBTEE",
+    "name": "Teesport",
+    "city": "Teesport",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBTHP",
+    "name": "Thamesport",
+    "city": "Thamesport",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBTIL",
+    "name": "Tilbury",
+    "city": "Tilbury",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBTYN",
+    "name": "Tyne",
+    "city": "Tyne",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBWDN",
+    "name": "Widnes",
+    "city": "Widnes",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBWOR",
+    "name": "Workington",
+    "city": "Workington",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GBYVZ",
+    "name": "Stonehouse",
+    "city": "Stonehouse",
+    "country": "United Kingdom"
+  },
+  {
+    "code": "GDSTG",
+    "name": "Saint George's",
+    "city": "Saint George's",
+    "country": "Grenada"
+  },
+  {
+    "code": "GEBUS",
+    "name": "Batumi",
+    "city": "Batumi",
+    "country": "Georgia"
+  },
+  {
+    "code": "GEPTI",
+    "name": "Poti",
+    "city": "Poti",
+    "country": "Georgia"
+  },
+  {
+    "code": "GETBS",
+    "name": "Tbilisi",
+    "city": "Tbilisi",
+    "country": "Georgia"
+  },
+  {
+    "code": "GFCAY",
+    "name": "Cayenne",
+    "city": "Cayenne",
+    "country": "French Guiana"
+  },
+  {
+    "code": "GFDDC",
+    "name": "Degrad des Cannes",
+    "city": "Dégrad des Cannes",
+    "country": "French Guiana"
+  },
+  {
+    "code": "GHTEM",
+    "name": "Tema",
+    "city": "Tema",
+    "country": "Ghana"
+  },
+  {
+    "code": "GHTKD",
+    "name": "Takoradi",
+    "city": "Takoradi",
+    "country": "Ghana"
+  },
+  {
+    "code": "GIGIB",
+    "name": "Gibraltar",
+    "city": "Gibraltar",
+    "country": "Gibraltar"
+  },
+  {
+    "code": "GMBJL",
+    "name": "Banjul",
+    "city": "Banjul",
+    "country": "Gambia"
+  },
+  {
+    "code": "GNCKY",
+    "name": "Conakry",
+    "city": "Conakry",
+    "country": "Guinea"
+  },
+  {
+    "code": "GPBBR",
+    "name": "Basse-Terre",
+    "city": "Basse-Terre",
+    "country": "Guadeloupe"
+  },
+  {
+    "code": "GPGUS",
+    "name": "Gustavia",
+    "city": "Gustavia",
+    "country": "Guadeloupe"
+  },
+  {
+    "code": "GPPTP",
+    "name": "Pointe-a-Pitre",
+    "city": "Pointe-à-Pitre",
+    "country": "Guadeloupe"
+  },
+  {
+    "code": "GPSBH",
+    "name": "Saint Barthelemy",
+    "city": "Saint Barthelemy",
+    "country": "Guadeloupe"
+  },
+  {
+    "code": "GQBSG",
+    "name": "Bata",
+    "city": "Bata",
+    "country": "Equatorial Guinea"
+  },
+  {
+    "code": "GQSSG",
+    "name": "Malabo",
+    "city": "Malabo",
+    "country": "Equatorial Guinea"
+  },
+  {
+    "code": "GRAST",
+    "name": "Astakos",
+    "city": "Astakós",
+    "country": "Greece"
+  },
+  {
+    "code": "GREEU",
+    "name": "Eleusina",
+    "city": "Eleusina",
+    "country": "Greece"
+  },
+  {
+    "code": "GRHER",
+    "name": "Heraklion (Iraklion)",
+    "city": "Heraklion (Iraklion)",
+    "country": "Greece"
+  },
+  {
+    "code": "GRKAP",
+    "name": "Kapsalion (Kythira)",
+    "city": "Kapsalion (Kythira)",
+    "country": "Greece"
+  },
+  {
+    "code": "GRPIR",
+    "name": "Piraeus",
+    "city": "Piraeus",
+    "country": "Greece"
+  },
+  {
+    "code": "GRRHO",
+    "name": "Rhodes",
+    "city": "Rhodes",
+    "country": "Greece"
+  },
+  {
+    "code": "GRSKG",
+    "name": "Thessaloniki",
+    "city": "Thessaloníki",
+    "country": "Greece"
+  },
+  {
+    "code": "GRVOL",
+    "name": "Volos",
+    "city": "Vólos",
+    "country": "Greece"
+  },
+  {
+    "code": "GTCHR",
+    "name": "Champerico",
+    "city": "Champerico",
+    "country": "Guatemala"
+  },
+  {
+    "code": "GTGUA",
+    "name": "Guatemala City",
+    "city": "Guatemala City",
+    "country": "Guatemala"
+  },
+  {
+    "code": "GTPBR",
+    "name": "Puerto Barrios",
+    "city": "Puerto Barrios",
+    "country": "Guatemala"
+  },
+  {
+    "code": "GTPRQ",
+    "name": "Puerto Quetzal",
+    "city": "Puerto Quetzal",
+    "country": "Guatemala"
+  },
+  {
+    "code": "GTSTC",
+    "name": "Puerto Santo Tomas de Castilla",
+    "city": "Puerto Santo Tomás de Castilla",
+    "country": "Guatemala"
+  },
+  {
+    "code": "GUGUM",
+    "name": "Guam",
+    "city": "Guam",
+    "country": "Guam"
+  },
+  {
+    "code": "GWOXB",
+    "name": "Bissau",
+    "city": "Bissau",
+    "country": "Guinea-Bissau"
+  },
+  {
+    "code": "GYGEO",
+    "name": "Georgetown",
+    "city": "Georgetown",
+    "country": "Guyana"
+  },
+  {
+    "code": "HKHKG",
+    "name": "Hong Kong",
+    "city": "Hong Kong",
+    "country": "Hong Kong"
+  },
+  {
+    "code": "HNAMP",
+    "name": "Amapala",
+    "city": "Amapala",
+    "country": "Honduras"
+  },
+  {
+    "code": "HNLCE",
+    "name": "La Ceiba",
+    "city": "La Ceiba",
+    "country": "Honduras"
+  },
+  {
+    "code": "HNPCA",
+    "name": "Puerto Castilla",
+    "city": "Puerto Castilla",
+    "country": "Honduras"
+  },
+  {
+    "code": "HNPCR",
+    "name": "Puerto Cortes",
+    "city": "Puerto Cortés",
+    "country": "Honduras"
+  },
+  {
+    "code": "HNRTB",
+    "name": "Roatan",
+    "city": "Roatán",
+    "country": "Honduras"
+  },
+  {
+    "code": "HNSLO",
+    "name": "San Lorenzo",
+    "city": "San Lorenzo",
+    "country": "Honduras"
+  },
+  {
+    "code": "HNTEA",
+    "name": "Tela",
+    "city": "Tela",
+    "country": "Honduras"
+  },
+  {
+    "code": "HNTGU",
+    "name": "Tegucigalpa",
+    "city": "Tegucigalpa",
+    "country": "Honduras"
+  },
+  {
+    "code": "HRDBV",
+    "name": "Dubrovnik",
+    "city": "Dubrovnik",
+    "country": "Croatia"
+  },
+  {
+    "code": "HRLST",
+    "name": "Lastovo",
+    "city": "Lastovo",
+    "country": "Croatia"
+  },
+  {
+    "code": "HRPLE",
+    "name": "Ploce",
+    "city": "Ploce",
+    "country": "Croatia"
+  },
+  {
+    "code": "HRRJK",
+    "name": "Rijeka",
+    "city": "Rijeka",
+    "country": "Croatia"
+  },
+  {
+    "code": "HRSPU",
+    "name": "Split",
+    "city": "Split",
+    "country": "Croatia"
+  },
+  {
+    "code": "HTCAP",
+    "name": "Cap-Haitien",
+    "city": "Cap-Haïtien",
+    "country": "Haiti"
+  },
+  {
+    "code": "HTPAP",
+    "name": "Port-au-Prince",
+    "city": "Port-au-Prince",
+    "country": "Haiti"
+  },
+  {
+    "code": "HUBUD",
+    "name": "Budapest",
+    "city": "Budapest",
+    "country": "Hungary"
+  },
+  {
+    "code": "IDAMA",
+    "name": "Amamapare, Ij",
+    "city": "Amamapare, Ij",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBDJ",
+    "name": "Banjarmasin",
+    "city": "Banjarmasin",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBIT",
+    "name": "Bitung, Sulawesi",
+    "city": "Bitung, Sulawesi",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBLW",
+    "name": "Belawan, Sumatra",
+    "city": "Belawan, Sumatra",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBNT",
+    "name": "Belanak Terminal",
+    "city": "Belanak Terminal",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBPN",
+    "name": "Balikpapan",
+    "city": "Balikpapan",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBTM",
+    "name": "Batam Island",
+    "city": "Batam Island",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBUN",
+    "name": "Buatan",
+    "city": "Buatan",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDBUR",
+    "name": "Batu Ampal",
+    "city": "Batu Ampal",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDCIG",
+    "name": "Cigading",
+    "city": "Cigading",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDDJB",
+    "name": "Jambi, Sumatra",
+    "city": "Jambi, Sumatra",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDDJJ",
+    "name": "Jayapura, Irian Jaya",
+    "city": "Jayapura, Irian Jaya",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDJKT",
+    "name": "Jakarta, Java",
+    "city": "Jakarta, Java",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDKAB",
+    "name": "Kabil",
+    "city": "Kabil",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDLBM",
+    "name": "Lobam",
+    "city": "Lobam",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDMAK",
+    "name": "Makassar",
+    "city": "Makassar",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDMES",
+    "name": "Medan, Sumatra",
+    "city": "Medan, Sumatra",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDMRK",
+    "name": "Merak, Java",
+    "city": "Merak, Java",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDPDG",
+    "name": "Padang",
+    "city": "Padang",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDPJG",
+    "name": "Panjang (Lampung, Sumatra)",
+    "city": "Panjang (Lampung, Sumatra)",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDPKU",
+    "name": "Pekanbaru, Sumatra",
+    "city": "Pekanbaru, Sumatra",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDPLM",
+    "name": "Palembang, Sumatra",
+    "city": "Palembang, Sumatra",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDPNJ",
+    "name": "Panjang",
+    "city": "Panjang",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDPNK",
+    "name": "Pontianak, Kalimantan",
+    "city": "Pontianak, Kalimantan",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDPWG",
+    "name": "Perawang",
+    "city": "Perawang",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDSEQ",
+    "name": "Sungai Pakning, Sumatra",
+    "city": "Sungai Pakning, Sumatra",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDSRG",
+    "name": "Semarang",
+    "city": "Semarang",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDSRI",
+    "name": "Samarinda, Kalimantan",
+    "city": "Samarinda, Kalimantan",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDSUB",
+    "name": "Surabaya",
+    "city": "Surabaya",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDTAB",
+    "name": "Taboneo",
+    "city": "Taboneo",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDTBG",
+    "name": "Teluk Betung, Sumatra",
+    "city": "Teluk Betung, Sumatra",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDTPP",
+    "name": "Tanjung Priok",
+    "city": "Tanjung Priok",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDTTI",
+    "name": "Tebingtinggi",
+    "city": "Tebingtinggi",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IDUPG",
+    "name": "Ujung Pandang, Sulawesi",
+    "city": "Ujung Pandang, Sulawesi",
+    "country": "Indonesia"
+  },
+  {
+    "code": "IEDRO",
+    "name": "Drogheda",
+    "city": "Drogheda",
+    "country": "Ireland"
+  },
+  {
+    "code": "IEDUB",
+    "name": "Dublin",
+    "city": "Dublin",
+    "country": "Ireland"
+  },
+  {
+    "code": "IEFOV",
+    "name": "Foynes",
+    "city": "Foynes",
+    "country": "Ireland"
+  },
+  {
+    "code": "IEGWY",
+    "name": "Galway",
+    "city": "Galway",
+    "country": "Ireland"
+  },
+  {
+    "code": "IEKLN",
+    "name": "Kinsale",
+    "city": "Kinsale",
+    "country": "Ireland"
+  },
+  {
+    "code": "IEORK",
+    "name": "Cork",
+    "city": "Cork",
+    "country": "Ireland"
+  },
+  {
+    "code": "IEWAT",
+    "name": "Waterford",
+    "city": "Waterford",
+    "country": "Ireland"
+  },
+  {
+    "code": "ILASH",
+    "name": "Ashdod",
+    "city": "Ashdod",
+    "country": "Israel"
+  },
+  {
+    "code": "ILHAD",
+    "name": "Hadera",
+    "city": "Hadera",
+    "country": "Israel"
+  },
+  {
+    "code": "ILHFA",
+    "name": "Haifa",
+    "city": "Haifa",
+    "country": "Israel"
+  },
+  {
+    "code": "ILNAT",
+    "name": "Netanya",
+    "city": "Netanya",
+    "country": "Israel"
+  },
+  {
+    "code": "ILRMG",
+    "name": "Ramat Gan",
+    "city": "Ramat Gan",
+    "country": "Israel"
+  },
+  {
+    "code": "ILTLV",
+    "name": "Tel Aviv-Yafo",
+    "city": "Tel Aviv-Yafo",
+    "country": "Israel"
+  },
+  {
+    "code": "INAGR",
+    "name": "Agra",
+    "city": "Agra",
+    "country": "India"
+  },
+  {
+    "code": "INAMD",
+    "name": "Ahmedabad",
+    "city": "Ahmedabad",
+    "country": "India"
+  },
+  {
+    "code": "INBLR",
+    "name": "Bangalore",
+    "city": "Bangalore",
+    "country": "India"
+  },
+  {
+    "code": "INBOM",
+    "name": "Mumbai (ex Bombay)",
+    "city": "Mumbai (ex Bombay)",
+    "country": "India"
+  },
+  {
+    "code": "INCCU",
+    "name": "Kolkata (ex Calcutta)",
+    "city": "Kolkata (ex Calcutta)",
+    "country": "India"
+  },
+  {
+    "code": "INCDL",
+    "name": "Cuddalore",
+    "city": "Cuddalore",
+    "country": "India"
+  },
+  {
+    "code": "INCJB",
+    "name": "Coimbatore",
+    "city": "Coimbatore",
+    "country": "India"
+  },
+  {
+    "code": "INCOK",
+    "name": "Cochin",
+    "city": "Cochin",
+    "country": "India"
+  },
+  {
+    "code": "INDAM",
+    "name": "Daman",
+    "city": "Daman",
+    "country": "India"
+  },
+  {
+    "code": "INDRI",
+    "name": "Dadri",
+    "city": "Dadri",
+    "country": "India"
+  },
+  {
+    "code": "INGOI",
+    "name": "Goa",
+    "city": "Goa",
+    "country": "India"
+  },
+  {
+    "code": "INHAL",
+    "name": "Haldia",
+    "city": "Haldia",
+    "country": "India"
+  },
+  {
+    "code": "INHYD",
+    "name": "Hyderabad",
+    "city": "Hyderabad",
+    "country": "India"
+  },
+  {
+    "code": "INICD",
+    "name": "New Delhi",
+    "city": "New Delhi",
+    "country": "India"
+  },
+  {
+    "code": "INIXE",
+    "name": "Mangalore",
+    "city": "Mangalore",
+    "country": "India"
+  },
+  {
+    "code": "INIXY",
+    "name": "Kandla",
+    "city": "Kandla",
+    "country": "India"
+  },
+  {
+    "code": "INJAI",
+    "name": "Jaipur",
+    "city": "Jaipur",
+    "country": "India"
+  },
+  {
+    "code": "INJDH",
+    "name": "Jodhpur",
+    "city": "Jodhpur",
+    "country": "India"
+  },
+  {
+    "code": "INKAK",
+    "name": "Kakinada",
+    "city": "Kakinada",
+    "country": "India"
+  },
+  {
+    "code": "INKNU",
+    "name": "Kanpur",
+    "city": "Kanpur",
+    "country": "India"
+  },
+  {
+    "code": "INKRI",
+    "name": "Krishnapatnam",
+    "city": "Krishnapatnam",
+    "country": "India"
+  },
+  {
+    "code": "INLUH",
+    "name": "Ludhiana",
+    "city": "Ludhiana",
+    "country": "India"
+  },
+  {
+    "code": "INMAA",
+    "name": "Chennai (ex Madras)",
+    "city": "Chennai (ex Madras)",
+    "country": "India"
+  },
+  {
+    "code": "INMOR",
+    "name": "Moradabad",
+    "city": "Moradabad",
+    "country": "India"
+  },
+  {
+    "code": "INMRM",
+    "name": "Marmagao (Marmugao)",
+    "city": "Marmagao (Marmugao)",
+    "country": "India"
+  },
+  {
+    "code": "INMUN",
+    "name": "Mundra",
+    "city": "Mundra",
+    "country": "India"
+  },
+  {
+    "code": "INNAG",
+    "name": "Nagpur",
+    "city": "Nagpur",
+    "country": "India"
+  },
+  {
+    "code": "INNSA",
+    "name": "Jawaharlal Nehru (Nhava Sheva)",
+    "city": "Jawaharlal Nehru (Nhava Sheva)",
+    "country": "India"
+  },
+  {
+    "code": "INPAP",
+    "name": "Panipat",
+    "city": "Panipat",
+    "country": "India"
+  },
+  {
+    "code": "INPAV",
+    "name": "Pipavav (Victor) Port",
+    "city": "Pipavav (Victor)",
+    "country": "India"
+  },
+  {
+    "code": "INPIR",
+    "name": "Pithampur",
+    "city": "Pithampur",
+    "country": "India"
+  },
+  {
+    "code": "INPNQ",
+    "name": "Pune",
+    "city": "Pune",
+    "country": "India"
+  },
+  {
+    "code": "INSTV",
+    "name": "Surat",
+    "city": "Surat",
+    "country": "India"
+  },
+  {
+    "code": "INTUT",
+    "name": "Tuticorin",
+    "city": "Tuticorin",
+    "country": "India"
+  },
+  {
+    "code": "INVTZ",
+    "name": "Visakhapatnam",
+    "city": "Visakhapatnam",
+    "country": "India"
+  },
+  {
+    "code": "INVVA",
+    "name": "Veraval",
+    "city": "Veraval",
+    "country": "India"
+  },
+  {
+    "code": "IQUQR",
+    "name": "Umm Qasr Port",
+    "city": "Umm Qasr",
+    "country": "Iraq"
+  },
+  {
+    "code": "IRBKM",
+    "name": "Bandar Khomeini",
+    "city": "Bandar Khomeini",
+    "country": "Iran, Islamic Republic of"
+  },
+  {
+    "code": "IRBND",
+    "name": "Bandar Abbas",
+    "city": "Bandar Abbas",
+    "country": "Iran, Islamic Republic of"
+  },
+  {
+    "code": "IRBUZ",
+    "name": "Bushehr",
+    "city": "Bushehr",
+    "country": "Iran, Islamic Republic of"
+  },
+  {
+    "code": "IRKHO",
+    "name": "Khorramshahr",
+    "city": "Khorramshahr",
+    "country": "Iran, Islamic Republic of"
+  },
+  {
+    "code": "IRZBR",
+    "name": "Chah Bahar",
+    "city": "Chah Bahar",
+    "country": "Iran, Islamic Republic of"
+  },
+  {
+    "code": "ISESK",
+    "name": "Eskifjordur - hofn",
+    "city": "Eskifjørdur - høfn",
+    "country": "Iceland"
+  },
+  {
+    "code": "ISGRT",
+    "name": "Grundartangi",
+    "city": "Grundartangi",
+    "country": "Iceland"
+  },
+  {
+    "code": "ISREY",
+    "name": "Reykjavik",
+    "city": "Reykjavík",
+    "country": "Iceland"
+  },
+  {
+    "code": "ITAOI",
+    "name": "Ancona",
+    "city": "Ancona",
+    "country": "Italy"
+  },
+  {
+    "code": "ITAUG",
+    "name": "Augusta",
+    "city": "Augusta",
+    "country": "Italy"
+  },
+  {
+    "code": "ITBRI",
+    "name": "Bari",
+    "city": "Bari",
+    "country": "Italy"
+  },
+  {
+    "code": "ITCAG",
+    "name": "Cagliari",
+    "city": "Cagliari",
+    "country": "Italy"
+  },
+  {
+    "code": "ITCRV",
+    "name": "Crotone",
+    "city": "Crotone",
+    "country": "Italy"
+  },
+  {
+    "code": "ITCTA",
+    "name": "Catania",
+    "city": "Catania",
+    "country": "Italy"
+  },
+  {
+    "code": "ITCVV",
+    "name": "Civitavecchia",
+    "city": "Civitavecchia",
+    "country": "Italy"
+  },
+  {
+    "code": "ITFAE",
+    "name": "Faenza",
+    "city": "Faenza",
+    "country": "Italy"
+  },
+  {
+    "code": "ITGAE",
+    "name": "Gaeta",
+    "city": "Gaeta",
+    "country": "Italy"
+  },
+  {
+    "code": "ITGIT",
+    "name": "Gioia Tauro",
+    "city": "Gioia Tauro",
+    "country": "Italy"
+  },
+  {
+    "code": "ITGOA",
+    "name": "Genova",
+    "city": "Genova",
+    "country": "Italy"
+  },
+  {
+    "code": "ITLIV",
+    "name": "Livorno",
+    "city": "Livorno",
+    "country": "Italy"
+  },
+  {
+    "code": "ITMIL",
+    "name": "Milano",
+    "city": "Milano",
+    "country": "Italy"
+  },
+  {
+    "code": "ITMNF",
+    "name": "Monfalcone",
+    "city": "Monfalcone",
+    "country": "Italy"
+  },
+  {
+    "code": "ITMOD",
+    "name": "Modena",
+    "city": "Modena",
+    "country": "Italy"
+  },
+  {
+    "code": "ITNAP",
+    "name": "Napoli",
+    "city": "Napoli",
+    "country": "Italy"
+  },
+  {
+    "code": "ITPDA",
+    "name": "Padova",
+    "city": "Padova",
+    "country": "Italy"
+  },
+  {
+    "code": "ITPES",
+    "name": "Pesaro",
+    "city": "Pesaro",
+    "country": "Italy"
+  },
+  {
+    "code": "ITPGA",
+    "name": "Porto Garibaldi",
+    "city": "Porto Garibaldi",
+    "country": "Italy"
+  },
+  {
+    "code": "ITPMO",
+    "name": "Palermo",
+    "city": "Palermo",
+    "country": "Italy"
+  },
+  {
+    "code": "ITPRJ",
+    "name": "Capri",
+    "city": "Capri",
+    "country": "Italy"
+  },
+  {
+    "code": "ITPSR",
+    "name": "Pescara",
+    "city": "Pescara",
+    "country": "Italy"
+  },
+  {
+    "code": "ITPVE",
+    "name": "Portoscuso (Porto Vesme)",
+    "city": "Portoscuso (Porto Vesme)",
+    "country": "Italy"
+  },
+  {
+    "code": "ITRAN",
+    "name": "Ravenna",
+    "city": "Ravenna",
+    "country": "Italy"
+  },
+  {
+    "code": "ITSAL",
+    "name": "Salerno",
+    "city": "Salerno",
+    "country": "Italy"
+  },
+  {
+    "code": "ITSPE",
+    "name": "La Spezia",
+    "city": "La Spezia",
+    "country": "Italy"
+  },
+  {
+    "code": "ITSVN",
+    "name": "Savona",
+    "city": "Savona",
+    "country": "Italy"
+  },
+  {
+    "code": "ITTAR",
+    "name": "Taranto",
+    "city": "Taranto",
+    "country": "Italy"
+  },
+  {
+    "code": "ITTPS",
+    "name": "Trapani",
+    "city": "Trapani",
+    "country": "Italy"
+  },
+  {
+    "code": "ITTRN",
+    "name": "Torino",
+    "city": "Torino",
+    "country": "Italy"
+  },
+  {
+    "code": "ITTRS",
+    "name": "Trieste",
+    "city": "Trieste",
+    "country": "Italy"
+  },
+  {
+    "code": "ITVCE",
+    "name": "Venezia",
+    "city": "Venezia",
+    "country": "Italy"
+  },
+  {
+    "code": "ITVDL",
+    "name": "Vado Ligure",
+    "city": "Vado Ligure",
+    "country": "Italy"
+  },
+  {
+    "code": "ITVIA",
+    "name": "Viareggio",
+    "city": "Viareggio",
+    "country": "Italy"
+  },
+  {
+    "code": "JMKIN",
+    "name": "Kingston",
+    "city": "Kingston",
+    "country": "Jamaica"
+  },
+  {
+    "code": "JMMBJ",
+    "name": "Montego Bay",
+    "city": "Montego Bay",
+    "country": "Jamaica"
+  },
+  {
+    "code": "JMOCJ",
+    "name": "Ocho Rios",
+    "city": "Ocho Rios",
+    "country": "Jamaica"
+  },
+  {
+    "code": "JMPKS",
+    "name": "Port Kaiser",
+    "city": "Port Kaiser",
+    "country": "Jamaica"
+  },
+  {
+    "code": "JOAQJ",
+    "name": "Al 'Aqabah",
+    "city": "Al 'Aqabah",
+    "country": "Jordan"
+  },
+  {
+    "code": "JPABU",
+    "name": "Aburatsu",
+    "city": "Aburatsu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPAOJ",
+    "name": "Aomori",
+    "city": "Aomori",
+    "country": "Japan"
+  },
+  {
+    "code": "JPAXT",
+    "name": "Akita",
+    "city": "Akita",
+    "country": "Japan"
+  },
+  {
+    "code": "JPCHB",
+    "name": "Chiba",
+    "city": "Chiba",
+    "country": "Japan"
+  },
+  {
+    "code": "JPFKY",
+    "name": "Fukuyama, Hiroshima",
+    "city": "Fukuyama, Hiroshima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHHE",
+    "name": "Hachinohe",
+    "city": "Hachinohe",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHIB",
+    "name": "Hibi",
+    "city": "Hibi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHIC",
+    "name": "Hitachinaka",
+    "city": "Hitachinaka",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHIJ",
+    "name": "Hiroshima",
+    "city": "Hiroshima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHIM",
+    "name": "Himeji",
+    "city": "Himeji",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHIS",
+    "name": "Hikoshima",
+    "city": "Hikoshima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHKD",
+    "name": "Hakodate",
+    "city": "Hakodate",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHKT",
+    "name": "Hakata/Fukuoka",
+    "city": "Hakata/Fukuoka",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHMD",
+    "name": "Hamada",
+    "city": "Hamada",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHMM",
+    "name": "Hamamatsu",
+    "city": "Hamamatsu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHSM",
+    "name": "Hososhima",
+    "city": "Hososhima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPHTC",
+    "name": "Hitachi",
+    "city": "Hitachi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPIHA",
+    "name": "Niihama",
+    "city": "Niihama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPIMB",
+    "name": "Imabari",
+    "city": "Imabari",
+    "country": "Japan"
+  },
+  {
+    "code": "JPIMI",
+    "name": "Imari",
+    "city": "Imari",
+    "country": "Japan"
+  },
+  {
+    "code": "JPISG",
+    "name": "Ishigaki",
+    "city": "Ishigaki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPISI",
+    "name": "Ishikari",
+    "city": "Ishikari",
+    "country": "Japan"
+  },
+  {
+    "code": "JPISM",
+    "name": "Ishinomaki",
+    "city": "Ishinomaki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPISS",
+    "name": "Isa",
+    "city": "Isa",
+    "country": "Japan"
+  },
+  {
+    "code": "JPIWK",
+    "name": "Iwakuni",
+    "city": "Iwakuni",
+    "country": "Japan"
+  },
+  {
+    "code": "JPIYM",
+    "name": "Iyomishima",
+    "city": "Iyomishima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKCZ",
+    "name": "Kochi",
+    "city": "Kochi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKGA",
+    "name": "Kakogawa",
+    "city": "Kakogawa",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKIJ",
+    "name": "Niigata",
+    "city": "Niigata",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKMJ",
+    "name": "Kumamoto",
+    "city": "Kumamoto",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKND",
+    "name": "Kanda, Fukuoka",
+    "city": "Kanda, Fukuoka",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKNU",
+    "name": "Kinuura",
+    "city": "Kinuura",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKNZ",
+    "name": "Kanazawa",
+    "city": "Kanazawa",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKOJ",
+    "name": "Kagoshima",
+    "city": "Kagoshima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKRE",
+    "name": "Kure, Hiroshima",
+    "city": "Kure, Hiroshima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKSM",
+    "name": "Kashima, Ibaraki",
+    "city": "Kashima, Ibaraki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKUH",
+    "name": "Kushiro",
+    "city": "Kushiro",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKWS",
+    "name": "Kawasaki",
+    "city": "Kawasaki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPKZU",
+    "name": "Kisarazu",
+    "city": "Kisarazu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPMAI",
+    "name": "Maizuru",
+    "city": "Maizuru",
+    "country": "Japan"
+  },
+  {
+    "code": "JPMII",
+    "name": "Miike, Fukuoka",
+    "city": "Miike",
+    "country": "Japan"
+  },
+  {
+    "code": "JPMOJ",
+    "name": "Moji/Kitakyushu",
+    "city": "Moji/Kitakyushu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPMTR",
+    "name": "Mutsure",
+    "city": "Mutsure",
+    "country": "Japan"
+  },
+  {
+    "code": "JPMUR",
+    "name": "Muroran",
+    "city": "Muroran",
+    "country": "Japan"
+  },
+  {
+    "code": "JPMYJ",
+    "name": "Matsuyama",
+    "city": "Matsuyama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPNAH",
+    "name": "Naha, Okinawa",
+    "city": "Naha, Okinawa",
+    "country": "Japan"
+  },
+  {
+    "code": "JPNAN",
+    "name": "Nakanoseki",
+    "city": "Nakanoseki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPNAO",
+    "name": "Naoetsu",
+    "city": "Naoetsu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPNAS",
+    "name": "Naoshima",
+    "city": "Naoshima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPNGO",
+    "name": "Nagoya, Aichi",
+    "city": "Nagoya, Aichi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPNGS",
+    "name": "Nagasaki",
+    "city": "Nagasaki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPOIT",
+    "name": "Oita",
+    "city": "Oita",
+    "country": "Japan"
+  },
+  {
+    "code": "JPOKA",
+    "name": "Okinawa",
+    "city": "Okinawa",
+    "country": "Japan"
+  },
+  {
+    "code": "JPOMZ",
+    "name": "Omaezaki",
+    "city": "Omaezaki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPONA",
+    "name": "Onahama",
+    "city": "Onahama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPONO",
+    "name": "Onomichi",
+    "city": "Onomichi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPOSA",
+    "name": "Osaka",
+    "city": "Osaka",
+    "country": "Japan"
+  },
+  {
+    "code": "JPOTK",
+    "name": "Otake",
+    "city": "Otake",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSAG",
+    "name": "Saganoseki",
+    "city": "Saganoseki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSBS",
+    "name": "Shibushi",
+    "city": "Shibushi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSDJ",
+    "name": "Sendai, Miyagi",
+    "city": "Sendai, Miyagi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSDS",
+    "name": "Sendaishinko",
+    "city": "Sendaishinko",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSDU",
+    "name": "Sodegaura",
+    "city": "Sodegaura",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSEN",
+    "name": "Satsumasendai",
+    "city": "Satsumasendai",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSHS",
+    "name": "Shimonoseki",
+    "city": "Shimonoseki",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSKD",
+    "name": "Sakaide",
+    "city": "Sakaide",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSKM",
+    "name": "Shikama",
+    "city": "Shikama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSKT",
+    "name": "Sakata",
+    "city": "Sakata",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSMA",
+    "name": "Souma",
+    "city": "Souma",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSMN",
+    "name": "Sakaiminato",
+    "city": "Sakaiminato",
+    "country": "Japan"
+  },
+  {
+    "code": "JPSMZ",
+    "name": "Shimizu",
+    "city": "Shimizu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTAK",
+    "name": "Takamatsu",
+    "city": "Takamatsu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTBT",
+    "name": "Tobata/Kitakyushu",
+    "city": "Tobata/Kitakyushu",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTGO",
+    "name": "Tagonoura",
+    "city": "Tagonoura",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTHS",
+    "name": "Toyohashi",
+    "city": "Toyohashi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTKS",
+    "name": "Tokushima",
+    "city": "Tokushima",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTKY",
+    "name": "Tokuyama",
+    "city": "Tokuyama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTMI",
+    "name": "Tsukumi",
+    "city": "Tsukumi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTMK",
+    "name": "Tomakomai",
+    "city": "Tomakomai",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTND",
+    "name": "Tonda",
+    "city": "Tonda",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTOK",
+    "name": "Tokachi",
+    "city": "Tokachi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTOS",
+    "name": "Toyamashinko",
+    "city": "Toyamashinko",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTOY",
+    "name": "Toyama",
+    "city": "Toyama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTRG",
+    "name": "Tsuruga",
+    "city": "Tsuruga",
+    "country": "Japan"
+  },
+  {
+    "code": "JPTYO",
+    "name": "Tokyo",
+    "city": "Tokyo",
+    "country": "Japan"
+  },
+  {
+    "code": "JPUBJ",
+    "name": "Ube",
+    "city": "Ube",
+    "country": "Japan"
+  },
+  {
+    "code": "JPUKB",
+    "name": "Kobe",
+    "city": "Kobe",
+    "country": "Japan"
+  },
+  {
+    "code": "JPUNT",
+    "name": "Unten",
+    "city": "Unten",
+    "country": "Japan"
+  },
+  {
+    "code": "JPWAK",
+    "name": "Wakayama",
+    "city": "Wakayama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPYAT",
+    "name": "Yatsushiro",
+    "city": "Yatsushiro",
+    "country": "Japan"
+  },
+  {
+    "code": "JPYKK",
+    "name": "Yokkaichi",
+    "city": "Yokkaichi",
+    "country": "Japan"
+  },
+  {
+    "code": "JPYOK",
+    "name": "Yokohama",
+    "city": "Yokohama",
+    "country": "Japan"
+  },
+  {
+    "code": "JPYOS",
+    "name": "Yokosuka",
+    "city": "Yokosuka",
+    "country": "Japan"
+  },
+  {
+    "code": "JPYWT",
+    "name": "Yawata/Kitakyushu",
+    "city": "Yawata/Kitakyushu",
+    "country": "Japan"
+  },
+  {
+    "code": "KEMBA",
+    "name": "Mombasa",
+    "city": "Mombasa",
+    "country": "Kenya"
+  },
+  {
+    "code": "KENBO",
+    "name": "Nairobi",
+    "city": "Nairobi",
+    "country": "Kenya"
+  },
+  {
+    "code": "KHKOS",
+    "name": "Kampong Saom",
+    "city": "Kâmpóng Saôm",
+    "country": "Cambodia"
+  },
+  {
+    "code": "KHPNH",
+    "name": "Phnom Penh",
+    "city": "Phnom Penh",
+    "country": "Cambodia"
+  },
+  {
+    "code": "KITRW",
+    "name": "Tarawa",
+    "city": "Tarawa",
+    "country": "Kiribati"
+  },
+  {
+    "code": "KMMUT",
+    "name": "Mutsamudu, Anjouan",
+    "city": "Mutsamudu, Anjouan",
+    "country": "Comoros"
+  },
+  {
+    "code": "KMYVA",
+    "name": "Moroni",
+    "city": "Moroni",
+    "country": "Comoros"
+  },
+  {
+    "code": "KNBAS",
+    "name": "Basseterre, Saint Kitts",
+    "city": "Basseterre, Saint Kitts",
+    "country": "Saint Kitts and Nevis"
+  },
+  {
+    "code": "KNNEV",
+    "name": "Nevis",
+    "city": "Nevis",
+    "country": "Saint Kitts and Nevis"
+  },
+  {
+    "code": "KPCHO",
+    "name": "Chongjin",
+    "city": "Chongjin",
+    "country": "Korea, Democratic People's Republic of"
+  },
+  {
+    "code": "KPWON",
+    "name": "Wonsan",
+    "city": "Wonsan",
+    "country": "Korea, Democratic People's Republic of"
+  },
+  {
+    "code": "KRCHA",
+    "name": "Jeju",
+    "city": "Jeju",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRCHF",
+    "name": "Jinhae",
+    "city": "Jinhae",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRCHG",
+    "name": "Janghang/Seocheon-gun",
+    "city": "Janghang/Seocheon-gun",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRCHO",
+    "name": "Cheonan",
+    "city": "Cheonan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRCHU",
+    "name": "Chungju",
+    "city": "Chungju",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRCHW",
+    "name": "Changwon",
+    "city": "Changwon",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRCWO",
+    "name": "Cheongwon-gun",
+    "city": "Cheongwon-gun",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRGYG",
+    "name": "Goyang",
+    "city": "Goyang",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRHIN",
+    "name": "Jinju",
+    "city": "Jinju",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRHYG",
+    "name": "Hamyang-gun",
+    "city": "Hamyang-gun",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRHYP",
+    "name": "Hyeonpoong/Daegu",
+    "city": "Hyeonpoong/Daegu",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRICH",
+    "name": "Incheon",
+    "city": "Incheon",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRINC",
+    "name": "Incheon",
+    "city": "Incheon",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRJEO",
+    "name": "Jeongeup",
+    "city": "Jeongeup",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRJGE",
+    "name": "Geoje",
+    "city": "Geoje",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRJHG",
+    "name": "Jangheung-gun",
+    "city": "Jangheung-gun",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKAN",
+    "name": "Gwangyang",
+    "city": "Gwangyang",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKJE",
+    "name": "Geoje",
+    "city": "Geoje",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKMC",
+    "name": "Gimcheon",
+    "city": "Gimcheon",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKPO",
+    "name": "Pohang",
+    "city": "Pohang",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKUM",
+    "name": "Gumi",
+    "city": "Gumi",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKUV",
+    "name": "Gunsan",
+    "city": "Gunsan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKWJ",
+    "name": "Gwangju",
+    "city": "Gwangju",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRKWU",
+    "name": "Gwangju",
+    "city": "Gwangju",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRMAS",
+    "name": "Masan",
+    "city": "Masan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRMOK",
+    "name": "Mokpo",
+    "city": "Mokpo",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRNYJ",
+    "name": "Namyang/Goheung-gun",
+    "city": "Namyang/Goheung-gun",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRNYU",
+    "name": "Namyangju",
+    "city": "Namyangju",
+    "country": "South Korea"
+  },
+  {
+    "code": "KROKP",
+    "name": "Okpo/Geoje",
+    "city": "Okpo/Geoje",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRONS",
+    "name": "Onsan/Ulsan",
+    "city": "Onsan/Ulsan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRPUS",
+    "name": "Busan",
+    "city": "Busan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRSCP",
+    "name": "Samcheonpo/Sacheon",
+    "city": "Samcheonpo/Sacheon",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRSEL",
+    "name": "Seoul",
+    "city": "Seoul",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRSSA",
+    "name": "Seosan",
+    "city": "Seosan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRTAE",
+    "name": "Daegu",
+    "city": "Daegu",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRTJN",
+    "name": "Daejeon",
+    "city": "Daejeon",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRTYG",
+    "name": "Tongyeong",
+    "city": "Tongyeong",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRUSN",
+    "name": "Ulsan",
+    "city": "Ulsan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRYES",
+    "name": "Yesan",
+    "city": "Yesan",
+    "country": "South Korea"
+  },
+  {
+    "code": "KRYOS",
+    "name": "Yeosu",
+    "city": "Yeosu",
+    "country": "South Korea"
+  },
+  {
+    "code": "KWKWI",
+    "name": "Kuwait",
+    "city": "Kuwait",
+    "country": "Kuwait"
+  },
+  {
+    "code": "KWSAA",
+    "name": "Shuaiba",
+    "city": "Shuaiba",
+    "country": "Kuwait"
+  },
+  {
+    "code": "KWSWK",
+    "name": "Shuwaikh",
+    "city": "Shuwaikh",
+    "country": "Kuwait"
+  },
+  {
+    "code": "KYGCM",
+    "name": "Grand Cayman",
+    "city": "Grand Cayman",
+    "country": "Cayman Islands"
+  },
+  {
+    "code": "KYGEC",
+    "name": "Georgetown, Grand Cayman",
+    "city": "Georgetown, Grand Cayman",
+    "country": "Cayman Islands"
+  },
+  {
+    "code": "LBBEY",
+    "name": "Beirut",
+    "city": "Beirut",
+    "country": "Lebanon"
+  },
+  {
+    "code": "LBKYE",
+    "name": "Tripoli",
+    "city": "Tripoli",
+    "country": "Lebanon"
+  },
+  {
+    "code": "LCCAS",
+    "name": "Castries",
+    "city": "Castries",
+    "country": "Saint Lucia"
+  },
+  {
+    "code": "LCSLU",
+    "name": "Saint Lucia Apt",
+    "city": "Saint Lucia Apt",
+    "country": "Saint Lucia"
+  },
+  {
+    "code": "LCVIF",
+    "name": "Vieux Fort",
+    "city": "Vieux Fort",
+    "country": "Saint Lucia"
+  },
+  {
+    "code": "LKCMB",
+    "name": "Colombo",
+    "city": "Colombo",
+    "country": "Sri Lanka"
+  },
+  {
+    "code": "LRMLW",
+    "name": "Monrovia",
+    "city": "Monrovia",
+    "country": "Liberia"
+  },
+  {
+    "code": "LTKLJ",
+    "name": "Klaipeda",
+    "city": "Klaipeda",
+    "country": "Lithuania"
+  },
+  {
+    "code": "LVAIZ",
+    "name": "Aizkraukle",
+    "city": "Aizkraukle",
+    "country": "Latvia"
+  },
+  {
+    "code": "LVRIX",
+    "name": "Riga",
+    "city": "Riga",
+    "country": "Latvia"
+  },
+  {
+    "code": "LVSAL",
+    "name": "Salacgriva",
+    "city": "Salacgriva",
+    "country": "Latvia"
+  },
+  {
+    "code": "LVVNT",
+    "name": "Ventspils",
+    "city": "Ventspils",
+    "country": "Latvia"
+  },
+  {
+    "code": "LYBEN",
+    "name": "Bingazi (Benghazi)",
+    "city": "Bingazi (Benghazi)",
+    "country": "Libya"
+  },
+  {
+    "code": "LYKHO",
+    "name": "Al Khums",
+    "city": "Al Khums",
+    "country": "Libya"
+  },
+  {
+    "code": "LYMRA",
+    "name": "Misurata",
+    "city": "Misurata",
+    "country": "Libya"
+  },
+  {
+    "code": "LYTIP",
+    "name": "Tripoli",
+    "city": "Tripoli",
+    "country": "Libya"
+  },
+  {
+    "code": "MAAGA",
+    "name": "Agadir",
+    "city": "Agadir",
+    "country": "Morocco"
+  },
+  {
+    "code": "MACAS",
+    "name": "Casablanca",
+    "city": "Casablanca",
+    "country": "Morocco"
+  },
+  {
+    "code": "MAELJ",
+    "name": "El Jadida",
+    "city": "El Jadida",
+    "country": "Morocco"
+  },
+  {
+    "code": "MAMOH",
+    "name": "Mohammedia",
+    "city": "Mohammedia",
+    "country": "Morocco"
+  },
+  {
+    "code": "MANNA",
+    "name": "Kenitra (ex Port Lyautey)",
+    "city": "Kenitra (ex Port Lyautey)",
+    "country": "Morocco"
+  },
+  {
+    "code": "MAPTM",
+    "name": "Tanger Med",
+    "city": "Tanger Med",
+    "country": "Morocco"
+  },
+  {
+    "code": "MASFI",
+    "name": "Safi",
+    "city": "Safi",
+    "country": "Morocco"
+  },
+  {
+    "code": "MATNG",
+    "name": "Tangier",
+    "city": "Tangier",
+    "country": "Morocco"
+  },
+  {
+    "code": "MCMON",
+    "name": "Monaco",
+    "city": "Monaco",
+    "country": "Monaco"
+  },
+  {
+    "code": "MDGIU",
+    "name": "Giurgiulesti",
+    "city": "Giurgiulesti",
+    "country": "Moldova, Republic of"
+  },
+  {
+    "code": "MEBAR",
+    "name": "Bar",
+    "city": "Bar",
+    "country": "Montenegro"
+  },
+  {
+    "code": "MGDIE",
+    "name": "Antsiranana",
+    "city": "Antsiranana",
+    "country": "Madagascar"
+  },
+  {
+    "code": "MGEHL",
+    "name": "Ehoala",
+    "city": "Ehoala",
+    "country": "Madagascar"
+  },
+  {
+    "code": "MGMJN",
+    "name": "Majunga (Mahajanga)",
+    "city": "Majunga (Mahajanga)",
+    "country": "Madagascar"
+  },
+  {
+    "code": "MGNOS",
+    "name": "Nosy-Be",
+    "city": "Nosy-Be",
+    "country": "Madagascar"
+  },
+  {
+    "code": "MGTLE",
+    "name": "Tulear (Toliara)",
+    "city": "Tulear (Toliara)",
+    "country": "Madagascar"
+  },
+  {
+    "code": "MGTMM",
+    "name": "Tamatave (Toamasina)",
+    "city": "Tamatave (Toamasina)",
+    "country": "Madagascar"
+  },
+  {
+    "code": "MGTOA",
+    "name": "Toamasina",
+    "city": "Toamasina",
+    "country": "Madagascar"
+  },
+  {
+    "code": "MHMAJ",
+    "name": "Majuro",
+    "city": "Majuro",
+    "country": "Marshall Islands"
+  },
+  {
+    "code": "MLBKO",
+    "name": "Bamako",
+    "city": "Bamako",
+    "country": "Mali"
+  },
+  {
+    "code": "MMRGN",
+    "name": "Yangon",
+    "city": "Yangon",
+    "country": "Myanmar"
+  },
+  {
+    "code": "MOMFM",
+    "name": "Macau",
+    "city": "Macau",
+    "country": "Macao"
+  },
+  {
+    "code": "MPSPN",
+    "name": "Saipan",
+    "city": "Saipan",
+    "country": "Northern Mariana Islands"
+  },
+  {
+    "code": "MQFDF",
+    "name": "Fort-de-France",
+    "city": "Fort-de-France",
+    "country": "Martinique"
+  },
+  {
+    "code": "MRNDB",
+    "name": "Nouadhibou",
+    "city": "Nouadhibou",
+    "country": "Mauritania"
+  },
+  {
+    "code": "MRNKC",
+    "name": "Nouakchott",
+    "city": "Nouakchott",
+    "country": "Mauritania"
+  },
+  {
+    "code": "MTMAR",
+    "name": "Marsaxlokk",
+    "city": "Marsaxlokk",
+    "country": "Malta"
+  },
+  {
+    "code": "MTMGZ",
+    "name": "Mgarr, Gozo",
+    "city": "Mgarr, Gozo",
+    "country": "Malta"
+  },
+  {
+    "code": "MTMLA",
+    "name": "Valletta",
+    "city": "Valletta",
+    "country": "Malta"
+  },
+  {
+    "code": "MUPLU",
+    "name": "Port Louis",
+    "city": "Port Louis",
+    "country": "Mauritius"
+  },
+  {
+    "code": "MVMLE",
+    "name": "Male",
+    "city": "Male",
+    "country": "Maldives"
+  },
+  {
+    "code": "MWBLZ",
+    "name": "Blantyre",
+    "city": "Blantyre",
+    "country": "Malawi"
+  },
+  {
+    "code": "MXACA",
+    "name": "Acapulco",
+    "city": "Acapulco",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXATM",
+    "name": "Altamira",
+    "city": "Altamira",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXCOA",
+    "name": "Coatzacoalcos",
+    "city": "Coatzacoalcos",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXESE",
+    "name": "Ensenada",
+    "city": "Ensenada",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXGYM",
+    "name": "Guaymas",
+    "city": "Guaymas",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXMEX",
+    "name": "Ciudad de Mexico",
+    "city": "Ciudad de México",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXPGO",
+    "name": "Progreso",
+    "city": "Progreso",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXPMS",
+    "name": "Puerto Morelos",
+    "city": "Puerto Morelos",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXREX",
+    "name": "Reynosa",
+    "city": "Reynosa",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXSCX",
+    "name": "Salina Cruz",
+    "city": "Salina Cruz",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXTAM",
+    "name": "Tampico",
+    "city": "Tampico",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXTPB",
+    "name": "Topolobampo",
+    "city": "Topolobampo",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXVER",
+    "name": "Veracruz",
+    "city": "Veracruz",
+    "country": "Mexico"
+  },
+  {
+    "code": "MXZLO",
+    "name": "Manzanillo",
+    "city": "Manzanillo",
+    "country": "Mexico"
+  },
+  {
+    "code": "MYBKI",
+    "name": "Kota Kinabalu, Sabah",
+    "city": "Kota Kinabalu, Sabah",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYBTU",
+    "name": "Bintulu, Sarawak",
+    "city": "Bintulu, Sarawak",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYBWH",
+    "name": "Bagan Luar (Butterworth)",
+    "city": "Bagan Luar (Butterworth)",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYJHB",
+    "name": "Johor Bahru",
+    "city": "Johor Bahru",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYKCH",
+    "name": "Kuching, Sarawak",
+    "city": "Kuching, Sarawak",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYKUA",
+    "name": "Kuantan (Tanjong Gelang)",
+    "city": "Kuantan (Tanjong Gelang)",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYLBU",
+    "name": "Labuan, Sabah",
+    "city": "Labuan, Sabah",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYMEP",
+    "name": "Mersing",
+    "city": "Mersing",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYMKZ",
+    "name": "Malacca",
+    "city": "Malacca",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYMUA",
+    "name": "Muar",
+    "city": "Muar",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYMYY",
+    "name": "Miri, Sarawak",
+    "city": "Miri, Sarawak",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYPEN",
+    "name": "Penang (Georgetown)",
+    "city": "Penang (Georgetown)",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYPGU",
+    "name": "Pasir Gudang, Johor",
+    "city": "Pasir Gudang, Johor",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYPKG",
+    "name": "Port Klang (Pelabuhan Klang)",
+    "city": "Port Klang (Pelabuhan Klang)",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYSBW",
+    "name": "Sibu, Sarawak",
+    "city": "Sibu, Sarawak",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYSDK",
+    "name": "Sandakan, Sabah",
+    "city": "Sandakan, Sabah",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYTBA",
+    "name": "Tanjong Baran",
+    "city": "Tanjong Baran",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYTGG",
+    "name": "Kuala Terengganu",
+    "city": "Kuala Terengganu",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYTPP",
+    "name": "Tanjung Pelepas",
+    "city": "Tanjung Pelepas",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYTWU",
+    "name": "Tawau, Sabah",
+    "city": "Tawau, Sabah",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MYWSP",
+    "name": "Westport/Port Klang",
+    "city": "Westport/Port Klang",
+    "country": "Malaysia"
+  },
+  {
+    "code": "MZBEW",
+    "name": "Beira",
+    "city": "Beira",
+    "country": "Mozambique"
+  },
+  {
+    "code": "MZMNC",
+    "name": "Nacala",
+    "city": "Nacala",
+    "country": "Mozambique"
+  },
+  {
+    "code": "MZMPM",
+    "name": "Maputo",
+    "city": "Maputo",
+    "country": "Mozambique"
+  },
+  {
+    "code": "MZPOL",
+    "name": "Pemba",
+    "city": "Pemba",
+    "country": "Mozambique"
+  },
+  {
+    "code": "MZUEL",
+    "name": "Quelimane",
+    "city": "Quelimane",
+    "country": "Mozambique"
+  },
+  {
+    "code": "NALUD",
+    "name": "Luderitz",
+    "city": "Lüderitz",
+    "country": "Namibia"
+  },
+  {
+    "code": "NAWVB",
+    "name": "Walvis Bay",
+    "city": "Walvis Bay",
+    "country": "Namibia"
+  },
+  {
+    "code": "NCNOU",
+    "name": "Noumea",
+    "city": "Nouméa",
+    "country": "New Caledonia"
+  },
+  {
+    "code": "NGAPP",
+    "name": "Apapa",
+    "city": "Apapa",
+    "country": "Nigeria"
+  },
+  {
+    "code": "NGCBQ",
+    "name": "Calabar",
+    "city": "Calabar",
+    "country": "Nigeria"
+  },
+  {
+    "code": "NGLOS",
+    "name": "Lagos",
+    "city": "Lagos",
+    "country": "Nigeria"
+  },
+  {
+    "code": "NGONN",
+    "name": "Onne",
+    "city": "Onne",
+    "country": "Nigeria"
+  },
+  {
+    "code": "NGPHC",
+    "name": "Port Harcourt",
+    "city": "Port Harcourt",
+    "country": "Nigeria"
+  },
+  {
+    "code": "NGTIN",
+    "name": "Tincan/Lagos",
+    "city": "Tincan/Lagos",
+    "country": "Nigeria"
+  },
+  {
+    "code": "NGWAR",
+    "name": "Warri",
+    "city": "Warri",
+    "country": "Nigeria"
+  },
+  {
+    "code": "NICIO",
+    "name": "Corinto",
+    "city": "Corinto",
+    "country": "Nicaragua"
+  },
+  {
+    "code": "NIMGA",
+    "name": "Managua",
+    "city": "Managua",
+    "country": "Nicaragua"
+  },
+  {
+    "code": "NLALK",
+    "name": "Alkmaar",
+    "city": "Alkmaar",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLAMS",
+    "name": "Amsterdam",
+    "city": "Amsterdam",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLBZM",
+    "name": "Bergen op Zoom",
+    "city": "Bergen op Zoom",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLDOR",
+    "name": "Dordrecht",
+    "city": "Dordrecht",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLEEM",
+    "name": "Eemshaven",
+    "city": "Eemshaven",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLGRQ",
+    "name": "Groningen",
+    "city": "Groningen",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLHVH",
+    "name": "Hoek van Holland",
+    "city": "Hoek van Holland",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLIJM",
+    "name": "IJmuiden/Velsen",
+    "city": "IJmuiden/Velsen",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLMOE",
+    "name": "Moerdijk",
+    "city": "Moerdijk",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLRTM",
+    "name": "Rotterdam",
+    "city": "Rotterdam",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLTNZ",
+    "name": "Terneuzen",
+    "city": "Terneuzen",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLVEL",
+    "name": "Velsen",
+    "city": "Velsen",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLVLA",
+    "name": "Vlaardingen",
+    "city": "Vlaardingen",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLVLI",
+    "name": "Vlissingen",
+    "city": "Vlissingen",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLZAA",
+    "name": "Zaandam",
+    "city": "Zaandam",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NLZEW",
+    "name": "Zeewolde",
+    "city": "Zeewolde",
+    "country": "Netherlands"
+  },
+  {
+    "code": "NOAAV",
+    "name": "Alvik",
+    "city": "Ålvik",
+    "country": "Norway"
+  },
+  {
+    "code": "NOAES",
+    "name": "Alesund",
+    "city": "Ålesund",
+    "country": "Norway"
+  },
+  {
+    "code": "NOAGO",
+    "name": "Agotnes",
+    "city": "Ågotnes",
+    "country": "Norway"
+  },
+  {
+    "code": "NOAND",
+    "name": "Andalsnes",
+    "city": "Åndalsnes",
+    "country": "Norway"
+  },
+  {
+    "code": "NOASV",
+    "name": "Austevoll",
+    "city": "Austevoll",
+    "country": "Norway"
+  },
+  {
+    "code": "NOBGO",
+    "name": "Bergen",
+    "city": "Bergen",
+    "country": "Norway"
+  },
+  {
+    "code": "NOBOO",
+    "name": "Bodo",
+    "city": "Bodø",
+    "country": "Norway"
+  },
+  {
+    "code": "NOBVK",
+    "name": "Brevik",
+    "city": "Brevik",
+    "country": "Norway"
+  },
+  {
+    "code": "NODRM",
+    "name": "Drammen",
+    "city": "Drammen",
+    "country": "Norway"
+  },
+  {
+    "code": "NOEGD",
+    "name": "Eigersund",
+    "city": "Eigersund",
+    "country": "Norway"
+  },
+  {
+    "code": "NOFKG",
+    "name": "Frekhaug",
+    "city": "Frekhaug",
+    "country": "Norway"
+  },
+  {
+    "code": "NOFRK",
+    "name": "Fredrikstad",
+    "city": "Fredrikstad",
+    "country": "Norway"
+  },
+  {
+    "code": "NOFRO",
+    "name": "Floro",
+    "city": "Florø",
+    "country": "Norway"
+  },
+  {
+    "code": "NOFUS",
+    "name": "Fusa",
+    "city": "Fusa",
+    "country": "Norway"
+  },
+  {
+    "code": "NOGJM",
+    "name": "Gjemnes",
+    "city": "Gjemnes",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHAL",
+    "name": "Halden",
+    "city": "Halden",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHAU",
+    "name": "Haugesund",
+    "city": "Haugesund",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHES",
+    "name": "Hestvika",
+    "city": "Hestvika",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHLA",
+    "name": "Holla",
+    "city": "Holla",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHOG",
+    "name": "Hogset",
+    "city": "Høgset",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHOY",
+    "name": "Husoy - Tonsberg",
+    "city": "Husøy - Tønsberg",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHRI",
+    "name": "Hareid",
+    "city": "Hareid",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHRY",
+    "name": "Heroya",
+    "city": "Herøya",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHUS",
+    "name": "Husnes",
+    "city": "Husnes",
+    "country": "Norway"
+  },
+  {
+    "code": "NOHVI",
+    "name": "Havik",
+    "city": "Håvik",
+    "country": "Norway"
+  },
+  {
+    "code": "NOIKR",
+    "name": "Ikornnes",
+    "city": "Ikornnes",
+    "country": "Norway"
+  },
+  {
+    "code": "NOKMY",
+    "name": "Karmoy",
+    "city": "Karmøy",
+    "country": "Norway"
+  },
+  {
+    "code": "NOKRS",
+    "name": "Kristiansand",
+    "city": "Kristiansand",
+    "country": "Norway"
+  },
+  {
+    "code": "NOKRV",
+    "name": "Knarrevik",
+    "city": "Knarrevik",
+    "country": "Norway"
+  },
+  {
+    "code": "NOKSU",
+    "name": "Kristiansund",
+    "city": "Kristiansund",
+    "country": "Norway"
+  },
+  {
+    "code": "NOLAR",
+    "name": "Larvik",
+    "city": "Larvik",
+    "country": "Norway"
+  },
+  {
+    "code": "NOLND",
+    "name": "Lyngdal",
+    "city": "Lyngdal",
+    "country": "Norway"
+  },
+  {
+    "code": "NOMAY",
+    "name": "Maloy",
+    "city": "Måløy",
+    "country": "Norway"
+  },
+  {
+    "code": "NOMOL",
+    "name": "Molde",
+    "city": "Molde",
+    "country": "Norway"
+  },
+  {
+    "code": "NOMON",
+    "name": "Mongstad",
+    "city": "Mongstad",
+    "country": "Norway"
+  },
+  {
+    "code": "NOMQN",
+    "name": "Mo i Rana",
+    "city": "Mo i Rana",
+    "country": "Norway"
+  },
+  {
+    "code": "NOMSS",
+    "name": "Moss",
+    "city": "Moss",
+    "country": "Norway"
+  },
+  {
+    "code": "NOODD",
+    "name": "Odda",
+    "city": "Odda",
+    "country": "Norway"
+  },
+  {
+    "code": "NOORK",
+    "name": "Orkanger",
+    "city": "Orkanger",
+    "country": "Norway"
+  },
+  {
+    "code": "NOOSL",
+    "name": "Oslo",
+    "city": "Oslo",
+    "country": "Norway"
+  },
+  {
+    "code": "NOPOR",
+    "name": "Porsgrunn",
+    "city": "Porsgrunn",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSAD",
+    "name": "Sandefjord",
+    "city": "Sandefjord",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSAU",
+    "name": "Sauda",
+    "city": "Sauda",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSKE",
+    "name": "Skien",
+    "city": "Skien",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSKX",
+    "name": "Skogn",
+    "city": "Skogn",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSLX",
+    "name": "Sortland",
+    "city": "Sortland",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSPG",
+    "name": "Sarpsborg",
+    "city": "Sarpsborg",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSRP",
+    "name": "Stord",
+    "city": "Stord",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSTM",
+    "name": "Straumen",
+    "city": "Straumen",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSUN",
+    "name": "Sunndalsora",
+    "city": "Sunndalsøra",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSVE",
+    "name": "Svelgen",
+    "city": "Svelgen",
+    "country": "Norway"
+  },
+  {
+    "code": "NOSVG",
+    "name": "Stavanger",
+    "city": "Stavanger",
+    "country": "Norway"
+  },
+  {
+    "code": "NOTAE",
+    "name": "Tananger",
+    "city": "Tananger",
+    "country": "Norway"
+  },
+  {
+    "code": "NOTON",
+    "name": "Tonsberg",
+    "city": "Tønsberg",
+    "country": "Norway"
+  },
+  {
+    "code": "NOTOS",
+    "name": "Tromso",
+    "city": "Tromsø",
+    "country": "Norway"
+  },
+  {
+    "code": "NOTRD",
+    "name": "Trondheim",
+    "city": "Trondheim",
+    "country": "Norway"
+  },
+  {
+    "code": "NZAKL",
+    "name": "Auckland",
+    "city": "Auckland",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZBLU",
+    "name": "Bluff",
+    "city": "Bluff",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZCHC",
+    "name": "Christchurch",
+    "city": "Christchurch",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZDUD",
+    "name": "Dunedin",
+    "city": "Dunedin",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZHLZ",
+    "name": "Hamilton",
+    "city": "Hamilton",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZLYT",
+    "name": "Lyttelton",
+    "city": "Lyttelton",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZMNR",
+    "name": "Middleton/Christchurch",
+    "city": "Middleton/Christchurch",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZNPE",
+    "name": "Napier",
+    "city": "Napier",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZNPL",
+    "name": "New Plymouth",
+    "city": "New Plymouth",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZNSN",
+    "name": "Nelson",
+    "city": "Nelson",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZPMR",
+    "name": "Palmerston North",
+    "city": "Palmerston North",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZPOE",
+    "name": "Port Chalmers",
+    "city": "Port Chalmers",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZTIU",
+    "name": "Timaru",
+    "city": "Timaru",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZTKA",
+    "name": "Temuka",
+    "city": "Temuka",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZTRG",
+    "name": "Tauranga",
+    "city": "Tauranga",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZWAG",
+    "name": "Wanganui",
+    "city": "Wanganui",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZWLG",
+    "name": "Wellington",
+    "city": "Wellington",
+    "country": "New Zealand"
+  },
+  {
+    "code": "NZWRE",
+    "name": "Whangarei",
+    "city": "Whangarei",
+    "country": "New Zealand"
+  },
+  {
+    "code": "OMMCT",
+    "name": "Muscat",
+    "city": "Muscat",
+    "country": "Oman"
+  },
+  {
+    "code": "OMMNQ",
+    "name": "Mina' Qabus",
+    "city": "Mina' Qabus",
+    "country": "Oman"
+  },
+  {
+    "code": "OMOPQ",
+    "name": "Port Qaboos",
+    "city": "Port Qaboos",
+    "country": "Oman"
+  },
+  {
+    "code": "OMSLL",
+    "name": "Salalah",
+    "city": "Salalah",
+    "country": "Oman"
+  },
+  {
+    "code": "OMSOH",
+    "name": "Sohar",
+    "city": "Sohar",
+    "country": "Oman"
+  },
+  {
+    "code": "PAAML",
+    "name": "Puerto Armuelles",
+    "city": "Puerto Armuelles",
+    "country": "Panama"
+  },
+  {
+    "code": "PABLB",
+    "name": "Balboa",
+    "city": "Balboa",
+    "country": "Panama"
+  },
+  {
+    "code": "PACFZ",
+    "name": "Colon Free Zone",
+    "city": "Colón Free Zone",
+    "country": "Panama"
+  },
+  {
+    "code": "PACSO",
+    "name": "Coco Solo",
+    "city": "Coco Solo",
+    "country": "Panama"
+  },
+  {
+    "code": "PACTB",
+    "name": "Cristobal",
+    "city": "Cristóbal",
+    "country": "Panama"
+  },
+  {
+    "code": "PACTD",
+    "name": "Chitre",
+    "city": "Chitre",
+    "country": "Panama"
+  },
+  {
+    "code": "PACZZ",
+    "name": "Canazas",
+    "city": "Cañazas",
+    "country": "Panama"
+  },
+  {
+    "code": "PAMIT",
+    "name": "Manzanillo",
+    "city": "Manzanillo",
+    "country": "Panama"
+  },
+  {
+    "code": "PAONX",
+    "name": "Colon",
+    "city": "Colón",
+    "country": "Panama"
+  },
+  {
+    "code": "PAPSA",
+    "name": "Rodman",
+    "city": "Rousseau",
+    "country": "Panama"
+  },
+  {
+    "code": "PAPTY",
+    "name": "Panama, Ciudad de",
+    "city": "Panamá, Ciudad de",
+    "country": "Panama"
+  },
+  {
+    "code": "PEATI",
+    "name": "Atico",
+    "city": "Atico",
+    "country": "Peru"
+  },
+  {
+    "code": "PECHM",
+    "name": "Chimbote",
+    "city": "Chimbote",
+    "country": "Peru"
+  },
+  {
+    "code": "PECLL",
+    "name": "Callao",
+    "city": "Callao",
+    "country": "Peru"
+  },
+  {
+    "code": "PEGSM",
+    "name": "General San Martin",
+    "city": "General San Martin",
+    "country": "Peru"
+  },
+  {
+    "code": "PEHCO",
+    "name": "Huacho",
+    "city": "Huacho",
+    "country": "Peru"
+  },
+  {
+    "code": "PEILQ",
+    "name": "Ilo",
+    "city": "Ilo",
+    "country": "Peru"
+  },
+  {
+    "code": "PEIQT",
+    "name": "Iquitos",
+    "city": "Iquitos",
+    "country": "Peru"
+  },
+  {
+    "code": "PELOB",
+    "name": "Lobitos",
+    "city": "Lobitos",
+    "country": "Peru"
+  },
+  {
+    "code": "PEMRI",
+    "name": "Matarani",
+    "city": "Matarani",
+    "country": "Peru"
+  },
+  {
+    "code": "PEPAC",
+    "name": "Pacasmayo",
+    "city": "Pacasmayo",
+    "country": "Peru"
+  },
+  {
+    "code": "PEPAI",
+    "name": "Paita",
+    "city": "Paita",
+    "country": "Peru"
+  },
+  {
+    "code": "PEPCH",
+    "name": "Puerto Chicama",
+    "city": "Puerto Chicama",
+    "country": "Peru"
+  },
+  {
+    "code": "PEPIO",
+    "name": "Pisco",
+    "city": "Pisco",
+    "country": "Peru"
+  },
+  {
+    "code": "PESNX",
+    "name": "San Nicolas",
+    "city": "San Nicolas",
+    "country": "Peru"
+  },
+  {
+    "code": "PESUP",
+    "name": "Supe",
+    "city": "Supe",
+    "country": "Peru"
+  },
+  {
+    "code": "PESVY",
+    "name": "Salaverry",
+    "city": "Salaverry",
+    "country": "Peru"
+  },
+  {
+    "code": "PETYL",
+    "name": "Talara",
+    "city": "Talara",
+    "country": "Peru"
+  },
+  {
+    "code": "PFPPT",
+    "name": "Papeete",
+    "city": "Papeete",
+    "country": "French Polynesia"
+  },
+  {
+    "code": "PGLAE",
+    "name": "Lae",
+    "city": "Lae",
+    "country": "Papua New Guinea"
+  },
+  {
+    "code": "PGMAG",
+    "name": "Madang",
+    "city": "Madang",
+    "country": "Papua New Guinea"
+  },
+  {
+    "code": "PGPOM",
+    "name": "Port Moresby",
+    "city": "Port Moresby",
+    "country": "Papua New Guinea"
+  },
+  {
+    "code": "PGRAB",
+    "name": "Rabaul",
+    "city": "Rabaul",
+    "country": "Papua New Guinea"
+  },
+  {
+    "code": "PHCEB",
+    "name": "Cebu",
+    "city": "Cebu",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHCGY",
+    "name": "Cagayan de Oro, Mindanao",
+    "city": "Cagayan de Oro, Mindanao",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHDVO",
+    "name": "Davao, Mindanao",
+    "city": "Davao, Mindanao",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHGES",
+    "name": "General Santos",
+    "city": "General Santos",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHIGN",
+    "name": "Iligan, Mindanao",
+    "city": "Iligan, Mindanao",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHISB",
+    "name": "Isabela (Basilan)",
+    "city": "Isabela (Basilan)",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHMLS",
+    "name": "Magellanes/Masao",
+    "city": "Magellanes/Masao",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHMNI",
+    "name": "Manicani",
+    "city": "Manicani",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHMNL",
+    "name": "Manila",
+    "city": "Manila",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHMNN",
+    "name": "Manila North Harbour",
+    "city": "Manila North Harbour",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHMNS",
+    "name": "Manila South Harbour",
+    "city": "Manila South Harbour",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHOZC",
+    "name": "Ozamis, Mindanao",
+    "city": "Ozamis, Mindanao",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHPSL",
+    "name": "Pasaleng, Luzon",
+    "city": "Pasaleng, Luzon",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHSFS",
+    "name": "Subic Bay",
+    "city": "Subic Bay",
+    "country": "Philippines"
+  },
+  {
+    "code": "PHZAM",
+    "name": "Zamboanga",
+    "city": "Zamboanga",
+    "country": "Philippines"
+  },
+  {
+    "code": "PKBQM",
+    "name": "Karachi-muhammad Bin Qasim",
+    "city": "Karachi-muhammad Bin Qasim",
+    "country": "Pakistan"
+  },
+  {
+    "code": "PKKHI",
+    "name": "Karachi",
+    "city": "Karachi",
+    "country": "Pakistan"
+  },
+  {
+    "code": "PLGDN",
+    "name": "Gdansk",
+    "city": "Gdansk",
+    "country": "Poland"
+  },
+  {
+    "code": "PLGDY",
+    "name": "Gdynia",
+    "city": "Gdynia",
+    "country": "Poland"
+  },
+  {
+    "code": "PLSWI",
+    "name": "Swinoujscie",
+    "city": "Swinoujscie",
+    "country": "Poland"
+  },
+  {
+    "code": "PLSZZ",
+    "name": "Szczecin",
+    "city": "Szczecin",
+    "country": "Poland"
+  },
+  {
+    "code": "PRBQN",
+    "name": "Aguadilla",
+    "city": "Aguadilla",
+    "country": "Puerto Rico"
+  },
+  {
+    "code": "PRMAZ",
+    "name": "Mayaguez",
+    "city": "Mayagüez",
+    "country": "Puerto Rico"
+  },
+  {
+    "code": "PRPNU",
+    "name": "Puerto Nuevo",
+    "city": "Puerto Nuevo",
+    "country": "Puerto Rico"
+  },
+  {
+    "code": "PRPSE",
+    "name": "Ponce",
+    "city": "Ponce",
+    "country": "Puerto Rico"
+  },
+  {
+    "code": "PRSJU",
+    "name": "San Juan",
+    "city": "San Juan",
+    "country": "Puerto Rico"
+  },
+  {
+    "code": "PTADH",
+    "name": "Angra do Heroismo",
+    "city": "Angra do Heroísmo",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTCNL",
+    "name": "Canical",
+    "city": "Caniçal",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTENT",
+    "name": "Entroncamento",
+    "city": "Entroncamento",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTFDF",
+    "name": "Figueira da Foz",
+    "city": "Figueira da Foz",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTFNC",
+    "name": "Funchal, Madeira",
+    "city": "Funchal, Madeira",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTHOR",
+    "name": "Horta",
+    "city": "Horta",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTLEI",
+    "name": "Leixoes",
+    "city": "Leixões",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTLIS",
+    "name": "Lisboa",
+    "city": "Lisboa",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTOPO",
+    "name": "Porto",
+    "city": "Porto",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTPDL",
+    "name": "Ponta Delgada",
+    "city": "Ponta Delgada",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTPRV",
+    "name": "Praia da Vitoria",
+    "city": "Praia da Vitória",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTSET",
+    "name": "Setubal",
+    "city": "Setúbal",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTSIE",
+    "name": "Sines",
+    "city": "Sines",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTTER",
+    "name": "Terceira Island Apt",
+    "city": "Terceira Island Apt",
+    "country": "Portugal"
+  },
+  {
+    "code": "PTVDC",
+    "name": "Viana do Castelo",
+    "city": "Viana do Castelo",
+    "country": "Portugal"
+  },
+  {
+    "code": "PYASU",
+    "name": "Asuncion",
+    "city": "Asunción",
+    "country": "Paraguay"
+  },
+  {
+    "code": "PYBCM",
+    "name": "Barrio Caacupe Mi",
+    "city": "Barrio Caacupé Mí",
+    "country": "Paraguay"
+  },
+  {
+    "code": "PYFNX",
+    "name": "Fenix",
+    "city": "Fenix",
+    "country": "Paraguay"
+  },
+  {
+    "code": "PYPIL",
+    "name": "Pilar",
+    "city": "Pilar",
+    "country": "Paraguay"
+  },
+  {
+    "code": "PYPSE",
+    "name": "Pto Seguro/col Mariano Roque Alonso",
+    "city": "Pto Seguro/col Mariano Roque Alonso",
+    "country": "Paraguay"
+  },
+  {
+    "code": "PYSAN",
+    "name": "San Antonio",
+    "city": "San Antonio",
+    "country": "Paraguay"
+  },
+  {
+    "code": "PYTER",
+    "name": "Terport (San Antonio)",
+    "city": "Terport (San Antonio)",
+    "country": "Paraguay"
+  },
+  {
+    "code": "QADOH",
+    "name": "Doha",
+    "city": "Doha",
+    "country": "Qatar"
+  },
+  {
+    "code": "QAMES",
+    "name": "Mesaieed",
+    "city": "Mesaieed",
+    "country": "Qatar"
+  },
+  {
+    "code": "QAUMS",
+    "name": "Umm Sa'id (Mesaieed)",
+    "city": "Umm Sa'id (Mesaieed)",
+    "country": "Qatar"
+  },
+  {
+    "code": "RELPT",
+    "name": "Le Port",
+    "city": "Le",
+    "country": "Réunion"
+  },
+  {
+    "code": "REPDG",
+    "name": "Port de Pointe des Galets",
+    "city": "Port de Pointe des Galets",
+    "country": "Réunion"
+  },
+  {
+    "code": "REREU",
+    "name": "Reunion",
+    "city": "Réunion",
+    "country": "Réunion"
+  },
+  {
+    "code": "RERUN",
+    "name": "Saint-Denis de la Reunion Apt",
+    "city": "Saint-Denis de la Réunion Apt",
+    "country": "Réunion"
+  },
+  {
+    "code": "ROAGI",
+    "name": "Agigea",
+    "city": "Agigea",
+    "country": "Romania"
+  },
+  {
+    "code": "ROBRA",
+    "name": "Braila",
+    "city": "Braila",
+    "country": "Romania"
+  },
+  {
+    "code": "ROCND",
+    "name": "Constanta",
+    "city": "Constanta",
+    "country": "Romania"
+  },
+  {
+    "code": "ROGAL",
+    "name": "Galati",
+    "city": "Galati",
+    "country": "Romania"
+  },
+  {
+    "code": "ROMAG",
+    "name": "Mangalia",
+    "city": "Mangalia",
+    "country": "Romania"
+  },
+  {
+    "code": "RUARH",
+    "name": "Arkhangelsk",
+    "city": "Arkhangelsk",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUGDX",
+    "name": "Magadan",
+    "city": "Magadan",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUKGD",
+    "name": "Kaliningrad",
+    "city": "Kaliningrad",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUKHO",
+    "name": "Kholmsk",
+    "city": "Kholmsk",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUKOR",
+    "name": "Korsakov",
+    "city": "Korsakov",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUKRR",
+    "name": "Krasnodar",
+    "city": "Krasnodar",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RULED",
+    "name": "Saint Petersburg (ex Leningrad)",
+    "city": "Saint Petersburg (ex Leningrad)",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUMMK",
+    "name": "Murmansk",
+    "city": "Murmansk",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUNJK",
+    "name": "Nakhodka",
+    "city": "Nakhodka",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUNVS",
+    "name": "Novorossiysk",
+    "city": "Novorossiysk",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUPTP",
+    "name": "Potapova",
+    "city": "Potapova",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUROV",
+    "name": "Rostov",
+    "city": "Rostov",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUTAG",
+    "name": "Taganrog",
+    "city": "Taganrog",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUVVO",
+    "name": "Vladivostok",
+    "city": "Vladivostok",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUVYG",
+    "name": "Vyborg",
+    "city": "Vyborg",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RUVYP",
+    "name": "Vostochnyy Port",
+    "city": "Vostochnyy",
+    "country": "Russian Federation"
+  },
+  {
+    "code": "RWKGL",
+    "name": "Kigali",
+    "city": "Kigali",
+    "country": "Rwanda"
+  },
+  {
+    "code": "SADMM",
+    "name": "Ad Dammam",
+    "city": "Ad Dammam",
+    "country": "Saudi Arabia"
+  },
+  {
+    "code": "SADMN",
+    "name": "Dammam",
+    "city": "Dammam",
+    "country": "Saudi Arabia"
+  },
+  {
+    "code": "SAJED",
+    "name": "Jeddah",
+    "city": "Jeddah",
+    "country": "Saudi Arabia"
+  },
+  {
+    "code": "SAJUB",
+    "name": "Jubail",
+    "city": "Jubail",
+    "country": "Saudi Arabia"
+  },
+  {
+    "code": "SAKAC",
+    "name": "King Abdullah City",
+    "city": "King Abdullah City",
+    "country": "Saudi Arabia"
+  },
+  {
+    "code": "SARUH",
+    "name": "Riyadh",
+    "city": "Riyadh",
+    "country": "Saudi Arabia"
+  },
+  {
+    "code": "SBHIR",
+    "name": "Honiara, Guadalcanal Is",
+    "city": "Honiara, Guadalcanal Is",
+    "country": "Solomon Islands"
+  },
+  {
+    "code": "SBNOR",
+    "name": "Noro, New Georgia",
+    "city": "Noro",
+    "country": "Solomon Islands"
+  },
+  {
+    "code": "SCMAW",
+    "name": "Mahe",
+    "city": "Mahe",
+    "country": "Seychelles"
+  },
+  {
+    "code": "SCPOV",
+    "name": "Port Victoria",
+    "city": "Port Victoria",
+    "country": "Seychelles"
+  },
+  {
+    "code": "SDPZU",
+    "name": "Port Sudan",
+    "city": "Port Sudan",
+    "country": "Sudan"
+  },
+  {
+    "code": "SEAHU",
+    "name": "Ahus",
+    "city": "Åhus",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEFAG",
+    "name": "Falkenberg",
+    "city": "Falkenberg",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEGOT",
+    "name": "Goteborg",
+    "city": "Göteborg",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEGVX",
+    "name": "Gavle",
+    "city": "Gävle",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEHAD",
+    "name": "Halmstad",
+    "city": "Halmstad",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEHEL",
+    "name": "Helsingborg",
+    "city": "Helsingborg",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEKAN",
+    "name": "Karlshamn",
+    "city": "Karlshamn",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEKSD",
+    "name": "Karlstad",
+    "city": "Karlstad",
+    "country": "Sweden"
+  },
+  {
+    "code": "SELAA",
+    "name": "Landskrona",
+    "city": "Landskrona",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEMMA",
+    "name": "Malmo",
+    "city": "Malmö",
+    "country": "Sweden"
+  },
+  {
+    "code": "SENRK",
+    "name": "Norrkoping",
+    "city": "Norrköping",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEOSK",
+    "name": "Oskarshamn",
+    "city": "Oskarshamn",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEOXE",
+    "name": "Oxelosund",
+    "city": "Oxelösund",
+    "country": "Sweden"
+  },
+  {
+    "code": "SESDL",
+    "name": "Sundsvall",
+    "city": "Sundsvall",
+    "country": "Sweden"
+  },
+  {
+    "code": "SESFT",
+    "name": "Skelleftea",
+    "city": "Skellefteå",
+    "country": "Sweden"
+  },
+  {
+    "code": "SESKE",
+    "name": "Skelleftehamn",
+    "city": "Skelleftehamn",
+    "country": "Sweden"
+  },
+  {
+    "code": "SESOE",
+    "name": "Sodertalje",
+    "city": "Södertälje",
+    "country": "Sweden"
+  },
+  {
+    "code": "SESTO",
+    "name": "Stockholm",
+    "city": "Stockholm",
+    "country": "Sweden"
+  },
+  {
+    "code": "SETRG",
+    "name": "Trelleborg",
+    "city": "Trelleborg",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEUDD",
+    "name": "Uddevalla",
+    "city": "Uddevalla",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEUME",
+    "name": "Umea",
+    "city": "Umeå",
+    "country": "Sweden"
+  },
+  {
+    "code": "SEVST",
+    "name": "Vasteras",
+    "city": "Västerås",
+    "country": "Sweden"
+  },
+  {
+    "code": "SGJUR",
+    "name": "Jurong/Singapore",
+    "city": "Jurong/Singapore",
+    "country": "Singapore"
+  },
+  {
+    "code": "SGSIN",
+    "name": "Singapore",
+    "city": "Singapore",
+    "country": "Singapore"
+  },
+  {
+    "code": "SIKOP",
+    "name": "Koper",
+    "city": "Koper",
+    "country": "Slovenia"
+  },
+  {
+    "code": "SKBTS",
+    "name": "Bratislava",
+    "city": "Bratislava",
+    "country": "Slovakia"
+  },
+  {
+    "code": "SLFNA",
+    "name": "Freetown",
+    "city": "Freetown",
+    "country": "Sierra Leone"
+  },
+  {
+    "code": "SNDKR",
+    "name": "Dakar",
+    "city": "Dakar",
+    "country": "Senegal"
+  },
+  {
+    "code": "SOBBO",
+    "name": "Berbera",
+    "city": "Berbera",
+    "country": "Somalia"
+  },
+  {
+    "code": "SOKMU",
+    "name": "Kismayu",
+    "city": "Kismayu",
+    "country": "Somalia"
+  },
+  {
+    "code": "SOMGQ",
+    "name": "Mogadishu",
+    "city": "Mogadishu",
+    "country": "Somalia"
+  },
+  {
+    "code": "SRPBM",
+    "name": "Paramaribo",
+    "city": "Paramaribo",
+    "country": "Suriname"
+  },
+  {
+    "code": "STTMS",
+    "name": "Sao Tome Island",
+    "city": "Sao Tome Island",
+    "country": "Sao Tome and Principe"
+  },
+  {
+    "code": "SVAQJ",
+    "name": "Acajutla",
+    "city": "Acajutla",
+    "country": "El Salvador"
+  },
+  {
+    "code": "SVLLD",
+    "name": "La Libertad",
+    "city": "La Libertad",
+    "country": "El Salvador"
+  },
+  {
+    "code": "SVLUN",
+    "name": "La Union",
+    "city": "La Union",
+    "country": "El Salvador"
+  },
+  {
+    "code": "SVSAL",
+    "name": "San Salvador",
+    "city": "San Salvador",
+    "country": "El Salvador"
+  },
+  {
+    "code": "SYDAM",
+    "name": "Damascus (Damas)",
+    "city": "Damascus (Damas)",
+    "country": "Syrian Arab Republic"
+  },
+  {
+    "code": "SYLTK",
+    "name": "Latakia",
+    "city": "Latakia",
+    "country": "Syrian Arab Republic"
+  },
+  {
+    "code": "SYTTS",
+    "name": "Tartus",
+    "city": "Tartus",
+    "country": "Syrian Arab Republic"
+  },
+  {
+    "code": "TCPLS",
+    "name": "Providenciales",
+    "city": "Providenciales",
+    "country": "Turks and Caicos Islands"
+  },
+  {
+    "code": "TGLFW",
+    "name": "Lome",
+    "city": "Lome",
+    "country": "Togo"
+  },
+  {
+    "code": "THBGP",
+    "name": "Bangpakong",
+    "city": "Bangpakong",
+    "country": "Thailand"
+  },
+  {
+    "code": "THBKK",
+    "name": "Bangkok",
+    "city": "Bangkok",
+    "country": "Thailand"
+  },
+  {
+    "code": "THBMT",
+    "name": "Bangkok Modern Terminals/Bangkok",
+    "city": "Bangkok Modern Terminals/Bangkok",
+    "country": "Thailand"
+  },
+  {
+    "code": "THKSI",
+    "name": "Koh Sichang",
+    "city": "Koh Sichang",
+    "country": "Thailand"
+  },
+  {
+    "code": "THKTY",
+    "name": "Khlong Toei",
+    "city": "Khlong Toei",
+    "country": "Thailand"
+  },
+  {
+    "code": "THLCH",
+    "name": "Laem Chabang",
+    "city": "Laem Chabang",
+    "country": "Thailand"
+  },
+  {
+    "code": "THLKR",
+    "name": "Lat Krabang",
+    "city": "Lat Krabang",
+    "country": "Thailand"
+  },
+  {
+    "code": "THMAT",
+    "name": "Mab Tapud",
+    "city": "Mab Tapud",
+    "country": "Thailand"
+  },
+  {
+    "code": "THPAT",
+    "name": "Pat Bangkok",
+    "city": "Pat Bangkok",
+    "country": "Thailand"
+  },
+  {
+    "code": "THPKN",
+    "name": "Paknam",
+    "city": "Paknam",
+    "country": "Thailand"
+  },
+  {
+    "code": "THSBP",
+    "name": "Siam Bangkok Port",
+    "city": "Siam Bangkok",
+    "country": "Thailand"
+  },
+  {
+    "code": "THSGZ",
+    "name": "Songkhla",
+    "city": "Songkhla",
+    "country": "Thailand"
+  },
+  {
+    "code": "THSPR",
+    "name": "Samut Prakarn",
+    "city": "Samut Prakarn",
+    "country": "Thailand"
+  },
+  {
+    "code": "THSRI",
+    "name": "Sriracha",
+    "city": "Sriracha",
+    "country": "Thailand"
+  },
+  {
+    "code": "THTPT",
+    "name": "Thai prosperity terminal",
+    "city": "Thai prosperity terminal",
+    "country": "Thailand"
+  },
+  {
+    "code": "TNGAE",
+    "name": "Gabes",
+    "city": "Gabès",
+    "country": "Tunisia"
+  },
+  {
+    "code": "TNJAR",
+    "name": "Jarjis",
+    "city": "Jarjis",
+    "country": "Tunisia"
+  },
+  {
+    "code": "TNLGN",
+    "name": "La Goulette Nord (Halqueloued)",
+    "city": "La Goulette Nord (Halqueloued)",
+    "country": "Tunisia"
+  },
+  {
+    "code": "TNRDS",
+    "name": "Rades",
+    "city": "Radès",
+    "country": "Tunisia"
+  },
+  {
+    "code": "TNSFA",
+    "name": "Sfax",
+    "city": "Sfax",
+    "country": "Tunisia"
+  },
+  {
+    "code": "TNSUS",
+    "name": "Sousse",
+    "city": "Sousse",
+    "country": "Tunisia"
+  },
+  {
+    "code": "TNTUN",
+    "name": "Tunis",
+    "city": "Tunis",
+    "country": "Tunisia"
+  },
+  {
+    "code": "TOTBU",
+    "name": "Nuku'alofa",
+    "city": "Nuku'alofa",
+    "country": "Tonga"
+  },
+  {
+    "code": "TRALI",
+    "name": "Aliaga",
+    "city": "Aliaga",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRAMB",
+    "name": "Ambarli",
+    "city": "Ambarli",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRAVC",
+    "name": "Avcilar",
+    "city": "Avcilar",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRAYT",
+    "name": "Antalya",
+    "city": "Antalya",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRBAY",
+    "name": "Bayrampasa",
+    "city": "Bayrampasa",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRBDM",
+    "name": "Bandirma",
+    "city": "Bandirma",
+    "country": "Turkey"
+  },
+  {
+    "code": "TREYP",
+    "name": "Evyap Port /Kocaeli",
+    "city": "Evyap Port /Kocaeli",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRGEB",
+    "name": "Gebze",
+    "city": "Gebze",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRGEM",
+    "name": "Gemlik",
+    "city": "Gemlik",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRHAY",
+    "name": "Haydarpasa",
+    "city": "Haydarpasa",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRHER",
+    "name": "Hereke",
+    "city": "Hereke",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRISK",
+    "name": "Iskenderun",
+    "city": "Iskenderun",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRIST",
+    "name": "Istanbul",
+    "city": "Istanbul",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRIZM",
+    "name": "Izmir",
+    "city": "Izmir",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRIZT",
+    "name": "Izmit",
+    "city": "Izmit",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRKMX",
+    "name": "Kumport",
+    "city": "Kumport",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRMAD",
+    "name": "Mardas",
+    "city": "Mardas",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRMAR",
+    "name": "Marmara Ereglisi",
+    "city": "Marmara Ereglisi",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRMER",
+    "name": "Mersin",
+    "city": "Mersin",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRNEM",
+    "name": "Nemrut Bay",
+    "city": "Nemrut Bay",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRSSX",
+    "name": "Samsun",
+    "city": "Samsun",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRTEK",
+    "name": "Tekirdag",
+    "city": "Tekirdag",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRTZX",
+    "name": "Trabzon",
+    "city": "Trabzon",
+    "country": "Turkey"
+  },
+  {
+    "code": "TRYAR",
+    "name": "Yarimca",
+    "city": "Yarimca",
+    "country": "Turkey"
+  },
+  {
+    "code": "TTPOS",
+    "name": "Port-of-Spain",
+    "city": "Port-of-Spain",
+    "country": "Trinidad and Tobago"
+  },
+  {
+    "code": "TTPTP",
+    "name": "Pointe a Pierre",
+    "city": "Pointe a Pierre",
+    "country": "Trinidad and Tobago"
+  },
+  {
+    "code": "TTPTS",
+    "name": "Point Lisas",
+    "city": "Point Lisas",
+    "country": "Trinidad and Tobago"
+  },
+  {
+    "code": "TTSFE",
+    "name": "San Fernando",
+    "city": "San Fernando",
+    "country": "Trinidad and Tobago"
+  },
+  {
+    "code": "TWKEL",
+    "name": "Keelung (Chilung)",
+    "city": "Keelung (Chilung)",
+    "country": "Taiwan"
+  },
+  {
+    "code": "TWKHH",
+    "name": "Kaohsiung",
+    "city": "Kaohsiung",
+    "country": "Taiwan"
+  },
+  {
+    "code": "TWMLI",
+    "name": "Mai-liao",
+    "city": "Mai-liao",
+    "country": "Taiwan"
+  },
+  {
+    "code": "TWSUO",
+    "name": "Suao",
+    "city": "Suao",
+    "country": "Taiwan"
+  },
+  {
+    "code": "TWTPE",
+    "name": "Taipei",
+    "city": "Taipei",
+    "country": "Taiwan"
+  },
+  {
+    "code": "TWTXG",
+    "name": "Taichung",
+    "city": "Taichung",
+    "country": "Taiwan"
+  },
+  {
+    "code": "TWTYN",
+    "name": "Taoyuan",
+    "city": "Taoyuan",
+    "country": "Taiwan"
+  },
+  {
+    "code": "TZDAR",
+    "name": "Dar es Salaam",
+    "city": "Dar es Salaam",
+    "country": "Tanzania, United Republic of"
+  },
+  {
+    "code": "TZTGT",
+    "name": "Tanga",
+    "city": "Tanga",
+    "country": "Tanzania, United Republic of"
+  },
+  {
+    "code": "TZZNZ",
+    "name": "Zanzibar",
+    "city": "Zanzibar",
+    "country": "Tanzania, United Republic of"
+  },
+  {
+    "code": "UAIEV",
+    "name": "Kiev",
+    "city": "Kiev",
+    "country": "Ukraine"
+  },
+  {
+    "code": "UAILK",
+    "name": "Illichivs'k",
+    "city": "Illichivs'k",
+    "country": "Ukraine"
+  },
+  {
+    "code": "UAKHE",
+    "name": "Kherson",
+    "city": "Kherson",
+    "country": "Ukraine"
+  },
+  {
+    "code": "UAMPW",
+    "name": "Mariupol (ex Zhdanov)",
+    "city": "Mariupol (ex Zhdanov)",
+    "country": "Ukraine"
+  },
+  {
+    "code": "UAODS",
+    "name": "Odessa",
+    "city": "Odessa",
+    "country": "Ukraine"
+  },
+  {
+    "code": "UASVP",
+    "name": "Sevastopol",
+    "city": "Sevastopol",
+    "country": "Ukraine"
+  },
+  {
+    "code": "UGJIN",
+    "name": "Jinja",
+    "city": "Jinja",
+    "country": "Uganda"
+  },
+  {
+    "code": "UGKLA",
+    "name": "Kampala",
+    "city": "Kampala",
+    "country": "Uganda"
+  },
+  {
+    "code": "USADQ",
+    "name": "Kodiak",
+    "city": "Kodiak",
+    "country": "United States"
+  },
+  {
+    "code": "USANC",
+    "name": "Anchorage",
+    "city": "Anchorage",
+    "country": "United States"
+  },
+  {
+    "code": "USANP",
+    "name": "Annapolis",
+    "city": "Annapolis",
+    "country": "United States"
+  },
+  {
+    "code": "USAR5",
+    "name": "Damascus",
+    "city": "Damascus",
+    "country": "United States"
+  },
+  {
+    "code": "USATL",
+    "name": "Atlanta",
+    "city": "Atlanta",
+    "country": "United States"
+  },
+  {
+    "code": "USBAL",
+    "name": "Baltimore",
+    "city": "Baltimore",
+    "country": "United States"
+  },
+  {
+    "code": "USBCC",
+    "name": "Bear Creek",
+    "city": "Bear Creek",
+    "country": "United States"
+  },
+  {
+    "code": "USBHM",
+    "name": "Birmingham",
+    "city": "Birmingham",
+    "country": "United States"
+  },
+  {
+    "code": "USBNA",
+    "name": "Nashville",
+    "city": "Nashville",
+    "country": "United States"
+  },
+  {
+    "code": "USBOS",
+    "name": "Boston",
+    "city": "Boston",
+    "country": "United States"
+  },
+  {
+    "code": "USBPT",
+    "name": "Beaumont",
+    "city": "Beaumont",
+    "country": "United States"
+  },
+  {
+    "code": "USBRO",
+    "name": "Brownsville",
+    "city": "Brownsville",
+    "country": "United States"
+  },
+  {
+    "code": "USBUF",
+    "name": "Buffalo",
+    "city": "Buffalo",
+    "country": "United States"
+  },
+  {
+    "code": "USCBF",
+    "name": "Council Bluffs",
+    "city": "Council Bluffs",
+    "country": "United States"
+  },
+  {
+    "code": "USCHA",
+    "name": "Chattanooga",
+    "city": "Chattanooga",
+    "country": "United States"
+  },
+  {
+    "code": "USCHI",
+    "name": "Chicago",
+    "city": "Chicago",
+    "country": "United States"
+  },
+  {
+    "code": "USCHS",
+    "name": "Charleston",
+    "city": "Charleston",
+    "country": "United States"
+  },
+  {
+    "code": "USCLE",
+    "name": "Cleveland",
+    "city": "Cleveland",
+    "country": "United States"
+  },
+  {
+    "code": "USCLM",
+    "name": "Port Angeles",
+    "city": "Port Angeles",
+    "country": "United States"
+  },
+  {
+    "code": "USCLT",
+    "name": "Charlotte",
+    "city": "Charlotte",
+    "country": "United States"
+  },
+  {
+    "code": "USCMH",
+    "name": "Columbus",
+    "city": "Columbus",
+    "country": "United States"
+  },
+  {
+    "code": "USCPF",
+    "name": "Chippewa Falls",
+    "city": "Chippewa Falls",
+    "country": "United States"
+  },
+  {
+    "code": "USCPV",
+    "name": "Cape Canaveral",
+    "city": "Cape Canaveral",
+    "country": "United States"
+  },
+  {
+    "code": "USCRP",
+    "name": "Corpus Christi",
+    "city": "Corpus Christi",
+    "country": "United States"
+  },
+  {
+    "code": "USCVG",
+    "name": "Cincinnati",
+    "city": "Cincinnati",
+    "country": "United States"
+  },
+  {
+    "code": "USCZF",
+    "name": "Cape Romanzof",
+    "city": "Cape Romanzof",
+    "country": "United States"
+  },
+  {
+    "code": "USDA8",
+    "name": "Dauphin",
+    "city": "Dauphin",
+    "country": "United States"
+  },
+  {
+    "code": "USDAL",
+    "name": "Dallas",
+    "city": "Dallas",
+    "country": "United States"
+  },
+  {
+    "code": "USDEC",
+    "name": "Decatur",
+    "city": "Decatur",
+    "country": "United States"
+  },
+  {
+    "code": "USDEN",
+    "name": "Denver",
+    "city": "Denver",
+    "country": "United States"
+  },
+  {
+    "code": "USDET",
+    "name": "Detroit",
+    "city": "Detroit",
+    "country": "United States"
+  },
+  {
+    "code": "USDNN",
+    "name": "Dalton",
+    "city": "Dalton",
+    "country": "United States"
+  },
+  {
+    "code": "USDSM",
+    "name": "Des Moines",
+    "city": "Des Moines",
+    "country": "United States"
+  },
+  {
+    "code": "USDUT",
+    "name": "Dutch Harbor",
+    "city": "Dutch Harbor",
+    "country": "United States"
+  },
+  {
+    "code": "USELP",
+    "name": "El Paso",
+    "city": "El Paso",
+    "country": "United States"
+  },
+  {
+    "code": "USENA",
+    "name": "Kenai",
+    "city": "Kenai",
+    "country": "United States"
+  },
+  {
+    "code": "USEWR",
+    "name": "Newark",
+    "city": "Newark",
+    "country": "United States"
+  },
+  {
+    "code": "USFEB",
+    "name": "Fernandina Beach",
+    "city": "Fernandina Beach",
+    "country": "United States"
+  },
+  {
+    "code": "USFLL",
+    "name": "Fort Lauderdale",
+    "city": "Fort Lauderdale",
+    "country": "United States"
+  },
+  {
+    "code": "USFPO",
+    "name": "Freeport",
+    "city": "Freeport",
+    "country": "United States"
+  },
+  {
+    "code": "USFRP",
+    "name": "Fresh Water Bay",
+    "city": "Fresh Water Bay",
+    "country": "United States"
+  },
+  {
+    "code": "USFWT",
+    "name": "Fort Worth",
+    "city": "Fort Worth",
+    "country": "United States"
+  },
+  {
+    "code": "USGBO",
+    "name": "Greensboro",
+    "city": "Greensboro",
+    "country": "United States"
+  },
+  {
+    "code": "USGLS",
+    "name": "Galveston",
+    "city": "Galveston",
+    "country": "United States"
+  },
+  {
+    "code": "USGPT",
+    "name": "Gulfport",
+    "city": "Gulfport",
+    "country": "United States"
+  },
+  {
+    "code": "USGSP",
+    "name": "Greer",
+    "city": "Greer",
+    "country": "United States"
+  },
+  {
+    "code": "USHNL",
+    "name": "Honolulu",
+    "city": "Honolulu",
+    "country": "United States"
+  },
+  {
+    "code": "USHOU",
+    "name": "Houston",
+    "city": "Houston",
+    "country": "United States"
+  },
+  {
+    "code": "USHSV",
+    "name": "Huntsville",
+    "city": "Huntsville",
+    "country": "United States"
+  },
+  {
+    "code": "USILM",
+    "name": "Wilmington",
+    "city": "Wilmington",
+    "country": "United States"
+  },
+  {
+    "code": "USIND",
+    "name": "Indianapolis",
+    "city": "Indianapolis",
+    "country": "United States"
+  },
+  {
+    "code": "USJ3C",
+    "name": "Jacksonville",
+    "city": "Jacksonville",
+    "country": "United States"
+  },
+  {
+    "code": "USJAX",
+    "name": "Jacksonville",
+    "city": "Jacksonville",
+    "country": "United States"
+  },
+  {
+    "code": "USJOT",
+    "name": "Joliet",
+    "city": "Joliet",
+    "country": "United States"
+  },
+  {
+    "code": "USKCK",
+    "name": "Kansas City",
+    "city": "Kansas City",
+    "country": "United States"
+  },
+  {
+    "code": "USLAS",
+    "name": "Las Vegas",
+    "city": "Las Vegas",
+    "country": "United States"
+  },
+  {
+    "code": "USLAT",
+    "name": "Los Alamitos",
+    "city": "Los Alamitos",
+    "country": "United States"
+  },
+  {
+    "code": "USLAX",
+    "name": "Los Angeles",
+    "city": "Los Angeles",
+    "country": "United States"
+  },
+  {
+    "code": "USLCH",
+    "name": "Lake Charles",
+    "city": "Lake Charles",
+    "country": "United States"
+  },
+  {
+    "code": "USLGB",
+    "name": "Long Beach",
+    "city": "Long Beach",
+    "country": "United States"
+  },
+  {
+    "code": "USLRD",
+    "name": "Laredo",
+    "city": "Laredo",
+    "country": "United States"
+  },
+  {
+    "code": "USLUI",
+    "name": "Louisville",
+    "city": "Louisville",
+    "country": "United States"
+  },
+  {
+    "code": "USMEM",
+    "name": "Memphis",
+    "city": "Memphis",
+    "country": "United States"
+  },
+  {
+    "code": "USMES",
+    "name": "Minneapolis",
+    "city": "Minneapolis",
+    "country": "United States"
+  },
+  {
+    "code": "USMIA",
+    "name": "Miami",
+    "city": "Miami",
+    "country": "United States"
+  },
+  {
+    "code": "USMKC",
+    "name": "Kansas City",
+    "city": "Kansas City",
+    "country": "United States"
+  },
+  {
+    "code": "USMKE",
+    "name": "Milwaukee",
+    "city": "Milwaukee",
+    "country": "United States"
+  },
+  {
+    "code": "USMOB",
+    "name": "Mobile",
+    "city": "Mobile",
+    "country": "United States"
+  },
+  {
+    "code": "USMRH",
+    "name": "Morehead City",
+    "city": "Morehead City",
+    "country": "United States"
+  },
+  {
+    "code": "USMSP",
+    "name": "Minneapolis/St Paul Apt",
+    "city": "Minneapolis/St Paul Apt",
+    "country": "United States"
+  },
+  {
+    "code": "USMSY",
+    "name": "New Orleans",
+    "city": "New Orleans",
+    "country": "United States"
+  },
+  {
+    "code": "USNNS",
+    "name": "Newport News",
+    "city": "Newport News",
+    "country": "United States"
+  },
+  {
+    "code": "USNTD",
+    "name": "Port Hueneme",
+    "city": "Port Hueneme",
+    "country": "United States"
+  },
+  {
+    "code": "USNTS",
+    "name": "North Charleston",
+    "city": "North Charleston",
+    "country": "United States"
+  },
+  {
+    "code": "USNYC",
+    "name": "New York",
+    "city": "New York",
+    "country": "United States"
+  },
+  {
+    "code": "USOAK",
+    "name": "Oakland",
+    "city": "Oakland",
+    "country": "United States"
+  },
+  {
+    "code": "USOCN",
+    "name": "Oceanside",
+    "city": "Oceanside",
+    "country": "United States"
+  },
+  {
+    "code": "USOCW",
+    "name": "Washington",
+    "city": "Washington",
+    "country": "United States"
+  },
+  {
+    "code": "USOLM",
+    "name": "Olympia",
+    "city": "Olympia",
+    "country": "United States"
+  },
+  {
+    "code": "USOMA",
+    "name": "Omaha",
+    "city": "Omaha",
+    "country": "United States"
+  },
+  {
+    "code": "USORF",
+    "name": "Norfolk",
+    "city": "Norfolk",
+    "country": "United States"
+  },
+  {
+    "code": "USORL",
+    "name": "Orlando",
+    "city": "Orlando",
+    "country": "United States"
+  },
+  {
+    "code": "USOYM",
+    "name": "Otay Mesa",
+    "city": "Otay Mesa",
+    "country": "United States"
+  },
+  {
+    "code": "USPAB",
+    "name": "Palm Beach",
+    "city": "Palm Beach",
+    "country": "United States"
+  },
+  {
+    "code": "USPCA",
+    "name": "Portage Creek",
+    "city": "Portage Creek",
+    "country": "United States"
+  },
+  {
+    "code": "USPCV",
+    "name": "Port Canaveral",
+    "city": "Brevard County",
+    "country": "United States"
+  },
+  {
+    "code": "USPDX",
+    "name": "Portland",
+    "city": "Portland",
+    "country": "United States"
+  },
+  {
+    "code": "USPEB",
+    "name": "Port Elizabeth",
+    "city": "Port Elizabeth",
+    "country": "United States"
+  },
+  {
+    "code": "USPEF",
+    "name": "Port Everglades",
+    "city": "Port Everglades",
+    "country": "United States"
+  },
+  {
+    "code": "USPFN",
+    "name": "Panama City",
+    "city": "Panama City",
+    "country": "United States"
+  },
+  {
+    "code": "USPGL",
+    "name": "Pascagoula",
+    "city": "Pascagoula",
+    "country": "United States"
+  },
+  {
+    "code": "USPHF",
+    "name": "Hampton-Williamsburg-Newport News Apt",
+    "city": "Hampton-Williamsburg-Newport News Apt",
+    "country": "United States"
+  },
+  {
+    "code": "USPHL",
+    "name": "Philadelphia",
+    "city": "Philadelphia",
+    "country": "United States"
+  },
+  {
+    "code": "USPHX",
+    "name": "Phoenix",
+    "city": "Phoenix",
+    "country": "United States"
+  },
+  {
+    "code": "USPIA",
+    "name": "Peoria",
+    "city": "Peoria",
+    "country": "United States"
+  },
+  {
+    "code": "USPIT",
+    "name": "Pittsburgh",
+    "city": "Pittsburgh",
+    "country": "United States"
+  },
+  {
+    "code": "USPME",
+    "name": "Port Manatee",
+    "city": "Port Manatee",
+    "country": "United States"
+  },
+  {
+    "code": "USPNS",
+    "name": "Pensacola",
+    "city": "Pensacola",
+    "country": "United States"
+  },
+  {
+    "code": "USPOA",
+    "name": "Port Arthur",
+    "city": "Port Arthur",
+    "country": "United States"
+  },
+  {
+    "code": "USPPS",
+    "name": "Pennsauken",
+    "city": "Pennsauken",
+    "country": "United States"
+  },
+  {
+    "code": "USPS6",
+    "name": "Pearson",
+    "city": "Pearson",
+    "country": "United States"
+  },
+  {
+    "code": "USPTM",
+    "name": "Portsmouth",
+    "city": "Portsmouth",
+    "country": "United States"
+  },
+  {
+    "code": "USPVD",
+    "name": "Providence",
+    "city": "Providence",
+    "country": "United States"
+  },
+  {
+    "code": "USPWM",
+    "name": "Portland",
+    "city": "Portland",
+    "country": "United States"
+  },
+  {
+    "code": "USPWN",
+    "name": "Port Wentworth",
+    "city": "Port Wentworth",
+    "country": "United States"
+  },
+  {
+    "code": "USPYM",
+    "name": "Plymouth",
+    "city": "Plymouth",
+    "country": "United States"
+  },
+  {
+    "code": "USRAJ",
+    "name": "Rotterdam",
+    "city": "Rotterdam",
+    "country": "United States"
+  },
+  {
+    "code": "USRBC",
+    "name": "Riviera Beach",
+    "city": "Riviera Beach",
+    "country": "United States"
+  },
+  {
+    "code": "USRIC",
+    "name": "Richmond",
+    "city": "Richmond",
+    "country": "United States"
+  },
+  {
+    "code": "USRNO",
+    "name": "Reno",
+    "city": "Reno",
+    "country": "United States"
+  },
+  {
+    "code": "USSAC",
+    "name": "Sacramento",
+    "city": "Sacramento",
+    "country": "United States"
+  },
+  {
+    "code": "USSAN",
+    "name": "San Diego",
+    "city": "San Diego",
+    "country": "United States"
+  },
+  {
+    "code": "USSAT",
+    "name": "San Antonio",
+    "city": "San Antonio",
+    "country": "United States"
+  },
+  {
+    "code": "USSAV",
+    "name": "Savannah",
+    "city": "Savannah",
+    "country": "United States"
+  },
+  {
+    "code": "USSCK",
+    "name": "Stockton",
+    "city": "Stockton",
+    "country": "United States"
+  },
+  {
+    "code": "USSEA",
+    "name": "Seattle",
+    "city": "Seattle",
+    "country": "United States"
+  },
+  {
+    "code": "USSFO",
+    "name": "San Francisco",
+    "city": "San Francisco",
+    "country": "United States"
+  },
+  {
+    "code": "USSLC",
+    "name": "Salt Lake City",
+    "city": "Salt Lake City",
+    "country": "United States"
+  },
+  {
+    "code": "USSPT",
+    "name": "South Saint Paul",
+    "city": "South Saint Paul",
+    "country": "United States"
+  },
+  {
+    "code": "USSSI",
+    "name": "Brunswick",
+    "city": "Brunswick",
+    "country": "United States"
+  },
+  {
+    "code": "USSTL",
+    "name": "Saint Louis",
+    "city": "Saint Louis",
+    "country": "United States"
+  },
+  {
+    "code": "USSTP",
+    "name": "Saint Paul",
+    "city": "Saint Paul",
+    "country": "United States"
+  },
+  {
+    "code": "USSUE",
+    "name": "Sturgeon Bay",
+    "city": "Sturgeon Bay",
+    "country": "United States"
+  },
+  {
+    "code": "USSUW",
+    "name": "Superior",
+    "city": "Superior",
+    "country": "United States"
+  },
+  {
+    "code": "USSWF",
+    "name": "Newburgh",
+    "city": "Newburgh",
+    "country": "United States"
+  },
+  {
+    "code": "USSXT",
+    "name": "Santa Teresa",
+    "city": "Santa Teresa",
+    "country": "United States"
+  },
+  {
+    "code": "USSXZ",
+    "name": "Swartz Creek",
+    "city": "Swartz Creek",
+    "country": "United States"
+  },
+  {
+    "code": "USTIW",
+    "name": "Tacoma",
+    "city": "Tacoma",
+    "country": "United States"
+  },
+  {
+    "code": "USTMM",
+    "name": "Tamms",
+    "city": "Tamms",
+    "country": "United States"
+  },
+  {
+    "code": "USTOL",
+    "name": "Toledo",
+    "city": "Toledo",
+    "country": "United States"
+  },
+  {
+    "code": "USTPA",
+    "name": "Tampa",
+    "city": "Tampa",
+    "country": "United States"
+  },
+  {
+    "code": "USTSA",
+    "name": "Savannah",
+    "city": "Savannah",
+    "country": "United States"
+  },
+  {
+    "code": "USTUL",
+    "name": "Tulsa",
+    "city": "Tulsa",
+    "country": "United States"
+  },
+  {
+    "code": "USUGN",
+    "name": "Waukegan",
+    "city": "Waukegan",
+    "country": "United States"
+  },
+  {
+    "code": "USUXZ",
+    "name": "Port Chester",
+    "city": "Port Chester",
+    "country": "United States"
+  },
+  {
+    "code": "USUZF",
+    "name": "Tonawanda",
+    "city": "Tonawanda",
+    "country": "United States"
+  },
+  {
+    "code": "USVAB",
+    "name": "Virginia Beach",
+    "city": "Virginia Beach",
+    "country": "United States"
+  },
+  {
+    "code": "USXGO",
+    "name": "Howard Beach/Queens/New York",
+    "city": "Howard Beach/Queens/New York",
+    "country": "United States"
+  },
+  {
+    "code": "USXHF",
+    "name": "Kirkland",
+    "city": "Kirkland",
+    "country": "United States"
+  },
+  {
+    "code": "USXHO",
+    "name": "Long Island City/Queens/New York",
+    "city": "Long Island City/Queens/New York",
+    "country": "United States"
+  },
+  {
+    "code": "USYOB",
+    "name": "Oakboro",
+    "city": "Oakboro",
+    "country": "United States"
+  },
+  {
+    "code": "UYCYR",
+    "name": "Colonia",
+    "city": "Colonia",
+    "country": "Uruguay"
+  },
+  {
+    "code": "UYMVD",
+    "name": "Montevideo",
+    "city": "Montevideo",
+    "country": "Uruguay"
+  },
+  {
+    "code": "UYNVP",
+    "name": "Nueva Palmira",
+    "city": "Nueva Palmira",
+    "country": "Uruguay"
+  },
+  {
+    "code": "UYPDU",
+    "name": "Paysandu",
+    "city": "Paysandu",
+    "country": "Uruguay"
+  },
+  {
+    "code": "VCKTN",
+    "name": "Kingstown",
+    "city": "Kingstown",
+    "country": "Saint Vincent and the Grenadines"
+  },
+  {
+    "code": "VEAMY",
+    "name": "Amuay",
+    "city": "Amuay",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEBLA",
+    "name": "Barcelona",
+    "city": "Barcelona",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEEGU",
+    "name": "El Guamache",
+    "city": "El Guamache",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEETV",
+    "name": "El Tablazo/Maracaibo L",
+    "city": "El Tablazo/Maracaibo L",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEGUB",
+    "name": "Guaranao Bay",
+    "city": "Guaranao Bay",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEGUT",
+    "name": "Guanta",
+    "city": "Guanta",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VELAG",
+    "name": "La Guaira",
+    "city": "La Guaira",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VELSV",
+    "name": "La Salina/Maracaibo L",
+    "city": "La Salina/Maracaibo L",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEMAR",
+    "name": "Maracaibo",
+    "city": "Maracaibo",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEMTV",
+    "name": "Matanzas",
+    "city": "Matanzas",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEPBL",
+    "name": "Puerto Cabello",
+    "city": "Puerto Cabello",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEPCN",
+    "name": "Punta Cardon",
+    "city": "Punta Cardón",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEPSU",
+    "name": "Puerto Sucre",
+    "city": "Puerto Sucre",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VEPZO",
+    "name": "Puerto Ordaz",
+    "city": "Puerto Ordaz",
+    "country": "Venezuela"
+  },
+  {
+    "code": "VGRAD",
+    "name": "Road Town, Tortola",
+    "city": "Road Town, Tortola",
+    "country": "Virgin Islands, British"
+  },
+  {
+    "code": "VGTOV",
+    "name": "Tortola",
+    "city": "Tortola",
+    "country": "Virgin Islands, British"
+  },
+  {
+    "code": "VICHA",
+    "name": "Charlotte Amalie, Saint Thomas",
+    "city": "Charlotte Amalie, Saint Thomas",
+    "country": "Virgin Islands, U.S."
+  },
+  {
+    "code": "VICTD",
+    "name": "Christiansted, Saint Croix",
+    "city": "Christiansted, Saint Croix",
+    "country": "Virgin Islands, U.S."
+  },
+  {
+    "code": "VISTT",
+    "name": "Saint Thomas",
+    "city": "Saint Thomas",
+    "country": "Virgin Islands, U.S."
+  },
+  {
+    "code": "VISTX",
+    "name": "Saint Croix",
+    "city": "Saint Croix",
+    "country": "Virgin Islands, U.S."
+  },
+  {
+    "code": "VNCLI",
+    "name": "Cat Lai",
+    "city": "Cát Lái",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNCLN",
+    "name": "Cai Lan",
+    "city": "Cai Lan",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNDAD",
+    "name": "Da Nang",
+    "city": "Da Nang",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNHPH",
+    "name": "Haiphong",
+    "city": "Haiphong",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNNHA",
+    "name": "Nha Trang",
+    "city": "Nha Trang",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNPHG",
+    "name": "Phuoc Long",
+    "city": "Phuóc Long",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNSGN",
+    "name": "Ho Chi Minh City",
+    "city": "Ho Chi Minh City",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNSTD",
+    "name": "Su Tu Den",
+    "city": "Su Tu Den",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNTOT",
+    "name": "Cai Mep",
+    "city": "Cai Mep",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNTTD",
+    "name": "Tan Thuan Dong",
+    "city": "Tân Thuan Dông",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNUIH",
+    "name": "Qui Nhon",
+    "city": "Qui Nhon",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNVIC",
+    "name": "Ho Chi Minh, VICT",
+    "city": "Ho Chi Minh, VICT",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VNVUT",
+    "name": "Vung Tau",
+    "city": "Vung Tau",
+    "country": "Viet Nam"
+  },
+  {
+    "code": "VUSON",
+    "name": "Espiritu Santo",
+    "city": "Espiritu Santo",
+    "country": "Vanuatu"
+  },
+  {
+    "code": "VUVLI",
+    "name": "Port Vila",
+    "city": "Port Vila",
+    "country": "Vanuatu"
+  },
+  {
+    "code": "WSAPW",
+    "name": "Apia",
+    "city": "Apia",
+    "country": "Samoa"
+  },
+  {
+    "code": "YEADE",
+    "name": "Aden",
+    "city": "Aden",
+    "country": "Yemen"
+  },
+  {
+    "code": "YEHOD",
+    "name": "Hodeidah",
+    "city": "Hodeidah",
+    "country": "Yemen"
+  },
+  {
+    "code": "YELAD",
+    "name": "Little Aden",
+    "city": "Little Aden",
+    "country": "Yemen"
+  },
+  {
+    "code": "YEMKX",
+    "name": "Mukalla",
+    "city": "Mukalla",
+    "country": "Yemen"
+  },
+  {
+    "code": "YTLON",
+    "name": "Longoni",
+    "city": "Longoni",
+    "country": "Mayotte"
+  },
+  {
+    "code": "ZABFN",
+    "name": "Bloemfontein",
+    "city": "Bloemfontein",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZACPT",
+    "name": "Cape Town",
+    "city": "Cape Town",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZADUR",
+    "name": "Durban",
+    "city": "Durban",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZAELS",
+    "name": "East London",
+    "city": "East London",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZAJNB",
+    "name": "Johannesburg",
+    "city": "Johannesburg",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZAPLZ",
+    "name": "Port Elizabeth",
+    "city": "Port Elizabeth",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZAPRY",
+    "name": "Pretoria",
+    "city": "Pretoria",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZARCB",
+    "name": "Richards Bay",
+    "city": "Richards Bay",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZAZBA",
+    "name": "Coega",
+    "city": "Coega",
+    "country": "South Africa"
+  },
+  {
+    "code": "ZMLUN",
+    "name": "Lusaka",
+    "city": "Lusaka",
+    "country": "Zambia"
+  },
+  {
+    "code": "ZWBUQ",
+    "name": "Bulawayo",
+    "city": "Bulawayo",
+    "country": "Zimbabwe"
+  },
+  {
+    "code": "ZWHRE",
+    "name": "Harare",
+    "city": "Harare",
+    "country": "Zimbabwe"
+  },
+  {
+    "code": "ZWUTA",
+    "name": "Mutare",
+    "city": "Mutare",
+    "country": "Zimbabwe"
+  }
+]

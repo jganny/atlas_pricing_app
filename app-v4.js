@@ -97,6 +97,7 @@ let appState = {
   currentUser: null, // User Role Object
   airports: [],
   airlines: [],
+  seaports: [],
   quotes: [],
   currentAirFreight: {
     origin: '',
@@ -342,6 +343,15 @@ function setupValidityDatePickerDismissal() {
 
 // Initialize Application
 document.addEventListener("DOMContentLoaded", () => {
+  // Disable browser autofill / personal contact directory suggestions
+  document.querySelectorAll("input").forEach(input => {
+    if (input.type !== "password") {
+      input.setAttribute("autocomplete", "new-password");
+      input.setAttribute("autocorrect", "off");
+      input.setAttribute("autocapitalize", "none");
+    }
+  });
+
   loadData();
   applyDeskNames();
   setupValidityDatePickerDismissal();
@@ -709,6 +719,13 @@ async function loadData() {
     appState.airlines = await airlinesRes.json();
   } catch (e) {
     console.error("Failed to load airlines.json", e);
+  }
+
+  try {
+    const seaportsRes = await fetch("data/seaports.json");
+    appState.seaports = await seaportsRes.json();
+  } catch (e) {
+    console.error("Failed to load seaports.json", e);
   }
 
   // Setup Autocomplete inputs
@@ -1435,6 +1452,9 @@ function saveCustomEntry(type, value) {
 // Autocomplete Engine
 function setupAutocomplete(inputEl, type) {
   if (!inputEl) return;
+  inputEl.setAttribute("autocomplete", "new-password");
+  inputEl.setAttribute("autocorrect", "off");
+  inputEl.setAttribute("autocapitalize", "none");
   
   const container = inputEl.closest(".autocomplete-container");
   let dropdown = container.querySelector(".autocomplete-dropdown");
@@ -1564,12 +1584,13 @@ function setupAutocomplete(inputEl, type) {
       if (stored) {
         try { customPorts = JSON.parse(stored); } catch(err) {}
       }
-      const combined = [...majorSeaports, ...customPorts];
+      const portsSource = (appState.seaports && appState.seaports.length > 0) ? appState.seaports : majorSeaports;
+      const combined = [...portsSource, ...customPorts];
       matches = combined.filter(sp => 
-        sp.code.toLowerCase().includes(val) || 
-        sp.name.toLowerCase().includes(val) ||
-        sp.city.toLowerCase().includes(val) ||
-        sp.country.toLowerCase().includes(val)
+        (sp.code || "").toLowerCase().includes(val) || 
+        (sp.name || "").toLowerCase().includes(val) ||
+        (sp.city || "").toLowerCase().includes(val) ||
+        (sp.country || "").toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "shippinglines") {
       const majorShippingLines = [
@@ -3323,7 +3344,7 @@ function setupSeaFreightEvents() {
   document.getElementById("sea-fcl-stuffing")?.addEventListener("change", calculateSeaFreight);
 
   // Populate first container line by default
-  const fclBody = document.getElementById("sea-fcl-body");
+  const fclBody = document.getElementById("sea-fcl-body-1");
   if (fclBody && fclBody.children.length === 0) {
     addFclContainerRow("20'GP", 1, 0);
   }
@@ -5486,7 +5507,7 @@ function saveCurrentQuote() {
 
     const containerItems = [];
     if (appState.currentSeaFreight.type === 'fcl') {
-      const fclRows = document.querySelectorAll("#sea-fcl-body .container-row");
+      const fclRows = document.querySelectorAll("#sea-fcl-body-1 .container-row");
       if (tariffsEnabled) {
         if (fclRows.length === 0) {
           alert("Please add at least one Container Line for FCL ocean freight.");

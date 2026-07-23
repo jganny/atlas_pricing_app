@@ -4945,8 +4945,8 @@
   },
   {
     "code": "BRB",
-    "name": "Barreirinhas Airport",
-    "city": "",
+    "name": "Barreirinhas Lençóis Maranhenses Regional Airport",
+    "city": "Barreirinhas",
     "country": "BR"
   },
   {
@@ -34656,6 +34656,12 @@
     "country": "IN"
   },
   {
+    "code": "RTE",
+    "name": "Campo de Marte Airport",
+    "city": "Sao Paulo",
+    "country": "BR"
+  },
+  {
     "code": "RTG",
     "name": "Satar Tacik Airport",
     "city": "Satar Tacik-Flores Island",
@@ -35044,12 +35050,6 @@
     "name": "San Diego International Airport",
     "city": "San Diego",
     "country": "US"
-  },
-  {
-    "code": "SAO",
-    "name": "Campo de Marte Airport",
-    "city": "Sao Paulo",
-    "country": "BR"
   },
   {
     "code": "SAP",

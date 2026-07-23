@@ -106,6 +106,31 @@ def download_data():
             print(f"Fallback failed: {ex}")
             clean_airports = []
 
+    # 3. Download Seaports
+    seaports_url = "https://raw.githubusercontent.com/marchah/sea-ports/master/lib/ports.json"
+    print(f"Downloading seaports from {seaports_url}...")
+    try:
+        req = urllib.request.Request(
+            seaports_url, 
+            headers={'User-Agent': 'Mozilla/5.0'}
+        )
+        with urllib.request.urlopen(req) as response:
+            seaports_data = json.loads(response.read().decode('utf-8'))
+        
+        clean_seaports = []
+        for code, info in seaports_data.items():
+            clean_seaports.append({
+                "code": code,
+                "name": (info.get("name") or "").strip(),
+                "city": (info.get("city") or "").strip(),
+                "country": (info.get("country") or "").strip()
+            })
+        clean_seaports = sorted(clean_seaports, key=lambda x: x["code"])
+        print(f"Processed {len(clean_seaports)} valid seaports.")
+    except Exception as e:
+        print(f"Error downloading seaports: {e}")
+        clean_seaports = []
+
     # Write output to static JSON files
     data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
@@ -115,6 +140,9 @@ def download_data():
         
     with open(os.path.join(data_dir, "airports.json"), "w", encoding="utf-8") as f:
         json.dump(clean_airports, f, indent=2, ensure_ascii=False)
+
+    with open(os.path.join(data_dir, "seaports.json"), "w", encoding="utf-8") as f:
+        json.dump(clean_seaports, f, indent=2, ensure_ascii=False)
         
     print("Files written successfully to data/ directory.")
 
