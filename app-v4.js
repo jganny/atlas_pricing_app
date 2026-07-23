@@ -3870,7 +3870,9 @@ function calculateSeaFreight() {
 
   // LCL RT Math
   const weightTons = weightKg / 1000;
-  const chargeableCbm = Math.max(cbm, weightTons);
+  const isLclMode = (type === 'lcl');
+  const effectiveCbm = (isLclMode && cbm < 1.0) ? 1.0 : cbm;
+  const chargeableCbm = Math.max(effectiveCbm, weightTons);
 
   const isSeaAmsEnabled = document.getElementById("sea-enable-ams-fee") ? document.getElementById("sea-enable-ams-fee").checked : true;
   const rawSeaAms = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
@@ -4069,7 +4071,7 @@ function calculateSeaFreight() {
     detailsText = primaryLiner.fclSummary.join(", ") || 'No Containers Selected';
     appState.currentSeaFreight.fclSummary = primaryLiner.fclSummary;
   } else if (type === 'lcl') {
-    detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
+    detailsText = `${chargeableCbm.toFixed(2)} RT (${effectiveCbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [LCL]`;
   } else {
     detailsText = `${chargeableCbm.toFixed(2)} RT (${cbm.toFixed(2)} CBM / ${weightTons.toFixed(2)} Tons) [Break Bulk]`;
   }
@@ -4083,7 +4085,7 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-type").textContent = typeLabel;
   document.getElementById("res-sea-details").textContent = detailsText;
   document.getElementById("res-sea-gw").textContent = `${weightKg.toFixed(2)} kg`;
-  document.getElementById("res-sea-vol").textContent = `${cbm.toFixed(2)} CBM`;
+  document.getElementById("res-sea-vol").textContent = `${effectiveCbm.toFixed(2)} CBM`;
   document.getElementById("res-sea-qty").textContent = `${pkgQty} Pkgs`;
 
   const routing = formatRoutingDisplay(document.getElementById("sea-routing")?.value || "");
@@ -4162,7 +4164,7 @@ function calculateSeaFreight() {
 
   appState.currentSeaFreight.liners = calculatedLiners;
   appState.currentSeaFreight.grossWeight = weightKg;
-  appState.currentSeaFreight.volumeCbm = cbm;
+  appState.currentSeaFreight.volumeCbm = effectiveCbm;
   appState.currentSeaFreight.packagesQuantity = pkgQty;
   appState.currentSeaFreight.baseFreight = baseFreight;
   appState.currentSeaFreight.surchargeTotal = totalSurcharges;
@@ -10527,7 +10529,9 @@ async function submitWonBookingDetails(e) {
     const weightKg = quote.details.grossWeight || 0;
     const weightTons = weightKg / 1000;
     const cbm = quote.details.volumeCbm || 0;
-    const chargeableCbm = Math.max(cbm, weightTons);
+    const isLcl = quote.details.mode === 'lcl';
+    const effectiveCbm = (isLcl && cbm < 1.0) ? 1.0 : cbm;
+    const chargeableCbm = Math.max(effectiveCbm, weightTons);
     const containerCount = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
     const isSeaFcl = quote.details.mode === 'fcl';
 
