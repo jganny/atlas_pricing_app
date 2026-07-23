@@ -4950,6 +4950,73 @@ window.convertQuote = (id) => {
     updateRateFromSelection();
   }
 
+  // Populate local fees buy rates inputs
+  const localFeesSection = document.getElementById("won-local-fees-section");
+  const originFeesGroup = document.getElementById("won-origin-fees-group");
+  const destFeesGroup = document.getElementById("won-dest-fees-group");
+  const originFeesList = document.getElementById("won-origin-fees-list");
+  const destFeesList = document.getElementById("won-dest-fees-list");
+
+  if (localFeesSection && originFeesList && destFeesList) {
+    originFeesList.innerHTML = "";
+    destFeesList.innerHTML = "";
+    
+    const originSurcharges = quote.details.originSurcharges || [];
+    const destSurcharges = quote.details.destSurcharges || [];
+
+    if (originSurcharges.length > 0 || destSurcharges.length > 0) {
+      localFeesSection.style.display = "block";
+    } else {
+      localFeesSection.style.display = "none";
+    }
+
+    if (originSurcharges.length > 0) {
+      originFeesGroup.style.display = "block";
+      originSurcharges.forEach((sch, i) => {
+        const row = document.createElement("div");
+        row.style.display = "grid";
+        row.style.gridTemplateColumns = "1.5fr 1fr";
+        row.style.gap = "0.8rem";
+        row.style.alignItems = "center";
+        row.style.marginBottom = "0.4rem";
+        
+        row.innerHTML = `
+          <span style="font-size: 0.72rem; color: var(--t1); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sch.name} (${sch.unit})">
+            ${sch.name} (${sch.unit}) <span style="color: var(--t3); font-size: 0.65rem;">[Sell: ${sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0)}]</span>
+          </span>
+          <input type="number" class="won-origin-fee-buy-input" data-index="${i}" placeholder="Buy Rate" step="0.01" value="${sch.buyRate !== undefined ? sch.buyRate : 0}"
+            style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+        `;
+        originFeesList.appendChild(row);
+      });
+    } else {
+      originFeesGroup.style.display = "none";
+    }
+
+    if (destSurcharges.length > 0) {
+      destFeesGroup.style.display = "block";
+      destSurcharges.forEach((sch, i) => {
+        const row = document.createElement("div");
+        row.style.display = "grid";
+        row.style.gridTemplateColumns = "1.5fr 1fr";
+        row.style.gap = "0.8rem";
+        row.style.alignItems = "center";
+        row.style.marginBottom = "0.4rem";
+        
+        row.innerHTML = `
+          <span style="font-size: 0.72rem; color: var(--t1); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sch.name} (${sch.unit})">
+            ${sch.name} (${sch.unit}) <span style="color: var(--t3); font-size: 0.65rem;">[Sell: ${sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0)}]</span>
+          </span>
+          <input type="number" class="won-dest-fee-buy-input" data-index="${i}" placeholder="Buy Rate" step="0.01" value="${sch.buyRate !== undefined ? sch.buyRate : 0}"
+            style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+        `;
+        destFeesList.appendChild(row);
+      });
+    } else {
+      destFeesGroup.style.display = "none";
+    }
+  }
+
   document.getElementById("won-booking-modal").style.display = "flex";
 };
 
@@ -10221,6 +10288,31 @@ async function submitWonBookingDetails(e) {
   quote.commodity = commodity;
   quote.conversionDate = new Date().toISOString().split('T')[0];
   quote.date = new Date().toISOString().split('T')[0];
+
+  // Save local fees buy rates back to quote details
+  const originBuyInputs = document.querySelectorAll(".won-origin-fee-buy-input");
+  originBuyInputs.forEach(input => {
+    const idx = parseInt(input.getAttribute("data-index"));
+    const val = parseFloat(input.value) || 0;
+    if (quote.details.originSurcharges && quote.details.originSurcharges[idx]) {
+      quote.details.originSurcharges[idx].buyRate = val;
+    }
+  });
+
+  const destBuyInputs = document.querySelectorAll(".won-dest-fee-buy-input");
+  destBuyInputs.forEach(input => {
+    const idx = parseInt(input.getAttribute("data-index"));
+    const val = parseFloat(input.value) || 0;
+    if (quote.details.destSurcharges && quote.details.destSurcharges[idx]) {
+      quote.details.destSurcharges[idx].buyRate = val;
+    }
+  });
+
+  // Re-assemble / sync quote.details.surcharges
+  quote.details.surcharges = [
+    ...(quote.details.originSurcharges || []),
+    ...(quote.details.destSurcharges || [])
+  ];
 
   const confirmedCarrier = document.getElementById("won-confirmed-carrier").value;
 
