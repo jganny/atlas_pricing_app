@@ -969,6 +969,24 @@ function updateCurrencyRules(role) {
 
   currencyElements.forEach(el => el.textContent = currency);
   symbolElements.forEach(el => el.textContent = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£')));
+
+  // Toggle global vs embedded local surcharges for Air Nomination
+  const isAirNomination = TEAM_ROLES[activeRole]?.category === 'AIR - NOMINATION';
+  const originFeesCard = document.getElementById("air-origin-fees-card");
+  const destFeesCard = document.getElementById("air-dest-fees-card");
+  if (originFeesCard && destFeesCard) {
+    if (isAirNomination) {
+      originFeesCard.style.display = "block";
+      destFeesCard.style.display = "block";
+    } else {
+      originFeesCard.style.display = "none";
+      destFeesCard.style.display = "none";
+    }
+  }
+  const cardWrappers = document.querySelectorAll("#air-airlines-list-container .air-card-surcharges-wrapper");
+  cardWrappers.forEach(w => {
+    w.style.display = isAirNomination ? "none" : "block";
+  });
 }
 
 function resetAirFreightDeskForm() {
@@ -2079,6 +2097,9 @@ function addAirlineCard(data = null) {
   const destFeesEnabled = data && data.destFeesEnabled !== undefined ? !!data.destFeesEnabled : true;
 
   const creatorRole = appState.currentUser;
+  const activeRole = getActiveRole();
+  const roleObj = TEAM_ROLES[activeRole];
+  const isAirNomination = roleObj && roleObj.category === 'AIR - NOMINATION';
   const isFreeHandOrNrs = creatorRole && (
     creatorRole === 'jaya' || 
     creatorRole === 'cathrina' || 
@@ -2150,7 +2171,7 @@ function addAirlineCard(data = null) {
     </div>
 
     <!-- Embedded Surcharges (Origin Local & Destination Local) per Airline -->
-    <div class="air-card-surcharges-wrapper" style="margin-top: 1rem; border-top: 1px dashed var(--border-1); padding-top: 0.75rem;">
+    <div class="air-card-surcharges-wrapper" style="margin-top: 1rem; border-top: 1px dashed var(--border-1); padding-top: 0.75rem; display: ${isAirNomination ? 'none' : 'block'};">
       <!-- Origin Local Section -->
       <div class="air-card-local-block" style="background: rgba(0, 0, 0, 0.12); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
         <div class="air-card-origin-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
@@ -2527,6 +2548,10 @@ function calculateAirFreight() {
   updateCurrencyRules(appState.currentUser);
   updateCartageRowVisibility();
 
+  const activeRole = getActiveRole();
+  const roleObj = TEAM_ROLES[activeRole];
+  const isAirNomination = roleObj && roleObj.category === 'AIR - NOMINATION';
+
   // Read section enable/disable states
   const tariffsEnabled = document.getElementById("air-enable-tariffs")?.checked ?? true;
   const originFeesEnabled = document.getElementById("air-enable-origin-fees")?.checked ?? true;
@@ -2755,7 +2780,7 @@ function calculateAirFreight() {
     const airlineDestSurcharges = [];
 
     const originCardCheckbox = card.querySelector(".air-card-enable-origin-fees");
-    const originCardEnabled = originCardCheckbox ? originCardCheckbox.checked : originFeesEnabled;
+    const originCardEnabled = isAirNomination ? originFeesEnabled : (originCardCheckbox ? originCardCheckbox.checked : originFeesEnabled);
     const originBadge = card.querySelector(".air-card-origin-status-badge");
     if (originBadge) {
       originBadge.textContent = originCardEnabled ? "✓ Included" : "✕ Excluded";
@@ -2764,7 +2789,7 @@ function calculateAirFreight() {
     }
 
     const destCardCheckbox = card.querySelector(".air-card-enable-dest-fees");
-    const destCardEnabled = destCardCheckbox ? destCardCheckbox.checked : destFeesEnabled;
+    const destCardEnabled = isAirNomination ? destFeesEnabled : (destCardCheckbox ? destCardCheckbox.checked : destFeesEnabled);
     const destBadge = card.querySelector(".air-card-dest-status-badge");
     if (destBadge) {
       destBadge.textContent = destCardEnabled ? "✓ Included" : "✕ Excluded";
@@ -2774,8 +2799,10 @@ function calculateAirFreight() {
 
     // Origin local surcharges for this airline
     if (originCardEnabled) {
-      let originRows = card.querySelectorAll(".air-card-origin-surcharges-body tr");
-      if (originRows.length === 0) {
+      let originRows = isAirNomination 
+        ? document.querySelectorAll("#air-origin-surcharges-body tr")
+        : card.querySelectorAll(".air-card-origin-surcharges-body tr");
+      if (!isAirNomination && originRows.length === 0) {
         originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
       }
       originRows.forEach(row => {
@@ -2832,8 +2859,10 @@ function calculateAirFreight() {
 
     // Destination local surcharges for this airline
     if (destCardEnabled) {
-      let destRows = card.querySelectorAll(".air-card-dest-surcharges-body tr");
-      if (destRows.length === 0) {
+      let destRows = isAirNomination 
+        ? document.querySelectorAll("#air-dest-surcharges-body tr")
+        : card.querySelectorAll(".air-card-dest-surcharges-body tr");
+      if (!isAirNomination && destRows.length === 0) {
         destRows = document.querySelectorAll("#air-dest-surcharges-body tr");
       }
       destRows.forEach(row => {
