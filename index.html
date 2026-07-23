@@ -1625,12 +1625,17 @@
 
             <!-- Dynamic Airlines Container (Carrier Tariffs) -->
             <div class="section-card" id="air-tariffs-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-air); cursor: pointer; margin: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1); cursor: pointer; user-select: none;" onclick="toggleAirSection('air-tariffs')">
+                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-air); cursor: pointer; margin: 0;" onclick="event.stopPropagation();">
                   <input type="checkbox" id="air-enable-tariffs" checked onchange="calculateAirFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
                   Airline / Carrier Tariffs
                 </label>
-                <span id="air-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span id="air-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                  <button type="button" class="btn-text toggle-air-tariffs-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
+                  </button>
+                </div>
               </div>
               <div id="air-tariffs-content-body">
                 <div id="air-airlines-list-container">
@@ -1649,12 +1654,17 @@
             <!-- Split Surcharges (Origin vs Destination) -->
             <!-- 1. Origin Surcharges & Airport Fees (Hidden: local surcharges now embedded per airline card) -->
             <div class="section-card" id="air-origin-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem; display: none;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1); cursor: pointer; user-select: none;" onclick="toggleAirSection('air-origin-fees')">
+                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;" onclick="event.stopPropagation();">
                   <input type="checkbox" id="air-enable-origin-fees" checked onchange="calculateAirFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
                   Origin Local Fees & Surcharges
                 </label>
-                <span id="air-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span id="air-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                  <button type="button" class="btn-text toggle-air-origin-fees-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
+                  </button>
+                </div>
               </div>
               <div id="air-origin-fees-content-body">
                 <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
@@ -1685,12 +1695,17 @@
 
             <!-- 2. Destination Surcharges & Airport Fees (Hidden: local surcharges now embedded per airline card) -->
             <div class="section-card" id="air-dest-fees-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem; display: none;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
-                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1); cursor: pointer; user-select: none;" onclick="toggleAirSection('air-dest-fees')">
+                <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;" onclick="event.stopPropagation();">
                   <input type="checkbox" id="air-enable-dest-fees" checked onchange="calculateAirFreight()" style="width: 18px; height: 18px; accent-color: var(--sky); cursor: pointer;">
                   Destination Local Fees & Surcharges
                 </label>
-                <span id="air-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span id="air-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+                  <button type="button" class="btn-text toggle-air-dest-fees-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
+                  </button>
+                </div>
               </div>
               <div id="air-dest-fees-content-body">
                 <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">

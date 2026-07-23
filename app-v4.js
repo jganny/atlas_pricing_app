@@ -1056,6 +1056,19 @@ function resetAirFreightDeskForm() {
 
   // Surcharges reset to default
   resetSurchargesToDefaults();
+
+  // Reset section collapses to expanded
+  ['air-tariffs', 'air-origin-fees', 'air-dest-fees'].forEach(prefix => {
+    const content = document.getElementById(`${prefix}-content-body`);
+    const btn = document.querySelector(`.toggle-${prefix}-btn`);
+    if (content) content.style.display = "block";
+    if (btn) {
+      const icon = btn.querySelector(".collapse-icon");
+      const text = btn.querySelector(".collapse-text");
+      if (icon) icon.textContent = "▼";
+      if (text) text.textContent = "Collapse";
+    }
+  });
   
   // Recalculate to update results layout to 0/empty
   calculateAirFreight();
@@ -3438,6 +3451,17 @@ function setupSeaFreightEvents() {
 // ══════════════════════════════════════════════════
 // MULTI-LINER & ACCORDION SYSTEM FOR SEA FREIGHT
 // ══════════════════════════════════════════════════
+
+function toggleAirSection(sectionPrefix) {
+  const content = document.getElementById(`${sectionPrefix}-content-body`);
+  const btn = document.querySelector(`.toggle-${sectionPrefix}-btn`);
+  if (!content || !btn) return;
+  const isHidden = content.style.display === "none";
+  content.style.display = isHidden ? "block" : "none";
+  btn.querySelector(".collapse-icon").textContent = isHidden ? "▼" : "▲";
+  btn.querySelector(".collapse-text").textContent = isHidden ? "Collapse" : "Expand";
+}
+window.toggleAirSection = toggleAirSection;
 
 window.toggleLinerAccordion = function(headerEl) {
   const contentEl = headerEl.nextElementSibling;
