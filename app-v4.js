@@ -765,7 +765,7 @@ async function loadData() {
 function setupRoleSwitcher() {
   document.querySelectorAll(".role-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
-      const role = e.target.getAttribute("data-role");
+      const role = e.currentTarget.getAttribute("data-role");
       switchRole(role);
     });
   });
