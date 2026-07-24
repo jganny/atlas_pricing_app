@@ -3513,6 +3513,9 @@ window.switchLinerMode = function(linerIndex, mode) {
   if (bbForm) bbForm.style.display = (mode === 'bb') ? "block" : "none";
 
   card.dataset.mode = mode;
+  if (mode === 'fcl') {
+    updateLinerSurchargeContainerOptions(linerIndex);
+  }
   calculateSeaFreight();
 };
 
@@ -3852,6 +3855,57 @@ window.addNewLinerCard = function(data = null) {
   calculateSeaFreight();
 };
 
+window.updateLinerSurchargeContainerOptions = function(linerIndex) {
+  const card = document.getElementById(`sea-liner-card-${linerIndex}`);
+  if (!card) return;
+
+  const fclRows = card.querySelectorAll(`.sea-fcl-body .container-row, tbody[id^='sea-fcl-body-${linerIndex}'] .container-row`);
+  const chosenTypes = [];
+  fclRows.forEach(row => {
+    const selectEl = row.querySelector(".fcl-type");
+    if (selectEl && selectEl.value) {
+      chosenTypes.push(selectEl.value);
+    }
+  });
+
+  const uniqueTypes = [...new Set(chosenTypes)];
+
+  const unitSelects = card.querySelectorAll(".chg-unit");
+  unitSelects.forEach(selectEl => {
+    const currentVal = selectEl.value;
+
+    let html = `
+      <option value="flat" ${currentVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
+      <option value="rt" ${currentVal === 'rt' ? 'selected' : ''}>Per RT (Revenue Ton)</option>
+      <option value="kg" ${currentVal === 'kg' ? 'selected' : ''}>Per Kg (Gross Weight)</option>
+    `;
+
+    uniqueTypes.forEach(type => {
+      const val = `container-${type}`;
+      html += `<option value="${val}" ${currentVal === val ? 'selected' : ''}>Per ${type}</option>`;
+    });
+
+    selectEl.innerHTML = html;
+
+    if (currentVal === 'container') {
+      if (uniqueTypes.length > 0) {
+        selectEl.value = `container-${uniqueTypes[0]}`;
+      } else {
+        selectEl.value = 'flat';
+      }
+    } else if (currentVal.startsWith('container-')) {
+      const type = currentVal.substring(10);
+      if (!uniqueTypes.includes(type)) {
+        if (uniqueTypes.length > 0) {
+          selectEl.value = `container-${uniqueTypes[0]}`;
+        } else {
+          selectEl.value = 'flat';
+        }
+      }
+    }
+  });
+};
+
 window.removeLinerCard = function(linerIndex) {
   const card = document.getElementById(`sea-liner-card-${linerIndex}`);
   if (card) {
@@ -3872,7 +3926,7 @@ window.addFclContainerRowToLiner = function(linerIndex, typeVal = "20'GP", qtyVa
   
   tr.innerHTML = `
     <td>
-      <select class="fcl-type table-select" onchange="calculateSeaFreight()">
+      <select class="fcl-type table-select" onchange="updateLinerSurchargeContainerOptions(${linerIndex}); calculateSeaFreight()">
         <option value="20'GP" ${typeVal === "20'GP" ? 'selected' : ''}>20'GP (General Purpose)</option>
         <option value="40'GP" ${typeVal === "40'GP" ? 'selected' : ''}>40'GP (General Purpose)</option>
         <option value="20'HC" ${typeVal === "20'HC" ? 'selected' : ''}>20'HC (High Cube)</option>
@@ -3890,13 +3944,14 @@ window.addFclContainerRowToLiner = function(linerIndex, typeVal = "20'GP", qtyVa
     <td><input type="number" class="fcl-rate fcl-sell-rate" value="${sellRate}" min="0" oninput="calculateSeaFreight()" style="width: 100%; text-align: right;"></td>
     <td><input type="number" class="fcl-buy-rate" value="${buyRate}" min="0" oninput="calculateSeaFreight()" style="width: 100%; text-align: right;"></td>
     <td style="text-align: center;">
-      <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaFreight();" style="margin: 0 auto;">
+      <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); updateLinerSurchargeContainerOptions(${linerIndex}); calculateSeaFreight();" style="margin: 0 auto;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
       </button>
     </td>
   `;
 
   tbody.appendChild(tr);
+  updateLinerSurchargeContainerOptions(linerIndex);
   calculateSeaFreight();
 };
 
@@ -3905,6 +3960,34 @@ window.addSeaSurchargeRowToLiner = function(linerIndex, type, nameVal = "", sell
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
 
+  const card = document.getElementById(`sea-liner-card-${linerIndex}`);
+  const fclRows = card ? card.querySelectorAll(`.sea-fcl-body .container-row, tbody[id^='sea-fcl-body-${linerIndex}'] .container-row`) : [];
+  const chosenTypes = [];
+  fclRows.forEach(row => {
+    const selectEl = row.querySelector(".fcl-type");
+    if (selectEl && selectEl.value) {
+      chosenTypes.push(selectEl.value);
+    }
+  });
+  const uniqueTypes = [...new Set(chosenTypes)];
+
+  let selectedVal = unitVal;
+  if (unitVal === 'container') {
+    if (uniqueTypes.length > 0) {
+      selectedVal = `container-${uniqueTypes[0]}`;
+    }
+  }
+
+  let unitOptions = `
+    <option value="flat" ${selectedVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
+    <option value="rt" ${selectedVal === 'rt' ? 'selected' : ''}>Per RT (Revenue Ton)</option>
+    <option value="kg" ${selectedVal === 'kg' ? 'selected' : ''}>Per Kg (Gross Weight)</option>
+  `;
+  uniqueTypes.forEach(t => {
+    const val = `container-${t}`;
+    unitOptions += `<option value="${val}" ${selectedVal === val ? 'selected' : ''}>Per ${t}</option>`;
+  });
+
   const tr = document.createElement("tr");
   tr.innerHTML = `
     <td><input type="text" class="chg-name" value="${nameVal}" placeholder="Surcharge Name" required oninput="calculateSeaFreight()"></td>
@@ -3912,10 +3995,7 @@ window.addSeaSurchargeRowToLiner = function(linerIndex, type, nameVal = "", sell
     <td><input type="number" class="chg-buy-rate" value="${buyVal}" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);" oninput="calculateSeaFreight()"></td>
     <td>
       <select class="chg-unit" onchange="calculateSeaFreight()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
-        <option value="flat" ${unitVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
-        <option value="container" ${unitVal === 'container' ? 'selected' : ''}>Per Container</option>
-        <option value="rt" ${unitVal === 'rt' ? 'selected' : ''}>Per RT (Revenue Ton)</option>
-        <option value="kg" ${unitVal === 'kg' ? 'selected' : ''}>Per Kg (Gross Weight)</option>
+        ${unitOptions}
       </select>
     </td>
     <td><input type="text" class="chg-remarks" value="${remarksVal}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
@@ -4061,7 +4141,12 @@ function calculateSeaFreight() {
 
         if (name && rate > 0) {
           let cost = 0;
-          if (unit === 'container') {
+          if (unit.startsWith('container-')) {
+            const cType = unit.substring(10);
+            const containerObj = containersList.find(c => c.type === cType);
+            const qty = containerObj ? containerObj.qty : 0;
+            cost = qty * rate;
+          } else if (unit === 'container') {
             cost = isLinerFcl ? linerContainersCount * rate : rate;
           } else if (unit === 'rt') {
             cost = chargeableCbm * rate;
@@ -4089,7 +4174,12 @@ function calculateSeaFreight() {
 
         if (name && rate > 0) {
           let cost = 0;
-          if (unit === 'container') {
+          if (unit.startsWith('container-')) {
+            const cType = unit.substring(10);
+            const containerObj = containersList.find(c => c.type === cType);
+            const qty = containerObj ? containerObj.qty : 0;
+            cost = qty * rate;
+          } else if (unit === 'container') {
             cost = isLinerFcl ? linerContainersCount * rate : rate;
           } else if (unit === 'rt') {
             cost = chargeableCbm * rate;
@@ -5744,7 +5834,7 @@ function saveCurrentQuote() {
     }
 
     if (originFeesEnabled) {
-      const seaOriginRows = document.querySelectorAll("#sea-origin-surcharges-body tr");
+      const seaOriginRows = document.querySelectorAll(".sea-origin-surcharges-body tr, tbody[id^='sea-origin-surcharges-body'] tr");
       let hasEmptySeaOrigin = false;
       seaOriginRows.forEach(row => {
         const rateInput = row.querySelector(".chg-rate");
@@ -5759,7 +5849,7 @@ function saveCurrentQuote() {
     }
 
     if (destFeesEnabled) {
-      const seaDestRows = document.querySelectorAll("#sea-dest-surcharges-body tr");
+      const seaDestRows = document.querySelectorAll(".sea-dest-surcharges-body tr, tbody[id^='sea-dest-surcharges-body'] tr");
       let hasEmptySeaDest = false;
       seaDestRows.forEach(row => {
         const rateInput = row.querySelector(".chg-rate");
