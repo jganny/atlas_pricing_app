@@ -24,6 +24,7 @@ const TEAM_ROLES = {
   'ganny': { name: 'Pricing Team', type: 'admin' },
   'shashank': { name: 'Air Nom', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
   'shaheer': { name: 'Sea Nomination', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
+  'mahendra': { name: 'Sea Nomination (Legacy)', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
   'jaya': { name: 'Free Hand', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
@@ -81,6 +82,13 @@ function getActiveRole() {
   return activeRole;
 }
 window.getActiveRole = getActiveRole;
+
+function isAdminUser(user) {
+  if (!user) return false;
+  const userLower = user.toLowerCase();
+  return userLower === 'ganny' || (TEAM_ROLES[userLower] && TEAM_ROLES[userLower].type === 'admin');
+}
+window.isAdminUser = isAdminUser;
 
 function isEligibleDeskUser(creator = null) {
   const roleId = creator || getActiveRole();
@@ -175,7 +183,7 @@ function getQuoteRefIdById(id) {
 window.getQuoteRefIdById = getQuoteRefIdById;
 
 function checkAndRequestEditPermission(quote, actionVerb = "modify") {
-  if (appState.currentUser === 'ganny' || quote.amendmentAllowed) {
+  if (isAdminUser(appState.currentUser) || quote.amendmentAllowed) {
     return true;
   }
   let requests = window._amendmentRequests || [];
@@ -245,7 +253,7 @@ function saveRequestLocallyFallback(newReq) {
     window._amendmentRequests = [newReq];
   }
 
-  if (appState.currentUser === 'ganny') {
+  if (isAdminUser(appState.currentUser)) {
     renderAdminDashboard();
   } else {
     renderMemberDashboard(appState.currentUser);
@@ -615,7 +623,7 @@ function loginSuccess(roleId) {
   }
 
   const root = document.documentElement;
-  if (roleIdLower === 'ganny') {
+  if (isAdminUser(roleIdLower)) {
     document.getElementById("admin-settings-btn").style.display = "flex";
     document.getElementById("admin-role-selector").style.display = "flex";
     root.style.setProperty('--accent-current', 'var(--sky)');
@@ -816,7 +824,7 @@ function switchRole(role) {
   }
 
   // Show Selected view
-  if (roleLower === 'manager' || roleLower === 'ganny') {
+  if (roleLower === 'manager' || isAdminUser(roleLower)) {
     document.getElementById("manager-panel").classList.add("active");
     renderAdminDashboard();
   } else if (TEAM_ROLES[roleLower] && TEAM_ROLES[roleLower].type === 'member') {
@@ -835,7 +843,7 @@ function goHome() {
     modal.classList.remove("show");
   });
   
-  if (appState.currentUser === 'ganny') {
+  if (isAdminUser(appState.currentUser)) {
     document.getElementById("manager-panel").classList.add("active");
     document.querySelectorAll(".role-btn").forEach(btn => {
       if (btn.getAttribute("data-role") === 'manager') {
@@ -1210,7 +1218,7 @@ function returnToWorkspace() {
   document.getElementById("transportation-panel").classList.remove("active");
   document.getElementById("warehousing-panel").classList.remove("active");
   
-  if (appState.currentUser === 'ganny') {
+  if (isAdminUser(appState.currentUser)) {
     const managerPanel = document.getElementById("manager-panel");
     if (managerPanel) managerPanel.classList.add("active");
     const root = document.documentElement;
@@ -6862,7 +6870,7 @@ window.deleteQuote = (id) => {
   if (!quote) return;
 
   // Enforce Ganny or deletionAllowed permission check
-  if (appState.currentUser !== 'ganny' && !quote.deletionAllowed) {
+  if (!isAdminUser(appState.currentUser) && !quote.deletionAllowed) {
     let requests = window._amendmentRequests || [];
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
@@ -8560,8 +8568,8 @@ function amendQuote(id) {
 window.amendQuote = amendQuote;
 
 function approveAmendment(reqId) {
-  if (appState.currentUser !== 'ganny') {
-    alert("❌ Security Error: Only Admin (Ganny) can approve requests.");
+  if (!isAdminUser(appState.currentUser)) {
+    alert("❌ Security Error: Only Admin can approve requests.");
     return;
   }
   let requests = window._amendmentRequests || [];
@@ -8622,8 +8630,8 @@ function approveAmendment(reqId) {
 window.approveAmendment = approveAmendment;
 
 function rejectAmendment(reqId) {
-  if (appState.currentUser !== 'ganny') {
-    alert("❌ Security Error: Only Admin (Ganny) can reject requests.");
+  if (!isAdminUser(appState.currentUser)) {
+    alert("❌ Security Error: Only Admin can reject requests.");
     return;
   }
   let requests = window._amendmentRequests || [];
