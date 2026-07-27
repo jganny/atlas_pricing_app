@@ -3177,7 +3177,7 @@ function calculateAirFreight() {
       if (alt.breaks && Object.keys(alt.breaks).length > 0) {
         breakRows = Object.keys(alt.breaks).map(bName => {
           const brVal = alt.breaks[bName] || { sell: 0, buy: 0 };
-          const sellRate = brVal.sell;
+          const sellRate = brVal.sell > 0 ? brVal.sell : (brVal.buy > 0 ? brVal.buy : 0);
           const buyRate = brVal.buy;
           
           const labels = {
@@ -5588,7 +5588,7 @@ function saveCurrentQuote() {
         (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
       );
 
-      if (sellRateVal > 0 && buyRateVal > 0) {
+      if (!isNominationUser && sellRateVal > 0 && buyRateVal > 0) {
         alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
         return;
       }
@@ -5764,7 +5764,7 @@ function saveCurrentQuote() {
           activeUser === 'shaheer' || 
           (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
         );
-        if (hasBoth) {
+        if (!isNominationUser && hasBoth) {
           alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
           return;
         }
@@ -5796,7 +5796,7 @@ function saveCurrentQuote() {
           (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
         );
 
-        if (lclRate > 0 && lclBuyRate > 0) {
+        if (!isNominationUser && lclRate > 0 && lclBuyRate > 0) {
           alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
           return;
         }
@@ -5844,7 +5844,7 @@ function saveCurrentQuote() {
           (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
         );
 
-        if (bbRate > 0 && bbBuyRate > 0) {
+        if (!isNominationUser && bbRate > 0 && bbBuyRate > 0) {
           alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
           return;
         }
