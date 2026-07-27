@@ -2702,8 +2702,6 @@ function calculateAirFreight() {
     const airlineChargeableWeight = Math.max(totalGrossWeight, totalVolumeWeight, pivotWeight);
     const autoBreakName = getWeightBreakBracket(airlineChargeableWeight);
 
-    addWeightBreakRow(card, autoBreakName, 0, true);
-
     const breaksData = {};
     card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
       const bName = wrapper.getAttribute("data-break-name");
@@ -2737,7 +2735,7 @@ function calculateAirFreight() {
     activeRate = activeBrVal.sell > 0 ? activeBrVal.sell : activeBrVal.buy;
     activeBuyRate = activeBrVal.buy;
 
-    if (isFreeHandOrNrs && activeRate === 0) {
+    if (activeRate === 0) {
       // Find the highest limit weight break that has a rate and is <= chargeable weight
       const brackets = [
         { name: 'minus45', limit: 0 },
