@@ -2175,15 +2175,13 @@ function addAirlineCard(data = null) {
     </div>
 
     <div style="margin-top: 0.75rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 8px;">
-        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-align: left; margin: 0;">
-          <input type="checkbox" class="air-enable-weight-breaks" ${wbEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
+      <div style="display: flex; align-items: center; margin-bottom: 0.5rem; gap: 8px; position: relative;">
+        <input type="checkbox" class="air-enable-weight-breaks" ${wbEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
+        <div class="weight-break-trigger" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
           <span style="font-size: 0.75rem; font-weight: 700; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">${isEligibleDeskUser() ? 'Weight Break Tariffs (Sell Rate per KG)' : 'Weight Break Tariffs (Rate per KG)'}</span>
-        </label>
-        <div style="position: relative; display: inline-block;">
-          <button type="button" class="btn-text add-weight-break-btn" style="font-size: 0.7rem; color: var(--sky); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0;">+ Add Weight Break</button>
-          <div class="weight-break-dropdown" style="display: none; position: absolute; right: 0; top: 100%; z-index: 1000; background: var(--bg-surface, #fff); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-1, #ccc); border-radius: 8px; box-shadow: var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); padding: 6px; min-width: 140px; flex-direction: column; gap: 2px;"></div>
+          <span style="font-size: 0.6rem; color: #666;">▼</span>
         </div>
+        <div class="weight-break-dropdown" style="display: none; position: absolute; left: 24px; top: 100%; z-index: 1000; background: var(--bg-surface, #fff); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-1, #ccc); border-radius: 8px; box-shadow: var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); padding: 6px; min-width: 160px; flex-direction: column; gap: 4px;"></div>
       </div>
       
       <div class="airline-breaks-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
@@ -2422,11 +2420,12 @@ function addAirlineCard(data = null) {
     calculateAirFreight();
   });
 
-  const addBreakBtn = card.querySelector(".add-weight-break-btn");
+  const trigger = card.querySelector(".weight-break-trigger");
   const dropdown = card.querySelector(".weight-break-dropdown");
-  if (addBreakBtn && dropdown) {
-    addBreakBtn.addEventListener("click", (e) => {
+  if (trigger && dropdown) {
+    trigger.addEventListener("click", (e) => {
       e.stopPropagation();
+      
       const breakOpts = {
         'min': 'Minimum (Flat)',
         'minus45': '-45 kg',
@@ -2437,15 +2436,6 @@ function addAirlineCard(data = null) {
         'plus1000': '+1000 kg'
       };
 
-      const currentBreaks = Array.from(card.querySelectorAll(".dynamic-break-wrapper")).map(x => x.getAttribute("data-break-name"));
-      const available = Object.keys(breakOpts).filter(k => !currentBreaks.includes(k));
-
-      if (available.length === 0) {
-        alert("All weight breaks have already been added.");
-        dropdown.style.display = "none";
-        return;
-      }
-
       if (dropdown.style.display === "flex") {
         dropdown.style.display = "none";
         return;
@@ -2454,11 +2444,22 @@ function addAirlineCard(data = null) {
       dropdown.innerHTML = "";
       dropdown.style.display = "flex";
 
-      available.forEach(k => {
-        const item = document.createElement("div");
-        item.style.cssText = "padding: 6px 10px; font-size: 0.72rem; color: var(--t1, #000); cursor: pointer; border-radius: 4px; transition: background 0.2s; text-align: left;";
-        item.textContent = breakOpts[k];
+      const currentBreaks = Array.from(card.querySelectorAll(".dynamic-break-wrapper")).map(x => x.getAttribute("data-break-name"));
+
+      Object.keys(breakOpts).forEach(k => {
+        const item = document.createElement("label");
+        item.style.cssText = "display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 0.72rem; color: var(--t1, #000); cursor: pointer; border-radius: 4px; transition: background 0.2s; text-align: left; margin: 0;";
         
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = currentBreaks.includes(k);
+        checkbox.style.cssText = "width: 13px; height: 13px; accent-color: var(--sky); cursor: pointer;";
+        
+        const labelText = document.createTextNode(breakOpts[k]);
+
+        item.appendChild(checkbox);
+        item.appendChild(labelText);
+
         item.addEventListener("mouseenter", () => {
           item.style.background = "var(--border-1, #eee)";
         });
@@ -2466,18 +2467,33 @@ function addAirlineCard(data = null) {
           item.style.background = "transparent";
         });
 
-        item.addEventListener("click", (evt) => {
+        checkbox.addEventListener("change", (evt) => {
           evt.stopPropagation();
-          addWeightBreakRow(card, k, 0);
+          if (checkbox.checked) {
+            addWeightBreakRow(card, k, 0);
+          } else {
+            const wrapper = card.querySelector(`.dynamic-break-wrapper[data-break-name="${k}"]`);
+            if (wrapper) {
+              wrapper.remove();
+            }
+          }
           calculateAirFreight();
-          dropdown.style.display = "none";
         });
+
+        item.addEventListener("click", (evt) => {
+          if (evt.target !== checkbox) {
+            evt.preventDefault();
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+          }
+        });
+
         dropdown.appendChild(item);
       });
     });
 
     document.addEventListener("click", (e) => {
-      if (dropdown && !dropdown.contains(e.target) && e.target !== addBreakBtn) {
+      if (dropdown && !dropdown.contains(e.target) && !trigger.contains(e.target)) {
         dropdown.style.display = "none";
       }
     });
