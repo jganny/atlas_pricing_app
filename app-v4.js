@@ -2801,7 +2801,7 @@ function calculateAirFreight() {
         wrapper.style.background = "rgba(46,204,113,0.1)";
         if (removeBtn) removeBtn.style.display = "none";
       } else {
-        wrapper.style.display = "none";
+        wrapper.style.display = "flex";
         wrapper.classList.remove("highlight-break");
         wrapper.style.borderColor = "#ccc";
         wrapper.style.background = "#fff";
