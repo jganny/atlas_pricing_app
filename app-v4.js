@@ -3173,31 +3173,81 @@ function calculateAirFreight() {
       const color = getAirlineColor(alt.name);
       const isCheapest = (alt.grandTotal === minGrandTotal);
       
+      let breakRows = "";
+      if (alt.breaks && Object.keys(alt.breaks).length > 0) {
+        breakRows = Object.keys(alt.breaks).map(bName => {
+          const brVal = alt.breaks[bName] || { sell: 0, buy: 0 };
+          const sellRate = brVal.sell;
+          const buyRate = brVal.buy;
+          
+          const labels = {
+            'min': 'Min (Flat)',
+            'minus45': '-45 kg',
+            'plus45': '+45 kg',
+            'plus100': '+100 kg',
+            'plus300': '+300 kg',
+            'plus500': '+500 kg',
+            'plus1000': '+1000 kg'
+          };
+
+          const displayLabel = labels[bName] || bName;
+          
+          const isMinActive = (bName === 'min' && alt.appliedRate === sellRate && alt.appliedBuyRate === buyRate && alt.baseFreight === sellRate);
+          const isActive = (bName === alt.usedBreak) || isMinActive;
+
+          const isMinType = (bName === 'min');
+          const breakBaseFreight = isMinType ? sellRate : (alt.chargeableWeight * sellRate);
+          const breakBuyFreight = isMinType ? buyRate : (alt.chargeableWeight * buyRate);
+          const breakGrandTotal = breakBaseFreight + alt.surchargeTotal;
+          const breakGP = breakBaseFreight - breakBuyFreight;
+
+          const rowStyle = isActive 
+            ? `background: rgba(46,204,113,0.1); border-left: 3px solid var(--accent-success); font-weight: 700;` 
+            : `border-left: 3px solid transparent;`;
+
+          return `
+            <tr style="${rowStyle} transition: background 0.2s;">
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1);">${displayLabel} ${isActive ? '<span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 800;">(Active)</span>' : ''}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: center;">${curSymbol}${sellRate.toFixed(2)}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: center;">${curSymbol}${buyRate.toFixed(2)}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: right;">${curSymbol}${breakBaseFreight.toFixed(2)}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: right;">${curSymbol}${breakGrandTotal.toFixed(2)}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--accent-success); font-weight: 700; text-align: right;">${curSymbol}${breakGP.toFixed(2)}</td>
+            </tr>
+          `;
+        }).join("");
+      } else {
+        breakRows = `<tr><td colspan="6" style="padding: 8px; font-size: 0.72rem; color: var(--t2); text-align: center; font-style: italic;">No weight breaks selected</td></tr>`;
+      }
+      
       return `
         <div class="glass-card" style="padding: 1rem; border: 1px solid ${alt.selected ? 'var(--accent-success)' : 'var(--border-1)'}; relative; background: ${alt.selected ? 'rgba(46,204,113,0.04)' : 'rgba(255,255,255,0.01)'}; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <strong style="font-size: 0.85rem; color: ${color};">${alt.name || 'Unnamed Airline'}</strong>
             ${isCheapest ? '<span style="font-size: 0.62rem; background: var(--accent-success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Cheapest Option</span>' : ''}
           </div>
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Chargeable Weight</span>
-            <span class="result-value" style="color: ${color}; font-weight: 700;">${alt.chargeableWeight.toFixed(2)} kg</span>
+          
+          <div style="display: flex; gap: 1rem; font-size: 0.72rem; margin-bottom: 0.5rem; color: var(--t2); border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 6px;">
+            <span>Chargeable Weight: <strong style="color: var(--t1);">${alt.chargeableWeight.toFixed(2)} kg</strong></span>
+            <span>Ancillary Surcharges: <strong style="color: var(--t1);">${curSymbol}${alt.surchargeTotal.toFixed(2)}</strong></span>
           </div>
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Base Freight Cost</span>
-            <span class="result-value" style="color: ${color}; font-weight: 700;">${curSymbol}${alt.baseFreight.toFixed(2)}</span>
-          </div>
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Total Ancillary Surcharges</span>
-            <span class="result-value" style="color: ${color}; font-weight: 700;">${curSymbol}${alt.surchargeTotal.toFixed(2)}</span>
-          </div>
-          <div class="result-row" style="font-size: 0.72rem; margin-bottom: 0.25rem; border-bottom: none; padding: 0;">
-            <span class="result-label" style="color: var(--t2);">Gross Profit (GP)</span>
-            <span class="result-value" style="color: var(--accent-success); font-weight: 700;">${curSymbol}${Math.abs(alt.grossProfit || 0).toFixed(2)}</span>
-          </div>
-          <div class="result-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.8rem; font-weight: bold; margin-top: 4px; border-bottom: none;">
-            <span class="result-label" style="color: var(--t1);">Grand Total</span>
-            <span class="result-value" style="color: ${color}; font-size: 0.85rem; font-weight: 800;">${curSymbol}${alt.grandTotal.toFixed(2)}</span>
+
+          <div style="overflow-x: auto; margin-top: 0.5rem; border: 1px solid var(--border-1); border-radius: 6px; background: rgba(0, 0, 0, 0.08);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-1); background: rgba(255, 255, 255, 0.02);">
+                  <th style="padding: 6px 8px; font-size: 0.65rem; color: var(--t2); text-transform: uppercase; font-weight: 700;">Weight Break</th>
+                  <th style="padding: 6px 8px; font-size: 0.65rem; color: var(--t2); text-transform: uppercase; font-weight: 700; text-align: center;">Sell/KG</th>
+                  <th style="padding: 6px 8px; font-size: 0.65rem; color: var(--t2); text-transform: uppercase; font-weight: 700; text-align: center;">Buy/KG</th>
+                  <th style="padding: 6px 8px; font-size: 0.65rem; color: var(--t2); text-transform: uppercase; font-weight: 700; text-align: right;">Base Freight</th>
+                  <th style="padding: 6px 8px; font-size: 0.65rem; color: var(--t2); text-transform: uppercase; font-weight: 700; text-align: right;">Grand Total</th>
+                  <th style="padding: 6px 8px; font-size: 0.65rem; color: var(--t2); text-transform: uppercase; font-weight: 700; text-align: right;">GP</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${breakRows}
+              </tbody>
+            </table>
           </div>
         </div>
       `;
