@@ -2100,7 +2100,7 @@ function addAirlineCard(data = null) {
   const card = document.createElement("div");
   card.className = "airline-card glass-card";
   card.id = airlineId;
-  card.style.cssText = "padding: 1rem; border: 1px solid var(--border-1); border-radius: 8px; margin-bottom: 1rem; position: relative;";
+  card.style.cssText = "padding: 1rem; border: 1px solid var(--border-1); border-radius: 8px; margin-bottom: 1rem; position: relative; overflow: visible !important;";
 
   const count = container.querySelectorAll(".airline-card").length + 1;
 
