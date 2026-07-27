@@ -1578,10 +1578,10 @@ function setupAutocomplete(inputEl, type) {
       }
       const combined = [...(appState.airports || []), ...customAirports];
       matches = combined.filter(ap => 
-        ap.code.toLowerCase().includes(val) || 
-        ap.city.toLowerCase().includes(val) || 
-        ap.country.toLowerCase().includes(val) || 
-        ap.name.toLowerCase().includes(val)
+        (ap.code || "").toLowerCase().includes(val) || 
+        (ap.city || "").toLowerCase().includes(val) || 
+        (ap.country || "").toLowerCase().includes(val) || 
+        (ap.name || "").toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "airlines") {
       let customAirlines = [];
@@ -1591,8 +1591,8 @@ function setupAutocomplete(inputEl, type) {
       }
       const combined = [...(appState.airlines || []), ...customAirlines];
       matches = combined.filter(al => 
-        al.code.toLowerCase().includes(val) || 
-        al.name.toLowerCase().includes(val)
+        (al.code || "").toLowerCase().includes(val) || 
+        (al.name || "").toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "customers") {
       let customCusts = [];
