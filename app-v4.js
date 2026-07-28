@@ -6778,63 +6778,72 @@ window.viewSavedQuote = (id) => {
       : (quote.details.airline || 'N/A');
 
     detailsRows = `
-      <tr><td>Air Freight Desk Module</td><td><strong>Air ${quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
-      <tr><td>Origin Airport</td><td>${quote.details.origin || 'BOM'}</td></tr>
-      <tr><td>Destination Airport</td><td>${quote.details.destination || 'JFK'}</td></tr>
+      <tr><td>Air Freight Desk Module</td><td><strong>Air ${quote.details && quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
+      <tr><td>Origin Airport</td><td>${quote.details?.origin || 'BOM'}</td></tr>
+      <tr><td>Destination Airport</td><td>${quote.details?.destination || 'JFK'}</td></tr>
       <tr><td>Airline(s)</td><td><strong>${quotedAirlinesList}</strong></td></tr>
       <tr><td>Commodity Type</td><td><strong>${commodityText}</strong></td></tr>
       <tr><td>Loadability</td><td><strong>${loadabilityText}</strong></td></tr>
-      <tr><td>Incoterm</td><td><strong>${quote.details.incoterm || 'EXW'}</strong></td></tr>
-      <tr><td>Actual Gross Weight</td><td>${(quote.details.grossWeight || 0).toFixed(2)} kg</td></tr>
-      <tr><td>Total Package Quantity</td><td>${quote.details.quantity || 'N/A'} Pkgs</td></tr>
-      <tr><td>Volume Weight</td><td>${(quote.details.volumeWeight || 0).toFixed(2)} kg</td></tr>
-      <tr><td>Volume (CBM)</td><td>${(quote.details.cbm || 0).toFixed(3)} CBM</td></tr>
-      <tr><td>Chargeable Weight</td><td>${(quote.details.chargeableWeight || 0).toFixed(2)} kg</td></tr>
-      ${quote.details.pivotWeight ? `<tr><td>Pivot Weight</td><td>${quote.details.pivotWeight.toFixed(2)} kg</td></tr>` : ''}
+      <tr><td>Incoterm</td><td><strong>${quote.details?.incoterm || 'EXW'}</strong></td></tr>
+      <tr><td>Actual Gross Weight</td><td>${(quote.details?.grossWeight || 0).toFixed(2)} kg</td></tr>
+      <tr><td>Total Package Quantity</td><td>${quote.details?.quantity || 'N/A'} Pkgs</td></tr>
+      <tr><td>Volume Weight</td><td>${(quote.details?.volumeWeight || 0).toFixed(2)} kg</td></tr>
+      <tr><td>Volume (CBM)</td><td>${(quote.details?.cbm || 0).toFixed(3)} CBM</td></tr>
+      <tr><td>Chargeable Weight</td><td>${(quote.details?.chargeableWeight || 0).toFixed(2)} kg</td></tr>
+      ${quote.details?.pivotWeight ? `<tr><td>Pivot Weight</td><td>${quote.details.pivotWeight.toFixed(2)} kg</td></tr>` : ''}
+    `;
+  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+    const isTrans = quote.type === 'transport';
+    detailsRows = `
+      <tr><td>Service Module</td><td><strong>${isTrans ? 'Transportation' : 'Warehouse'} Standalone</strong></td></tr>
+      <tr><td>Service Mode</td><td><strong>${isTrans ? 'Transportation' : 'Warehouse'}</strong></td></tr>
+      <tr><td>Route / Description</td><td>${quote.route || quote.details?.routing || '-'}</td></tr>
+      <tr><td>Total Quoted Amount</td><td><strong>${currencySym}${(quote.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td></tr>
+      ${quote.notes ? `<tr><td>Notes / Calculation</td><td>${quote.notes}</td></tr>` : ''}
     `;
   } else {
     let modeLabel = 'FCL (Containers)';
-    if (quote.details.mode === 'lcl') {
+    if (quote.details?.mode === 'lcl') {
       modeLabel = 'LCL (Loose Cargo)';
-    } else if (quote.details.mode === 'bb') {
+    } else if (quote.details?.mode === 'bb') {
       modeLabel = 'Break Bulk (Loose Cargo)';
     }
 
     let subDetails = "";
-    if (quote.details.mode === 'fcl') {
+    if (quote.details?.mode === 'fcl') {
       subDetails = `<tr><td>Containers Selected</td><td>${(quote.details.fclSummary || []).join(", ") || 'Containers'}</td></tr>`;
       if (quote.details.stuffingOption) {
         const stuffingLabel = quote.details.stuffingOption === 'factory' ? 'Factory Stuffing' : 'CFS/ICD Stuffing';
         subDetails += `<tr><td>Stuffing Option</td><td><strong>${stuffingLabel}</strong></td></tr>`;
       }
-    } else if (quote.details.mode === 'lcl') {
+    } else if (quote.details?.mode === 'lcl') {
       subDetails = `
         <tr><td>LCL Chargeable RT</td><td>${(quote.details.lclChargeable || 0).toFixed(2)} RT</td></tr>
         <tr><td>LCL Ocean Rate</td><td>${currencySym}${(quote.details.lclRateApplied || 0).toFixed(2)} / RT</td></tr>
       `;
     } else {
       subDetails = `
-        <tr><td>Break Bulk Chargeable RT</td><td>${(quote.details.lclChargeable || 0).toFixed(2)} RT</td></tr>
-        <tr><td>Break Bulk Rate</td><td>${currencySym}${(quote.details.bbRateApplied || 0).toFixed(2)} / RT</td></tr>
+        <tr><td>Break Bulk Chargeable RT</td><td>${(quote.details?.lclChargeable || 0).toFixed(2)} RT</td></tr>
+        <tr><td>Break Bulk Rate</td><td>${currencySym}${(quote.details?.bbRateApplied || 0).toFixed(2)} / RT</td></tr>
       `;
     }
     detailsRows = `
-      <tr><td>Sea Freight Desk Module</td><td><strong>Sea ${quote.details.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
-      <tr><td>Origin Port</td><td>${quote.details.origin || 'INNSA'}</td></tr>
-      <tr><td>Destination Port</td><td>${quote.details.destination || 'Rotterdam'}</td></tr>
-      <tr><td>Shipping Line</td><td>${quote.details.shippingLine || 'N/A'}</td></tr>
-      <tr><td>Liner Name</td><td>${quote.details.linerName || 'N/A'}</td></tr>
-      <tr><td>Commodity</td><td>${quote.details.commodity || 'N/A'}</td></tr>
-      <tr><td>Incoterm</td><td><strong>${quote.details.incoterm || 'EXW'}</strong></td></tr>
+      <tr><td>Sea Freight Desk Module</td><td><strong>Sea ${quote.details?.module === 'import' ? 'Import' : 'Export'}</strong></td></tr>
+      <tr><td>Origin Port</td><td>${quote.details?.origin || 'INNSA'}</td></tr>
+      <tr><td>Destination Port</td><td>${quote.details?.destination || 'Rotterdam'}</td></tr>
+      <tr><td>Shipping Line</td><td>${quote.details?.shippingLine || 'N/A'}</td></tr>
+      <tr><td>Liner Name</td><td>${quote.details?.linerName || 'N/A'}</td></tr>
+      <tr><td>Commodity</td><td>${quote.details?.commodity || 'N/A'}</td></tr>
+      <tr><td>Incoterm</td><td><strong>${quote.details?.incoterm || 'EXW'}</strong></td></tr>
       <tr><td>Sea Freight Mode</td><td>${modeLabel}</td></tr>
-      <tr><td>Total Gross Weight</td><td>${(quote.details.grossWeight || 0).toFixed(2)} kg</td></tr>
-      <tr><td>Total Volume</td><td>${(quote.details.volumeCbm || 0).toFixed(2)} CBM</td></tr>
-      <tr><td>Total Package Quantity</td><td>${quote.details.packagesQuantity || 'N/A'} Pkgs</td></tr>
+      <tr><td>Total Gross Weight</td><td>${(quote.details?.grossWeight || 0).toFixed(2)} kg</td></tr>
+      <tr><td>Total Volume</td><td>${(quote.details?.volumeCbm || 0).toFixed(2)} CBM</td></tr>
+      <tr><td>Total Package Quantity</td><td>${quote.details?.packagesQuantity || 'N/A'} Pkgs</td></tr>
       ${subDetails}
-      <tr><td>Routing</td><td>${quote.details.routing || 'Direct'}</td></tr>
-      <tr><td>Transit Time (TT)</td><td>${quote.details.tt || 'N/A'}</td></tr>
-      <tr><td>Validity</td><td>${quote.details.validity || 'N/A'}</td></tr>
-      <tr><td>Base Ocean Freight</td><td>${currencySym}${(quote.details.baseFreight || 0).toFixed(2)}</td></tr>
+      <tr><td>Routing</td><td>${quote.details?.routing || 'Direct'}</td></tr>
+      <tr><td>Transit Time (TT)</td><td>${quote.details?.tt || 'N/A'}</td></tr>
+      <tr><td>Validity</td><td>${quote.details?.validity || 'N/A'}</td></tr>
+      <tr><td>Base Ocean Freight</td><td>${currencySym}${(quote.details?.baseFreight || 0).toFixed(2)}</td></tr>
       <tr><td>Charges Breakup</td><td><button class="no-print" onclick="window.showSeaBreakup('${quote.id}')" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.65rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ View Breakup</button></td></tr>
     `;
   }
@@ -7770,9 +7779,15 @@ window.applyUserDbFiltersAndSort = () => {
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
       <td><span class="quote-type-badge ${quote.type}">
-        ${quote.type === 'air' ? 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        ${quote.type === 'transport' ?
+          `Transportation` :
+          (quote.type === 'warehouse' ?
+            `Warehouse` :
+            (quote.type === 'air' ? 
+              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+            )
+          )
         }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
@@ -8012,9 +8027,15 @@ window.applyDbFiltersAndSort = () => {
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>${quote.date}</td>
       <td><span class="quote-type-badge ${quote.type}">
-        ${quote.type === 'air' ? 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
-          `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+        ${quote.type === 'transport' ?
+          `Transportation` :
+          (quote.type === 'warehouse' ?
+            `Warehouse` :
+            (quote.type === 'air' ? 
+              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
+              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
+            )
+          )
         }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
@@ -12146,7 +12167,7 @@ function saveStandaloneQuote(module) {
     const dPin = document.getElementById("transport-delivery-pin")?.value || "";
     routingInfo = `Pickup PIN ${pPin} ➔ Delivery PIN ${dPin}`;
   } else if (module === 'warehouse') {
-    modeTitle = "Warehousing";
+    modeTitle = "Warehouse";
     routingInfo = `Warehousing Storage & Operations`;
   }
 
@@ -12164,6 +12185,12 @@ function saveStandaloneQuote(module) {
     amountINR: rateInr,
     route: routingInfo,
     routingDetails: routingInfo,
+    details: {
+      mode: modeTitle,
+      type: module,
+      module: module,
+      routing: routingInfo
+    },
     notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
   };
 
