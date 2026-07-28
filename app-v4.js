@@ -1168,11 +1168,13 @@ function openActiveCalculator(type) {
     const seaPanel = document.getElementById("sea-freight-panel");
     const transportPanel = document.getElementById("transportation-panel");
     const warehousePanel = document.getElementById("warehousing-panel");
+    const directoryPanel = document.getElementById("directory-panel");
 
     if (airPanel) airPanel.classList.remove("active");
     if (seaPanel) seaPanel.classList.remove("active");
     if (transportPanel) transportPanel.classList.remove("active");
     if (warehousePanel) warehousePanel.classList.remove("active");
+    if (directoryPanel) directoryPanel.classList.remove("active");
 
     const root = document.documentElement;
 
@@ -1196,6 +1198,11 @@ function openActiveCalculator(type) {
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
       try { calculateWarehousing(); } catch(e) { console.error("calculateWarehousing error:", e); }
+    } else if (type === 'directory') {
+      if (directoryPanel) directoryPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--sky)');
+      root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
+      try { loadDirectoryContacts(); } catch(e) { console.error("loadDirectoryContacts error:", e); }
     }
     updateModuleTabs(type);
   } catch(err) {
@@ -13853,5 +13860,751 @@ function selectPincodeItem(pin, fullLabel) {
   closePincodeSearchModal();
 }
 window.selectPincodeItem = selectPincodeItem;
+
+/* ══════════════════════════════════════════════════
+   CONTACT & PARTNER DIRECTORY MODULE
+   ══════════════════════════════════════════════════ */
+let directoryContacts = [];
+let activeDirectoryParent = 'agents'; // 'agents' or 'vendors'
+let activeDirectoryCategory = 'all';
+let importedExcelRows = [];
+
+// Fallback initial data if database is empty or offline
+const fallbackContacts = [
+  { id: "sample-1", category: "agency", name: "Apex Global Logistics", contactPerson: "Rohan Sharma", email: "rohan.s@apexglobal.com", phone: "+91 98200 12345", location: "Mumbai, India", notes: "Primary agency for Nhava Sheva handling. 15 days credit term.", updatedAt: new Date(), updatedBy: "Pricing Team" },
+  { id: "sample-2", category: "liner", name: "Maersk Line India", contactPerson: "Sarah D'Souza", email: "sarah.dsouza@maersk.com", phone: "+91 22 6655 4433", location: "Chennai, India", notes: "Direct contact for special spot rates to Europe.", updatedAt: new Date(), updatedBy: "Pricing Team" },
+  { id: "sample-3", category: "coloader", name: "Cargo Movers India Ltd", contactPerson: "Amit Patel", email: "pricing@cargomovers.in", phone: "+91 99300 54321", location: "Gujarat, India", notes: "LCL consolidation specialist to USA ports.", updatedAt: new Date(), updatedBy: "Pricing Team" },
+  { id: "sample-4", category: "airline", name: "Qatar Airways Cargo", contactPerson: "Vikram Malhotra", email: "vmalhotra@qatarairways.com.qa", phone: "+91 11 4765 8900", location: "Delhi, India", notes: "Best rates for pharmaceutical shipments via Doha.", updatedAt: new Date(), updatedBy: "Pricing Team" },
+  { id: "sample-5", category: "pq", name: "Port Health Officer Office", contactPerson: "Dr. K. Raghavan", email: "pho.mumbai@gov.in", phone: "+91 22 2261 4321", location: "Mumbai, India", notes: "PQ clearance protocols/officer contact.", updatedAt: new Date(), updatedBy: "Pricing Team" },
+  { id: "sample-6", category: "insurance", name: "New India Assurance Co", contactPerson: "S. K. Mukherjee", email: "sk.mukherjee@newindia.co.in", phone: "+91 98111 22233", location: "Kolkata, India", notes: "Marine cargo transit insurance policies cover.", updatedAt: new Date(), updatedBy: "Pricing Team" },
+  { id: "sample-7", category: "nvocc", name: "Schenker India NVOCC", contactPerson: "Rajesh Sen", email: "rajesh.sen@dbschenker.com", phone: "+91 22 4000 8000", location: "Mumbai, India", notes: "LCL rates / NVOCC operations.", updatedAt: new Date(), updatedBy: "Pricing Team" }
+];
+
+// Overseas Agents Directory can be changed by Admin, Air Nomination, Sea Nomination
+function canEditAgentsDirectory() {
+  const currentRole = getActiveRole()?.toLowerCase();
+  const currentUser = (appState.currentUser || "").toLowerCase();
+  return currentUser === 'ganny' || 
+         currentRole === 'manager' || 
+         currentRole === 'shashank' || 
+         currentRole === 'shaheer';
+}
+window.canEditAgentsDirectory = canEditAgentsDirectory;
+
+// Vendor Contacts Directory can be viewed & changed *only* by Admin, Air Nomination, Sea Nomination, FreeHand, and NRS
+function canAccessVendorsDirectory() {
+  const currentRole = getActiveRole()?.toLowerCase();
+  const currentUser = (appState.currentUser || "").toLowerCase();
+  return currentUser === 'ganny' || 
+         currentRole === 'manager' || 
+         currentRole === 'shashank' || 
+         currentRole === 'shaheer' || 
+         currentRole === 'jaya' || 
+         currentRole === 'cathrina';
+}
+window.canAccessVendorsDirectory = canAccessVendorsDirectory;
+
+// Toggle parent level Directory
+function setDirectoryParent(parent) {
+  if (parent === 'vendors' && !canAccessVendorsDirectory()) {
+    alert("You do not have permission to access the Vendor Contacts directory.");
+    return;
+  }
+
+  activeDirectoryParent = parent;
+  activeDirectoryCategory = 'all';
+  
+  // Set tab buttons active status
+  document.querySelectorAll(".dir-parent-tab").forEach(tab => {
+    if (tab.id === `dir-parent-${parent}`) {
+      tab.classList.add("active");
+      tab.style.color = "var(--sky)";
+    } else {
+      tab.classList.remove("active");
+      tab.style.color = "var(--t2)";
+    }
+  });
+
+  // Toggle sub-filters row visibility (only show sub-filters for vendor contacts)
+  const subfilters = document.getElementById("vendor-subfilters-container");
+  if (subfilters) {
+    subfilters.style.display = (parent === 'vendors') ? 'flex' : 'none';
+  }
+
+  // Reset category active state on sub-filters if switching to vendors
+  if (parent === 'vendors') {
+    document.querySelectorAll(".dir-tab").forEach(tab => {
+      if (tab.getAttribute("data-category") === 'all') {
+        tab.classList.add("active");
+      } else {
+        tab.classList.remove("active");
+      }
+    });
+  }
+
+  renderDirectoryContacts();
+}
+window.setDirectoryParent = setDirectoryParent;
+
+// Load contacts from Firestore (with LocalStorage caching fallback)
+async function loadDirectoryContacts() {
+  const grid = document.getElementById("directory-contacts-grid");
+  if (!grid) return;
+
+  // Manage top level Vendor Contacts tab visibility
+  const vendorTab = document.getElementById("dir-parent-vendors");
+  const canAccessVendors = canAccessVendorsDirectory();
+  if (vendorTab) {
+    vendorTab.style.display = canAccessVendors ? 'inline-block' : 'none';
+  }
+
+  // If user cannot access vendor contacts and active parent is vendors, force to agents
+  if (!canAccessVendors && activeDirectoryParent === 'vendors') {
+    activeDirectoryParent = 'agents';
+    // Update active class on agents parent tab
+    const pAgents = document.getElementById("dir-parent-agents");
+    const pVendors = document.getElementById("dir-parent-vendors");
+    if (pAgents) {
+      pAgents.classList.add("active");
+      pAgents.style.color = "var(--sky)";
+    }
+    if (pVendors) {
+      pVendors.classList.remove("active");
+      pVendors.style.color = "var(--t2)";
+    }
+  }
+
+  // Manage visibility of edit/add controls based on role permissions and active context
+  let allowedToEdit = false;
+  if (activeDirectoryParent === 'agents') {
+    allowedToEdit = canEditAgentsDirectory();
+  } else {
+    allowedToEdit = canAccessVendors; // Vendor list edit rights match access rights
+  }
+
+  const addBtn = document.getElementById("dir-add-contact-btn");
+  const importBtn = document.getElementById("dir-import-excel-btn");
+  if (addBtn) addBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
+  if (importBtn) importBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
+
+  try {
+    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
+      Fetching contacts from database...
+    </div>`;
+
+    if (window.db) {
+      const snapshot = await db.collection("contactsDirectory").get();
+      if (!snapshot.empty) {
+        directoryContacts = [];
+        snapshot.forEach(doc => {
+          directoryContacts.push({ id: doc.id, ...doc.data() });
+        });
+        localStorage.setItem("gl_directory_contacts", JSON.stringify(directoryContacts));
+      } else {
+        // First run - feed fallback list to db
+        directoryContacts = [...fallbackContacts];
+        for (let contact of directoryContacts) {
+          const { id, ...data } = contact;
+          await db.collection("contactsDirectory").doc(id).set(data);
+        }
+        localStorage.setItem("gl_directory_contacts", JSON.stringify(directoryContacts));
+      }
+    } else {
+      throw new Error("Firestore not initialized");
+    }
+  } catch (err) {
+    console.warn("Firestore fetch failed, falling back to LocalStorage cache:", err);
+    const cached = localStorage.getItem("gl_directory_contacts");
+    if (cached) {
+      directoryContacts = JSON.parse(cached);
+    } else {
+      directoryContacts = [...fallbackContacts];
+      localStorage.setItem("gl_directory_contacts", JSON.stringify(directoryContacts));
+    }
+  }
+
+  renderDirectoryContacts();
+}
+window.loadDirectoryContacts = loadDirectoryContacts;
+
+// Render directory contacts onto grid with sorting/filtering
+function renderDirectoryContacts() {
+  const grid = document.getElementById("directory-contacts-grid");
+  if (!grid) return;
+
+  const searchQuery = (document.getElementById("directory-search-input")?.value || "").toLowerCase().trim();
+  
+  // Decide if allowed to edit
+  let allowedToEdit = false;
+  if (activeDirectoryParent === 'agents') {
+    allowedToEdit = canEditAgentsDirectory();
+  } else {
+    allowedToEdit = canAccessVendorsDirectory();
+  }
+
+  // Filter
+  let filtered = directoryContacts.filter(c => {
+    // Parent level filter (Overseas Agents vs Vendor Contacts)
+    if (activeDirectoryParent === 'agents') {
+      // Overseas Agents have category = 'agency'
+      if (c.category !== 'agency') return false;
+    } else {
+      // If user is trying to access vendors but has no permission, block
+      if (!canAccessVendorsDirectory()) return false;
+      
+      // Vendor contacts category != 'agency'
+      if (c.category === 'agency') return false;
+      // category sub-filter if set
+      if (activeDirectoryCategory !== 'all' && c.category !== activeDirectoryCategory) return false;
+    }
+    
+    // Search query filter
+    if (searchQuery) {
+      const name = (c.name || "").toLowerCase();
+      const person = (c.contactPerson || "").toLowerCase();
+      const email = (c.email || "").toLowerCase();
+      const phone = (c.phone || "").toLowerCase();
+      const location = (c.location || "").toLowerCase();
+      const notes = (c.notes || "").toLowerCase();
+      return name.includes(searchQuery) || person.includes(searchQuery) || email.includes(searchQuery) || 
+             phone.includes(searchQuery) || location.includes(searchQuery) || notes.includes(searchQuery);
+    }
+    return true;
+  });
+
+  // Sort alphabetically by Company/Contact Name
+  filtered.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--t3); font-style: italic; background: rgba(255,255,255,0.02); border-radius: var(--r-md); border: 1px dashed var(--border-2);">
+      <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">🔍</span>
+      No contacts found in this section matching your filters.
+    </div>`;
+    return;
+  }
+
+  let html = "";
+  filtered.forEach(contact => {
+    const escNotes = (contact.notes || "").replace(/"/g, "&quot;");
+    let categoryLabel = contact.category ? contact.category.toUpperCase() : "CONTACT";
+    if (categoryLabel === 'AGENCY') categoryLabel = 'OVERSEAS AGENT';
+    
+    // Admin action buttons (Edit/Delete) - visible only if allowed to edit
+    const adminActionsHtml = allowedToEdit ? `
+      <button class="contact-action-btn" title="Edit Contact" onclick="openContactModal('${contact.id}')" style="margin-left: auto;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      </button>
+      <button class="contact-action-btn" title="Delete Contact" onclick="deleteContact('${contact.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+      </button>
+    ` : '';
+
+    // Contact action shortcuts (Call, Email, WhatsApp)
+    const phoneClean = (contact.phone || "").replace(/[^\d+]/g, '');
+    const callButtonHtml = contact.phone ? `
+      <a href="tel:${phoneClean}" class="contact-action-btn" title="Call Contact">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+        </svg>
+      </a>
+    ` : '';
+
+    const emailButtonHtml = contact.email ? `
+      <a href="mailto:${contact.email}" class="contact-action-btn" title="Send Email">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+      </a>
+    ` : '';
+
+    const waButtonHtml = contact.phone && contact.phone.includes("+") ? `
+      <a href="https://wa.me/${phoneClean}" target="_blank" class="contact-action-btn" title="Chat on WhatsApp" style="color: #25D366; border-color: rgba(37, 211, 102, 0.2);">
+        <span>💬</span>
+      </a>
+    ` : '';
+
+    html += `
+      <div class="contact-card">
+        <div>
+          <div class="contact-card-header">
+            <span class="contact-card-badge ${contact.category || ''}">${categoryLabel}</span>
+            <div style="font-size: 0.62rem; color: var(--t3);">By: ${contact.updatedBy || 'System'}</div>
+          </div>
+          
+          <div class="contact-card-title" style="margin-bottom: 0.75rem;">${contact.name || ''}</div>
+          
+          ${contact.contactPerson ? `
+            <div class="contact-info-row" style="font-weight: 600; color: var(--t1);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              ${contact.contactPerson}
+            </div>
+          ` : ''}
+
+          ${contact.location ? `
+            <div class="contact-info-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+              ${contact.location}
+            </div>
+          ` : ''}
+
+          ${contact.phone ? `
+            <div class="contact-info-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              ${contact.phone}
+            </div>
+          ` : ''}
+
+          ${contact.email ? `
+            <div class="contact-info-row" style="word-break: break-all;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              ${contact.email}
+            </div>
+          ` : ''}
+
+          ${contact.notes ? `
+            <div style="font-size: 0.72rem; color: var(--t3); background: rgba(0,0,0,0.03); padding: 8px; border-radius: 6px; border: 1px solid var(--border-1); margin-top: 0.75rem; line-height: 1.35; white-space: pre-line;">
+              ${contact.notes}
+            </div>
+          ` : ''}
+        </div>
+        
+        <div class="contact-actions">
+          ${callButtonHtml}
+          ${emailButtonHtml}
+          ${waButtonHtml}
+          ${adminActionsHtml}
+        </div>
+      </div>`;
+  });
+
+  grid.innerHTML = html;
+}
+
+// Search Filter Input handler
+function filterDirectoryContacts() {
+  renderDirectoryContacts();
+}
+window.filterDirectoryContacts = filterDirectoryContacts;
+
+// Set Category Tab handler
+function setDirectoryCategory(category) {
+  activeDirectoryCategory = category;
+  
+  // Set tab buttons active status
+  document.querySelectorAll(".dir-tab").forEach(tab => {
+    if (tab.getAttribute("data-category") === category) {
+      tab.classList.add("active");
+    } else {
+      tab.classList.remove("active");
+    }
+  });
+
+  renderDirectoryContacts();
+}
+window.setDirectoryCategory = setDirectoryCategory;
+
+// Contact Modal (Create/Edit) Show
+function openContactModal(id = null) {
+  const modal = document.getElementById("contact-form-modal");
+  const form = document.getElementById("contact-form");
+  if (!modal || !form) return;
+
+  form.reset();
+  
+  if (id) {
+    // Edit Mode
+    document.getElementById("contact-modal-title").textContent = "EDIT CONTACT";
+    const contact = directoryContacts.find(c => c.id === id);
+    if (contact) {
+      document.getElementById("contact-form-id").value = contact.id;
+      document.getElementById("contact-form-category").value = contact.category || 'agency';
+      document.getElementById("contact-form-name").value = contact.name || '';
+      document.getElementById("contact-form-person").value = contact.contactPerson || '';
+      document.getElementById("contact-form-email").value = contact.email || '';
+      document.getElementById("contact-form-phone").value = contact.phone || '';
+      document.getElementById("contact-form-location").value = contact.location || '';
+      document.getElementById("contact-form-notes").value = contact.notes || '';
+    }
+  } else {
+    // Add Mode
+    document.getElementById("contact-modal-title").textContent = "ADD NEW CONTACT";
+    document.getElementById("contact-form-id").value = "";
+    
+    // Auto-select category based on parent tab context
+    if (activeDirectoryParent === 'agents') {
+      document.getElementById("contact-form-category").value = 'agency';
+    } else if (activeDirectoryCategory !== 'all') {
+      document.getElementById("contact-form-category").value = activeDirectoryCategory;
+    } else {
+      document.getElementById("contact-form-category").value = 'liner';
+    }
+  }
+
+  modal.style.display = "flex";
+}
+window.openContactModal = openContactModal;
+
+// Contact Modal Hide
+function closeContactModal() {
+  const modal = document.getElementById("contact-form-modal");
+  if (modal) modal.style.display = "none";
+}
+window.closeContactModal = closeContactModal;
+
+// Submit Add/Edit Form
+async function saveContactForm(event) {
+  event.preventDefault();
+  
+  const id = document.getElementById("contact-form-id").value;
+  const category = document.getElementById("contact-form-category").value;
+  
+  // Verify permissions based on context
+  const allowed = (category === 'agency') ? canEditAgentsDirectory() : canAccessVendorsDirectory();
+  if (!allowed) {
+    alert("You do not have permission to modify this contact.");
+    return;
+  }
+
+  const name = document.getElementById("contact-form-name").value.trim();
+  const contactPerson = document.getElementById("contact-form-person").value.trim();
+  const email = document.getElementById("contact-form-email").value.trim();
+  const phone = document.getElementById("contact-form-phone").value.trim();
+  const location = document.getElementById("contact-form-location").value.trim();
+  const notes = document.getElementById("contact-form-notes").value.trim();
+  
+  const updatedBy = appState.currentUser || "Pricing Team";
+  const contactData = {
+    category,
+    name,
+    contactPerson,
+    email,
+    phone,
+    location,
+    notes,
+    updatedAt: new Date(),
+    updatedBy
+  };
+
+  try {
+    if (window.db) {
+      if (id) {
+        // Edit Mode
+        await db.collection("contactsDirectory").doc(id).update(contactData);
+        alert("Contact updated successfully!");
+      } else {
+        // Add Mode
+        await db.collection("contactsDirectory").add(contactData);
+        alert("Contact added successfully!");
+      }
+    } else {
+      throw new Error("No database connection");
+    }
+  } catch (err) {
+    console.error("Error saving contact in Firestore:", err);
+    // Offline LocalStorage updates
+    if (id) {
+      const index = directoryContacts.findIndex(c => c.id === id);
+      if (index !== -1) {
+        directoryContacts[index] = { id, ...contactData };
+      }
+    } else {
+      const newId = "local-" + Date.now();
+      directoryContacts.push({ id: newId, ...contactData });
+    }
+    localStorage.setItem("gl_directory_contacts", JSON.stringify(directoryContacts));
+    alert("Saved locally! Offline mode changes will sync to server when connected.");
+  }
+
+  closeContactModal();
+  loadDirectoryContacts();
+}
+window.saveContactForm = saveContactForm;
+
+// Delete Contact Document
+async function deleteContact(id) {
+  const contact = directoryContacts.find(c => c.id === id);
+  if (!contact) return;
+
+  const allowed = (contact.category === 'agency') ? canEditAgentsDirectory() : canAccessVendorsDirectory();
+  if (!allowed) {
+    alert("You do not have permission to delete this contact.");
+    return;
+  }
+
+  if (!confirm("Are you sure you want to delete this contact? This action cannot be undone.")) return;
+
+  try {
+    if (window.db) {
+      await db.collection("contactsDirectory").doc(id).delete();
+      alert("Contact deleted successfully!");
+    } else {
+      throw new Error("No database connection");
+    }
+  } catch (err) {
+    console.error("Error deleting contact in Firestore:", err);
+    directoryContacts = directoryContacts.filter(c => c.id !== id);
+    localStorage.setItem("gl_directory_contacts", JSON.stringify(directoryContacts));
+    alert("Deleted locally!");
+  }
+
+  loadDirectoryContacts();
+}
+window.deleteContact = deleteContact;
+
+// Import Excel Modal Show/Hide
+function openImportExcelModal() {
+  const modal = document.getElementById("excel-import-modal");
+  if (modal) {
+    resetExcelImport();
+    modal.style.display = "flex";
+  }
+}
+window.openImportExcelModal = openImportExcelModal;
+
+function closeImportExcelModal() {
+  const modal = document.getElementById("excel-import-modal");
+  if (modal) modal.style.display = "none";
+}
+window.closeImportExcelModal = closeImportExcelModal;
+
+// Excel Parsing Logic (using SheetJS)
+function handleExcelFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = e.target.result;
+      const workbook = XLSX.read(data, { type: 'binary' });
+      importedExcelRows = [];
+
+      // Process each sheet/tab in the workbook
+      workbook.SheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        
+        // Auto-detect category from sheet name (e.g. Liners, Airlines, Coloaders, NVOCCs)
+        let autoCategory = 'agency';
+        const nameLower = sheetName.toLowerCase();
+        if (nameLower.includes('liner')) autoCategory = 'liner';
+        else if (nameLower.includes('coloader')) autoCategory = 'coloader';
+        else if (nameLower.includes('nvocc')) autoCategory = 'nvocc';
+        else if (nameLower.includes('breakbulk') || nameLower.includes('break bulk')) autoCategory = 'breakbulk';
+        else if (nameLower.includes('air') && (nameLower.includes('line') || nameLower.includes('contact'))) autoCategory = 'airline';
+        else if (nameLower.includes('pq')) autoCategory = 'pq';
+        else if (nameLower.includes('insurance')) autoCategory = 'insurance';
+        else if (nameLower.includes('agent') || nameLower.includes('agency')) autoCategory = 'agency';
+        else autoCategory = 'other';
+
+        json.forEach(row => {
+          // Normalize spreadsheet column headers to our database schema
+          const keys = Object.keys(row);
+          let name = "";
+          let person = "";
+          let email = "";
+          let phone = "";
+          let location = "";
+          let notes = "";
+          let rowCategory = autoCategory;
+
+          keys.forEach(k => {
+            const keyLower = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            if (keyLower.includes('company') || keyLower.includes('name') || keyLower.includes('liner') || keyLower.includes('airline') || keyLower.includes('agency')) {
+              if (!name) name = row[k];
+            } else if (keyLower.includes('person') || keyLower.includes('contactname') || keyLower.includes('attention')) {
+              person = row[k];
+            } else if (keyLower.includes('email') || keyLower.includes('mail')) {
+              email = row[k];
+            } else if (keyLower.includes('phone') || keyLower.includes('mobile') || keyLower.includes('contactno') || keyLower.includes('tel')) {
+              phone = row[k];
+            } else if (keyLower.includes('location') || keyLower.includes('city') || keyLower.includes('address') || keyLower.includes('branch')) {
+              location = row[k];
+            } else if (keyLower.includes('notes') || keyLower.includes('remarks') || keyLower.includes('comments') || keyLower.includes('rates')) {
+              notes = row[k];
+            } else if (keyLower.includes('category') || keyLower.includes('type')) {
+              const catVal = String(row[k]).toLowerCase();
+              if (catVal.includes('liner')) rowCategory = 'liner';
+              else if (catVal.includes('coloader')) rowCategory = 'coloader';
+              else if (catVal.includes('nvocc')) rowCategory = 'nvocc';
+              else if (catVal.includes('break')) rowCategory = 'breakbulk';
+              else if (catVal.includes('air')) rowCategory = 'airline';
+              else if (catVal.includes('pq')) rowCategory = 'pq';
+              else if (catVal.includes('insurance')) rowCategory = 'insurance';
+              else if (catVal.includes('agency') || catVal.includes('agent')) rowCategory = 'agency';
+              else rowCategory = 'other';
+            }
+          });
+
+          // Ensure we have a valid contact name before importing
+          if (name && String(name).trim()) {
+            importedExcelRows.push({
+              category: rowCategory,
+              name: String(name).trim(),
+              contactPerson: String(person).trim(),
+              email: String(email).trim(),
+              phone: String(phone).trim(),
+              location: String(location).trim(),
+              notes: String(notes).trim(),
+              updatedAt: new Date(),
+              updatedBy: appState.currentUser || "Pricing Team"
+            });
+          }
+        });
+      });
+
+      if (importedExcelRows.length === 0) {
+        alert("No valid rows found in Excel sheet. Please make sure there is a Name/Company column.");
+        resetExcelImport();
+        return;
+      }
+
+      // Show preview of parsed data
+      const preview = document.getElementById("excel-import-preview");
+      const countEl = document.getElementById("excel-import-count");
+      const actions = document.getElementById("excel-import-actions");
+      
+      if (preview && countEl && actions) {
+        countEl.textContent = importedExcelRows.length;
+        
+        let previewHtml = `<strong>Parsed Rows Preview (First 5):</strong><br>`;
+        importedExcelRows.slice(0, 5).forEach((r, idx) => {
+          previewHtml += `[${idx+1}] Category: ${r.category} | Name: ${r.name} | Contact: ${r.contactPerson} | Phone: ${r.phone}<br>`;
+        });
+        if (importedExcelRows.length > 5) {
+          previewHtml += `... and ${importedExcelRows.length - 5} more rows.`;
+        }
+        
+        preview.innerHTML = previewHtml;
+        preview.style.display = "block";
+        actions.style.display = "flex";
+      }
+
+    } catch (err) {
+      console.error("Excel import parse error:", err);
+      alert("Error parsing excel file. Please check if the file is corrupted.");
+      resetExcelImport();
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+window.handleExcelFileSelect = handleExcelFileSelect;
+
+// Reset Importer fields
+function resetExcelImport() {
+  importedExcelRows = [];
+  const fileInput = document.getElementById('excel-file-input');
+  if (fileInput) fileInput.value = "";
+  
+  const preview = document.getElementById("excel-import-preview");
+  if (preview) {
+    preview.style.display = "none";
+    preview.innerHTML = "";
+  }
+  
+  const actions = document.getElementById("excel-import-actions");
+  if (actions) actions.style.display = "none";
+}
+window.resetExcelImport = resetExcelImport;
+
+// Submit Bulk Rows to Firestore
+async function submitExcelImport() {
+  if (importedExcelRows.length === 0) return;
+
+  const hasAgents = importedExcelRows.some(r => r.category === 'agency');
+  const hasVendors = importedExcelRows.some(r => r.category !== 'agency');
+
+  if (hasAgents && !canEditAgentsDirectory()) {
+    alert("You do not have permission to import Overseas Agents.");
+    return;
+  }
+  if (hasVendors && !canAccessVendorsDirectory()) {
+    alert("You do not have permission to import Vendor Contacts.");
+    return;
+  }
+
+  const count = importedExcelRows.length;
+  if (!confirm(`Are you sure you want to import ${count} contacts? This will write them to the database.`)) return;
+
+  try {
+    if (window.db) {
+      // Chunk writes in batches of 200 to prevent firestore size limit
+      const chunkSize = 200;
+      for (let i = 0; i < importedExcelRows.length; i += chunkSize) {
+        const batch = db.batch();
+        const chunk = importedExcelRows.slice(i, i + chunkSize);
+        
+        chunk.forEach(item => {
+          const docRef = db.collection("contactsDirectory").doc();
+          batch.set(docRef, item);
+        });
+        
+        await batch.commit();
+      }
+      alert(`Imported ${count} contacts successfully!`);
+    } else {
+      throw new Error("No database connection");
+    }
+  } catch (err) {
+    console.error("Error bulk writing in Firestore:", err);
+    // Local fallback
+    directoryContacts = [...directoryContacts, ...importedExcelRows];
+    localStorage.setItem("gl_directory_contacts", JSON.stringify(directoryContacts));
+    alert("Database connection offline. Imported locally!");
+  }
+
+  closeImportExcelModal();
+  loadDirectoryContacts();
+}
+window.submitExcelImport = submitExcelImport;
+
+// Export directory to Excel
+function exportDirectoryToExcel() {
+  if (directoryContacts.length === 0) {
+    alert("No contacts in directory to export.");
+    return;
+  }
+
+  try {
+    // Filter to only export contacts matching active parent directory (Agents or Vendors)
+    const exportFiltered = directoryContacts.filter(c => {
+      if (activeDirectoryParent === 'agents') {
+        return c.category === 'agency';
+      } else {
+        return c.category !== 'agency';
+      }
+    });
+
+    const dataToExport = exportFiltered.map(c => ({
+      Category: c.category || '',
+      Name: c.name || '',
+      'Contact Person': c.contactPerson || '',
+      Email: c.email || '',
+      Phone: c.phone || '',
+      Location: c.location || '',
+      'Notes / Remarks': c.notes || '',
+      'Last Updated By': c.updatedBy || '',
+      'Last Updated At': c.updatedAt ? new Date(c.updatedAt.seconds ? c.updatedAt.seconds * 1000 : c.updatedAt).toLocaleDateString() : ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, activeDirectoryParent === 'agents' ? "Overseas Agents" : "Vendor Contacts");
+    XLSX.writeFile(workbook, activeDirectoryParent === 'agents' ? "atlas_overseas_agents_directory.xlsx" : "atlas_vendor_contacts_directory.xlsx");
+  } catch (err) {
+    console.error("Excel export error:", err);
+    alert("Failed to export directory. Please check logs.");
+  }
+}
+window.exportDirectoryToExcel = exportDirectoryToExcel;
+
 
 

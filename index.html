@@ -16,6 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -293,6 +294,15 @@
           <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse" style="background: linear-gradient(135deg, var(--amber) 0%, #eab308 100%); color:#000;">
             <span style="font-size: 1.1rem;">🏢</span>
             Price Warehousing
+          </button>
+          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('directory')" id="admin-goto-directory" style="background: linear-gradient(135deg, var(--sky) 0%, var(--teal) 100%); color:#fff;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Contact Directory
           </button>
         </div>
 
@@ -1033,6 +1043,17 @@
               onclick="openActiveCalculator('warehouse')" id="btn-goto-warehouse">
               <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🏢</span>
               Price Warehousing
+            </button>
+            <button class="btn-primary"
+              style="background: #E0F2FE; color: #0F172A; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1.5px solid #0284c7;"
+              onclick="openActiveCalculator('directory')" id="btn-goto-directory">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Contact Directory
             </button>
           </div>
 
@@ -3061,6 +3082,196 @@
           </div>
         </div>
       </div>
+
+      <!-- ==================== CONTACT & AGENCY DIRECTORY PANEL ==================== -->
+      <div id="directory-panel" class="view-panel">
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+                Logistics & Pricing Directory
+              </div>
+              <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
+                PARTNER & CONTACT DIRECTORY
+              </h2>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <!-- Admin-only Add Contact -->
+              <button id="dir-add-contact-btn" class="btn-primary" onclick="openContactModal()" style="display: none; align-items: center; gap: 0.4rem; background: var(--sky); color: #000; font-weight: 700;">
+                <span>+</span> Add Contact
+              </button>
+              <!-- Admin-only One-Time Excel Import -->
+              <button id="dir-import-excel-btn" class="btn-secondary" onclick="openImportExcelModal()" style="display: none; align-items: center; gap: 0.4rem; font-weight: 700;">
+                <span>📥</span> Excel Import
+              </button>
+              <!-- All roles Export -->
+              <button class="btn-secondary" onclick="exportDirectoryToExcel()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                <span>📤</span> Export Excel
+              </button>
+              <!-- Back to Home -->
+              <button class="btn-secondary" onclick="goHome()" style="font-weight: 700;">
+                Back to Workspace
+              </button>
+            </div>
+          </div>
+
+          <!-- Directory Parent Level Tabs -->
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border-2); padding-bottom: 0.5rem;">
+            <button class="dir-parent-tab active" id="dir-parent-agents" onclick="setDirectoryParent('agents')" style="background: none; border: none; font-size: 0.95rem; font-weight: 800; padding: 0.5rem 1rem; color: var(--sky); cursor: pointer; position: relative;">
+              🌍 Overseas Agents
+            </button>
+            <button class="dir-parent-tab" id="dir-parent-vendors" onclick="setDirectoryParent('vendors')" style="background: none; border: none; font-size: 0.95rem; font-weight: 800; padding: 0.5rem 1rem; color: var(--t2); cursor: pointer; position: relative;">
+              🏢 Vendor Contacts
+            </button>
+          </div>
+
+          <!-- Directory Search & Category Filters -->
+          <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; gap: 0.75rem; width: 100%;">
+              <input type="text" id="directory-search-input" placeholder="Search contacts by name, person, email, phone, location, notes..." 
+                     style="flex: 1; padding: 0.75rem 1rem; border-radius: 10px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.9rem;"
+                     oninput="filterDirectoryContacts()">
+            </div>
+            
+            <div class="directory-tabs-container" id="vendor-subfilters-container" style="display: none; gap: 0.5rem; flex-wrap: wrap; overflow-x: auto; padding-bottom: 0.5rem;">
+              <button class="dir-tab active" data-category="all" onclick="setDirectoryCategory('all')">All Vendors</button>
+              <button class="dir-tab" data-category="liner" onclick="setDirectoryCategory('liner')">Liners</button>
+              <button class="dir-tab" data-category="coloader" onclick="setDirectoryCategory('coloader')">Coloaders</button>
+              <button class="dir-tab" data-category="nvocc" onclick="setDirectoryCategory('nvocc')">NVOCCs</button>
+              <button class="dir-tab" data-category="breakbulk" onclick="setDirectoryCategory('breakbulk')">BreakBulk</button>
+              <button class="dir-tab" data-category="airline" onclick="setDirectoryCategory('airline')">Airlines</button>
+              <button class="dir-tab" data-category="pq" onclick="setDirectoryCategory('pq')">PQ Contacts</button>
+              <button class="dir-tab" data-category="insurance" onclick="setDirectoryCategory('insurance')">Insurance</button>
+              <button class="dir-tab" data-category="other" onclick="setDirectoryCategory('other')">Others</button>
+            </div>
+          </div>
+
+          <!-- Contacts Cards Grid -->
+          <div id="directory-contacts-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem;">
+            <!-- Contacts loaded dynamically by JS -->
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
+              Loading directory contacts...
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  <!-- ==================== ADD / EDIT CONTACT MODAL ==================== -->
+  <div id="contact-form-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2001; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div class="glass-card modal-card"
+      style="width: 100%; max-width: 500px; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;" id="contact-modal-subtitle">
+            Directory Management
+          </div>
+          <h2 style="font-size: 1.2rem; font-weight: 900; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;" id="contact-modal-title">
+            ADD NEW CONTACT
+          </h2>
+        </div>
+        <button type="button" onclick="closeContactModal()"
+          style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700;">×</button>
+      </div>
+
+      <form id="contact-form" onsubmit="saveContactForm(event)">
+        <input type="hidden" id="contact-form-id">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="contact-form-category" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Category</label>
+          <select id="contact-form-category" required style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+            <option value="agency">Overseas Agent</option>
+            <option value="liner">Liner</option>
+            <option value="coloader">Coloader</option>
+            <option value="nvocc">NVOCC</option>
+            <option value="breakbulk">BreakBulk</option>
+            <option value="airline">Airline</option>
+            <option value="pq">PQ Contact</option>
+            <option value="insurance">Insurance Contact</option>
+            <option value="other">Other Vendor</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="contact-form-name" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Company / Contact Name</label>
+          <input type="text" id="contact-form-name" required placeholder="e.g. Atlas Shipping Ltd" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="contact-form-person" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Contact Person</label>
+          <input type="text" id="contact-form-person" placeholder="e.g. John Doe" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="contact-form-email" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Email Address</label>
+          <input type="email" id="contact-form-email" placeholder="e.g. john@atlas.com" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="contact-form-phone" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Phone Number</label>
+          <input type="text" id="contact-form-phone" placeholder="e.g. +91 98765 43210" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="contact-form-location" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Location (City, Country)</label>
+          <input type="text" id="contact-form-location" placeholder="e.g. Mumbai, India" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="contact-form-notes" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Notes / Remarks</label>
+          <textarea id="contact-form-notes" placeholder="Rates, contract validity, special notes..." style="width:100%; height: 70px; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.85rem; resize: none;"></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; background: var(--accent-success); color: #000; font-weight: 700;">
+          Save Contact
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== EXCEL IMPORT MODAL ==================== -->
+  <div id="excel-import-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2001; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div class="glass-card modal-card"
+      style="width: 100%; max-width: 500px; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+            Bulk Excel Migration
+          </div>
+          <h2 style="font-size: 1.2rem; font-weight: 900; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
+            MIGRATE CONTACT DIRECTORY
+          </h2>
+        </div>
+        <button type="button" onclick="closeImportExcelModal()"
+          style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700;">×</button>
+      </div>
+
+      <div style="margin-bottom: 1rem; font-size: 0.8rem; color: var(--t2); line-height: 1.4;">
+        <p><strong>Upload your current Excel contact sheet.</strong></p>
+        <p>The importer expects the first row to be headers. It will auto-map columns like <em>Category</em> (or Category sheets), <em>Company Name</em>, <em>Contact Person</em>, <em>Email</em>, <em>Phone</em>, <em>Location</em>, and <em>Notes/Remarks</em>.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--sky);"><em>Tip: If your excel has multiple tabs, the importer will process all of them or ask you to choose.</em></p>
+      </div>
+
+      <div id="excel-drag-drop-zone" 
+           style="border: 2px dashed var(--border-2); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; background: rgba(0,0,0,0.02); transition: all 0.2s;"
+           onmouseover="this.style.background='rgba(0,0,0,0.05)';"
+           onmouseout="this.style.background='rgba(0,0,0,0.02)';"
+           onclick="document.getElementById('excel-file-input').click()">
+        <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">📊</span>
+        <span style="font-size: 0.85rem; font-weight: 700; color: var(--t1); display: block;">Drag & Drop Excel File here</span>
+        <span style="font-size: 0.75rem; color: var(--t3); display: block; margin-top: 0.25rem;">or click to browse from files</span>
+        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelFileSelect(event)">
+      </div>
+
+      <div id="excel-import-preview" style="display: none; margin-top: 1.25rem; max-height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.7rem; padding: 8px; border: 1px solid var(--border-1); border-radius: 8px; background: rgba(0,0,0,0.03);">
+        <!-- Preview items loaded dynamically -->
+      </div>
+
+      <div id="excel-import-actions" style="display: none; gap: 0.5rem; margin-top: 1.25rem;">
+        <button class="btn-primary" onclick="submitExcelImport()" style="flex: 1; border-radius: 8px; background: var(--accent-success); color: #000; font-weight: 700;">
+          Confirm & Import (<span id="excel-import-count">0</span> rows)
+        </button>
+        <button class="btn-secondary" onclick="resetExcelImport()" style="border-radius: 8px;">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
     </main>
   </div>
 
