@@ -6880,8 +6880,8 @@ window.viewSavedQuote = (id) => {
   let originSurchargeRows = "";
   let destSurchargeRows = "";
 
-  const originList = quote.details.originSurcharges || [];
-  const destList = quote.details.destSurcharges || [];
+  const originList = quote.details ? (quote.details.originSurcharges || []) : [];
+  const destList = quote.details ? (quote.details.destSurcharges || []) : [];
 
   if (originList.length > 0) {
     originList.forEach(s => {
@@ -6891,7 +6891,7 @@ window.viewSavedQuote = (id) => {
     });
   } else {
     // If it's an old quote with only 'surcharges' array, put them in origin
-    if (quote.details.surcharges && quote.details.surcharges.length > 0 && originList.length === 0) {
+    if (quote.details && quote.details.surcharges && quote.details.surcharges.length > 0 && originList.length === 0) {
       quote.details.surcharges.forEach(s => {
         const cost = s.calculatedCost || s.cost;
         const rateLabel = s.unit ? `(${currencySym}${s.rate}/${s.unit})` : '';
@@ -6914,12 +6914,16 @@ window.viewSavedQuote = (id) => {
 
   let termsList = "";
   const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : (isAir ? DEFAULT_AIR_TERMS : DEFAULT_SEA_TERMS);
-  rawTerms.split("\n").map(l => l.trim()).filter(l => l.length > 0).forEach(line => {
-    termsList += `<li>${line}</li>`;
-  });
+  if (rawTerms) {
+    rawTerms.split("\n").map(l => l.trim()).filter(l => l.length > 0).forEach(line => {
+      termsList += `<li>${line}</li>`;
+    });
+  }
 
-    const isMultiCarrier = (quote.details.airlines && quote.details.airlines.length > 1) || 
-                           (quote.details.alternatives && quote.details.alternatives.length > 1);
+    const isMultiCarrier = quote.details ? 
+                           ((quote.details.airlines && quote.details.airlines.length > 1) || 
+                            (quote.details.alternatives && quote.details.alternatives.length > 1))
+                           : false;
 
     const bottomTotalBox = isMultiCarrier ? "" : `
       <div class="total-summary-box">
@@ -10037,13 +10041,19 @@ const DB = {
       q.timestamp = Date.now() - (idx * 60 * 1000);
     }
     // Specific fix for duplicate quotes AEANT0726IN00062 / AEANT0726IN00065:
-    if (getQuoteRefId(q) === 'AEANT0726IN00062' || getQuoteRefId(q) === 'AEANT0726IN00065' || q.quoteNumber === 62 || q.quoteNumber === 65) {
+    const lowercaseId = (q.id || "").toLowerCase();
+    const isTargetQuote = lowercaseId.includes("00062") || lowercaseId.includes("00065") || 
+                          q.quoteNumber === 62 || q.quoteNumber === 65 || 
+                          (q.id && (q.id.includes("62") || q.id.includes("65"))) ||
+                          (q.notes && (q.notes.includes("00062") || q.notes.includes("00065")));
+    
+    if (isTargetQuote) {
       q.type = 'warehouse';
       q.mode = 'Warehouse';
-      if (q.details) {
-        q.details.mode = 'Warehouse';
-        q.details.type = 'warehouse';
-      }
+      if (!q.details) q.details = {};
+      q.details.mode = 'Warehouse';
+      q.details.type = 'warehouse';
+      q.details.module = 'warehouse';
     }
   },
   
