@@ -24,7 +24,6 @@ const TEAM_ROLES = {
   'ganny': { name: 'Pricing Team', type: 'admin' },
   'shashank': { name: 'Air Nom', type: 'member', category: 'AIR - NOMINATION', currency: 'USD' },
   'shaheer': { name: 'Sea Nomination', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
-  'mahendra': { name: 'Sea Nomination (Legacy)', type: 'member', category: 'SEA - NOMINATION', currency: 'USD' },
   'jaya': { name: 'Free Hand', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
@@ -4721,12 +4720,9 @@ function renderAdminDashboard() {
   const leadBody = document.getElementById("admin-leaderboard-body");
   leadBody.innerHTML = "";
 
-  // Get all registered member user IDs (excluding manager/admin roles and shaheer)
+  // Get all registered member user IDs (excluding manager/admin roles)
   const desks = Object.keys(TEAM_ROLES).filter(roleId => {
     if (roleId === 'ganny' || roleId === 'manager') return false;
-    if (roleId.toLowerCase() === 'shaheer') return false;
-    const name = (TEAM_ROLES[roleId]?.name || '').toLowerCase();
-    if (name === 'shaheer' || name.startsWith('shaheer ')) return false;
     return true;
   });
 
@@ -7424,7 +7420,13 @@ window.populateAllHeaderFilterDropdowns = () => {
   const deskOptions = document.getElementById('hdr-options-desk');
   if (deskOptions) {
     const creatorsSet = new Set(Object.keys(TEAM_ROLES));
-    quotes.forEach(q => { if (q.creator) creatorsSet.add(q.creator); });
+    quotes.forEach(q => { 
+      if (q.creator && q.creator.toLowerCase() !== 'mahendra') {
+        creatorsSet.add(q.creator); 
+      }
+    });
+    creatorsSet.delete('mahendra');
+    creatorsSet.delete('Mahendra');
     
     let html = `<div class="hdr-filter-opt ${window.hdrFilterState.desk === 'all' ? 'active' : ''}" onclick="selectHdrFilter('desk', 'all', 'All Desks')">All Desks</div>`;
     Array.from(creatorsSet).forEach(cId => {
@@ -7887,6 +7889,7 @@ window.applyDbFiltersAndSort = () => {
   const endDateVal = document.getElementById("db-filter-end-date")?.value;
 
   let filtered = (appState.quotes || []).filter(q => {
+    if (q.creator && q.creator.toLowerCase() === 'mahendra') return false;
     const refIdStr = (getQuoteRefId(q) || q.id || "").toLowerCase();
     const dateStr = (q.date || "").toLowerCase();
     const typeStr = (q.type || "").toLowerCase();
@@ -9940,6 +9943,7 @@ const DB = {
           const u = doc.data();
           if (u && u.username) {
             const lowerUser = u.username.toLowerCase();
+            if (lowerUser === 'mahendra') return;
 
             // If Firestore doc has no password, try to preserve one from localStorage
             if (!u.password) {
