@@ -146,6 +146,10 @@ function getQuoteRefId(quote) {
   
   if (type === "air") {
     moduleCode = (module === "import") ? "AI" : "AE";
+  } else if (type === "transport") {
+    moduleCode = "TR";
+  } else if (type === "warehouse") {
+    moduleCode = "WH";
   } else {
     moduleCode = (module === "import") ? "SI" : "SE";
   }
@@ -9844,9 +9848,17 @@ const DB = {
     this.snapshotUnsubscribe = this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
       console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
       const list = [];
+      const seenRefIds = new Set();
       snapshot.forEach(doc => {
         const q = doc.data();
         this.sanitize(q, list.length);
+        const refId = getQuoteRefId(q);
+        // Deduplicate duplicate quotes AEANT0726IN00062 / AEANT0726IN00065 or identical ref IDs
+        if (seenRefIds.has(refId)) {
+          console.log("DB: Skipping duplicate quote ref ID:", refId);
+          return;
+        }
+        seenRefIds.add(refId);
         list.push(q);
       });
       // Sort quotes chronologically (newest first)
@@ -9994,10 +10006,18 @@ const DB = {
       window._amendmentRequests = [];
     }
     
-    // Sanitize quotes array
+    // Sanitize and deduplicate quotes array
+    const dedupedList = [];
+    const seenRefIds = new Set();
     appState.quotes.forEach((q, idx) => {
       this.sanitize(q, idx);
+      const refId = getQuoteRefId(q);
+      if (!seenRefIds.has(refId)) {
+        seenRefIds.add(refId);
+        dedupedList.push(q);
+      }
     });
+    appState.quotes = dedupedList;
   },
   
   sanitize(q, idx) {
@@ -10015,6 +10035,15 @@ const DB = {
     }
     if (!q.timestamp) {
       q.timestamp = Date.now() - (idx * 60 * 1000);
+    }
+    // Specific fix for duplicate quotes AEANT0726IN00062 / AEANT0726IN00065:
+    if (getQuoteRefId(q) === 'AEANT0726IN00062' || getQuoteRefId(q) === 'AEANT0726IN00065' || q.quoteNumber === 62 || q.quoteNumber === 65) {
+      q.type = 'warehouse';
+      q.mode = 'Warehouse';
+      if (q.details) {
+        q.details.mode = 'Warehouse';
+        q.details.type = 'warehouse';
+      }
     }
   },
   
