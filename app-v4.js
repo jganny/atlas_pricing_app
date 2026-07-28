@@ -5513,7 +5513,7 @@ function saveCurrentQuote() {
     id: 'Q' + Math.random().toString(36).substr(2, 9),
     date: new Date().toISOString().split('T')[0],
     customer: customerName,
-    creator: appState.currentUser,
+    creator: getActiveRole(),
     status: 'quoted',
     quoteNumber: appState.quotes.length + 1
   };
@@ -5581,7 +5581,7 @@ function saveCurrentQuote() {
       const sellRateVal = appState.currentAirFreight.appliedRate || 0;
       const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
 
-      const activeUser = appState.currentUser;
+      const activeUser = getActiveRole();
       const isNominationUser = activeUser && (
         activeUser === 'shashank' || 
         activeUser === 'shaheer' || 
@@ -5758,7 +5758,7 @@ function saveCurrentQuote() {
           alert("Please fill in Container Quantity for all container rows.");
           return;
         }
-        const activeUser = appState.currentUser;
+        const activeUser = getActiveRole();
         const isNominationUser = activeUser && (
           activeUser === 'shashank' || 
           activeUser === 'shaheer' || 
@@ -5789,7 +5789,7 @@ function saveCurrentQuote() {
         const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
         const lclBuyRate = parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0;
 
-        const activeUser = appState.currentUser;
+        const activeUser = getActiveRole();
         const isNominationUser = activeUser && (
           activeUser === 'shashank' || 
           activeUser === 'shaheer' || 
@@ -5837,7 +5837,7 @@ function saveCurrentQuote() {
         const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
         const bbBuyRate = parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0;
 
-        const activeUser = appState.currentUser;
+        const activeUser = getActiveRole();
         const isNominationUser = activeUser && (
           activeUser === 'shashank' || 
           activeUser === 'shaheer' || 
