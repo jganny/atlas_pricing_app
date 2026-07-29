@@ -8646,6 +8646,108 @@ function amendQuote(id) {
     calculateAirFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
     
+  } else if (quote.type === 'transport') {
+    document.getElementById("transportation-panel").classList.add("active");
+    
+    if (document.getElementById("transport-pickup-pin")) {
+      document.getElementById("transport-pickup-pin").value = quote.details.pickupPin || "";
+    }
+    if (document.getElementById("transport-delivery-pin")) {
+      document.getElementById("transport-delivery-pin").value = quote.details.deliveryPin || "";
+    }
+    if (document.getElementById("transport-currency")) {
+      document.getElementById("transport-currency").value = quote.currency || "INR";
+    }
+    
+    const transportBody = document.getElementById("transport-standalone-body");
+    if (transportBody) {
+      transportBody.innerHTML = "";
+      const items = quote.details.items || [];
+      if (items.length > 0) {
+        items.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><input type="text" class="chg-name" value="${item.name}" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+            <td><input type="number" class="chg-rate" value="${item.rate}" step="0.01" oninput="calculateTransportation()"></td>
+            <td><input type="text" class="chg-remarks" value="${item.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+            <td style="text-align: center;">
+              <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+            </td>
+          `;
+          transportBody.appendChild(tr);
+        });
+      } else {
+        // Fallback default row
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" class="chg-name" value="Transport Fee" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+          <td><input type="number" class="chg-rate" value="${quote.amount || 0}" step="0.01" oninput="calculateTransportation()"></td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+          <td style="text-align: center;">
+            <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+          </td>
+        `;
+        transportBody.appendChild(tr);
+      }
+    }
+    
+    updateAdminModulePermissions();
+    calculateTransportation();
+    alert(`Editing Transportation Quote #${getQuoteRefId(quote)} in progress. Enter name when saving to confirm your amendments.`);
+    
+  } else if (quote.type === 'warehouse') {
+    document.getElementById("warehousing-panel").classList.add("active");
+    
+    if (document.getElementById("warehouse-currency")) {
+      document.getElementById("warehouse-currency").value = quote.currency || "INR";
+    }
+    
+    const warehouseBody = document.getElementById("warehouse-standalone-body");
+    if (warehouseBody) {
+      warehouseBody.innerHTML = "";
+      const items = quote.details.items || [];
+      if (items.length > 0) {
+        items.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><input type="text" class="chg-name" value="${item.name}" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+            <td>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="chg-rate" value="${item.rate}" step="0.01" oninput="calculateWarehousing()" style="width: 90px; flex-shrink: 0;">
+                <input type="text" class="chg-desc" value="${item.desc || ''}" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem;">
+              </div>
+            </td>
+            <td><input type="text" class="chg-remarks" value="${item.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+            <td style="text-align: center;">
+              <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+            </td>
+          `;
+          warehouseBody.appendChild(tr);
+        });
+      } else {
+        // Fallback default row
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" class="chg-name" value="Warehouse Charge" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+          <td>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="number" class="chg-rate" value="${quote.amount || 0}" step="0.01" oninput="calculateWarehousing()" style="width: 90px; flex-shrink: 0;">
+              <input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem;">
+            </div>
+          </td>
+          <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
+          <td style="text-align: center;">
+            <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+          </td>
+        `;
+        warehouseBody.appendChild(tr);
+      }
+    }
+    
+    updateAdminModulePermissions();
+    calculateWarehousing();
+    alert(`Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Enter name when saving to confirm your amendments.`);
+    
   } else {
     document.getElementById("sea-freight-panel").classList.add("active");
     
@@ -12210,15 +12312,54 @@ function saveStandaloneQuote(module) {
 
   let modeTitle = "Services";
   let routingInfo = `${module.toUpperCase()} Standalone Services`;
+  let pickupPin = "";
+  let deliveryPin = "";
 
   if (module === 'transport') {
     modeTitle = "Transportation";
-    const pPin = document.getElementById("transport-pickup-pin")?.value || "";
-    const dPin = document.getElementById("transport-delivery-pin")?.value || "";
-    routingInfo = `Pickup PIN ${pPin} ➔ Delivery PIN ${dPin}`;
+    pickupPin = document.getElementById("transport-pickup-pin")?.value || "";
+    deliveryPin = document.getElementById("transport-delivery-pin")?.value || "";
+    routingInfo = `Pickup PIN ${pickupPin} ➔ Delivery PIN ${deliveryPin}`;
   } else if (module === 'warehouse') {
     modeTitle = "Warehouse";
     routingInfo = `Warehousing Storage & Operations`;
+  }
+
+  const items = [];
+  if (module === 'transport') {
+    const tbody = document.getElementById("transport-standalone-body");
+    if (tbody) {
+      tbody.querySelectorAll("tr").forEach(tr => {
+        const nameInp = tr.querySelector(".chg-name");
+        const rateInp = tr.querySelector(".chg-rate");
+        const remarksInp = tr.querySelector(".chg-remarks");
+        if (nameInp) {
+          items.push({
+            name: nameInp.value,
+            rate: parseFloat(rateInp?.value) || 0,
+            remarks: remarksInp?.value || ""
+          });
+        }
+      });
+    }
+  } else if (module === 'warehouse') {
+    const tbody = document.getElementById("warehouse-standalone-body");
+    if (tbody) {
+      tbody.querySelectorAll("tr").forEach(tr => {
+        const nameInp = tr.querySelector(".chg-name");
+        const rateInp = tr.querySelector(".chg-rate");
+        const descInp = tr.querySelector(".chg-desc");
+        const remarksInp = tr.querySelector(".chg-remarks");
+        if (nameInp) {
+          items.push({
+            name: nameInp.value,
+            rate: parseFloat(rateInp?.value) || 0,
+            desc: descInp?.value || "",
+            remarks: remarksInp?.value || ""
+          });
+        }
+      });
+    }
   }
 
   const quoteData = {
@@ -12239,13 +12380,32 @@ function saveStandaloneQuote(module) {
       mode: modeTitle,
       type: module,
       module: module,
-      routing: routingInfo
+      routing: routingInfo,
+      items: items,
+      pickupPin: pickupPin,
+      deliveryPin: deliveryPin
     },
     notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
   };
 
-  DB.saveQuote(quoteData);
-  alert(`${modeTitle} Standalone Quotation saved successfully!`);
+  if (appState.editingQuoteId) {
+    const existingIndex = appState.quotes.findIndex(q => q.id === appState.editingQuoteId);
+    if (existingIndex !== -1) {
+      const originalQuote = appState.quotes[existingIndex];
+      quoteData.id = originalQuote.id;
+      quoteData.date = new Date().toISOString().split('T')[0];
+      quoteData.creator = originalQuote.creator;
+      quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
+      quoteData.amendmentAllowed = false; // Lock it back!
+      
+      appState.editingQuoteId = null; // Clear edit mode
+      DB.saveQuote(quoteData);
+      alert(`${modeTitle} Standalone Quotation amended and locked successfully!`);
+    }
+  } else {
+    DB.saveQuote(quoteData);
+    alert(`${modeTitle} Standalone Quotation saved successfully!`);
+  }
   returnToWorkspace();
 }
 window.saveStandaloneQuote = saveStandaloneQuote;
@@ -14605,6 +14765,30 @@ function exportDirectoryToExcel() {
   }
 }
 window.exportDirectoryToExcel = exportDirectoryToExcel;
+
+window.addEventListener("storage", (e) => {
+  if (e.key === "gl_amendment_requests") {
+    let requests = [];
+    try { requests = JSON.parse(e.newValue || "[]"); } catch (err) {}
+    window._amendmentRequests = requests;
+    
+    if (typeof checkAndNotifyNewRequests === 'function') {
+      checkAndNotifyNewRequests(requests);
+    }
+    if (appState.currentUser === 'ganny') {
+      renderAdminDashboard();
+    }
+  } else if (e.key === "logistics_quotes") {
+    let quotes = [];
+    try { quotes = JSON.parse(e.newValue || "[]"); } catch (err) {}
+    appState.quotes = quotes;
+    if (appState.currentUser === 'ganny') {
+      renderAdminDashboard();
+    } else {
+      renderMemberDashboard(appState.currentUser);
+    }
+  }
+});
 
 
 
