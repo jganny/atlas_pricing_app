@@ -688,18 +688,18 @@
                     </div>
                   </th>
 
-                  <!-- AGENT & ROUTE Filter -->
+                  <!-- AGENT Filter -->
                   <th>
                     <div class="hdr-filter-dropdown" id="dropdown-hdr-agentroute">
                       <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'agentroute')">
-                        <span id="hdr-label-agentroute">Agent/Route</span> <span class="hdr-filter-arrow">▼</span>
+                        <span id="hdr-label-agentroute">Agent</span> <span class="hdr-filter-arrow">▼</span>
                       </button>
                       <div class="hdr-filter-menu" id="hdr-menu-agentroute" onclick="event.stopPropagation()">
                         <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-agentroute" placeholder="Search Agent/Route..." oninput="onHdrSearchInput('agentroute', this.value)">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-agentroute" placeholder="Search Agent..." oninput="onHdrSearchInput('agentroute', this.value)">
                         </div>
                         <div class="hdr-filter-options-list" id="hdr-options-agentroute">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('agentroute', 'all', 'All Routes')">All Routes</div>
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('agentroute', 'all', 'All Agents')">All Agents</div>
                         </div>
                       </div>
                     </div>
@@ -1220,18 +1220,18 @@
                     </div>
                   </th>
 
-                  <!-- AGENT & ROUTE DETAILS Filter -->
+                  <!-- AGENT Filter -->
                   <th>
                     <div class="hdr-filter-dropdown" id="dropdown-user-hdr-agentroute">
                       <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'agentroute')">
-                        <span id="user-hdr-label-agentroute">Agent/Route</span> <span class="hdr-filter-arrow">▼</span>
+                        <span id="user-hdr-label-agentroute">Agent</span> <span class="hdr-filter-arrow">▼</span>
                       </button>
                       <div class="hdr-filter-menu" id="user-hdr-menu-agentroute" onclick="event.stopPropagation()">
                         <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-agentroute" placeholder="Filter Route..." oninput="onUserHdrSearchInput('agentroute', this.value)">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-agentroute" placeholder="Search Agent..." oninput="onUserHdrSearchInput('agentroute', this.value)">
                         </div>
                         <div class="hdr-filter-options-list" id="user-hdr-options-agentroute">
-                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('agentroute', 'all', 'All Agents & Routes')">All Agents & Routes</div>
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('agentroute', 'all', 'All Agents')">All Agents</div>
                         </div>
                       </div>
                     </div>

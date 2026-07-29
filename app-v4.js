@@ -7286,7 +7286,7 @@ window.resetAllHdrFilters = () => {
   if (document.getElementById('hdr-label-refid')) document.getElementById('hdr-label-refid').textContent = 'Ref ID';
   if (document.getElementById('hdr-label-date')) document.getElementById('hdr-label-date').textContent = 'All Dates';
   if (document.getElementById('hdr-label-mode')) document.getElementById('hdr-label-mode').textContent = 'All Modes';
-  if (document.getElementById('hdr-label-agentroute')) document.getElementById('hdr-label-agentroute').textContent = 'Agent/Route';
+  if (document.getElementById('hdr-label-agentroute')) document.getElementById('hdr-label-agentroute').textContent = 'Agent';
   if (document.getElementById('hdr-label-desk')) document.getElementById('hdr-label-desk').textContent = 'All Desks';
   if (document.getElementById('hdr-label-carrier')) document.getElementById('hdr-label-carrier').textContent = 'All Carriers';
   if (document.getElementById('hdr-label-buyrate')) document.getElementById('hdr-label-buyrate').textContent = 'Buy Rate';
@@ -7365,7 +7365,22 @@ window.populateAllHeaderFilterDropdowns = () => {
     carrierOptions.innerHTML = html;
   }
 
-  // 4. AGENT & ROUTE DETAILS (Show ALL Customers/Agents & Routes)
+  // 4. AGENT DETAILS
+  const agentRouteOptions = document.getElementById('hdr-options-agentroute');
+  if (agentRouteOptions) {
+    const itemsSet = new Set();
+    quotes.forEach(q => {
+      if (q.customer && q.customer.trim()) itemsSet.add(q.customer.trim());
+    });
+    const sortedItems = Array.from(itemsSet).sort();
+    let html = `<div class="hdr-filter-opt ${window.hdrFilterState.agentroute === 'all' ? 'active' : ''}" onclick="selectHdrFilter('agentroute', 'all', 'All Agents')">All Agents</div>`;
+    sortedItems.forEach(item => {
+      const active = window.hdrFilterState.agentroute === item ? 'active' : '';
+      const escapedItem = item.replace(/'/g, "\\'");
+      html += `<div class="hdr-filter-opt ${active}" onclick="selectHdrFilter('agentroute', '${escapedItem}', '${escapedItem}')">${item}</div>`;
+    });
+    agentRouteOptions.innerHTML = html;
+  }
 };
 
 // --- User Column Header Filter State & Handlers ---
@@ -7495,7 +7510,7 @@ window.resetAllUserHdrFilters = () => {
   if (document.getElementById('user-hdr-label-refid')) document.getElementById('user-hdr-label-refid').textContent = 'Ref ID';
   if (document.getElementById('user-hdr-label-date')) document.getElementById('user-hdr-label-date').textContent = 'All Dates';
   if (document.getElementById('user-hdr-label-mode')) document.getElementById('user-hdr-label-mode').textContent = 'All Modes';
-  if (document.getElementById('user-hdr-label-agentroute')) document.getElementById('user-hdr-label-agentroute').textContent = 'Agent/Route';
+  if (document.getElementById('user-hdr-label-agentroute')) document.getElementById('user-hdr-label-agentroute').textContent = 'Agent';
   if (document.getElementById('user-hdr-label-carrier')) document.getElementById('user-hdr-label-carrier').textContent = 'All Carriers';
   if (document.getElementById('user-hdr-label-buyrate')) document.getElementById('user-hdr-label-buyrate').textContent = 'Buy Rate';
   if (document.getElementById('user-hdr-label-sellrate')) document.getElementById('user-hdr-label-sellrate').textContent = 'Sell Rate';
@@ -7546,16 +7561,15 @@ window.populateAllUserHeaderFilterDropdowns = (myQuotes) => {
     carrierOptions.innerHTML = html;
   }
 
-  // 3. AGENT & ROUTE DETAILS
+  // 3. AGENT DETAILS
   const agentRouteOptions = document.getElementById('user-hdr-options-agentroute');
   if (agentRouteOptions) {
     const itemsSet = new Set();
     quotes.forEach(q => {
       if (q.customer && q.customer.trim()) itemsSet.add(q.customer.trim());
-      if (q.route && q.route.trim()) itemsSet.add(q.route.trim());
     });
     const sortedItems = Array.from(itemsSet).sort();
-    let html = `<div class="hdr-filter-opt ${window.userHdrFilterState.agentroute === 'all' ? 'active' : ''}" onclick="selectUserHdrFilter('agentroute', 'all', 'All Agents & Routes')">All Agents & Routes</div>`;
+    let html = `<div class="hdr-filter-opt ${window.userHdrFilterState.agentroute === 'all' ? 'active' : ''}" onclick="selectUserHdrFilter('agentroute', 'all', 'All Agents')">All Agents</div>`;
     sortedItems.forEach(item => {
       const active = window.userHdrFilterState.agentroute === item ? 'active' : '';
       const escapedItem = item.replace(/'/g, "\\'");
@@ -7606,10 +7620,10 @@ window.applyUserDbFiltersAndSort = () => {
       if (carrierStr !== st.carrier.toLowerCase()) return false;
     }
 
-    // Agent & Route filter
+    // Agent filter
     if (st.agentroute && st.agentroute !== 'all') {
       const targetAR = st.agentroute.toLowerCase();
-      if (customerStr !== targetAR && routeStr !== targetAR && !customerStr.includes(targetAR) && !routeStr.includes(targetAR)) {
+      if (customerStr !== targetAR && !customerStr.includes(targetAR)) {
         return false;
       }
     }
@@ -7633,7 +7647,7 @@ window.applyUserDbFiltersAndSort = () => {
     if (st.search_refid && !refIdStr.includes(st.search_refid)) return false;
     if (st.search_date && !dateStr.includes(st.search_date)) return false;
     if (st.search_mode && !typeStr.includes(st.search_mode)) return false;
-    if (st.search_agentroute && !customerStr.includes(st.search_agentroute) && !routeStr.includes(st.search_agentroute) && !originStr.includes(st.search_agentroute) && !destStr.includes(st.search_agentroute)) return false;
+    if (st.search_agentroute && !customerStr.includes(st.search_agentroute)) return false;
     if (st.search_carrier && !carrierStr.includes(st.search_carrier)) return false;
     if (st.search_buyrate && !buyRateStr.includes(st.search_buyrate)) return false;
     if (st.search_sellrate && !sellRateStr.includes(st.search_sellrate)) return false;
@@ -7712,7 +7726,6 @@ window.applyUserDbFiltersAndSort = () => {
         }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
@@ -7841,10 +7854,10 @@ window.applyDbFiltersAndSort = () => {
       if (carrierStr !== st.carrier.toLowerCase()) return false;
     }
 
-    // Agent & Route filter (match customer or route)
+    // Agent filter
     if (st.agentroute && st.agentroute !== 'all') {
       const targetAR = st.agentroute.toLowerCase();
-      if (customerStr !== targetAR && routeStr !== targetAR && !customerStr.includes(targetAR) && !routeStr.includes(targetAR)) {
+      if (customerStr !== targetAR && !customerStr.includes(targetAR)) {
         return false;
       }
     }
@@ -7868,7 +7881,7 @@ window.applyDbFiltersAndSort = () => {
     if (st.search_refid && !refIdStr.includes(st.search_refid)) return false;
     if (st.search_date && !dateStr.includes(st.search_date)) return false;
     if (st.search_mode && !typeStr.includes(st.search_mode)) return false;
-    if (st.search_agentroute && !customerStr.includes(st.search_agentroute) && !routeStr.includes(st.search_agentroute) && !originStr.includes(st.search_agentroute) && !destStr.includes(st.search_agentroute)) return false;
+    if (st.search_agentroute && !customerStr.includes(st.search_agentroute)) return false;
     if (st.search_desk && !creatorName.includes(st.search_desk) && !creatorStr.includes(st.search_desk)) return false;
     if (st.search_carrier && !carrierStr.includes(st.search_carrier)) return false;
     if (st.search_buyrate && !buyRateStr.includes(st.search_buyrate)) return false;
@@ -7967,7 +7980,6 @@ window.applyDbFiltersAndSort = () => {
         }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">${quote.route}</div>
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t1);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${carrierName}</span></td>
