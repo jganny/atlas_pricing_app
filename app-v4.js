@@ -13957,15 +13957,7 @@ let activeDirectoryCategory = 'all';
 let importedExcelRows = [];
 
 // Fallback initial data if database is empty or offline
-const fallbackContacts = [
-  { id: "sample-1", category: "agency", name: "Apex Global Logistics", contactPerson: "Rohan Sharma", email: "rohan.s@apexglobal.com", phone: "+91 98200 12345", location: "Mumbai, India", notes: "Primary agency for Nhava Sheva handling. 15 days credit term.", updatedAt: new Date(), updatedBy: "Pricing Team" },
-  { id: "sample-2", category: "liner", name: "Maersk Line India", contactPerson: "Sarah D'Souza", email: "sarah.dsouza@maersk.com", phone: "+91 22 6655 4433", location: "Chennai, India", notes: "Direct contact for special spot rates to Europe.", updatedAt: new Date(), updatedBy: "Pricing Team" },
-  { id: "sample-3", category: "coloader", name: "Cargo Movers India Ltd", contactPerson: "Amit Patel", email: "pricing@cargomovers.in", phone: "+91 99300 54321", location: "Gujarat, India", notes: "LCL consolidation specialist to USA ports.", updatedAt: new Date(), updatedBy: "Pricing Team" },
-  { id: "sample-4", category: "airline", name: "Qatar Airways Cargo", contactPerson: "Vikram Malhotra", email: "vmalhotra@qatarairways.com.qa", phone: "+91 11 4765 8900", location: "Delhi, India", notes: "Best rates for pharmaceutical shipments via Doha.", updatedAt: new Date(), updatedBy: "Pricing Team" },
-  { id: "sample-5", category: "pq", name: "Port Health Officer Office", contactPerson: "Dr. K. Raghavan", email: "pho.mumbai@gov.in", phone: "+91 22 2261 4321", location: "Mumbai, India", notes: "PQ clearance protocols/officer contact.", updatedAt: new Date(), updatedBy: "Pricing Team" },
-  { id: "sample-6", category: "insurance", name: "New India Assurance Co", contactPerson: "S. K. Mukherjee", email: "sk.mukherjee@newindia.co.in", phone: "+91 98111 22233", location: "Kolkata, India", notes: "Marine cargo transit insurance policies cover.", updatedAt: new Date(), updatedBy: "Pricing Team" },
-  { id: "sample-7", category: "nvocc", name: "Schenker India NVOCC", contactPerson: "Rajesh Sen", email: "rajesh.sen@dbschenker.com", phone: "+91 22 4000 8000", location: "Mumbai, India", notes: "LCL rates / NVOCC operations.", updatedAt: new Date(), updatedBy: "Pricing Team" }
-];
+const fallbackContacts = [];
 
 // Overseas Agents Directory can be changed by Admin, Air Nomination, Sea Nomination
 function canEditAgentsDirectory() {
@@ -14714,7 +14706,7 @@ async function purgeDirectoryContacts() {
 
   const isAgents = (activeDirectoryParent === 'agents');
   const targetName = isAgents ? "Overseas Agents" : "Vendor Contacts";
-  const confirmMsg = `⚠️ WARNING: This will permanently delete all ${targetName} in the database and restore default fallback ${targetName}. Are you sure you want to proceed?`;
+  const confirmMsg = `⚠️ WARNING: This will permanently delete all ${targetName} in the database. Are you sure you want to proceed?`;
   if (!confirm(confirmMsg)) return;
 
   try {
@@ -14753,7 +14745,7 @@ async function purgeDirectoryContacts() {
       });
       await batchRestore.commit();
       
-      alert(`${targetName} directory cleared and restored to default fallback contacts successfully!`);
+      alert(`${targetName} directory cleared successfully!`);
     } else {
       if (isAgents) {
         directoryContacts = directoryContacts.filter(c => c.category !== 'agency');
