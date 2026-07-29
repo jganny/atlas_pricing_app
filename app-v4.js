@@ -5036,252 +5036,199 @@ window.convertQuote = (id) => {
     }
   }
 
-  const carrierSection = document.getElementById("won-carrier-buy-section");
-  const carrierSelect = document.getElementById("won-confirmed-carrier");
-  const buyRateInput = document.getElementById("won-confirmed-buy-rate");
-
-  if (carrierSection && carrierSelect && buyRateInput) {
-    carrierSection.style.display = "block";
-    carrierSelect.required = true;
-
-    // Determine what is missing
-    let isBuyRateMissing = false;
-    let isSellRateMissing = false;
-
-    const isNominationCreator = quote.creator && (
-      quote.creator === 'shashank' || 
-      quote.creator === 'shaheer' || 
-      (TEAM_ROLES[quote.creator] && (TEAM_ROLES[quote.creator].category === 'AIR - NOMINATION' || TEAM_ROLES[quote.creator].category === 'SEA - NOMINATION'))
-    );
-
-    if (isNominationCreator) {
-      isSellRateMissing = true;
-    } else if (quote.type === 'air') {
-      const sellRate = quote.details.appliedRate || 0;
-      const buyRate = quote.details.appliedBuyRate || 0;
-      if (sellRate > 0 && buyRate === 0) {
-        isBuyRateMissing = true;
-      } else if (buyRate > 0 && sellRate === 0) {
-        isSellRateMissing = true;
-      }
-    } else {
-      if (quote.details.mode === 'fcl') {
-        const hasSell = (quote.details.containerItems || []).some(item => (item.rate || 0) > 0);
-        const hasBuy = (quote.details.containerItems || []).some(item => (item.buy || 0) > 0);
-        if (hasSell && !hasBuy) {
-          isBuyRateMissing = true;
-        } else if (hasBuy && !hasSell) {
-          isSellRateMissing = true;
-        }
-      } else if (quote.details.mode === 'lcl') {
-        const sellRate = quote.details.lclRateApplied || 0;
-        const buyRate = quote.details.lclBuyRateApplied || 0;
-        if (sellRate > 0 && buyRate === 0) {
-          isBuyRateMissing = true;
-        } else if (buyRate > 0 && sellRate === 0) {
-          isSellRateMissing = true;
-        }
-      } else {
-        const sellRate = quote.details.bbRateApplied || 0;
-        const buyRate = quote.details.bbBuyRateApplied || 0;
-        if (sellRate > 0 && buyRate === 0) {
-          isBuyRateMissing = true;
-        } else if (buyRate > 0 && sellRate === 0) {
-          isSellRateMissing = true;
-        }
-      }
+  let carrierOptions = [];
+  if (quote.type === 'air') {
+    if (quote.details.airlines && quote.details.airlines.length > 0) {
+      carrierOptions = quote.details.airlines.map(a => a.name);
+    } else if (quote.details.airline) {
+      carrierOptions = [quote.details.airline.split(" - ")[0]];
     }
-
-    const buyGrp = document.getElementById("won-confirmed-buy-rate-group");
-    const sellGrp = document.getElementById("won-confirmed-sell-rate-group");
-    const sellRateInput = document.getElementById("won-confirmed-sell-rate");
-
-    if (isSellRateMissing) {
-      if (buyGrp) buyGrp.style.display = "none";
-      if (sellGrp) sellGrp.style.display = "block";
-      if (sellRateInput) sellRateInput.required = true;
-      buyRateInput.required = false;
-    } else {
-      if (buyGrp) buyGrp.style.display = "block";
-      if (sellGrp) sellGrp.style.display = "none";
-      if (sellRateInput) sellRateInput.required = false;
-      buyRateInput.required = true;
+  } else if (quote.type === 'sea') {
+    if (quote.details.shippingLine) {
+      carrierOptions.push(quote.details.shippingLine);
     }
-
-    // Update Labels
-    const carrierLabel = document.getElementById("won-confirmed-carrier-label");
-    const titleLabel = document.getElementById("won-carrier-section-title");
-    const buyRateLabel = document.getElementById("won-confirmed-buy-rate-label");
-    const sellRateLabel = document.getElementById("won-confirmed-sell-rate-label");
-
-    if (quote.type === 'air') {
-      if (titleLabel) titleLabel.textContent = "Confirmed Airline Details";
-      if (carrierLabel) carrierLabel.textContent = "Confirmed Airline *";
-      if (buyRateLabel) buyRateLabel.textContent = "Confirmed Buy Rate (per KG) *";
-      if (sellRateLabel) sellRateLabel.textContent = "Confirmed Sell Rate (per KG) *";
-    } else {
-      if (titleLabel) titleLabel.textContent = "Confirmed Shipping Line Details";
-      if (carrierLabel) carrierLabel.textContent = "Confirmed Shipping Line *";
-      if (buyRateLabel) buyRateLabel.textContent = "Confirmed Buy Rate *";
-      if (sellRateLabel) sellRateLabel.textContent = "Confirmed Sell Rate *";
-    }
-
-    // Populate select dropdown options based on quote details
-    carrierSelect.innerHTML = "";
-    let carrierOptions = [];
-    if (quote.type === 'air') {
-      if (quote.details.airlines && quote.details.airlines.length > 0) {
-        carrierOptions = quote.details.airlines.map(a => a.name);
-      } else if (quote.details.airline) {
-        carrierOptions = [quote.details.airline.split(" - ")[0]];
-      }
-    } else {
-      if (quote.details.shippingLine) {
-        carrierOptions.push(quote.details.shippingLine);
-      }
-      if (quote.details.alternatives && quote.details.alternatives.length > 0) {
-        quote.details.alternatives.forEach(alt => {
-          if (alt.carrier && !carrierOptions.includes(alt.carrier)) {
-            carrierOptions.push(alt.carrier);
-          }
-        });
-      }
-    }
-
-    // If no carriers were saved, let's allow a fallback
-    if (carrierOptions.length === 0) {
-      carrierOptions.push(quote.type === 'air' ? 'Any Airline' : 'Any Line');
-    }
-
-    carrierOptions.forEach(opt => {
-      const option = document.createElement("option");
-      option.value = opt;
-      option.textContent = opt;
-      carrierSelect.appendChild(option);
-    });
-
-    // Default buy/sell rate based on selection
-    const updateRateFromSelection = () => {
-      const selectedCarrier = document.getElementById("won-confirmed-carrier")?.value || "";
-      let defaultBuyRate = 0;
-      let defaultSellRate = 0;
-
-      if (quote.type === 'air') {
-        if (quote.details.airlines && quote.details.airlines.length > 0) {
-          const match = quote.details.airlines.find(a => a.name === selectedCarrier);
-          if (match) {
-            const activeBr = match.usedBreak || getWeightBreakBracket(match.chargeableWeight || quote.details.chargeableWeight || 0);
-            const brVal = match.breaks[activeBr];
-            defaultBuyRate = (typeof brVal === 'object' && brVal !== null) ? (brVal.buy || 0) : 0;
-            defaultSellRate = (typeof brVal === 'object' && brVal !== null) ? (brVal.sell || 0) : 0;
-          }
+    if (quote.details.alternatives && quote.details.alternatives.length > 0) {
+      quote.details.alternatives.forEach(alt => {
+        if (alt.carrier && !carrierOptions.includes(alt.carrier)) {
+          carrierOptions.push(alt.carrier);
         }
-      } else {
-        // Sea
-        if (quote.details.mode === 'fcl') {
-          let sumBuy = 0;
-          let sumSell = 0;
-          if (quote.details.containerItems && quote.details.containerItems.length > 0) {
-            quote.details.containerItems.forEach(item => {
-              sumBuy += (item.buy || 0);
-              sumSell += (item.rate || 0);
-            });
-          }
-          defaultBuyRate = sumBuy;
-          defaultSellRate = sumSell;
-        } else if (quote.details.mode === 'lcl') {
-          defaultBuyRate = quote.details.lclBuyRateApplied || 0;
-          defaultSellRate = quote.details.lclRateApplied || 0;
-        } else {
-          defaultBuyRate = quote.details.bbBuyRateApplied || 0;
-          defaultSellRate = quote.details.bbRateApplied || 0;
-        }
-      }
-
-      if (buyRateInput) {
-        buyRateInput.value = defaultBuyRate > 0 ? defaultBuyRate : "";
-      }
-      if (sellRateInput) {
-        sellRateInput.value = defaultSellRate > 0 ? defaultSellRate : "";
-      }
-    };
-
-    // Remove existing listeners before adding
-    const newSelect = carrierSelect.cloneNode(true);
-    carrierSelect.parentNode.replaceChild(newSelect, carrierSelect);
-    newSelect.addEventListener("change", updateRateFromSelection);
-    
-    // Auto-alert
-    alert(`⚠️ Please select the Confirmed ${quote.type === 'air' ? 'Airline' : 'Shipping Line'} and enter/verify the Confirmed ${isSellRateMissing ? 'Sell' : 'Buy'} Rate.`);
-
-    updateRateFromSelection();
+      });
+    }
+  }
+  if (carrierOptions.length === 0) {
+    carrierOptions.push(quote.type === 'air' ? 'Any Airline' : 'Any Line');
   }
 
-  // Populate local fees buy rates inputs
-  const localFeesSection = document.getElementById("won-local-fees-section");
-  const originFeesGroup = document.getElementById("won-origin-fees-group");
-  const destFeesGroup = document.getElementById("won-dest-fees-group");
-  const originFeesList = document.getElementById("won-origin-fees-list");
-  const destFeesList = document.getElementById("won-dest-fees-list");
+  let html = `<h4 style="font-size: 0.75rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 1.2rem 0 0.8rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Confirmed Surcharges & Rates</h4>`;
 
-  if (localFeesSection && originFeesList && destFeesList) {
-    originFeesList.innerHTML = "";
-    destFeesList.innerHTML = "";
-    
-    const originSurcharges = quote.details.originSurcharges || [];
-    const destSurcharges = quote.details.destSurcharges || [];
+  if (quote.type === 'air' || quote.type === 'sea') {
+    html += `
+      <div class="form-group" style="margin-bottom: 0.8rem;">
+        <label for="won-confirmed-carrier" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo); display: block; margin-bottom: 0.4rem;">Confirmed ${quote.type === 'air' ? 'Airline' : 'Shipping Line'} *</label>
+        <select id="won-confirmed-carrier" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); width: 100%;">
+          ${carrierOptions.map(opt => `<option value="${opt}" ${opt === quote.confirmedCarrier ? 'selected' : ''}>${opt}</option>`).join('')}
+        </select>
+      </div>
+    `;
+  } else {
+    html += `<input type="hidden" id="won-confirmed-carrier" value="N/A">`;
+  }
 
-    if (originSurcharges.length > 0 || destSurcharges.length > 0) {
-      localFeesSection.style.display = "block";
-    } else {
-      localFeesSection.style.display = "none";
-    }
+  if (quote.type === 'air') {
+    const sellRate = quote.details.appliedRate || 0;
+    const buyRate = quote.details.appliedBuyRate || 0;
+    html += `
+      <div style="margin-bottom: 1.2rem;">
+        <div style="font-size: 0.72rem; color: var(--t1); font-weight: 700; margin-bottom: 0.4rem;">Air Freight Rate (per KG)</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+          <div class="form-group">
+            <label style="font-size: 0.65rem; color: var(--indigo);">Sell Rate *</label>
+            <input type="number" id="won-confirmed-sell-rate" placeholder="Sell Rate" step="0.01" value="${sellRate}" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.65rem; color: var(--indigo);">Buy Rate *</label>
+            <input type="number" id="won-confirmed-buy-rate" placeholder="Buy Rate" step="0.01" value="${buyRate}" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (quote.type === 'sea' && quote.details.mode !== 'fcl') {
+    const sellRate = quote.details.mode === 'lcl' ? (quote.details.lclRateApplied || 0) : (quote.details.bbRateApplied || 0);
+    const buyRate = quote.details.mode === 'lcl' ? (quote.details.lclBuyRateApplied || 0) : (quote.details.bbBuyRateApplied || 0);
+    html += `
+      <div style="margin-bottom: 1.2rem;">
+        <div style="font-size: 0.72rem; color: var(--t1); font-weight: 700; margin-bottom: 0.4rem;">${quote.details.mode.toUpperCase()} Freight Rate (per RT)</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+          <div class="form-group">
+            <label style="font-size: 0.65rem; color: var(--indigo);">Sell Rate *</label>
+            <input type="number" id="won-confirmed-sell-rate" placeholder="Sell Rate" step="0.01" value="${sellRate}" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.65rem; color: var(--indigo);">Buy Rate *</label>
+            <input type="number" id="won-confirmed-buy-rate" placeholder="Buy Rate" step="0.01" value="${buyRate}" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (quote.type === 'sea' && quote.details.mode === 'fcl') {
+    html += `
+      <input type="hidden" id="won-confirmed-sell-rate" value="0">
+      <input type="hidden" id="won-confirmed-buy-rate" value="0">
+      <div style="margin-bottom: 1.2rem;">
+        <div style="font-size: 0.72rem; color: var(--t1); font-weight: 700; margin-bottom: 0.4rem;">FCL Container Rates</div>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+          ${(quote.details.containerItems || []).map((item, idx) => `
+            <div style="border: 1px solid var(--border-1); border-radius: 10px; padding: 0.6rem; background: rgba(255,255,255,0.01);">
+              <div style="font-size: 0.7rem; font-weight: 700; color: var(--t1); margin-bottom: 0.4rem;">${item.type} x ${item.qty}</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                <div class="form-group">
+                  <label style="font-size: 0.62rem; color: var(--indigo);">Sell Rate (per Container) *</label>
+                  <input type="number" class="won-fcl-sell-input" data-index="${idx}" placeholder="Sell Rate" step="0.01" value="${item.rate || 0}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                </div>
+                <div class="form-group">
+                  <label style="font-size: 0.62rem; color: var(--indigo);">Buy Rate (per Container) *</label>
+                  <input type="number" class="won-fcl-buy-input" data-index="${idx}" placeholder="Buy Rate" step="0.01" value="${item.buy || 0}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+    html += `
+      <input type="hidden" id="won-confirmed-sell-rate" value="0">
+      <input type="hidden" id="won-confirmed-buy-rate" value="0">
+      <div style="margin-bottom: 1.2rem;">
+        <div style="font-size: 0.72rem; color: var(--t1); font-weight: 700; margin-bottom: 0.4rem;">Standalone Items Rates</div>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+          ${(quote.details.items || []).map((item, idx) => `
+            <div style="border: 1px solid var(--border-1); border-radius: 10px; padding: 0.6rem; background: rgba(255,255,255,0.01);">
+              <div style="font-size: 0.7rem; font-weight: 700; color: var(--t1); margin-bottom: 0.4rem;">${item.name}</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                <div class="form-group">
+                  <label style="font-size: 0.62rem; color: var(--indigo);">Sell Rate *</label>
+                  <input type="number" class="won-standalone-sell-input" data-index="${idx}" placeholder="Sell Rate" step="0.01" value="${item.rate || 0}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                </div>
+                <div class="form-group">
+                  <label style="font-size: 0.62rem; color: var(--indigo);">Buy Rate *</label>
+                  <input type="number" class="won-standalone-buy-input" data-index="${idx}" placeholder="Buy Rate" step="0.01" value="${item.buyRate || 0}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  const originSurcharges = quote.details.originSurcharges || [];
+  const destSurcharges = quote.details.destSurcharges || [];
+
+  if (originSurcharges.length > 0 || destSurcharges.length > 0) {
+    html += `
+      <div style="margin-top: 1.2rem;">
+        <div style="font-size: 0.75rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
+          Local Fees & Surcharges
+        </div>
+    `;
 
     if (originSurcharges.length > 0) {
-      originFeesGroup.style.display = "block";
-      originSurcharges.forEach((sch, i) => {
-        const row = document.createElement("div");
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "1.5fr 1fr";
-        row.style.gap = "0.8rem";
-        row.style.alignItems = "center";
-        row.style.marginBottom = "0.4rem";
-        
-        row.innerHTML = `
-          <span style="font-size: 0.72rem; color: var(--t1); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sch.name} (${sch.unit})">
-            ${sch.name} (${sch.unit}) <span style="color: var(--t3); font-size: 0.65rem;">[Sell: ${sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0)}]</span>
-          </span>
-          <input type="number" class="won-origin-fee-buy-input" data-index="${i}" placeholder="Buy Rate" step="0.01" value="${sch.buyRate !== undefined ? sch.buyRate : 0}"
-            style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
-        `;
-        originFeesList.appendChild(row);
-      });
-    } else {
-      originFeesGroup.style.display = "none";
+      html += `
+        <div style="margin-bottom: 0.8rem;">
+          <label style="font-weight: 700; font-size: 0.68rem; color: var(--indigo); display: block; margin-bottom: 0.4rem;">Origin Local Fee Rates</label>
+          <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+            ${originSurcharges.map((sch, i) => `
+              <div style="border: 1px solid var(--border-1); border-radius: 10px; padding: 0.6rem; background: rgba(255,255,255,0.01);">
+                <div style="font-size: 0.7rem; font-weight: 700; color: var(--t1); margin-bottom: 0.4rem;" title="${sch.name} (${sch.unit})">${sch.name} (${sch.unit})</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                  <div class="form-group">
+                    <label style="font-size: 0.62rem; color: var(--indigo);">Sell Rate *</label>
+                    <input type="number" class="won-origin-fee-sell-input" data-index="${i}" placeholder="Sell Rate" step="0.01" value="${sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0)}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size: 0.62rem; color: var(--indigo);">Buy Rate *</label>
+                    <input type="number" class="won-origin-fee-buy-input" data-index="${i}" placeholder="Buy Rate" step="0.01" value="${sch.buyRate !== undefined ? sch.buyRate : 0}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
     }
 
     if (destSurcharges.length > 0) {
-      destFeesGroup.style.display = "block";
-      destSurcharges.forEach((sch, i) => {
-        const row = document.createElement("div");
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "1.5fr 1fr";
-        row.style.gap = "0.8rem";
-        row.style.alignItems = "center";
-        row.style.marginBottom = "0.4rem";
-        
-        row.innerHTML = `
-          <span style="font-size: 0.72rem; color: var(--t1); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sch.name} (${sch.unit})">
-            ${sch.name} (${sch.unit}) <span style="color: var(--t3); font-size: 0.65rem;">[Sell: ${sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0)}]</span>
-          </span>
-          <input type="number" class="won-dest-fee-buy-input" data-index="${i}" placeholder="Buy Rate" step="0.01" value="${sch.buyRate !== undefined ? sch.buyRate : 0}"
-            style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem; width: 100%; height: 38px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
-        `;
-        destFeesList.appendChild(row);
-      });
-    } else {
-      destFeesGroup.style.display = "none";
+      html += `
+        <div style="margin-bottom: 0.8rem;">
+          <label style="font-weight: 700; font-size: 0.68rem; color: var(--indigo); display: block; margin-bottom: 0.4rem;">Destination Local Fee Rates</label>
+          <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+            ${destSurcharges.map((sch, i) => `
+              <div style="border: 1px solid var(--border-1); border-radius: 10px; padding: 0.6rem; background: rgba(255,255,255,0.01);">
+                <div style="font-size: 0.7rem; font-weight: 700; color: var(--t1); margin-bottom: 0.4rem;" title="${sch.name} (${sch.unit})">${sch.name} (${sch.unit})</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                  <div class="form-group">
+                    <label style="font-size: 0.62rem; color: var(--indigo);">Sell Rate *</label>
+                    <input type="number" class="won-dest-fee-sell-input" data-index="${i}" placeholder="Sell Rate" step="0.01" value="${sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0)}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size: 0.62rem; color: var(--indigo);">Buy Rate *</label>
+                    <input type="number" class="won-dest-fee-buy-input" data-index="${i}" placeholder="Buy Rate" step="0.01" value="${sch.buyRate !== undefined ? sch.buyRate : 0}" style="border-radius: 8px; font-size: 0.7rem; padding: 0.35rem 0.5rem; width: 100%; height: 34px; background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1);" required>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
     }
+
+    html += `</div>`;
+  }
+
+  const confirmationSection = document.getElementById("won-charges-confirmation-section");
+  if (confirmationSection) {
+    confirmationSection.innerHTML = html;
   }
 
   document.getElementById("won-booking-modal").style.display = "flex";
@@ -5602,27 +5549,9 @@ function saveCurrentQuote() {
       const sellRateVal = appState.currentAirFreight.appliedRate || 0;
       const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
 
-      const activeUser = getActiveRole();
-      const isNominationUser = activeUser && (
-        activeUser === 'shashank' || 
-        activeUser === 'shaheer' || 
-        (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
-      );
-
-      if (!isNominationUser && sellRateVal > 0 && buyRateVal > 0) {
-        alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+      if (sellRateVal <= 0 && buyRateVal <= 0) {
+        alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
         return;
-      }
-      if (isNominationUser) {
-        if (sellRateVal <= 0 && buyRateVal <= 0) {
-          alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
-          return;
-        }
-      } else {
-        if (sellRateVal <= 0) {
-          alert("❌ Sell rate must be entered for the quote to Save to database.");
-          return;
-        }
       }
     }
 
@@ -5779,26 +5708,9 @@ function saveCurrentQuote() {
           alert("Please fill in Container Quantity for all container rows.");
           return;
         }
-        const activeUser = getActiveRole();
-        const isNominationUser = activeUser && (
-          activeUser === 'shashank' || 
-          activeUser === 'shaheer' || 
-          (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
-        );
-        if (!isNominationUser && hasBoth) {
-          alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+        if (hasNeither) {
+          alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
           return;
-        }
-        if (isNominationUser) {
-          if (hasNeither) {
-            alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
-            return;
-          }
-        } else {
-          if (hasMissingSellRate) {
-            alert("❌ Sell rate must be entered for all container rows.");
-            return;
-          }
         }
       }
     }
@@ -5810,27 +5722,9 @@ function saveCurrentQuote() {
         const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
         const lclBuyRate = parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0;
 
-        const activeUser = getActiveRole();
-        const isNominationUser = activeUser && (
-          activeUser === 'shashank' || 
-          activeUser === 'shaheer' || 
-          (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
-        );
-
-        if (!isNominationUser && lclRate > 0 && lclBuyRate > 0) {
-          alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+        if (lclRate <= 0 && lclBuyRate <= 0) {
+          alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
           return;
-        }
-        if (isNominationUser) {
-          if (lclRate <= 0 && lclBuyRate <= 0) {
-            alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
-            return;
-          }
-        } else {
-          if (lclRate <= 0) {
-            alert("❌ Sell rate must be entered for the quote to Save to database.");
-            return;
-          }
         }
       }
       if (rows.length === 0) {
@@ -5858,27 +5752,9 @@ function saveCurrentQuote() {
         const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
         const bbBuyRate = parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0;
 
-        const activeUser = getActiveRole();
-        const isNominationUser = activeUser && (
-          activeUser === 'shashank' || 
-          activeUser === 'shaheer' || 
-          (TEAM_ROLES[activeUser] && (TEAM_ROLES[activeUser].category === 'AIR - NOMINATION' || TEAM_ROLES[activeUser].category === 'SEA - NOMINATION'))
-        );
-
-        if (!isNominationUser && bbRate > 0 && bbBuyRate > 0) {
-          alert("❌ Quote Saved can have either Sell Rate or Buy Rate but not Both, before converting status to Converted/WON.");
+        if (bbRate <= 0 && bbBuyRate <= 0) {
+          alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
           return;
-        }
-        if (isNominationUser) {
-          if (bbRate <= 0 && bbBuyRate <= 0) {
-            alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
-            return;
-          }
-        } else {
-          if (bbRate <= 0) {
-            alert("❌ Sell rate must be entered for the quote to Save to database.");
-            return;
-          }
         }
       }
       if (rows.length === 0) {
@@ -8695,6 +8571,7 @@ function amendQuote(id) {
           tr.innerHTML = `
             <td><input type="text" class="chg-name" value="${item.name}" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
             <td><input type="number" class="chg-rate" value="${item.rate}" step="0.01" oninput="calculateTransportation()"></td>
+            <td><input type="number" class="chg-buy-rate" value="${item.buyRate || 0}" step="0.01" oninput="calculateTransportation()"></td>
             <td><input type="text" class="chg-remarks" value="${item.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td style="text-align: center;">
               <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -8708,6 +8585,7 @@ function amendQuote(id) {
         tr.innerHTML = `
           <td><input type="text" class="chg-name" value="Transport Fee" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td><input type="number" class="chg-rate" value="${quote.amount || 0}" step="0.01" oninput="calculateTransportation()"></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
           <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td style="text-align: center;">
             <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -8737,12 +8615,9 @@ function amendQuote(id) {
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td><input type="text" class="chg-name" value="${item.name}" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-            <td>
-              <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <input type="number" class="chg-rate" value="${item.rate}" step="0.01" oninput="calculateWarehousing()" style="width: 90px; flex-shrink: 0;">
-                <input type="text" class="chg-desc" value="${item.desc || ''}" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem;">
-              </div>
-            </td>
+            <td><input type="number" class="chg-rate" value="${item.rate}" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
+            <td><input type="number" class="chg-buy-rate" value="${item.buyRate || 0}" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
+            <td><input type="text" class="chg-desc" value="${item.desc || ''}" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td><input type="text" class="chg-remarks" value="${item.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td style="text-align: center;">
               <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -8755,12 +8630,9 @@ function amendQuote(id) {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td><input type="text" class="chg-name" value="Warehouse Charge" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-          <td>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-              <input type="number" class="chg-rate" value="${quote.amount || 0}" step="0.01" oninput="calculateWarehousing()" style="width: 90px; flex-shrink: 0;">
-              <input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem;">
-            </div>
-          </td>
+          <td><input type="number" class="chg-rate" value="${quote.amount || 0}" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
+          <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td style="text-align: center;">
             <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -10735,122 +10607,65 @@ async function submitWonBookingDetails(e) {
   quote.conversionDate = new Date().toISOString().split('T')[0];
   quote.date = new Date().toISOString().split('T')[0];
 
-  // Save local fees buy rates back to quote details
-  const originBuyInputs = document.querySelectorAll(".won-origin-fee-buy-input");
-  originBuyInputs.forEach(input => {
-    const idx = parseInt(input.getAttribute("data-index"));
-    const val = parseFloat(input.value) || 0;
+  // 1. Confirm and validate Carrier
+  const confirmedCarrier = document.getElementById("won-confirmed-carrier")?.value || "N/A";
+  quote.confirmedCarrier = confirmedCarrier;
+
+  // 2. Validate and Save Local Fee rates (both Sell and Buy rate inputs are side-by-side)
+  const originSellInputs = document.querySelectorAll(".won-origin-fee-sell-input");
+  for (let i = 0; i < originSellInputs.length; i++) {
+    const idx = parseInt(originSellInputs[i].getAttribute("data-index"));
+    const sellVal = parseFloat(originSellInputs[i].value) || 0;
+    const buyVal = parseFloat(document.querySelector(`.won-origin-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
+    if (sellVal <= 0 || buyVal <= 0) {
+      alert("❌ COMPLIANCE ERROR: All origin fee Sell Rates and Buy Rates must be greater than 0.");
+      return;
+    }
     if (quote.details.originSurcharges && quote.details.originSurcharges[idx]) {
-      quote.details.originSurcharges[idx].buyRate = val;
+      quote.details.originSurcharges[idx].rate = sellVal;
+      quote.details.originSurcharges[idx].cost = sellVal;
+      quote.details.originSurcharges[idx].buyRate = buyVal;
     }
-  });
+  }
 
-  const destBuyInputs = document.querySelectorAll(".won-dest-fee-buy-input");
-  destBuyInputs.forEach(input => {
-    const idx = parseInt(input.getAttribute("data-index"));
-    const val = parseFloat(input.value) || 0;
+  const destSellInputs = document.querySelectorAll(".won-dest-fee-sell-input");
+  for (let i = 0; i < destSellInputs.length; i++) {
+    const idx = parseInt(destSellInputs[i].getAttribute("data-index"));
+    const sellVal = parseFloat(destSellInputs[i].value) || 0;
+    const buyVal = parseFloat(document.querySelector(`.won-dest-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
+    if (sellVal <= 0 || buyVal <= 0) {
+      alert("❌ COMPLIANCE ERROR: All destination fee Sell Rates and Buy Rates must be greater than 0.");
+      return;
+    }
     if (quote.details.destSurcharges && quote.details.destSurcharges[idx]) {
-      quote.details.destSurcharges[idx].buyRate = val;
+      quote.details.destSurcharges[idx].rate = sellVal;
+      quote.details.destSurcharges[idx].cost = sellVal;
+      quote.details.destSurcharges[idx].buyRate = buyVal;
     }
-  });
+  }
 
-  // Re-assemble / sync quote.details.surcharges
+  // Sync surcharges array
   quote.details.surcharges = [
     ...(quote.details.originSurcharges || []),
     ...(quote.details.destSurcharges || [])
   ];
 
-  const confirmedCarrier = document.getElementById("won-confirmed-carrier").value;
-
-  // Determine what was missing
-  let isBuyRateMissing = false;
-  let isSellRateMissing = false;
-
-  const isNominationCreator = quote.creator && (
-    quote.creator === 'shashank' || 
-    quote.creator === 'shaheer' || 
-    (TEAM_ROLES[quote.creator] && (TEAM_ROLES[quote.creator].category === 'AIR - NOMINATION' || TEAM_ROLES[quote.creator].category === 'SEA - NOMINATION'))
-  );
-
-  if (isNominationCreator) {
-    isSellRateMissing = true;
-  } else if (quote.type === 'air') {
-    const sellRate = quote.details.appliedRate || 0;
-    const buyRate = quote.details.appliedBuyRate || 0;
-    if (sellRate > 0 && buyRate === 0) {
-      isBuyRateMissing = true;
-    } else if (buyRate > 0 && sellRate === 0) {
-      isSellRateMissing = true;
-    }
-  } else {
-    if (quote.details.mode === 'fcl') {
-      const hasSell = (quote.details.containerItems || []).some(item => (item.rate || 0) > 0);
-      const hasBuy = (quote.details.containerItems || []).some(item => (item.buy || 0) > 0);
-      if (hasSell && !hasBuy) {
-        isBuyRateMissing = true;
-      } else if (hasBuy && !hasSell) {
-        isSellRateMissing = true;
-      }
-    } else if (quote.details.mode === 'lcl') {
-      const sellRate = quote.details.lclRateApplied || 0;
-      const buyRate = quote.details.lclBuyRateApplied || 0;
-      if (sellRate > 0 && buyRate === 0) {
-        isBuyRateMissing = true;
-      } else if (buyRate > 0 && sellRate === 0) {
-        isSellRateMissing = true;
-      }
-    } else {
-      const sellRate = quote.details.bbRateApplied || 0;
-      const buyRate = quote.details.bbBuyRateApplied || 0;
-      if (sellRate > 0 && buyRate === 0) {
-        isBuyRateMissing = true;
-      } else if (buyRate > 0 && sellRate === 0) {
-        isSellRateMissing = true;
-      }
-    }
-  }
-
+  // 3. Validate and Update freight/item rates
   let finalBuyRate = 0;
   let finalSellRate = 0;
 
-  if (isSellRateMissing) {
-    finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate").value) || 0;
-    if (!confirmedCarrier || finalSellRate <= 0) {
-      alert("❌ COMPLIANCE ERROR: Please enter a valid Confirmed Airline/Shipping Line and Sell Rate.");
-      return;
-    }
-    if (quote.type === 'air') {
-      finalBuyRate = quote.details.appliedBuyRate || 0;
-    } else if (quote.details.mode === 'lcl') {
-      finalBuyRate = quote.details.lclBuyRateApplied || 0;
-    } else if (quote.details.mode === 'bb') {
-      finalBuyRate = quote.details.bbBuyRateApplied || 0;
-    } else if (quote.details.mode === 'fcl') {
-      finalBuyRate = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.buy || 0), 0);
-    }
-  } else {
-    finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate").value) || 0;
-    if (!confirmedCarrier || finalBuyRate <= 0) {
-      alert("❌ COMPLIANCE ERROR: Please enter a valid Confirmed Airline/Shipping Line and Buy Rate.");
-      return;
-    }
-    if (quote.type === 'air') {
-      finalSellRate = quote.details.appliedRate || 0;
-    } else if (quote.details.mode === 'lcl') {
-      finalSellRate = quote.details.lclRateApplied || 0;
-    } else if (quote.details.mode === 'bb') {
-      finalSellRate = quote.details.bbRateApplied || 0;
-    }
-  }
-
-  quote.confirmedCarrier = confirmedCarrier;
-  quote.confirmedBuyRate = finalBuyRate;
-  quote.confirmedSellRate = finalSellRate;
-
-  // Update in quote details as well
   if (quote.type === 'air') {
+    finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
+    finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
+    if (finalSellRate <= 0 || finalBuyRate <= 0) {
+      alert("❌ COMPLIANCE ERROR: Confirmed Airline Sell Rate and Buy Rate must be greater than 0.");
+      return;
+    }
+    quote.confirmedSellRate = finalSellRate;
+    quote.confirmedBuyRate = finalBuyRate;
     quote.details.appliedRate = finalSellRate;
     quote.details.appliedBuyRate = finalBuyRate;
+
     if (quote.details.airlines && quote.details.airlines.length > 0) {
       const match = quote.details.airlines.find(a => a.name === confirmedCarrier);
       if (match) {
@@ -10866,91 +10681,67 @@ async function submitWonBookingDetails(e) {
         }
       }
     }
-  } else {
-    if (quote.details.mode === 'fcl') {
-      if (isSellRateMissing) {
-        let calculatedBaseFreight = 0;
-        (quote.details.containerItems || []).forEach(item => {
-          item.rate = finalSellRate;
-          calculatedBaseFreight += (item.qty || 0) * finalSellRate;
-        });
-        quote.details.baseFreight = calculatedBaseFreight;
-        quote.amount = calculatedBaseFreight + (quote.details.surchargeTotal || 0);
-        if (quote.currency !== 'INR') {
-          quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
-        } else {
-          quote.amountINR = quote.amount;
-        }
-      } else {
-        (quote.details.containerItems || []).forEach(item => {
-          item.buy = finalBuyRate;
-        });
-      }
-    } else if (quote.details.mode === 'lcl') {
-      if (isSellRateMissing) {
-        quote.details.lclRateApplied = finalSellRate;
-        const chargeableRT = quote.details.lclChargeable || 0;
-        quote.details.baseFreight = chargeableRT * finalSellRate;
-        quote.amount = quote.details.baseFreight + (quote.details.surchargeTotal || 0);
-        if (quote.currency !== 'INR') {
-          quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
-        } else {
-          quote.amountINR = quote.amount;
-        }
-      } else {
-        quote.details.lclBuyRateApplied = finalBuyRate;
-      }
+  } else if (quote.type === 'sea' && quote.details.mode !== 'fcl') {
+    finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
+    finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
+    if (finalSellRate <= 0 || finalBuyRate <= 0) {
+      alert("❌ COMPLIANCE ERROR: Confirmed Sell Rate and Buy Rate must be greater than 0.");
+      return;
+    }
+    quote.confirmedSellRate = finalSellRate;
+    quote.confirmedBuyRate = finalBuyRate;
+    if (quote.details.mode === 'lcl') {
+      quote.details.lclRateApplied = finalSellRate;
+      quote.details.lclBuyRateApplied = finalBuyRate;
     } else {
-      if (isSellRateMissing) {
-        quote.details.bbRateApplied = finalSellRate;
-        const chargeableRT = quote.details.lclChargeable || 0;
-        quote.details.baseFreight = chargeableRT * finalSellRate;
-        quote.amount = quote.details.baseFreight + (quote.details.surchargeTotal || 0);
-        if (quote.currency !== 'INR') {
-          quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
-        } else {
-          quote.amountINR = quote.amount;
-        }
-      } else {
-        quote.details.bbBuyRateApplied = finalBuyRate;
+      quote.details.bbRateApplied = finalSellRate;
+      quote.details.bbBuyRateApplied = finalBuyRate;
+    }
+  } else if (quote.type === 'sea' && quote.details.mode === 'fcl') {
+    const fclSellInputs = document.querySelectorAll(".won-fcl-sell-input");
+    for (let i = 0; i < fclSellInputs.length; i++) {
+      const idx = parseInt(fclSellInputs[i].getAttribute("data-index"));
+      const sellVal = parseFloat(fclSellInputs[i].value) || 0;
+      const buyVal = parseFloat(document.querySelector(`.won-fcl-buy-input[data-index="${idx}"]`)?.value) || 0;
+      if (sellVal <= 0 || buyVal <= 0) {
+        alert("❌ COMPLIANCE ERROR: All container Sell Rates and Buy Rates must be greater than 0.");
+        return;
+      }
+      if (quote.details.containerItems && quote.details.containerItems[idx]) {
+        quote.details.containerItems[idx].rate = sellVal;
+        quote.details.containerItems[idx].buy = buyVal;
+      }
+    }
+  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+    const standaloneSellInputs = document.querySelectorAll(".won-standalone-sell-input");
+    for (let i = 0; i < standaloneSellInputs.length; i++) {
+      const idx = parseInt(standaloneSellInputs[i].getAttribute("data-index"));
+      const sellVal = parseFloat(standaloneSellInputs[i].value) || 0;
+      const buyVal = parseFloat(document.querySelector(`.won-standalone-buy-input[data-index="${idx}"]`)?.value) || 0;
+      if (sellVal <= 0 || buyVal <= 0) {
+        alert("❌ COMPLIANCE ERROR: All item Sell Rates and Buy Rates must be greater than 0.");
+        return;
+      }
+      if (quote.details.items && quote.details.items[idx]) {
+        quote.details.items[idx].rate = sellVal;
+        quote.details.items[idx].buyRate = buyVal;
       }
     }
   }
 
-  // Auto-calculate GP
+  // 4. Recalculate Totals & GP based on updated rates
   let sellBaseFreight = 0;
   let buyBaseFreight = 0;
+  let surchargeSell = 0;
+  let surchargeBuy = 0;
   let grossProfit = 0;
 
   if (quote.type === 'air') {
-    let chargeableWeight = quote.details.chargeableWeight || 0;
-    sellBaseFreight = chargeableWeight * finalSellRate;
-    buyBaseFreight = chargeableWeight * finalBuyRate;
-    grossProfit = sellBaseFreight - buyBaseFreight;
-  } else {
-    if (quote.details.mode === 'fcl') {
-      sellBaseFreight = quote.details.baseFreight || 0;
-      buyBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.buy || 0), 0);
-      grossProfit = sellBaseFreight - buyBaseFreight;
-    } else {
-      const chargeableRT = quote.details.lclChargeable || 0;
-      sellBaseFreight = chargeableRT * finalSellRate;
-      buyBaseFreight = chargeableRT * finalBuyRate;
-      grossProfit = sellBaseFreight - buyBaseFreight;
-    }
-  }
-
-  // Calculate local fees / surcharges GP contribution
-  let surchargeSell = 0;
-  let surchargeBuy = 0;
-  const allSurcharges = [
-    ...(quote.details.originSurcharges || []),
-    ...(quote.details.destSurcharges || [])
-  ];
-
-  if (quote.type === 'air') {
     const chargeableWeight = quote.details.chargeableWeight || 0;
-    allSurcharges.forEach(sch => {
+    sellBaseFreight = chargeableWeight * quote.details.appliedRate;
+    buyBaseFreight = chargeableWeight * quote.details.appliedBuyRate;
+
+    (quote.details.surcharges || []).forEach(sch => {
       const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
       const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
       if (sch.unit === 'kg') {
@@ -10961,7 +10752,10 @@ async function submitWonBookingDetails(e) {
         surchargeBuy += buyRate;
       }
     });
-  } else {
+
+    quote.amount = sellBaseFreight + surchargeSell;
+    grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
+  } else if (quote.type === 'sea') {
     const weightKg = quote.details.grossWeight || 0;
     const weightTons = weightKg / 1000;
     const cbm = quote.details.volumeCbm || 0;
@@ -10971,7 +10765,19 @@ async function submitWonBookingDetails(e) {
     const containerCount = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
     const isSeaFcl = quote.details.mode === 'fcl';
 
-    allSurcharges.forEach(sch => {
+    if (quote.details.mode === 'fcl') {
+      sellBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.rate || 0), 0);
+      buyBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.buy || 0), 0);
+    } else {
+      const RT = quote.details.lclChargeable || 0;
+      const sellRate = quote.details.mode === 'lcl' ? quote.details.lclRateApplied : quote.details.bbRateApplied;
+      const buyRate = quote.details.mode === 'lcl' ? quote.details.lclBuyRateApplied : quote.details.bbBuyRateApplied;
+      sellBaseFreight = RT * sellRate;
+      buyBaseFreight = RT * buyRate;
+    }
+    quote.details.baseFreight = sellBaseFreight;
+
+    (quote.details.surcharges || []).forEach(sch => {
       const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
       const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
       const unit = sch.unit || 'flat';
@@ -10990,9 +10796,27 @@ async function submitWonBookingDetails(e) {
         surchargeBuy += buyRate;
       }
     });
+    quote.details.surchargeTotal = surchargeSell;
+
+    quote.amount = sellBaseFreight + surchargeSell;
+    grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
+  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+    let subtotalSell = 0;
+    let subtotalBuy = 0;
+    (quote.details.items || []).forEach(item => {
+      subtotalSell += item.rate;
+      subtotalBuy += item.buyRate;
+    });
+    const taxSell = subtotalSell * 0.18;
+    quote.amount = subtotalSell + taxSell;
+    grossProfit = subtotalSell - subtotalBuy;
   }
 
-  grossProfit += surchargeSell - surchargeBuy;
+  if (quote.currency !== 'INR') {
+    quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+  } else {
+    quote.amountINR = quote.amount;
+  }
 
   quote.grossProfit = grossProfit;
   quote.grossProfitCurrency = quote.currency;
@@ -12217,6 +12041,7 @@ function addTransportRow(type = 'surcharge') {
   tr.innerHTML = `
     <td><input type="text" class="chg-name" value="${defaultName}" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
     <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
+    <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
     <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td style="text-align: center;">
       <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -12251,12 +12076,9 @@ function addWarehouseRow(type = 'surcharge') {
   const defaultName = type === 'metric' ? "Fulfillment Metric" : "Warehouse Charge";
   tr.innerHTML = `
     <td><input type="text" class="chg-name" value="${defaultName}" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-    <td>
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 90px; flex-shrink: 0;">
-        <input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="flex: 1; min-width: 100px; background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem;">
-      </div>
-    </td>
+    <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
+    <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
+    <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td style="text-align: center;">
       <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -12359,11 +12181,13 @@ function saveStandaloneQuote(module) {
       tbody.querySelectorAll("tr").forEach(tr => {
         const nameInp = tr.querySelector(".chg-name");
         const rateInp = tr.querySelector(".chg-rate");
+        const buyRateInp = tr.querySelector(".chg-buy-rate");
         const remarksInp = tr.querySelector(".chg-remarks");
         if (nameInp) {
           items.push({
             name: nameInp.value,
             rate: parseFloat(rateInp?.value) || 0,
+            buyRate: parseFloat(buyRateInp?.value) || 0,
             remarks: remarksInp?.value || ""
           });
         }
@@ -12375,18 +12199,37 @@ function saveStandaloneQuote(module) {
       tbody.querySelectorAll("tr").forEach(tr => {
         const nameInp = tr.querySelector(".chg-name");
         const rateInp = tr.querySelector(".chg-rate");
+        const buyRateInp = tr.querySelector(".chg-buy-rate");
         const descInp = tr.querySelector(".chg-desc");
         const remarksInp = tr.querySelector(".chg-remarks");
         if (nameInp) {
           items.push({
             name: nameInp.value,
             rate: parseFloat(rateInp?.value) || 0,
+            buyRate: parseFloat(buyRateInp?.value) || 0,
             desc: descInp?.value || "",
             remarks: remarksInp?.value || ""
           });
         }
       });
     }
+  }
+
+  if (items.length === 0) {
+    alert("❌ Please add at least one charge to save the quotation.");
+    return;
+  }
+
+  let hasPricing = true;
+  items.forEach(item => {
+    if (item.rate <= 0 && item.buyRate <= 0) {
+      hasPricing = false;
+    }
+  });
+
+  if (!hasPricing) {
+    alert("❌ Please enter either a Sell Rate or a Buy Rate for all charges.");
+    return;
   }
 
   const quoteData = {
