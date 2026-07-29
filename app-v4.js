@@ -629,6 +629,12 @@ function loginSuccess(roleId) {
   document.getElementById("app-workspace").style.display = "flex";
   document.getElementById("subheader-controls").style.display = "flex";
 
+  if (roleIdLower === 'cathrina') {
+    document.documentElement.classList.add("nrs-font-scale");
+  } else {
+    document.documentElement.classList.remove("nrs-font-scale");
+  }
+
   // Apply custom names to badge UI & dropdowns
   applyDeskNames();
 
@@ -661,6 +667,7 @@ function loginSuccess(roleId) {
 }
 
 function logoutUser() {
+  document.documentElement.classList.remove("nrs-font-scale");
   if (DB.isCloud) {
     firebase.auth().signOut().catch(err => {
       console.error("Auth: Sign out failed:", err);
@@ -9724,6 +9731,7 @@ const DB = {
             loginSuccess(username);
           } else {
             console.log("Auth: user logged out");
+            document.documentElement.classList.remove("nrs-font-scale");
             sessionStorage.removeItem("gl_pricing_session");
             appState.currentUser = null;
             document.body.classList.add("logged-out-blur");

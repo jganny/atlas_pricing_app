@@ -1787,6 +1787,11 @@ html {
   -webkit-overflow-scrolling: touch;
 }
 
+html.nrs-font-scale {
+  font-size: 110%; /* slightly larger base font size for NRS user */
+}
+
+
 
 /* ══════════════════════════════════════════════════
    A2. ENHANCED GLASSMORPHISM HEADER
