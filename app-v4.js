@@ -185,8 +185,22 @@ function getQuoteRefIdById(id) {
 }
 window.getQuoteRefIdById = getQuoteRefIdById;
 
+function isEditUnlocked(quote) {
+  if (!quote) return false;
+  const isWithin6Hours = quote.timestamp && (Date.now() - quote.timestamp) < 6 * 60 * 60 * 1000;
+  return isWithin6Hours || quote.amendmentAllowed || isAdminUser(appState.currentUser);
+}
+window.isEditUnlocked = isEditUnlocked;
+
+function isDeleteUnlocked(quote) {
+  if (!quote) return false;
+  const isWithin6Hours = quote.timestamp && (Date.now() - quote.timestamp) < 6 * 60 * 60 * 1000;
+  return isWithin6Hours || quote.deletionAllowed || isAdminUser(appState.currentUser);
+}
+window.isDeleteUnlocked = isDeleteUnlocked;
+
 function checkAndRequestEditPermission(quote, actionVerb = "modify") {
-  if (isAdminUser(appState.currentUser) || quote.amendmentAllowed) {
+  if (isEditUnlocked(quote)) {
     return true;
   }
   let requests = window._amendmentRequests || [];
@@ -7044,7 +7058,7 @@ window.deleteQuote = (id) => {
   if (!quote) return;
 
   // Enforce Ganny or deletionAllowed permission check
-  if (!isAdminUser(appState.currentUser) && !quote.deletionAllowed) {
+  if (!isDeleteUnlocked(quote)) {
     let requests = window._amendmentRequests || [];
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
@@ -7794,7 +7808,10 @@ window.applyUserDbFiltersAndSort = () => {
     
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
-      <td>${quote.date}</td>
+      <td>
+        <div>${quote.date}</div>
+        <div class="edit-timeline-indicator" data-timestamp="${quote.timestamp || ''}" data-quote-id="${quote.id}" style="font-size: 0.68rem; margin-top: 2px;"></div>
+      </td>
       <td><span class="quote-type-badge ${quote.type}">
         ${quote.type === 'transport' ?
           `Transportation` :
@@ -7825,7 +7842,7 @@ window.applyUserDbFiltersAndSort = () => {
       </td>
       <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
       <td class="actions-cell">
-        <button class="action-icon-btn amend" style="background: ${quote.amendmentAllowed ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
+        <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
         <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
@@ -7835,24 +7852,27 @@ window.applyUserDbFiltersAndSort = () => {
         <button class="action-icon-btn convert" style="background: rgba(74, 222, 128, 0.2); color: var(--accent-success);" title="Convert Quote to Won" onclick="convertQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
-        <button class="action-icon-btn delete" style="background: ${quote.amendmentAllowed ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
+        <button class="action-icon-btn delete" style="background: ${isEditUnlocked(quote) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </button>
-        <button class="action-icon-btn view" style="background: ${quote.amendmentAllowed ? 'rgba(156, 163, 175, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--t1)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost'}" onclick="markQuoteLost('${quote.id}')">
+        <button class="action-icon-btn view" style="background: ${isEditUnlocked(quote) ? 'rgba(156, 163, 175, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--t1)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost'}" onclick="markQuoteLost('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
         ` : `
-        <button class="action-icon-btn convert" style="background: ${quote.amendmentAllowed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${quote.amendmentAllowed ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${quote.amendmentAllowed ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert'}" onclick="revertQuoteToOriginal('${quote.id}')">
+        <button class="action-icon-btn convert" style="background: ${isEditUnlocked(quote) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert'}" onclick="revertQuoteToOriginal('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
         </button>
         `}
-        <button class="action-icon-btn delete" style="background: ${quote.deletionAllowed ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${quote.deletionAllowed ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${quote.deletionAllowed ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete'}" onclick="deleteQuote('${quote.id}')">
+        <button class="action-icon-btn delete" style="background: ${isDeleteUnlocked(quote) ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isDeleteUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${isDeleteUnlocked(quote) ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete'}" onclick="deleteQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
         </button>
       </td>
     `;
     tbody.appendChild(tr);
   });
+  if (typeof window.updateEditTimelines === 'function') {
+    window.updateEditTimelines();
+  }
 };
 
 window.filterQuotes = (val) => {
@@ -8043,7 +8063,10 @@ window.applyDbFiltersAndSort = () => {
     
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
-      <td>${quote.date}</td>
+      <td>
+        <div>${quote.date}</div>
+        <div class="edit-timeline-indicator" data-timestamp="${quote.timestamp || ''}" data-quote-id="${quote.id}" style="font-size: 0.68rem; margin-top: 2px;"></div>
+      </td>
       <td><span class="quote-type-badge ${quote.type}">
         ${quote.type === 'transport' ?
           `Transportation` :
@@ -8078,7 +8101,7 @@ window.applyDbFiltersAndSort = () => {
       </td>
       <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
       <td class="actions-cell">
-        <button class="action-icon-btn amend" style="background: rgba(245, 158, 11, 0.25); color: var(--accent-warning);" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
+        <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
         <button class="action-icon-btn view" title="View Quote" onclick="viewSavedQuote('${quote.id}')">
@@ -8088,24 +8111,27 @@ window.applyDbFiltersAndSort = () => {
         <button class="action-icon-btn convert" title="Convert Quote" onclick="convertQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
-        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.1); color: var(--accent-error);" title="Mark as Cancelled" onclick="markQuoteCancelled('${quote.id}')">
+        <button class="action-icon-btn delete" style="background: ${isEditUnlocked(quote) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="Mark as Cancelled" onclick="markQuoteCancelled('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </button>
-        <button class="action-icon-btn view" style="background: rgba(156, 163, 175, 0.1); color: var(--text-dim);" title="Mark as Lost" onclick="markQuoteLost('${quote.id}')">
+        <button class="action-icon-btn view" style="background: ${isEditUnlocked(quote) ? 'rgba(156, 163, 175, 0.1)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--text-dim)' : 'var(--text-dim)'};" title="Mark as Lost" onclick="markQuoteLost('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
         ` : `
-        <button class="action-icon-btn convert" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-success);" title="Revert Quote status to Quoted" onclick="revertQuoteToOriginal('${quote.id}')">
+        <button class="action-icon-btn convert" style="background: ${isEditUnlocked(quote) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-success)' : 'var(--text-dim)'};" title="Revert Quote status to Quoted" onclick="revertQuoteToOriginal('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
         </button>
         `}
-        <button class="action-icon-btn delete" style="background: rgba(239, 68, 68, 0.25); color: var(--accent-error);" title="Delete Quote (Admin Override)" onclick="deleteQuote('${quote.id}')">
+        <button class="action-icon-btn delete" style="background: ${isDeleteUnlocked(quote) ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isDeleteUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="Delete Quote (Admin Override)" onclick="deleteQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
         </button>
       </td>
     `;
     tbody.appendChild(tr);
   });
+  if (typeof window.updateEditTimelines === 'function') {
+    window.updateEditTimelines();
+  }
 };
 
 window.filterQuotes = (val) => {
@@ -13092,6 +13118,54 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Check broadcast every 3 seconds
   setInterval(checkActiveBroadcast, 3000);
+
+  // Update edit timelines countdown every second
+  function updateEditTimelines() {
+    const indicators = document.querySelectorAll(".edit-timeline-indicator");
+    indicators.forEach(el => {
+      const timestampStr = el.getAttribute("data-timestamp");
+      const quoteId = el.getAttribute("data-quote-id");
+      if (!timestampStr) {
+        el.innerHTML = '<span style="color: var(--text-muted); font-size: 0.65rem;">🔒 Locked</span>';
+        return;
+      }
+      const timestamp = parseInt(timestampStr, 10);
+      if (isNaN(timestamp)) {
+        el.innerHTML = '<span style="color: var(--text-muted); font-size: 0.65rem;">🔒 Locked</span>';
+        return;
+      }
+      
+      const quote = appState.quotes.find(q => q.id === quoteId);
+      const elapsed = Date.now() - timestamp;
+      const limit = 6 * 60 * 60 * 1000; // 6 hours
+      
+      if (elapsed < limit) {
+        const remaining = limit - elapsed;
+        const hours = Math.floor(remaining / (3600 * 1000));
+        const minutes = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
+        const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+        
+        let color = "var(--accent-success)"; // Greenish
+        let label = "⏳";
+        if (hours < 1) {
+          color = "var(--accent-warning)"; // Orange
+          label = "⚠️";
+        }
+        
+        const timeStr = `${hours}h ${minutes}m ${seconds}s`;
+        el.innerHTML = `<span style="color: ${color}; font-weight: 600;" title="Editable without permission for ${timeStr}">${label} ${hours}h ${minutes}m left</span>`;
+      } else {
+        if (quote && quote.amendmentAllowed) {
+          el.innerHTML = '<span style="color: var(--accent-success); font-weight: 600;" title="Unlocked by Admin approval">🔓 Unlocked</span>';
+        } else {
+          el.innerHTML = '<span style="color: var(--text-muted); font-size: 0.65rem;" title="Edit window expired. Request permission to edit.">🔒 Locked</span>';
+        }
+      }
+    });
+  }
+  window.updateEditTimelines = updateEditTimelines;
+  setInterval(updateEditTimelines, 1000);
+  setTimeout(updateEditTimelines, 100);
 
   // Populate users dropdown immediately on load
   if (typeof populateReportUsers === 'function') {
