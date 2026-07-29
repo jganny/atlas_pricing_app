@@ -14220,8 +14220,19 @@ async function loadDirectoryContacts() {
 
   const addBtn = document.getElementById("dir-add-contact-btn");
   const importBtn = document.getElementById("dir-import-excel-btn");
+  const resetBtn = document.getElementById("dir-reset-btn");
   if (addBtn) addBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
   if (importBtn) importBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
+  
+  const isAdmin = isAdminUser(appState.currentUser);
+  if (resetBtn) {
+    resetBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (activeDirectoryParent === 'agents') {
+      resetBtn.innerHTML = '<span>🗑️</span> Reset Agents';
+    } else {
+      resetBtn.innerHTML = '<span>🗑️</span> Reset Vendors';
+    }
+  }
 
   try {
     grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
@@ -14841,6 +14852,78 @@ function exportDirectoryToExcel() {
   }
 }
 window.exportDirectoryToExcel = exportDirectoryToExcel;
+
+// Purge and reset database directory contacts
+async function purgeDirectoryContacts() {
+  const isAdmin = isAdminUser(appState.currentUser);
+  if (!isAdmin) {
+    alert("You do not have permission to reset the directory.");
+    return;
+  }
+
+  const isAgents = (activeDirectoryParent === 'agents');
+  const targetName = isAgents ? "Overseas Agents" : "Vendor Contacts";
+  const confirmMsg = `⚠️ WARNING: This will permanently delete all ${targetName} in the database and restore default fallback ${targetName}. Are you sure you want to proceed?`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    if (window.db) {
+      const snapshot = await db.collection("contactsDirectory").get();
+      if (!snapshot.empty) {
+        const batch = db.batch();
+        let deleteCount = 0;
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const isAgency = (data.category === 'agency');
+          
+          if ((isAgents && isAgency) || (!isAgents && !isAgency)) {
+            batch.delete(doc.ref);
+            deleteCount++;
+          }
+        });
+        
+        if (deleteCount > 0) {
+          await batch.commit();
+        }
+      }
+      
+      // Repopulate fallback contacts for the reset category
+      const targetFallbacks = fallbackContacts.filter(c => {
+        const isAgency = (c.category === 'agency');
+        return isAgents ? isAgency : !isAgency;
+      });
+      
+      const batchRestore = db.batch();
+      targetFallbacks.forEach(contact => {
+        const { id, ...data } = contact;
+        const newDocRef = db.collection("contactsDirectory").doc(id);
+        batchRestore.set(newDocRef, data);
+      });
+      await batchRestore.commit();
+      
+      alert(`${targetName} directory cleared and restored to default fallback contacts successfully!`);
+    } else {
+      if (isAgents) {
+        directoryContacts = directoryContacts.filter(c => c.category !== 'agency');
+        const agencyFallbacks = fallbackContacts.filter(c => c.category === 'agency');
+        directoryContacts = [...directoryContacts, ...agencyFallbacks];
+      } else {
+        directoryContacts = directoryContacts.filter(c => c.category === 'agency');
+        const vendorFallbacks = fallbackContacts.filter(c => c.category !== 'agency');
+        directoryContacts = [...directoryContacts, ...vendorFallbacks];
+      }
+      localStorage.setItem("gl_directory_contacts", JSON.stringify(directoryContacts));
+      alert(`Offline mode: Local ${targetName} directory reset.`);
+    }
+  } catch (err) {
+    console.error("Error purging contacts directory:", err);
+    alert("An error occurred while clearing the directory: " + err.message);
+  }
+
+  loadDirectoryContacts();
+}
+window.purgeDirectoryContacts = purgeDirectoryContacts;
 
 window.addEventListener("storage", (e) => {
   if (e.key === "gl_amendment_requests") {
