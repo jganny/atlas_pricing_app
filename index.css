@@ -1905,25 +1905,21 @@ header {
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  padding: clamp(0.7rem,1.2vw,1rem) clamp(0.9rem,1.5vw,1.4rem);
-  border-radius: var(--bento-radius);
+  padding: clamp(0.65rem,1.1vw,0.9rem) clamp(0.85rem,1.4vw,1.3rem);
+  border-radius: 10px;
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(0.75rem,1vw,0.88rem);
+  font-size: clamp(0.76rem,1vw,0.88rem);
   font-weight: 800;
   letter-spacing: 0.02em;
   cursor: pointer;
-  border: none;
-  transition: transform 0.2s cubic-bezier(.4,0,.2,1), box-shadow 0.2s, filter 0.2s;
-  box-shadow: var(--shadow-md);
+  transition: transform 0.18s cubic-bezier(.4,0,.2,1), box-shadow 0.18s, filter 0.18s, background 0.18s;
   position: relative;
   overflow: hidden;
   white-space: nowrap;
   min-height: 44px;
 }
-.bento-action-btn::before { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent); transition:left 0.5s ease; }
-.bento-action-btn:hover::before { left:150%; }
-.bento-action-btn:hover  { transform:translateY(-3px); filter:brightness(1.08); box-shadow:var(--shadow-lg); }
-.bento-action-btn:active { transform:translateY(0) scale(0.98); filter:brightness(0.96); box-shadow:var(--shadow-sm); }
+.bento-action-btn:hover  { transform:translateY(-2px); filter:brightness(0.97); box-shadow:0 6px 18px rgba(0,0,0,0.12); }
+.bento-action-btn:active { transform:translateY(0) scale(0.98); filter:brightness(0.94); }
 
 
 /* ══════════════════════════════════════════════════

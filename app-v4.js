@@ -4710,7 +4710,11 @@ window.deleteNrsAlert = deleteNrsAlert;
 function renderAdminDashboard() {
   renderControlTowerFeed();
   renderNrsRegistry();
-  if (typeof updateAdminDirectoryView === 'function') {
+  // Auto-collapse directory on first admin load
+  if (typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet) {
+    window._dirInitialCollapseSet = true;
+    collapseAllDirNodes();
+  } else if (typeof updateAdminDirectoryView === 'function') {
     updateAdminDirectoryView();
   }
   if (typeof updateAdminScratchpadViewer === 'function') {
@@ -12297,6 +12301,61 @@ function convertToInr(amount, currency) {
 }
 window.convertToInr = convertToInr;
 
+// ═══════════════════════════════════════════════════════════
+// MODULE-LEVEL BROADCAST FUNCTIONS (accessible to all users)
+// ═══════════════════════════════════════════════════════════
+window.checkActiveBroadcast = function () {
+  var broadcast = null;
+  try {
+    var data = localStorage.getItem("gl_admin_broadcast");
+    if (data) broadcast = JSON.parse(data);
+  } catch (e) { }
+
+  if (!broadcast || !broadcast.active) {
+    var overlayEl = document.getElementById("system-broadcast-overlay");
+    if (overlayEl) overlayEl.style.display = "none";
+    return;
+  }
+
+  var overlay = document.getElementById("system-broadcast-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "system-broadcast-overlay";
+    overlay.style.cssText = "position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; font-family:'Outfit', sans-serif; font-size:0.85rem; font-weight:700; box-shadow:0 3px 15px rgba(0,0,0,0.3); transition:all 0.3s;";
+    document.body.appendChild(overlay);
+  }
+
+  if (broadcast.type === 'mandate') {
+    overlay.style.background = "linear-gradient(90deg, #ef4444, #b91c1c)";
+    overlay.innerHTML = '<div>\u26a0\ufe0f SYSTEM MANDATE NOTICE: ' + broadcast.message + '</div>';
+  } else if (broadcast.type === 'meeting') {
+    overlay.style.background = "linear-gradient(90deg, #f59e0b, #d97706)";
+    overlay.innerHTML = '<div>\ud83d\udcc5 CALENDAR VISIT REMINDER: ' + broadcast.message + '</div>';
+  } else {
+    overlay.style.background = "linear-gradient(90deg, #10b981, #047857)";
+    overlay.innerHTML = '<div>\ud83c\udf89 HOLIDAY / LEAVE POPUP: ' + broadcast.message + '</div>';
+  }
+
+  overlay.innerHTML += '<button type="button" style="background:#fff; border:none; color:#000; font-size:0.65rem; font-weight:bold; cursor:pointer; padding:3px 8px; border-radius:4px;" onclick="dismissBroadcast()">Dismiss / Close</button>';
+  overlay.style.display = "flex";
+};
+
+window.dismissBroadcast = function () {
+  var overlay = document.getElementById("system-broadcast-overlay");
+  if (overlay) overlay.style.display = "none";
+  try {
+    var data = localStorage.getItem("gl_admin_broadcast");
+    if (data) {
+      var b = JSON.parse(data);
+      b.active = false;
+      localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
+    }
+  } catch (e) { }
+};
+
+// Poll every 3 seconds for all users
+setInterval(window.checkActiveBroadcast, 3000);
+
 document.addEventListener("DOMContentLoaded", () => {
   const db = DB.firestoreRef || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
   window.db = db;
@@ -12567,10 +12626,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.updateAdminScratchpadViewer = updateAdminScratchpadViewer;
 
-  // Admin Broadcast notices
+  // Admin Broadcast notices — sendAdminBroadcast exposed globally
   window.sendAdminBroadcast = function () {
-    const type = document.getElementById("broadcast-type").value;
-    const msg = document.getElementById("broadcast-message").value.trim();
+    const typeEl = document.getElementById("broadcast-type");
+    const msgEl  = document.getElementById("broadcast-message");
+    if (!typeEl || !msgEl) return alert("Broadcast controls not found.");
+    const type = typeEl.value;
+    const msg  = msgEl.value.trim();
 
     if (!msg) return alert("Please enter broadcast message.");
 
@@ -12584,70 +12646,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     localStorage.setItem("gl_admin_broadcast", JSON.stringify(broadcast));
     alert("📢 Broadcast notice pushed to all active screens!");
-    document.getElementById("broadcast-message").value = "";
+    msgEl.value = "";
 
     // Instantly trigger overlay check
-    checkActiveBroadcast();
+    window.checkActiveBroadcast();
   };
 
-  function checkActiveBroadcast() {
-    let broadcast = null;
-    try {
-      const data = localStorage.getItem("gl_admin_broadcast");
-      if (data) broadcast = JSON.parse(data);
-    } catch (e) { }
-
-    if (!broadcast || !broadcast.active) {
-      const overlay = document.getElementById("system-broadcast-overlay");
-      if (overlay) overlay.style.display = "none";
-      return;
-    }
-
-    // Render high visibility overlay banner if not already present
-    let overlay = document.getElementById("system-broadcast-overlay");
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = "system-broadcast-overlay";
-      overlay.style.cssText = "position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; font-family:'Outfit', sans-serif; font-size:0.85rem; font-weight:700; box-shadow:0 3px 15px rgba(0,0,0,0.3); transition:all 0.3s;";
-      document.body.appendChild(overlay);
-    }
-
-    // Set theme color depending on type
-    if (broadcast.type === 'mandate') {
-      overlay.style.background = "linear-gradient(90deg, #ef4444, #b91c1c)"; // Red
-      overlay.innerHTML = `<div>⚠️ SYSTEM MANDATE NOTICE: ${broadcast.message}</div>`;
-    } else if (broadcast.type === 'meeting') {
-      overlay.style.background = "linear-gradient(90deg, #f59e0b, #d97706)"; // Amber/Yellow
-      overlay.innerHTML = `<div>📅 CALENDAR VISIT REMINDER: ${broadcast.message}</div>`;
-    } else {
-      overlay.style.background = "linear-gradient(90deg, #10b981, #047857)"; // Green
-      overlay.innerHTML = `<div>🎉 HOLIDAY / LEAVE POPUP: ${broadcast.message}</div>`;
-    }
-
-    // Close / dismiss button
-    overlay.innerHTML += `
-  <button type="button" style="background:#fff; border:none; color:#000; font-size:0.65rem; font-weight:bold; cursor:pointer; padding:3px 8px; border-radius:4px;" onclick="dismissBroadcast()">
-    Dismiss / Close
-  </button>
-`;
-    overlay.style.display = "flex";
-  }
-  window.checkActiveBroadcast = checkActiveBroadcast;
-
-  window.dismissBroadcast = function () {
-    const overlay = document.getElementById("system-broadcast-overlay");
-    if (overlay) overlay.style.display = "none";
-
-    // Soft dismiss (mark as inactive in localStorage)
-    try {
-      const data = localStorage.getItem("gl_admin_broadcast");
-      if (data) {
-        const b = JSON.parse(data);
-        b.active = false;
-        localStorage.setItem("gl_admin_broadcast", JSON.stringify(b));
-      }
-    } catch (e) { }
-  };
+  // Kept for internal reference inside the DOMContentLoaded block
+  const checkActiveBroadcast = window.checkActiveBroadcast;
 
   // ══════════════════════════════════════════════════
   // REPORTING & ARCHIVING FUNCTIONS
@@ -12967,8 +12973,7 @@ document.addEventListener("DOMContentLoaded", () => {
     alert(`Successfully archived ${successCount} quotes!`);
   };
 
-  // Check broadcast every 3 seconds
-  setInterval(checkActiveBroadcast, 3000);
+  // (Broadcast polling handled at module level — see window.checkActiveBroadcast setInterval above)
 
   // Update edit timelines countdown every second
   function updateEditTimelines() {

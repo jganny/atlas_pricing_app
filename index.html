@@ -273,30 +273,30 @@
 
         <!-- Navigation triggers for active calculators (Admin Quick Access) — Bento Grid -->
         <div class="bento-action-grid" style="margin-bottom: 1.5rem;">
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('air')" id="admin-goto-air" style="background: linear-gradient(135deg, var(--sky) 0%, var(--indigo) 100%); color:#fff;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <button class="bento-action-btn" onclick="openActiveCalculator('air')" id="admin-goto-air" style="background:#EFF6FF; color:#0F172A; border:1.5px solid #BFDBFE; border-left:4px solid #2563EB; box-shadow:0 2px 8px rgba(37,99,235,0.12);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5">
               <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
             </svg>
             Price Air Freight
           </button>
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('sea')" id="admin-goto-sea" style="background: linear-gradient(135deg, var(--indigo) 0%, var(--teal) 100%); color:#fff;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <button class="bento-action-btn" onclick="openActiveCalculator('sea')" id="admin-goto-sea" style="background:#F0FDF4; color:#0F172A; border:1.5px solid #BBF7D0; border-left:4px solid #16A34A; box-shadow:0 2px 8px rgba(22,163,74,0.12);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
               <line x1="2" y1="10" x2="22" y2="10" />
               <path d="M12 17v4M8 21h8" />
             </svg>
             Price Sea Freight
           </button>
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('transport')" id="admin-goto-transport" style="background: linear-gradient(135deg, var(--violet) 0%, var(--indigo) 100%); color:#fff;">
-            <span style="font-size: 1.1rem;">🚛</span>
+          <button class="bento-action-btn" onclick="openActiveCalculator('transport')" id="admin-goto-transport" style="background:#FDF4FF; color:#0F172A; border:1.5px solid #E9D5FF; border-left:4px solid #9333EA; box-shadow:0 2px 8px rgba(147,51,234,0.12);">
+            <span style="font-size: 1.05rem; line-height:1;">🚛</span>
             Price Transportation
           </button>
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse" style="background: linear-gradient(135deg, var(--amber) 0%, #eab308 100%); color:#000;">
-            <span style="font-size: 1.1rem;">🏢</span>
+          <button class="bento-action-btn" onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse" style="background:#FFF7ED; color:#0F172A; border:1.5px solid #FED7AA; border-left:4px solid #EA580C; box-shadow:0 2px 8px rgba(234,88,12,0.12);">
+            <span style="font-size: 1.05rem; line-height:1;">🏢</span>
             Price Warehousing
           </button>
-          <button class="bento-action-btn btn-primary" onclick="openActiveCalculator('directory')" id="admin-goto-directory" style="background: linear-gradient(135deg, var(--sky) 0%, var(--teal) 100%); color:#fff;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <button class="bento-action-btn" onclick="openActiveCalculator('directory')" id="admin-goto-directory" style="background:#F0F9FF; color:#0F172A; border:1.5px solid #BAE6FD; border-left:4px solid #0284C7; box-shadow:0 2px 8px rgba(2,132,199,0.12);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.5">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -615,7 +615,7 @@
                   <th>Ref ID</th>
                   <th>Date</th>
                   <th>Mode</th>
-                  <th>Agent & Route Details</th>
+                  <th>Agent Details</th>
                   <th>Priced By Desk</th>
                   <th>Carrier</th>
                   <th>Buy Rate</th>
@@ -1009,23 +1009,22 @@
         <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem; align-items: stretch;">
           <!-- Left Column: Navigation triggers -->
           <div class="glass-card"
-            style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; padding: 1.5rem;">
+            style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center; gap: 1rem; padding: 1.5rem;">
             <h3
               style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
               Quotation Calculators
             </h3>
             <button class="btn-primary" onclick="openActiveCalculator('air')" id="btn-goto-air"
-              style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #E0F2FE; color: #0F172A; font-weight: bold; border: 1.5px solid #0284c7;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path
-                  d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
+              style="width: 100%; display: flex; align-items: center; gap: 0.6rem; background:#EFF6FF; color:#0F172A; font-weight:700; border:1.5px solid #BFDBFE; border-left:4px solid #2563EB; padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; cursor:pointer; transition:all 0.18s; box-shadow:0 1px 6px rgba(37,99,235,0.1);" onmouseover="this.style.background='#DBEAFE'" onmouseout="this.style.background='#EFF6FF'">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5">
+                <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
               </svg>
               Price Air Freight Enquiry
             </button>
             <button class="btn-primary"
-              style="background: #E6F7F4; color: #0F172A; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1.5px solid #0d9488;"
-              onclick="openActiveCalculator('sea')" id="btn-goto-sea">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              style="background:#F0FDF4; color:#0F172A; font-weight:700; width:100%; display:flex; align-items:center; gap:0.6rem; border:1.5px solid #BBF7D0; border-left:4px solid #16A34A; padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; cursor:pointer; transition:all 0.18s; box-shadow:0 1px 6px rgba(22,163,74,0.1);"
+              onclick="openActiveCalculator('sea')" id="btn-goto-sea" onmouseover="this.style.background='#DCFCE7'" onmouseout="this.style.background='#F0FDF4'">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5">
                 <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
                 <line x1="2" y1="10" x2="22" y2="10" />
                 <path d="M12 17v4M8 21h8" />
@@ -1033,21 +1032,21 @@
               Price Sea Freight Enquiry
             </button>
             <button class="btn-primary"
-              style="background: #F4EBFB; color: #0F172A; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1.5px solid #9333ea;"
-              onclick="openActiveCalculator('transport')" id="btn-goto-transport">
-              <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🚛</span>
+              style="background:#FDF4FF; color:#0F172A; font-weight:700; width:100%; display:flex; align-items:center; gap:0.6rem; border:1.5px solid #E9D5FF; border-left:4px solid #9333EA; padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; cursor:pointer; transition:all 0.18s; box-shadow:0 1px 6px rgba(147,51,234,0.1);"
+              onclick="openActiveCalculator('transport')" id="btn-goto-transport" onmouseover="this.style.background='#F3E8FF'" onmouseout="this.style.background='#FDF4FF'">
+              <span style="font-size: 1.05rem; margin-right: 3px; vertical-align: middle;">🚛</span>
               Price Transportation
             </button>
             <button class="btn-primary"
-              style="background: #F0F2F5; color: #0F172A; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1.5px solid #475569;"
-              onclick="openActiveCalculator('warehouse')" id="btn-goto-warehouse">
-              <span style="font-size: 1.1rem; margin-right: 3px; vertical-align: middle;">🏢</span>
+              style="background:#FFF7ED; color:#0F172A; font-weight:700; width:100%; display:flex; align-items:center; gap:0.6rem; border:1.5px solid #FED7AA; border-left:4px solid #EA580C; padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; cursor:pointer; transition:all 0.18s; box-shadow:0 1px 6px rgba(234,88,12,0.1);"
+              onclick="openActiveCalculator('warehouse')" id="btn-goto-warehouse" onmouseover="this.style.background='#FFEDD5'" onmouseout="this.style.background='#FFF7ED'">
+              <span style="font-size: 1.05rem; margin-right: 3px; vertical-align: middle;">🏢</span>
               Price Warehousing
             </button>
             <button class="btn-primary"
-              style="background: #E0F2FE; color: #0F172A; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1.5px solid #0284c7;"
-              onclick="openActiveCalculator('directory')" id="btn-goto-directory">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              style="background:#F0F9FF; color:#0F172A; font-weight:700; width:100%; display:flex; align-items:center; gap:0.6rem; border:1.5px solid #BAE6FD; border-left:4px solid #0284C7; padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; cursor:pointer; transition:all 0.18s; box-shadow:0 1px 6px rgba(2,132,199,0.1);"
+              onclick="openActiveCalculator('directory')" id="btn-goto-directory" onmouseover="this.style.background='#E0F2FE'" onmouseout="this.style.background='#F0F9FF'">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.5">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -1149,7 +1148,7 @@
                   <th>Ref ID</th>
                   <th>Date</th>
                   <th>Mode</th>
-                  <th>Agent & Route Details</th>
+                  <th>Agent Details</th>
                   <th>Carrier</th>
                   <th>Buy Rate</th>
                   <th>Sell Rate</th>
