@@ -9804,6 +9804,7 @@ const DB = {
         console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
         console.log("DB: Initializing Firestore connection with database ID:", dbId);
         this.firestoreRef = firebase.firestore(firebase.app(), dbId);
+        window.db = this.firestoreRef;
         this.isCloud = true;
         
         // Enable offline persistence
@@ -12421,6 +12422,7 @@ window.convertToInr = convertToInr;
 
 document.addEventListener("DOMContentLoaded", () => {
   const db = DB.firestoreRef || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+  window.db = db;
   const doc = (firestore, collectionName, docId) => {
     return firestore.collection(collectionName).doc(docId);
   };
