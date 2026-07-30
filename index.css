@@ -2716,9 +2716,10 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
 }
 
 .dir-tab.active {
-  background: var(--sky) !important;
-  color: #000 !important;
-  border-color: var(--sky) !important;
+  background: rgba(2, 132, 199, 0.1) !important;
+  color: #111827 !important;
+  border-color: rgba(2, 132, 199, 0.45) !important;
+  font-weight: 800 !important;
 }
 
 .contact-card {

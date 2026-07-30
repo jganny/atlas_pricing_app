@@ -1123,8 +1123,8 @@ function resetSeaFreightDeskForm() {
   if (document.getElementById("sea-routing")) document.getElementById("sea-routing").value = "";
   if (document.getElementById("sea-tt")) document.getElementById("sea-tt").value = "";
   if (document.getElementById("sea-validity")) document.getElementById("sea-validity").value = "";
-  if (document.getElementById("sea-lcl-rate")) document.getElementById("sea-lcl-rate").value = "0";
-  if (document.getElementById("sea-bb-rate")) document.getElementById("sea-bb-rate").value = "0";
+  document.querySelectorAll(".sea-lcl-rate").forEach(el => el.value = "0");
+  document.querySelectorAll(".sea-bb-rate").forEach(el => el.value = "0");
   if (document.getElementById("sea-terms")) document.getElementById("sea-terms").value = DEFAULT_SEA_TERMS;
 
   // Reset module switcher
@@ -3422,10 +3422,7 @@ function setupSeaFreightEvents() {
   document.getElementById("sea-gross-weight")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-volume")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-pkg-qty")?.addEventListener("input", calculateSeaFreight);
-  document.getElementById("sea-lcl-rate")?.addEventListener("input", calculateSeaFreight);
-  document.getElementById("sea-lcl-buy-rate")?.addEventListener("input", calculateSeaFreight);
-  document.getElementById("sea-bb-rate")?.addEventListener("input", calculateSeaFreight);
-  document.getElementById("sea-bb-buy-rate")?.addEventListener("input", calculateSeaFreight);
+  document.querySelectorAll(".sea-lcl-rate, .sea-lcl-buy-rate, .sea-bb-rate, .sea-bb-buy-rate").forEach(el => el.addEventListener("input", calculateSeaFreight));
   document.getElementById("sea-routing")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-tt")?.addEventListener("input", calculateSeaFreight);
   document.getElementById("sea-validity")?.addEventListener("input", calculateSeaFreight);
@@ -5730,8 +5727,8 @@ function saveCurrentQuote() {
     const rows = document.querySelectorAll("#sea-cargo-body .sea-cargo-item-row");
     if (appState.currentSeaFreight.type === 'lcl') {
       if (tariffsEnabled) {
-        const lclRate = parseFloat(document.getElementById("sea-lcl-rate").value) || 0;
-        const lclBuyRate = parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0;
+        const lclRate = parseFloat(document.querySelector(".sea-lcl-rate")?.value) || 0;
+        const lclBuyRate = parseFloat(document.querySelector(".sea-lcl-buy-rate")?.value) || 0;
 
         if (lclRate <= 0 && lclBuyRate <= 0) {
           alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
@@ -5760,8 +5757,8 @@ function saveCurrentQuote() {
       }
     } else if (appState.currentSeaFreight.type === 'bb') {
       if (tariffsEnabled) {
-        const bbRate = parseFloat(document.getElementById("sea-bb-rate").value) || 0;
-        const bbBuyRate = parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0;
+        const bbRate = parseFloat(document.querySelector(".sea-bb-rate")?.value) || 0;
+        const bbBuyRate = parseFloat(document.querySelector(".sea-bb-buy-rate")?.value) || 0;
 
         if (bbRate <= 0 && bbBuyRate <= 0) {
           alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
@@ -5862,10 +5859,10 @@ function saveCurrentQuote() {
       lclCbm: appState.currentSeaFreight.volumeCbm,
       lclWeight: appState.currentSeaFreight.grossWeight,
       lclChargeable: Math.max(appState.currentSeaFreight.volumeCbm, appState.currentSeaFreight.grossWeight / 1000),
-      lclRateApplied: parseFloat(document.getElementById("sea-lcl-rate")?.value) || 0,
-      bbRateApplied: parseFloat(document.getElementById("sea-bb-rate")?.value) || 0,
-      lclBuyRateApplied: parseFloat(document.getElementById("sea-lcl-buy-rate")?.value) || 0,
-      bbBuyRateApplied: parseFloat(document.getElementById("sea-bb-buy-rate")?.value) || 0,
+      lclRateApplied: parseFloat(document.querySelector(".sea-lcl-rate")?.value) || 0,
+      bbRateApplied: parseFloat(document.querySelector(".sea-bb-rate")?.value) || 0,
+      lclBuyRateApplied: parseFloat(document.querySelector(".sea-lcl-buy-rate")?.value) || 0,
+      bbBuyRateApplied: parseFloat(document.querySelector(".sea-bb-buy-rate")?.value) || 0,
       containerItems: containerItems,
       cargoItems: cargoItems,
       dimUnit: appState.currentSeaFreight.dimUnit || 'cms',
@@ -14021,21 +14018,18 @@ function setDirectoryParent(parent) {
     }
   });
 
-  // Toggle sub-filters row visibility (only show sub-filters for vendor contacts)
-  const subfilters = document.getElementById("vendor-subfilters-container");
+  // The subfilters container is now used by both Agents and Vendors
+  const subfilters = document.getElementById("directory-subfilters-container");
   if (subfilters) {
-    subfilters.style.display = (parent === 'vendors') ? 'flex' : 'none';
+    subfilters.style.display = 'flex';
   }
 
-  // Reset category active state on sub-filters if switching to vendors
-  if (parent === 'vendors') {
-    document.querySelectorAll(".dir-tab").forEach(tab => {
-      if (tab.getAttribute("data-category") === 'all') {
-        tab.classList.add("active");
-      } else {
-        tab.classList.remove("active");
-      }
-    });
+  // Reset active category to all when switching parent
+  activeDirectoryCategory = 'all';
+
+  // Render the dynamic tabs based on the new parent context
+  if (typeof renderDirectoryTabs === 'function') {
+    renderDirectoryTabs();
   }
 
   renderDirectoryContacts();
@@ -14130,6 +14124,9 @@ async function loadDirectoryContacts() {
     }
   }
 
+  if (typeof renderDirectoryTabs === 'function') {
+    renderDirectoryTabs();
+  }
   renderDirectoryContacts();
 }
 window.loadDirectoryContacts = loadDirectoryContacts;
@@ -14161,8 +14158,12 @@ function renderDirectoryContacts() {
       
       // Vendor contacts category != 'agency'
       if (c.category === 'agency') return false;
-      // category sub-filter if set
-      if (activeDirectoryCategory !== 'all' && c.category !== activeDirectoryCategory) return false;
+    }
+    
+    // Dynamic tab sub-filter check using sheetGroup (or fallback to category if missing)
+    if (activeDirectoryCategory !== 'all') {
+      const cGroup = c.sheetGroup || c.category || '';
+      if (cGroup !== activeDirectoryCategory) return false;
     }
     
     // Search query filter
@@ -14193,7 +14194,10 @@ function renderDirectoryContacts() {
   let html = "";
   filtered.forEach(contact => {
     const escNotes = (contact.notes || "").replace(/"/g, "&quot;");
-    let categoryLabel = contact.category ? contact.category.toUpperCase() : "CONTACT";
+    
+    // Display sheetGroup if available, otherwise fallback to category label
+    let categoryLabel = contact.sheetGroup || contact.category || "CONTACT";
+    categoryLabel = categoryLabel.toUpperCase();
     if (categoryLabel === 'AGENCY') categoryLabel = 'OVERSEAS AGENT';
     
     // Admin action buttons (Edit/Delete) - visible only if allowed to edit
@@ -14317,6 +14321,41 @@ function setDirectoryCategory(category) {
 }
 window.setDirectoryCategory = setDirectoryCategory;
 
+// Render dynamic directory filter tabs based on unique sheetGroup values
+function renderDirectoryTabs() {
+  const container = document.getElementById("directory-subfilters-container");
+  if (!container) return;
+
+  // 1. Filter contacts by active parent first
+  const parentContacts = directoryContacts.filter(c => {
+    if (activeDirectoryParent === 'agents') {
+      return c.category === 'agency';
+    } else {
+      return c.category !== 'agency';
+    }
+  });
+
+  // 2. Extract unique sheet groups (fallback to category if sheetGroup is missing)
+  const uniqueGroups = [...new Set(parentContacts.map(c => c.sheetGroup || c.category || '').filter(Boolean))].sort();
+
+  // 3. Build HTML
+  const parentLabel = activeDirectoryParent === 'agents' ? 'Agents' : 'Vendors';
+  let html = \`<button class="dir-tab \${activeDirectoryCategory === 'all' ? 'active' : ''}" data-category="all" onclick="setDirectoryCategory('all')">All \${parentLabel}</button>\`;
+
+  uniqueGroups.forEach(group => {
+    const isActive = activeDirectoryCategory === group ? 'active' : '';
+    // Escape single quotes for onclick string
+    const safeGroup = group.replace(/'/g, "\\\\'");
+    html += \`<button class="dir-tab \${isActive}" data-category="\${group}" onclick="setDirectoryCategory('\${safeGroup}')">\${group}</button>\`;
+  });
+
+  container.innerHTML = html;
+  
+  // Make sure the container is visible
+  container.style.display = 'flex';
+}
+window.renderDirectoryTabs = renderDirectoryTabs;
+
 // Contact Modal (Create/Edit) Show
 function openContactModal(id = null) {
   const modal = document.getElementById("contact-form-modal");
@@ -14338,6 +14377,7 @@ function openContactModal(id = null) {
       document.getElementById("contact-form-phone").value = contact.phone || '';
       document.getElementById("contact-form-location").value = contact.location || '';
       document.getElementById("contact-form-notes").value = contact.notes || '';
+      document.getElementById("contact-form-sheetgroup").value = contact.sheetGroup || '';
     }
   } else {
     // Add Mode
@@ -14352,6 +14392,10 @@ function openContactModal(id = null) {
     } else {
       document.getElementById("contact-form-category").value = 'liner';
     }
+    
+    // Auto-fill the tab group if we are currently filtering by one
+    document.getElementById("contact-form-sheetgroup").value = 
+      (activeDirectoryCategory !== 'all') ? activeDirectoryCategory : '';
   }
 
   modal.style.display = "flex";
@@ -14385,6 +14429,13 @@ async function saveContactForm(event) {
   const phone = document.getElementById("contact-form-phone").value.trim();
   const location = document.getElementById("contact-form-location").value.trim();
   const notes = document.getElementById("contact-form-notes").value.trim();
+  let sheetGroup = document.getElementById("contact-form-sheetgroup").value.trim();
+  
+  if (!sheetGroup) {
+    // Default to the category dropdown's visible label if not provided
+    const catSelect = document.getElementById("contact-form-category");
+    sheetGroup = catSelect.options[catSelect.selectedIndex].text;
+  }
   
   const updatedBy = appState.currentUser || "Pricing Team";
   const contactData = {
@@ -14395,6 +14446,7 @@ async function saveContactForm(event) {
     phone,
     location,
     notes,
+    sheetGroup,
     updatedAt: new Date(),
     updatedBy
   };
@@ -14561,6 +14613,7 @@ function handleExcelFileSelect(event) {
               phone: String(phone).trim(),
               location: String(location).trim(),
               notes: String(notes).trim(),
+              _sheetName: sheetName.trim(),   // exact tab name, trimmed
               updatedAt: new Date(),
               updatedBy: appState.currentUser || "Pricing Team"
             });
@@ -14581,20 +14634,98 @@ function handleExcelFileSelect(event) {
       
       if (preview && countEl && actions) {
         countEl.textContent = importedExcelRows.length;
-        
-        let previewHtml = `<strong>Parsed Rows Preview (First 5):</strong><br>`;
-        importedExcelRows.slice(0, 5).forEach((r, idx) => {
-          previewHtml += `[${idx+1}] Category: ${r.category} | Name: ${r.name} | Contact: ${r.contactPerson} | Phone: ${r.phone}<br>`;
+
+        const categoryColors = {
+          liner: '#0ea5e9', coloader: '#8b5cf6', nvocc: '#f59e0b',
+          breakbulk: '#ef4444', airline: '#06b6d4', pq: '#10b981',
+          insurance: '#f97316', agency: '#3b82f6', other: '#6b7280'
+        };
+
+        // --- Per-sheet summary: club chips by normalised key (trim+lowercase) ---
+        // This ensures "Liners", "liners ", "LINERS" all merge into one chip.
+        const sheetOrder = [];          // preserve workbook tab order
+        const sheetSummary = {};        // key: normalised name
+        importedExcelRows.forEach(r => {
+          const raw = r._sheetName || 'Unknown Sheet';
+          const key = raw.toLowerCase().trim();
+          if (!sheetSummary[key]) {
+            sheetSummary[key] = { displayName: raw, count: 0, catCounts: {} };
+            sheetOrder.push(key);
+          }
+          sheetSummary[key].count++;
+          const cat = r.category || 'other';
+          sheetSummary[key].catCounts[cat] = (sheetSummary[key].catCounts[cat] || 0) + 1;
         });
-        if (importedExcelRows.length > 5) {
-          previewHtml += `... and ${importedExcelRows.length - 5} more rows.`;
-        }
-        
+
+        // Pick the dominant category (highest count) for each chip's colour
+        const sheetChips = sheetOrder.map(key => {
+          const info = sheetSummary[key];
+          const dominantCat = Object.entries(info.catCounts)
+            .sort((a, b) => b[1] - a[1])[0][0];
+          const col = categoryColors[dominantCat] || '#6b7280';
+          return `<span style="display:inline-flex; align-items:center; gap:5px; background:${col}12; color:${col}; border:1px solid ${col}45; border-radius:20px; padding:3px 12px 3px 8px; font-size:0.65rem; font-weight:700; white-space:nowrap;">
+            <span style="font-size:0.75rem;">📋</span> ${info.displayName}
+            <span style="background:${col}35; color:${col}; border-radius:10px; padding:1px 7px; font-size:0.6rem; font-weight:800;">${info.count}</span>
+          </span>`;
+        }).join('');
+
+        // --- Preview table rows (first 10) ---
+        const previewRows = importedExcelRows.slice(0, 10);
+        let tableRows = previewRows.map((r, idx) => {
+          const color = categoryColors[r.category] || '#6b7280';
+          const catLabel = r.category ? r.category.toUpperCase() : 'OTHER';
+          const bgRow = idx % 2 === 0 ? 'rgba(0,0,0,0.02)' : '#fff';
+          const sheetShort = (r._sheetName || 'Sheet').length > 12
+            ? (r._sheetName || 'Sheet').slice(0, 11) + '…'
+            : (r._sheetName || 'Sheet');
+          return `<tr style="background:${bgRow};">
+            <td style="padding:5px 8px; color:#6b7280; font-size:0.65rem; text-align:center; border-right:1px solid #e5e7eb;">${idx + 1}</td>
+            <td style="padding:5px 8px; border-right:1px solid #e5e7eb;">
+              <span style="background:${color}20; color:${color}; border:1px solid ${color}40; border-radius:4px; padding:1px 6px; font-size:0.58rem; font-weight:700; white-space:nowrap;">${catLabel}</span>
+            </td>
+            <td style="padding:4px 8px; font-size:0.62rem; color:#6b7280; border-right:1px solid #e5e7eb; white-space:nowrap;" title="${r._sheetName || ''}">${sheetShort}</td>
+            <td style="padding:5px 8px; font-weight:600; color:#111827; font-size:0.72rem; border-right:1px solid #e5e7eb; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r.name}">${r.name || '—'}</td>
+            <td style="padding:5px 8px; color:#374151; font-size:0.7rem; border-right:1px solid #e5e7eb;">${r.contactPerson || '—'}</td>
+            <td style="padding:5px 8px; color:#374151; font-size:0.7rem;">${r.phone || '—'}</td>
+          </tr>`;
+        }).join('');
+
+        const remaining = importedExcelRows.length - previewRows.length;
+        const footerRow = remaining > 0 ? `
+          <tr>
+            <td colspan="6" style="padding:6px 8px; text-align:center; font-size:0.68rem; color:#6b7280; font-style:italic; background:#f9fafb; border-top:1px solid #e5e7eb;">
+              + ${remaining} more row${remaining > 1 ? 's' : ''} not shown in preview
+            </td>
+          </tr>` : '';
+
+        let previewHtml = `
+          <div style="font-size:0.72rem; font-weight:700; color:#374151; margin-bottom:8px; padding:0 2px;">
+            ✅ ${importedExcelRows.length} contact${importedExcelRows.length !== 1 ? 's' : ''} parsed from ${sheetOrder.length} sheet${sheetOrder.length !== 1 ? 's' : ''}
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">${sheetChips}</div>
+          <div style="overflow-x:auto; border-radius:6px; border:1px solid #e5e7eb;">
+            <table style="width:100%; border-collapse:collapse; font-family:'Outfit',sans-serif;">
+              <thead>
+                <tr style="background:#f3f4f6;">
+                  <th style="padding:5px 8px; font-size:0.62rem; color:#6b7280; font-weight:700; text-align:center; border-right:1px solid #e5e7eb; border-bottom:1px solid #d1d5db;">#</th>
+                  <th style="padding:5px 8px; font-size:0.62rem; color:#6b7280; font-weight:700; text-align:left; border-right:1px solid #e5e7eb; border-bottom:1px solid #d1d5db;">Category</th>
+                  <th style="padding:5px 8px; font-size:0.62rem; color:#6b7280; font-weight:700; text-align:left; border-right:1px solid #e5e7eb; border-bottom:1px solid #d1d5db;">Sheet Tab</th>
+                  <th style="padding:5px 8px; font-size:0.62rem; color:#6b7280; font-weight:700; text-align:left; border-right:1px solid #e5e7eb; border-bottom:1px solid #d1d5db;">Company / Name</th>
+                  <th style="padding:5px 8px; font-size:0.62rem; color:#6b7280; font-weight:700; text-align:left; border-right:1px solid #e5e7eb; border-bottom:1px solid #d1d5db;">Contact Person</th>
+                  <th style="padding:5px 8px; font-size:0.62rem; color:#6b7280; font-weight:700; text-align:left; border-bottom:1px solid #d1d5db;">Phone</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+                ${footerRow}
+              </tbody>
+            </table>
+          </div>`;
+
         preview.innerHTML = previewHtml;
         preview.style.display = "block";
         actions.style.display = "flex";
       }
-
     } catch (err) {
       console.error("Excel import parse error:", err);
       alert("Error parsing excel file. Please check if the file is corrupted.");
@@ -14650,8 +14781,11 @@ async function submitExcelImport() {
         const chunk = importedExcelRows.slice(i, i + chunkSize);
         
         chunk.forEach(item => {
+          const { _sheetName, ...cleanItem } = item;
+          // Preserve the original sheet tab as sheetGroup for dynamic tabs in the directory UI
+          cleanItem.sheetGroup = _sheetName;
           const docRef = db.collection("contactsDirectory").doc();
-          batch.set(docRef, item);
+          batch.set(docRef, cleanItem);
         });
         
         await batch.commit();
