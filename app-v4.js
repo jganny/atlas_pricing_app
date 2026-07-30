@@ -14340,13 +14340,13 @@ function renderDirectoryTabs() {
 
   // 3. Build HTML
   const parentLabel = activeDirectoryParent === 'agents' ? 'Agents' : 'Vendors';
-  let html = \`<button class="dir-tab \${activeDirectoryCategory === 'all' ? 'active' : ''}" data-category="all" onclick="setDirectoryCategory('all')">All \${parentLabel}</button>\`;
+  let html = `<button class="dir-tab ${activeDirectoryCategory === 'all' ? 'active' : ''}" data-category="all" onclick="setDirectoryCategory('all')">All ${parentLabel}</button>`;
 
   uniqueGroups.forEach(group => {
     const isActive = activeDirectoryCategory === group ? 'active' : '';
     // Escape single quotes for onclick string
     const safeGroup = group.replace(/'/g, "\\\\'");
-    html += \`<button class="dir-tab \${isActive}" data-category="\${group}" onclick="setDirectoryCategory('\${safeGroup}')">\${group}</button>\`;
+    html += `<button class="dir-tab ${isActive}" data-category="${group}" onclick="setDirectoryCategory('${safeGroup}')">${group}</button>`;
   });
 
   container.innerHTML = html;
