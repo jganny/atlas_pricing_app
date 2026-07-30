@@ -8567,20 +8567,34 @@ function amendQuote(id) {
     
     calculateAirFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
-    
   } else if (quote.type === 'transport') {
     document.getElementById("transportation-panel").classList.add("active");
-    
     if (document.getElementById("transport-pickup-pin")) {
       document.getElementById("transport-pickup-pin").value = quote.details.pickupPin || "";
+    }
+    if (document.getElementById("transport-pickup-city")) {
+      document.getElementById("transport-pickup-city").value = quote.details.pickupCity || "";
+    }
+    if (document.getElementById("transport-pickup-search")) {
+      const pin = quote.details.pickupPin || "";
+      const city = quote.details.pickupCity || "";
+      document.getElementById("transport-pickup-search").value = pin && city ? `${pin} - ${city}` : (pin || city || "");
     }
     if (document.getElementById("transport-delivery-pin")) {
       document.getElementById("transport-delivery-pin").value = quote.details.deliveryPin || "";
     }
-    if (document.getElementById("transport-currency")) {
-      document.getElementById("transport-currency").value = quote.currency || "INR";
+    if (document.getElementById("transport-delivery-city")) {
+      document.getElementById("transport-delivery-city").value = quote.details.deliveryCity || "";
     }
-    
+    if (document.getElementById("transport-delivery-search")) {
+      const pin = quote.details.deliveryPin || "";
+      const city = quote.details.deliveryCity || "";
+      document.getElementById("transport-delivery-search").value = pin && city ? `${pin} - ${city}` : (pin || city || "");
+    }
+    if (document.getElementById("transport-header-currency")) {
+      document.getElementById("transport-header-currency").value = quote.currency || "INR";
+      syncTransportCurrency();
+    }
     const transportBody = document.getElementById("transport-standalone-body");
     if (transportBody) {
       transportBody.innerHTML = "";
@@ -8600,7 +8614,6 @@ function amendQuote(id) {
           transportBody.appendChild(tr);
         });
       } else {
-        // Fallback default row
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td><input type="text" class="chg-name" value="Transport Fee" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
@@ -8614,17 +8627,17 @@ function amendQuote(id) {
         transportBody.appendChild(tr);
       }
     }
-    
     updateAdminModulePermissions();
     calculateTransportation();
     alert(`Editing Transportation Quote #${getQuoteRefId(quote)} in progress. Enter name when saving to confirm your amendments.`);
-    
   } else if (quote.type === 'warehouse') {
     document.getElementById("warehousing-panel").classList.add("active");
-    
-    if (document.getElementById("warehouse-currency")) {
-      document.getElementById("warehouse-currency").value = quote.currency || "INR";
+    if (document.getElementById("warehouse-header-currency")) {
+      document.getElementById("warehouse-header-currency").value = quote.currency || "INR";
+      syncWarehouseCurrency();
     }
+    
+
     
     const warehouseBody = document.getElementById("warehouse-standalone-body");
     if (warehouseBody) {
@@ -14929,7 +14942,6 @@ window.addEventListener("storage", (e) => {
     let requests = [];
     try { requests = JSON.parse(e.newValue || "[]"); } catch (err) {}
     window._amendmentRequests = requests;
-    
     if (typeof checkAndNotifyNewRequests === 'function') {
       checkAndNotifyNewRequests(requests);
     }
@@ -14947,6 +14959,314 @@ window.addEventListener("storage", (e) => {
     }
   }
 });
+
+// Global ZIP codes database for 192 countries
+const GLOBAL_ZIP_RECORDS = [
+  // Major Indian Hubs
+  { zip: "110001", city: "New Delhi", country: "India" },
+  { zip: "400001", city: "Mumbai", country: "India" },
+  { zip: "560001", city: "Bengaluru", country: "India" },
+  { zip: "600001", city: "Chennai", country: "India" },
+  { zip: "700001", city: "Kolkata", country: "India" },
+  { zip: "500001", city: "Hyderabad", country: "India" },
+  { zip: "380001", city: "Ahmedabad", country: "India" },
+  { zip: "411001", city: "Pune", country: "India" },
+  { zip: "122001", city: "Gurgaon", country: "India" },
+  { zip: "201301", city: "Noida", country: "India" },
+  { zip: "600028", city: "Chennai Port Area", country: "India" },
+  { zip: "400707", city: "Navi Mumbai (Nhava Sheva JNPT)", country: "India" },
+  { zip: "370201", city: "Gandhidham / Kandla Port", country: "India" },
+  { zip: "395003", city: "Surat", country: "India" },
+  
+  // 192 countries representation
+  { country: "Afghanistan", city: "Kabul", zip: "1001" },
+  { country: "Albania", city: "Tirana", zip: "1000" },
+  { country: "Algeria", city: "Algiers", zip: "16000" },
+  { country: "Andorra", city: "Andorra la Vella", zip: "AD500" },
+  { country: "Angola", city: "Luanda", zip: "1011" },
+  { country: "Antigua and Barbuda", city: "Saint John's", zip: "00000" },
+  { country: "Argentina", city: "Buenos Aires", zip: "C1001" },
+  { country: "Armenia", city: "Yerevan", zip: "0001" },
+  { country: "Australia", city: "Sydney", zip: "2000" },
+  { country: "Austria", city: "Vienna", zip: "1010" },
+  { country: "Azerbaijan", city: "Baku", zip: "AZ1000" },
+  { country: "Bahamas", city: "Nassau", zip: "00000" },
+  { country: "Bahrain", city: "Manama", zip: "302" },
+  { country: "Bangladesh", city: "Dhaka", zip: "1000" },
+  { country: "Barbados", city: "Bridgetown", zip: "BB11000" },
+  { country: "Belarus", city: "Minsk", zip: "220000" },
+  { country: "Belgium", city: "Brussels", zip: "1000" },
+  { country: "Belize", city: "Belmopan", zip: "00000" },
+  { country: "Benin", city: "Porto-Novo", zip: "00000" },
+  { country: "Bhutan", city: "Thimphu", zip: "11001" },
+  { country: "Bolivia", city: "La Paz", zip: "0000" },
+  { country: "Bosnia and Herzegovina", city: "Sarajevo", zip: "71000" },
+  { country: "Botswana", city: "Gaborone", zip: "00000" },
+  { country: "Brazil", city: "Brasilia", zip: "70000-000" },
+  { country: "Brunei", city: "Bandar Seri Begawan", zip: "BS8611" },
+  { country: "Bulgaria", city: "Sofia", zip: "1000" },
+  { country: "Burkina Faso", city: "Ouagadougou", zip: "00000" },
+  { country: "Burundi", city: "Gitega", zip: "0000" },
+  { country: "Cabo Verde", city: "Praia", zip: "7600" },
+  { country: "Cambodia", city: "Phnom Penh", zip: "12000" },
+  { country: "Cameroon", city: "Yaounde", zip: "00000" },
+  { country: "Canada", city: "Ottawa", zip: "K1P 1J1" },
+  { country: "Central African Republic", city: "Bangui", zip: "00000" },
+  { country: "Chad", city: "N'Djamena", zip: "00000" },
+  { country: "Chile", city: "Santiago", zip: "8320000" },
+  { country: "China", city: "Beijing", zip: "100000" },
+  { country: "Colombia", city: "Bogota", zip: "110111" },
+  { country: "Comoros", city: "Moroni", zip: "00000" },
+  { country: "Congo", city: "Brazzaville", zip: "00000" },
+  { country: "Costa Rica", city: "San Jose", zip: "10101" },
+  { country: "Croatia", city: "Zagreb", zip: "10000" },
+  { country: "Cuba", city: "Havana", zip: "10100" },
+  { country: "Cyprus", city: "Nicosia", zip: "1010" },
+  { country: "Czechia", city: "Prague", zip: "11000" },
+  { country: "Denmark", city: "Copenhagen", zip: "1000" },
+  { country: "Djibouti", city: "Djibouti", zip: "00000" },
+  { country: "Dominica", city: "Roseau", zip: "00000" },
+  { country: "Dominican Republic", city: "Santo Domingo", zip: "10101" },
+  { country: "Ecuador", city: "Quito", zip: "170150" },
+  { country: "Egypt", city: "Cairo", zip: "11511" },
+  { country: "El Salvador", city: "San Salvador", zip: "01101" },
+  { country: "Equatorial Guinea", city: "Malabo", zip: "00000" },
+  { country: "Eritrea", city: "Asmara", zip: "00000" },
+  { country: "Estonia", city: "Tallinn", zip: "10111" },
+  { country: "Eswatini", city: "Mbabane", zip: "H100" },
+  { country: "Ethiopia", city: "Addis Ababa", zip: "1000" },
+  { country: "Fiji", city: "Suva", zip: "00000" },
+  { country: "Finland", city: "Helsinki", zip: "00100" },
+  { country: "France", city: "Paris", zip: "75001" },
+  { country: "Gabon", city: "Libreville", zip: "00000" },
+  { country: "Gambia", city: "Banjul", zip: "00000" },
+  { country: "Georgia", city: "Tbilisi", zip: "0100" },
+  { country: "Germany", city: "Berlin", zip: "10115" },
+  { country: "Ghana", city: "Accra", zip: "GA000" },
+  { country: "Greece", city: "Athens", zip: "10431" },
+  { country: "Grenada", city: "St. George's", zip: "00000" },
+  { country: "Guatemala", city: "Guatemala City", zip: "01001" },
+  { country: "Guinea", city: "Conakry", zip: "00000" },
+  { country: "Guinea-Bissau", city: "Bissau", zip: "1000" },
+  { country: "Guyana", city: "Georgetown", zip: "00000" },
+  { country: "Haiti", city: "Port-au-Prince", zip: "HT6110" },
+  { country: "Honduras", city: "Tegucigalpa", zip: "11101" },
+  { country: "Hungary", city: "Budapest", zip: "1011" },
+  { country: "Iceland", city: "Reykjavik", zip: "101" },
+  { country: "Indonesia", city: "Jakarta", zip: "10110" },
+  { country: "Iran", city: "Tehran", zip: "11155" },
+  { country: "Iraq", city: "Baghdad", zip: "10001" },
+  { country: "Ireland", city: "Dublin", zip: "D01 A5T2" },
+  { country: "Israel", city: "Jerusalem", zip: "91000" },
+  { country: "Italy", city: "Rome", zip: "00187" },
+  { country: "Ivory Coast", city: "Yamoussoukro", zip: "00000" },
+  { country: "Jamaica", city: "Kingston", zip: "00000" },
+  { country: "Japan", city: "Tokyo", zip: "100-0001" },
+  { country: "Jordan", city: "Amman", zip: "11110" },
+  { country: "Kazakhstan", city: "Astana", zip: "010000" },
+  { country: "Kenya", city: "Nairobi", zip: "00100" },
+  { country: "Kiribati", city: "Tarawa", zip: "00000" },
+  { country: "Kuwait", city: "Kuwait City", zip: "13001" },
+  { country: "Kyrgyzstan", city: "Bishkek", zip: "720000" },
+  { country: "Laos", city: "Vientiane", zip: "01000" },
+  { country: "Latvia", city: "Riga", zip: "LV-1050" },
+  { country: "Lebanon", city: "Beirut", zip: "1107" },
+  { country: "Lesotho", city: "Maseru", zip: "100" },
+  { country: "Liberia", city: "Monrovia", zip: "1000" },
+  { country: "Libya", city: "Tripoli", zip: "00000" },
+  { country: "Liechtenstein", city: "Vaduz", zip: "9490" },
+  { country: "Lithuania", city: "Vilnius", zip: "LT-01001" },
+  { country: "Luxembourg", city: "Luxembourg City", zip: "1009" },
+  { country: "Madagascar", city: "Antananarivo", zip: "101" },
+  { country: "Malawi", city: "Lilongwe", zip: "00000" },
+  { country: "Malaysia", city: "Kuala Lumpur", zip: "50000" },
+  { country: "Maldives", city: "Male", zip: "20000" },
+  { country: "Mali", city: "Bamako", zip: "00000" },
+  { country: "Malta", city: "Valletta", zip: "VLT 1115" },
+  { country: "Marshall Islands", city: "Majuro", zip: "96960" },
+  { country: "Mauritania", city: "Nouakchott", zip: "00000" },
+  { country: "Mauritius", city: "Port Louis", zip: "11302" },
+  { country: "Mexico", city: "Mexico City", zip: "06000" },
+  { country: "Micronesia", city: "Palikir", zip: "96941" },
+  { country: "Moldova", city: "Chisinau", zip: "MD-2000" },
+  { country: "Monaco", city: "Monaco", zip: "98000" },
+  { country: "Mongolia", city: "Ulaanbaatar", zip: "15160" },
+  { country: "Montenegro", city: "Podgorica", zip: "81000" },
+  { country: "Morocco", city: "Rabat", zip: "10000" },
+  { country: "Mozambique", city: "Maputo", zip: "1100" },
+  { country: "Myanmar", city: "Naypyidaw", zip: "15011" },
+  { country: "Namibia", city: "Windhoek", zip: "10005" },
+  { country: "Nauru", city: "Yaren", zip: "00000" },
+  { country: "Nepal", city: "Kathmandu", zip: "44600" },
+  { country: "Netherlands", city: "Amsterdam", zip: "1012 JS" },
+  { country: "New Zealand", city: "Wellington", zip: "6011" },
+  { country: "Nicaragua", city: "Managua", zip: "10000" },
+  { country: "Niger", city: "Niamey", zip: "00000" },
+  { country: "Nigeria", city: "Abuja", zip: "900001" },
+  { country: "North Korea", city: "Pyongyang", zip: "00000" },
+  { country: "North Macedonia", city: "Skopje", zip: "1000" },
+  { country: "Norway", city: "Oslo", zip: "0010" },
+  { country: "Oman", city: "Muscat", zip: "100" },
+  { country: "Pakistan", city: "Islamabad", zip: "44000" },
+  { country: "Palau", city: "Ngerulmud", zip: "96940" },
+  { country: "Palestine", city: "Jerusalem", zip: "91000" },
+  { country: "Panama", city: "Panama City", zip: "0801" },
+  { country: "Papua New Guinea", city: "Port Moresby", zip: "111" },
+  { country: "Paraguay", city: "Asuncion", zip: "1001" },
+  { country: "Peru", city: "Lima", zip: "15001" },
+  { country: "Philippines", city: "Manila", zip: "1000" },
+  { country: "Poland", city: "Warsaw", zip: "00-001" },
+  { country: "Portugal", city: "Lisbon", zip: "1000-001" },
+  { country: "Qatar", city: "Doha", zip: "00000" },
+  { country: "Romania", city: "Bucharest", zip: "010011" },
+  { country: "Russia", city: "Moscow", zip: "101000" },
+  { country: "Rwanda", city: "Kigali", zip: "00000" },
+  { country: "Saint Kitts and Nevis", city: "Basseterre", zip: "00000" },
+  { country: "Saint Lucia", city: "Castries", zip: "00000" },
+  { country: "Saint Vincent and the Grenadines", city: "Kingstown", zip: "00000" },
+  { country: "Samoa", city: "Apia", zip: "00000" },
+  { country: "San Marino", city: "San Marino", zip: "47890" },
+  { country: "Sao Tome and Principe", city: "Sao Tome", zip: "00000" },
+  { country: "Saudi Arabia", city: "Riyadh", zip: "11564" },
+  { country: "Senegal", city: "Dakar", zip: "12500" },
+  { country: "Serbia", city: "Belgrade", zip: "11000" },
+  { country: "Seychelles", city: "Victoria", zip: "00000" },
+  { country: "Sierra Leone", city: "Freetown", zip: "00000" },
+  { country: "Singapore", city: "Singapore", zip: "018989" },
+  { country: "Slovakia", city: "Bratislava", zip: "81101" },
+  { country: "Slovenia", city: "Ljubljana", zip: "1000" },
+  { country: "Solomon Islands", city: "Honiara", zip: "00000" },
+  { country: "Somalia", city: "Mogadishu", zip: "00000" },
+  { country: "South Africa", city: "Pretoria", zip: "0001" },
+  { country: "South Korea", city: "Seoul", zip: "03000" },
+  { country: "South Sudan", city: "Juba", zip: "00000" },
+  { country: "Spain", city: "Madrid", zip: "28001" },
+  { country: "Sri Lanka", city: "Colombo", zip: "00100" },
+  { country: "Sudan", city: "Khartoum", zip: "11111" },
+  { country: "Suriname", city: "Paramaribo", zip: "00000" },
+  { country: "Sweden", city: "Stockholm", zip: "11122" },
+  { country: "Switzerland", city: "Bern", zip: "3000" },
+  { country: "Syria", city: "Damascus", zip: "00000" },
+  { country: "Taiwan", city: "Taipei", zip: "100" },
+  { country: "Tajikistan", city: "Dushanbe", zip: "734000" },
+  { country: "Tanzania", city: "Dodoma", zip: "00000" },
+  { country: "Thailand", city: "Bangkok", zip: "10100" },
+  { country: "Timor-Leste", city: "Dili", zip: "00000" },
+  { country: "Togo", city: "Lome", zip: "00000" },
+  { country: "Tonga", city: "Nuku'alofa", zip: "00000" },
+  { country: "Trinidad and Tobago", city: "Port of Spain", zip: "00000" },
+  { country: "Tunisia", city: "Tunis", zip: "1000" },
+  { country: "Turkey", city: "Ankara", zip: "06000" },
+  { country: "Turkmenistan", city: "Ashgabat", zip: "744000" },
+  { country: "Tuvalu", city: "Funafuti", zip: "00000" },
+  { country: "Uganda", city: "Kampala", zip: "00000" },
+  { country: "Ukraine", city: "Kyiv", zip: "01001" },
+  { country: "United Arab Emirates", city: "Abu Dhabi", zip: "00000" },
+  { country: "United Kingdom", city: "London", zip: "EC1A 1BB" },
+  { country: "United States", city: "Washington, D.C.", zip: "20500" },
+  { country: "Uruguay", city: "Montevideo", zip: "11000" },
+  { country: "Uzbekistan", city: "Tashkent", zip: "100000" },
+  { country: "Vanuatu", city: "Port Vila", zip: "00000" },
+  { country: "Vatican City", city: "Vatican City", zip: "00120" },
+  { country: "Venezuela", city: "Caracas", zip: "1010" },
+  { country: "Vietnam", city: "Hanoi", zip: "100000" },
+  { country: "Yemen", city: "Sanaa", zip: "00000" },
+  { country: "Zambia", city: "Lusaka", zip: "10101" },
+  { country: "Zimbabwe", city: "Harare", zip: "00000" }
+];
+
+function showCustomDropdown(type) {
+  const listEl = document.getElementById(type + "-dropdown-list");
+  if (listEl) {
+    listEl.classList.add("show");
+    filterCustomDropdown(type);
+  }
+}
+window.showCustomDropdown = showCustomDropdown;
+
+function filterCustomDropdown(type) {
+  const searchInput = document.getElementById("transport-" + type + "-search");
+  const listEl = document.getElementById(type + "-dropdown-list");
+  if (!searchInput || !listEl) return;
+  
+  const query = searchInput.value.toLowerCase().trim();
+  listEl.innerHTML = "";
+  
+  const matches = GLOBAL_ZIP_RECORDS.filter(rec => {
+    return rec.city.toLowerCase().includes(query) || 
+           rec.zip.toLowerCase().includes(query) || 
+           rec.country.toLowerCase().includes(query);
+  });
+  
+  if (matches.length === 0) {
+    const itemEl = document.createElement("div");
+    itemEl.className = "custom-dropdown-item";
+    itemEl.style.justifyContent = "center";
+    itemEl.style.fontStyle = "italic";
+    itemEl.style.opacity = "0.7";
+    itemEl.textContent = `Use custom: "${searchInput.value}"`;
+    itemEl.onclick = () => selectCustomItem(type, "", searchInput.value);
+    listEl.appendChild(itemEl);
+  } else {
+    matches.slice(0, 100).forEach(rec => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "custom-dropdown-item";
+      
+      const zipSpan = document.createElement("span");
+      zipSpan.className = "zip-code";
+      zipSpan.textContent = rec.zip;
+      
+      const citySpan = document.createElement("span");
+      citySpan.className = "city-country";
+      citySpan.textContent = ` - ${rec.city}, ${rec.country}`;
+      
+      itemEl.appendChild(zipSpan);
+      itemEl.appendChild(citySpan);
+      
+      itemEl.onclick = () => selectCustomItem(type, rec.zip, `${rec.city}, ${rec.country}`);
+      listEl.appendChild(itemEl);
+    });
+  }
+}
+window.filterCustomDropdown = filterCustomDropdown;
+
+function selectCustomItem(type, zip, city) {
+  const searchInput = document.getElementById("transport-" + type + "-search");
+  const pinInput = document.getElementById("transport-" + type + "-pin");
+  const cityInput = document.getElementById("transport-" + type + "-city");
+  const listEl = document.getElementById(type + "-dropdown-list");
+  
+  if (searchInput) {
+    searchInput.value = zip ? `${zip} - ${city}` : city;
+  }
+  if (pinInput) {
+    pinInput.value = zip;
+  }
+  if (cityInput) {
+    cityInput.value = city;
+  }
+  if (listEl) {
+    listEl.classList.remove("show");
+  }
+  
+  if (typeof calculateTransportation === "function") {
+    calculateTransportation();
+  }
+}
+window.selectCustomItem = selectCustomItem;
+
+document.addEventListener("click", function(event) {
+  if (!event.target.closest("#pickup-dropdown-container")) {
+    const list = document.getElementById("pickup-dropdown-list");
+    if (list) list.classList.remove("show");
+  }
+  if (!event.target.closest("#delivery-dropdown-container")) {
+    const list = document.getElementById("delivery-dropdown-list");
+    if (list) list.classList.remove("show");
+  }
+});
+
+
 
 
 

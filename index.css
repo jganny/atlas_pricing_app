@@ -2819,3 +2819,96 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
   border-color: var(--sky);
 }
 
+/* Custom searchable dropdown */
+.custom-dropdown-container {
+  position: relative;
+  width: 100%;
+}
+.custom-dropdown-input {
+  width: 100%;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--t1) !important;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 6px !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.custom-dropdown-input:focus {
+  border-color: var(--sky) !important;
+}
+.custom-dropdown-list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  max-height: 250px;
+  overflow-y: auto;
+  background: #0d121f !important;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-top: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.custom-dropdown-list.show {
+  display: block;
+}
+.custom-dropdown-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--t1);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.custom-dropdown-item:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: var(--sky) !important;
+}
+.custom-dropdown-item .zip-code {
+  font-weight: bold;
+  color: var(--sky);
+  margin-right: 4px;
+}
+.custom-dropdown-item .city-country {
+  color: var(--t1);
+}
+
+/* Small crisp dashboard back button */
+.btn-back-dashboard {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: var(--t1) !important;
+  padding: 0.4rem 0.8rem !important;
+  font-size: 0.75rem !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  height: fit-content !important;
+  min-height: unset !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+}
+.btn-back-dashboard:hover {
+  background: var(--sky) !important;
+  border-color: var(--sky) !important;
+  color: #0c1017 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25) !important;
+}
+.btn-back-dashboard:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+

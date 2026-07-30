@@ -2658,7 +2658,7 @@
               style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
               TRANSPORTATION DESK</h2>
           </div>
-          <button class="btn-secondary" onclick="returnToWorkspace()">← Back to Dashboard</button>
+          <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
@@ -2686,122 +2686,22 @@
             <!-- Pickup & Delivery PIN Code Blocks -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div>
-                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">📍 Pickup Location (PIN Code)</label>
-                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <select id="transport-pickup-pin" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
-                    <option value="110001">110001 - New Delhi (Connaught Place)</option>
-                    <option value="400001">400001 - Mumbai (Fort / South Mumbai)</option>
-                    <option value="560001">560001 - Bengaluru (MG Road / Central)</option>
-                    <option value="600001">600001 - Chennai (George Town)</option>
-                    <option value="700001">700001 - Kolkata (BBD Bagh)</option>
-                    <option value="500001">500001 - Hyderabad (Abids)</option>
-                    <option value="380001">380001 - Ahmedabad (Bhadra)</option>
-                    <option value="411001">411001 - Pune (Camp)</option>
-                    <option value="122001">122001 - Gurgaon (DLF Phase 1)</option>
-                    <option value="201301">201301 - Noida (Sector 18)</option>
-                    <option value="600028">600028 - Chennai Port Area</option>
-                    <option value="400707">400707 - Navi Mumbai (Nhava Sheva JNPT)</option>
-                    <option value="370201">370201 - Gandhidham / Kandla Port</option>
-                    <option value="395003">395003 - Surat (Central)</option>
-                    <optgroup label="🌍 Global – USA">
-                      <option value="10001">10001 - New York, NY (USA)</option>
-                      <option value="90001">90001 - Los Angeles, CA (USA)</option>
-                      <option value="60601">60601 - Chicago, IL (USA)</option>
-                      <option value="77001">77001 - Houston, TX (USA)</option>
-                      <option value="94102">94102 - San Francisco, CA (USA)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – UK">
-                      <option value="EC1A1BB">EC1A 1BB - London (City of London, UK)</option>
-                      <option value="M11AE">M1 1AE - Manchester (UK)</option>
-                      <option value="B11BB">B1 1BB - Birmingham (UK)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – UAE">
-                      <option value="UAE-DXB">UAE-DXB - Dubai (UAE)</option>
-                      <option value="UAE-AUH">UAE-AUH - Abu Dhabi (UAE)</option>
-                      <option value="UAE-SHJ">UAE-SHJ - Sharjah (UAE)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – Singapore / Malaysia">
-                      <option value="SGP-018989">018989 - Singapore (Tanjong Pagar Port)</option>
-                      <option value="MYS-50000">50000 - Kuala Lumpur (Malaysia)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – China">
-                      <option value="CHN-200001">200001 - Shanghai (China)</option>
-                      <option value="CHN-100001">100001 - Beijing (China)</option>
-                      <option value="CHN-510000">510000 - Guangzhou (China)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – Australia">
-                      <option value="AUS-2000">2000 - Sydney, NSW (Australia)</option>
-                      <option value="AUS-3000">3000 - Melbourne, VIC (Australia)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – Germany / Netherlands">
-                      <option value="DEU-20457">20457 - Hamburg Port (Germany)</option>
-                      <option value="NLD-3011">3011 - Rotterdam Port (Netherlands)</option>
-                    </optgroup>
-                  </select>
-                  <input type="text" id="transport-pickup-city" placeholder="Or type city name manually..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.45rem 0.75rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600;" />
-                  <button type="button" onclick="openPincodeSearchModal('pickup')" style="width: 100%; font-size: 0.75rem; font-weight: 700; padding: 0.45rem 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.12); color: var(--sky); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
-                    🔍 Search All 19,000+ India PIN Codes
-                  </button>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">📍 Pickup Location</label>
+                <div class="custom-dropdown-container" id="pickup-dropdown-container">
+                  <input type="text" id="transport-pickup-search" class="custom-dropdown-input" placeholder="Search City or ZIP code..." onfocus="showCustomDropdown('pickup')" oninput="filterCustomDropdown('pickup')" autocomplete="off" />
+                  <input type="hidden" id="transport-pickup-pin" />
+                  <input type="hidden" id="transport-pickup-city" />
+                  <div class="custom-dropdown-list" id="pickup-dropdown-list"></div>
                 </div>
               </div>
 
               <div>
-                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">🏁 Delivery Location (PIN Code)</label>
-                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <select id="transport-delivery-pin" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
-                    <option value="400001">400001 - Mumbai (Fort / South Mumbai)</option>
-                    <option value="110001">110001 - New Delhi (Connaught Place)</option>
-                    <option value="560001">560001 - Bengaluru (MG Road / Central)</option>
-                    <option value="600001">600001 - Chennai (George Town)</option>
-                    <option value="700001">700001 - Kolkata (BBD Bagh)</option>
-                    <option value="500001">500001 - Hyderabad (Abids)</option>
-                    <option value="380001">380001 - Ahmedabad (Bhadra)</option>
-                    <option value="411001">411001 - Pune (Camp)</option>
-                    <option value="122001">122001 - Gurgaon (DLF Phase 1)</option>
-                    <option value="201301">201301 - Noida (Sector 18)</option>
-                    <option value="400707">400707 - Navi Mumbai (Nhava Sheva JNPT)</option>
-                    <option value="600028">600028 - Chennai Port Area</option>
-                    <option value="370201">370201 - Gandhidham / Kandla Port</option>
-                    <option value="395003">395003 - Surat (Central)</option>
-                    <optgroup label="🌍 Global – USA">
-                      <option value="10001">10001 - New York, NY (USA)</option>
-                      <option value="90001">90001 - Los Angeles, CA (USA)</option>
-                      <option value="60601">60601 - Chicago, IL (USA)</option>
-                      <option value="77001">77001 - Houston, TX (USA)</option>
-                      <option value="94102">94102 - San Francisco, CA (USA)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – UK">
-                      <option value="EC1A1BB">EC1A 1BB - London (City of London, UK)</option>
-                      <option value="M11AE">M1 1AE - Manchester (UK)</option>
-                      <option value="B11BB">B1 1BB - Birmingham (UK)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – UAE">
-                      <option value="UAE-DXB">UAE-DXB - Dubai (UAE)</option>
-                      <option value="UAE-AUH">UAE-AUH - Abu Dhabi (UAE)</option>
-                      <option value="UAE-SHJ">UAE-SHJ - Sharjah (UAE)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – Singapore / Malaysia">
-                      <option value="SGP-018989">018989 - Singapore (Tanjong Pagar Port)</option>
-                      <option value="MYS-50000">50000 - Kuala Lumpur (Malaysia)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – China">
-                      <option value="CHN-200001">200001 - Shanghai (China)</option>
-                      <option value="CHN-100001">100001 - Beijing (China)</option>
-                      <option value="CHN-510000">510000 - Guangzhou (China)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – Australia">
-                      <option value="AUS-2000">2000 - Sydney, NSW (Australia)</option>
-                      <option value="AUS-3000">3000 - Melbourne, VIC (Australia)</option>
-                    </optgroup>
-                    <optgroup label="🌍 Global – Germany / Netherlands">
-                      <option value="DEU-20457">20457 - Hamburg Port (Germany)</option>
-                      <option value="NLD-3011">3011 - Rotterdam Port (Netherlands)</option>
-                    </optgroup>
-                  </select>
-                  <input type="text" id="transport-delivery-city" placeholder="Or type city name manually..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.45rem 0.75rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600;" />
-                  <button type="button" onclick="openPincodeSearchModal('delivery')" style="width: 100%; font-size: 0.75rem; font-weight: 700; padding: 0.45rem 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.12); color: var(--sky); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
-                    🔍 Search All 19,000+ India PIN Codes
-                  </button>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">🏁 Delivery Location</label>
+                <div class="custom-dropdown-container" id="delivery-dropdown-container">
+                  <input type="text" id="transport-delivery-search" class="custom-dropdown-input" placeholder="Search City or ZIP code..." onfocus="showCustomDropdown('delivery')" oninput="filterCustomDropdown('delivery')" autocomplete="off" />
+                  <input type="hidden" id="transport-delivery-pin" />
+                  <input type="hidden" id="transport-delivery-city" />
+                  <div class="custom-dropdown-list" id="delivery-dropdown-list"></div>
                 </div>
               </div>
             </div>
@@ -2813,14 +2713,7 @@
                   Transportation Breakup Calculations</h4>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <button type="button" class="btn-admin-action add-transport-row-btn" onclick="addTransportRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Row</button>
-                  <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
-                  <select id="transport-currency" onchange="calculateTransportation()"
-                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
-                    <option value="INR" selected>INR - Indian Rupee (₹)</option>
-                    <option value="USD">USD - US Dollar ($)</option>
-                    <option value="EUR">EUR - Euro (€)</option>
-                    <option value="GBP">GBP - British Pound (£)</option>
-                  </select>
+                  <input type="hidden" id="transport-currency" value="INR">
                 </div>
               </div>
 
@@ -2887,7 +2780,7 @@
               style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
               WAREHOUSING DESK</h2>
           </div>
-          <button class="btn-secondary" onclick="returnToWorkspace()">← Back to Dashboard</button>
+          <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
@@ -2920,18 +2813,7 @@
                   Warehousing Breakup Calculations</h4>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <button type="button" class="btn-admin-action add-warehouse-row-btn" onclick="addWarehouseRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Row</button>
-                  <label style="font-size: 0.8rem; font-weight: 800; color: var(--sky);">Currency:</label>
-                  <select id="warehouse-currency" onchange="calculateWarehousing()"
-                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem;">
-                    <option value="INR" selected>INR - Indian Rupee (₹)</option>
-                    <option value="USD">USD - US Dollar ($)</option>
-                    <option value="EUR">EUR - Euro (€)</option>
-                    <option value="GBP">GBP - British Pound (£)</option>
-                    <option value="AED">AED - UAE Dirham (د.إ)</option>
-                    <option value="SGD">SGD - Singapore Dollar (S$)</option>
-                    <option value="AUD">AUD - Australian Dollar (A$)</option>
-                    <option value="CNY">CNY - Chinese Yuan (¥)</option>
-                  </select>
+                  <input type="hidden" id="warehouse-currency" value="INR">
                 </div>
               </div>
 
