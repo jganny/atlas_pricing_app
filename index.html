@@ -2648,10 +2648,6 @@
 
       <!-- ==================== TRANSPORTATION PANEL ==================== -->
       <div id="transportation-panel" class="view-panel">
-        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
-            onclick="returnToWorkspace()">← Back to Dashboard</button>
-        </div>
         <div class="calculator-header"
           style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
@@ -2667,6 +2663,26 @@
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
           <div class="glass-card" style="padding: 2rem;">
+            <!-- Customer Name & Currency Row -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">👤 Customer Name</label>
+                <input type="text" id="transport-customer-name" placeholder="Enter customer / company name..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">💱 Currency</label>
+                <select id="transport-header-currency" onchange="syncTransportCurrency()" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                  <option value="INR" selected>INR - Indian Rupee (₹)</option>
+                  <option value="USD">USD - US Dollar ($)</option>
+                  <option value="EUR">EUR - Euro (€)</option>
+                  <option value="GBP">GBP - British Pound (£)</option>
+                  <option value="AED">AED - UAE Dirham (د.إ)</option>
+                  <option value="SGD">SGD - Singapore Dollar (S$)</option>
+                  <option value="AUD">AUD - Australian Dollar (A$)</option>
+                  <option value="CNY">CNY - Chinese Yuan (¥)</option>
+                </select>
+              </div>
+            </div>
             <!-- Pickup & Delivery PIN Code Blocks -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div>
@@ -2687,7 +2703,42 @@
                     <option value="400707">400707 - Navi Mumbai (Nhava Sheva JNPT)</option>
                     <option value="370201">370201 - Gandhidham / Kandla Port</option>
                     <option value="395003">395003 - Surat (Central)</option>
+                    <optgroup label="🌍 Global – USA">
+                      <option value="10001">10001 - New York, NY (USA)</option>
+                      <option value="90001">90001 - Los Angeles, CA (USA)</option>
+                      <option value="60601">60601 - Chicago, IL (USA)</option>
+                      <option value="77001">77001 - Houston, TX (USA)</option>
+                      <option value="94102">94102 - San Francisco, CA (USA)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – UK">
+                      <option value="EC1A1BB">EC1A 1BB - London (City of London, UK)</option>
+                      <option value="M11AE">M1 1AE - Manchester (UK)</option>
+                      <option value="B11BB">B1 1BB - Birmingham (UK)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – UAE">
+                      <option value="UAE-DXB">UAE-DXB - Dubai (UAE)</option>
+                      <option value="UAE-AUH">UAE-AUH - Abu Dhabi (UAE)</option>
+                      <option value="UAE-SHJ">UAE-SHJ - Sharjah (UAE)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – Singapore / Malaysia">
+                      <option value="SGP-018989">018989 - Singapore (Tanjong Pagar Port)</option>
+                      <option value="MYS-50000">50000 - Kuala Lumpur (Malaysia)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – China">
+                      <option value="CHN-200001">200001 - Shanghai (China)</option>
+                      <option value="CHN-100001">100001 - Beijing (China)</option>
+                      <option value="CHN-510000">510000 - Guangzhou (China)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – Australia">
+                      <option value="AUS-2000">2000 - Sydney, NSW (Australia)</option>
+                      <option value="AUS-3000">3000 - Melbourne, VIC (Australia)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – Germany / Netherlands">
+                      <option value="DEU-20457">20457 - Hamburg Port (Germany)</option>
+                      <option value="NLD-3011">3011 - Rotterdam Port (Netherlands)</option>
+                    </optgroup>
                   </select>
+                  <input type="text" id="transport-pickup-city" placeholder="Or type city name manually..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.45rem 0.75rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600;" />
                   <button type="button" onclick="openPincodeSearchModal('pickup')" style="width: 100%; font-size: 0.75rem; font-weight: 700; padding: 0.45rem 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.12); color: var(--sky); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
                     🔍 Search All 19,000+ India PIN Codes
                   </button>
@@ -2712,7 +2763,42 @@
                     <option value="600028">600028 - Chennai Port Area</option>
                     <option value="370201">370201 - Gandhidham / Kandla Port</option>
                     <option value="395003">395003 - Surat (Central)</option>
+                    <optgroup label="🌍 Global – USA">
+                      <option value="10001">10001 - New York, NY (USA)</option>
+                      <option value="90001">90001 - Los Angeles, CA (USA)</option>
+                      <option value="60601">60601 - Chicago, IL (USA)</option>
+                      <option value="77001">77001 - Houston, TX (USA)</option>
+                      <option value="94102">94102 - San Francisco, CA (USA)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – UK">
+                      <option value="EC1A1BB">EC1A 1BB - London (City of London, UK)</option>
+                      <option value="M11AE">M1 1AE - Manchester (UK)</option>
+                      <option value="B11BB">B1 1BB - Birmingham (UK)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – UAE">
+                      <option value="UAE-DXB">UAE-DXB - Dubai (UAE)</option>
+                      <option value="UAE-AUH">UAE-AUH - Abu Dhabi (UAE)</option>
+                      <option value="UAE-SHJ">UAE-SHJ - Sharjah (UAE)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – Singapore / Malaysia">
+                      <option value="SGP-018989">018989 - Singapore (Tanjong Pagar Port)</option>
+                      <option value="MYS-50000">50000 - Kuala Lumpur (Malaysia)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – China">
+                      <option value="CHN-200001">200001 - Shanghai (China)</option>
+                      <option value="CHN-100001">100001 - Beijing (China)</option>
+                      <option value="CHN-510000">510000 - Guangzhou (China)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – Australia">
+                      <option value="AUS-2000">2000 - Sydney, NSW (Australia)</option>
+                      <option value="AUS-3000">3000 - Melbourne, VIC (Australia)</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global – Germany / Netherlands">
+                      <option value="DEU-20457">20457 - Hamburg Port (Germany)</option>
+                      <option value="NLD-3011">3011 - Rotterdam Port (Netherlands)</option>
+                    </optgroup>
                   </select>
+                  <input type="text" id="transport-delivery-city" placeholder="Or type city name manually..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.45rem 0.75rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600;" />
                   <button type="button" onclick="openPincodeSearchModal('delivery')" style="width: 100%; font-size: 0.75rem; font-weight: 700; padding: 0.45rem 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.12); color: var(--sky); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
                     🔍 Search All 19,000+ India PIN Codes
                   </button>
@@ -2750,96 +2836,7 @@
                     </tr>
                   </thead>
                   <tbody id="transport-standalone-body">
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Trucking Base Freight" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Fuel Surcharge" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Loading / Unloading" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Tolls & Border Taxes" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <!-- ===== TRANSPORTATION LINE-HAUL METRIC HEADINGS ===== -->
-                    <tr style="background: rgba(56,189,248,0.04);">
-                      <td colspan="5" style="padding: 0.5rem 0.75rem; border-top: 1px dashed rgba(56,189,248,0.25);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <span style="font-size: 0.7rem; font-weight: 900; color: var(--sky); text-transform: uppercase; letter-spacing: 0.08em;">🚛 Line-Haul Routing Metrics</span>
-                          <button type="button" class="btn-admin-action add-transport-metric-btn" onclick="addTransportRow('metric')" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Line-Haul Metric</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Long-Haul Lane Rate" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Multi-Stop Delivery Surcharge" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Detention / Demurrage" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Night Delivery / Time-Slot Premium" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Cross-Border Handling Fee" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
+                    <!-- Rows are added manually by user via the Add Row button -->
                   </tbody>
                 </table>
               </div>
@@ -2880,10 +2877,6 @@
 
       <!-- ==================== WAREHOUSING PANEL ==================== -->
       <div id="warehousing-panel" class="view-panel">
-        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
-            onclick="returnToWorkspace()">← Back to Dashboard</button>
-        </div>
         <div class="calculator-header"
           style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
@@ -2899,6 +2892,27 @@
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
           <div class="glass-card" style="padding: 2rem;">
+            <!-- Customer Name & Currency Row for Warehousing -->
+            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">👤 Customer Name</label>
+                <input type="text" id="warehouse-customer-name" placeholder="Enter customer / company name..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--sky);">💱 Currency</label>
+                <select id="warehouse-header-currency" onchange="syncWarehouseCurrency()" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--t1); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                  <option value="INR" selected>INR - Indian Rupee (₹)</option>
+                  <option value="USD">USD - US Dollar ($)</option>
+                  <option value="EUR">EUR - Euro (€)</option>
+                  <option value="GBP">GBP - British Pound (£)</option>
+                  <option value="AED">AED - UAE Dirham (د.إ)</option>
+                  <option value="SGD">SGD - Singapore Dollar (S$)</option>
+                  <option value="AUD">AUD - Australian Dollar (A$)</option>
+                  <option value="CNY">CNY - Chinese Yuan (¥)</option>
+                </select>
+              </div>
+            </div>
+
             <!-- Warehousing Standalone Breakup Table -->
             <div id="warehouse-path-standalone-container" style="display: block;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
@@ -2913,6 +2927,10 @@
                     <option value="USD">USD - US Dollar ($)</option>
                     <option value="EUR">EUR - Euro (€)</option>
                     <option value="GBP">GBP - British Pound (£)</option>
+                    <option value="AED">AED - UAE Dirham (د.إ)</option>
+                    <option value="SGD">SGD - Singapore Dollar (S$)</option>
+                    <option value="AUD">AUD - Australian Dollar (A$)</option>
+                    <option value="CNY">CNY - Chinese Yuan (¥)</option>
                   </select>
                 </div>
               </div>
@@ -2930,95 +2948,7 @@
                     </tr>
                   </thead>
                   <tbody id="warehouse-standalone-body">
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Space Storage" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Handling In / Out" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Palletization Charges" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Documentation & Admin" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <!-- ===== WAREHOUSING FULFILLMENT METRIC HEADINGS ===== -->
-                    <tr style="background: rgba(56,189,248,0.04);">
-                      <td colspan="6" style="padding: 0.5rem 0.75rem; border-top: 1px dashed rgba(56,189,248,0.25);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <span style="font-size: 0.7rem; font-weight: 900; color: var(--sky); text-transform: uppercase; letter-spacing: 0.08em;">📦 Fulfillment & Value-Added Metrics</span>
-                          <button type="button" class="btn-admin-action add-warehouse-metric-btn" onclick="addWarehouseRow('metric')" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Fulfillment Metric</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Inventory Management Charge" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Cross-Docking / Transshipment" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="Returns / Reverse Logistics" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="chg-name" value="AMS Fee" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
-                      <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-                      <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
-                      <td style="text-align: center;">
-                        <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
-                      </td>
-                    </tr>
+                    <!-- Rows are added manually by user via the Add Row button -->
                   </tbody>
                 </table>
               </div>
@@ -3032,11 +2962,8 @@
               <h3
                 style="font-weight: 800; margin-bottom: 1.25rem; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
                 Pricing Summary</h3>
-              <div id="warehouse-summary-inactive"
-                style="font-size: 0.82rem; color: var(--text-muted); font-style: italic; text-align: center; margin-top: 3rem;">
-                Pathway A (Bundled) is currently active. Fees are integrated alongside the main freight calculations.
-              </div>
-              <div id="warehouse-summary-active" style="display: none; flex-direction: column; gap: 0.75rem;">
+              <div id="warehouse-summary-inactive" style="display: none;"></div>
+              <div id="warehouse-summary-active" style="display: flex; flex-direction: column; gap: 0.75rem;">
                 <div class="result-row">
                   <span class="result-label">Subtotal</span>
                   <span class="result-value" id="res-warehouse-subtotal">₹0.00</span>
@@ -3052,7 +2979,7 @@
                 </div>
               </div>
             </div>
-            <div class="action-buttons" id="warehouse-save-btn-container" style="display: none; margin-top: 1.5rem;">
+            <div class="action-buttons" id="warehouse-save-btn-container" style="display: block; margin-top: 1.5rem;">
               <button class="btn-primary" onclick="saveStandaloneQuote('warehouse')" style="width: 100%;">
                 Save Standalone Quote
               </button>

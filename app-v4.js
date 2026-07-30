@@ -12050,11 +12050,6 @@ function updateAdminModulePermissions() {
 window.updateAdminModulePermissions = updateAdminModulePermissions;
 
 function addTransportRow(type = 'surcharge') {
-  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
-  if (!isAdmin) {
-    alert("Permission Denied: Only Admin can add or delete rows.");
-    return;
-  }
   const tbody = document.getElementById("transport-standalone-body");
   if (!tbody) return;
   const tr = document.createElement("tr");
@@ -12069,28 +12064,17 @@ function addTransportRow(type = 'surcharge') {
     </td>
   `;
   tbody.appendChild(tr);
-  updateAdminModulePermissions();
   calculateTransportation();
 }
 window.addTransportRow = addTransportRow;
 
 function removeTransportRow(btn) {
-  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
-  if (!isAdmin) {
-    alert("Permission Denied: Only Admin can add or delete rows.");
-    return;
-  }
   btn.closest("tr").remove();
   calculateTransportation();
 }
 window.removeTransportRow = removeTransportRow;
 
 function addWarehouseRow(type = 'surcharge') {
-  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
-  if (!isAdmin) {
-    alert("Permission Denied: Only Admin can add or delete rows.");
-    return;
-  }
   const tbody = document.getElementById("warehouse-standalone-body");
   if (!tbody) return;
   const tr = document.createElement("tr");
@@ -12106,21 +12090,37 @@ function addWarehouseRow(type = 'surcharge') {
     </td>
   `;
   tbody.appendChild(tr);
-  updateAdminModulePermissions();
   calculateWarehousing();
 }
 window.addWarehouseRow = addWarehouseRow;
 
 function removeWarehouseRow(btn) {
-  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
-  if (!isAdmin) {
-    alert("Permission Denied: Only Admin can add or delete rows.");
-    return;
-  }
   btn.closest("tr").remove();
   calculateWarehousing();
 }
 window.removeWarehouseRow = removeWarehouseRow;
+
+// Sync the header currency dropdown with the table-level currency selector (Transport)
+function syncTransportCurrency() {
+  const headerSel = document.getElementById('transport-header-currency');
+  const tableSel = document.getElementById('transport-currency');
+  if (headerSel && tableSel) {
+    tableSel.value = headerSel.value;
+    calculateTransportation();
+  }
+}
+window.syncTransportCurrency = syncTransportCurrency;
+
+// Sync the header currency dropdown with the table-level currency selector (Warehouse)
+function syncWarehouseCurrency() {
+  const headerSel = document.getElementById('warehouse-header-currency');
+  const tableSel = document.getElementById('warehouse-currency');
+  if (headerSel && tableSel) {
+    tableSel.value = headerSel.value;
+    calculateWarehousing();
+  }
+}
+window.syncWarehouseCurrency = syncWarehouseCurrency;
 
 function calculateTransportation() {
   const tbody = document.getElementById("transport-standalone-body");
@@ -12151,13 +12151,13 @@ function calculateWarehousing() {
       subtotal += parseFloat(input.value) || 0;
     });
   }
-  
+
   const tax = subtotal * 0.18;
   const total = subtotal + tax;
-  
+
   const cur = document.getElementById("warehouse-currency")?.value || 'INR';
-  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
-  
+  const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : (cur === 'GBP' ? '£' : (cur === 'AED' ? 'د.إ' : (cur === 'SGD' ? 'S$' : (cur === 'AUD' ? 'A$' : '¥'))))));
+
   if (document.getElementById("res-warehouse-subtotal")) document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
   if (document.getElementById("res-warehouse-tax")) document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
   if (document.getElementById("res-warehouse-total")) document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -12175,8 +12175,14 @@ function saveStandaloneQuote(module) {
   const tax = parseFloat(document.getElementById(`res-${module}-tax`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
   const total = parseFloat(document.getElementById(`res-${module}-total`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
 
-  const customerName = prompt("Please enter Customer Name for this standalone quote:", "Walk-in Customer");
-  if (!customerName) return;
+  // Read customer name from the dedicated input field (no blocking prompt needed)
+  const customerNameField = document.getElementById(`${module}-customer-name`);
+  let customerName = (customerNameField?.value || '').trim();
+  if (!customerName) {
+    // Fallback prompt if the field is somehow missing
+    customerName = prompt("Please enter Customer Name for this standalone quote:", "Walk-in Customer");
+    if (!customerName) return;
+  }
 
   const rateInr = convertToInr(total, cur);
 
@@ -12184,17 +12190,24 @@ function saveStandaloneQuote(module) {
   let routingInfo = `${module.toUpperCase()} Standalone Services`;
   let pickupPin = "";
   let deliveryPin = "";
+  let pickupCity = "";
+  let deliveryCity = "";
 
   if (module === 'transport') {
     modeTitle = "Transportation";
     pickupPin = document.getElementById("transport-pickup-pin")?.value || "";
     deliveryPin = document.getElementById("transport-delivery-pin")?.value || "";
-    routingInfo = `Pickup PIN ${pickupPin} ➔ Delivery PIN ${deliveryPin}`;
+    pickupCity = document.getElementById("transport-pickup-city")?.value || "";
+    deliveryCity = document.getElementById("transport-delivery-city")?.value || "";
+    const from = pickupCity || pickupPin;
+    const to = deliveryCity || deliveryPin;
+    routingInfo = `${from} ➤ ${to}`;
   } else if (module === 'warehouse') {
     modeTitle = "Warehouse";
     routingInfo = `Warehousing Storage & Operations`;
   }
 
+  // Collect line items
   const items = [];
   if (module === 'transport') {
     const tbody = document.getElementById("transport-standalone-body");
@@ -12236,22 +12249,12 @@ function saveStandaloneQuote(module) {
     }
   }
 
+  // Validation: at least one row required
   if (items.length === 0) {
-    alert("❌ Please add at least one charge to save the quotation.");
+    alert("❌ Please add at least one charge row to save the quotation.");
     return;
   }
-
-  let hasPricing = true;
-  items.forEach(item => {
-    if (item.rate <= 0 && item.buyRate <= 0) {
-      hasPricing = false;
-    }
-  });
-
-  if (!hasPricing) {
-    alert("❌ Please enter either a Sell Rate or a Buy Rate for all charges.");
-    return;
-  }
+  // Note: Users can save with either Sell Rate or Buy Rate (or both) — no dual-rate requirement.
 
   const quoteData = {
     id: 'Q' + Math.random().toString(36).substr(2, 9),
@@ -12274,7 +12277,9 @@ function saveStandaloneQuote(module) {
       routing: routingInfo,
       items: items,
       pickupPin: pickupPin,
-      deliveryPin: deliveryPin
+      pickupCity: pickupCity,
+      deliveryPin: deliveryPin,
+      deliveryCity: deliveryCity
     },
     notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
   };
@@ -12288,7 +12293,7 @@ function saveStandaloneQuote(module) {
       quoteData.creator = originalQuote.creator;
       quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
       quoteData.amendmentAllowed = false; // Lock it back!
-      
+
       appState.editingQuoteId = null; // Clear edit mode
       DB.saveQuote(quoteData);
       alert(`${modeTitle} Standalone Quotation amended and locked successfully!`);
