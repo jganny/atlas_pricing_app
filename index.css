@@ -5,47 +5,47 @@
    Premium Light Theme ("Glass Bubble" aesthetic)
 ══════════════════════════════════════════════════ */
 :root {
-  /* Base palette */
-  --bg-void:      #eff3f8; /* Soft blue-gray liquid base */
-  --bg-deep:      #e2ebf3; /* Structured layout background */
-  --bg-surface:   rgba(255, 255, 255, 0.7); /* Frosted liquid glass card base */
-  --bg-elevated:  rgba(255, 255, 255, 0.8); /* Elevated frosted container */
-  --bg-input:     rgba(255, 255, 255, 0.7); /* Translucent input canvas */
-  --bg-input-focus: rgba(255, 255, 255, 0.9);
+  /* Base palette - Modern clean enterprise */
+  --bg-void:      #f8fafc; /* Very light slate grey */
+  --bg-deep:      #f1f5f9; /* Structured layout background */
+  --bg-surface:   #ffffff; /* Solid, crisp white card base */
+  --bg-elevated:  #ffffff; /* Elevated container */
+  --bg-input:     #ffffff; /* Input background */
+  --bg-input-focus: #ffffff;
 
-  /* Borders (Ultra clean glass border lines) */
-  --border-1: rgba(255, 255, 255, 0.5); /* Soft white reflecting border edge */
-  --border-2: rgba(27, 28, 92, 0.07); /* Standard dividing lines */
-  --border-3: rgba(27, 28, 92, 0.2); /* Hover border highlights */
+  /* Borders (Ultra clean, neutral slate lines) */
+  --border-1: rgba(226, 232, 240, 0.8); /* Soft white/light-grey border edge */
+  --border-2: rgba(226, 232, 240, 0.5); /* Standard dividing lines */
+  --border-3: rgba(148, 163, 184, 0.3); /* Hover border highlights */
 
-  /* Text */
-  --t1: #000000; /* Deep Slate Charcoal (darker than pure black, looks cleaner) */
-  --t2: #000000; /* Slate-800 dark gray/black */
-  --t3: #000000; /* Slate-600 */
+  /* Text - Deep Slate Charcoal */
+  --t1: #1e293b; /* Slate-800 primary text */
+  --t2: #475569; /* Slate-600 secondary text */
+  --t3: #64748b; /* Slate-500 muted text */
 
-  /* Accents */
-  --sky:    #1b1c5c; /* Deep Corporate Navy Blue from Atlas Logo */
-  --sky-g:  rgba(27, 28, 92, 0.08);
-  --sky-glow: 0 4px 20px rgba(27, 28, 92, 0.15);
+  /* Accents - Refined brand colors */
+  --sky:    #1b1c5c; /* Deep Corporate Navy Blue */
+  --sky-g:  rgba(27, 28, 92, 0.05);
+  --sky-glow: 0 4px 12px rgba(27, 28, 92, 0.05);
 
-  --indigo:   #2f3193; /* Royal Blue from Atlas Logo */
-  --indigo-g: rgba(47, 49, 147, 0.08);
+  --indigo:   #2f3193; /* Royal Blue */
+  --indigo-g: rgba(47, 49, 147, 0.05);
 
-  --violet:   #7c3aed;
-  --violet-g: rgba(124, 58, 237, 0.08);
+  --violet:   #6d28d9;
+  --violet-g: rgba(109, 40, 217, 0.05);
 
-  --teal:     #0d9488;
-  --teal-g:   rgba(13, 148, 136, 0.08);
-  --teal-glow: 0 4px 20px rgba(13, 148, 136, 0.1);
+  --teal:     #0f766e;
+  --teal-g:   rgba(15, 118, 110, 0.05);
+  --teal-glow: 0 4px 12px rgba(15, 118, 110, 0.05);
 
-  --green:    #15803d; /* Elegant Forest Green */
-  --green-g:  rgba(21, 128, 61, 0.08);
+  --green:    #166534; /* Muted Green */
+  --green-g:  rgba(22, 101, 52, 0.05);
 
-  --amber:    #b45309; /* Elegant Golden Bronze */
-  --amber-g:  rgba(180, 83, 9, 0.08);
+  --amber:    #9a3412; /* Muted Amber */
+  --amber-g:  rgba(154, 52, 18, 0.05);
 
-  --rose:     #be123c; /* Elegant Crimson Red */
-  --rose-g:   rgba(190, 18, 60, 0.08);
+  --rose:     #991b1b; /* Muted Rose */
+  --rose-g:   rgba(153, 27, 27, 0.05);
 
   /* Semantic */
   --accent:      var(--sky);
@@ -79,51 +79,51 @@
   --r-xl: 22px;
   --r-pill: 999px;
 
-  /* Shadows (Liquid Glass reflection shadows) */
-  --shadow-sm:  0 2px 6px rgba(27, 28, 92, 0.01), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  --shadow-md:  0 8px 32px 0 rgba(31, 38, 135, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  --shadow-lg:  0 12px 40px 0 rgba(31, 38, 135, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  --shadow-xl:  0 20px 50px 0 rgba(31, 38, 135, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  /* Shadows - Clean slate shadow-casting */
+  --shadow-sm:  0 1px 3px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --shadow-md:  0 4px 18px 0 rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --shadow-lg:  0 10px 30px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-xl:  0 20px 40px 0 rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
   /* Custom Brand Accent */
-  --text-brand: #000000;
+  --text-brand: var(--t1);
   --brand-gold: #eab308;
 
-  /* ── Neumorphism / Soft UI Tokens ────────────────── */
-  --neumorph-bg:     #e8eef5;           /* Base soft surface colour          */
-  --neumorph-raised: 6px 6px 14px rgba(163,177,198,0.55), -6px -6px 14px rgba(255,255,255,0.82);
-  --neumorph-inset:  inset 4px 4px 10px rgba(163,177,198,0.45), inset -4px -4px 10px rgba(255,255,255,0.75);
-  --neumorph-flat:   3px 3px 8px rgba(163,177,198,0.4), -3px -3px 8px rgba(255,255,255,0.7);
-  --neumorph-hover:  8px 8px 18px rgba(163,177,198,0.6), -8px -8px 18px rgba(255,255,255,0.88);
-  --neumorph-active: inset 2px 2px 6px rgba(163,177,198,0.5), inset -2px -2px 6px rgba(255,255,255,0.65);
+  /* Neumorphic UI Tokens - Clean light grey shadows */
+  --neumorph-bg:     #f1f5f9;
+  --neumorph-raised: 4px 4px 10px rgba(148, 163, 184, 0.12), -4px -4px 10px rgba(255, 255, 255, 0.9);
+  --neumorph-inset:  inset 3px 3px 6px rgba(148, 163, 184, 0.1), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+  --neumorph-flat:   2px 2px 6px rgba(148, 163, 184, 0.08), -2px -2px 6px rgba(255, 255, 255, 0.8);
+  --neumorph-hover:  6px 6px 14px rgba(148, 163, 184, 0.18), -6px -6px 14px rgba(255, 255, 255, 0.95);
+  --neumorph-active: inset 1px 1px 4px rgba(148, 163, 184, 0.12), inset -1px -1px 4px rgba(255, 255, 255, 0.7);
 
-  /* ── Atlassian Enterprise Status Tag Tokens ─────── */
-  --atl-green-bg:   rgba(21, 128, 61, 0.09);
-  --atl-green-bdr:  rgba(21, 128, 61, 0.28);
-  --atl-green-text: #000000;
-  --atl-amber-bg:   rgba(180, 83, 9, 0.09);
-  --atl-amber-bdr:  rgba(180, 83, 9, 0.28);
-  --atl-amber-text: #000000;
-  --atl-rose-bg:    rgba(190, 18, 60, 0.09);
-  --atl-rose-bdr:   rgba(190, 18, 60, 0.28);
-  --atl-rose-text:  #000000;
-  --atl-sky-bg:     rgba(27, 28, 92, 0.07);
-  --atl-sky-bdr:    rgba(27, 28, 92, 0.2);
-  --atl-sky-text:   #000000;
-  --atl-violet-bg:  rgba(124, 58, 237, 0.07);
-  --atl-violet-bdr: rgba(124, 58, 237, 0.22);
-  --atl-violet-text:#000000;
-  --atl-teal-bg:    rgba(13, 148, 136, 0.07);
-  --atl-teal-bdr:   rgba(13, 148, 136, 0.22);
-  --atl-teal-text:  #000000;
+  /* Atlassian Enterprise Status Tag Tokens */
+  --atl-green-bg:   #f0fdf4;
+  --atl-green-bdr:  #bbf7d0;
+  --atl-green-text: #166534;
+  --atl-amber-bg:   #fff7ed;
+  --atl-amber-bdr:  #fed7aa;
+  --atl-amber-text: #9a3412;
+  --atl-rose-bg:    #fef2f2;
+  --atl-rose-bdr:   #fecaca;
+  --atl-rose-text:  #991b1b;
+  --atl-sky-bg:     #f0f9ff;
+  --atl-sky-bdr:    #bae6fd;
+  --atl-sky-text:   #075985;
+  --atl-violet-bg:  #faf5ff;
+  --atl-violet-bdr: #e9d5ff;
+  --atl-violet-text:#6b21a8;
+  --atl-teal-bg:    #f0fdfa;
+  --atl-teal-bdr:   #ccfbf1;
+  --atl-teal-text:  #115e59;
 
-  /* ── iOS PWA Safe Area Tokens ───────────────────── */
+  /* iOS PWA Safe Area Tokens */
   --safe-top:    env(safe-area-inset-top,    0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left:   env(safe-area-inset-left,   0px);
   --safe-right:  env(safe-area-inset-right,  0px);
 
-  /* ── Fluid Spacing (clamp-based) ────────────────── */
+  /* Fluid Spacing (clamp-based) */
   --space-xs:  clamp(4px,  0.5vw,  8px);
   --space-sm:  clamp(8px,  1vw,   12px);
   --space-md:  clamp(12px, 1.5vw, 20px);
@@ -131,7 +131,7 @@
   --space-xl:  clamp(24px, 3vw,   40px);
   --space-2xl: clamp(32px, 4vw,   56px);
 
-  /* ── Bento Grid Tokens ──────────────────────────── */
+  /* Bento Grid Tokens */
   --bento-gap:    clamp(10px, 1.5vw, 20px);
   --bento-radius: clamp(12px, 1.5vw, 20px);
   --bento-pad:    clamp(14px, 2vw,   24px);
@@ -182,7 +182,7 @@ html, body {
 
 body {
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  background: linear-gradient(135deg, #f0f4f8 0%, #e5edf5 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
   background-attachment: fixed;
   color: var(--t1);
   min-height: 100vh;
