@@ -19,9 +19,9 @@
   --border-3: rgba(27, 28, 92, 0.2); /* Hover border highlights */
 
   /* Text */
-  --t1: #0b0f19; /* Deep Slate Charcoal (darker than pure black, looks cleaner) */
-  --t2: #1e293b; /* Slate-800 dark gray/black */
-  --t3: #475569; /* Slate-600 */
+  --t1: #000000; /* Deep Slate Charcoal (darker than pure black, looks cleaner) */
+  --t2: #000000; /* Slate-800 dark gray/black */
+  --t3: #000000; /* Slate-600 */
 
   /* Accents */
   --sky:    #1b1c5c; /* Deep Corporate Navy Blue from Atlas Logo */
@@ -86,7 +86,7 @@
   --shadow-xl:  0 20px 50px 0 rgba(31, 38, 135, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 
   /* Custom Brand Accent */
-  --text-brand: #0f172a;
+  --text-brand: #000000;
   --brand-gold: #eab308;
 
   /* ── Neumorphism / Soft UI Tokens ────────────────── */
@@ -100,22 +100,22 @@
   /* ── Atlassian Enterprise Status Tag Tokens ─────── */
   --atl-green-bg:   rgba(21, 128, 61, 0.09);
   --atl-green-bdr:  rgba(21, 128, 61, 0.28);
-  --atl-green-text: #15803d;
+  --atl-green-text: #000000;
   --atl-amber-bg:   rgba(180, 83, 9, 0.09);
   --atl-amber-bdr:  rgba(180, 83, 9, 0.28);
-  --atl-amber-text: #b45309;
+  --atl-amber-text: #000000;
   --atl-rose-bg:    rgba(190, 18, 60, 0.09);
   --atl-rose-bdr:   rgba(190, 18, 60, 0.28);
-  --atl-rose-text:  #be123c;
+  --atl-rose-text:  #000000;
   --atl-sky-bg:     rgba(27, 28, 92, 0.07);
   --atl-sky-bdr:    rgba(27, 28, 92, 0.2);
-  --atl-sky-text:   #1b1c5c;
+  --atl-sky-text:   #000000;
   --atl-violet-bg:  rgba(124, 58, 237, 0.07);
   --atl-violet-bdr: rgba(124, 58, 237, 0.22);
-  --atl-violet-text:#7c3aed;
+  --atl-violet-text:#000000;
   --atl-teal-bg:    rgba(13, 148, 136, 0.07);
   --atl-teal-bdr:   rgba(13, 148, 136, 0.22);
-  --atl-teal-text:  #0d9488;
+  --atl-teal-text:  #000000;
 
   /* ── iOS PWA Safe Area Tokens ───────────────────── */
   --safe-top:    env(safe-area-inset-top,    0px);
@@ -2910,5 +2910,20 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
 .btn-back-dashboard:active {
   transform: translateY(0) scale(0.98) !important;
 }
+
+/* ══════════════════════════════════════════════════
+   GLOBAL OVERRIDES FOR BLACK TEXT COLOR (#000000)
+══════════════════════════════════════════════════ */
+*, *::before, *::after, 
+input, select, textarea, button, p, span, h1, h2, h3, h4, h5, h6, a, td, th, div, label, li, option, strong, em, b, i {
+  color: #000000 !important;
+}
+
+/* Ensure placeholder texts are also fully black */
+input::placeholder, textarea::placeholder {
+  color: #000000 !important;
+  opacity: 0.7 !important;
+}
+
 
 
