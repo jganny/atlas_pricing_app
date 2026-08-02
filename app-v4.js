@@ -94,8 +94,11 @@ function isUserAdminOrManager() {
   const currentUser = appState.currentUser.toLowerCase();
   const currentRole = (getActiveRole() || "").toLowerCase();
   
-  const isAdmin = currentUser === 'ganny' || (TEAM_ROLES[currentUser] && TEAM_ROLES[currentUser].type === 'admin');
-  const isManager = currentUser === 'manager' || currentRole === 'manager';
+  const userRoleInfo = TEAM_ROLES[currentUser];
+  const userType = userRoleInfo ? (userRoleInfo.type || userRoleInfo.role || "").toLowerCase() : "";
+
+  const isAdmin = userType === 'admin';
+  const isManager = currentRole === 'manager' || userType === 'manager';
   
   return !!(isAdmin || isManager);
 }
