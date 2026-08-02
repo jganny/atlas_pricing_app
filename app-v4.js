@@ -89,6 +89,35 @@ function isAdminUser(user) {
 }
 window.isAdminUser = isAdminUser;
 
+function isUserAdminOrManager() {
+  if (!appState.currentUser) return false;
+  const currentUser = appState.currentUser.toLowerCase();
+  const currentRole = (getActiveRole() || "").toLowerCase();
+  
+  const isAdmin = currentUser === 'ganny' || (TEAM_ROLES[currentUser] && TEAM_ROLES[currentUser].type === 'admin');
+  const isManager = currentUser === 'manager' || currentRole === 'manager';
+  
+  return !!(isAdmin || isManager);
+}
+window.isUserAdminOrManager = isUserAdminOrManager;
+
+function updateExecutiveDashboardVisibility() {
+  const execPanel = document.getElementById("executive-dashboard-panel");
+  if (execPanel) {
+    if (isUserAdminOrManager()) {
+      execPanel.style.display = "";
+    } else {
+      execPanel.style.display = "none";
+      if (execPanel.classList.contains("active")) {
+        execPanel.classList.remove("active");
+        goHome();
+      }
+    }
+  }
+}
+window.updateExecutiveDashboardVisibility = updateExecutiveDashboardVisibility;
+
+
 function isEligibleDeskUser(creator = null) {
   const roleId = creator || getActiveRole();
   const role = TEAM_ROLES[roleId];
@@ -386,6 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSavedQuotes();
   loadMemorizedSurcharges();
   checkSession();
+  updateExecutiveDashboardVisibility();
   fetchExchangeRates();
 
   // Modal handlers
@@ -647,6 +677,10 @@ function loginSuccess(roleId) {
 
   const root = document.documentElement;
   const execDashBtn = document.getElementById("executive-dashboard-btn");
+
+  // Update visibility of executive dashboard panel first
+  updateExecutiveDashboardVisibility();
+
   if (isAdminUser(roleIdLower)) {
     document.getElementById("admin-settings-btn").style.display = "flex";
     document.getElementById("admin-role-selector").style.display = "flex";
@@ -657,8 +691,18 @@ function loginSuccess(roleId) {
   } else {
     document.getElementById("admin-settings-btn").style.display = "none";
     document.getElementById("admin-role-selector").style.display = "none";
-    if (execDashBtn) execDashBtn.style.display = "none";
-    if (roleIdLower.startsWith('air')) {
+    
+    // Manage button visibility based on isUserAdminOrManager check
+    if (isUserAdminOrManager()) {
+      if (execDashBtn) execDashBtn.style.display = "flex";
+    } else {
+      if (execDashBtn) execDashBtn.style.display = "none";
+    }
+    
+    if (roleIdLower === 'manager') {
+      root.style.setProperty('--accent-current', 'var(--sky)');
+      root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
+    } else if (roleIdLower.startsWith('air')) {
       root.style.setProperty('--accent-current', 'var(--accent-air)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
     } else {
@@ -673,13 +717,14 @@ function logoutUser() {
   document.documentElement.classList.remove("nrs-font-scale");
   const execDashBtn = document.getElementById("executive-dashboard-btn");
   if (execDashBtn) execDashBtn.style.display = "none";
+  appState.currentUser = null;
+  updateExecutiveDashboardVisibility();
   if (DB.isCloud) {
     firebase.auth().signOut().catch(err => {
       console.error("Auth: Sign out failed:", err);
     });
   } else {
     sessionStorage.removeItem("gl_pricing_session");
-    appState.currentUser = null;
     document.body.classList.add("logged-out-blur");
     document.getElementById("login-overlay").style.display = "flex";
     document.getElementById("app-workspace").style.display = "flex";
@@ -812,6 +857,12 @@ function switchRole(role) {
   if (!role) return;
   const roleLower = role.toLowerCase();
 
+  // Guard: prevent non-admins/non-managers from switching to administrative roles
+  if ((roleLower === 'manager' || roleLower === 'ganny') && !isUserAdminOrManager()) {
+    console.warn("Permission denied: cannot switch to admin/manager role.");
+    return;
+  }
+
   // Update Active Class on Buttons (if visible)
   document.querySelectorAll(".role-btn").forEach(btn => {
     const btnRole = btn.getAttribute("data-role");
@@ -862,6 +913,9 @@ function switchRole(role) {
     document.getElementById("member-dashboard-panel").classList.add("active");
     renderMemberDashboard(roleLower);
   }
+
+  // Update visibility of executive dashboard panel
+  updateExecutiveDashboardVisibility();
 }
 
 function goHome() {
@@ -4710,6 +4764,12 @@ window.deleteNrsAlert = deleteNrsAlert;
 
 // EXECUTIVE COMMAND CENTER DASHBOARD
 function showExecutiveDashboard() {
+  if (!isUserAdminOrManager()) {
+    console.warn("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
+    alert("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
+    goHome();
+    return;
+  }
   document.querySelectorAll(".view-panel").forEach(panel => {
     panel.classList.remove("active");
   });
@@ -9908,6 +9968,7 @@ const DB = {
             if (execDashBtn) execDashBtn.style.display = "none";
             sessionStorage.removeItem("gl_pricing_session");
             appState.currentUser = null;
+            updateExecutiveDashboardVisibility();
             document.body.classList.add("logged-out-blur");
             document.getElementById("login-overlay").style.display = "flex";
             document.getElementById("app-workspace").style.display = "flex";
