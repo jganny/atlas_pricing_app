@@ -646,15 +646,18 @@ function loginSuccess(roleId) {
   }
 
   const root = document.documentElement;
+  const execDashBtn = document.getElementById("executive-dashboard-btn");
   if (isAdminUser(roleIdLower)) {
     document.getElementById("admin-settings-btn").style.display = "flex";
     document.getElementById("admin-role-selector").style.display = "flex";
+    if (execDashBtn) execDashBtn.style.display = "flex";
     root.style.setProperty('--accent-current', 'var(--sky)');
     root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
     switchRole('manager');
   } else {
     document.getElementById("admin-settings-btn").style.display = "none";
     document.getElementById("admin-role-selector").style.display = "none";
+    if (execDashBtn) execDashBtn.style.display = "none";
     if (roleIdLower.startsWith('air')) {
       root.style.setProperty('--accent-current', 'var(--accent-air)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
@@ -668,6 +671,8 @@ function loginSuccess(roleId) {
 
 function logoutUser() {
   document.documentElement.classList.remove("nrs-font-scale");
+  const execDashBtn = document.getElementById("executive-dashboard-btn");
+  if (execDashBtn) execDashBtn.style.display = "none";
   if (DB.isCloud) {
     firebase.auth().signOut().catch(err => {
       console.error("Auth: Sign out failed:", err);
@@ -4703,8 +4708,149 @@ function deleteNrsAlert(alertId) {
 }
 window.deleteNrsAlert = deleteNrsAlert;
 
+// EXECUTIVE COMMAND CENTER DASHBOARD
+function showExecutiveDashboard() {
+  document.querySelectorAll(".view-panel").forEach(panel => {
+    panel.classList.remove("active");
+  });
+  const execPanel = document.getElementById("executive-dashboard-panel");
+  if (execPanel) {
+    execPanel.classList.add("active");
+  }
+  renderExecutiveDashboard();
+}
+window.showExecutiveDashboard = showExecutiveDashboard;
+
+function renderExecutiveDashboard() {
+  // 1. Fetch data
+  const quotes = appState.quotes || [];
+  
+  // 2. Executive KPI Cards Calculations
+  const totalQuotes = quotes.length;
+  const convertedQuotes = quotes.filter(q => q.status === 'converted').length;
+  const conversionPct = totalQuotes > 0 ? (convertedQuotes / totalQuotes * 100) : 0;
+  const totalGP = quotes.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
+
+  // Update KPI Cards UI
+  document.getElementById("exec-kpi-total-quotes").textContent = totalQuotes;
+  document.getElementById("exec-kpi-converted-quotes").textContent = convertedQuotes;
+  document.getElementById("exec-kpi-conversion-pct").textContent = `${conversionPct.toFixed(1)}%`;
+  document.getElementById("exec-kpi-total-gp").textContent = `₹${totalGP.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
+  // 3. Quote Pipeline Status Counts
+  const pipeQuoted = quotes.filter(q => q.status === 'quoted').length;
+  const pipeConverted = convertedQuotes;
+  const pipeLost = quotes.filter(q => q.status === 'lost').length;
+  const pipeCancelled = quotes.filter(q => q.status === 'cancelled').length;
+
+  document.getElementById("exec-pipe-quoted").textContent = pipeQuoted;
+  document.getElementById("exec-pipe-converted").textContent = pipeConverted;
+  document.getElementById("exec-pipe-lost").textContent = pipeLost;
+  document.getElementById("exec-pipe-cancelled").textContent = pipeCancelled;
+
+  // 4. Customer Compliance Control Summary
+  let controls = window._customerControls || {};
+  if (Object.keys(controls).length === 0) {
+    try {
+      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
+    } catch(e) {}
+  }
+  
+  const blockedCusts = [];
+  const pendingCusts = [];
+  
+  Object.values(controls).forEach(c => {
+    if (c.blocked) {
+      blockedCusts.push(c.customer);
+    }
+    if (!c.hasAgreement && !c.waiveAgreement) {
+      pendingCusts.push(c.customer);
+    }
+  });
+
+  document.getElementById("exec-blocked-cust-count").textContent = blockedCusts.length;
+  document.getElementById("exec-blocked-cust-list").textContent = blockedCusts.length > 0 ? blockedCusts.join(", ") : "None currently";
+  
+  document.getElementById("exec-pending-cust-count").textContent = pendingCusts.length;
+  document.getElementById("exec-pending-cust-list").textContent = pendingCusts.length > 0 ? pendingCusts.join(", ") : "None currently";
+
+  // 5. Pricing Team Leaderboard Performance
+  const leadBody = document.getElementById("exec-leaderboard-body");
+  if (leadBody) {
+    leadBody.innerHTML = "";
+    
+    const desks = Object.keys(TEAM_ROLES).filter(roleId => {
+      if (roleId === 'ganny' || roleId === 'manager') return false;
+      return true;
+    });
+
+    desks.forEach(deskId => {
+      const deskIdLower = deskId.toLowerCase();
+      const deskQuotes = quotes.filter(q => q.creator && q.creator.toLowerCase() === deskIdLower);
+      const deskQuotesCount = deskQuotes.length;
+      const deskConversions = deskQuotes.filter(q => q.status === 'converted').length;
+      const deskRate = deskQuotesCount > 0 ? (deskConversions / deskQuotesCount * 100) : 0;
+      const deskGP = deskQuotes.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
+      
+      const tr = document.createElement("tr");
+      const name = (TEAM_ROLES[deskIdLower]?.name || deskIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
+      
+      tr.innerHTML = `
+        <td><strong>${name}</strong></td>
+        <td>${deskQuotesCount}</td>
+        <td>${deskConversions}</td>
+        <td>
+          <span style="font-weight:700; color: ${deskRate >= 40 ? 'var(--accent-success)' : (deskRate >= 25 ? 'var(--accent-warning)' : 'var(--accent-error)')};">
+            ${deskRate.toFixed(1)}%
+          </span>
+        </td>
+        <td>₹${deskGP.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+      `;
+      leadBody.appendChild(tr);
+    });
+  }
+
+  // 6. Recent Quote Activity
+  const recentBody = document.getElementById("exec-recent-quotes-body");
+  if (recentBody) {
+    recentBody.innerHTML = "";
+    
+    // Sort quotes descending (newest first, based on index or date string)
+    const sortedQuotes = [...quotes].reverse().slice(0, 10);
+    
+    if (sortedQuotes.length === 0) {
+      recentBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No quotations recorded yet.</td></tr>`;
+    } else {
+      sortedQuotes.forEach(q => {
+        const tr = document.createElement("tr");
+        const statusText = q.status === 'quoted' ? 'Quoted' : (q.status === 'converted' ? 'Converted' : (q.status === 'cancelled' ? 'Cancelled' : 'Lost'));
+        const creatorName = (TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || "").replace(/\s*\(Free\s*Hand\)/i, "");
+        const formattedAmount = q.amountINR ? `₹${q.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : `₹0`;
+        
+        tr.innerHTML = `
+          <td>${q.date || "-"}</td>
+          <td><strong>${q.customer || "-"}</strong></td>
+          <td>${creatorName}</td>
+          <td>
+            <span class="status-badge ${q.status}" style="font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block;">
+              ${statusText}
+            </span>
+          </td>
+          <td><strong>${formattedAmount}</strong></td>
+        `;
+        recentBody.appendChild(tr);
+      });
+    }
+  }
+}
+window.renderExecutiveDashboard = renderExecutiveDashboard;
+
 // ADMIN DASHBOARD RENDERING
 function renderAdminDashboard() {
+  const execPanel = document.getElementById("executive-dashboard-panel");
+  if (execPanel && execPanel.classList.contains("active")) {
+    renderExecutiveDashboard();
+  }
   renderControlTowerFeed();
   renderNrsRegistry();
   // Auto-collapse directory on first admin load
@@ -9758,6 +9904,8 @@ const DB = {
           } else {
             console.log("Auth: user logged out");
             document.documentElement.classList.remove("nrs-font-scale");
+            const execDashBtn = document.getElementById("executive-dashboard-btn");
+            if (execDashBtn) execDashBtn.style.display = "none";
             sessionStorage.removeItem("gl_pricing_session");
             appState.currentUser = null;
             document.body.classList.add("logged-out-blur");
