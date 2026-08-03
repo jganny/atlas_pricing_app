@@ -647,7 +647,7 @@ async function handleLogin(e) {
 }
 
 function loginSuccess(roleId) {
-  const roleInfo = TEAM_ROLES[roleIdLower] || { name: roleIdLower, type: 'member' };
+  const userRoleInfo = TEAM_ROLES[roleIdLower] || { name: roleIdLower, type: 'member' };
   // Emergency fallback: register Firebase users into TEAM_ROLES
   if (!TEAM_ROLES[roleIdLower]) {
     TEAM_ROLES[roleIdLower] = {
@@ -672,8 +672,8 @@ function loginSuccess(roleId) {
   // Apply custom names to badge UI & dropdowns
   applyDeskNames();
 
-  const roleInfo = TEAM_ROLES[roleIdLower] || { name: roleIdLower, type: 'member' };
-  const displayName = (roleInfo.name || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
+  const userRoleInfo = TEAM_ROLES[roleIdLower] || { name: roleIdLower, type: 'member' };
+  const displayName = (userRoleInfo.name || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
   const activeUserNameEl = document.getElementById("active-user-name");
   if (activeUserNameEl) {
     activeUserNameEl.textContent = displayName;
