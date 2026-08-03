@@ -91,8 +91,14 @@ window.isAdminUser = isAdminUser;
 
 function isUserAdminOrManager() {
   if (!appState.currentUser) return false;
+
   const currentUser = appState.currentUser.toLowerCase();
-  return currentUser === 'ganny';
+
+  return (
+    currentUser === 'ganny' ||
+    (TEAM_ROLES[currentUser] &&
+      TEAM_ROLES[currentUser].type === 'admin')
+  );
 }
 window.isUserAdminOrManager = isUserAdminOrManager;
 
@@ -649,6 +655,7 @@ async function handleLogin(e) {
 function loginSuccess(roleId) {
 
   const roleIdLower = roleId.toLowerCase();
+  appState.currentUser = roleIdLower; // CRITICAL: must be set first — all permission checks depend on this
 
   // Emergency fallback for Firebase users
   if (!TEAM_ROLES[roleIdLower]) {
@@ -10224,9 +10231,6 @@ const DB = {
             loginSuccess(username);
             updateExecutiveDashboardVisibility();
 
-            if (username === "ganny") {
-              showExecutiveDashboard();
-            }
           } else {
             console.log("Auth: user logged out");
             document.documentElement.classList.remove("nrs-font-scale");
