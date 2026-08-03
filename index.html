@@ -405,6 +405,108 @@
                 <!-- Populated dynamically -->
               </tbody>
             </table>
+        </div>
+        
+        <!-- Phase 3A: Advanced Business Intelligence Suite -->
+        <div style="margin-top: 2rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 2rem;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--sky); margin: 0 0 1.5rem 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+            EXECUTIVE INTELLIGENCE SUITE
+          </h2>
+
+          <!-- Row 1: Charts (Revenue/Profit & Conversion Trends) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <!-- Revenue & Gross Profit Trends -->
+            <div class="exec-section-card">
+              <h3 style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+                Revenue & Profitability Trends
+              </h3>
+              <div id="exec-revenue-trend-chart" style="height: 220px; display: flex; align-items: center; justify-content: center;">
+                <!-- Dynamically populated SVG -->
+              </div>
+            </div>
+
+            <!-- Quote Conversion & Win/Loss Trends -->
+            <div class="exec-section-card">
+              <h3 style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+                Quote Conversion & Win/Loss Dynamics
+              </h3>
+              <div id="exec-conversion-trend-chart" style="height: 220px; display: flex; align-items: center; justify-content: center;">
+                <!-- Dynamically populated SVG -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Customer Concentration & Route/Trade Lane Performance -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <!-- Customer Concentration -->
+            <div class="exec-section-card">
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+                Customer Concentration (Top Contributors)
+              </h3>
+              <div style="width: 100%; overflow-x: auto;">
+                <table class="exec-table">
+                  <thead>
+                    <tr>
+                      <th>Customer Name</th>
+                      <th>Revenue (INR)</th>
+                      <th>Gross Profit (INR)</th>
+                      <th>Quotes Count</th>
+                    </tr>
+                  </thead>
+                  <tbody id="exec-customer-concentration-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Route / Trade Lane Performance -->
+            <div class="exec-section-card">
+              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+                Route & Trade Lane Performance
+              </h3>
+              <div style="width: 100%; overflow-x: auto;">
+                <table class="exec-table">
+                  <thead>
+                    <tr>
+                      <th>Route / Trade Lane</th>
+                      <th>Quotes</th>
+                      <th>Won</th>
+                      <th>Avg Margin %</th>
+                      <th>Total GP (INR)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="exec-route-performance-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Data Integrity Audit / Checksum Controls -->
+          <div class="exec-section-card" style="background: rgba(27,28,92,0.02); border: 1px solid rgba(27,28,92,0.12);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h4 style="margin: 0 0 0.25rem 0; font-size: 0.95rem; font-weight: 700; color: var(--sky);">
+                  SYSTEM DATA RECONCILIATION AUDIT
+                </h4>
+                <p style="margin: 0; font-size: 0.75rem; color: var(--text-dim);" id="exec-data-validation-text">
+                  Verifying data parity with Firestore instance...
+                </p>
+              </div>
+              <div style="display: flex; gap: 1.5rem; align-items: center;">
+                <div style="text-align: right;">
+                  <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; display: block;">Parity Checksum</span>
+                  <span id="exec-integrity-checksum" style="font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--accent-success);">OK (0x0)</span>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; display: block;">Accuracy Level</span>
+                  <span id="exec-integrity-accuracy" style="font-size: 0.85rem; font-weight: 800; color: var(--accent-success);">100%</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
