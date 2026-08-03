@@ -54,11 +54,17 @@ function loadCustomUsers() {
       users.forEach(u => {
         if (!u || !u.username || typeof u.username !== 'string') return;
         const lowerUser = u.username.toLowerCase();
+        // Preserve Firestore-sourced category/currency; never overwrite hardcoded core users
+        if (TEAM_ROLES[lowerUser]) return; // core hardcoded users take precedence
+        const storedCategory = u.category || 'FREE HAND SALES (AIR/SEA)';
+        const storedCurrency = u.currency || 'INR';
+        // Strip legacy '(Free Hand)' suffix stored in older snapshots
+        const storedName = (u.fullName || lowerUser).replace(/\s*\(Free\s*Hand\)/i, '').trim();
         TEAM_ROLES[lowerUser] = {
-          name: `${u.fullName} (Free Hand)`,
-          type: 'member',
-          category: 'FREE HAND SALES (AIR/SEA)',
-          currency: 'INR'
+          name: storedName,
+          type: u.role || 'member',
+          category: storedCategory,
+          currency: storedCurrency
         };
       });
     } catch (e) {
@@ -538,7 +544,10 @@ async function handleLogin(e) {
       sessionStorage.setItem("gl_pricing_session", user);
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
-      loginSuccess(user);
+      // Do NOT call loginSuccess() here — onAuthStateChanged will handle it
+      // after the _dataReadyPromise gate ensures quotes + TEAM_ROLES are loaded.
+      // Calling it twice (once here, once from onAuthStateChanged) caused a blank
+      // flash followed by a full re-render, and bypassed the data-ready gate.
       return;
     }
 
@@ -657,14 +666,30 @@ function loginSuccess(roleId) {
   const roleIdLower = roleId.toLowerCase();
   appState.currentUser = roleIdLower; // CRITICAL: must be set first — all permission checks depend on this
 
-  // Emergency fallback for Firebase users
+  // Emergency fallback: ensure every authenticated Firebase user has a TEAM_ROLES entry.
+  // We first try to find the user in the Firestore-synced custom users (window._firebaseUsers)
+  // so direct-sales users (ramesh, sunil, linson, spoorthi, etc.) get the correct profile.
+  // Only create a bare default if no Firestore data is available yet.
   if (!TEAM_ROLES[roleIdLower]) {
-    TEAM_ROLES[roleIdLower] = {
+    // Try to get richer profile from Firestore-synced user list
+    let firestoreProfile = null;
+    const fbUsers = window._firebaseUsers || [];
+    const fbMatch = fbUsers.find(u => u && u.username && u.username.toLowerCase() === roleIdLower);
+    if (fbMatch) {
+      firestoreProfile = {
+        name: (fbMatch.fullName || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, '').trim(),
+        type: fbMatch.role || 'member',
+        category: fbMatch.category || 'FREE HAND SALES (AIR/SEA)',
+        currency: fbMatch.currency || 'INR'
+      };
+    }
+    TEAM_ROLES[roleIdLower] = firestoreProfile || {
       name: roleIdLower,
       type: 'member',
       category: 'FREE HAND SALES (AIR/SEA)',
       currency: 'INR'
     };
+    console.log(`TEAM_ROLES: Created entry for "${roleIdLower}" from ${firestoreProfile ? 'Firestore profile' : 'default fallback'}`);
   }
 
   const userRoleInfo = TEAM_ROLES[roleIdLower];
@@ -918,6 +943,23 @@ function switchRole(role) {
   } else if (TEAM_ROLES[roleLower] && TEAM_ROLES[roleLower].type === 'member') {
     // Check if we are showing the member dashboard or active calculator
     // Default: show member dashboard summary
+    document.getElementById("member-dashboard-panel").classList.add("active");
+    renderMemberDashboard(roleLower);
+  } else if (appState.currentUser && appState.currentUser === roleLower) {
+    // Fallback: any authenticated user who isn't admin gets the member dashboard.
+    // This fires when TEAM_ROLES wasn't populated yet (e.g. syncUsers snapshot race).
+    // Ensure a valid TEAM_ROLES entry exists so renderMemberDashboard works.
+    if (!TEAM_ROLES[roleLower]) {
+      const fbUsers = window._firebaseUsers || [];
+      const fbMatch = fbUsers.find(u => u && u.username && u.username.toLowerCase() === roleLower);
+      TEAM_ROLES[roleLower] = fbMatch ? {
+        name: (fbMatch.fullName || roleLower).replace(/\s*\(Free\s*Hand\)/i, '').trim(),
+        type: 'member',
+        category: fbMatch.category || 'FREE HAND SALES (AIR/SEA)',
+        currency: fbMatch.currency || 'INR'
+      } : { name: roleLower, type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' };
+      console.warn(`switchRole: TEAM_ROLES fallback created for "${roleLower}" — syncUsers snapshot may still be in-flight.`);
+    }
     document.getElementById("member-dashboard-panel").classList.add("active");
     renderMemberDashboard(roleLower);
   }
@@ -10537,10 +10579,20 @@ const DB = {
         // dashboard so they see the correct category and their own quotations.
         // This is a no-op for static users already in hardcoded TEAM_ROLES.
         const cu = appState.currentUser;
-        if (cu && !isAdminUser(cu) && TEAM_ROLES[cu] && TEAM_ROLES[cu].type === 'member') {
+        if (cu && !isAdminUser(cu)) {
+          // If member panel is already active, just re-render with fresh TEAM_ROLES data
           const memberPanel = document.getElementById("member-dashboard-panel");
-          if (memberPanel && memberPanel.classList.contains("active")) {
-            renderMemberDashboard(cu);
+          const memberPanelIsActive = memberPanel && memberPanel.classList.contains("active");
+
+          if (TEAM_ROLES[cu] && TEAM_ROLES[cu].type === 'member') {
+            if (memberPanelIsActive) {
+              // Panel already visible — just refresh the data
+              renderMemberDashboard(cu);
+            } else {
+              // Panel not active yet — this can happen when syncUsers snapshot beat
+              // the loginSuccess/switchRole call. Drive the full panel activation.
+              switchRole(cu);
+            }
           }
         }
       });
