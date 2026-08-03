@@ -10223,11 +10223,22 @@ const DB = {
         this.registerSnapshotListener();
 
         // Setup persistent auth listener
-        firebase.auth().onAuthStateChanged(user => {
+        firebase.auth().onAuthStateChanged(async user => {
           if (user) {
             console.log("Auth: user logged in", user.email);
             const username = user.email.split('@')[0].toLowerCase();
             sessionStorage.setItem("gl_pricing_session", username);
+
+            // ── SAFE DASHBOARD INIT ───────────────────────────────────────────
+            // Wait for the first Firestore quotes snapshot to arrive before
+            // rendering any dashboard. This ensures appState.quotes is populated
+            // and TEAM_ROLES has been updated by syncUsers before the dashboard
+            // is painted. No setTimeout — uses promise-based gate set in
+            // registerSnapshotListener().
+            if (appState._dataReadyPromise) {
+              await appState._dataReadyPromise;
+            }
+
             loginSuccess(username);
             updateExecutiveDashboardVisibility();
 
@@ -10307,6 +10318,16 @@ const DB = {
     const statusText = document.getElementById("db-connection-text");
 
     console.log("DB: Registering Firestore snapshot listener...");
+
+    // ── DATA-READY GATE ──────────────────────────────────────────────────────
+    // onAuthStateChanged must NOT render dashboards until the first Firestore
+    // quotes snapshot has arrived and appState.quotes is populated.
+    // We create a one-time Promise that resolves on the first snapshot delivery.
+    if (!appState._dataReadyResolve) {
+      appState._dataReadyPromise = new Promise(resolve => {
+        appState._dataReadyResolve = resolve;
+      });
+    }
 
     // Sync users list from Firestore
     this.syncUsers();
@@ -10400,6 +10421,14 @@ const DB = {
       appState.quotes = list;
 
       console.log("FIRESTORE LOADED QUOTES:", appState.quotes.length);
+
+      // ── RESOLVE DATA-READY GATE ──────────────────────────────────────────
+      // Signal that quotes are now loaded so onAuthStateChanged can proceed
+      // to render the dashboard. Only resolves once; subsequent calls are no-ops.
+      if (typeof appState._dataReadyResolve === 'function') {
+        appState._dataReadyResolve();
+        appState._dataReadyResolve = null; // prevent double-resolve
+      }
 
       // Update badge status to show online
       if (statusDot) statusDot.style.background = "#10b981"; // green
@@ -10500,6 +10529,19 @@ const DB = {
         console.log("DB: Synced users from Firestore count:", customUsers.length);
         if (typeof window.renderUserCredentialsList === 'function') {
           window.renderUserCredentialsList();
+        }
+
+        // ── DYNAMIC USER RE-RENDER ────────────────────────────────────────────
+        // If a dynamic user (e.g. ramesh, sunil) is already logged in and their
+        // TEAM_ROLES entry was just populated by this snapshot, re-render their
+        // dashboard so they see the correct category and their own quotations.
+        // This is a no-op for static users already in hardcoded TEAM_ROLES.
+        const cu = appState.currentUser;
+        if (cu && !isAdminUser(cu) && TEAM_ROLES[cu] && TEAM_ROLES[cu].type === 'member') {
+          const memberPanel = document.getElementById("member-dashboard-panel");
+          if (memberPanel && memberPanel.classList.contains("active")) {
+            renderMemberDashboard(cu);
+          }
         }
       });
     } catch (err) {
