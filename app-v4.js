@@ -647,33 +647,32 @@ async function handleLogin(e) {
 }
 
 function loginSuccess(roleId) {
-  const userRoleInfo = TEAM_ROLES[roleIdLower] || { name: roleIdLower, type: 'member' };
+  const roleIdLower = roleId.toLowerCase();
+
   // Emergency fallback: register Firebase users into TEAM_ROLES
+  let userRoleInfo = TEAM_ROLES[roleIdLower] || {
+    name: roleIdLower,
+    type: 'member',
+    category: 'FREE HAND SALES (AIR/SEA)',
+    currency: 'INR'
+  };
+
   if (!TEAM_ROLES[roleIdLower]) {
-    TEAM_ROLES[roleIdLower] = {
-      name: roleInfo.name || roleIdLower,
-      type: 'member',
-      category: roleInfo.category || 'FREE HAND SALES (AIR/SEA)',
-      currency: roleInfo.currency || 'INR'
-    };
+    TEAM_ROLES[roleIdLower] = userRoleInfo;
   }
+
   appState.currentUser = roleIdLower;
+
   document.body.classList.remove("logged-out-blur");
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("app-workspace").style.display = "flex";
   document.getElementById("subheader-controls").style.display = "flex";
 
-  if (roleIdLower === 'cathrina') {
-    document.documentElement.classList.add("nrs-font-scale");
-  } else {
-    document.documentElement.classList.remove("nrs-font-scale");
-  }
-
-  // Apply custom names to badge UI & dropdowns
   applyDeskNames();
 
-  const userRoleInfo = TEAM_ROLES[roleIdLower] || { name: roleIdLower, type: 'member' };
-  const displayName = (userRoleInfo.name || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
+  const displayName = (userRoleInfo.name || roleIdLower)
+    .replace(/\s*\(Free\s*Hand\)/i, "");
+
   const activeUserNameEl = document.getElementById("active-user-name");
   if (activeUserNameEl) {
     activeUserNameEl.textContent = displayName;
