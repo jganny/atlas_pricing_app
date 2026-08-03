@@ -92,15 +92,7 @@ window.isAdminUser = isAdminUser;
 function isUserAdminOrManager() {
   if (!appState.currentUser) return false;
   const currentUser = appState.currentUser.toLowerCase();
-  const currentRole = (getActiveRole() || "").toLowerCase();
-  
-  const userRoleInfo = TEAM_ROLES[currentUser];
-  const userType = userRoleInfo ? (userRoleInfo.type || userRoleInfo.role || "").toLowerCase() : "";
-
-  const isAdmin = userType === 'admin';
-  const isManager = currentRole === 'manager' || userType === 'manager';
-  
-  return !!(isAdmin || isManager);
+  return currentUser === 'ganny';
 }
 window.isUserAdminOrManager = isUserAdminOrManager;
 
@@ -4768,8 +4760,8 @@ window.deleteNrsAlert = deleteNrsAlert;
 // EXECUTIVE COMMAND CENTER DASHBOARD
 function showExecutiveDashboard() {
   if (!isUserAdminOrManager()) {
-    console.warn("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
-    alert("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
+    console.warn("Access Denied: Executive Dashboard is restricted to user ganny.");
+    alert("Access Denied: Executive Dashboard is restricted to user ganny.");
     goHome();
     return;
   }
