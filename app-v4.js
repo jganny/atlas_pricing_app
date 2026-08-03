@@ -647,22 +647,20 @@ async function handleLogin(e) {
 }
 
 function loginSuccess(roleId) {
+
   const roleIdLower = roleId.toLowerCase();
 
-  // Emergency fallback: register Firebase users into TEAM_ROLES
-  let userRoleInfo = TEAM_ROLES[roleIdLower] || {
-    name: roleIdLower,
-    type: 'member',
-    category: 'FREE HAND SALES (AIR/SEA)',
-    currency: 'INR'
-  };
-
+  // Emergency fallback for Firebase users
   if (!TEAM_ROLES[roleIdLower]) {
-    TEAM_ROLES[roleIdLower] = userRoleInfo;
+    TEAM_ROLES[roleIdLower] = {
+      name: roleIdLower,
+      type: 'member',
+      category: 'FREE HAND SALES (AIR/SEA)',
+      currency: 'INR'
+    };
   }
 
-  appState.currentUser = roleIdLower;
-
+  const userRoleInfo = TEAM_ROLES[roleIdLower];
   document.body.classList.remove("logged-out-blur");
   document.getElementById("login-overlay").style.display = "none";
   document.getElementById("app-workspace").style.display = "flex";
