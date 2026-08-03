@@ -4677,7 +4677,7 @@ function renderMemberDashboard(userId) {
   if (btnGotoTransport) btnGotoTransport.style.display = "flex";
   if (btnGotoWarehouse) btnGotoWarehouse.style.display = "flex";
 
-  const myQuotes = appState.quotes.filter(q => q.creator === userId);
+  const myQuotes = (appState.quotes || []).filter(q => q.creator === userId);
   const totalEnquiries = myQuotes.length;
 
   let totalRevenueINR = 0;
@@ -8042,7 +8042,7 @@ window.applyUserDbFiltersAndSort = () => {
   if (!tbody) return;
 
   const userId = window.userDashboardId || appState.currentUser;
-  const myQuotes = appState.quotes.filter(q => q.creator === userId);
+  const myQuotes = (appState.quotes || []).filter(q => q.creator === userId);
 
   populateAllUserHeaderFilterDropdowns(myQuotes);
 
