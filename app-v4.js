@@ -92,15 +92,7 @@ window.isAdminUser = isAdminUser;
 function isUserAdminOrManager() {
   if (!appState.currentUser) return false;
   const currentUser = appState.currentUser.toLowerCase();
-  const currentRole = (getActiveRole() || "").toLowerCase();
-
-  const userRoleInfo = TEAM_ROLES[currentUser];
-  const userType = userRoleInfo ? (userRoleInfo.type || userRoleInfo.role || "").toLowerCase() : "";
-
-  const isAdmin = userType === 'admin';
-  const isManager = currentRole === 'manager' || userType === 'manager';
-
-  return !!(isAdmin || isManager);
+  return currentUser === 'ganny';
 }
 window.isUserAdminOrManager = isUserAdminOrManager;
 
@@ -4774,8 +4766,8 @@ window.deleteNrsAlert = deleteNrsAlert;
 // EXECUTIVE COMMAND CENTER DASHBOARD
 function showExecutiveDashboard() {
   if (!isUserAdminOrManager()) {
-    console.warn("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
-    alert("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
+    console.warn("Access Denied: Executive Dashboard is restricted to user ganny.");
+    alert("Access Denied: Executive Dashboard is restricted to user ganny.");
     goHome();
     return;
   }
@@ -10224,6 +10216,11 @@ const DB = {
             const username = user.email.split('@')[0].toLowerCase();
             sessionStorage.setItem("gl_pricing_session", username);
             loginSuccess(username);
+            updateExecutiveDashboardVisibility();
+
+            if (username === "ganny") {
+              showExecutiveDashboard();
+            }
           } else {
             console.log("Auth: user logged out");
             document.documentElement.classList.remove("nrs-font-scale");
@@ -10367,14 +10364,18 @@ const DB = {
     }
 
     this.snapshotUnsubscribe = this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
-      appState.quotes = list;
+
       console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
+
       const list = [];
       const seenRefIds = new Set();
+
       snapshot.forEach(doc => {
         const q = doc.data();
         this.sanitize(q, list.length);
+
         const refId = getQuoteRefId(q);
+
         // Deduplicate duplicate quotes AEANT0726IN00062 / AEANT0726IN00065 or identical ref IDs
         if (seenRefIds.has(refId)) {
           console.log("DB: Skipping duplicate quote ref ID:", refId);
@@ -10385,11 +10386,10 @@ const DB = {
       });
       // Sort quotes chronologically (newest first)
       list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
       appState.quotes = list;
 
-      setTimeout(() => {
-        renderAdminDashboard();
-      }, 500);
+      console.log("FIRESTORE LOADED QUOTES:", appState.quotes.length);
 
       // Update badge status to show online
       if (statusDot) statusDot.style.background = "#10b981"; // green
