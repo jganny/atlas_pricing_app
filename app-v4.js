@@ -92,7 +92,15 @@ window.isAdminUser = isAdminUser;
 function isUserAdminOrManager() {
   if (!appState.currentUser) return false;
   const currentUser = appState.currentUser.toLowerCase();
-  return currentUser === 'ganny';
+  const currentRole = (getActiveRole() || "").toLowerCase();
+
+  const userRoleInfo = TEAM_ROLES[currentUser];
+  const userType = userRoleInfo ? (userRoleInfo.type || userRoleInfo.role || "").toLowerCase() : "";
+
+  const isAdmin = userType === 'admin';
+  const isManager = currentRole === 'manager' || userType === 'manager';
+
+  return !!(isAdmin || isManager);
 }
 window.isUserAdminOrManager = isUserAdminOrManager;
 
@@ -166,7 +174,7 @@ function getQuoteRefId(quote) {
   let moduleCode = "XX";
   const type = quote.type || "air";
   const module = (quote.details && quote.details.module) || "export";
-  
+
   if (type === "air") {
     moduleCode = (module === "import") ? "AI" : "AE";
   } else if (type === "transport") {
@@ -176,10 +184,10 @@ function getQuoteRefId(quote) {
   } else {
     moduleCode = (module === "import") ? "SI" : "SE";
   }
-  
+
   const custName = (quote.customer || "XYZ").trim().replace(/[^a-zA-Z0-9]/g, "");
   const custPart = custName.substring(0, 3).toUpperCase().padEnd(3, 'X');
-  
+
   let datePart = "0000";
   if (quote.date) {
     const parts = quote.date.split('-');
@@ -196,7 +204,7 @@ function getQuoteRefId(quote) {
       }
     }
   }
-  
+
   const seqNum = quote.quoteNumber || 1;
   const seqPart = String(seqNum).padStart(5, '0');
   return `${moduleCode}${custPart}${datePart}IN${seqPart}`;
@@ -231,7 +239,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
     if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
+      try { requests = JSON.parse(stored); } catch (e) { }
     }
   }
   const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'edit' && r.status === 'pending');
@@ -239,7 +247,7 @@ function checkAndRequestEditPermission(quote, actionVerb = "modify") {
     alert(`You have already requested permission to edit/amend this quote. Please wait for Ganny's approval.`);
     return false;
   }
-  
+
   const reason = prompt(`You do not have permission to ${actionVerb} this quotation.\n\nPlease enter the reason for requesting edit/amendment permission from Ganny:`);
   if (reason === null) return false; // User cancelled
   if (!reason.trim()) {
@@ -282,11 +290,11 @@ function saveRequestLocallyFallback(newReq) {
   let requests = [];
   const stored = localStorage.getItem("gl_amendment_requests");
   if (stored) {
-    try { requests = JSON.parse(stored); } catch(e) {}
+    try { requests = JSON.parse(stored); } catch (e) { }
   }
   requests.push(newReq);
   localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-  
+
   // Update local view
   if (window._amendmentRequests) {
     window._amendmentRequests.push(newReq);
@@ -323,7 +331,7 @@ function autoFocusWeightBreak(event) {
   if (event.key === "Enter") {
     event.preventDefault();
     calculateAirFreight();
-    
+
     const chgWeight = appState.currentAirFreight.chargeableWeight || 0;
     if (chgWeight <= 0) return;
 
@@ -344,7 +352,7 @@ function autoFocusWeightBreak(event) {
     if (inputEl) {
       inputEl.focus();
       setTimeout(() => {
-        try { inputEl.select(); } catch(e) {}
+        try { inputEl.select(); } catch (e) { }
       }, 0);
     }
   }
@@ -356,12 +364,12 @@ function setupValidityDatePickerDismissal() {
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    
+
     const dismiss = () => {
       setTimeout(() => {
         try {
           el.blur();
-        } catch (e) {}
+        } catch (e) { }
       }, 50);
     };
 
@@ -384,7 +392,7 @@ function setupValidityDatePickerDismissal() {
   document.addEventListener("focus", (e) => {
     if (e.target && (e.target.classList.contains("chg-rate") || e.target.classList.contains("fcl-rate"))) {
       setTimeout(() => {
-        try { e.target.select(); } catch(err) {}
+        try { e.target.select(); } catch (err) { }
       }, 0);
     }
   }, true);
@@ -420,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // File upload badge updates
   const agreementFileInput = document.getElementById("won-agreement-file");
   if (agreementFileInput) {
-    agreementFileInput.addEventListener("change", function() {
+    agreementFileInput.addEventListener("change", function () {
       const statusEl = document.getElementById("won-agreement-status");
       if (statusEl) {
         if (this.files && this.files.length > 0) {
@@ -436,7 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const invoiceFileInput = document.getElementById("won-invoice-packing-file");
   if (invoiceFileInput) {
-    invoiceFileInput.addEventListener("change", function() {
+    invoiceFileInput.addEventListener("change", function () {
       const statusEl = document.getElementById("won-invoice-packing-status");
       if (statusEl) {
         if (this.files && this.files.length > 0) {
@@ -493,7 +501,7 @@ async function handleLogin(e) {
   if (DB.isCloud) {
     // ── PRIMARY: Try canonical @atlaspricing.com domain ──────────────────────
     const canonicalEmail = `${user}@atlaspricing.com`;
-    const legacyEmail    = `${user}@pricing.local`; // one-time migration compat.
+    const legacyEmail = `${user}@pricing.local`; // one-time migration compat.
 
     let firebaseAuthSuccess = false;
     let signedInEmail = null;
@@ -508,8 +516,8 @@ async function handleLogin(e) {
 
       // ── MIGRATION: Try legacy @pricing.local domain transparently ──────────
       if (primaryErr.code === "auth/user-not-found" ||
-          primaryErr.code === "auth/invalid-credential" ||
-          primaryErr.code === "auth/invalid-email") {
+        primaryErr.code === "auth/invalid-credential" ||
+        primaryErr.code === "auth/invalid-email") {
         try {
           await firebase.auth().signInWithEmailAndPassword(legacyEmail, pass);
           firebaseAuthSuccess = true;
@@ -561,7 +569,7 @@ async function handleLogin(e) {
       let customUsers = [];
       const storedCustom = localStorage.getItem("gl_custom_users");
       if (storedCustom) {
-        try { customUsers = JSON.parse(storedCustom); } catch (e) {}
+        try { customUsers = JSON.parse(storedCustom); } catch (e) { }
       }
       const matchedLocal = customUsers.find(u => u && u.username && u.username.toLowerCase() === user);
       if (matchedLocal && matchedLocal.password === pass) {
@@ -615,7 +623,7 @@ async function handleLogin(e) {
     if (dbUsers.length === 0) {
       const storedCustom = localStorage.getItem("gl_custom_users");
       if (storedCustom) {
-        try { dbUsers = JSON.parse(storedCustom); } catch(err) {}
+        try { dbUsers = JSON.parse(storedCustom); } catch (err) { }
       }
     }
 
@@ -686,14 +694,14 @@ function loginSuccess(roleId) {
   } else {
     document.getElementById("admin-settings-btn").style.display = "none";
     document.getElementById("admin-role-selector").style.display = "none";
-    
+
     // Manage button visibility based on isUserAdminOrManager check
     if (isUserAdminOrManager()) {
       if (execDashBtn) execDashBtn.style.display = "flex";
     } else {
       if (execDashBtn) execDashBtn.style.display = "none";
     }
-    
+
     if (roleIdLower === 'manager') {
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
@@ -730,15 +738,15 @@ function logoutUser() {
 function renderUserCredentialsList() {
   const userCredsBody = document.getElementById("admin-user-credentials-body");
   if (!userCredsBody) return;
-  
+
   let dbUsers = window._firebaseUsers || [];
   if (dbUsers.length === 0) {
     try {
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) dbUsers = JSON.parse(stored) || [];
-    } catch(e) {}
+    } catch (e) { }
   }
-  
+
   // Default hardcoded users
   const defaultUsers = [
     { username: 'ganny', fullName: 'Pricing Team (Admin)', role: 'admin' },
@@ -747,7 +755,7 @@ function renderUserCredentialsList() {
     { username: 'jaya', fullName: 'Free Hand Sales', role: 'member', category: 'FREE HAND SALES (AIR/SEA)' },
     { username: 'cathrina', fullName: 'NRS', role: 'member', category: 'NRS (AIR/SEA)' }
   ];
-  
+
   // Combine unique users
   const allUsersMap = {};
   defaultUsers.forEach(u => allUsersMap[u.username.toLowerCase()] = u);
@@ -766,7 +774,7 @@ function renderUserCredentialsList() {
       };
     }
   });
-  
+
   const allUsers = Object.values(allUsersMap);
   userCredsBody.innerHTML = allUsers.map(u => {
     const roleCat = u.category || (u.role === 'admin' ? 'Admin' : 'Member');
@@ -811,7 +819,7 @@ async function loadData() {
   setupAutocomplete(document.getElementById("air-dest"), "airports");
   setupAutocomplete(document.getElementById("air-airline"), "airlines");
   setupAutocomplete(document.getElementById("air-commodity"), "air_commodities");
-  
+
   setupAutocomplete(document.getElementById("sea-cust-name"), "customers");
   setupAutocomplete(document.getElementById("sea-origin"), "seaports");
   setupAutocomplete(document.getElementById("sea-dest"), "seaports");
@@ -920,7 +928,7 @@ function goHome() {
   document.querySelectorAll(".modal-overlay").forEach(modal => {
     modal.classList.remove("show");
   });
-  
+
   if (isAdminUser(appState.currentUser)) {
     document.getElementById("manager-panel").classList.add("active");
     document.querySelectorAll(".role-btn").forEach(btn => {
@@ -944,7 +952,7 @@ window.goHome = goHome;
 function updateCurrencyRules(role) {
   const airCurSelect = document.getElementById("air-currency");
   const seaCurSelect = document.getElementById("sea-currency");
-  
+
   let activeRole = role;
   if (activeRole === 'ganny' || activeRole === 'manager') {
     const activeBtn = document.querySelector(".role-btn.active");
@@ -954,11 +962,11 @@ function updateCurrencyRules(role) {
     }
   }
   if (!activeRole) activeRole = appState.currentUser || 'ganny';
-  
+
   const isNrs = activeRole && (activeRole === 'cathrina' || TEAM_ROLES[activeRole]?.category === 'NRS (AIR/SEA)');
   const isLocal = activeRole && (activeRole.includes('local') || activeRole === 'jaya' || TEAM_ROLES[activeRole]?.category === 'FREE HAND SALES (AIR/SEA)');
   const targetType = isNrs ? "nrs" : (isLocal ? "local" : "nom");
-  
+
   // Hide Agency Agreement option for NRS and Free Hand Sales desks
   const airAgreementGrp = document.getElementById("air-agency-agreement-group");
   const seaAgreementGrp = document.getElementById("sea-agency-agreement-group");
@@ -1155,7 +1163,7 @@ function resetAirFreightDeskForm() {
       if (text) text.textContent = "Collapse";
     }
   });
-  
+
   // Recalculate to update results layout to 0/empty
   calculateAirFreight();
 }
@@ -1237,7 +1245,7 @@ function openActiveCalculator(type) {
     if (memberPanel) memberPanel.classList.remove("active");
     const managerPanel = document.getElementById("manager-panel");
     if (managerPanel) managerPanel.classList.remove("active");
-    
+
     // Hide all panels safely
     const airPanel = document.getElementById("air-freight-panel");
     const seaPanel = document.getElementById("sea-freight-panel");
@@ -1257,30 +1265,30 @@ function openActiveCalculator(type) {
       if (airPanel) airPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--accent-air)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
-      try { resetAirFreightDeskForm(); } catch(e) { console.error("resetAirFreightDeskForm error:", e); }
+      try { resetAirFreightDeskForm(); } catch (e) { console.error("resetAirFreightDeskForm error:", e); }
     } else if (type === 'sea') {
       if (seaPanel) seaPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--accent-sea)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
-      try { resetSeaFreightDeskForm(); } catch(e) { console.error("resetSeaFreightDeskForm error:", e); }
+      try { resetSeaFreightDeskForm(); } catch (e) { console.error("resetSeaFreightDeskForm error:", e); }
     } else if (type === 'transport') {
       if (transportPanel) transportPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--violet)');
       root.style.setProperty('--accent-current-glow', 'rgba(124, 58, 237, 0.2)');
-      try { calculateTransportation(); } catch(e) { console.error("calculateTransportation error:", e); }
+      try { calculateTransportation(); } catch (e) { console.error("calculateTransportation error:", e); }
     } else if (type === 'warehouse') {
       if (warehousePanel) warehousePanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
-      try { calculateWarehousing(); } catch(e) { console.error("calculateWarehousing error:", e); }
+      try { calculateWarehousing(); } catch (e) { console.error("calculateWarehousing error:", e); }
     } else if (type === 'directory') {
       if (directoryPanel) directoryPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
-      try { loadDirectoryContacts(); } catch(e) { console.error("loadDirectoryContacts error:", e); }
+      try { loadDirectoryContacts(); } catch (e) { console.error("loadDirectoryContacts error:", e); }
     }
     updateModuleTabs(type);
-  } catch(err) {
+  } catch (err) {
     console.error("Critical error in openActiveCalculator:", err);
     if (type === 'sea') {
       const seaPanel = document.getElementById("sea-freight-panel");
@@ -1289,11 +1297,11 @@ function openActiveCalculator(type) {
   }
 }
 
-window.resetFreightForm = function(type) {
+window.resetFreightForm = function (type) {
   if (type === 'air') {
-    try { resetAirFreightDeskForm(); } catch(e) {}
+    try { resetAirFreightDeskForm(); } catch (e) { }
   } else if (type === 'sea') {
-    try { resetSeaFreightDeskForm(); } catch(e) {}
+    try { resetSeaFreightDeskForm(); } catch (e) { }
   }
 };
 
@@ -1302,7 +1310,7 @@ function returnToWorkspace() {
   document.getElementById("sea-freight-panel").classList.remove("active");
   document.getElementById("transportation-panel").classList.remove("active");
   document.getElementById("warehousing-panel").classList.remove("active");
-  
+
   if (isAdminUser(appState.currentUser)) {
     const managerPanel = document.getElementById("manager-panel");
     if (managerPanel) managerPanel.classList.add("active");
@@ -1520,20 +1528,20 @@ function saveCustomEntry(type, value) {
   let customList = [];
   const stored = localStorage.getItem(storageKey);
   if (stored) {
-    try { customList = JSON.parse(stored); } catch(e) {}
+    try { customList = JSON.parse(stored); } catch (e) { }
   }
 
   const normalizedInput = valTrimmed.toLowerCase();
 
   if (isObjectList) {
-    const existsInDefault = defaultList.some(item => 
-      item.name.toLowerCase() === normalizedInput || 
+    const existsInDefault = defaultList.some(item =>
+      item.name.toLowerCase() === normalizedInput ||
       item.code.toLowerCase() === normalizedInput ||
       `${item.code} - ${item.name}`.toLowerCase() === normalizedInput ||
       `${item.code} | ${item.name}`.toLowerCase() === normalizedInput
     );
-    const existsInCustom = customList.some(item => 
-      item.name.toLowerCase() === normalizedInput || 
+    const existsInCustom = customList.some(item =>
+      item.name.toLowerCase() === normalizedInput ||
       item.code.toLowerCase() === normalizedInput ||
       `${item.code} - ${item.name}`.toLowerCase() === normalizedInput ||
       `${item.code} | ${item.name}`.toLowerCase() === normalizedInput
@@ -1579,7 +1587,7 @@ function setupAutocomplete(inputEl, type) {
   inputEl.setAttribute("autocomplete", "new-password");
   inputEl.setAttribute("autocorrect", "off");
   inputEl.setAttribute("autocapitalize", "none");
-  
+
   const container = inputEl.closest(".autocomplete-container");
   let dropdown = container.querySelector(".autocomplete-dropdown");
   if (!dropdown) {
@@ -1626,10 +1634,10 @@ function setupAutocomplete(inputEl, type) {
         }
         dropdown.classList.remove("show");
         dropdown.innerHTML = "";
-        
+
         const event = new Event('change');
         inputEl.dispatchEvent(event);
-        
+
         const inputEvent = new Event('input');
         inputEl.dispatchEvent(inputEvent);
 
@@ -1659,31 +1667,31 @@ function setupAutocomplete(inputEl, type) {
       let customAirports = [];
       const stored = localStorage.getItem("gl_custom_airports");
       if (stored) {
-        try { customAirports = JSON.parse(stored); } catch(err) {}
+        try { customAirports = JSON.parse(stored); } catch (err) { }
       }
       const combined = [...(appState.airports || []), ...customAirports];
-      matches = combined.filter(ap => 
-        (ap.code || "").toLowerCase().includes(val) || 
-        (ap.city || "").toLowerCase().includes(val) || 
-        (ap.country || "").toLowerCase().includes(val) || 
+      matches = combined.filter(ap =>
+        (ap.code || "").toLowerCase().includes(val) ||
+        (ap.city || "").toLowerCase().includes(val) ||
+        (ap.country || "").toLowerCase().includes(val) ||
         (ap.name || "").toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "airlines") {
       let customAirlines = [];
       const stored = localStorage.getItem("gl_custom_airlines");
       if (stored) {
-        try { customAirlines = JSON.parse(stored); } catch(err) {}
+        try { customAirlines = JSON.parse(stored); } catch (err) { }
       }
       const combined = [...(appState.airlines || []), ...customAirlines];
-      matches = combined.filter(al => 
-        (al.code || "").toLowerCase().includes(val) || 
+      matches = combined.filter(al =>
+        (al.code || "").toLowerCase().includes(val) ||
         (al.name || "").toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "customers") {
       let customCusts = [];
       const stored = localStorage.getItem("gl_custom_customers");
       if (stored) {
-        try { customCusts = JSON.parse(stored); } catch(err) {}
+        try { customCusts = JSON.parse(stored); } catch (err) { }
       }
       matches = customCusts.filter(c => c.toLowerCase().includes(val)).map(c => ({
         code: "CUST",
@@ -1706,12 +1714,12 @@ function setupAutocomplete(inputEl, type) {
       let customPorts = [];
       const stored = localStorage.getItem("gl_custom_seaports");
       if (stored) {
-        try { customPorts = JSON.parse(stored); } catch(err) {}
+        try { customPorts = JSON.parse(stored); } catch (err) { }
       }
       const portsSource = (appState.seaports && appState.seaports.length > 0) ? appState.seaports : majorSeaports;
       const combined = [...portsSource, ...customPorts];
-      matches = combined.filter(sp => 
-        (sp.code || "").toLowerCase().includes(val) || 
+      matches = combined.filter(sp =>
+        (sp.code || "").toLowerCase().includes(val) ||
         (sp.name || "").toLowerCase().includes(val) ||
         (sp.city || "").toLowerCase().includes(val) ||
         (sp.country || "").toLowerCase().includes(val)
@@ -1734,7 +1742,7 @@ function setupAutocomplete(inputEl, type) {
       let customLines = [];
       const stored = localStorage.getItem("gl_custom_shippinglines");
       if (stored) {
-        try { customLines = JSON.parse(stored); } catch(err) {}
+        try { customLines = JSON.parse(stored); } catch (err) { }
       }
       const combined = [...majorShippingLines, ...customLines];
       matches = combined.filter(sl =>
@@ -1759,11 +1767,11 @@ function setupAutocomplete(inputEl, type) {
       let customLiners = [];
       const stored = localStorage.getItem("gl_custom_linernames");
       if (stored) {
-        try { customLiners = JSON.parse(stored); } catch(err) {}
+        try { customLiners = JSON.parse(stored); } catch (err) { }
       }
       const combined = [...majorLiners, ...customLiners];
-      matches = combined.filter(l => 
-        l.code.toLowerCase().includes(val) || 
+      matches = combined.filter(l =>
+        l.code.toLowerCase().includes(val) ||
         l.name.toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "air_commodities" || type === "sea_commodities") {
@@ -1778,7 +1786,7 @@ function setupAutocomplete(inputEl, type) {
       const storageKey = type === "air_commodities" ? "gl_custom_air_commodities" : "gl_custom_sea_commodities";
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        try { customCommodities = JSON.parse(stored); } catch(err) {}
+        try { customCommodities = JSON.parse(stored); } catch (err) { }
       }
 
       // Combine operational defaults, full HS chapters list, specific headings list, and custom commodities
@@ -1789,8 +1797,8 @@ function setupAutocomplete(inputEl, type) {
         ...customCommodities
       ];
 
-      matches = combined.filter(c => 
-        c.code.toLowerCase().includes(val) || 
+      matches = combined.filter(c =>
+        c.code.toLowerCase().includes(val) ||
         c.name.toLowerCase().includes(val)
       );
 
@@ -1818,7 +1826,7 @@ function setupAutocomplete(inputEl, type) {
       matches.forEach((item, idx) => {
         const div = document.createElement("div");
         div.className = "autocomplete-item";
-        
+
         let label = "";
         if (type === "customers" || type === "linernames" || type === "sea_commodities" || type === "air_commodities") {
           label = `<div>${item.name}</div>`;
@@ -1827,7 +1835,7 @@ function setupAutocomplete(inputEl, type) {
         } else {
           label = `<div>${item.name} (${item.city || ''}${item.country ? ', ' + item.country : ''})</div><div class="code-badge">${item.code}</div>`;
         }
-        
+
         div.innerHTML = label;
         div.addEventListener("click", () => {
           inputEl._programmaticSelection = true;
@@ -1838,7 +1846,7 @@ function setupAutocomplete(inputEl, type) {
           }
           dropdown.classList.remove("show");
           dropdown.innerHTML = "";
-          
+
           const event = new Event('change');
           inputEl.dispatchEvent(event);
 
@@ -1915,7 +1923,7 @@ function setupAirFreightEvents() {
         </td>
       `;
       tableBody.appendChild(row);
-      
+
       row.querySelectorAll("input").forEach(inp => {
         inp.addEventListener("input", calculateAirFreight);
       });
@@ -2088,7 +2096,7 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
 
   const sellRate = (typeof rate === 'object' && rate !== null) ? (rate.sell || 0) : (parseFloat(rate) || 0);
   const buyRate = (typeof rate === 'object' && rate !== null) ? (rate.buy || 0) : 0;
-  
+
   wrapper.innerHTML = `
     <span style="font-size: 0.72rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
     <div style="display: flex; gap: 4px; align-items: center;">
@@ -2207,9 +2215,9 @@ function addAirlineCard(data = null) {
   const roleObj = TEAM_ROLES[activeRole];
   const isAirNomination = roleObj && roleObj.category === 'AIR - NOMINATION';
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' || 
-    creatorRole === 'cathrina' || 
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    creatorRole === 'jaya' ||
+    creatorRole === 'cathrina' ||
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
     TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
@@ -2445,14 +2453,14 @@ function addAirlineCard(data = null) {
         try {
           const stored = localStorage.getItem("gl_custom_airlines");
           if (stored) customAirlines = JSON.parse(stored);
-        } catch(e) {}
-        
+        } catch (e) { }
+
         let allAirlines = [...(appState.airlines || []), ...customAirlines];
         if (allAirlines.length === 0) {
           allAirlines = Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name }));
         }
 
-        const matches = allAirlines.filter(al => 
+        const matches = allAirlines.filter(al =>
           (al.code && al.code.toUpperCase().includes(val)) ||
           (al.name && al.name.toUpperCase().includes(val))
         ).slice(0, 15);
@@ -2510,7 +2518,7 @@ function addAirlineCard(data = null) {
   if (trigger && dropdown) {
     trigger.addEventListener("click", (e) => {
       e.stopPropagation();
-      
+
       const breakOpts = {
         'min': 'Minimum (Flat)',
         'minus45': '-45 kg',
@@ -2534,12 +2542,12 @@ function addAirlineCard(data = null) {
       Object.keys(breakOpts).forEach(k => {
         const item = document.createElement("label");
         item.style.cssText = "display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 0.72rem; color: var(--t1, #000); cursor: pointer; border-radius: 4px; transition: background 0.2s; text-align: left; margin: 0;";
-        
+
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.checked = currentBreaks.includes(k);
         checkbox.style.cssText = "width: 13px; height: 13px; accent-color: var(--sky); cursor: pointer;";
-        
+
         const labelText = document.createTextNode(breakOpts[k]);
 
         item.appendChild(checkbox);
@@ -2608,14 +2616,14 @@ function getAirlineColor(name) {
     'SG': '#e74c3c', // SpiceJet - Red
   };
   if (mapping[code]) return mapping[code];
-  
+
   // Deterministic hash code to return a nice bright aesthetic color
   let hash = 0;
   for (let i = 0; i < code.length; i++) {
     hash = code.charCodeAt(i) + ((hash << 5) - hash);
   }
   const colors = [
-    '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#e74c3c', 
+    '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#e74c3c',
     '#1abc9c', '#f1c40f', '#2980b9', '#e84393', '#00cec9'
   ];
   return colors[Math.abs(hash) % colors.length];
@@ -2636,9 +2644,9 @@ function updateCartageRowVisibility() {
       if (!cartageRow) {
         const creatorRole = appState.currentUser;
         const isFreeHandOrNrs = creatorRole && (
-          creatorRole === 'jaya' || 
-          creatorRole === 'cathrina' || 
-          TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+          creatorRole === 'jaya' ||
+          creatorRole === 'cathrina' ||
+          TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
           TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
         );
 
@@ -2713,7 +2721,7 @@ function calculateAirFreight() {
   let totalVolume = 0;
   let totalVolumeWeight = 0;
   let totalPackageQty = 0;
-  
+
   const unit = appState.currentAirFreight.dimUnit;
   const divisor = (unit === 'cms') ? 6000 : 366;
 
@@ -2729,7 +2737,7 @@ function calculateAirFreight() {
       totalPackageQty += qty;
       const volWeight = (l * w * h * qty) / divisor;
       totalVolumeWeight += volWeight;
-      
+
       if (unit === 'cms') {
         totalVolume += (l * w * h * qty) / 1000000;
       } else {
@@ -2741,7 +2749,7 @@ function calculateAirFreight() {
   const commodity = document.getElementById("air-commodity")?.value || "GENERAL";
   const tempType = document.getElementById("air-temp-type")?.value || "NON-TEMPERATURE";
   const tempRange = document.getElementById("air-temp-range")?.value || "2-8";
-  
+
   let commLabel = commodity;
   if (commodity === 'PERISHABLES' || commodity === 'PHARMA') {
     if (tempType === 'TEMPERATURE') {
@@ -2750,13 +2758,13 @@ function calculateAirFreight() {
       commLabel += ` - Non-Temp`;
     }
   }
-  
+
   const resComm = document.getElementById("res-air-commodity-val");
   if (resComm) resComm.textContent = commLabel;
 
   const loadTilt = document.getElementById("air-loadability-tilt")?.value || "TILTABLE";
   const loadStack = document.getElementById("air-loadability-stack")?.value || "STACKABLE";
-  
+
   const loadLabel = `${loadTilt === 'TILTABLE' ? 'Tiltable' : 'Non-Tiltable'} / ${loadStack === 'STACKABLE' ? 'Stackable' : 'Non-Stackable'}`;
   const resLoad = document.getElementById("res-air-loadability-val");
   if (resLoad) resLoad.textContent = loadLabel;
@@ -2767,7 +2775,7 @@ function calculateAirFreight() {
   document.getElementById("res-air-vol").textContent = `${totalVolume.toFixed(3)} CBM`;
 
   const airlineCards = document.querySelectorAll("#air-airlines-list-container .airline-card");
-  
+
   if (airlineCards.length === 0) {
     addAirlineCard();
     return;
@@ -2797,9 +2805,9 @@ function calculateAirFreight() {
 
     const creatorRole = appState.currentUser;
     const isFreeHandOrNrs = creatorRole && (
-      creatorRole === 'jaya' || 
-      creatorRole === 'cathrina' || 
-      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+      creatorRole === 'jaya' ||
+      creatorRole === 'cathrina' ||
+      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
       TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
     );
 
@@ -2860,7 +2868,7 @@ function calculateAirFreight() {
     }
 
     let baseFreightCost = (tariffsEnabled && wbEnabled) ? (airlineChargeableWeight * activeRate) : 0;
-    
+
     let isMinActive = false;
     const minVal = breaksData['min'];
     const minSell = (typeof minVal === 'object' && minVal !== null) ? (minVal.sell > 0 ? minVal.sell : minVal.buy) : (parseFloat(minVal) || 0);
@@ -2876,7 +2884,7 @@ function calculateAirFreight() {
       const bName = wrapper.getAttribute("data-break-name");
       const removeBtn = wrapper.querySelector(".remove-break-btn");
       const isActive = (bName === usedBreak && !isMinActive) || (bName === 'min' && isMinActive);
-      
+
       if (isActive) {
         wrapper.style.display = "flex";
         wrapper.classList.add("highlight-break");
@@ -2919,7 +2927,7 @@ function calculateAirFreight() {
 
     // Origin local surcharges for this airline
     if (originCardEnabled) {
-      let originRows = isAirNomination 
+      let originRows = isAirNomination
         ? document.querySelectorAll("#air-origin-surcharges-body tr")
         : card.querySelectorAll(".air-card-origin-surcharges-body tr");
       if (!isAirNomination && originRows.length === 0) {
@@ -2930,7 +2938,7 @@ function calculateAirFreight() {
         if (!surchargeNameInput) return;
         const surchargeName = surchargeNameInput.value.trim();
         const surchargeNameLower = surchargeName.toLowerCase();
-        
+
         let rate = parseFloat(row.querySelector(".chg-rate")?.value) || 0;
         let unit = row.querySelector(".chg-unit")?.value || "kg";
         const buyRateInput = row.querySelector(".chg-buy-rate");
@@ -2940,9 +2948,9 @@ function calculateAirFreight() {
 
         const creatorRole = appState.currentUser;
         const isFreeHandOrNrs = creatorRole && (
-          creatorRole === 'jaya' || 
-          creatorRole === 'cathrina' || 
-          TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+          creatorRole === 'jaya' ||
+          creatorRole === 'cathrina' ||
+          TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
           TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
         );
 
@@ -2979,7 +2987,7 @@ function calculateAirFreight() {
 
     // Destination local surcharges for this airline
     if (destCardEnabled) {
-      let destRows = isAirNomination 
+      let destRows = isAirNomination
         ? document.querySelectorAll("#air-dest-surcharges-body tr")
         : card.querySelectorAll(".air-card-dest-surcharges-body tr");
       if (!isAirNomination && destRows.length === 0) {
@@ -3057,7 +3065,7 @@ function calculateAirFreight() {
 
   const finalChargeableWeight = selectedAirlineData.chargeableWeight;
   document.getElementById("res-air-chw").textContent = `${finalChargeableWeight.toFixed(2)} kg`;
-  
+
   const pivotRow = document.getElementById("row-air-pivot");
   const pivotVal = document.getElementById("res-air-pivot");
   if (selectedAirlineData.pivotWeight > 0) {
@@ -3075,20 +3083,20 @@ function calculateAirFreight() {
   const originRows = document.querySelectorAll("#air-origin-surcharges-body tr");
   const creatorRole = appState.currentUser;
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' || 
-    creatorRole === 'cathrina' || 
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    creatorRole === 'jaya' ||
+    creatorRole === 'cathrina' ||
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
     TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
   originRows.forEach(row => {
     const nameInput = row.querySelector(".chg-name");
     const name = nameInput.value.trim().toLowerCase();
-    
+
     if (name === "cartage" || name === "misc") {
       const rateInp = row.querySelector(".chg-rate");
       const unitSelect = row.querySelector(".chg-unit");
-      
+
       if (isFreeHandOrNrs) {
         rateInp.readOnly = false;
         if (unitSelect) unitSelect.disabled = false;
@@ -3111,7 +3119,7 @@ function calculateAirFreight() {
           rateInp.value = "0.00";
           unitSelect.value = "flat";
         }
-        
+
         rateInp.readOnly = true;
         if (unitSelect) unitSelect.disabled = true;
         rateInp.style.background = "rgba(255,255,255,0.02)";
@@ -3188,7 +3196,7 @@ function calculateAirFreight() {
     const savingsAmount = baseFreightCost - optFreightCost;
     const currency = document.getElementById("air-currency").value;
     const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
-    
+
     const activeLabel = rates[activeBreakIdx] ? rates[activeBreakIdx].label : 'Standard';
 
     const optSuggestion = document.getElementById("opt-suggestion-text");
@@ -3199,7 +3207,7 @@ function calculateAirFreight() {
         <br><strong>Savings: ${curSymbol}${savingsAmount.toFixed(2)}</strong>.
       `;
     }
-    
+
     const optBName = rates[optBreakIndex].breakName;
     const optWrapper = selectedAirlineData.card.querySelector(`.dynamic-break-wrapper[data-break-name="${optBName}"]`);
     if (optWrapper) {
@@ -3222,7 +3230,7 @@ function calculateAirFreight() {
   if (appState.currentAirFreight.isOptimizedApplied && hasSavings) {
     finalBaseRate = optRate;
     finalFreightCost = optFreightCost;
-    
+
     selectedAirlineData.card.querySelectorAll(".dynamic-break-wrapper").forEach(el => {
       el.style.borderColor = "#ccc";
       el.style.background = "#fff";
@@ -3250,21 +3258,21 @@ function calculateAirFreight() {
   if (resultsContainer) {
     const currency = document.getElementById("air-currency").value;
     const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
-    
+
     // Find cheapest grand total
     const minGrandTotal = Math.min(...airlinesListData.map(alt => alt.grandTotal));
-    
+
     resultsContainer.innerHTML = airlinesListData.map(alt => {
       const color = getAirlineColor(alt.name);
       const isCheapest = (alt.grandTotal === minGrandTotal);
-      
+
       let breakRows = "";
       if (alt.breaks && Object.keys(alt.breaks).length > 0) {
         breakRows = Object.keys(alt.breaks).map(bName => {
           const brVal = alt.breaks[bName] || { sell: 0, buy: 0 };
           const sellRate = brVal.sell > 0 ? brVal.sell : (brVal.buy > 0 ? brVal.buy : 0);
           const buyRate = brVal.buy;
-          
+
           const labels = {
             'min': 'Min (Flat)',
             'minus45': '-45 kg',
@@ -3276,7 +3284,7 @@ function calculateAirFreight() {
           };
 
           const displayLabel = labels[bName] || bName;
-          
+
           const isMinActive = (bName === 'min' && alt.appliedRate === sellRate && alt.appliedBuyRate === buyRate && alt.baseFreight === sellRate);
           const isActive = (bName === alt.usedBreak) || isMinActive;
 
@@ -3286,8 +3294,8 @@ function calculateAirFreight() {
           const breakGrandTotal = breakBaseFreight + alt.surchargeTotal;
           const breakGP = breakBaseFreight - breakBuyFreight;
 
-          const rowStyle = isActive 
-            ? `background: rgba(46,204,113,0.1); border-left: 3px solid var(--accent-success); font-weight: 700;` 
+          const rowStyle = isActive
+            ? `background: rgba(46,204,113,0.1); border-left: 3px solid var(--accent-success); font-weight: 700;`
             : `border-left: 3px solid transparent;`;
 
           return `
@@ -3304,7 +3312,7 @@ function calculateAirFreight() {
       } else {
         breakRows = `<tr><td colspan="6" style="padding: 8px; font-size: 0.72rem; color: var(--t2); text-align: center; font-style: italic;">No weight breaks selected</td></tr>`;
       }
-      
+
       return `
         <div class="glass-card" style="padding: 1rem; border: 1px solid ${alt.selected ? 'var(--accent-success)' : 'var(--border-1)'}; relative; background: ${alt.selected ? 'rgba(46,204,113,0.04)' : 'rgba(255,255,255,0.01)'}; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -3569,7 +3577,7 @@ function setupSeaFreightEvents() {
         </td>
       `;
       seaCargoBody.appendChild(row);
-      
+
       row.querySelectorAll("input").forEach(inp => {
         inp.addEventListener("input", calculateSeaVolumeFromDimensions);
       });
@@ -3617,7 +3625,7 @@ function toggleAirSection(sectionPrefix) {
 }
 window.toggleAirSection = toggleAirSection;
 
-window.toggleLinerAccordion = function(headerEl) {
+window.toggleLinerAccordion = function (headerEl) {
   const contentEl = headerEl.nextElementSibling;
   const toggleBtn = headerEl.querySelector(".liner-accordion-toggle-btn");
   if (!contentEl) return;
@@ -3638,7 +3646,7 @@ window.toggleLinerAccordion = function(headerEl) {
   }
 };
 
-window.switchLinerMode = function(linerIndex, mode) {
+window.switchLinerMode = function (linerIndex, mode) {
   const card = document.getElementById(`sea-liner-card-${linerIndex}`);
   if (!card) return;
 
@@ -3667,27 +3675,33 @@ window.switchLinerMode = function(linerIndex, mode) {
 
 function buildLinerOptionsHTML(selectedName = "") {
   const options = [
-    { group: "🚢 Shipping Lines", items: [
-      "MSC (Mediterranean Shipping Company)", "Maersk Line", "CMA CGM", "COSCO Shipping",
-      "Hapag-Lloyd", "ONE (Ocean Network Express)", "Evergreen Line", "HMM Co., Ltd.",
-      "Yang Ming Marine Transport", "ZIM Integrated Shipping", "Wan Hai Lines",
-      "PIL (Pacific International Lines)", "OOCL (Orient Overseas Container Line)",
-      "KMTC (Korea Marine Transport Co.)", "SITC Container Lines", "TS Lines",
-      "RCL (Regional Container Lines)", "X-Press Feeders", "Sinokor Merchant Marine",
-      "SM Line", "Turkon Line", "Grimaldi Lines"
-    ]},
-    { group: "📦 Coloaders & NVOCCs", items: [
-      "Vanguard Logistics", "ECU Worldwide", "CWT Globelink", "Shipco Transport",
-      "FPS (Famous Pacific Shipping)", "SACO Shipping", "CFR Rinkens / CFR Freight",
-      "Oceanus Coloaders", "Cargo Services Far East", "Allcargo Logistics",
-      "Caravel Logistics", "Conship", "FreightConsol"
-    ]},
-    { group: "🏗 Breakbulk Operators", items: [
-      "BBC Chartering", "Spliethoff Group", "dship Carriers", "AAL Shipping (Austral Asia Line)",
-      "Saga Welco", "MACS Maritime Carrier Shipping", "Swire Shipping", "G2 Ocean",
-      "Chipolbrok", "BigLift Shipping", "Jumbo-SAL Maritime", "United Heavy Lift (UHL)",
-      "Fednav", "Intermarine", "Harren Group", "Thorco Maritime"
-    ]}
+    {
+      group: "🚢 Shipping Lines", items: [
+        "MSC (Mediterranean Shipping Company)", "Maersk Line", "CMA CGM", "COSCO Shipping",
+        "Hapag-Lloyd", "ONE (Ocean Network Express)", "Evergreen Line", "HMM Co., Ltd.",
+        "Yang Ming Marine Transport", "ZIM Integrated Shipping", "Wan Hai Lines",
+        "PIL (Pacific International Lines)", "OOCL (Orient Overseas Container Line)",
+        "KMTC (Korea Marine Transport Co.)", "SITC Container Lines", "TS Lines",
+        "RCL (Regional Container Lines)", "X-Press Feeders", "Sinokor Merchant Marine",
+        "SM Line", "Turkon Line", "Grimaldi Lines"
+      ]
+    },
+    {
+      group: "📦 Coloaders & NVOCCs", items: [
+        "Vanguard Logistics", "ECU Worldwide", "CWT Globelink", "Shipco Transport",
+        "FPS (Famous Pacific Shipping)", "SACO Shipping", "CFR Rinkens / CFR Freight",
+        "Oceanus Coloaders", "Cargo Services Far East", "Allcargo Logistics",
+        "Caravel Logistics", "Conship", "FreightConsol"
+      ]
+    },
+    {
+      group: "🏗 Breakbulk Operators", items: [
+        "BBC Chartering", "Spliethoff Group", "dship Carriers", "AAL Shipping (Austral Asia Line)",
+        "Saga Welco", "MACS Maritime Carrier Shipping", "Swire Shipping", "G2 Ocean",
+        "Chipolbrok", "BigLift Shipping", "Jumbo-SAL Maritime", "United Heavy Lift (UHL)",
+        "Fednav", "Intermarine", "Harren Group", "Thorco Maritime"
+      ]
+    }
   ];
 
   let html = `<option value="">-- Select Shipping Line / Coloader / BreakBulk --</option>`;
@@ -3711,7 +3725,7 @@ function buildLinerOptionsHTML(selectedName = "") {
   return { html, isCustom };
 }
 
-window.handleLinerSelectChange = function(index) {
+window.handleLinerSelectChange = function (index) {
   const card = document.getElementById(`sea-liner-card-${index}`);
   if (!card) return;
   const select = card.querySelector(".liner-name-select");
@@ -3732,7 +3746,7 @@ window.handleLinerSelectChange = function(index) {
 
 let linerCardCounter = 1;
 
-window.addNewLinerCard = function(data = null) {
+window.addNewLinerCard = function (data = null) {
   linerCardCounter++;
   const index = linerCardCounter;
   const container = document.getElementById("sea-liners-container");
@@ -4001,7 +4015,7 @@ window.addNewLinerCard = function(data = null) {
   calculateSeaFreight();
 };
 
-window.updateLinerSurchargeContainerOptions = function(linerIndex) {
+window.updateLinerSurchargeContainerOptions = function (linerIndex) {
   const card = document.getElementById(`sea-liner-card-${linerIndex}`);
   if (!card) return;
 
@@ -4052,7 +4066,7 @@ window.updateLinerSurchargeContainerOptions = function(linerIndex) {
   });
 };
 
-window.removeLinerCard = function(linerIndex) {
+window.removeLinerCard = function (linerIndex) {
   const card = document.getElementById(`sea-liner-card-${linerIndex}`);
   if (card) {
     card.remove();
@@ -4060,7 +4074,7 @@ window.removeLinerCard = function(linerIndex) {
   }
 };
 
-window.addFclContainerRowToLiner = function(linerIndex, typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
+window.addFclContainerRowToLiner = function (linerIndex, typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
   const tbody = document.getElementById(`sea-fcl-body-${linerIndex}`);
   if (!tbody) return;
 
@@ -4069,7 +4083,7 @@ window.addFclContainerRowToLiner = function(linerIndex, typeVal = "20'GP", qtyVa
 
   const tr = document.createElement("tr");
   tr.className = "container-row";
-  
+
   tr.innerHTML = `
     <td>
       <select class="fcl-type table-select" onchange="updateLinerSurchargeContainerOptions(${linerIndex}); calculateSeaFreight()">
@@ -4101,7 +4115,7 @@ window.addFclContainerRowToLiner = function(linerIndex, typeVal = "20'GP", qtyVa
   calculateSeaFreight();
 };
 
-window.addSeaSurchargeRowToLiner = function(linerIndex, type, nameVal = "", sellVal = 0, buyVal = 0, unitVal = "flat", remarksVal = "") {
+window.addSeaSurchargeRowToLiner = function (linerIndex, type, nameVal = "", sellVal = 0, buyVal = 0, unitVal = "flat", remarksVal = "") {
   const tbodyId = type === 'origin' ? `sea-origin-surcharges-body-${linerIndex}` : `sea-dest-surcharges-body-${linerIndex}`;
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
@@ -4170,7 +4184,7 @@ function calculateSeaFreight() {
   const type = appState.currentSeaFreight.type; // 'fcl', 'lcl', or 'bb'
   const currency = document.getElementById("sea-currency").value;
   const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
-  
+
   // Read top level cargo details
   const weightKg = parseFloat(document.getElementById("sea-gross-weight").value) || 0;
   const cbm = parseFloat(document.getElementById("sea-volume").value) || 0;
@@ -4193,7 +4207,7 @@ function calculateSeaFreight() {
     const linerIndex = card.dataset.linerIndex;
     const linerSelect = card.querySelector(".liner-name-select") || document.getElementById(`sea-liner-select-${linerIndex}`);
     const linerNameInput = card.querySelector(".liner-name-input") || document.getElementById(`sea-liner-name-${linerIndex}`);
-    
+
     let linerName = "";
     if (linerSelect && linerSelect.value && linerSelect.value !== "__custom__") {
       linerName = linerSelect.value;
@@ -4459,7 +4473,7 @@ function calculateSeaFreight() {
         alts.push({ carrier, routing: route, tt: transitTime, rate: rateInfo });
       }
     });
-    
+
     if (alts.length > 0) {
       altContainer.style.display = "block";
       altList.innerHTML = alts.map(alt => `
@@ -4625,11 +4639,11 @@ function renderMemberDashboard(userId) {
   if (requestsList.length === 0) {
     const storedReqs = localStorage.getItem("gl_amendment_requests");
     if (storedReqs) {
-      try { requestsList = JSON.parse(storedReqs); } catch(e) {}
+      try { requestsList = JSON.parse(storedReqs); } catch (e) { }
     }
   }
   const myResolved = requestsList.filter(r => r.creator === userId && !r.acknowledged && (r.status === 'approved' || r.status === 'rejected'));
-  
+
   if (myResolved.length > 0) {
     // Schedule a small delay to not block rendering
     setTimeout(() => {
@@ -4673,7 +4687,7 @@ function renderMemberDashboard(userId) {
 
   const myQuotes = appState.quotes.filter(q => q.creator === userId);
   const totalEnquiries = myQuotes.length;
-  
+
   let totalRevenueINR = 0;
   let conversions = 0;
 
@@ -4709,7 +4723,7 @@ function renderMemberDashboard(userId) {
       if (stored) {
         try { alerts = JSON.parse(stored); } catch (e) { alerts = []; }
       }
-      
+
       if (alerts.length > 0) {
         nrsPanel.style.display = "block";
         const alertsList = document.getElementById("nrs-notifications-list");
@@ -4760,8 +4774,8 @@ window.deleteNrsAlert = deleteNrsAlert;
 // EXECUTIVE COMMAND CENTER DASHBOARD
 function showExecutiveDashboard() {
   if (!isUserAdminOrManager()) {
-    console.warn("Access Denied: Executive Dashboard is restricted to user ganny.");
-    alert("Access Denied: Executive Dashboard is restricted to user ganny.");
+    console.warn("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
+    alert("Access Denied: Executive Dashboard is restricted to Admin and Manager roles.");
     goHome();
     return;
   }
@@ -4782,7 +4796,7 @@ window.showExecutiveDashboard = showExecutiveDashboard;
 function renderExecutiveDashboard() {
   // 1. Fetch data
   const quotes = appState.quotes || [];
-  
+
   // 2. Executive KPI Cards Calculations
   const totalQuotes = quotes.length;
   const convertedQuotes = quotes.filter(q => q.status === 'converted').length;
@@ -4811,12 +4825,12 @@ function renderExecutiveDashboard() {
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch(e) {}
+    } catch (e) { }
   }
-  
+
   const blockedCusts = [];
   const pendingCusts = [];
-  
+
   Object.values(controls).forEach(c => {
     if (c.blocked) {
       blockedCusts.push(c.customer);
@@ -4828,7 +4842,7 @@ function renderExecutiveDashboard() {
 
   document.getElementById("exec-blocked-cust-count").textContent = blockedCusts.length;
   document.getElementById("exec-blocked-cust-list").textContent = blockedCusts.length > 0 ? blockedCusts.join(", ") : "None currently";
-  
+
   document.getElementById("exec-pending-cust-count").textContent = pendingCusts.length;
   document.getElementById("exec-pending-cust-list").textContent = pendingCusts.length > 0 ? pendingCusts.join(", ") : "None currently";
 
@@ -4836,7 +4850,7 @@ function renderExecutiveDashboard() {
   const leadBody = document.getElementById("exec-leaderboard-body");
   if (leadBody) {
     leadBody.innerHTML = "";
-    
+
     const desks = Object.keys(TEAM_ROLES).filter(roleId => {
       if (roleId === 'ganny' || roleId === 'manager') return false;
       return true;
@@ -4849,10 +4863,10 @@ function renderExecutiveDashboard() {
       const deskConversions = deskQuotes.filter(q => q.status === 'converted').length;
       const deskRate = deskQuotesCount > 0 ? (deskConversions / deskQuotesCount * 100) : 0;
       const deskGP = deskQuotes.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
-      
+
       const tr = document.createElement("tr");
       const name = (TEAM_ROLES[deskIdLower]?.name || deskIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
-      
+
       tr.innerHTML = `
         <td><strong>${name}</strong></td>
         <td>${deskQuotesCount}</td>
@@ -4872,10 +4886,10 @@ function renderExecutiveDashboard() {
   const recentBody = document.getElementById("exec-recent-quotes-body");
   if (recentBody) {
     recentBody.innerHTML = "";
-    
+
     // Sort quotes descending (newest first, based on index or date string)
     const sortedQuotes = [...quotes].reverse().slice(0, 10);
-    
+
     if (sortedQuotes.length === 0) {
       recentBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No quotations recorded yet.</td></tr>`;
     } else {
@@ -4884,7 +4898,7 @@ function renderExecutiveDashboard() {
         const statusText = q.status === 'quoted' ? 'Quoted' : (q.status === 'converted' ? 'Converted' : (q.status === 'cancelled' ? 'Cancelled' : 'Lost'));
         const creatorName = (TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || "").replace(/\s*\(Free\s*Hand\)/i, "");
         const formattedAmount = q.amountINR ? `₹${q.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : `₹0`;
-        
+
         tr.innerHTML = `
           <td>${q.date || "-"}</td>
           <td><strong>${q.customer || "-"}</strong></td>
@@ -5086,7 +5100,7 @@ function renderConversionDynamicsChart(trends) {
     svgContent += `
       <rect x="${x}" y="${yWin}" width="${barWidth}" height="${winHeight}" fill="#16A34A" rx="2" />
       <rect x="${x}" y="${yLost}" width="${barWidth}" height="${lostHeight}" fill="#EF4444" rx="2" />
-      <text x="${x + barWidth/2}" y="${height - 10}" fill="var(--text-dim)" font-size="9" text-anchor="middle">${monthLabel}</text>
+      <text x="${x + barWidth / 2}" y="${height - 10}" fill="var(--text-dim)" font-size="9" text-anchor="middle">${monthLabel}</text>
     `;
   });
   svgContent += `
@@ -5251,7 +5265,7 @@ function renderAdminDashboard() {
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch(e) {}
+        try { requests = JSON.parse(stored); } catch (e) { }
       }
     }
     const pending = requests.filter(r => r.status === 'pending');
@@ -5304,7 +5318,7 @@ function renderAdminDashboard() {
         heading.innerHTML = `Admin Approvals Control Deck <span style="background: rgba(255,255,255,0.08); color: var(--text-dim); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 0.5rem;">0 PENDING</span>`;
       }
     }
-    
+
     let listHtml = "";
     const filteredPending = pending;
 
@@ -5378,9 +5392,9 @@ function renderAdminDashboard() {
         </div>
       `;
     }
-    
+
     reqList.innerHTML = warningPrefix + listHtml;
-    
+
     // Dynamically refresh customer controls list to update override/waiver badges
     renderAdminCustomerControlList();
   }
@@ -5402,17 +5416,17 @@ function renderControlTowerFeed() {
 
   // Get up to 3 most recent quotes
   const recent = [...quotes].reverse().slice(0, 3);
-  
+
   container.innerHTML = recent.map(quote => {
     const isAir = quote.type === 'air';
     const modeLabel = isAir ? 'AIR DESK' : 'SEA DESK';
     const originStr = (quote.origin || '').substring(0, 15);
     const destStr = (quote.destination || '').substring(0, 15);
-    
+
     // Status text & colors matching premium corporate timeline
     const statusText = quote.status === 'converted' ? 'Won Booking' : 'Priced (Pending)';
     const statusColor = quote.status === 'converted' ? 'var(--green)' : 'var(--amber)';
-    
+
     // Chargeable parameter
     let loadStr = '';
     if (isAir) {
@@ -5420,10 +5434,10 @@ function renderControlTowerFeed() {
     } else {
       loadStr = `${(quote.volume || 0).toLocaleString()} CBM`;
     }
-    
+
     // Routing description
     const routingStr = quote.viaRoute ? `via ${quote.viaRoute}` : 'Direct Lane';
-    
+
     return `
       <div class="timeline-shipment-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; transition: all 0.2s; cursor: pointer;" onclick="viewSavedQuote('${quote.id}')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -5468,12 +5482,12 @@ window.convertQuote = (id) => {
   const customerName = quote.customer || "";
   const lower = customerName.toLowerCase().trim();
   const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-  
+
   const creatorRole = quote.creator;
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' || 
-    creatorRole === 'cathrina' || 
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    creatorRole === 'jaya' ||
+    creatorRole === 'cathrina' ||
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
     TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
@@ -5704,7 +5718,7 @@ function generatePerformanceReport() {
 
   const todayStr = new Date().toISOString().split('T')[0];
   const activeYear = '2026';
-  
+
   // Filter quotes based on officer
   let filtered = appState.quotes;
   if (officer !== 'all') {
@@ -5804,7 +5818,7 @@ function generatePerformanceReport() {
   // Populate print modal
   const printCard = document.getElementById("quote-print-card");
   document.getElementById("modal-header-title").textContent = "Official Performance Report Extraction";
-  
+
   printCard.innerHTML = `
     <div class="print-header">
       <div class="print-logo">GL PERFORMANCE DESK</div>
@@ -5904,7 +5918,7 @@ function saveCurrentQuote() {
   memorizeSurchargeNames();
   const isAirActive = document.getElementById("air-freight-panel")?.classList.contains("active");
   const isSeaActive = document.getElementById("sea-freight-panel")?.classList.contains("active");
-  
+
   let isAir = false;
   if (isAirActive) {
     isAir = true;
@@ -5916,7 +5930,7 @@ function saveCurrentQuote() {
   }
 
   const customerName = document.getElementById(isAir ? "air-cust-name" : "sea-cust-name").value.trim();
-  
+
   if (!customerName) {
     alert("Please enter a Customer Name to save the quote.");
     return;
@@ -5929,7 +5943,7 @@ function saveCurrentQuote() {
     try {
       const storedControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       control = storedControls[lowerCust] || null;
-    } catch(e) {}
+    } catch (e) { }
   }
 
   // 2. Capture Agency Agreement PDF if uploaded in the calculator page
@@ -5962,10 +5976,10 @@ function saveCurrentQuote() {
     const originVal = document.getElementById("air-origin").value.trim();
     const destVal = document.getElementById("air-dest").value.trim();
     const incoterm = document.getElementById("air-incoterm").value;
-    
+
     if (!originVal) { alert("Please fill in Origin Airport."); return; }
     if (!destVal) { alert("Please fill in Destination Airport."); return; }
-    
+
     const tariffsEnabled = document.getElementById("air-enable-tariffs")?.checked ?? true;
     const originFeesEnabled = document.getElementById("air-enable-origin-fees")?.checked ?? true;
     const destFeesEnabled = document.getElementById("air-enable-dest-fees")?.checked ?? true;
@@ -5990,7 +6004,7 @@ function saveCurrentQuote() {
       alert("Please add at least one Cargo Line in the Dimensions Matrix.");
       return;
     }
-    
+
     let hasInvalidRow = false;
     rows.forEach(row => {
       const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
@@ -6373,7 +6387,7 @@ function saveCurrentQuote() {
       quoteData.creator = originalQuote.creator;
       quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
       quoteData.amendmentAllowed = false; // Lock it back!
-      
+
       appState.editingQuoteId = null; // Clear edit mode
       DB.saveQuote(quoteData);
       alert("Quotation amended and locked successfully!");
@@ -6411,14 +6425,14 @@ function saveCurrentQuote() {
   } else {
     resetSeaFreightDeskForm();
   }
-  
+
   resetSurchargesToDefaults();
-  
+
   // Clear agreement variables
   if (!window._uploadedAgreements) window._uploadedAgreements = {};
   window._uploadedAgreements['air'] = null;
   window._uploadedAgreements['sea'] = null;
-  
+
   const airStatusLabel = document.getElementById("air-agreement-status");
   if (airStatusLabel) {
     airStatusLabel.textContent = "[Required]";
@@ -6444,9 +6458,9 @@ function resetSurchargesToDefaults() {
   if (airOriginBody) {
     const creatorRole = appState.currentUser;
     const isFreeHandOrNrs = creatorRole && (
-      creatorRole === 'jaya' || 
-      creatorRole === 'cathrina' || 
-      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+      creatorRole === 'jaya' ||
+      creatorRole === 'cathrina' ||
+      TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
       TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
     );
 
@@ -6782,7 +6796,7 @@ function loadMemorizedSurcharges() {
       }
     }
     const merged = Array.from(new Set([...defaults[cat], ...names]));
-    
+
     const datalist = document.getElementById(`${cat}-charges-list`);
     if (datalist) {
       datalist.innerHTML = merged.map(name => `<option value="${name}"></option>`).join("");
@@ -6803,7 +6817,7 @@ function memorizeSurchargeNames() {
   categories.forEach(cat => {
     const body = document.getElementById(`${cat}-surcharges-body`);
     if (!body) return;
-    
+
     const names = [];
     body.querySelectorAll(".chg-name").forEach(input => {
       const val = input.value.trim();
@@ -6823,12 +6837,12 @@ function memorizeSurchargeNames() {
           stored = [];
         }
       }
-      
+
       const updated = Array.from(new Set([...stored, ...names]));
       localStorage.setItem(storageKey, JSON.stringify(updated));
     }
   });
-  
+
   loadMemorizedSurcharges();
 }
 window.memorizeSurchargeNames = memorizeSurchargeNames;
@@ -6894,21 +6908,21 @@ window.showAirlineBreakup = (quoteId, airlineIndex) => {
   if (!quote) return;
   const alt = quote.details.airlines[airlineIndex];
   if (!alt) return;
-  
+
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-  
+
   let originHtml = "";
   (alt.originSurcharges || []).forEach(s => {
     originHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${s.name} (${currencySym}${s.rate}/${s.unit})</span><strong>${currencySym}${s.calculatedCost.toFixed(2)}</strong></div>`;
   });
   if (!originHtml) originHtml = `<div style="color:#888; font-style:italic;">No origin surcharges</div>`;
-  
+
   let destHtml = "";
   (alt.destSurcharges || []).forEach(s => {
     destHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${s.name} (${currencySym}${s.rate}/${s.unit})</span><strong>${currencySym}${s.calculatedCost.toFixed(2)}</strong></div>`;
   });
   if (!destHtml) destHtml = `<div style="color:#888; font-style:italic;">No destination surcharges</div>`;
-  
+
   const breakupModal = document.createElement("div");
   breakupModal.id = "breakup-submodal";
   breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
@@ -6957,9 +6971,9 @@ window.showAirlineBreakup = (quoteId, airlineIndex) => {
 window.showSeaBreakup = (quoteId) => {
   const quote = appState.quotes.find(q => q.id === quoteId);
   if (!quote) return;
-  
+
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-  
+
   let originHtml = "";
   const originList = quote.details.originSurcharges || [];
   if (originList.length > 0) {
@@ -6976,7 +6990,7 @@ window.showSeaBreakup = (quoteId) => {
     });
   }
   if (!originHtml) originHtml = `<div style="color:#888; font-style:italic; font-size:0.85rem;">No origin surcharges</div>`;
-  
+
   let destHtml = "";
   const destList = quote.details.destSurcharges || [];
   destList.forEach(s => {
@@ -6985,7 +6999,7 @@ window.showSeaBreakup = (quoteId) => {
     destHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;"><span>${s.name} ${rateLabel}</span><strong>${currencySym}${cost.toFixed(2)}</strong></div>`;
   });
   if (!destHtml) destHtml = `<div style="color:#888; font-style:italic; font-size:0.85rem;">No destination surcharges</div>`;
-  
+
   const breakupModal = document.createElement("div");
   breakupModal.id = "breakup-submodal";
   breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
@@ -7041,9 +7055,9 @@ window.viewSavedQuote = (id) => {
 
   const isAir = quote.type === 'air';
   const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
-  
+
   let detailsRows = "";
-  
+
   let alternativesHtml = "";
   if (quote.details && quote.details.airlines && quote.details.airlines.length > 0) {
     const altRows = quote.details.airlines.map((alt, index) => {
@@ -7052,7 +7066,7 @@ window.viewSavedQuote = (id) => {
       const surch = alt.surchargeTotal !== undefined ? alt.surchargeTotal : (quote.details.surchargeTotal || 0);
       const gTotal = alt.grandTotal !== undefined ? alt.grandTotal : (baseFr + surch);
       const rate = alt.appliedRate !== undefined ? alt.appliedRate : (quote.details.appliedRate || 0);
-      
+
       return `
         <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
@@ -7077,7 +7091,7 @@ window.viewSavedQuote = (id) => {
         </tr>
       `;
     }).join("");
-    
+
     alternativesHtml = `
       <div class="print-section-title" style="margin-top: 1.5rem;">Airline Carrier & Pricing Summary (Individual Details)</div>
       <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
@@ -7108,7 +7122,7 @@ window.viewSavedQuote = (id) => {
         <td style="font-weight: 700; color: #2f3193;">${alt.rate}</td>
       </tr>
     `).join("");
-    
+
     alternativesHtml = `
       <div class="print-section-title" style="margin-top: 1.5rem;">Alternative Carrier & Routing Options</div>
       <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem;">
@@ -7276,19 +7290,19 @@ window.viewSavedQuote = (id) => {
     });
   }
 
-    const isMultiCarrier = quote.details ? 
-                           ((quote.details.airlines && quote.details.airlines.length > 1) || 
-                            (quote.details.alternatives && quote.details.alternatives.length > 1))
-                           : false;
+  const isMultiCarrier = quote.details ?
+    ((quote.details.airlines && quote.details.airlines.length > 1) ||
+      (quote.details.alternatives && quote.details.alternatives.length > 1))
+    : false;
 
-    const bottomTotalBox = isMultiCarrier ? "" : `
+  const bottomTotalBox = isMultiCarrier ? "" : `
       <div class="total-summary-box">
         <strong>GRAND TOTAL FREIGHT CHARGES (EXCLUDING LOCAL TAXES):</strong>
         <span class="val">${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
     `;
 
-    printCard.innerHTML = `
+  printCard.innerHTML = `
       <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
           <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
@@ -7402,7 +7416,7 @@ window.deleteQuote = (id) => {
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch(e) {}
+        try { requests = JSON.parse(stored); } catch (e) { }
       }
     }
     const pending = requests.find(r => r.quoteId === quote.id && r.requestType === 'delete' && r.status === 'pending');
@@ -7410,7 +7424,7 @@ window.deleteQuote = (id) => {
       alert("You have already requested permission to delete this quote. Please wait for Ganny's approval.");
       return;
     }
-    
+
     const reason = prompt("You do not have permission to delete this quotation.\n\nPlease enter the reason for requesting deletion permission from Admin (Ganny):");
     if (reason === null) return; // User cancelled
     if (!reason.trim()) {
@@ -7450,7 +7464,7 @@ window.deleteQuote = (id) => {
 
   if (confirm(`Are you sure you want to delete quote for "${quote.customer}"?`)) {
     DB.deleteQuote(id);
-    
+
     // Remove related requests
     if (DB.firestoreRef) {
       const related = (window._amendmentRequests || []).filter(r => r.quoteId === id);
@@ -7462,14 +7476,14 @@ window.deleteQuote = (id) => {
       let requests = [];
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch(e) {}
+        try { requests = JSON.parse(stored); } catch (e) { }
       }
       requests = requests.filter(r => r.quoteId !== id);
       localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
     }
 
     alert("Quotation deleted successfully!");
-    
+
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
     } else {
@@ -7503,7 +7517,7 @@ window.toggleMaximizeQuoteModal = () => {
   const modal = document.getElementById("quote-modal");
   const btn = document.getElementById("maximize-modal-btn");
   if (!modal) return;
-  
+
   const isMaximized = modal.classList.toggle("maximized");
   if (isMaximized) {
     btn.innerHTML = `
@@ -7534,74 +7548,74 @@ function printQuote() {
 
   const baseHref = window.location.origin + window.location.pathname;
 
-  printWindow.document.write('<!DOCTYPE html>' + 
+  printWindow.document.write('<!DOCTYPE html>' +
     '<html lang="en">' +
     '<head>' +
-      '<meta charset="UTF-8">' +
-      '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-      '<title>Quotation Official Print</title>' +
-      '<base href="' + baseHref + '">' +
-      '<link rel="preconnect" href="https://fonts.googleapis.com">' +
-      '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-      '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-      '<link rel="stylesheet" href="index.css">' +
-      '<style>' +
-        '@page {' +
-          'size: A4;' +
-          'margin: 15mm 20mm 15mm 20mm;' +
-        '}' +
-        'html, body {' +
-          'margin: 0 !important;' +
-          'padding: 0 !important;' +
-          'background: #fff !important;' +
-          'color: #0f172a !important;' +
-          'font-family: "Plus Jakarta Sans", Arial, sans-serif;' +
-          '-webkit-print-color-adjust: exact !important;' +
-          'print-color-adjust: exact !important;' +
-        '}' +
-        '.quote-print-card {' +
-          'box-shadow: none !important;' +
-          'padding: 0 !important;' +
-          'margin: 0 !important;' +
-          'width: 100% !important;' +
-          'max-width: 100% !important;' +
-          'background: #fff !important;' +
-          'color: #0f172a !important;' +
-          'font-size: 9.5pt !important;' +
-        '}' +
-        '* {' +
-          '-webkit-print-color-adjust: exact !important;' +
-          'print-color-adjust: exact !important;' +
-        '}' +
-        '.quote-print-card tr {' +
-          'page-break-inside: avoid !important;' +
-        '}' +
-        '.quote-print-card table {' +
-          'page-break-inside: auto;' +
-        '}' +
-        '.total-summary-box {' +
-          'page-break-inside: avoid !important;' +
-        '}' +
-        'ol {' +
-          'page-break-inside: auto;' +
-        '}' +
-        'li {' +
-          'page-break-inside: avoid !important;' +
-        '}' +
-      '</style>' +
+    '<meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>Quotation Official Print</title>' +
+    '<base href="' + baseHref + '">' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
+    '<link rel="stylesheet" href="index.css">' +
+    '<style>' +
+    '@page {' +
+    'size: A4;' +
+    'margin: 15mm 20mm 15mm 20mm;' +
+    '}' +
+    'html, body {' +
+    'margin: 0 !important;' +
+    'padding: 0 !important;' +
+    'background: #fff !important;' +
+    'color: #0f172a !important;' +
+    'font-family: "Plus Jakarta Sans", Arial, sans-serif;' +
+    '-webkit-print-color-adjust: exact !important;' +
+    'print-color-adjust: exact !important;' +
+    '}' +
+    '.quote-print-card {' +
+    'box-shadow: none !important;' +
+    'padding: 0 !important;' +
+    'margin: 0 !important;' +
+    'width: 100% !important;' +
+    'max-width: 100% !important;' +
+    'background: #fff !important;' +
+    'color: #0f172a !important;' +
+    'font-size: 9.5pt !important;' +
+    '}' +
+    '* {' +
+    '-webkit-print-color-adjust: exact !important;' +
+    'print-color-adjust: exact !important;' +
+    '}' +
+    '.quote-print-card tr {' +
+    'page-break-inside: avoid !important;' +
+    '}' +
+    '.quote-print-card table {' +
+    'page-break-inside: auto;' +
+    '}' +
+    '.total-summary-box {' +
+    'page-break-inside: avoid !important;' +
+    '}' +
+    'ol {' +
+    'page-break-inside: auto;' +
+    '}' +
+    'li {' +
+    'page-break-inside: avoid !important;' +
+    '}' +
+    '</style>' +
     '</head>' +
     '<body>' +
-      '<div class="quote-print-card">' +
-        printCard.innerHTML +
-      '</div>' +
-      '<script>' +
-        'window.addEventListener("load", () => {' +
-          'setTimeout(() => {' +
-            'window.print();' +
-            'window.close();' +
-          '}, 300);' +
-        '});' +
-      '</' + 'script>' +
+    '<div class="quote-print-card">' +
+    printCard.innerHTML +
+    '</div>' +
+    '<script>' +
+    'window.addEventListener("load", () => {' +
+    'setTimeout(() => {' +
+    'window.print();' +
+    'window.close();' +
+    '}, 300);' +
+    '});' +
+    '</' + 'script>' +
     '</body>' +
     '</html>'
   );
@@ -7646,7 +7660,7 @@ document.addEventListener('click', (e) => {
 
 window.onHdrSearchInput = (key, val) => {
   window.hdrFilterState[`search_${key}`] = val.toLowerCase().trim();
-  
+
   const optionsList = document.getElementById(`hdr-options-${key}`);
   if (optionsList) {
     const opts = optionsList.querySelectorAll('.hdr-filter-opt');
@@ -7659,7 +7673,7 @@ window.onHdrSearchInput = (key, val) => {
       }
     });
   }
-  
+
   applyDbFiltersAndSort();
 };
 
@@ -7667,7 +7681,7 @@ window.selectHdrFilter = (key, value, label) => {
   window.hdrFilterState[key] = value;
   const btnLabel = document.getElementById(`hdr-label-${key}`);
   const dropdownBtn = document.querySelector(`#dropdown-hdr-${key} .hdr-filter-btn`);
-  
+
   if (btnLabel) btnLabel.textContent = label;
   if (dropdownBtn) {
     if (value !== 'all') {
@@ -7780,14 +7794,14 @@ window.populateAllHeaderFilterDropdowns = () => {
   const deskOptions = document.getElementById('hdr-options-desk');
   if (deskOptions) {
     const creatorsSet = new Set(Object.keys(TEAM_ROLES));
-    quotes.forEach(q => { 
+    quotes.forEach(q => {
       if (q.creator && q.creator.toLowerCase() !== 'mahendra') {
-        creatorsSet.add(q.creator); 
+        creatorsSet.add(q.creator);
       }
     });
     creatorsSet.delete('mahendra');
     creatorsSet.delete('Mahendra');
-    
+
     let html = `<div class="hdr-filter-opt ${window.hdrFilterState.desk === 'all' ? 'active' : ''}" onclick="selectHdrFilter('desk', 'all', 'All Desks')">All Desks</div>`;
     Array.from(creatorsSet).forEach(cId => {
       const name = (TEAM_ROLES[cId]?.name || cId).replace(/\(Free Hand\)/g, "").trim();
@@ -7868,7 +7882,7 @@ window.toggleUserHdrFilterMenu = (event, key) => {
 window.onUserHdrSearchInput = (key, val) => {
   if (!window.userHdrFilterState) window.userHdrFilterState = {};
   window.userHdrFilterState[`search_${key}`] = val.toLowerCase().trim();
-  
+
   const optionsList = document.getElementById(`user-hdr-options-${key}`);
   if (optionsList) {
     const opts = optionsList.querySelectorAll('.hdr-filter-opt');
@@ -7881,7 +7895,7 @@ window.onUserHdrSearchInput = (key, val) => {
       }
     });
   }
-  
+
   applyUserDbFiltersAndSort();
 };
 
@@ -7890,7 +7904,7 @@ window.selectUserHdrFilter = (key, value, label) => {
   window.userHdrFilterState[key] = value;
   const btnLabel = document.getElementById(`user-hdr-label-${key}`);
   const dropdownBtn = document.querySelector(`#dropdown-user-hdr-${key} .hdr-filter-btn`);
-  
+
   if (btnLabel) btnLabel.textContent = label;
   if (dropdownBtn) {
     if (value !== 'all') {
@@ -8056,8 +8070,8 @@ window.applyUserDbFiltersAndSort = () => {
     const statusStr = (q.status || "").toLowerCase();
     const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
     const sellRateStr = (q.amount || "").toString().toLowerCase();
-    
-    const gpStr = st.gp === 'percent' ? 
+
+    const gpStr = st.gp === 'percent' ?
       (q.grossProfit !== undefined && q.amount ? `${((q.grossProfit / q.amount) * 100).toFixed(2)}%` : '0.00%').toLowerCase() :
       (q.grossProfit || "").toString().toLowerCase();
 
@@ -8109,7 +8123,7 @@ window.applyUserDbFiltersAndSort = () => {
     // Global Search match
     if (st.search_global) {
       const topSearch = st.search_global;
-      const match = 
+      const match =
         customerStr.includes(topSearch) ||
         refIdStr.includes(topSearch) ||
         typeStr.includes(topSearch) ||
@@ -8155,10 +8169,10 @@ window.applyUserDbFiltersAndSort = () => {
     const quoteAmount = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
     const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
-    
+
     const isQuoted = quote.status === 'quoted';
     const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
-    
+
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>
@@ -8167,15 +8181,15 @@ window.applyUserDbFiltersAndSort = () => {
       </td>
       <td><span class="quote-type-badge ${quote.type}">
         ${quote.type === 'transport' ?
-          `Transportation` :
-          (quote.type === 'warehouse' ?
-            `Warehouse` :
-            (quote.type === 'air' ? 
-              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
-              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
-            )
+        `Transportation` :
+        (quote.type === 'warehouse' ?
+          `Warehouse` :
+          (quote.type === 'air' ?
+            `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` :
+            `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
           )
-        }</span></td>
+        )
+      }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
       </td>
@@ -8185,10 +8199,10 @@ window.applyUserDbFiltersAndSort = () => {
       <td>
         ${quote.grossProfit !== undefined ? `
           <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
-            ${st.gp === 'percent' ? 
-              (quote.amount ? `${((quote.grossProfit / quote.amount) * 100).toFixed(2)}%` : '0.00%') :
-              `${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            }
+            ${st.gp === 'percent' ?
+          (quote.amount ? `${((quote.grossProfit / quote.amount) * 100).toFixed(2)}%` : '0.00%') :
+          `${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        }
           </div>
         ` : '-'}
       </td>
@@ -8282,7 +8296,7 @@ window.applyDbFiltersAndSort = () => {
     const statusStr = (q.status || "").toLowerCase();
     const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
     const sellRateStr = (q.amount || "").toString().toLowerCase();
-    const gpStr = st.gp === 'percent' ? 
+    const gpStr = st.gp === 'percent' ?
       (q.grossProfit !== undefined && q.amount ? `${((q.grossProfit / q.amount) * 100).toFixed(2)}%` : '0.00%').toLowerCase() :
       (q.grossProfit || "").toString().toLowerCase();
 
@@ -8343,7 +8357,7 @@ window.applyDbFiltersAndSort = () => {
 
     // Global Top Search Bar match
     if (topSearch) {
-      const match = 
+      const match =
         customerStr.includes(topSearch) ||
         refIdStr.includes(topSearch) ||
         typeStr.includes(topSearch) ||
@@ -8412,7 +8426,7 @@ window.applyDbFiltersAndSort = () => {
     const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
     const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
-    
+
     tr.innerHTML = `
       <td><strong>#${getQuoteRefId(quote)}</strong></td>
       <td>
@@ -8421,15 +8435,15 @@ window.applyDbFiltersAndSort = () => {
       </td>
       <td><span class="quote-type-badge ${quote.type}">
         ${quote.type === 'transport' ?
-          `Transportation` :
-          (quote.type === 'warehouse' ?
-            `Warehouse` :
-            (quote.type === 'air' ? 
-              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` : 
-              `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
-            )
+        `Transportation` :
+        (quote.type === 'warehouse' ?
+          `Warehouse` :
+          (quote.type === 'air' ?
+            `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>${quote.details && quote.details.module === 'import' ? 'Air Import' : 'Air Export'}` :
+            `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>${quote.details && quote.details.module === 'import' ? 'Sea Import' : 'Sea Export'}`
           )
-        }</span></td>
+        )
+      }</span></td>
       <td>
         <div style="font-weight: 600;">${quote.customer}</div>
       </td>
@@ -8443,10 +8457,10 @@ window.applyDbFiltersAndSort = () => {
       <td>
         ${quote.grossProfit !== undefined ? `
           <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
-            ${window.hdrFilterState.gp === 'percent' ? 
-              (quote.amount ? `${((quote.grossProfit / quote.amount) * 100).toFixed(2)}%` : '0.00%') :
-              `${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${Math.abs(quote.grossProfitINR || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}`
-            }
+            ${window.hdrFilterState.gp === 'percent' ?
+          (quote.amount ? `${((quote.grossProfit / quote.amount) * 100).toFixed(2)}%` : '0.00%') :
+          `${quote.grossProfitCurrency === 'INR' ? '₹' : (quote.grossProfitCurrency === 'USD' ? '$' : (quote.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(quote.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}${quote.grossProfitCurrency !== 'INR' ? `<br><span style="font-size:0.7rem; color:var(--text-dim);">[₹${Math.abs(quote.grossProfitINR || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}]</span>` : ''}`
+        }
           </div>
         ` : '-'}
       </td>
@@ -8489,7 +8503,7 @@ window.filterQuotes = (val) => {
   const query = val.toLowerCase().trim();
   const activeTbodyId = appState.currentUser === 'ganny' ? 'admin-quotes-body' : 'user-quotes-body';
   const rows = document.querySelectorAll(`#${activeTbodyId} tr`);
-  
+
   rows.forEach(row => {
     // Find the quote ID from the row data attribute
     const quoteId = row.getAttribute("data-quote-id");
@@ -8498,32 +8512,32 @@ window.filterQuotes = (val) => {
       row.style.display = "";
       return;
     }
-    
+
     const quote = appState.quotes.find(q => q.id === quoteId);
     if (!quote) {
       row.style.display = "none";
       return;
     }
-    
+
     // Check match on various fields
     const creatorName = (TEAM_ROLES[quote.creator]?.name || "").toLowerCase();
     const customer = (quote.customer || "").toLowerCase();
     const refId = quote.id.toLowerCase();
     const type = (quote.type || "").toLowerCase();
     const route = (quote.route || "").toLowerCase();
-    
+
     // Origin / Destination detailed names
     const origin = (quote.details?.origin || "").toLowerCase();
     const destination = (quote.details?.destination || "").toLowerCase();
-    
+
     // Carrier & Incoterms
     const carrier = (quote.details?.airline || quote.details?.shippingLine || "").toLowerCase();
     const incoterm = (quote.details?.incoterm || "").toLowerCase();
-    
+
     // Row visual text
     const rowText = row.textContent.toLowerCase();
-    
-    const isMatch = 
+
+    const isMatch =
       customer.includes(query) ||
       refId.includes(query) ||
       type.includes(query) ||
@@ -8534,7 +8548,7 @@ window.filterQuotes = (val) => {
       carrier.includes(query) ||
       incoterm.includes(query) ||
       rowText.includes(query);
-      
+
     if (isMatch) {
       row.style.display = "";
     } else {
@@ -8548,7 +8562,7 @@ function applyDeskNames() {
   if (switcher) {
     const adminName = (TEAM_ROLES['ganny']?.name || 'Pricing Team').replace(/\(Free Hand\)/g, "");
     let buttonsHtml = `<button class="role-btn active" data-role="manager">${adminName}</button>`;
-    
+
     // Add default users
     const defaultUsers = [
       { id: 'shashank', defaultName: 'Air Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
@@ -8570,7 +8584,7 @@ function applyDeskNames() {
     });
 
     switcher.innerHTML = buttonsHtml;
-    
+
     // Re-bind clicks
     switcher.querySelectorAll(".role-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
@@ -8635,7 +8649,7 @@ function applyDeskNames() {
 
 function saveDeskNames(e) {
   e.preventDefault();
-  
+
   const shashank = document.getElementById("cfg-shashank").value.trim();
   const shaheer = document.getElementById("cfg-shaheer").value.trim();
   const jaya = document.getElementById("cfg-jaya").value.trim();
@@ -8672,7 +8686,7 @@ function saveDeskNames(e) {
     if (rawVal !== oldConfig) {
       firebaseConfigChanged = true;
     }
-    
+
     if (rawVal) {
       try {
         let cleaned = rawVal.trim();
@@ -8693,7 +8707,7 @@ function saveDeskNames(e) {
           cleaned = cleaned.replace(regex, `"${k}":`);
         });
         cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-          
+
         const parsed = JSON.parse(cleaned);
         if (!parsed.apiKey || !parsed.projectId) {
           alert("Firebase Config JSON must contain at least 'apiKey' and 'projectId' fields.");
@@ -8734,12 +8748,12 @@ async function registerNewUserProfile(e) {
   const fullName = document.getElementById("reg-fullname").value.trim();
   const username = document.getElementById("reg-username").value.trim().toLowerCase();
   const password = document.getElementById("reg-password").value;
-  
+
   if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username]) {
     alert("This username is already taken. Please try another one.");
     return;
   }
-  
+
   const newUser = {
     username,
     fullName,
@@ -8785,25 +8799,25 @@ async function registerNewUserProfile(e) {
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) {
-        try { customUsers = JSON.parse(stored); } catch(err) {}
+        try { customUsers = JSON.parse(stored); } catch (err) { }
       }
       // Offline mode still saves password locally for fallback login
       const localNewUser = { ...newUser, password };
       customUsers.push(localNewUser);
       localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
     }
-    
+
     TEAM_ROLES[username] = {
       name: `${fullName} (Free Hand)`,
       type: 'member',
       category: 'FREE HAND SALES (AIR/SEA)',
       currency: 'INR'
     };
-    
+
     document.getElementById("reg-fullname").value = "";
     document.getElementById("reg-username").value = "";
     document.getElementById("reg-password").value = "";
-    
+
     alert(`User Profile for "${fullName}" registered successfully! They can now log in using "${username}".`);
     if (typeof renderUserCredentialsList === 'function') {
       renderUserCredentialsList();
@@ -8819,14 +8833,14 @@ function repopulateSurchargesTable(tableBodyId, surchargesList) {
   if (!tbody) return;
   tbody.innerHTML = "";
   if (!surchargesList || surchargesList.length === 0) return;
-  
+
   surchargesList.forEach(s => {
     const tr = document.createElement("tr");
     const isAir = tableBodyId.startsWith("air");
-    const autocompleteList = isAir 
+    const autocompleteList = isAir
       ? (tableBodyId.includes("origin") ? "air-origin-surcharges-list" : "air-dest-surcharges-list")
       : (tableBodyId.includes("origin") ? "sea-origin-surcharges-list" : "sea-dest-surcharges-list");
-      
+
     tr.innerHTML = `
       <td><input type="text" class="chg-name" list="${autocompleteList}" value="${s.name}" required></td>
       <td><input type="number" class="chg-rate" step="0.01" value="${s.rate}" required></td>
@@ -8881,7 +8895,7 @@ function addAlternativeOptionRow(tbodyId, carrier = "", routing = "", tt = "", r
       </button>
     </td>
   `;
-  
+
   // Attach input event listeners for live updates
   tr.querySelectorAll("input").forEach(inp => {
     inp.addEventListener("input", () => {
@@ -8907,7 +8921,7 @@ function addAlternativeOptionRow(tbodyId, carrier = "", routing = "", tt = "", r
   }
 
   tbody.appendChild(tr);
-  
+
   // Trigger initial calculation to show empty state/new option
   if (tbodyId.includes("air")) {
     calculateAirFreight();
@@ -8926,20 +8940,20 @@ function amendQuote(id) {
   // Load the quote back into the respective calculator
   appState.editingQuoteId = quote.id;
   hideQuoteModal(); // Close print preview modal if open
-  
+
   // Hide dashboards
   document.getElementById("member-dashboard-panel").classList.remove("active");
   document.getElementById("manager-panel").classList.remove("active");
-  
+
   if (quote.type === 'air') {
     document.getElementById("air-freight-panel").classList.add("active");
-    
+
     document.getElementById("air-cust-name").value = quote.customer;
     document.getElementById("air-origin").value = quote.details.origin || "";
     document.getElementById("air-dest").value = quote.details.destination || "";
     document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
     document.getElementById("air-terms").value = quote.details.termsAndConditions || DEFAULT_AIR_TERMS;
-    
+
     document.getElementById("air-commodity").value = quote.details.commodity || "GENERAL";
     handleAirCommodityChange();
     if (quote.details.tempType) {
@@ -8989,7 +9003,7 @@ function amendQuote(id) {
         tabImp.classList.remove("active");
       }
     }
-    
+
     // Cargo items
     const cargoBody = document.getElementById("air-cargo-body");
     if (cargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
@@ -9015,11 +9029,11 @@ function amendQuote(id) {
         });
       });
     }
-    
+
     // Local surcharges
     repopulateSurchargesTable("air-origin-surcharges-body", quote.details.originSurcharges);
     repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
-    
+
     calculateAirFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
   } else if (quote.type === 'transport') {
@@ -9091,9 +9105,9 @@ function amendQuote(id) {
       document.getElementById("warehouse-header-currency").value = quote.currency || "INR";
       syncWarehouseCurrency();
     }
-    
 
-    
+
+
     const warehouseBody = document.getElementById("warehouse-standalone-body");
     if (warehouseBody) {
       warehouseBody.innerHTML = "";
@@ -9129,14 +9143,14 @@ function amendQuote(id) {
         warehouseBody.appendChild(tr);
       }
     }
-    
+
     updateAdminModulePermissions();
     calculateWarehousing();
     alert(`Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Enter name when saving to confirm your amendments.`);
-    
+
   } else {
     document.getElementById("sea-freight-panel").classList.add("active");
-    
+
     document.getElementById("sea-cust-name").value = quote.customer;
     document.getElementById("sea-origin").value = quote.details.origin || "";
     document.getElementById("sea-dest").value = quote.details.destination || "";
@@ -9148,7 +9162,7 @@ function amendQuote(id) {
     document.getElementById("sea-tt").value = quote.details.tt || "";
     document.getElementById("sea-validity").value = quote.details.validity || "";
     document.getElementById("sea-terms").value = quote.details.termsAndConditions || DEFAULT_SEA_TERMS;
-    
+
     appState.currentSeaFreight.module = quote.details.module || 'export';
     const tabExp = document.getElementById("sea-tab-export");
     const tabImp = document.getElementById("sea-tab-import");
@@ -9175,7 +9189,7 @@ function amendQuote(id) {
     const fclSection = document.getElementById("sea-fcl-section");
     const lclSection = document.getElementById("sea-lcl-section");
     const bbForm = document.getElementById("sea-bb-form");
-    
+
     const container = document.getElementById("sea-liners-container");
     if (container) {
       container.innerHTML = "";
@@ -9200,7 +9214,7 @@ function amendQuote(id) {
         });
       }
     }
-    
+
     // Repopulate cargo dimensions if exists
     const seaCargoBody = document.getElementById("sea-cargo-body");
     if (seaCargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
@@ -9241,7 +9255,7 @@ function amendQuote(id) {
 
     // Alternative carrier options
     repopulateAlternativesTable("sea-alternatives-body", quote.details.alternatives);
-    
+
     calculateSeaFreight();
     alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
   }
@@ -9257,7 +9271,7 @@ function approveAmendment(reqId) {
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
     if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
+      try { requests = JSON.parse(stored); } catch (e) { }
     }
   }
   const req = requests.find(r => r.id === reqId);
@@ -9271,7 +9285,7 @@ function approveAmendment(reqId) {
       }
       controls[lower].waiveAgreement = true;
       window._customerControls = controls;
-      
+
       if (DB.firestoreRef) {
         DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
       } else {
@@ -9279,7 +9293,7 @@ function approveAmendment(reqId) {
           let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
           offlineControls[lower] = controls[lower];
           localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-        } catch(e) {}
+        } catch (e) { }
       }
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been APPROVED.`);
     } else if (req.requestType === 'credit_override') {
@@ -9297,7 +9311,7 @@ function approveAmendment(reqId) {
       if (quote) DB.saveQuote(quote);
       alert(`Request to ${req.requestType ? req.requestType.toUpperCase() : 'EDIT'} quote #${getQuoteRefIdById(req.quoteId)} has been APPROVED.`);
     }
-    
+
     // Sync change to DB
     if (DB.firestoreRef) {
       DB.firestoreRef.collection("amendment_requests").doc(req.id).set(req, { merge: true })
@@ -9319,13 +9333,13 @@ function rejectAmendment(reqId) {
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
     if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
+      try { requests = JSON.parse(stored); } catch (e) { }
     }
   }
   const req = requests.find(r => r.id === reqId);
   if (req) {
     req.status = 'rejected';
-    
+
     if (req.requestType === 'agreement_waiver') {
       alert(`Agency Agreement waiver request for customer "${req.customer}" has been REJECTED.`);
     } else if (req.requestType === 'credit_override') {
@@ -9349,16 +9363,16 @@ window.rejectAmendment = rejectAmendment;
 function calculateSeaVolumeFromDimensions() {
   const rows = document.querySelectorAll("#sea-cargo-body .sea-cargo-item-row");
   const unit = appState.currentSeaFreight.dimUnit || 'cms';
-  
+
   let totalVolume = 0;
   let totalPackages = 0;
-  
+
   rows.forEach(row => {
     const l = parseFloat(row.querySelector(".sea-cargo-len").value) || 0;
     const w = parseFloat(row.querySelector(".sea-cargo-wid").value) || 0;
     const h = parseFloat(row.querySelector(".sea-cargo-hei").value) || 0;
     const qty = parseInt(row.querySelector(".sea-cargo-qty").value) || 0;
-    
+
     if (l > 0 && w > 0 && h > 0 && qty > 0) {
       let rowVol = 0;
       if (unit === 'cms') {
@@ -9370,17 +9384,17 @@ function calculateSeaVolumeFromDimensions() {
       totalPackages += qty;
     }
   });
-  
+
   const volInput = document.getElementById("sea-volume");
   if (volInput) {
     volInput.value = totalVolume > 0 ? totalVolume.toFixed(3) : 0;
   }
-  
+
   const pkgInput = document.getElementById("sea-pkg-qty");
   if (pkgInput) {
     pkgInput.value = totalPackages > 0 ? totalPackages : 0;
   }
-  
+
   calculateSeaFreight();
 }
 window.calculateSeaVolumeFromDimensions = calculateSeaVolumeFromDimensions;
@@ -9442,13 +9456,13 @@ window.markQuoteLost = markQuoteLost;
 
 function saveCustomSeaAutocompletes(originInput, destInput, lineInput, linerInput, commodityInput) {
   let customPorts = [];
-  try { customPorts = JSON.parse(localStorage.getItem("gl_custom_seaports") || "[]"); } catch(e) {}
+  try { customPorts = JSON.parse(localStorage.getItem("gl_custom_seaports") || "[]"); } catch (e) { }
   let customLines = [];
-  try { customLines = JSON.parse(localStorage.getItem("gl_custom_shippinglines") || "[]"); } catch(e) {}
+  try { customLines = JSON.parse(localStorage.getItem("gl_custom_shippinglines") || "[]"); } catch (e) { }
   let customLiners = [];
-  try { customLiners = JSON.parse(localStorage.getItem("gl_custom_linernames") || "[]"); } catch(e) {}
+  try { customLiners = JSON.parse(localStorage.getItem("gl_custom_linernames") || "[]"); } catch (e) { }
   let customCommodities = [];
-  try { customCommodities = JSON.parse(localStorage.getItem("gl_custom_sea_commodities") || "[]"); } catch(e) {}
+  try { customCommodities = JSON.parse(localStorage.getItem("gl_custom_sea_commodities") || "[]"); } catch (e) { }
 
   const majorSeaports = [
     { code: "CNSHA", name: "Shanghai Port", city: "Shanghai", country: "China" },
@@ -9596,7 +9610,7 @@ window.saveCustomSeaAutocompletes = saveCustomSeaAutocompletes;
 function saveCustomCustomer(name) {
   if (!name) return;
   let customCusts = [];
-  try { customCusts = JSON.parse(localStorage.getItem("gl_custom_customers") || "[]"); } catch(e) {}
+  try { customCusts = JSON.parse(localStorage.getItem("gl_custom_customers") || "[]"); } catch (e) { }
   const normalized = name.trim();
   if (normalized && !customCusts.some(c => c.toLowerCase() === normalized.toLowerCase())) {
     customCusts.push(normalized);
@@ -9663,7 +9677,7 @@ document.addEventListener("keydown", (e) => {
       const container = target.closest(".autocomplete-container");
       const dropdown = container ? container.querySelector(".autocomplete-dropdown") : null;
       const hasActiveDropdown = dropdown && dropdown.classList.contains("show") && dropdown.querySelector(".autocomplete-item.active");
-      
+
       if (!hasActiveDropdown) {
         e.preventDefault();
         if (target._transitionScheduled) return;
@@ -9700,7 +9714,7 @@ async function fetchExchangeRates() {
       EXCHANGE_RATES.GBP_TO_INR = r.INR / r.GBP;
       EXCHANGE_RATES.EUR_TO_USD = 1 / r.EUR;
       EXCHANGE_RATES.GBP_TO_USD = 1 / r.GBP;
-      
+
       // Update UI Ticker
       const tickerUsd = document.getElementById("ticker-usd");
       const tickerEur = document.getElementById("ticker-eur");
@@ -9708,7 +9722,7 @@ async function fetchExchangeRates() {
       if (tickerUsd) tickerUsd.textContent = `USD ₹${r.INR.toFixed(2)}`;
       if (tickerEur) tickerEur.textContent = `EUR ₹${(r.INR / r.EUR).toFixed(2)}`;
       if (tickerGbp) tickerGbp.textContent = `GBP ₹${(r.INR / r.GBP).toFixed(2)}`;
-      
+
       // Update Modal fields
       const modUsdInr = document.getElementById("modal-usd-inr");
       const modEurInr = document.getElementById("modal-eur-inr");
@@ -9720,12 +9734,12 @@ async function fetchExchangeRates() {
       if (modGbpInr) modGbpInr.textContent = `₹${(r.INR / r.GBP).toFixed(2)}`;
       if (modEurUsd) modEurUsd.textContent = `$${(1 / r.EUR).toFixed(2)}`;
       if (modGbpUsd) modGbpUsd.textContent = `$${(1 / r.GBP).toFixed(2)}`;
-      
+
       // Last Updated Text
       const d = new Date(data.time_last_update_utc);
       const updatedText = document.getElementById("xe-last-updated");
       if (updatedText) updatedText.textContent = `Last Updated: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} (UTC)`;
-      
+
       // Trigger calculations update
       if (typeof calculateAirFreight === 'function') calculateAirFreight();
       if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
@@ -9760,18 +9774,18 @@ function runCurrencyConversion() {
   const fromSelect = document.getElementById("converter-from");
   const toSelect = document.getElementById("converter-to");
   const resultDiv = document.getElementById("converter-result");
-  
+
   if (!amtInput || !fromSelect || !toSelect || !resultDiv) return;
-  
+
   const amt = parseFloat(amtInput.value) || 0;
   const from = fromSelect.value;
   const to = toSelect.value;
-  
+
   if (amt <= 0) {
     resultDiv.textContent = "0.00";
     return;
   }
-  
+
   let amountInUSD = amt;
   if (from === 'INR') {
     amountInUSD = amt / EXCHANGE_RATES.USD_TO_INR;
@@ -9780,7 +9794,7 @@ function runCurrencyConversion() {
   } else if (from === 'GBP') {
     amountInUSD = amt * EXCHANGE_RATES.GBP_TO_USD;
   }
-  
+
   let finalAmt = amountInUSD;
   let sym = "$";
   if (to === 'INR') {
@@ -9795,7 +9809,7 @@ function runCurrencyConversion() {
   } else if (to === 'USD') {
     sym = "$";
   }
-  
+
   resultDiv.textContent = `${sym}${finalAmt.toFixed(2)}`;
 }
 window.runCurrencyConversion = runCurrencyConversion;
@@ -9817,7 +9831,7 @@ function formatTransitTimeDisplay(tt) {
   if (!tt) return "-";
   const trimmed = tt.trim();
   if (trimmed.toLowerCase() === "direct") return trimmed.toUpperCase();
-  
+
   const clean = trimmed.replace(/\s*days?\s*$/i, "");
   if (/^\d+([\s\-\.\/]\d+)*$/.test(clean)) {
     return clean + " Days";
@@ -9841,8 +9855,8 @@ function getCountryFromPortValue(val, mode) {
   }
 
   if (mode === 'air') {
-    const matchedAp = appState.airports.find(ap => 
-      ap.code.toLowerCase() === code || 
+    const matchedAp = appState.airports.find(ap =>
+      ap.code.toLowerCase() === code ||
       ap.name.toLowerCase() === cleanVal ||
       ap.name.toLowerCase().includes(cleanVal)
     );
@@ -9865,10 +9879,10 @@ function getCountryFromPortValue(val, mode) {
     try {
       const stored = localStorage.getItem("gl_custom_seaports");
       if (stored) customPorts = JSON.parse(stored) || [];
-    } catch(e) {}
+    } catch (e) { }
     const combined = [...majorSeaports, ...customPorts];
-    const matchedSp = combined.find(sp => 
-      sp.code.toLowerCase() === code || 
+    const matchedSp = combined.find(sp =>
+      sp.code.toLowerCase() === code ||
       sp.name.toLowerCase() === cleanVal ||
       sp.name.toLowerCase().includes(cleanVal)
     );
@@ -9898,7 +9912,7 @@ function toggleMapHelper(mode, type) {
   const rawVal = inputEl.value.trim();
   let searchQuery = "";
   const country = getCountryFromPortValue(rawVal, mode);
-  
+
   if (country) {
     searchQuery = mode === 'air' ? `Airports in ${country}` : `Seaports in ${country}`;
   } else if (rawVal) {
@@ -9976,13 +9990,13 @@ function validateCreditCompliance(quoteData) {
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch(e) {}
+    } catch (e) { }
   }
 
   // Get allowed credit period (defaults to 36)
   const customerAllowedDays = controls[lowerCust] ? (controls[lowerCust].creditDays || 36) : 36;
-  const agentAllowedDays = (controls[agentUsername] ? (controls[agentUsername].creditDays || 36) : 
-                            (controls[agentRoleName] ? (controls[agentRoleName].creditDays || 36) : 36));
+  const agentAllowedDays = (controls[agentUsername] ? (controls[agentUsername].creditDays || 36) :
+    (controls[agentRoleName] ? (controls[agentRoleName].creditDays || 36) : 36));
 
   // Get all quotes
   const allQuotes = appState.quotes || [];
@@ -10043,16 +10057,16 @@ function validateCreditCompliance(quoteData) {
   if (requests.length === 0) {
     const stored = localStorage.getItem("gl_amendment_requests");
     if (stored) {
-      try { requests = JSON.parse(stored); } catch(e) {}
+      try { requests = JSON.parse(stored); } catch (e) { }
     }
   }
 
   // Check if there is an approved credit_override request matching customer or agent
-  const matchedApprovedReq = requests.find(r => 
-    r.requestType === 'credit_override' && 
+  const matchedApprovedReq = requests.find(r =>
+    r.requestType === 'credit_override' &&
     r.status === 'approved' &&
     ((r.customer && r.customer.toLowerCase().trim() === lowerCust) ||
-     (r.agent && r.agent.toLowerCase().trim() === agentUsername))
+      (r.agent && r.agent.toLowerCase().trim() === agentUsername))
   );
 
   if (matchedApprovedReq) {
@@ -10068,11 +10082,11 @@ function validateCreditCompliance(quoteData) {
   }
 
   // Check if there is a pending request
-  const matchedPendingReq = requests.find(r => 
-    r.requestType === 'credit_override' && 
+  const matchedPendingReq = requests.find(r =>
+    r.requestType === 'credit_override' &&
     r.status === 'pending' &&
     ((r.customer && r.customer.toLowerCase().trim() === lowerCust) ||
-     (r.agent && r.agent.toLowerCase().trim() === agentUsername))
+      (r.agent && r.agent.toLowerCase().trim() === agentUsername))
   );
 
   if (matchedPendingReq) {
@@ -10148,19 +10162,19 @@ const DB = {
   firestoreRef: null,
   triedDefaultFallback: false,
   snapshotUnsubscribe: null,
-  
+
   async init() {
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
-    
+
     const useOffline = localStorage.getItem("gl_use_offline") === "true";
     if (useOffline) {
       this.fallbackToLocal();
       return;
     }
-    
+
     let configRaw = localStorage.getItem("gl_firebase_config");
-    
+
     let config = null;
     if (configRaw) {
       try {
@@ -10169,11 +10183,11 @@ const DB = {
         console.error("Failed to parse stored Firebase configuration:", e);
       }
     }
-    
+
     if (!config) {
       config = DEFAULT_FIREBASE_CONFIG;
     }
-    
+
     if (config && config.apiKey && config.projectId) {
       try {
         // Initialize Firebase Compat
@@ -10192,15 +10206,15 @@ const DB = {
         this.firestoreRef = firebase.firestore(firebase.app(), dbId);
         window.db = this.firestoreRef;
         this.isCloud = true;
-        
+
         // Enable offline persistence
         this.firestoreRef.enablePersistence().catch(err => {
           console.warn("Firestore offline persistence failed:", err.code);
         });
-        
+
         if (statusDot) statusDot.style.background = "#10b981"; // green
         if (statusText) statusText.textContent = "Firebase Cloud (Online)";
-        
+
         this.registerSnapshotListener();
 
         // Setup persistent auth listener
@@ -10224,7 +10238,7 @@ const DB = {
             document.getElementById("subheader-controls").style.display = "flex";
           }
         });
-        
+
         // Check for migration from local to cloud
         const localQuotes = JSON.parse(localStorage.getItem("logistics_quotes") || "[]");
         if (localQuotes.length > 0) {
@@ -10256,7 +10270,7 @@ const DB = {
             console.error("DB: Migration of local NRS registry failed. Retaining local copy.", err);
           }
         }
-        
+
         // Check for migration from local to cloud for amendment requests
         const localReqs = JSON.parse(localStorage.getItem("gl_amendment_requests") || "[]");
         if (localReqs.length > 0) {
@@ -10276,20 +10290,20 @@ const DB = {
         console.error("Failed to initialize Firebase:", e);
       }
     }
-    
+
     // Fallback to local storage
     this.fallbackToLocal();
   },
-  
+
   registerSnapshotListener() {
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
-    
+
     console.log("DB: Registering Firestore snapshot listener...");
-    
+
     // Sync users list from Firestore
     this.syncUsers();
-    
+
     // Sync customer controls list from Firestore
     if (this.firestoreRef) {
       // Sync custom autocomplete entries from Firestore
@@ -10329,7 +10343,7 @@ const DB = {
         }
         window._amendmentRequests = reqs;
         localStorage.setItem("gl_amendment_requests", JSON.stringify(reqs));
-        
+
         // Auto refresh dashboards dynamically
         if (appState.currentUser) {
           if (appState.currentUser === 'ganny') {
@@ -10346,13 +10360,14 @@ const DB = {
         }
       });
     }
-    
+
     // Unsubscribe from any existing listener if applicable
     if (this.snapshotUnsubscribe) {
       this.snapshotUnsubscribe();
     }
-    
+
     this.snapshotUnsubscribe = this.firestoreRef.collection("quotes").onSnapshot(snapshot => {
+      appState.quotes = list;
       console.log("DB: Received snapshot from Firestore. Document count:", snapshot.size);
       const list = [];
       const seenRefIds = new Set();
@@ -10371,11 +10386,15 @@ const DB = {
       // Sort quotes chronologically (newest first)
       list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       appState.quotes = list;
-      
+
+      setTimeout(() => {
+        renderAdminDashboard();
+      }, 500);
+
       // Update badge status to show online
       if (statusDot) statusDot.style.background = "#10b981"; // green
       if (statusText) statusText.textContent = "Firebase Cloud (Online)";
-      
+
       // Refresh view
       if (appState.currentUser) {
         if (appState.currentUser === 'ganny') {
@@ -10386,7 +10405,7 @@ const DB = {
       }
     }, error => {
       console.error("Firestore synchronization error:", error);
-      
+
       // Self-healing: check if default database is missing and redirect to named 'default' database ID
       if (error.message && error.message.includes("(default) does not exist") && !this.triedDefaultFallback) {
         console.log("DB: Default database not found. Self-healing to connect to named database 'default'...");
@@ -10399,12 +10418,12 @@ const DB = {
           console.error("DB: Self-healing fallback failed:", fallbackErr);
         }
       }
-      
+
       if (statusDot) statusDot.style.background = "#ef4444"; // red
       if (statusText) statusText.textContent = "Firebase: " + error.message;
     });
   },
-  
+
   async syncUsers() {
     if (!this.firestoreRef) return;
     try {
@@ -10423,7 +10442,7 @@ const DB = {
         }
         console.log("DB: Auto-populated default users in Firestore");
       }
-      
+
       // Set listener on users collection
       this.firestoreRef.collection("users").onSnapshot(snap => {
         let customUsers = [];
@@ -10437,7 +10456,7 @@ const DB = {
         try {
           const storedLocal = localStorage.getItem("gl_custom_users");
           if (storedLocal) existingLocalUsers = JSON.parse(storedLocal) || [];
-        } catch (e) {}
+        } catch (e) { }
 
         snap.forEach(doc => {
           const u = doc.data();
@@ -10477,15 +10496,15 @@ const DB = {
       console.error("DB: Failed to sync users from Firestore:", err);
     }
   },
-  
+
   fallbackToLocal() {
     const statusDot = document.getElementById("db-connection-dot");
     const statusText = document.getElementById("db-connection-text");
-    
+
     this.isCloud = false;
     if (statusDot) statusDot.style.background = "#38bdf8"; // sky blue
     if (statusText) statusText.textContent = "LocalStorage (Offline)";
-    
+
     // Load local storage quotes
     const saved = localStorage.getItem("logistics_quotes");
     if (saved) {
@@ -10501,7 +10520,7 @@ const DB = {
     } else {
       appState.quotes = [];
     }
-    
+
     // Load local amendment requests cache
     const storedReqs = localStorage.getItem("gl_amendment_requests");
     if (storedReqs) {
@@ -10513,7 +10532,7 @@ const DB = {
     } else {
       window._amendmentRequests = [];
     }
-    
+
     // Sanitize and deduplicate quotes array
     const dedupedList = [];
     const seenRefIds = new Set();
@@ -10527,7 +10546,7 @@ const DB = {
     });
     appState.quotes = dedupedList;
   },
-  
+
   sanitize(q, idx) {
     const creatorMap = {
       'air-nom': 'shashank',
@@ -10546,11 +10565,11 @@ const DB = {
     }
     // Specific fix for duplicate quotes AEANT0726IN00062 / AEANT0726IN00065:
     const lowercaseId = (q.id || "").toLowerCase();
-    const isTargetQuote = lowercaseId.includes("00062") || lowercaseId.includes("00065") || 
-                          q.quoteNumber === 62 || q.quoteNumber === 65 || 
-                          (q.id && (q.id.includes("62") || q.id.includes("65"))) ||
-                          (q.notes && (q.notes.includes("00062") || q.notes.includes("00065")));
-    
+    const isTargetQuote = lowercaseId.includes("00062") || lowercaseId.includes("00065") ||
+      q.quoteNumber === 62 || q.quoteNumber === 65 ||
+      (q.id && (q.id.includes("62") || q.id.includes("65"))) ||
+      (q.notes && (q.notes.includes("00062") || q.notes.includes("00065")));
+
     if (isTargetQuote) {
       q.type = 'warehouse';
       q.mode = 'Warehouse';
@@ -10560,10 +10579,10 @@ const DB = {
       q.details.module = 'warehouse';
     }
   },
-  
+
   async saveQuote(quote) {
     if (!quote.timestamp) quote.timestamp = Date.now();
-    
+
     // Local memory update immediately so the local user doesn't see lag
     const idx = appState.quotes.findIndex(q => q.id === quote.id);
     if (idx !== -1) {
@@ -10571,7 +10590,7 @@ const DB = {
     } else {
       appState.quotes.push(quote);
     }
-    
+
     if (this.isCloud && this.firestoreRef) {
       console.log("DB: Attempting to write quote to Firestore...", quote.id);
       try {
@@ -10590,10 +10609,10 @@ const DB = {
       }
     }
   },
-  
+
   async deleteQuote(quoteId) {
     appState.quotes = appState.quotes.filter(q => q.id !== quoteId);
-    
+
     if (this.isCloud && this.firestoreRef) {
       try {
         await this.firestoreRef.collection("quotes").doc(quoteId).delete();
@@ -10610,7 +10629,7 @@ const DB = {
       }
     }
   },
-  
+
   async clearAllQuotes() {
     if (this.isCloud && this.firestoreRef) {
       try {
@@ -10689,15 +10708,15 @@ async function loadLogisticsNews(type = 'global') {
   if (container1) container1.innerHTML = loadingHtml;
   if (container2) container2.innerHTML = loadingHtml;
 
-  const rssUrl = type === 'global' 
-    ? "https://container-news.com/feed/" 
+  const rssUrl = type === 'global'
+    ? "https://container-news.com/feed/"
     : "https://www.logisticsinsider.in/feed/";
   const feedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
   try {
     const res = await fetch(feedUrl);
     const data = await res.json();
-    
+
     if (data && data.status === 'ok' && data.items && data.items.length > 0) {
       const itemsHtml = data.items.map(item => {
         let dateStr = "";
@@ -10706,12 +10725,12 @@ async function loadLogisticsNews(type = 'global') {
           if (!isNaN(d.getTime())) {
             dateStr = d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
           }
-        } catch(e) {}
-        
+        } catch (e) { }
+
         const title = item.title || "Logistics News Update";
         const link = item.link || "#";
         const author = item.author ? ` • By ${item.author}` : "";
-        
+
         return `
           <a href="${link}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block; margin-bottom: 0.5rem;">
             <div class="news-feed-card" style="background: rgba(255,255,255,0.45); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.25rem; transition: all 0.2s; cursor: pointer;">
@@ -10753,7 +10772,7 @@ function toggleAdminSettingsModal() {
 
   const modal = document.getElementById("admin-settings-modal");
   if (!modal) return;
-  
+
   if (modal.style.display === "none" || !modal.style.display) {
     // Populate configurations dynamically inside modal inputs
     const savedNames = localStorage.getItem("gl_desk_names");
@@ -10764,12 +10783,12 @@ function toggleAdminSettingsModal() {
         if (parsed["shaheer"]) document.getElementById("cfg-shaheer").value = parsed["shaheer"];
         if (parsed["jaya"]) document.getElementById("cfg-jaya").value = parsed["jaya"];
         if (parsed["cathrina"]) document.getElementById("cfg-cathrina").value = parsed["cathrina"];
-      } catch(e) {}
+      } catch (e) { }
     }
-    
+
     document.getElementById("cfg-gmaps-key").value = localStorage.getItem("gl_gmaps_key") || "";
     document.getElementById("cfg-firebase-json").value = localStorage.getItem("gl_firebase_config_raw") || "";
-    
+
     renderAdminCustomerControlList();
     modal.style.display = "flex";
   } else {
@@ -10823,7 +10842,7 @@ async function saveNewPassword(e) {
       try {
         let customUsers = [];
         const stored = localStorage.getItem("gl_custom_users");
-        if (stored) { try { customUsers = JSON.parse(stored); } catch(e) {} }
+        if (stored) { try { customUsers = JSON.parse(stored); } catch (e) { } }
         const matchedLocal = customUsers.find(u => u && u.username && u.username.toLowerCase() === currentUser);
         if (matchedLocal) {
           matchedLocal.password = newPass;
@@ -10831,7 +10850,7 @@ async function saveNewPassword(e) {
           customUsers.push({ username: currentUser, fullName: TEAM_ROLES[currentUser]?.name || currentUser, password: newPass });
         }
         localStorage.setItem("gl_custom_users", JSON.stringify(customUsers));
-      } catch(lsErr) {
+      } catch (lsErr) {
         console.warn("Could not sync new password to localStorage (non-fatal):", lsErr);
       }
 
@@ -10841,7 +10860,7 @@ async function saveNewPassword(e) {
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) {
-        try { customUsers = JSON.parse(stored); } catch(err) {}
+        try { customUsers = JSON.parse(stored); } catch (err) { }
       }
       const matched = customUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === currentUser);
       if (matched) {
@@ -10871,28 +10890,28 @@ document.addEventListener("keydown", (e) => {
   // ESC key: Exit modals and return to home from calculators
   if (e.key === "Escape") {
     const modalIds = [
-      "admin-settings-modal", 
+      "admin-settings-modal",
       "admin-reset-overlay",
-      "change-password-modal", 
-      "xe-rates-modal", 
+      "change-password-modal",
+      "xe-rates-modal",
       "print-preview-modal",
       "won-booking-modal"
     ];
     let modalClosed = false;
-    
+
     for (const id of modalIds) {
       const modal = document.getElementById(id);
       if (modal && (modal.style.display === "flex" || modal.style.display === "block")) {
         modal.style.display = "none";
         modalClosed = true;
-        
+
         // Modal-specific cleanups
         if (id === "change-password-modal") {
           document.getElementById("new-pass-val").value = "";
         }
       }
     }
-    
+
     // If no modal was closed, but we are inside an active calculator desk, return back to main dashboard
     if (!modalClosed) {
       const activePanel = document.querySelector(".view-panel.active");
@@ -10967,8 +10986,8 @@ async function submitWonBookingDetails(e) {
 
   const commodity = document.getElementById("won-commodity").value.trim();
 
-  if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress || 
-      !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
+  if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress ||
+    !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
     alert("Please fill all exporter, importer and cargo details to proceed.");
     return;
   }
@@ -10998,12 +11017,12 @@ async function submitWonBookingDetails(e) {
   const customerName = quote.customer || "";
   const lower = customerName.toLowerCase().trim();
   const ctrl = (window._customerControls && window._customerControls[lower]) || {};
-  
+
   const creatorRole = quote.creator;
   const isFreeHandOrNrs = creatorRole && (
-    creatorRole === 'jaya' || 
-    creatorRole === 'cathrina' || 
-    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' || 
+    creatorRole === 'jaya' ||
+    creatorRole === 'cathrina' ||
+    TEAM_ROLES[creatorRole]?.category === 'FREE HAND SALES (AIR/SEA)' ||
     TEAM_ROLES[creatorRole]?.category === 'NRS (AIR/SEA)'
   );
 
@@ -11038,7 +11057,7 @@ async function submitWonBookingDetails(e) {
     if (requests.length === 0) {
       const stored = localStorage.getItem("gl_amendment_requests");
       if (stored) {
-        try { requests = JSON.parse(stored); } catch(e) {}
+        try { requests = JSON.parse(stored); } catch (e) { }
       }
     }
     const pending = requests.find(r => r.customer.toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
@@ -11357,7 +11376,7 @@ async function submitWonBookingDetails(e) {
       let offlineRegistry = [];
       const stored = localStorage.getItem("gl_nrs_registry");
       if (stored) {
-        try { offlineRegistry = JSON.parse(stored); } catch(err) {}
+        try { offlineRegistry = JSON.parse(stored); } catch (err) { }
       }
       const idx = offlineRegistry.findIndex(item => item.id === quote.id);
       if (idx !== -1) {
@@ -11424,7 +11443,7 @@ async function renderNrsRegistry() {
     } else {
       const stored = localStorage.getItem("gl_nrs_registry");
       if (stored) {
-        try { registryList = JSON.parse(stored); } catch(e) {}
+        try { registryList = JSON.parse(stored); } catch (e) { }
       }
     }
 
@@ -11433,8 +11452,8 @@ async function renderNrsRegistry() {
       const quote = appState.quotes.find(q => q.id === item.id);
       const creator = item.creator || (quote && quote.creator);
       if (creator) {
-        return creator === 'shashank' || creator === 'shaheer' || 
-               (TEAM_ROLES[creator] && (TEAM_ROLES[creator].category === 'AIR - NOMINATION' || TEAM_ROLES[creator].category === 'SEA - NOMINATION'));
+        return creator === 'shashank' || creator === 'shaheer' ||
+          (TEAM_ROLES[creator] && (TEAM_ROLES[creator].category === 'AIR - NOMINATION' || TEAM_ROLES[creator].category === 'SEA - NOMINATION'));
       }
       const prefix = (item.refId || "").substring(0, 2).toUpperCase();
       const isNomRef = prefix === 'AE' || prefix === 'AI' || prefix === 'SE' || prefix === 'SI';
@@ -11464,7 +11483,7 @@ function previewPdfDataUrl(dataUrl, title = "Document Preview") {
     }
     const blob = new Blob([uInt8Array], { type: contentType });
     const blobUrl = URL.createObjectURL(blob);
-    
+
     const win = window.open();
     if (win) {
       win.document.write(`
@@ -11502,10 +11521,10 @@ window.previewPdfDataUrl = previewPdfDataUrl;
 function previewNrsAgreementPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-  
+
   let agreementData = item ? item.agencyAgreementData : null;
   let agreementName = item ? item.agencyAgreementName : null;
-  
+
   if (!agreementData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -11535,10 +11554,10 @@ window.previewNrsAgreementPdf = previewNrsAgreementPdf;
 function previewNrsInvoicePackingPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-  
+
   let invoicePackingData = item ? item.invoicePackingData : null;
   let invoicePackingName = item ? item.invoicePackingName : null;
-  
+
   if (!invoicePackingData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -11558,10 +11577,10 @@ window.previewNrsInvoicePackingPdf = previewNrsInvoicePackingPdf;
 function downloadNrsAgreementPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-  
+
   let agreementData = item ? item.agencyAgreementData : null;
   let agreementName = item ? item.agencyAgreementName : null;
-  
+
   if (!agreementData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -11598,10 +11617,10 @@ window.downloadNrsAgreementPdf = downloadNrsAgreementPdf;
 function downloadNrsInvoicePackingPdf(id) {
   const list = window._nrsRegistryCached || [];
   const item = list.find(x => x.id === id);
-  
+
   let invoicePackingData = item ? item.invoicePackingData : null;
   let invoicePackingName = item ? item.invoicePackingName : null;
-  
+
   if (!invoicePackingData) {
     const q = appState.quotes.find(x => x.id === id);
     if (q) {
@@ -11720,27 +11739,27 @@ function displayNrsRegistryItems(list) {
         </td>
         <td>
           ${(() => {
-            const followUps = item.followUps || [];
-            const latest = followUps.length > 0 ? followUps[followUps.length - 1] : null;
-            const statusColors = {
-              'Awaiting Response': { bg: 'rgba(245,158,11,0.12)', color: '#d97706' },
-              'Documents Pending': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
-              'Booking Confirmed by Shipper': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
-              'Shipment Dispatched': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
-              'Completed': { bg: 'rgba(34,197,94,0.12)', color: '#15803d' }
-            };
-            const sc = latest ? (statusColors[latest.status] || { bg: 'rgba(0,0,0,0.05)', color: 'var(--t3)' }) : null;
-            let badgeHtml = '';
-            if (latest) {
-              badgeHtml = `<div style="font-size: 0.58rem; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: ${sc.bg}; color: ${sc.color}; margin-bottom: 3px; white-space: nowrap;">${latest.status}</div>`;
-            }
-            return `
+        const followUps = item.followUps || [];
+        const latest = followUps.length > 0 ? followUps[followUps.length - 1] : null;
+        const statusColors = {
+          'Awaiting Response': { bg: 'rgba(245,158,11,0.12)', color: '#d97706' },
+          'Documents Pending': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
+          'Booking Confirmed by Shipper': { bg: 'rgba(16,185,129,0.12)', color: '#059669' },
+          'Shipment Dispatched': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed' },
+          'Completed': { bg: 'rgba(34,197,94,0.12)', color: '#15803d' }
+        };
+        const sc = latest ? (statusColors[latest.status] || { bg: 'rgba(0,0,0,0.05)', color: 'var(--t3)' }) : null;
+        let badgeHtml = '';
+        if (latest) {
+          badgeHtml = `<div style="font-size: 0.58rem; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: ${sc.bg}; color: ${sc.color}; margin-bottom: 3px; white-space: nowrap;">${latest.status}</div>`;
+        }
+        return `
               ${badgeHtml}
               <button onclick="openNrsFollowUpModal('${item.id}')" style="font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--sky); cursor: pointer; font-weight: 700; white-space: nowrap;" title="View / Add Follow-ups">
                 📋 ${followUps.length > 0 ? followUps.length + ' note' + (followUps.length > 1 ? 's' : '') : 'Track'}
               </button>
             `;
-          })()}
+      })()}
         </td>
       </tr>
     `;
@@ -11920,7 +11939,7 @@ async function addNrsFollowUp() {
     } else {
       // Offline fallback — save to localStorage
       let offlineNrs = {};
-      try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch(e) {}
+      try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch (e) { }
       if (!offlineNrs[itemId]) offlineNrs[itemId] = {};
       offlineNrs[itemId].followUps = item.followUps;
       localStorage.setItem('gl_nrs_registry', JSON.stringify(offlineNrs));
@@ -11953,7 +11972,7 @@ window._uploadedAgreements = { air: null, sea: null };
 function handleAgreementUpload(mode, input) {
   if (!input.files || input.files.length === 0) return;
   const file = input.files[0];
-  
+
   if (!window._uploadedAgreements) window._uploadedAgreements = {};
   window._uploadedAgreements[mode] = {
     name: file.name,
@@ -11988,7 +12007,7 @@ async function renderAdminCustomerControlList() {
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch(e) {}
+    } catch (e) { }
   }
   const customers = Array.from(new Set([
     ...appState.quotes.map(q => q.customer.trim()),
@@ -12041,7 +12060,7 @@ async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
   if (!controls[lower]) {
     controls[lower] = { customer: customerName, creditDays: 36, creditLimit: 0, blocked: false, waiveAgreement: false };
   }
-  
+
   controls[lower].hasAgreement = true;
   controls[lower].agreementFile = fileName;
   controls[lower].agreementData = fileData;
@@ -12052,7 +12071,7 @@ async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
     try {
       await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower], { merge: true });
       console.log(`DB: Saved agency agreement for "${customerName}" to Firestore.`);
-    } catch(err) {
+    } catch (err) {
       console.error("DB: Failed to save agency agreement to Firestore:", err);
     }
   } else {
@@ -12060,7 +12079,7 @@ async function saveCustomerAgreementRecord(customerName, fileName, fileData) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch(e) {}
+    } catch (e) { }
   }
 }
 window.saveCustomerAgreementRecord = saveCustomerAgreementRecord;
@@ -12074,7 +12093,7 @@ async function resetCustomerAgreement(customerName) {
     controls[lower].hasAgreement = false;
     delete controls[lower].agreementFile;
     delete controls[lower].agreementData;
-    
+
     // Sync to database
     if (DB.firestoreRef) {
       await DB.firestoreRef.collection("customer_control").doc(lower).set(controls[lower]);
@@ -12083,7 +12102,7 @@ async function resetCustomerAgreement(customerName) {
         let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
         offlineControls[lower] = controls[lower];
         localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-      } catch(e) {}
+      } catch (e) { }
     }
     alert(`Successfully reset Agency Agreement for "${customerName}".`);
     renderAdminCustomerControlList();
@@ -12107,7 +12126,7 @@ function displayAdminCustomerControlList(list) {
     const pendingReqs = window._amendmentRequests || [];
     const hasPendingWaiver = pendingReqs.some(r => (r.customer || "").toLowerCase().trim() === lower && r.requestType === 'agreement_waiver' && r.status === 'pending');
 
-    const agreementCell = hasAgreement 
+    const agreementCell = hasAgreement
       ? `<div style="display: flex; align-items: center; gap: 0.4rem;">
            <span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 750; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fileName}">${fileName}</span>
            <button class="btn-text" onclick="downloadAgreementPdf('${ctrl.customer}')" style="font-size: 0.65rem; padding: 2px 4px; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;">📥 Download</button>
@@ -12181,7 +12200,7 @@ async function updateCustomerCreditPeriod(customerName, days) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch(e) {}
+    } catch (e) { }
   }
 }
 window.updateCustomerCreditPeriod = updateCustomerCreditPeriod;
@@ -12205,7 +12224,7 @@ async function updateCustomerCreditLimitValue(customerName, limit) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch(e) {}
+    } catch (e) { }
   }
 }
 window.updateCustomerCreditLimitValue = updateCustomerCreditLimitValue;
@@ -12226,7 +12245,7 @@ async function toggleCustomerAgreementWaiver(customerName) {
       let offlineControls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
       offlineControls[lower] = controls[lower];
       localStorage.setItem("gl_customer_controls", JSON.stringify(offlineControls));
-    } catch(e) {}
+    } catch (e) { }
     renderAdminCustomerControlList();
   }
 }
@@ -12266,7 +12285,7 @@ function resetDbConnectionLocal() {
     // Clear service worker registrations
     if (navigator.serviceWorker) {
       navigator.serviceWorker.getRegistrations().then(regs => {
-        for(let r of regs) r.unregister();
+        for (let r of regs) r.unregister();
       });
     }
 
@@ -12288,7 +12307,7 @@ window.resetDbConnectionLocal = resetDbConnectionLocal;
 function toggleDiagnosticsDrawer() {
   const drawer = document.getElementById("diagnostics-drawer");
   if (!drawer) return;
-  
+
   if (drawer.style.display === "none") {
     drawer.style.display = "block";
     updateDiagnosticsUI();
@@ -12305,7 +12324,7 @@ function updateDiagnosticsUI() {
   const diagStatus = document.getElementById("diag-status");
 
   if (diagConn) diagConn.textContent = DB.isCloud ? "Cloud (Online) 🟢" : "Offline (Local) 🔵";
-  
+
   let projectId = "None";
   try {
     const configRaw = localStorage.getItem("gl_firebase_config");
@@ -12313,7 +12332,7 @@ function updateDiagnosticsUI() {
       const config = JSON.parse(configRaw);
       if (config && config.projectId) projectId = config.projectId;
     }
-  } catch(e) {}
+  } catch (e) { }
   if (diagProj) diagProj.textContent = projectId;
 
   let dbUsers = window._firebaseUsers || [];
@@ -12321,7 +12340,7 @@ function updateDiagnosticsUI() {
     try {
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) dbUsers = JSON.parse(stored) || [];
-    } catch(e) {}
+    } catch (e) { }
   }
   if (diagUsers) diagUsers.textContent = `${dbUsers.length} users`;
 
@@ -12349,7 +12368,7 @@ async function resetCustomerCreditDirectory() {
       });
       await Promise.all(promises);
       console.log("DB: Successfully cleared customer_control collection from Firestore.");
-    } catch(err) {
+    } catch (err) {
       console.error("DB: Failed to clear customer_control from Firestore:", err);
       alert("Database error: " + err.message);
       return;
@@ -12387,7 +12406,7 @@ async function clearAllTestData() {
       await Promise.all(reqsPromises);
 
       console.log("DB: Cleared quotes, nrs_registry, and amendment_requests collections.");
-    } catch(err) {
+    } catch (err) {
       console.error("DB: Failed to clear test data from Firestore:", err);
       alert("Database error: " + err.message);
       return;
@@ -12401,7 +12420,7 @@ async function clearAllTestData() {
 
   appState.quotes = [];
   window._amendmentRequests = [];
-  
+
   alert("All test data has been cleared from database successfully!");
   renderAdminDashboard();
 }
@@ -12421,7 +12440,7 @@ async function runDbDiagnostics() {
 
   log("🔍 Starting Database Connection Diagnostics...");
   log(`• App Mode: ${DB.isCloud ? "Firebase Cloud (Online) 🟢" : "LocalStorage (Offline) 🔵"}`);
-  
+
   let configRaw = localStorage.getItem("gl_firebase_config");
   log(`• Custom config: ${configRaw ? "Yes" : "No (Using DEFAULT)"}`);
 
@@ -12436,7 +12455,7 @@ async function runDbDiagnostics() {
   try {
     const snap = await DB.firestoreRef.collection("quotes").limit(1).get();
     log(`✅ quotes collection read test: PASSED (Found ${snap.size} docs)`);
-  } catch(err) {
+  } catch (err) {
     log(`❌ quotes collection read test: FAILED - ${err.message}`);
   }
 
@@ -12454,13 +12473,13 @@ async function runDbDiagnostics() {
     // Clean it up
     await DB.firestoreRef.collection("amendment_requests").doc(testId).delete();
     log("✅ 'amendment_requests' delete test: PASSED");
-    
+
     // Clear any previous error warning banner
     delete window._amendmentRequestsError;
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
     }
-  } catch(err) {
+  } catch (err) {
     log(`❌ 'amendment_requests' write test: FAILED - ${err.message}`);
     log(`👉 Recommendation: Ask your developer to modify Firestore Security Rules to allow read, write on 'amendment_requests' collection.`);
   }
@@ -12488,7 +12507,7 @@ function toggleModulePathway(module, mode) {
   document.getElementById(`${module}-summary-inactive`).style.display = isBundled ? 'block' : 'none';
   document.getElementById(`${module}-summary-active`).style.display = isBundled ? 'none' : 'flex';
   document.getElementById(`${module}-save-btn-container`).style.display = isBundled ? 'none' : 'block';
-  
+
   if (module === 'transport') calculateTransportation();
   else if (module === 'warehouse') calculateWarehousing();
 }
@@ -12601,16 +12620,16 @@ function calculateTransportation() {
       subtotal += parseFloat(input.value) || 0;
     });
   }
-  
+
   const tax = subtotal * 0.18;
   const total = subtotal + tax;
-  
+
   const cur = document.getElementById("transport-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
-  
-  if (document.getElementById("res-transport-subtotal")) document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  if (document.getElementById("res-transport-tax")) document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  if (document.getElementById("res-transport-total")) document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+
+  if (document.getElementById("res-transport-subtotal")) document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  if (document.getElementById("res-transport-tax")) document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  if (document.getElementById("res-transport-total")) document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
 window.calculateTransportation = calculateTransportation;
 
@@ -12629,9 +12648,9 @@ function calculateWarehousing() {
   const cur = document.getElementById("warehouse-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : (cur === 'GBP' ? '£' : (cur === 'AED' ? 'د.إ' : (cur === 'SGD' ? 'S$' : (cur === 'AUD' ? 'A$' : '¥'))))));
 
-  if (document.getElementById("res-warehouse-subtotal")) document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  if (document.getElementById("res-warehouse-tax")) document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-  if (document.getElementById("res-warehouse-total")) document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+  if (document.getElementById("res-warehouse-subtotal")) document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  if (document.getElementById("res-warehouse-tax")) document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  if (document.getElementById("res-warehouse-total")) document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
 window.calculateWarehousing = calculateWarehousing;
 
@@ -12852,7 +12871,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
 
-  window.handleForgotPassword = async function(e) {
+  window.handleForgotPassword = async function (e) {
     if (e) e.preventDefault();
     const usernameInput = prompt("Enter your Username to request an administrative password reset:");
     if (!usernameInput) return;
@@ -12879,7 +12898,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let titleTimer = null;
   const titleEl = document.getElementById("pricing-desk-title");
   if (titleEl) {
-    titleEl.onclick = function() {
+    titleEl.onclick = function () {
       titleClicks++;
       clearTimeout(titleTimer);
       titleTimer = setTimeout(() => {
@@ -12903,10 +12922,10 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  window.updateResetListInPanel = async function() {
+  window.updateResetListInPanel = async function () {
     const listEl = document.getElementById("admin-pending-list");
     if (!listEl) return;
-    
+
     try {
       if (db) {
         const snapshot = await db.collection("resetRequests").where("status", "==", "pending").get();
@@ -12934,7 +12953,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  window.executeForceReset = async function() {
+  window.executeForceReset = async function () {
     const rawUser = document.getElementById("admin-target-user").value;
     const newPass = document.getElementById("admin-target-pass").value;
 
@@ -12990,7 +13009,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Clear the password reset request
         try {
           await db.collection("resetRequests").doc(username).delete();
-        } catch(delErr) {
+        } catch (delErr) {
           console.warn("Could not delete reset request:", delErr);
         }
       }
@@ -12999,7 +13018,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let customUsers = [];
       const stored = localStorage.getItem("gl_custom_users");
       if (stored) {
-        try { customUsers = JSON.parse(stored); } catch(err) {}
+        try { customUsers = JSON.parse(stored); } catch (err) { }
       }
       const matched = customUsers.find(u => u && u.username && u.username.toLowerCase() === username);
       if (matched) {
@@ -13023,7 +13042,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let resets = [];
       const storedResets = localStorage.getItem("pending_password_resets");
       if (storedResets) {
-        try { resets = JSON.parse(storedResets); } catch(err) {}
+        try { resets = JSON.parse(storedResets); } catch (err) { }
       }
       resets = resets.filter(u => u !== username);
       localStorage.setItem("pending_password_resets", JSON.stringify(resets));
@@ -13041,7 +13060,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("admin-target-pass").value = "";
       window.updateResetListInPanel();
       window.updateResetIndicators();
-    } catch(err) {
+    } catch (err) {
       alert("❌ Error performing administrative force reset: " + err.message);
     } finally {
       if (btnEl) { btnEl.textContent = originalBtnText; btnEl.disabled = false; }
@@ -13114,10 +13133,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Admin Broadcast notices — sendAdminBroadcast exposed globally
   window.sendAdminBroadcast = function () {
     const typeEl = document.getElementById("broadcast-type");
-    const msgEl  = document.getElementById("broadcast-message");
+    const msgEl = document.getElementById("broadcast-message");
     if (!typeEl || !msgEl) return alert("Broadcast controls not found.");
     const type = typeEl.value;
-    const msg  = msgEl.value.trim();
+    const msg = msgEl.value.trim();
 
     if (!msg) return alert("Please enter broadcast message.");
 
@@ -13143,7 +13162,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ══════════════════════════════════════════════════
   // REPORTING & ARCHIVING FUNCTIONS
   // ══════════════════════════════════════════════════
-  window.populateReportUsers = function() {
+  window.populateReportUsers = function () {
     const selectEl = document.getElementById("report-user");
     if (!selectEl) return;
     selectEl.innerHTML = '<option value="all">👥 All Desks / Users</option>';
@@ -13155,7 +13174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  window.toggleCustomDateFields = function() {
+  window.toggleCustomDateFields = function () {
     const period = document.getElementById("report-period")?.value;
     const div = document.getElementById("report-custom-dates");
     if (div) {
@@ -13169,7 +13188,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (now.getMonth() < 3) {
       currentYear -= 1;
     }
-    
+
     let startDate, endDate;
     if (period === 'current-fy') {
       startDate = new Date(currentYear, 3, 1);
@@ -13194,7 +13213,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function fetchQuotesForReport(startDate, endDate, userFilter) {
     let allQuotes = [...appState.quotes];
-    
+
     if (DB.isCloud && DB.firestoreRef) {
       try {
         const snapshot = await DB.firestoreRef.collection("archive_quotes")
@@ -13218,9 +13237,9 @@ document.addEventListener("DOMContentLoaded", () => {
             allQuotes.push(q);
           }
         });
-      } catch(e) {}
+      } catch (e) { }
     }
-    
+
     return allQuotes.filter(q => {
       const qDate = new Date(q.date);
       if (qDate < startDate || qDate > endDate) return false;
@@ -13231,20 +13250,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  window.generateReportSummary = async function() {
+  window.generateReportSummary = async function () {
     const period = document.getElementById("report-period")?.value;
     const userFilter = document.getElementById("report-user")?.value;
     const { startDate, endDate } = getReportDateRange(period);
-    
+
     const resultsGrid = document.getElementById("report-results-grid");
     if (resultsGrid) resultsGrid.style.display = 'grid';
-    
+
     const matched = await fetchQuotesForReport(startDate, endDate, userFilter);
-    
+
     let totalSell = 0;
     let totalBuy = 0;
     let totalGp = 0;
-    
+
     matched.forEach(q => {
       totalSell += q.amountINR || 0;
       const buyRate = q.buyRate || q.details?.buyRate || 0;
@@ -13256,27 +13275,27 @@ document.addEventListener("DOMContentLoaded", () => {
         totalGp += (q.amountINR - buyRate);
       }
     });
-    
+
     document.getElementById("rep-stat-count").textContent = matched.length;
     document.getElementById("rep-stat-revenue").textContent = `₹${totalSell.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     document.getElementById("rep-stat-buy").textContent = `₹${totalBuy.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     document.getElementById("rep-stat-gp").textContent = `₹${totalGp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   };
 
-  window.exportReportToCSV = async function() {
+  window.exportReportToCSV = async function () {
     const period = document.getElementById("report-period")?.value;
     const userFilter = document.getElementById("report-user")?.value;
     const { startDate, endDate } = getReportDateRange(period);
-    
+
     const matched = await fetchQuotesForReport(startDate, endDate, userFilter);
     if (matched.length === 0) {
       alert("No quotes found matching the report criteria.");
       return;
     }
-    
+
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Ref ID,Date,Mode,Customer,Route,Creator,Carrier,Buy Rate,Sell Rate,GP,Status\n";
-    
+
     matched.forEach(q => {
       const refId = getQuoteRefId(q) || q.id || "";
       const date = q.date || "";
@@ -13289,10 +13308,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const sellRate = q.amount || 0;
       const gp = q.grossProfit !== undefined ? q.grossProfit : (sellRate - buyRate);
       const status = q.status || "";
-      
+
       csvContent += `${refId},${date},${mode},${customer},${route},${creator},${carrier},${buyRate},${sellRate},${gp},${status}\n`;
     });
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -13302,16 +13321,16 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.removeChild(link);
   };
 
-  window.lookupSingleArchivedQuote = async function() {
+  window.lookupSingleArchivedQuote = async function () {
     const refInput = document.getElementById("report-lookup-ref")?.value.trim().replace("#", "");
     if (!refInput) {
       alert("Please enter a Reference ID to look up.");
       return;
     }
-    
+
     let foundQuote = null;
     foundQuote = appState.quotes.find(q => (getQuoteRefId(q) || "").toLowerCase() === refInput.toLowerCase() || q.id.toLowerCase() === refInput.toLowerCase());
-    
+
     if (!foundQuote && DB.isCloud && DB.firestoreRef) {
       try {
         const docRef = DB.firestoreRef.collection("archive_quotes").doc(refInput);
@@ -13327,18 +13346,18 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!snapshot2.empty) foundQuote = snapshot2.docs[0].data();
           }
         }
-      } catch(e) {
+      } catch (e) {
         console.error("Failed to lookup archive:", e);
       }
     }
-    
+
     if (!foundQuote) {
       try {
         const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
         foundQuote = offlineArchive.find(q => (getQuoteRefId(q) || "").toLowerCase() === refInput.toLowerCase() || q.id.toLowerCase() === refInput.toLowerCase());
-      } catch(e) {}
+      } catch (e) { }
     }
-    
+
     if (foundQuote) {
       if (typeof printQuoteSheet === 'function') {
         printQuoteSheet(foundQuote);
@@ -13350,15 +13369,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  window.updateArchiveLookupSuggestions = async function(val) {
+  window.updateArchiveLookupSuggestions = async function (val) {
     const datalist = document.getElementById("archive-lookup-suggestions");
     if (!datalist) return;
     datalist.innerHTML = "";
     if (!val || val.trim().length < 2) return;
-    
+
     const searchVal = val.toLowerCase().trim();
     const suggestions = new Set();
-    
+
     // 1. Memory quotes
     (appState.quotes || []).forEach(q => {
       const refId = (getQuoteRefId(q) || q.id || "").toLowerCase();
@@ -13367,7 +13386,7 @@ document.addEventListener("DOMContentLoaded", () => {
         suggestions.add(getQuoteRefId(q) || q.id);
       }
     });
-    
+
     // 2. Offline archive
     try {
       const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
@@ -13378,8 +13397,8 @@ document.addEventListener("DOMContentLoaded", () => {
           suggestions.add(getQuoteRefId(q) || q.id);
         }
       });
-    } catch(e) {}
-    
+    } catch (e) { }
+
     // 3. Firestore archive
     if (DB.isCloud && DB.firestoreRef) {
       try {
@@ -13394,9 +13413,9 @@ document.addEventListener("DOMContentLoaded", () => {
             suggestions.add(getQuoteRefId(q) || q.id);
           }
         });
-      } catch(e) {}
+      } catch (e) { }
     }
-    
+
     Array.from(suggestions).slice(0, 15).forEach(s => {
       const option = document.createElement("option");
       option.value = s;
@@ -13404,14 +13423,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  window.runAutoArchival = async function() {
+  window.runAutoArchival = async function () {
     const thresholdDays = 90;
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - thresholdDays);
-    
+
     const toArchive = [];
     const remaining = [];
-    
+
     appState.quotes.forEach(q => {
       const qDate = new Date(q.date);
       if (qDate < cutoffDate) {
@@ -13420,16 +13439,16 @@ document.addEventListener("DOMContentLoaded", () => {
         remaining.push(q);
       }
     });
-    
+
     if (toArchive.length === 0) {
       alert("No quotes older than 90 days found to archive.");
       return;
     }
-    
+
     if (!confirm(`Are you sure you want to archive ${toArchive.length} quotes older than 90 days? They will be moved to the archival database to speed up the app.`)) {
       return;
     }
-    
+
     let successCount = 0;
     if (DB.isCloud && DB.firestoreRef) {
       for (const q of toArchive) {
@@ -13437,7 +13456,7 @@ document.addEventListener("DOMContentLoaded", () => {
           await DB.firestoreRef.collection("archive_quotes").doc(q.id).set(q);
           await DB.firestoreRef.collection("quotes").doc(q.id).delete();
           successCount++;
-        } catch(e) {
+        } catch (e) {
           console.error("Failed to archive quote:", q.id, e);
         }
       }
@@ -13448,11 +13467,11 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("logistics_archive_quotes", JSON.stringify(updatedArchive));
         localStorage.setItem("logistics_quotes", JSON.stringify(remaining));
         successCount = toArchive.length;
-      } catch(e) {
+      } catch (e) {
         console.error("Failed to update offline archive:", e);
       }
     }
-    
+
     appState.quotes = remaining;
     applyDbFiltersAndSort();
     alert(`Successfully archived ${successCount} quotes!`);
@@ -13475,24 +13494,24 @@ document.addEventListener("DOMContentLoaded", () => {
         el.innerHTML = '<span style="color: var(--text-muted); font-size: 0.65rem;">🔒 Locked</span>';
         return;
       }
-      
+
       const quote = appState.quotes.find(q => q.id === quoteId);
       const elapsed = Date.now() - timestamp;
       const limit = 6 * 60 * 60 * 1000; // 6 hours
-      
+
       if (elapsed < limit) {
         const remaining = limit - elapsed;
         const hours = Math.floor(remaining / (3600 * 1000));
         const minutes = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
         const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
-        
+
         let color = "var(--accent-success)"; // Greenish
         let label = "⏳";
         if (hours < 1) {
           color = "var(--accent-warning)"; // Orange
           label = "⚠️";
         }
-        
+
         const timeStr = `${hours}h ${minutes}m ${seconds}s`;
         el.innerHTML = `<span style="color: ${color}; font-weight: 600;" title="Editable without permission for ${timeStr}">${label} ${hours}h ${minutes}m left</span>`;
       } else {
@@ -13542,11 +13561,11 @@ function collapseAllDirNodes() {
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch(e) {}
+    } catch (e) { }
   }
-  
+
   window._dirCollapsedNodes.clear();
-  
+
   if (window._dirGrouping === 'agents') {
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (roleId === 'ganny' || roleId === 'manager') return;
@@ -13573,10 +13592,10 @@ window.collapseAllDirNodes = collapseAllDirNodes;
 
 function toggleDirGrouping(mode) {
   window._dirGrouping = mode;
-  
+
   const btnAgents = document.getElementById("dir-toggle-agents");
   const btnCustomers = document.getElementById("dir-toggle-customers");
-  
+
   if (btnAgents && btnCustomers) {
     if (mode === 'agents') {
       btnAgents.classList.add("active");
@@ -13600,7 +13619,7 @@ window.toggleDirGrouping = toggleDirGrouping;
 
 function selectDirectoryItem(type, name) {
   window._dirSelectedItem = { type, name };
-  
+
   // Highlight active item in the list
   const allItems = document.querySelectorAll(".dir-tree-node");
   allItems.forEach(item => {
@@ -13608,14 +13627,14 @@ function selectDirectoryItem(type, name) {
     item.style.background = "transparent";
     item.style.borderColor = "transparent";
   });
-  
+
   const activeEl = document.getElementById(`dir-node-${type}-${name.replace(/\s+/g, '_')}`);
   if (activeEl) {
     activeEl.classList.add("active-node");
     activeEl.style.background = "rgba(14, 165, 233, 0.15)";
     activeEl.style.borderColor = "var(--sky)";
   }
-  
+
   showDirectoryItemDetails(type, name);
 }
 window.selectDirectoryItem = selectDirectoryItem;
@@ -13623,22 +13642,22 @@ window.selectDirectoryItem = selectDirectoryItem;
 function updateAdminDirectoryView() {
   const listContainer = document.getElementById("dir-list-container");
   if (!listContainer) return;
-  
+
   const searchInput = document.getElementById("dir-search-input");
   const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
-  
+
   const quotes = appState.quotes || [];
   let controls = window._customerControls || {};
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch(e) {}
+    } catch (e) { }
   }
-  
+
   if (window._dirGrouping === 'agents') {
     // Group by Agents (creator of the quotes)
     const agentMap = {};
-    
+
     // Add all registered team roles to make sure they appear
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (roleId === 'ganny' || roleId === 'manager') return;
@@ -13649,7 +13668,7 @@ function updateAdminDirectoryView() {
         quotesCount: 0
       };
     });
-    
+
     // Populate from quotes
     quotes.forEach(q => {
       const creator = q.creator || 'unknown';
@@ -13662,31 +13681,31 @@ function updateAdminDirectoryView() {
         agentMap[agentName].customers.add(q.customer.trim());
       }
     });
-    
+
     // Build HTML
     let html = '';
     const sortedAgents = Object.keys(agentMap).sort();
-    
+
     let filteredCount = 0;
     sortedAgents.forEach(agentName => {
       const data = agentMap[agentName];
       const customersList = Array.from(data.customers).sort();
-      
+
       // Filter logic
       const matchesAgent = agentName.toLowerCase().includes(query);
       const matchingCustomers = customersList.filter(c => c.toLowerCase().includes(query));
-      
+
       if (!query || matchesAgent || matchingCustomers.length > 0) {
         filteredCount++;
         const isSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'agent' && window._dirSelectedItem.name === agentName;
         const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
         const border = isSelected ? 'var(--sky)' : 'transparent';
-        
+
         const nodeKey = `agent_${agentName}`;
         const isCollapsed = window._dirCollapsedNodes.has(nodeKey);
         const arrow = isCollapsed ? '▶' : '▼';
         const displayStyle = isCollapsed ? 'none' : 'flex';
-        
+
         html += `
           <div class="dir-tree-node-wrapper" style="margin-bottom: 0.5rem;">
             <div id="dir-node-agent-${agentName.replace(/\s+/g, '_')}" class="dir-tree-node" onclick="selectDirectoryItem('agent', '${agentName}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid ${border}; background: ${bg}; cursor: pointer; transition: all 0.2s;" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.05)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
@@ -13703,47 +13722,47 @@ function updateAdminDirectoryView() {
             <!-- Children (Customers under this Agent) -->
             <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: ${displayStyle}; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 1.25rem;">
               ${customersList.map(cust => {
-                const matchesCust = !query || cust.toLowerCase().includes(query) || matchesAgent;
-                if (!matchesCust) return '';
-                const isCustSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'customer' && window._dirSelectedItem.name === cust;
-                const cBg = isCustSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
-                const cBorder = isCustSelected ? 'var(--sky)' : 'transparent';
-                return `
+          const matchesCust = !query || cust.toLowerCase().includes(query) || matchesAgent;
+          if (!matchesCust) return '';
+          const isCustSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'customer' && window._dirSelectedItem.name === cust;
+          const cBg = isCustSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
+          const cBorder = isCustSelected ? 'var(--sky)' : 'transparent';
+          return `
                   <div id="dir-node-customer-${cust.replace(/\s+/g, '_')}" class="dir-tree-node child-node" onclick="event.stopPropagation(); selectDirectoryItem('customer', '${cust}')" style="display: flex; align-items: center; gap: 0.4rem; padding: 4px 8px; border-radius: 6px; border: 1px solid ${cBorder}; background: ${cBg}; cursor: pointer; font-size: 0.75rem; color: var(--t2);" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
                     <span>🏢</span>
                     <span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${cust}</span>
                   </div>
                 `;
-              }).join('')}
+        }).join('')}
             </div>
           </div>
         `;
       }
     });
-    
+
     if (filteredCount === 0) {
       listContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); font-size: 0.75rem; padding: 2rem;">No matching agents found.</div>`;
     } else {
       listContainer.innerHTML = html;
     }
-    
+
   } else {
     // Group by Customers
     const customerMap = {};
-    
+
     // Populate unique customers from quotes and controls
     const allCustomers = Array.from(new Set([
       ...quotes.map(q => q.customer.trim()),
       ...Object.values(controls).map(c => c.customer.trim())
     ]));
-    
+
     allCustomers.forEach(cust => {
       customerMap[cust] = {
         agents: new Set(),
         quotesCount: 0
       };
     });
-    
+
     quotes.forEach(q => {
       if (q.customer) {
         const cust = q.customer.trim();
@@ -13755,29 +13774,29 @@ function updateAdminDirectoryView() {
         }
       }
     });
-    
+
     let html = '';
     const sortedCusts = Object.keys(customerMap).sort();
     let filteredCount = 0;
-    
+
     sortedCusts.forEach(cust => {
       const data = customerMap[cust];
       const agentsList = Array.from(data.agents).sort();
-      
+
       const matchesCust = cust.toLowerCase().includes(query);
       const matchingAgents = agentsList.filter(a => a.toLowerCase().includes(query));
-      
+
       if (!query || matchesCust || matchingAgents.length > 0) {
         filteredCount++;
         const isSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'customer' && window._dirSelectedItem.name === cust;
         const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
         const border = isSelected ? 'var(--sky)' : 'transparent';
-        
+
         const nodeKey = `customer_${cust}`;
         const isCollapsed = window._dirCollapsedNodes.has(nodeKey);
         const arrow = isCollapsed ? '▶' : '▼';
         const displayStyle = isCollapsed ? 'none' : 'flex';
-        
+
         html += `
           <div class="dir-tree-node-wrapper" style="margin-bottom: 0.5rem;">
             <div id="dir-node-customer-${cust.replace(/\s+/g, '_')}" class="dir-tree-node" onclick="selectDirectoryItem('customer', '${cust}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid ${border}; background: ${bg}; cursor: pointer; transition: all 0.2s;" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.05)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
@@ -13794,24 +13813,24 @@ function updateAdminDirectoryView() {
             <!-- Children (Agents under this Customer) -->
             <div style="padding-left: 1.5rem; margin-top: 0.25rem; display: ${displayStyle}; flex-direction: column; gap: 0.25rem; border-left: 1px dashed var(--border-1); margin-left: 1.25rem;">
               ${agentsList.map(agent => {
-                const matchesAgent = !query || agent.toLowerCase().includes(query) || matchesCust;
-                if (!matchesAgent) return '';
-                const isAgentSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'agent' && window._dirSelectedItem.name === agent;
-                const aBg = isAgentSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
-                const aBorder = isAgentSelected ? 'var(--sky)' : 'transparent';
-                return `
+          const matchesAgent = !query || agent.toLowerCase().includes(query) || matchesCust;
+          if (!matchesAgent) return '';
+          const isAgentSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'agent' && window._dirSelectedItem.name === agent;
+          const aBg = isAgentSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
+          const aBorder = isAgentSelected ? 'var(--sky)' : 'transparent';
+          return `
                   <div id="dir-node-agent-${agent.replace(/\s+/g, '_')}" class="dir-tree-node child-node" onclick="event.stopPropagation(); selectDirectoryItem('agent', '${agent}')" style="display: flex; align-items: center; gap: 0.4rem; padding: 4px 8px; border-radius: 6px; border: 1px solid ${aBorder}; background: ${aBg}; cursor: pointer; font-size: 0.75rem; color: var(--t2);" onmouseover="if(!this.classList.contains('active-node')) this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!this.classList.contains('active-node')) this.style.background='transparent'">
                     <span>👤</span>
                     <span>${agent}</span>
                   </div>
                 `;
-              }).join('')}
+        }).join('')}
             </div>
           </div>
         `;
       }
     });
-    
+
     if (filteredCount === 0) {
       listContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); font-size: 0.75rem; padding: 2rem;">No matching customers found.</div>`;
     } else {
@@ -13824,29 +13843,29 @@ window.updateAdminDirectoryView = updateAdminDirectoryView;
 function showDirectoryItemDetails(type, name) {
   const detailsContainer = document.getElementById("dir-details-container");
   if (!detailsContainer) return;
-  
+
   const quotes = appState.quotes || [];
   let controls = window._customerControls || {};
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch(e) {}
+    } catch (e) { }
   }
-  
+
   if (type === 'agent') {
     // Render Agent details
     const agentQuotes = quotes.filter(q => {
       const agentName = TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
       return agentName.toLowerCase().trim() === name.toLowerCase().trim();
     });
-    
+
     const uniqueCustomers = Array.from(new Set(agentQuotes.map(q => q.customer).filter(Boolean))).sort();
     const totalCount = agentQuotes.length;
     const convertedCount = agentQuotes.filter(q => q.status === 'converted').length;
     const conversionRate = totalCount > 0 ? ((convertedCount / totalCount) * 100).toFixed(1) : '0.0';
-    
+
     let quotesRows = agentQuotes.map(q => {
-      const refId = q.refid || `Q-${q.id.substring(0,6)}`;
+      const refId = q.refid || `Q-${q.id.substring(0, 6)}`;
       const amtStr = q.amountINR ? `₹${q.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'N/A';
       const dateStr = q.timestamp ? new Date(q.timestamp).toLocaleDateString() : 'N/A';
       const statusColor = q.status === 'converted' ? 'var(--accent-success)' : (q.status === 'expired' ? 'var(--accent-error)' : 'var(--accent-warning)');
@@ -13861,11 +13880,11 @@ function showDirectoryItemDetails(type, name) {
         </tr>
       `;
     }).join('');
-    
+
     if (!quotesRows) {
       quotesRows = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:1rem;">No quotes generated by this agent.</td></tr>`;
     }
-    
+
     detailsContainer.innerHTML = `
       <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; background: rgba(255,255,255,0.01); border: 1px solid var(--border-1); border-radius: 12px; height: 100%;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem;">
@@ -13920,7 +13939,7 @@ function showDirectoryItemDetails(type, name) {
         </div>
       </div>
     `;
-    
+
   } else {
     // Render Customer details
     const customerLower = name.toLowerCase().trim();
@@ -13932,25 +13951,25 @@ function showDirectoryItemDetails(type, name) {
       waiveAgreement: false,
       hasAgreement: false
     };
-    
+
     const customerQuotes = quotes.filter(q => q.customer?.toLowerCase().trim() === customerLower);
     const totalCount = customerQuotes.length;
     const totalValue = customerQuotes.reduce((acc, q) => acc + (q.amountINR || 0), 0);
-    
+
     // Associated agents
     const associatedAgents = Array.from(new Set(customerQuotes.map(q => {
       return TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
     }).filter(Boolean))).sort();
-    
+
     const statusText = ctrl.blocked ? 'BLOCKED' : 'ACTIVE';
     const statusBg = ctrl.blocked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
     const statusColor = ctrl.blocked ? 'var(--accent-error)' : 'var(--accent-success)';
-    
+
     const complianceText = ctrl.hasAgreement ? 'COMPLIANT' : (ctrl.waiveAgreement ? 'WAIVED' : 'NON-COMPLIANT');
     const complianceColor = ctrl.hasAgreement ? 'var(--accent-success)' : (ctrl.waiveAgreement ? 'var(--accent-warning)' : 'var(--accent-error)');
-    
+
     let quotesRows = customerQuotes.map(q => {
-      const refId = q.refid || `Q-${q.id.substring(0,6)}`;
+      const refId = q.refid || `Q-${q.id.substring(0, 6)}`;
       const amtStr = q.amountINR ? `₹${q.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'N/A';
       const dateStr = q.timestamp ? new Date(q.timestamp).toLocaleDateString() : 'N/A';
       const creatorName = TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
@@ -13966,11 +13985,11 @@ function showDirectoryItemDetails(type, name) {
         </tr>
       `;
     }).join('');
-    
+
     if (!quotesRows) {
       quotesRows = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:1rem;">No quotes generated for this customer.</td></tr>`;
     }
-    
+
     detailsContainer.innerHTML = `
       <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; background: rgba(255,255,255,0.01); border: 1px solid var(--border-1); border-radius: 12px; height: 100%;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem;">
@@ -14039,21 +14058,21 @@ function exportDirectoryCSV() {
   if (Object.keys(controls).length === 0) {
     try {
       controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch(e) {}
+    } catch (e) { }
   }
-  
+
   let csvContent = "data:text/csv;charset=utf-8,";
-  
+
   if (window._dirGrouping === 'agents') {
     csvContent += "Agent Name,Desk,Total Quotes,Customer Assigned\n";
-    
+
     const agentMap = {};
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (roleId === 'ganny' || roleId === 'manager') return;
       const agentName = TEAM_ROLES[roleId].name || roleId;
       agentMap[agentName] = { roleId: roleId, customers: new Set(), quotesCount: 0 };
     });
-    
+
     quotes.forEach(q => {
       const creator = q.creator || 'unknown';
       const agentName = TEAM_ROLES[creator.toLowerCase()]?.name || q.creator || 'Unknown';
@@ -14065,12 +14084,12 @@ function exportDirectoryCSV() {
         agentMap[agentName].customers.add(q.customer.trim());
       }
     });
-    
+
     Object.keys(agentMap).sort().forEach(agentName => {
       const data = agentMap[agentName];
       const category = TEAM_ROLES[data.roleId?.toLowerCase()]?.category || 'Custom Desk';
       const customersList = Array.from(data.customers);
-      
+
       if (customersList.length === 0) {
         csvContent += `"${agentName}","${category}",${data.quotesCount},"None"\n`;
       } else {
@@ -14081,29 +14100,29 @@ function exportDirectoryCSV() {
     });
   } else {
     csvContent += "Customer Name,Credit Period (Days),Credit Limit (USD),Compliance,Total Quotes,Associated Agents\n";
-    
+
     const allCustomers = Array.from(new Set([
       ...quotes.map(q => q.customer.trim()),
       ...Object.values(controls).map(c => c.customer.trim())
     ])).sort();
-    
+
     allCustomers.forEach(cust => {
       const customerLower = cust.toLowerCase().trim();
       const ctrl = controls[customerLower] || { creditDays: 36, creditLimit: 0 };
-      
+
       const customerQuotes = quotes.filter(q => q.customer?.toLowerCase().trim() === customerLower);
       const quotesCount = customerQuotes.length;
-      
+
       const associatedAgents = Array.from(new Set(customerQuotes.map(q => {
         return TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || 'Unknown';
       }).filter(Boolean))).sort().join(' | ');
-      
+
       const complianceText = ctrl.hasAgreement ? 'Compliant' : (ctrl.waiveAgreement ? 'Waived' : 'Non-Compliant');
-      
+
       csvContent += `"${cust}",${ctrl.creditDays || 36},${ctrl.creditLimit || 0},"${complianceText}",${quotesCount},"${associatedAgents || 'None'}"\n`;
     });
   }
-  
+
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
@@ -14138,7 +14157,7 @@ function playNotificationSound() {
     if (ctx.state === 'suspended') {
       ctx.resume().catch(e => console.warn(e));
     }
-    
+
     // Play realistic cricket chirp sound: high-pitched pulses repeating
     const playChirp = (startTime) => {
       const numSyllables = 4;
@@ -14149,19 +14168,19 @@ function playNotificationSound() {
       for (let i = 0; i < numSyllables; i++) {
         const osc = ctx.createOscillator();
         const gainNode = ctx.createGain();
-        
+
         osc.type = 'sine';
         osc.frequency.setValueAtTime(frequency, ctx.currentTime + startTime + i * (syllableDuration + syllableGap));
-        
+
         const sTime = ctx.currentTime + startTime + i * (syllableDuration + syllableGap);
         gainNode.gain.setValueAtTime(0, ctx.currentTime);
         gainNode.gain.setValueAtTime(0, sTime);
         gainNode.gain.linearRampToValueAtTime(0.04, sTime + 0.002);
         gainNode.gain.exponentialRampToValueAtTime(0.0001, sTime + syllableDuration);
-        
+
         osc.connect(gainNode);
         gainNode.connect(ctx.destination);
-        
+
         osc.start(sTime);
         osc.stop(sTime + syllableDuration);
       }
@@ -14218,7 +14237,7 @@ function showToastNotification(message) {
     pointer-events: auto;
     backdrop-filter: blur(10px);
   `;
-  
+
   toast.innerHTML = `
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="font-size: 1.1rem;">🔔</span>
@@ -14226,9 +14245,9 @@ function showToastNotification(message) {
     </div>
     <button style="background:transparent; border:none; color:rgba(255,255,255,0.6); cursor:pointer; font-weight:bold; font-size:1.1rem; padding: 0 4px;" onclick="this.parentElement.remove()">×</button>
   `;
-  
+
   container.appendChild(toast);
-  
+
   // Trigger animation
   setTimeout(() => {
     toast.style.opacity = "1";
@@ -14251,7 +14270,7 @@ function checkAndNotifyNewRequests(reqs) {
   if (!isAdmin) return;
 
   const currentPending = reqs.filter(r => r.status === 'pending');
-  
+
   if (!_isRequestsInitDone) {
     currentPending.forEach(r => _previousPendingReqIds.add(r.id));
     _isRequestsInitDone = true;
@@ -14316,21 +14335,21 @@ function openPincodeSearchModal(targetField) {
   const modal = document.getElementById("pincode-search-modal");
   const title = document.getElementById("pincode-modal-title");
   const searchInput = document.getElementById("pincode-search-input");
-  
+
   if (title) {
     const label = pincodeSearchTarget === 'pickup' ? '📍 Pickup Location' : '🏁 Delivery Location';
     title.innerHTML = `🔍 Search India PIN Codes (${label})`;
   }
-  
+
   if (modal) {
     modal.style.display = "flex";
   }
-  
+
   if (searchInput) {
     searchInput.value = "";
     setTimeout(() => searchInput.focus(), 100);
   }
-  
+
   if (!pincodesLoaded || pincodesData.length === 0) {
     loadPincodesData().then(() => {
       filterPincodes();
@@ -14427,7 +14446,7 @@ function selectPincodeItem(pin, fullLabel) {
       selectEl.appendChild(opt);
     }
     selectEl.value = pin;
-    
+
     selectEl.dispatchEvent(new Event('change'));
     if (typeof window.calculateTransportation === 'function') {
       window.calculateTransportation();
@@ -14453,10 +14472,10 @@ const fallbackContacts = [];
 function canEditAgentsDirectory() {
   const currentRole = getActiveRole()?.toLowerCase();
   const currentUser = (appState.currentUser || "").toLowerCase();
-  return currentUser === 'ganny' || 
-         currentRole === 'manager' || 
-         currentRole === 'shashank' || 
-         currentRole === 'shaheer';
+  return currentUser === 'ganny' ||
+    currentRole === 'manager' ||
+    currentRole === 'shashank' ||
+    currentRole === 'shaheer';
 }
 window.canEditAgentsDirectory = canEditAgentsDirectory;
 
@@ -14464,12 +14483,12 @@ window.canEditAgentsDirectory = canEditAgentsDirectory;
 function canAccessVendorsDirectory() {
   const currentRole = getActiveRole()?.toLowerCase();
   const currentUser = (appState.currentUser || "").toLowerCase();
-  return currentUser === 'ganny' || 
-         currentRole === 'manager' || 
-         currentRole === 'shashank' || 
-         currentRole === 'shaheer' || 
-         currentRole === 'jaya' || 
-         currentRole === 'cathrina';
+  return currentUser === 'ganny' ||
+    currentRole === 'manager' ||
+    currentRole === 'shashank' ||
+    currentRole === 'shaheer' ||
+    currentRole === 'jaya' ||
+    currentRole === 'cathrina';
 }
 window.canAccessVendorsDirectory = canAccessVendorsDirectory;
 
@@ -14482,7 +14501,7 @@ function setDirectoryParent(parent) {
 
   activeDirectoryParent = parent;
   activeDirectoryCategory = 'all';
-  
+
   // Set tab buttons active status
   document.querySelectorAll(".dir-parent-tab").forEach(tab => {
     if (tab.id === `dir-parent-${parent}`) {
@@ -14553,7 +14572,7 @@ async function loadDirectoryContacts() {
   const resetBtn = document.getElementById("dir-reset-btn");
   if (addBtn) addBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
   if (importBtn) importBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
-  
+
   const isAdmin = isAdminUser(appState.currentUser);
   if (resetBtn) {
     resetBtn.style.display = isAdmin ? 'inline-flex' : 'none';
@@ -14613,7 +14632,7 @@ function renderDirectoryContacts() {
   if (!grid) return;
 
   const searchQuery = (document.getElementById("directory-search-input")?.value || "").toLowerCase().trim();
-  
+
   // Decide if allowed to edit
   let allowedToEdit = false;
   if (activeDirectoryParent === 'agents') {
@@ -14631,17 +14650,17 @@ function renderDirectoryContacts() {
     } else {
       // If user is trying to access vendors but has no permission, block
       if (!canAccessVendorsDirectory()) return false;
-      
+
       // Vendor contacts category != 'agency'
       if (c.category === 'agency') return false;
     }
-    
+
     // Dynamic tab sub-filter check using sheetGroup (or fallback to category if missing)
     if (activeDirectoryCategory !== 'all') {
       const cGroup = c.sheetGroup || c.category || '';
       if (cGroup !== activeDirectoryCategory) return false;
     }
-    
+
     // Search query filter
     if (searchQuery) {
       const name = (c.name || "").toLowerCase();
@@ -14650,8 +14669,8 @@ function renderDirectoryContacts() {
       const phone = (c.phone || "").toLowerCase();
       const location = (c.location || "").toLowerCase();
       const notes = (c.notes || "").toLowerCase();
-      return name.includes(searchQuery) || person.includes(searchQuery) || email.includes(searchQuery) || 
-             phone.includes(searchQuery) || location.includes(searchQuery) || notes.includes(searchQuery);
+      return name.includes(searchQuery) || person.includes(searchQuery) || email.includes(searchQuery) ||
+        phone.includes(searchQuery) || location.includes(searchQuery) || notes.includes(searchQuery);
     }
     return true;
   });
@@ -14670,12 +14689,12 @@ function renderDirectoryContacts() {
   let html = "";
   filtered.forEach(contact => {
     const escNotes = (contact.notes || "").replace(/"/g, "&quot;");
-    
+
     // Display sheetGroup if available, otherwise fallback to category label
     let categoryLabel = contact.sheetGroup || contact.category || "CONTACT";
     categoryLabel = categoryLabel.toUpperCase();
     if (categoryLabel === 'AGENCY') categoryLabel = 'OVERSEAS AGENT';
-    
+
     // Admin action buttons (Edit/Delete) - visible only if allowed to edit
     const adminActionsHtml = allowedToEdit ? `
       <button class="contact-action-btn" title="Edit Contact" onclick="openContactModal('${contact.id}')" style="margin-left: auto;">
@@ -14783,7 +14802,7 @@ window.filterDirectoryContacts = filterDirectoryContacts;
 // Set Category Tab handler
 function setDirectoryCategory(category) {
   activeDirectoryCategory = category;
-  
+
   // Set tab buttons active status
   document.querySelectorAll(".dir-tab").forEach(tab => {
     if (tab.getAttribute("data-category") === category) {
@@ -14826,7 +14845,7 @@ function renderDirectoryTabs() {
   });
 
   container.innerHTML = html;
-  
+
   // Make sure the container is visible
   container.style.display = 'flex';
 }
@@ -14839,7 +14858,7 @@ function openContactModal(id = null) {
   if (!modal || !form) return;
 
   form.reset();
-  
+
   if (id) {
     // Edit Mode
     document.getElementById("contact-modal-title").textContent = "EDIT CONTACT";
@@ -14859,7 +14878,7 @@ function openContactModal(id = null) {
     // Add Mode
     document.getElementById("contact-modal-title").textContent = "ADD NEW CONTACT";
     document.getElementById("contact-form-id").value = "";
-    
+
     // Auto-select category based on parent tab context
     if (activeDirectoryParent === 'agents') {
       document.getElementById("contact-form-category").value = 'agency';
@@ -14868,9 +14887,9 @@ function openContactModal(id = null) {
     } else {
       document.getElementById("contact-form-category").value = 'liner';
     }
-    
+
     // Auto-fill the tab group if we are currently filtering by one
-    document.getElementById("contact-form-sheetgroup").value = 
+    document.getElementById("contact-form-sheetgroup").value =
       (activeDirectoryCategory !== 'all') ? activeDirectoryCategory : '';
   }
 
@@ -14888,10 +14907,10 @@ window.closeContactModal = closeContactModal;
 // Submit Add/Edit Form
 async function saveContactForm(event) {
   event.preventDefault();
-  
+
   const id = document.getElementById("contact-form-id").value;
   const category = document.getElementById("contact-form-category").value;
-  
+
   // Verify permissions based on context
   const allowed = (category === 'agency') ? canEditAgentsDirectory() : canAccessVendorsDirectory();
   if (!allowed) {
@@ -14906,13 +14925,13 @@ async function saveContactForm(event) {
   const location = document.getElementById("contact-form-location").value.trim();
   const notes = document.getElementById("contact-form-notes").value.trim();
   let sheetGroup = document.getElementById("contact-form-sheetgroup").value.trim();
-  
+
   if (!sheetGroup) {
     // Default to the category dropdown's visible label if not provided
     const catSelect = document.getElementById("contact-form-category");
     sheetGroup = catSelect.options[catSelect.selectedIndex].text;
   }
-  
+
   const updatedBy = appState.currentUser || "Pricing Team";
   const contactData = {
     category,
@@ -15015,7 +15034,7 @@ function handleExcelFileSelect(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     try {
       const data = e.target.result;
       const workbook = XLSX.read(data, { type: 'binary' });
@@ -15025,7 +15044,7 @@ function handleExcelFileSelect(event) {
       workbook.SheetNames.forEach(sheetName => {
         const sheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-        
+
         // Auto-detect category from sheet name (e.g. Liners, Airlines, Coloaders, NVOCCs)
         let autoCategory = 'agency';
         const nameLower = sheetName.toLowerCase();
@@ -15052,7 +15071,7 @@ function handleExcelFileSelect(event) {
 
           keys.forEach(k => {
             const keyLower = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-            
+
             if (keyLower.includes('company') || keyLower.includes('name') || keyLower.includes('liner') || keyLower.includes('airline') || keyLower.includes('agency')) {
               if (!name) name = row[k];
             } else if (keyLower.includes('person') || keyLower.includes('contactname') || keyLower.includes('attention')) {
@@ -15107,7 +15126,7 @@ function handleExcelFileSelect(event) {
       const preview = document.getElementById("excel-import-preview");
       const countEl = document.getElementById("excel-import-count");
       const actions = document.getElementById("excel-import-actions");
-      
+
       if (preview && countEl && actions) {
         countEl.textContent = importedExcelRows.length;
 
@@ -15217,13 +15236,13 @@ function resetExcelImport() {
   importedExcelRows = [];
   const fileInput = document.getElementById('excel-file-input');
   if (fileInput) fileInput.value = "";
-  
+
   const preview = document.getElementById("excel-import-preview");
   if (preview) {
     preview.style.display = "none";
     preview.innerHTML = "";
   }
-  
+
   const actions = document.getElementById("excel-import-actions");
   if (actions) actions.style.display = "none";
 }
@@ -15255,7 +15274,7 @@ async function submitExcelImport() {
       for (let i = 0; i < importedExcelRows.length; i += chunkSize) {
         const batch = db.batch();
         const chunk = importedExcelRows.slice(i, i + chunkSize);
-        
+
         chunk.forEach(item => {
           const { _sheetName, ...cleanItem } = item;
           // Preserve the original sheet tab as sheetGroup for dynamic tabs in the directory UI
@@ -15263,7 +15282,7 @@ async function submitExcelImport() {
           const docRef = db.collection("contactsDirectory").doc();
           batch.set(docRef, cleanItem);
         });
-        
+
         await batch.commit();
       }
       alert(`Imported ${count} contacts successfully!`);
@@ -15342,28 +15361,28 @@ async function purgeDirectoryContacts() {
       if (!snapshot.empty) {
         const batch = db.batch();
         let deleteCount = 0;
-        
+
         snapshot.forEach(doc => {
           const data = doc.data();
           const isAgency = (data.category === 'agency');
-          
+
           if ((isAgents && isAgency) || (!isAgents && !isAgency)) {
             batch.delete(doc.ref);
             deleteCount++;
           }
         });
-        
+
         if (deleteCount > 0) {
           await batch.commit();
         }
       }
-      
+
       // Repopulate fallback contacts for the reset category
       const targetFallbacks = fallbackContacts.filter(c => {
         const isAgency = (c.category === 'agency');
         return isAgents ? isAgency : !isAgency;
       });
-      
+
       const batchRestore = db.batch();
       targetFallbacks.forEach(contact => {
         const { id, ...data } = contact;
@@ -15371,7 +15390,7 @@ async function purgeDirectoryContacts() {
         batchRestore.set(newDocRef, data);
       });
       await batchRestore.commit();
-      
+
       alert(`${targetName} directory cleared successfully!`);
     } else {
       if (isAgents) {
@@ -15398,7 +15417,7 @@ window.purgeDirectoryContacts = purgeDirectoryContacts;
 window.addEventListener("storage", (e) => {
   if (e.key === "gl_amendment_requests") {
     let requests = [];
-    try { requests = JSON.parse(e.newValue || "[]"); } catch (err) {}
+    try { requests = JSON.parse(e.newValue || "[]"); } catch (err) { }
     window._amendmentRequests = requests;
     if (typeof checkAndNotifyNewRequests === 'function') {
       checkAndNotifyNewRequests(requests);
@@ -15408,7 +15427,7 @@ window.addEventListener("storage", (e) => {
     }
   } else if (e.key === "logistics_quotes") {
     let quotes = [];
-    try { quotes = JSON.parse(e.newValue || "[]"); } catch (err) {}
+    try { quotes = JSON.parse(e.newValue || "[]"); } catch (err) { }
     appState.quotes = quotes;
     if (appState.currentUser === 'ganny') {
       renderAdminDashboard();
@@ -15435,7 +15454,7 @@ const GLOBAL_ZIP_RECORDS = [
   { zip: "400707", city: "Navi Mumbai (Nhava Sheva JNPT)", country: "India" },
   { zip: "370201", city: "Gandhidham / Kandla Port", country: "India" },
   { zip: "395003", city: "Surat", country: "India" },
-  
+
   // 192 countries representation
   { country: "Afghanistan", city: "Kabul", zip: "1001" },
   { country: "Albania", city: "Tirana", zip: "1000" },
@@ -15646,16 +15665,16 @@ function filterCustomDropdown(type) {
   const searchInput = document.getElementById("transport-" + type + "-search");
   const listEl = document.getElementById(type + "-dropdown-list");
   if (!searchInput || !listEl) return;
-  
+
   const query = searchInput.value.toLowerCase().trim();
   listEl.innerHTML = "";
-  
+
   const matches = GLOBAL_ZIP_RECORDS.filter(rec => {
-    return rec.city.toLowerCase().includes(query) || 
-           rec.zip.toLowerCase().includes(query) || 
-           rec.country.toLowerCase().includes(query);
+    return rec.city.toLowerCase().includes(query) ||
+      rec.zip.toLowerCase().includes(query) ||
+      rec.country.toLowerCase().includes(query);
   });
-  
+
   if (matches.length === 0) {
     const itemEl = document.createElement("div");
     itemEl.className = "custom-dropdown-item";
@@ -15669,18 +15688,18 @@ function filterCustomDropdown(type) {
     matches.slice(0, 100).forEach(rec => {
       const itemEl = document.createElement("div");
       itemEl.className = "custom-dropdown-item";
-      
+
       const zipSpan = document.createElement("span");
       zipSpan.className = "zip-code";
       zipSpan.textContent = rec.zip;
-      
+
       const citySpan = document.createElement("span");
       citySpan.className = "city-country";
       citySpan.textContent = ` - ${rec.city}, ${rec.country}`;
-      
+
       itemEl.appendChild(zipSpan);
       itemEl.appendChild(citySpan);
-      
+
       itemEl.onclick = () => selectCustomItem(type, rec.zip, `${rec.city}, ${rec.country}`);
       listEl.appendChild(itemEl);
     });
@@ -15693,7 +15712,7 @@ function selectCustomItem(type, zip, city) {
   const pinInput = document.getElementById("transport-" + type + "-pin");
   const cityInput = document.getElementById("transport-" + type + "-city");
   const listEl = document.getElementById(type + "-dropdown-list");
-  
+
   if (searchInput) {
     searchInput.value = zip ? `${zip} - ${city}` : city;
   }
@@ -15706,14 +15725,14 @@ function selectCustomItem(type, zip, city) {
   if (listEl) {
     listEl.classList.remove("show");
   }
-  
+
   if (typeof calculateTransportation === "function") {
     calculateTransportation();
   }
 }
 window.selectCustomItem = selectCustomItem;
 
-document.addEventListener("click", function(event) {
+document.addEventListener("click", function (event) {
   if (!event.target.closest("#pickup-dropdown-container")) {
     const list = document.getElementById("pickup-dropdown-list");
     if (list) list.classList.remove("show");
