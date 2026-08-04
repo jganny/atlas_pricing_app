@@ -10288,6 +10288,9 @@ const DB = {
 
             loginSuccess(username);
             updateExecutiveDashboardVisibility();
+            if (typeof goHome === 'function') {
+              goHome();
+            }
 
           } else {
             console.log("Auth: user logged out");
