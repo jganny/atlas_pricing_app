@@ -4669,7 +4669,8 @@ function renderMemberDashboard(userId) {
   let scratchpads = {};
   try {
     scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-  } catch (e) { }
+    if (typeof scratchpads !== 'object' || scratchpads === null) scratchpads = {};
+  } catch (e) { scratchpads = {}; }
   const pad = scratchpads[user];
   const ta = document.getElementById("dashboard-scratchpad");
   if (ta) {
@@ -4686,9 +4687,13 @@ function renderMemberDashboard(userId) {
   if (requestsList.length === 0) {
     const storedReqs = localStorage.getItem("gl_amendment_requests");
     if (storedReqs) {
-      try { requestsList = JSON.parse(storedReqs); } catch (e) { }
+      try { 
+        requestsList = JSON.parse(storedReqs); 
+        if (!Array.isArray(requestsList)) requestsList = [];
+      } catch (e) { requestsList = []; }
     }
   }
+  if (!Array.isArray(requestsList)) requestsList = [];
   const myResolved = requestsList.filter(r => r.creator === userId && !r.acknowledged && (r.status === 'approved' || r.status === 'rejected'));
 
   if (myResolved.length > 0) {
