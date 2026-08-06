@@ -10470,10 +10470,11 @@ const DB = {
 
       // Refresh view
       if (appState.currentUser) {
-        if (appState.currentUser === 'ganny') {
+        const activeRole = getActiveRole();
+        if (activeRole === 'ganny' || activeRole === 'manager') {
           renderAdminDashboard();
         } else {
-          renderMemberDashboard(appState.currentUser);
+          renderMemberDashboard(activeRole);
         }
       }
     }, error => {
@@ -10692,16 +10693,23 @@ const DB = {
       try {
         await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
         console.log("DB: Firestore write succeeded!");
+        const activeRole = getActiveRole();
+        if (activeRole === 'ganny' || activeRole === 'manager') {
+          renderAdminDashboard();
+        } else {
+          renderMemberDashboard(activeRole);
+        }
       } catch (err) {
         console.error("DB: Firestore write failed:", err);
         alert("Cloud Database Write Error: " + err.message);
       }
     } else {
       localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
-      if (appState.currentUser === 'ganny') {
+      const activeRole = getActiveRole();
+      if (activeRole === 'ganny' || activeRole === 'manager') {
         renderAdminDashboard();
       } else {
-        renderMemberDashboard(appState.currentUser);
+        renderMemberDashboard(activeRole);
       }
     }
   },
