@@ -160,31 +160,20 @@
           <img src="logo.png" alt="Vertex Logo" class="logo-img">
           <div class="logo-text-container">
             <div class="logo-text">
-              <span class="brand-verte">VERTE</span><span class="custom-brand-x">X</span>
+              <span class="brand-verte">VERTE</span><span class="custom-brand-x"></span>
             </div>
             <div class="logo-tagline">Pricing Platform</div>
           </div>
         </div>
 
-        <!-- Workspace Context Area -->
-        <div class="header-workspace-context" style="flex-grow: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; margin: 0 1rem;">
-          <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Workspace</div>
-          <div id="header-workspace-name" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Dashboard</div>
-        </div>
-
         <!-- Active User Badge & Logout -->
         <div class="user-badge-container">
-          <div class="active-user-badge" id="active-user-badge" style="display:flex; align-items:center; gap:0.5rem; text-align:right;">
-            <div style="display:flex; flex-direction:column; justify-content:center;">
-              <span id="header-user-name" style="font-weight:700; font-size:0.85rem; line-height:1.2; color: #0f172a;">User</span>
-              <span id="header-user-role" style="font-size:0.7rem; color: #475569; line-height:1.2; font-weight:600;">Role</span>
-            </div>
-            <div style="background: rgba(2, 132, 199, 0.1); color: var(--sky); padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </div>
+          <div class="active-user-badge" id="active-user-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span id="active-user-name">Pricing Team</span>
           </div>
           <!-- Executive Dashboard button -->
           <button id="executive-dashboard-btn" class="admin-settings-btn" onclick="showExecutiveDashboard()" style="display: none; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); color: var(--sky);">

@@ -703,10 +703,10 @@ function loginSuccess(roleId) {
   const displayName = (userRoleInfo.name || roleIdLower)
     .replace(/\s*\(Free\s*Hand\)/i, "");
 
-  const headerUserNameEl = document.getElementById("header-user-name");
-  if (headerUserNameEl) headerUserNameEl.textContent = (appState.currentUser || roleIdLower).toUpperCase();
-  const headerUserRoleEl = document.getElementById("header-user-role");
-  if (headerUserRoleEl) headerUserRoleEl.textContent = displayName;
+  const activeUserNameEl = document.getElementById("active-user-name");
+  if (activeUserNameEl) {
+    activeUserNameEl.textContent = displayName;
+  }
 
   const root = document.documentElement;
   const execDashBtn = document.getElementById("executive-dashboard-btn");
@@ -969,9 +969,6 @@ function switchRole(role) {
 }
 
 function goHome() {
-  const workspaceNameEl = document.getElementById("header-workspace-name");
-  if (workspaceNameEl) workspaceNameEl.textContent = "Dashboard";
-
   document.querySelectorAll(".view-panel").forEach(panel => {
     panel.classList.remove("active");
   });
@@ -1291,15 +1288,6 @@ function resetSeaFreightDeskForm() {
 // Sub-navigation triggers for Calculators inside Member dashboard
 function openActiveCalculator(type) {
   try {
-    const workspaceNameEl = document.getElementById("header-workspace-name");
-    if (workspaceNameEl) {
-      if (type === 'air') workspaceNameEl.textContent = "Air Freight Pricing";
-      else if (type === 'sea') workspaceNameEl.textContent = "Sea Freight Pricing";
-      else if (type === 'transport') workspaceNameEl.textContent = "Transportation";
-      else if (type === 'warehouse') workspaceNameEl.textContent = "Warehousing";
-      else if (type === 'directory') workspaceNameEl.textContent = "Directory";
-    }
-
     const memberPanel = document.getElementById("member-dashboard-panel");
     if (memberPanel) memberPanel.classList.remove("active");
     const managerPanel = document.getElementById("manager-panel");
@@ -2213,8 +2201,8 @@ function createAirSurchargeRow(surcharge = {}) {
 
   tr.innerHTML = `
     <td><input type="text" class="chg-name" value="${name}" ${readOnlyName ? 'readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"' : ''} required></td>
-    <td><input type="number" class="chg-rate" value="${sellRate}" step="0.01"></td>
-    <td><input type="number" class="chg-buy-rate" value="${buyRate}" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+    <td><input type="number" class="chg-rate" value="${sellRate}" step="0.01" required></td>
+    <td><input type="number" class="chg-buy-rate" value="${buyRate}" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
     <td>
       <select class="chg-unit">
         <option value="kg" ${unit === 'kg' ? 'selected' : ''}>Per kg</option>
@@ -4210,8 +4198,8 @@ window.addSeaSurchargeRowToLiner = function (linerIndex, type, nameVal = "", sel
   const tr = document.createElement("tr");
   tr.innerHTML = `
     <td><input type="text" class="chg-name" value="${nameVal}" placeholder="Surcharge Name" required oninput="calculateSeaFreight()"></td>
-    <td><input type="number" class="chg-rate" value="${sellVal}" step="0.01" oninput="calculateSeaFreight()"></td>
-    <td><input type="number" class="chg-buy-rate" value="${buyVal}" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);" oninput="calculateSeaFreight()"></td>
+    <td><input type="number" class="chg-rate" value="${sellVal}" step="0.01" required oninput="calculateSeaFreight()"></td>
+    <td><input type="number" class="chg-buy-rate" value="${buyVal}" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);" oninput="calculateSeaFreight()"></td>
     <td>
       <select class="chg-unit" onchange="calculateSeaFreight()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
         ${unitOptions}
@@ -4593,8 +4581,8 @@ function setupSurchargesEvents(freightType) {
     if (isAir) {
       row.innerHTML = `
         <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
-        <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Rate"></td>
-        <td><input type="number" class="chg-buy-rate" min="0" step="0.01" placeholder="Cost" value="0.00" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Rate" required></td>
+        <td><input type="number" class="chg-buy-rate" min="0" step="0.01" placeholder="Cost" value="0.00" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit">
             <option value="kg">Per kg</option>
@@ -4611,8 +4599,8 @@ function setupSurchargesEvents(freightType) {
     } else {
       row.innerHTML = `
         <td><input type="text" class="chg-name" placeholder="Charge Name" required></td>
-        <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Cost"></td>
-        <td><input type="number" class="chg-buy-rate" min="0" step="0.01" placeholder="Cost" value="0.00" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" min="0" step="0.01" placeholder="Cost" required></td>
+        <td><input type="number" class="chg-buy-rate" min="0" step="0.01" placeholder="Cost" value="0.00" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
@@ -6089,6 +6077,11 @@ function saveCurrentQuote() {
     if (tariffsEnabled) {
       const sellRateVal = appState.currentAirFreight.appliedRate || 0;
       const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
+
+      if (sellRateVal <= 0 && buyRateVal <= 0) {
+        alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
+        return;
+      }
     }
 
     if (originFeesEnabled) {
@@ -6216,6 +6209,9 @@ function saveCurrentQuote() {
         }
       }
       let hasInvalidFcl = false;
+      let hasBoth = false;
+      let hasNeither = false;
+      let hasMissingSellRate = false;
       fclRows.forEach(row => {
         const type = row.querySelector(".fcl-type").value;
         const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
@@ -6225,11 +6221,24 @@ function saveCurrentQuote() {
         if (qty <= 0) {
           hasInvalidFcl = true;
         }
+        if (rate > 0 && buy > 0) {
+          hasBoth = true;
+        }
+        if (rate <= 0 && buy <= 0) {
+          hasNeither = true;
+        }
+        if (rate <= 0) {
+          hasMissingSellRate = true;
+        }
         containerItems.push({ type, qty, rate, buy });
       });
       if (tariffsEnabled) {
         if (hasInvalidFcl) {
           alert("Please fill in Container Quantity for all container rows.");
+          return;
+        }
+        if (hasNeither) {
+          alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
           return;
         }
       }
@@ -6241,6 +6250,11 @@ function saveCurrentQuote() {
       if (tariffsEnabled) {
         const lclRate = parseFloat(document.querySelector(".sea-lcl-rate")?.value) || 0;
         const lclBuyRate = parseFloat(document.querySelector(".sea-lcl-buy-rate")?.value) || 0;
+
+        if (lclRate <= 0 && lclBuyRate <= 0) {
+          alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
+          return;
+        }
       }
       if (rows.length === 0) {
         alert("Please add at least one Cargo Line in the Dimensions Calculator.");
@@ -6266,6 +6280,11 @@ function saveCurrentQuote() {
       if (tariffsEnabled) {
         const bbRate = parseFloat(document.querySelector(".sea-bb-rate")?.value) || 0;
         const bbBuyRate = parseFloat(document.querySelector(".sea-bb-buy-rate")?.value) || 0;
+
+        if (bbRate <= 0 && bbBuyRate <= 0) {
+          alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
+          return;
+        }
       }
       if (rows.length === 0) {
         alert("Please add at least one Cargo Line in the Dimensions Calculator.");
@@ -6501,8 +6520,8 @@ function resetSurchargesToDefaults() {
       airOriginBody.innerHTML = `
         <tr>
           <td><input type="text" class="chg-name" value="Xray" required></td>
-          <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg" selected>Per kg</option>
@@ -6518,8 +6537,8 @@ function resetSurchargesToDefaults() {
         </tr>
         <tr>
           <td><input type="text" class="chg-name" value="Cartage" required></td>
-          <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg">Per kg</option>
@@ -6535,8 +6554,8 @@ function resetSurchargesToDefaults() {
         </tr>
         <tr>
           <td><input type="text" class="chg-name" value="Misc" required></td>
-          <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg">Per kg</option>
@@ -6555,8 +6574,8 @@ function resetSurchargesToDefaults() {
       airOriginBody.innerHTML = `
         <tr>
           <td><input type="text" class="chg-name" value="Xray" required></td>
-          <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
             <select class="chg-unit">
               <option value="kg" selected>Per kg</option>
@@ -6572,8 +6591,8 @@ function resetSurchargesToDefaults() {
         </tr>
         <tr>
           <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-rate" value="6.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td>
             <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
               <option value="kg">Per kg</option>
@@ -6589,8 +6608,8 @@ function resetSurchargesToDefaults() {
         </tr>
         <tr>
           <td><input type="text" class="chg-name" value="Misc" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-rate" value="6.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-rate" value="6.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
           <td>
             <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
               <option value="kg">Per kg</option>
@@ -6635,8 +6654,8 @@ function populateSeaSurcharges(mode) {
     originRows = `
       <tr>
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -6654,8 +6673,8 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
@@ -6676,8 +6695,8 @@ function populateSeaSurcharges(mode) {
     originRows = `
       <tr>
         <td><input type="text" class="chg-name" value="Terminal Handling Charges (THC)" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -6695,8 +6714,8 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Documentation Fee" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat" selected>Flat Fee</option>
@@ -6714,8 +6733,8 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Port Handling Charges" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -6736,8 +6755,8 @@ function populateSeaSurcharges(mode) {
     originRows = `
       <tr>
         <td><input type="text" class="chg-name" value="Lashing & Securing" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -6755,8 +6774,8 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Stevedoring" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -6774,8 +6793,8 @@ function populateSeaSurcharges(mode) {
       </tr>
       <tr>
         <td><input type="text" class="chg-name" value="Port Handling" required></td>
-        <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
-        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+        <td><input type="number" class="chg-rate" value="0.00" step="0.01" required></td>
+        <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
         <td>
           <select class="chg-unit table-select">
             <option value="flat">Flat Fee</option>
@@ -8629,13 +8648,10 @@ function applyDeskNames() {
 
   const activeUser = appState.currentUser;
   if (activeUser && activeUser !== 'ganny') {
+    const activeUserName = document.getElementById("active-user-name");
     let name = (TEAM_ROLES[activeUser]?.name || activeUser).replace(/\s*\(Free\s*Hand\)/i, "");
     if (activeUser === 'shaheer') name = 'Sea Nomination';
-    
-    const headerUserNameEl = document.getElementById("header-user-name");
-    if (headerUserNameEl) headerUserNameEl.textContent = activeUser.toUpperCase();
-    const headerUserRoleEl = document.getElementById("header-user-role");
-    if (headerUserRoleEl) headerUserRoleEl.textContent = name;
+    if (activeUserName) activeUserName.textContent = name;
   }
 
   // Update report user dropdown options dynamically with all Pricing Officers
@@ -8879,8 +8895,8 @@ function repopulateSurchargesTable(tableBodyId, surchargesList) {
 
     tr.innerHTML = `
       <td><input type="text" class="chg-name" list="${autocompleteList}" value="${s.name}" required></td>
-      <td><input type="number" class="chg-rate" step="0.01" value="${s.rate}"></td>
-      <td><input type="number" class="chg-buy-rate" step="0.01" value="${s.buyRate || 0.00}" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
+      <td><input type="number" class="chg-rate" step="0.01" value="${s.rate}" required></td>
+      <td><input type="number" class="chg-buy-rate" step="0.01" value="${s.buyRate || 0.00}" required style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
       <td>
         <select class="chg-unit">
           <option value="flat" ${s.unit === 'flat' ? 'selected' : ''}>Flat Fee</option>
@@ -10272,9 +10288,6 @@ const DB = {
 
             loginSuccess(username);
             updateExecutiveDashboardVisibility();
-            if (typeof goHome === 'function') {
-              goHome();
-            }
 
           } else {
             console.log("Auth: user logged out");
@@ -11225,7 +11238,7 @@ async function submitWonBookingDetails(e) {
     const sellVal = parseFloat(originSellInputs[i].value) || 0;
     const buyVal = parseFloat(document.querySelector(`.won-origin-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
     if (sellVal <= 0 || buyVal <= 0) {
-      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+      alert("❌ COMPLIANCE ERROR: All origin fee Sell Rates and Buy Rates must be greater than 0.");
       return;
     }
     if (quote.details.originSurcharges && quote.details.originSurcharges[idx]) {
@@ -11241,7 +11254,7 @@ async function submitWonBookingDetails(e) {
     const sellVal = parseFloat(destSellInputs[i].value) || 0;
     const buyVal = parseFloat(document.querySelector(`.won-dest-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
     if (sellVal <= 0 || buyVal <= 0) {
-      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+      alert("❌ COMPLIANCE ERROR: All destination fee Sell Rates and Buy Rates must be greater than 0.");
       return;
     }
     if (quote.details.destSurcharges && quote.details.destSurcharges[idx]) {
@@ -11265,7 +11278,7 @@ async function submitWonBookingDetails(e) {
     finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
     finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
     if (finalSellRate <= 0 || finalBuyRate <= 0) {
-      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+      alert("❌ COMPLIANCE ERROR: Confirmed Airline Sell Rate and Buy Rate must be greater than 0.");
       return;
     }
     quote.confirmedSellRate = finalSellRate;
@@ -11292,7 +11305,7 @@ async function submitWonBookingDetails(e) {
     finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
     finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
     if (finalSellRate <= 0 || finalBuyRate <= 0) {
-      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+      alert("❌ COMPLIANCE ERROR: Confirmed Sell Rate and Buy Rate must be greater than 0.");
       return;
     }
     quote.confirmedSellRate = finalSellRate;
@@ -11311,7 +11324,7 @@ async function submitWonBookingDetails(e) {
       const sellVal = parseFloat(fclSellInputs[i].value) || 0;
       const buyVal = parseFloat(document.querySelector(`.won-fcl-buy-input[data-index="${idx}"]`)?.value) || 0;
       if (sellVal <= 0 || buyVal <= 0) {
-        alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+        alert("❌ COMPLIANCE ERROR: All container Sell Rates and Buy Rates must be greater than 0.");
         return;
       }
       if (quote.details.containerItems && quote.details.containerItems[idx]) {
@@ -11326,7 +11339,7 @@ async function submitWonBookingDetails(e) {
       const sellVal = parseFloat(standaloneSellInputs[i].value) || 0;
       const buyVal = parseFloat(document.querySelector(`.won-standalone-buy-input[data-index="${idx}"]`)?.value) || 0;
       if (sellVal <= 0 || buyVal <= 0) {
-        alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+        alert("❌ COMPLIANCE ERROR: All item Sell Rates and Buy Rates must be greater than 0.");
         return;
       }
       if (quote.details.items && quote.details.items[idx]) {

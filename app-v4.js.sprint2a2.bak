@@ -703,10 +703,10 @@ function loginSuccess(roleId) {
   const displayName = (userRoleInfo.name || roleIdLower)
     .replace(/\s*\(Free\s*Hand\)/i, "");
 
-  const headerUserNameEl = document.getElementById("header-user-name");
-  if (headerUserNameEl) headerUserNameEl.textContent = (appState.currentUser || roleIdLower).toUpperCase();
-  const headerUserRoleEl = document.getElementById("header-user-role");
-  if (headerUserRoleEl) headerUserRoleEl.textContent = displayName;
+  const activeUserNameEl = document.getElementById("active-user-name");
+  if (activeUserNameEl) {
+    activeUserNameEl.textContent = displayName;
+  }
 
   const root = document.documentElement;
   const execDashBtn = document.getElementById("executive-dashboard-btn");
@@ -969,9 +969,6 @@ function switchRole(role) {
 }
 
 function goHome() {
-  const workspaceNameEl = document.getElementById("header-workspace-name");
-  if (workspaceNameEl) workspaceNameEl.textContent = "Dashboard";
-
   document.querySelectorAll(".view-panel").forEach(panel => {
     panel.classList.remove("active");
   });
@@ -1291,15 +1288,6 @@ function resetSeaFreightDeskForm() {
 // Sub-navigation triggers for Calculators inside Member dashboard
 function openActiveCalculator(type) {
   try {
-    const workspaceNameEl = document.getElementById("header-workspace-name");
-    if (workspaceNameEl) {
-      if (type === 'air') workspaceNameEl.textContent = "Air Freight Pricing";
-      else if (type === 'sea') workspaceNameEl.textContent = "Sea Freight Pricing";
-      else if (type === 'transport') workspaceNameEl.textContent = "Transportation";
-      else if (type === 'warehouse') workspaceNameEl.textContent = "Warehousing";
-      else if (type === 'directory') workspaceNameEl.textContent = "Directory";
-    }
-
     const memberPanel = document.getElementById("member-dashboard-panel");
     if (memberPanel) memberPanel.classList.remove("active");
     const managerPanel = document.getElementById("manager-panel");
@@ -8629,13 +8617,10 @@ function applyDeskNames() {
 
   const activeUser = appState.currentUser;
   if (activeUser && activeUser !== 'ganny') {
+    const activeUserName = document.getElementById("active-user-name");
     let name = (TEAM_ROLES[activeUser]?.name || activeUser).replace(/\s*\(Free\s*Hand\)/i, "");
     if (activeUser === 'shaheer') name = 'Sea Nomination';
-    
-    const headerUserNameEl = document.getElementById("header-user-name");
-    if (headerUserNameEl) headerUserNameEl.textContent = activeUser.toUpperCase();
-    const headerUserRoleEl = document.getElementById("header-user-role");
-    if (headerUserRoleEl) headerUserRoleEl.textContent = name;
+    if (activeUserName) activeUserName.textContent = name;
   }
 
   // Update report user dropdown options dynamically with all Pricing Officers
