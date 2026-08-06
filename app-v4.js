@@ -6077,11 +6077,6 @@ function saveCurrentQuote() {
     if (tariffsEnabled) {
       const sellRateVal = appState.currentAirFreight.appliedRate || 0;
       const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
-
-      if (sellRateVal <= 0 && buyRateVal <= 0) {
-        alert("❌ Please enter either a Sell Rate or a Buy Rate for the active weight break under Tariffs.");
-        return;
-      }
     }
 
     if (originFeesEnabled) {
@@ -6209,9 +6204,6 @@ function saveCurrentQuote() {
         }
       }
       let hasInvalidFcl = false;
-      let hasBoth = false;
-      let hasNeither = false;
-      let hasMissingSellRate = false;
       fclRows.forEach(row => {
         const type = row.querySelector(".fcl-type").value;
         const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
@@ -6221,24 +6213,11 @@ function saveCurrentQuote() {
         if (qty <= 0) {
           hasInvalidFcl = true;
         }
-        if (rate > 0 && buy > 0) {
-          hasBoth = true;
-        }
-        if (rate <= 0 && buy <= 0) {
-          hasNeither = true;
-        }
-        if (rate <= 0) {
-          hasMissingSellRate = true;
-        }
         containerItems.push({ type, qty, rate, buy });
       });
       if (tariffsEnabled) {
         if (hasInvalidFcl) {
           alert("Please fill in Container Quantity for all container rows.");
-          return;
-        }
-        if (hasNeither) {
-          alert("❌ Please enter either a Sell Rate or a Buy Rate for all container rows.");
           return;
         }
       }
@@ -6250,11 +6229,6 @@ function saveCurrentQuote() {
       if (tariffsEnabled) {
         const lclRate = parseFloat(document.querySelector(".sea-lcl-rate")?.value) || 0;
         const lclBuyRate = parseFloat(document.querySelector(".sea-lcl-buy-rate")?.value) || 0;
-
-        if (lclRate <= 0 && lclBuyRate <= 0) {
-          alert("❌ Please enter either LCL Sell Rate or Buy Rate per Revenue Ton (RT).");
-          return;
-        }
       }
       if (rows.length === 0) {
         alert("Please add at least one Cargo Line in the Dimensions Calculator.");
@@ -6280,11 +6254,6 @@ function saveCurrentQuote() {
       if (tariffsEnabled) {
         const bbRate = parseFloat(document.querySelector(".sea-bb-rate")?.value) || 0;
         const bbBuyRate = parseFloat(document.querySelector(".sea-bb-buy-rate")?.value) || 0;
-
-        if (bbRate <= 0 && bbBuyRate <= 0) {
-          alert("❌ Please enter either Break Bulk Sell Rate or Buy Rate per Revenue Ton (RT).");
-          return;
-        }
       }
       if (rows.length === 0) {
         alert("Please add at least one Cargo Line in the Dimensions Calculator.");
@@ -11241,7 +11210,7 @@ async function submitWonBookingDetails(e) {
     const sellVal = parseFloat(originSellInputs[i].value) || 0;
     const buyVal = parseFloat(document.querySelector(`.won-origin-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
     if (sellVal <= 0 || buyVal <= 0) {
-      alert("❌ COMPLIANCE ERROR: All origin fee Sell Rates and Buy Rates must be greater than 0.");
+      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
       return;
     }
     if (quote.details.originSurcharges && quote.details.originSurcharges[idx]) {
@@ -11257,7 +11226,7 @@ async function submitWonBookingDetails(e) {
     const sellVal = parseFloat(destSellInputs[i].value) || 0;
     const buyVal = parseFloat(document.querySelector(`.won-dest-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
     if (sellVal <= 0 || buyVal <= 0) {
-      alert("❌ COMPLIANCE ERROR: All destination fee Sell Rates and Buy Rates must be greater than 0.");
+      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
       return;
     }
     if (quote.details.destSurcharges && quote.details.destSurcharges[idx]) {
@@ -11281,7 +11250,7 @@ async function submitWonBookingDetails(e) {
     finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
     finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
     if (finalSellRate <= 0 || finalBuyRate <= 0) {
-      alert("❌ COMPLIANCE ERROR: Confirmed Airline Sell Rate and Buy Rate must be greater than 0.");
+      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
       return;
     }
     quote.confirmedSellRate = finalSellRate;
@@ -11308,7 +11277,7 @@ async function submitWonBookingDetails(e) {
     finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
     finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
     if (finalSellRate <= 0 || finalBuyRate <= 0) {
-      alert("❌ COMPLIANCE ERROR: Confirmed Sell Rate and Buy Rate must be greater than 0.");
+      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
       return;
     }
     quote.confirmedSellRate = finalSellRate;
@@ -11327,7 +11296,7 @@ async function submitWonBookingDetails(e) {
       const sellVal = parseFloat(fclSellInputs[i].value) || 0;
       const buyVal = parseFloat(document.querySelector(`.won-fcl-buy-input[data-index="${idx}"]`)?.value) || 0;
       if (sellVal <= 0 || buyVal <= 0) {
-        alert("❌ COMPLIANCE ERROR: All container Sell Rates and Buy Rates must be greater than 0.");
+        alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
         return;
       }
       if (quote.details.containerItems && quote.details.containerItems[idx]) {
@@ -11342,7 +11311,7 @@ async function submitWonBookingDetails(e) {
       const sellVal = parseFloat(standaloneSellInputs[i].value) || 0;
       const buyVal = parseFloat(document.querySelector(`.won-standalone-buy-input[data-index="${idx}"]`)?.value) || 0;
       if (sellVal <= 0 || buyVal <= 0) {
-        alert("❌ COMPLIANCE ERROR: All item Sell Rates and Buy Rates must be greater than 0.");
+        alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
         return;
       }
       if (quote.details.items && quote.details.items[idx]) {
