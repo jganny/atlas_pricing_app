@@ -226,12 +226,91 @@ body {
 
 
 .app-container {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: auto auto 1fr;
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+.app-sidebar {
+  grid-column: 1;
+  grid-row: 3;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-1);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md) 0;
+  z-index: 50;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.02);
+}
+
+.sidebar-brand {
+  padding: 0 var(--space-md) var(--space-md);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar-brand-text {
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--sky);
+  letter-spacing: 0.05em;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 var(--space-sm);
+}
+
+.sidebar-group-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--t3);
+  font-weight: 800;
+  margin: 1rem 0 0.5rem 1rem;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--t2);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.sidebar-item:hover {
+  background: var(--bg-deep);
+  color: var(--t1);
+}
+
+.sidebar-item.active {
+  background: var(--accent-current-glow);
+  color: var(--accent-current);
+  font-weight: 700;
+}
+
+.sidebar-item svg {
+  flex-shrink: 0;
+  color: inherit;
 }
 
 /* ══════════════════════════════════════════════════
@@ -241,6 +320,8 @@ body {
    HEADER
 ══════════════════════════════════════════════════ */
 .app-header {
+  grid-column: 1 / -1;
+  grid-row: 1;
   backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
   -webkit-backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
   background: rgba(255, 255, 255, 0.85) !important;
@@ -379,6 +460,8 @@ body {
 
 /* Sub-header Controls Bar */
 .subheader-bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
   backdrop-filter: blur(22px) saturate(150%) !important;
   -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
   background: rgba(255, 255, 255, 0.72) !important;
@@ -437,6 +520,8 @@ body {
    MAIN
 ══════════════════════════════════════════════════ */
 main {
+  grid-column: 2;
+  grid-row: 3;
   max-width: 1520px;
   margin: 0 auto;
   padding: var(--space-lg);
@@ -450,13 +535,11 @@ main {
 ══════════════════════════════════════════════════ */
 .glass-card {
   background: var(--bg-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-1);
+  border: 1px solid rgba(226, 232, 240, 1);
   border-radius: var(--bento-radius);
   padding: var(--bento-pad);
-  box-shadow: var(--shadow-md);
-  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   overflow: hidden;
 }
@@ -465,15 +548,14 @@ main {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+  background: linear-gradient(145deg, rgba(255,255,255,0.8) 0%, transparent 100%);
   pointer-events: none;
   border-radius: inherit;
 }
 
 .glass-card:hover {
-  border-color: var(--border-3);
-  box-shadow: var(--shadow-lg), 0 0 25px rgba(255,255,255,0.02);
-  transform: translateY(-4px);
+  border-color: rgba(203, 213, 225, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 /* ══════════════════════════════════════════════════
