@@ -1514,10 +1514,28 @@ function saveCustomEntry(type, value) {
 
   if (type === "airports") {
     storageKey = "gl_custom_airports";
-    defaultList = appState.airports || [];
+    const majorAirports = [
+      { code: "MAA", name: "Chennai International Airport" },
+      { code: "BOM", name: "Chhatrapati Shivaji Maharaj International Airport" },
+      { code: "DEL", name: "Indira Gandhi International Airport" },
+      { code: "BLR", name: "Kempegowda International Airport" },
+      { code: "HYD", name: "Rajiv Gandhi International Airport" },
+      { code: "DXB", name: "Dubai International Airport" },
+      { code: "SIN", name: "Singapore Changi Airport" },
+      { code: "LHR", name: "London Heathrow Airport" },
+      { code: "JFK", name: "John F. Kennedy International Airport" },
+      { code: "FRA", name: "Frankfurt Airport" },
+      { code: "HKG", name: "Hong Kong International Airport" },
+      { code: "PVG", name: "Shanghai Pudong International Airport" },
+      { code: "NRT", name: "Narita International Airport" },
+      { code: "DOH", name: "Hamad International Airport" }
+    ];
+    defaultList = (appState.airports && appState.airports.length > 0) ? appState.airports : majorAirports;
   } else if (type === "airlines") {
     storageKey = "gl_custom_airlines";
-    defaultList = appState.airlines || [];
+    defaultList = (appState.airlines && appState.airlines.length > 0)
+      ? appState.airlines
+      : (typeof IATA_AIRLINES !== "undefined" ? Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name })) : []);
   } else if (type === "customers") {
     storageKey = "gl_custom_customers";
     defaultList = [];
@@ -1723,12 +1741,29 @@ function setupAutocomplete(inputEl, type) {
 
     let matches = [];
     if (type === "airports") {
+      const majorAirports = [
+        { code: "MAA", name: "Chennai International Airport", city: "Chennai", country: "India" },
+        { code: "BOM", name: "Chhatrapati Shivaji Maharaj International Airport", city: "Mumbai", country: "India" },
+        { code: "DEL", name: "Indira Gandhi International Airport", city: "New Delhi", country: "India" },
+        { code: "BLR", name: "Kempegowda International Airport", city: "Bengaluru", country: "India" },
+        { code: "HYD", name: "Rajiv Gandhi International Airport", city: "Hyderabad", country: "India" },
+        { code: "DXB", name: "Dubai International Airport", city: "Dubai", country: "UAE" },
+        { code: "SIN", name: "Singapore Changi Airport", city: "Singapore", country: "Singapore" },
+        { code: "LHR", name: "London Heathrow Airport", city: "London", country: "UK" },
+        { code: "JFK", name: "John F. Kennedy International Airport", city: "New York", country: "USA" },
+        { code: "FRA", name: "Frankfurt Airport", city: "Frankfurt", country: "Germany" },
+        { code: "HKG", name: "Hong Kong International Airport", city: "Hong Kong", country: "Hong Kong" },
+        { code: "PVG", name: "Shanghai Pudong International Airport", city: "Shanghai", country: "China" },
+        { code: "NRT", name: "Narita International Airport", city: "Tokyo", country: "Japan" },
+        { code: "DOH", name: "Hamad International Airport", city: "Doha", country: "Qatar" }
+      ];
       let customAirports = [];
       const stored = localStorage.getItem("gl_custom_airports");
       if (stored) {
         try { customAirports = JSON.parse(stored); } catch (err) { }
       }
-      const combined = [...(appState.airports || []), ...customAirports];
+      const airportsSource = (appState.airports && appState.airports.length > 0) ? appState.airports : majorAirports;
+      const combined = [...airportsSource, ...customAirports];
       matches = combined.filter(ap =>
         (ap.code || "").toLowerCase().includes(val) ||
         (ap.city || "").toLowerCase().includes(val) ||
@@ -1741,7 +1776,12 @@ function setupAutocomplete(inputEl, type) {
       if (stored) {
         try { customAirlines = JSON.parse(stored); } catch (err) { }
       }
-      const combined = [...(appState.airlines || []), ...customAirlines];
+      const baseAirlines = (appState.airlines && appState.airlines.length > 0)
+        ? appState.airlines
+        : (typeof IATA_AIRLINES !== "undefined"
+            ? Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name }))
+            : []);
+      const combined = [...baseAirlines, ...customAirlines];
       matches = combined.filter(al =>
         (al.code || "").toLowerCase().includes(val) ||
         (al.name || "").toLowerCase().includes(val)
@@ -1939,6 +1979,7 @@ function setupAutocomplete(inputEl, type) {
     }
   });
 }
+window.setupAutocomplete = setupAutocomplete;
 
 // AIR FREIGHT CALCULATOR LOGIC
 // AIR FREIGHT CALCULATOR LOGIC
@@ -2505,6 +2546,7 @@ function addAirlineCard(data = null) {
     }
 
     nameInput.addEventListener("input", () => {
+      nameInput._selectedFromDropdown = false;
       const val = nameInput.value.trim().toUpperCase();
       dropdown.innerHTML = "";
       if (val.length >= 1) {
@@ -2531,6 +2573,7 @@ function addAirlineCard(data = null) {
             item.className = "iata-autocomplete-item";
             item.textContent = `${al.code} - ${al.name}`;
             item.addEventListener("click", () => {
+              nameInput._selectedFromDropdown = true;
               nameInput.value = `${al.code} - ${al.name}`;
               dropdown.style.display = "none";
               calculateAirFreight();
@@ -2548,6 +2591,43 @@ function addAirlineCard(data = null) {
     document.addEventListener("click", (e) => {
       if (e.target !== nameInput && !dropdown.contains(e.target)) {
         dropdown.style.display = "none";
+      }
+    });
+
+    nameInput.addEventListener("blur", () => {
+      const val = nameInput.value ? nameInput.value.trim() : "";
+      if (!val) return;
+
+      if (nameInput._selectedFromDropdown) return;
+
+      let customAirlines = [];
+      try {
+        const stored = localStorage.getItem("gl_custom_airlines");
+        if (stored) customAirlines = JSON.parse(stored);
+      } catch (e) { }
+
+      let baseAirlines = (appState.airlines && appState.airlines.length > 0)
+        ? appState.airlines
+        : (typeof IATA_AIRLINES !== "undefined"
+            ? Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name }))
+            : []);
+
+      const allAirlines = [...baseAirlines, ...customAirlines];
+      const valUpper = val.toUpperCase();
+
+      const isExisting = allAirlines.some(al => {
+        const code = (al.code || "").toUpperCase();
+        const name = (al.name || "").toUpperCase();
+        return (
+          code === valUpper ||
+          name === valUpper ||
+          `${code} - ${name}` === valUpper ||
+          `${code} | ${name}` === valUpper
+        );
+      });
+
+      if (!isExisting) {
+        saveCustomEntry("airlines", nameInput.value);
       }
     });
   }
