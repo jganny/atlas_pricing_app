@@ -10693,12 +10693,6 @@ const DB = {
       try {
         await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
         console.log("DB: Firestore write succeeded!");
-        const activeRole = getActiveRole();
-        if (activeRole === 'ganny' || activeRole === 'manager') {
-          renderAdminDashboard();
-        } else {
-          renderMemberDashboard(activeRole);
-        }
       } catch (err) {
         console.error("DB: Firestore write failed:", err);
         alert("Cloud Database Write Error: " + err.message);
