@@ -2335,7 +2335,7 @@ function addAirlineCard(data = null) {
     <div class="form-grid-3">
       <div class="form-group">
         <label>Carrier / Airline</label>
-        <input type="text" class="air-name" placeholder="Airline name or code..." value="${name}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+        <input type="text" class="air-name" placeholder="Airline name or code..." value="${name}" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
       </div>
       <div class="form-grid-2 form-group" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0; padding: 0; border: none; background: none;">
         <div class="form-group">
@@ -4817,18 +4817,6 @@ function renderMemberDashboard(userId) {
     }, 100);
   }
 
-  const btnGotoAir = document.getElementById("btn-goto-air");
-  const btnGotoSea = document.getElementById("btn-goto-sea");
-  const btnGotoCustom = document.getElementById("btn-goto-custom");
-  const btnGotoTransport = document.getElementById("btn-goto-transport");
-  const btnGotoWarehouse = document.getElementById("btn-goto-warehouse");
-
-  if (btnGotoAir) btnGotoAir.style.display = "flex";
-  if (btnGotoSea) btnGotoSea.style.display = "flex";
-  if (btnGotoCustom) btnGotoCustom.style.display = "flex";
-  if (btnGotoTransport) btnGotoTransport.style.display = "flex";
-  if (btnGotoWarehouse) btnGotoWarehouse.style.display = "flex";
-
   const myQuotes = (appState.quotes || []).filter(q => q.creator === userId);
   const totalEnquiries = myQuotes.length;
 
@@ -6426,6 +6414,7 @@ function saveCurrentQuote() {
       linerName: document.getElementById("sea-liner-name")?.value.trim() || shippingLine || "",
       commodity: document.getElementById("sea-commodity").value.trim(),
       incoterm: incoterm,
+      termsAndConditions: document.getElementById("sea-terms")?.value.trim() || DEFAULT_SEA_TERMS,
       mode: appState.currentSeaFreight.type,
       module: appState.currentSeaFreight.module || 'export',
       liners: appState.currentSeaFreight.liners || [],
