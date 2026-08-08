@@ -225,14 +225,20 @@ body {
 }
 
 
-.app-container {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  grid-template-rows: auto auto 1fr;
+.app-container,
+#app-workspace {
+  display: grid !important;
+  grid-template-columns: 240px 1fr !important;
+  grid-template-rows: auto auto 1fr !important;
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+.app-container[style*="display: none"],
+#app-workspace[style*="display: none"] {
+  display: none !important;
 }
 
 .app-sidebar {
@@ -2094,31 +2100,39 @@ header {
 
 /* Bento action grid — module launcher buttons */
 .bento-action-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-  gap: var(--bento-gap);
-  margin-bottom: var(--space-xl);
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  gap: var(--bento-gap) !important;
+  margin-bottom: var(--space-xl) !important;
 }
 .bento-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  padding: clamp(0.65rem,1.1vw,0.9rem) clamp(0.85rem,1.4vw,1.3rem);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.55rem !important;
+  padding: clamp(0.65rem,1.1vw,0.9rem) clamp(0.75rem,1.2vw,1.2rem) !important;
   border-radius: 10px;
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(0.76rem,1vw,0.88rem);
+  font-size: clamp(0.72rem,0.95vw,0.86rem) !important;
   font-weight: 800;
   letter-spacing: 0.02em;
   cursor: pointer;
   transition: transform 0.18s cubic-bezier(.4,0,.2,1), box-shadow 0.18s, filter 0.18s, background 0.18s;
   position: relative;
   overflow: hidden;
-  white-space: nowrap;
-  min-height: 44px;
+  white-space: nowrap !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
 }
 .bento-action-btn:hover  { transform:translateY(-2px); filter:brightness(0.97); box-shadow:0 6px 18px rgba(0,0,0,0.12); }
 .bento-action-btn:active { transform:translateY(0) scale(0.98); filter:brightness(0.94); }
+
+/* Control tower layout — full width 1-column single container */
+.control-tower-layout {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 1.5rem !important;
+}
 
 
 /* ══════════════════════════════════════════════════
@@ -2448,7 +2462,7 @@ table {
    L. MAIN PADDING — fluid & safe-area aware
 ══════════════════════════════════════════════════ */
 
-main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-width:1600px !important; margin:0 auto !important; }
+main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
 
 
 /* ══════════════════════════════════════════════════
@@ -2461,7 +2475,6 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
   .bento-grid-4 { grid-template-columns:repeat(4,1fr); }
   .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
   .header-content, .subheader-content { max-width:1720px; }
-  main { max-width:1720px !important; }
   .bento-stat .bento-stat-value { font-size:2.4rem; }
 }
 
@@ -2481,10 +2494,10 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
 /* MacBook 13" / Windows Laptop (1024-1279px) */
 @media (min-width: 1024px) and (max-width: 1279px) {
   .bento-grid-4, .bento-grid-3 { grid-template-columns:repeat(2,1fr); }
-  .stats-grid   { grid-template-columns:repeat(2,1fr) !important; }
+  .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
   .workspace, .admin-grid { grid-template-columns:1fr !important; }
   main { padding: var(--space-md) !important; }
-  .bento-action-grid { grid-template-columns:repeat(3,1fr); }
+  .bento-action-grid { grid-template-columns:repeat(5,1fr) !important; }
   .bento-span-2 { grid-column:span 1; }
   .bento-span-3 { grid-column:span 2; }
 }
@@ -2495,7 +2508,7 @@ main { padding: clamp(1rem,2vw,2rem) clamp(0.85rem,2.5vw,2rem) !important; max-w
   .stats-grid   { grid-template-columns:repeat(2,1fr) !important; }
   .workspace, .admin-grid { grid-template-columns:1fr !important; }
   .form-grid-3  { grid-template-columns:1fr 1fr !important; }
-  .bento-action-grid { grid-template-columns:repeat(2,1fr); }
+  .bento-action-grid { grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)) !important; }
   .bento-span-2, .bento-span-3 { grid-column:span 1; }
   main { padding: var(--space-md) !important; }
   .xe-ticker-container { display:none !important; }
