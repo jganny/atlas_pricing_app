@@ -530,9 +530,9 @@ main {
   grid-row: 3;
   padding: var(--space-lg);
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   flex: 1;
-  min-width: 0;
 }
 
 /* ══════════════════════════════════════════════════
@@ -2463,184 +2463,139 @@ table {
    L. MAIN PADDING — fluid & safe-area aware
 ══════════════════════════════════════════════════ */
 
-main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
+main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; margin: 0 !important; box-sizing: border-box !important; }
 
 
-/* ══════════════════════════════════════════════════
 /* ══════════════════════════════════════════════════
    M. FULL RESPONSIVE BREAKPOINT MATRIX
-   Every device width covered (320px, 375px, 768px, 1024px, 1280px+)
+   Every device width covered — no leaf unturned
 ══════════════════════════════════════════════════ */
-
-/* Desktop Base Rule (≥ 1024px): Preserve desktop sidebar, hide duplicate global module tabs */
-@media (min-width: 1024px) {
-  #global-module-tabs,
-  .module-navigation-tabs {
-    display: none !important;
-  }
-}
 
 /* 4K / Ultrawide (≥ 1920px) */
 @media (min-width: 1920px) {
-  .app-container, #app-workspace { display: grid !important; grid-template-columns: 240px 1fr !important; }
-  .app-sidebar { display: flex !important; width: 240px !important; min-width: 240px !important; }
-  .bento-grid-4 { grid-template-columns: repeat(4, 1fr); }
-  .stats-grid   { grid-template-columns: repeat(4, 1fr) !important; }
-  .header-content, .subheader-content { max-width: 1720px; }
-  .bento-stat .bento-stat-value { font-size: 2.4rem; }
+  .bento-grid-4 { grid-template-columns:repeat(4,1fr); }
+  .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
+  .header-content, .subheader-content { max-width:1720px; }
+  .bento-stat .bento-stat-value { font-size:2.4rem; }
 }
 
 /* Full HD Desktop (1440-1919px) */
 @media (min-width: 1440px) and (max-width: 1919px) {
-  .app-container, #app-workspace { display: grid !important; grid-template-columns: 240px 1fr !important; }
-  .app-sidebar { display: flex !important; width: 240px !important; min-width: 240px !important; }
-  .bento-grid-4 { grid-template-columns: repeat(4, 1fr); }
-  .stats-grid   { grid-template-columns: repeat(4, 1fr) !important; }
-  .bento-action-grid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+  .bento-grid-4 { grid-template-columns:repeat(4,1fr); }
+  .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
 }
 
 /* Standard Desktop / Wide Laptop (1280-1439px) */
 @media (min-width: 1280px) and (max-width: 1439px) {
-  .app-container, #app-workspace { display: grid !important; grid-template-columns: 240px 1fr !important; }
-  .app-sidebar { display: flex !important; width: 240px !important; min-width: 240px !important; }
-  .bento-grid-4 { grid-template-columns: repeat(3, 1fr); }
-  .stats-grid   { grid-template-columns: repeat(4, 1fr) !important; }
-  .workspace    { grid-template-columns: 1.4fr 1fr !important; }
-  .bento-action-grid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+  .bento-grid-4 { grid-template-columns:repeat(3,1fr); }
+  .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
+  .workspace    { grid-template-columns:1.4fr 1fr !important; }
 }
 
-/* MacBook 13" / Windows Laptop / Tablet Landscape (1024-1279px) */
+/* MacBook 13" / Windows Laptop (1024-1279px) */
 @media (min-width: 1024px) and (max-width: 1279px) {
-  .app-container, #app-workspace { display: grid !important; grid-template-columns: 200px 1fr !important; }
-  .app-sidebar { display: flex !important; width: 200px !important; min-width: 200px !important; }
-  main { grid-column: 2 !important; min-width: 0 !important; width: 100% !important; padding: var(--space-md) !important; }
-  .bento-grid-4, .bento-grid-3 { grid-template-columns: repeat(2, 1fr); }
-  .stats-grid   { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
-  .workspace, .admin-grid { grid-template-columns: 1fr !important; }
-  .bento-action-grid { grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr)) !important; gap: var(--space-sm) !important; }
-  .bento-action-btn { font-size: clamp(0.7rem, 0.88vw, 0.8rem) !important; padding: 0.6rem 0.5rem !important; white-space: normal !important; text-align: center !important; }
-  .bento-span-2 { grid-column: span 1; }
-  .bento-span-3 { grid-column: span 2; }
+  .bento-grid-4, .bento-grid-3 { grid-template-columns:repeat(2,1fr); }
+  .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
+  .workspace, .admin-grid { grid-template-columns:1fr !important; }
+  main { padding: var(--space-md) !important; }
+  .bento-action-grid { grid-template-columns:repeat(5,1fr) !important; }
+  .bento-span-2 { grid-column:span 1; }
+  .bento-span-3 { grid-column:span 2; }
 }
 
-/* Narrow Screens Master Rule (≤ 1023px): Sidebar hidden, Global Module Navigation visible & scrollable */
+/* Narrow / Mobile & Tablet Layout (≤ 1023px) */
 @media (max-width: 1023px) {
-  .app-sidebar { display: none !important; }
-  #global-module-tabs,
-  .module-navigation-tabs {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    gap: 0.35rem !important;
-    padding-bottom: 2px !important;
-    margin: 0 !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
+  .app-container,
+  #app-workspace {
+    grid-template-columns: 1fr !important;
   }
-  #global-module-tabs::-webkit-scrollbar,
-  .module-navigation-tabs::-webkit-scrollbar {
+  .app-sidebar {
     display: none !important;
   }
-  #global-module-tabs .module-tab,
-  .module-navigation-tabs .module-tab {
+  .app-header,
+  header {
+    grid-column: 1 !important;
+    width: 100% !important;
+  }
+  .subheader-bar {
+    grid-column: 1 !important;
+    width: 100% !important;
+  }
+  main {
+    grid-column: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  #global-module-tabs {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+    flex-wrap: nowrap !important;
+  }
+  #global-module-tabs .module-tab {
     flex-shrink: 0 !important;
-    white-space: nowrap !important;
   }
 }
 
-/* iPad / Tablet Portrait (768-1023px) */
+/* iPad / Large Tablet (768-1023px) */
 @media (min-width: 768px) and (max-width: 1023px) {
-  .app-container, #app-workspace { display: grid !important; grid-template-columns: 1fr !important; }
-  .app-sidebar { display: none !important; }
-  .app-header, header { grid-column: 1 !important; padding: 0.75rem var(--space-md) !important; }
-  .subheader-bar { grid-column: 1 !important; padding: 0.4rem var(--space-md) !important; }
-  .subheader-content { flex-direction: column !important; align-items: stretch !important; gap: var(--space-sm) !important; }
-  main { grid-column: 1 !important; width: 100% !important; min-width: 0 !important; padding: var(--space-md) !important; }
-  .bento-grid-4, .bento-grid-3, .bento-grid-2 { grid-template-columns: repeat(2, 1fr); }
-  .stats-grid   { grid-template-columns: repeat(2, 1fr) !important; }
-  .workspace, .admin-grid { grid-template-columns: 1fr !important; }
-  .form-grid-3  { grid-template-columns: 1fr 1fr !important; }
-  .bento-action-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; gap: var(--space-sm) !important; }
-  .bento-action-btn { font-size: 0.76rem !important; padding: 0.6rem 0.6rem !important; white-space: normal !important; text-align: center !important; }
-  .bento-span-2, .bento-span-3 { grid-column: span 1; }
-  .xe-ticker-container { display: none !important; }
-  .control-tower-layout { grid-template-columns: 1fr !important; }
-  .admin-flex-row > * { min-width: 0 !important; flex: 1 1 calc(50% - 1rem) !important; }
-  .leaderboard-table-container, .quotes-table-container, .table-container, .exec-section-card { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100% !important; }
-  .role-selector-bar { flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; gap: 0.3rem !important; max-width: 100% !important; scrollbar-width: none !important; }
-  .role-selector-bar::-webkit-scrollbar { display: none !important; }
-  .role-btn { flex-shrink: 0 !important; white-space: nowrap !important; padding: 0.35rem 0.75rem !important; font-size: 0.72rem !important; }
-  .module-tab { font-size: 0.72rem !important; padding: 0.38rem 0.75rem !important; }
+  .bento-grid-4, .bento-grid-3, .bento-grid-2 { grid-template-columns:repeat(2,1fr); }
+  .stats-grid   { grid-template-columns:repeat(2,1fr) !important; }
+  .workspace, .admin-grid { grid-template-columns:1fr !important; }
+  .form-grid-3  { grid-template-columns:1fr 1fr !important; }
+  .bento-action-grid { grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)) !important; }
+  .bento-span-2, .bento-span-3 { grid-column:span 1; }
+  main { padding: var(--space-md) !important; }
+  .xe-ticker-container { display:none !important; }
+  .app-header, header { padding:0.75rem var(--space-md) !important; }
+  .subheader-bar { padding:0.4rem var(--space-md) !important; }
 }
 
-/* Mobile / Smartphone (≤ 767px, covers 375px) */
+/* Mobile / iPhone Large (480-767px) */
 @media (max-width: 767px) {
-  .app-container, #app-workspace { display: grid !important; grid-template-columns: 1fr !important; }
-  .app-sidebar { display: none !important; }
-  .app-header, header { grid-column: 1 !important; padding: 0.65rem var(--space-sm) !important; }
-  .subheader-bar { grid-column: 1 !important; padding: 0.4rem var(--space-sm) !important; }
-  main { grid-column: 1 !important; width: 100% !important; min-width: 0 !important; padding: var(--space-sm) !important; }
-  .bento-grid-4, .bento-grid-3, .bento-grid-2, .bento-grid-auto { grid-template-columns: 1fr !important; }
-  .bento-span-2, .bento-span-3, .bento-span-full { grid-column: span 1 !important; }
-  .stats-grid   { grid-template-columns: 1fr 1fr !important; gap: var(--space-sm) !important; }
-  .bento-action-grid { grid-template-columns: 1fr 1fr !important; gap: var(--space-sm) !important; }
-  .bento-action-btn { font-size: 0.72rem !important; padding: 0.5rem 0.4rem !important; white-space: normal !important; text-align: center !important; min-height: 44px !important; box-sizing: border-box !important; }
-  .workspace, .admin-grid { grid-template-columns: 1fr !important; }
-  .form-row, .form-grid-3 { grid-template-columns: 1fr !important; gap: var(--space-sm) !important; }
-  .xe-ticker-container { display: none !important; }
-  .subheader-content { flex-direction: column !important; align-items: stretch !important; gap: var(--space-sm) !important; }
-  .role-selector-bar { flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; border-radius: var(--r-md); padding: 0.35rem; gap: 0.3rem; max-width: 100%; scrollbar-width: none !important; }
-  .role-selector-bar::-webkit-scrollbar { display: none !important; }
-  .role-btn { flex-shrink: 0 !important; white-space: nowrap !important; padding: 0.3rem 0.7rem; font-size: 0.68rem; }
-  .module-tab { flex-shrink: 0 !important; white-space: nowrap !important; font-size: 0.65rem !important; padding: 0.35rem 0.65rem !important; }
-  .glass-card { padding: 1rem !important; min-width: 0 !important; max-width: 100% !important; box-sizing: border-box !important; }
-  .admin-flex-row { flex-direction: column !important; gap: var(--space-sm) !important; }
-  .admin-flex-row > * { min-width: 0 !important; width: 100% !important; flex: 1 1 100% !important; }
-  .bento-cell { padding: 0.9rem !important; min-width: 0 !important; }
-  .action-buttons { flex-direction: column; gap: 0.6rem; }
-  .btn-primary, .btn-secondary { flex: none; width: 100%; min-height: 48px !important; font-size: 0.88rem !important; }
-  .result-value-highlight { font-size: clamp(1.6rem, 7vw, 2rem) !important; }
-  .bento-stat .bento-stat-value { font-size: clamp(1.5rem, 7vw, 2rem) !important; }
-  .modal-content { border-radius: 20px 20px 0 0 !important; margin-top: auto !important; max-height: 92dvh !important; }
-  .print-details { grid-template-columns: 1fr !important; gap: 0.5rem !important; }
-  .surcharge-row { grid-template-columns: 2fr 1fr auto !important; }
-  .control-tower-layout { grid-template-columns: 1fr !important; }
-  .leaderboard-table-container, .quotes-table-container, .table-container, .exec-section-card { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100% !important; }
+  .bento-grid-4, .bento-grid-3, .bento-grid-2, .bento-grid-auto { grid-template-columns:1fr !important; }
+  .bento-span-2, .bento-span-3, .bento-span-full { grid-column:span 1 !important; }
+  .stats-grid   { grid-template-columns:1fr 1fr !important; gap:var(--space-sm) !important; }
+  .bento-action-grid { grid-template-columns:1fr 1fr !important; gap:var(--space-sm) !important; }
+  .workspace, .admin-grid { grid-template-columns:1fr !important; }
+  .form-row, .form-grid-3 { grid-template-columns:1fr !important; gap:var(--space-sm) !important; }
+  .xe-ticker-container { display:none !important; }
+  main { padding: var(--space-sm) !important; }
+  .app-header, header { padding:0.65rem var(--space-sm) !important; }
+  .subheader-bar { padding:0.4rem var(--space-sm) !important; }
+  .subheader-content { flex-direction:column; align-items:stretch; gap:var(--space-sm); }
+  .role-selector-bar { flex-wrap:wrap; border-radius:var(--r-md); padding:0.4rem; gap:0.3rem; }
+  .role-btn { padding:0.3rem 0.7rem; font-size:0.68rem; }
+  .module-navigation-tabs { flex-wrap:nowrap; overflow-x:auto; gap:0.3rem; padding-bottom:2px; }
+  .module-tab { flex-shrink:0; font-size:0.65rem !important; padding:0.35rem 0.65rem !important; }
+  .glass-card { padding:1rem !important; }
+  .bento-cell { padding:0.9rem !important; }
+  .action-buttons { flex-direction:column; gap:0.6rem; }
+  .btn-primary, .btn-secondary { flex:none; width:100%; min-height:48px !important; font-size:0.88rem !important; }
+  .result-value-highlight { font-size:clamp(1.6rem,7vw,2rem) !important; }
+  .bento-stat .bento-stat-value { font-size:clamp(1.5rem,7vw,2rem) !important; }
+  .modal-content { border-radius:20px 20px 0 0 !important; margin-top:auto !important; max-height:92dvh !important; }
+  .print-details { grid-template-columns:1fr !important; gap:0.5rem !important; }
+  .surcharge-row { grid-template-columns:2fr 1fr auto !important; }
   
   /* Compact mobile header customizations */
   .logo-tagline { display: none; }
-  .header-workspace-context { display: none !important; }
   .user-badge-container span { display: none; }
   .active-user-badge, .admin-settings-btn, .change-password-btn, .logout-btn { padding: 0.45rem !important; gap: 0; }
 }
 
-/* iPhone SE / Narrow Screen (≤ 389px, covers 320px) */
+/* iPhone SE / Small (≤ 389px) */
 @media (max-width: 389px) {
-  .stats-grid { grid-template-columns: 1fr !important; gap: 0.5rem !important; }
-  .bento-action-grid { grid-template-columns: 1fr !important; gap: 0.5rem !important; }
-  .bento-action-btn { width: 100% !important; font-size: 0.76rem !important; padding: 0.55rem 0.5rem !important; }
-  main { padding: 0.5rem !important; width: 100% !important; min-width: 0 !important; }
-  .app-header, header { padding: 0.5rem 0.65rem !important; }
-  .header-content { gap: 0.35rem !important; }
-  .brand-verte { font-size: 1.2rem !important; }
-  .logo-img { height: 32px !important; width: 32px !important; }
-  .user-badge-container { gap: 0.25rem !important; }
-  .active-user-badge, .admin-settings-btn, .change-password-btn, .logout-btn { padding: 0.35rem 0.45rem !important; font-size: 0.7rem !important; }
-  .subheader-bar { padding: 0.35rem 0.5rem !important; }
-  .role-selector-bar { padding: 0.15rem !important; gap: 0.2rem !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; max-width: 100% !important; }
-  .role-btn { padding: 0.25rem 0.5rem !important; font-size: 0.62rem !important; flex-shrink: 0 !important; white-space: nowrap !important; }
-  .module-tab { font-size: 0.6rem !important; padding: 0.28rem 0.45rem !important; flex-shrink: 0 !important; white-space: nowrap !important; }
-  .glass-card, .bento-cell { padding: 0.75rem !important; border-radius: 10px !important; min-width: 0 !important; width: 100% !important; }
-  .admin-flex-row > * { min-width: 0 !important; width: 100% !important; }
-  .bento-stat .bento-stat-value { font-size: 1.3rem !important; word-break: break-word !important; }
-  .result-value-highlight { font-size: 1.35rem !important; }
-  .btn-primary, .btn-secondary { font-size: 0.8rem !important; min-height: 42px !important; }
-  .margin-radar-strip { padding: 0.4rem 0.6rem !important; gap: 0.3rem !important; }
-  .atl-tag { font-size: 0.62rem !important; padding: 2px 5px !important; }
-  #db-connection-badge { display: none !important; }
+  .stats-grid { grid-template-columns:1fr !important; }
+  .bento-action-grid { grid-template-columns:1fr !important; }
+  main { padding:0.6rem !important; }
+  .app-header, header { padding:0.6rem 0.75rem !important; }
+  .module-tab { font-size:0.6rem !important; padding:0.3rem 0.5rem !important; }
+  .glass-card, .bento-cell { padding:0.8rem !important; border-radius:12px !important; }
+  .bento-stat .bento-stat-value { font-size:1.4rem !important; }
+  .result-value-highlight { font-size:1.5rem !important; }
+  .btn-primary, .btn-secondary { font-size:0.82rem !important; }
 }
 
 /* Touch devices — enlarge tap targets to ≥ 44px (iOS HIG) */
