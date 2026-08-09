@@ -7443,7 +7443,7 @@ window.viewSavedQuote = (id) => {
   printCard.innerHTML = `
       <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
-          <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo" style="height: 40px; width: auto; object-fit: contain;">
+          <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo" style="height: 56px; width: auto; object-fit: contain;">
         </div>
         <div class="print-title">
           <h2>QUOTATION</h2>

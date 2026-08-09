@@ -569,6 +569,18 @@ main {
 .view-panel { display: none; animation: slideUp 0.32s cubic-bezier(.4,0,.2,1); width: 100%; max-width: 100%; }
 .view-panel.active { display: block; }
 
+/* Keep the member dashboard at the start of the workspace flow. This is
+   intentionally layout-only: it does not alter member data or dashboard logic. */
+#member-dashboard-panel.active {
+  display: flow-root;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  transform: none !important;
+}
+#member-dashboard-panel > .stats-grid:first-of-type {
+  margin-top: 0 !important;
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -3386,6 +3398,5 @@ input::placeholder, textarea::placeholder {
     opacity: 1;
   }
 }
-
 
 
