@@ -2994,7 +2994,8 @@ function calculateAirFreight() {
     let usedBreak = autoBreakName;
 
     const activeBrVal = breaksData[autoBreakName] || { sell: 0, buy: 0 };
-    activeRate = activeBrVal.sell > 0 ? activeBrVal.sell : activeBrVal.buy;
+    // A buy-only rate is a cost, never a sell rate.
+    activeRate = activeBrVal.sell || 0;
     activeBuyRate = activeBrVal.buy;
 
     if (activeRate === 0) {
@@ -3010,26 +3011,26 @@ function calculateAirFreight() {
       let bestBracket = null;
       for (const br of brackets) {
         const val = breaksData[br.name];
-        const valNum = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
+        const valNum = (typeof val === 'object' && val !== null) ? (val.sell || 0) : (parseFloat(val) || 0);
         if (valNum > 0 && airlineChargeableWeight >= br.limit) {
           bestBracket = br;
         }
       }
       if (bestBracket) {
         const val = breaksData[bestBracket.name];
-        activeRate = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
+        activeRate = (typeof val === 'object' && val !== null) ? (val.sell || 0) : (parseFloat(val) || 0);
         activeBuyRate = (typeof val === 'object' && val !== null) ? val.buy : 0;
         usedBreak = bestBracket.name;
       } else {
         // Try any bracket that has a rate
         const bracketsWithRates = brackets.filter(br => {
           const val = breaksData[br.name];
-          const valNum = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
+          const valNum = (typeof val === 'object' && val !== null) ? (val.sell || 0) : (parseFloat(val) || 0);
           return valNum > 0;
         });
         if (bracketsWithRates.length > 0) {
           const val = breaksData[bracketsWithRates[0].name];
-          activeRate = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
+          activeRate = (typeof val === 'object' && val !== null) ? (val.sell || 0) : (parseFloat(val) || 0);
           activeBuyRate = (typeof val === 'object' && val !== null) ? val.buy : 0;
           usedBreak = bracketsWithRates[0].name;
         }
@@ -3040,7 +3041,7 @@ function calculateAirFreight() {
 
     let isMinActive = false;
     const minVal = breaksData['min'];
-    const minSell = (typeof minVal === 'object' && minVal !== null) ? (minVal.sell > 0 ? minVal.sell : minVal.buy) : (parseFloat(minVal) || 0);
+    const minSell = (typeof minVal === 'object' && minVal !== null) ? (minVal.sell || 0) : (parseFloat(minVal) || 0);
     const minBuy = (typeof minVal === 'object' && minVal !== null) ? minVal.buy : 0;
 
     if (tariffsEnabled && wbEnabled && minSell > 0 && baseFreightCost < minSell) {
@@ -3439,8 +3440,10 @@ function calculateAirFreight() {
       if (alt.breaks && Object.keys(alt.breaks).length > 0) {
         breakRows = Object.keys(alt.breaks).map(bName => {
           const brVal = alt.breaks[bName] || { sell: 0, buy: 0 };
-          const sellRate = brVal.sell > 0 ? brVal.sell : (brVal.buy > 0 ? brVal.buy : 0);
-          const buyRate = brVal.buy;
+          const sellRate = brVal.sell || 0;
+          const buyRate = brVal.buy || 0;
+          const hasSellRate = sellRate > 0;
+          const hasBuyRate = buyRate > 0;
 
           const labels = {
             'min': 'Min (Flat)',
@@ -3454,7 +3457,7 @@ function calculateAirFreight() {
 
           const displayLabel = labels[bName] || bName;
 
-          const isMinActive = (bName === 'min' && alt.appliedRate === sellRate && alt.appliedBuyRate === buyRate && alt.baseFreight === sellRate);
+          const isMinActive = (bName === 'min' && hasSellRate && alt.appliedRate === sellRate && alt.appliedBuyRate === buyRate && alt.baseFreight === sellRate);
           const isActive = (bName === alt.usedBreak) || isMinActive;
 
           const isMinType = (bName === 'min');
@@ -3470,11 +3473,11 @@ function calculateAirFreight() {
           return `
             <tr style="${rowStyle} transition: background 0.2s;">
               <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1);">${displayLabel} ${isActive ? '<span style="font-size: 0.65rem; color: var(--accent-success); font-weight: 800;">(Active)</span>' : ''}</td>
-              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: center;">${curSymbol}${sellRate.toFixed(2)}</td>
-              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: center;">${curSymbol}${buyRate.toFixed(2)}</td>
-              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: right;">${curSymbol}${breakBaseFreight.toFixed(2)}</td>
-              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: right;">${curSymbol}${breakGrandTotal.toFixed(2)}</td>
-              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--accent-success); font-weight: 700; text-align: right;">${curSymbol}${breakGP.toFixed(2)}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: center;">${hasSellRate ? `${curSymbol}${sellRate.toFixed(2)}` : '—'}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: center;">${hasBuyRate ? `${curSymbol}${buyRate.toFixed(2)}` : '—'}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: right;">${hasSellRate ? `${curSymbol}${breakBaseFreight.toFixed(2)}` : '—'}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--t1); text-align: right;">${hasSellRate ? `${curSymbol}${breakGrandTotal.toFixed(2)}` : '—'}</td>
+              <td style="padding: 6px 8px; font-size: 0.7rem; color: var(--accent-success); font-weight: 700; text-align: right;">${hasSellRate ? `${curSymbol}${breakGP.toFixed(2)}` : '—'}</td>
             </tr>
           `;
         }).join("");
@@ -11315,7 +11318,6 @@ async function submitWonBookingDetails(e) {
     quote.agencyAgreementData = ctrl.agreementData;
   }
 
-  quote.status = 'converted';
   quote.shipperName = shipperName;
   quote.shipperPhone = shipperPhone;
   quote.shipperEmail = shipperEmail;
@@ -11325,8 +11327,6 @@ async function submitWonBookingDetails(e) {
   quote.consigneeEmail = consigneeEmail;
   quote.consigneeAddress = consigneeAddress;
   quote.commodity = commodity;
-  quote.conversionDate = new Date().toISOString().split('T')[0];
-  quote.date = new Date().toISOString().split('T')[0];
 
   // 1. Confirm and validate Carrier
   const confirmedCarrier = document.getElementById("won-confirmed-carrier")?.value || "N/A";
@@ -11547,6 +11547,11 @@ async function submitWonBookingDetails(e) {
     grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
   }
   quote.grossProfitINR = grossProfitINR;
+
+  // Do not mark the quote Converted/WON until every required buy/sell validation above has passed.
+  quote.status = 'converted';
+  quote.conversionDate = new Date().toISOString().split('T')[0];
+  quote.date = new Date().toISOString().split('T')[0];
 
   try {
     // 1. Save quote update (updates Firestore dynamically)
