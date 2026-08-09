@@ -2630,6 +2630,33 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   }
 }
 
+/* Standalone Transportation / Warehousing controls: keep member actions visible
+   and allow the Add Row and GST controls to wrap within their own card. */
+#transport-path-standalone-container > div:first-child > h4,
+#warehouse-path-standalone-container > div:first-child > h4 {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+#transport-path-standalone-container .standalone-charge-controls,
+#warehouse-path-standalone-container .standalone-charge-controls {
+  margin-left: auto;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  #transport-path-standalone-container .standalone-charge-controls,
+  #warehouse-path-standalone-container .standalone-charge-controls {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
 /* iPad / Large Tablet (768-1023px) */
 @media (min-width: 768px) and (max-width: 1023px) {
   .bento-grid-4, .bento-grid-3, .bento-grid-2 { grid-template-columns:repeat(2,1fr); }
