@@ -2335,7 +2335,7 @@ function addAirlineCard(data = null) {
     <div class="form-grid-3">
       <div class="form-group">
         <label>Carrier / Airline</label>
-        <input type="text" class="air-name" placeholder="Airline name or code..." value="${name}" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+        <input type="search" name="vertex-airline-search" class="air-name" placeholder="Airline name or code..." value="${name}" required autocomplete="new-password" autocorrect="off" autocapitalize="none" spellcheck="false" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
       </div>
       <div class="form-grid-2 form-group" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0; padding: 0; border: none; background: none;">
         <div class="form-group">
@@ -7407,14 +7407,7 @@ window.viewSavedQuote = (id) => {
   printCard.innerHTML = `
       <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
-          <img src="logo.png" alt="Vertex Logo" style="height: 50px; width: 50px; object-fit: contain; border-radius: 50%;">
-          <div style="display: flex; flex-direction: column; justify-content: center;">
-            <div style="color: #1b1c5c; font-family: 'Cinzel', serif; display: inline-flex; align-items: baseline; line-height: 1.0;">
-              <span style="font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em;">VERTE</span>
-              <span class="custom-brand-x" style="font-size: 2.0rem; font-weight: 900; margin-left: 2px; transform: translateY(0.04em);"></span>
-            </div>
-            <div style="font-size: 0.75rem; color: #64748b; font-weight: 500; font-family: 'Futura', 'Outfit', sans-serif; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.25rem;">Pricing, Simplified</div>
-          </div>
+          <img src="assets/vertex-logo-primary.png" alt="Vertex Logo" style="height: 40px; width: auto; object-fit: contain;">
         </div>
         <div class="print-title">
           <h2>QUOTATION</h2>
