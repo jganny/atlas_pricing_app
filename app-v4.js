@@ -3443,7 +3443,9 @@ function calculateAirFreight() {
       if (alt.breaks && Object.keys(alt.breaks).length > 0) {
         breakRows = Object.keys(alt.breaks).map(bName => {
           const brVal = alt.breaks[bName] || { sell: 0, buy: 0 };
-          const sellRate = brVal.sell > 0 ? brVal.sell : (brVal.buy > 0 ? brVal.buy : 0);
+          // Keep commercial Sell and internal Buy distinct in the live result.
+          // A missing counterpart is calculated as zero; it is never mirrored.
+          const sellRate = brVal.sell || 0;
           const buyRate = brVal.buy;
 
           const labels = {
@@ -7232,18 +7234,18 @@ window.viewSavedQuote = (id) => {
 
     alternativesHtml = `
       <div class="print-section-title" style="margin-top: 1.5rem;">Airline Carrier & Pricing Summary (Individual Details)</div>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
+      <table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
         <thead>
           <tr style="background: #f8fafc;">
             <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Airline</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Routing</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Transit Time</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Validity</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Pivot Wt</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Chargeable Wt</th>
+            <th style="border: 1px solid #e2e8f0; padding: 5px; font-size: 0.64rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Route</th>
+            <th style="border: 1px solid #e2e8f0; padding: 5px; font-size: 0.64rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">T.T</th>
+            <th style="border: 1px solid #e2e8f0; padding: 5px; font-size: 0.64rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Expiry</th>
+            <th style="border: 1px solid #e2e8f0; padding: 5px; font-size: 0.64rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">PWT</th>
+            <th style="border: 1px solid #e2e8f0; padding: 5px; font-size: 0.64rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">CWT</th>
             <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Base Freight</th>
             <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Surcharges</th>
-            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Grand Total</th>
+            <th style="border: 1px solid #e2e8f0; padding: 5px; font-size: 0.64rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Gross Total</th>
           </tr>
         </thead>
         <tbody>
@@ -7360,31 +7362,6 @@ window.viewSavedQuote = (id) => {
     `;
   }
 
-  if (quote.status === 'converted') {
-    const buyVal = quote.confirmedBuyRate || 0;
-    const sellVal = quote.confirmedSellRate || 0;
-    const gpVal = quote.grossProfit || 0;
-
-    detailsRows += `
-      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
-        <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Carrier</td>
-        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${quote.confirmedCarrier || 'N/A'}</strong></td>
-      </tr>
-      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
-        <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Buy Rate</td>
-        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${buyVal.toFixed(2)}</strong></td>
-      </tr>
-      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
-        <td style="padding: 8px 12px; font-size: 0.72rem;">Confirmed Sell Rate</td>
-        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${sellVal.toFixed(2)}</strong></td>
-      </tr>
-      <tr style="background: rgba(46,204,113,0.1); font-weight: bold; border-left: 3px solid var(--accent-success);">
-        <td style="padding: 8px 12px; font-size: 0.72rem;">Gross Profit (GP)</td>
-        <td style="padding: 8px 12px; font-size: 0.72rem;"><strong style="color: var(--accent-success);">${currencySym}${Math.abs(gpVal).toFixed(2)}</strong></td>
-      </tr>
-    `;
-  }
-
   let originSurchargeRows = "";
   let destSurchargeRows = "";
 
@@ -7424,7 +7401,7 @@ window.viewSavedQuote = (id) => {
   const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : (isAir ? DEFAULT_AIR_TERMS : DEFAULT_SEA_TERMS);
   if (rawTerms) {
     rawTerms.split("\n").map(l => l.trim()).filter(l => l.length > 0).forEach(line => {
-      termsList += `<li>${line}</li>`;
+      termsList += `<li>${line.replace(/^\s*\d+[.)]?\s*/, '')}</li>`;
     });
   }
 
