@@ -112,7 +112,7 @@ function updateExecutiveDashboardVisibility() {
   const execPanel = document.getElementById("executive-dashboard-panel");
   if (execPanel) {
     if (isUserAdminOrManager()) {
-      execPanel.style.display = "";
+      execPanel.style.display = execPanel.classList.contains("active") ? "" : "none";
     } else {
       execPanel.style.display = "none";
       if (execPanel.classList.contains("active")) {
@@ -4955,6 +4955,7 @@ function showExecutiveDashboard() {
   const execPanel = document.getElementById("executive-dashboard-panel");
   if (execPanel) {
     execPanel.classList.add("active");
+    execPanel.style.display = "";
   }
   renderExecutiveDashboard();
   if (typeof renderExecutiveDashboardIntelligence === 'function') {
