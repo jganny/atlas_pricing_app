@@ -2513,6 +2513,15 @@ table {
   padding-left: 1.25rem !important;
 }
 
+/* ══════════════════════════════════════════════════
+   RELEASE 4 — OPERATIONAL DASHBOARD FOCUS
+   Keep dashboards centred on decisions, KPIs and approvals. */
+#admin-global-control-tower,
+#member-logistics-news-panel,
+#member-collaboration-tools {
+  display: none !important;
+}
+
 
 /* ══════════════════════════════════════════════════
    K. MODAL — Premium Glassmorphic overlay
