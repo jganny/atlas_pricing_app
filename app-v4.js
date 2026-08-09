@@ -9204,6 +9204,8 @@ function amendQuote(id) {
       document.getElementById("transport-header-currency").value = quote.currency || "INR";
       syncTransportCurrency();
     }
+    const transportGstToggle = document.getElementById("transport-gst-enabled");
+    if (transportGstToggle) transportGstToggle.checked = quote.details?.gstEnabled !== false;
     const transportBody = document.getElementById("transport-standalone-body");
     if (transportBody) {
       transportBody.innerHTML = "";
@@ -9245,6 +9247,8 @@ function amendQuote(id) {
       document.getElementById("warehouse-header-currency").value = quote.currency || "INR";
       syncWarehouseCurrency();
     }
+    const warehouseGstToggle = document.getElementById("warehouse-gst-enabled");
+    if (warehouseGstToggle) warehouseGstToggle.checked = quote.details?.gstEnabled !== false;
 
 
 
@@ -12837,13 +12841,15 @@ function calculateTransportation() {
     });
   }
 
-  const tax = subtotal * 0.18;
+  const gstEnabled = document.getElementById("transport-gst-enabled")?.checked !== false;
+  const tax = gstEnabled ? subtotal * 0.18 : 0;
   const total = subtotal + tax;
 
   const cur = document.getElementById("transport-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
 
   if (document.getElementById("res-transport-subtotal")) document.getElementById("res-transport-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  if (document.getElementById("res-transport-tax-label")) document.getElementById("res-transport-tax-label").textContent = gstEnabled ? "GST / Service Tax (18%)" : "GST / Service Tax (Not applied)";
   if (document.getElementById("res-transport-tax")) document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   if (document.getElementById("res-transport-total")) document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
@@ -12858,13 +12864,15 @@ function calculateWarehousing() {
     });
   }
 
-  const tax = subtotal * 0.18;
+  const gstEnabled = document.getElementById("warehouse-gst-enabled")?.checked !== false;
+  const tax = gstEnabled ? subtotal * 0.18 : 0;
   const total = subtotal + tax;
 
   const cur = document.getElementById("warehouse-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : (cur === 'GBP' ? '£' : (cur === 'AED' ? 'د.إ' : (cur === 'SGD' ? 'S$' : (cur === 'AUD' ? 'A$' : '¥'))))));
 
   if (document.getElementById("res-warehouse-subtotal")) document.getElementById("res-warehouse-subtotal").textContent = `${sym}${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  if (document.getElementById("res-warehouse-tax-label")) document.getElementById("res-warehouse-tax-label").textContent = gstEnabled ? "GST / Service Tax (18%)" : "GST / Service Tax (Not applied)";
   if (document.getElementById("res-warehouse-tax")) document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   if (document.getElementById("res-warehouse-total")) document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
@@ -12877,6 +12885,7 @@ window.injectModuleFeesToFreight = injectModuleFeesToFreight;
 
 async function saveStandaloneQuote(module) {
   const cur = document.getElementById(`${module}-currency`)?.value || 'INR';
+  const gstEnabled = document.getElementById(`${module}-gst-enabled`)?.checked !== false;
   const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
   const tax = parseFloat(document.getElementById(`res-${module}-tax`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
   const total = parseFloat(document.getElementById(`res-${module}-total`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
@@ -12991,9 +13000,11 @@ async function saveStandaloneQuote(module) {
       pickupAddress: pickupAddress,
       deliveryPin: deliveryPin,
       deliveryCity: deliveryCity,
-      deliveryAddress: deliveryAddress
+      deliveryAddress: deliveryAddress,
+      gstEnabled: gstEnabled,
+      gstRate: gstEnabled ? 18 : 0
     },
-    notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
+    notes: `Calculated standalone. Subtotal: ${subtotal}, GST (${gstEnabled ? '18%' : 'not applied'}): ${tax}, Total: ${total} ${cur}`
   };
 
   if (appState.editingQuoteId) {

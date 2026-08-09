@@ -2891,6 +2891,7 @@
                   Transportation Breakup Calculations</h4>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <button type="button" class="btn-admin-action add-transport-row-btn" onclick="addTransportRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Row</button>
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: var(--t1); white-space: nowrap; cursor: pointer;"><input type="checkbox" id="transport-gst-enabled" checked onchange="calculateTransportation()" style="accent-color: var(--sky);"> Apply GST (18%)</label>
                   <input type="hidden" id="transport-currency" value="INR">
                 </div>
               </div>
@@ -2927,7 +2928,7 @@
                   <span class="result-value" id="res-transport-subtotal">₹0.00</span>
                 </div>
                 <div class="result-row">
-                  <span class="result-label">GST / Service Tax (18%)</span>
+                  <span class="result-label" id="res-transport-tax-label">GST / Service Tax (18%)</span>
                   <span class="result-value" id="res-transport-tax">₹0.00</span>
                 </div>
                 <div class="result-row"
@@ -2991,6 +2992,7 @@
                   Warehousing Breakup Calculations</h4>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <button type="button" class="btn-admin-action add-warehouse-row-btn" onclick="addWarehouseRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Row</button>
+                  <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: var(--t1); white-space: nowrap; cursor: pointer;"><input type="checkbox" id="warehouse-gst-enabled" checked onchange="calculateWarehousing()" style="accent-color: var(--sky);"> Apply GST (18%)</label>
                   <input type="hidden" id="warehouse-currency" value="INR">
                 </div>
               </div>
@@ -3029,7 +3031,7 @@
                   <span class="result-value" id="res-warehouse-subtotal">₹0.00</span>
                 </div>
                 <div class="result-row">
-                  <span class="result-label">GST / Service Tax (18%)</span>
+                  <span class="result-label" id="res-warehouse-tax-label">GST / Service Tax (18%)</span>
                   <span class="result-value" id="res-warehouse-tax">₹0.00</span>
                 </div>
                 <div class="result-row"
