@@ -1962,6 +1962,33 @@ body.logged-out-blur #subheader-controls {
   color: var(--accent-air);
 }
 
+/* Browser-independent airline directory control: prevents Safari Contact autofill. */
+.airline-directory-input {
+  min-height: 30px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--t1);
+  font-size: 0.75rem;
+  line-height: 20px;
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.airline-directory-input:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-dim);
+}
+
+.airline-directory-input:focus {
+  border-color: var(--accent-air);
+  box-shadow: 0 0 0 2px var(--accent-air-glow);
+}
+
 
 /* ══════════════════════════════════════════════════════════════════════
    ADAPTIVE LIGHT UI UPGRADE — ATLAS PRICING PWA
@@ -3359,7 +3386,6 @@ input::placeholder, textarea::placeholder {
     opacity: 1;
   }
 }
-
 
 
 

@@ -1387,6 +1387,15 @@ function returnToWorkspace() {
   updateModuleTabs('dashboard');
 }
 
+function showMyQuotationLogs() {
+  returnToWorkspace();
+  const quoteTableId = isAdminUser(appState.currentUser) ? "admin-quotes-body" : "user-quotes-body";
+  window.setTimeout(() => {
+    const quoteTable = document.getElementById(quoteTableId);
+    quoteTable?.closest(".glass-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 0);
+}
+
 // Global HS / HSN Chapters List (Chapters 01 to 99)
 const globalHSNChapters = [
   { code: "01", name: "Chapter 01 | Live Animals" },
@@ -2335,7 +2344,8 @@ function addAirlineCard(data = null) {
     <div class="form-grid-3">
       <div class="form-group">
         <label>Carrier / Airline</label>
-        <input type="search" name="vertex-airline-search" class="air-name" placeholder="Airline name or code..." value="${name}" required autocomplete="new-password" autocorrect="off" autocapitalize="none" spellcheck="false" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+        <div class="airline-directory-input" contenteditable="plaintext-only" role="combobox" aria-autocomplete="list" aria-expanded="false" data-placeholder="Type airline code or name..." spellcheck="false"></div>
+        <input type="hidden" class="air-name" value="">
       </div>
       <div class="form-grid-2 form-group" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0; padding: 0; border: none; background: none;">
         <div class="form-group">
@@ -2534,9 +2544,14 @@ function addAirlineCard(data = null) {
   });
 
   const nameInput = card.querySelector(".air-name");
+  const directoryInput = card.querySelector(".airline-directory-input");
   if (nameInput) {
     const parent = nameInput.parentElement;
     parent.style.position = "relative";
+    if (directoryInput) {
+      directoryInput.textContent = name;
+      nameInput.value = name;
+    }
     let dropdown = parent.querySelector(".iata-autocomplete-dropdown");
     if (!dropdown) {
       dropdown = document.createElement("div");
@@ -2545,9 +2560,36 @@ function addAirlineCard(data = null) {
       parent.appendChild(dropdown);
     }
 
-    nameInput.addEventListener("input", () => {
+    const saveTypedAirlineIfNew = () => {
+      const val = nameInput.value ? nameInput.value.trim() : "";
+      if (!val || nameInput._selectedFromDropdown) return;
+
+      let customAirlines = [];
+      try {
+        const stored = localStorage.getItem("gl_custom_airlines");
+        if (stored) customAirlines = JSON.parse(stored);
+      } catch (e) { }
+
+      const baseAirlines = (appState.airlines && appState.airlines.length > 0)
+        ? appState.airlines
+        : Object.entries(IATA_AIRLINES).map(([code, airlineName]) => ({ code, name: airlineName }));
+      const valUpper = val.toUpperCase();
+      const isExisting = [...baseAirlines, ...customAirlines].some(al => {
+        const code = (al.code || "").toUpperCase();
+        const airlineName = (al.name || "").toUpperCase();
+        return code === valUpper || airlineName === valUpper || `${code} - ${airlineName}` === valUpper;
+      });
+      if (!isExisting) saveCustomEntry("airlines", val);
+    };
+
+    const updateAirlineDirectory = (event) => {
       nameInput._selectedFromDropdown = false;
-      const val = nameInput.value.trim().toUpperCase();
+      if (directoryInput && event?.target === directoryInput) {
+        nameInput.value = directoryInput.textContent.trim();
+      } else {
+        nameInput.value = nameInput.value.trim();
+      }
+      const val = nameInput.value.toUpperCase();
       dropdown.innerHTML = "";
       if (val.length >= 1) {
         let customAirlines = [];
@@ -2564,10 +2606,18 @@ function addAirlineCard(data = null) {
         const matches = allAirlines.filter(al =>
           (al.code && al.code.toUpperCase().includes(val)) ||
           (al.name && al.name.toUpperCase().includes(val))
-        ).slice(0, 15);
+        ).sort((a, b) => {
+          const aCode = (a.code || "").toUpperCase();
+          const bCode = (b.code || "").toUpperCase();
+          const aName = (a.name || "").toUpperCase();
+          const bName = (b.name || "").toUpperCase();
+          const score = (code, airlineName) => code === val ? 0 : code.startsWith(val) ? 1 : airlineName.startsWith(val) ? 2 : 3;
+          return score(aCode, aName) - score(bCode, bName) || aCode.localeCompare(bCode);
+        }).slice(0, 15);
 
         if (matches.length > 0) {
           dropdown.style.display = "flex";
+          if (directoryInput) directoryInput.setAttribute("aria-expanded", "true");
           matches.forEach(al => {
             const item = document.createElement("div");
             item.className = "iata-autocomplete-item";
@@ -2575,59 +2625,39 @@ function addAirlineCard(data = null) {
             item.addEventListener("click", () => {
               nameInput._selectedFromDropdown = true;
               nameInput.value = `${al.code} - ${al.name}`;
+              if (directoryInput) directoryInput.textContent = nameInput.value;
               dropdown.style.display = "none";
+              if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
               calculateAirFreight();
             });
             dropdown.appendChild(item);
           });
         } else {
           dropdown.style.display = "none";
+          if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
         }
       } else {
         dropdown.style.display = "none";
+        if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
       }
-    });
+    };
+
+    if (directoryInput) {
+      directoryInput.addEventListener("input", updateAirlineDirectory);
+      directoryInput.addEventListener("blur", () => setTimeout(saveTypedAirlineIfNew, 150));
+      // Retained for quote-loader and regression-suite compatibility; this hidden
+      // input is never exposed to Safari's Contact autofill UI.
+      nameInput.addEventListener("input", updateAirlineDirectory);
+      nameInput.addEventListener("blur", saveTypedAirlineIfNew);
+    } else {
+      nameInput.addEventListener("input", updateAirlineDirectory);
+      nameInput.addEventListener("blur", saveTypedAirlineIfNew);
+    }
 
     document.addEventListener("click", (e) => {
-      if (e.target !== nameInput && !dropdown.contains(e.target)) {
+      if (e.target !== nameInput && e.target !== directoryInput && !dropdown.contains(e.target)) {
         dropdown.style.display = "none";
-      }
-    });
-
-    nameInput.addEventListener("blur", () => {
-      const val = nameInput.value ? nameInput.value.trim() : "";
-      if (!val) return;
-
-      if (nameInput._selectedFromDropdown) return;
-
-      let customAirlines = [];
-      try {
-        const stored = localStorage.getItem("gl_custom_airlines");
-        if (stored) customAirlines = JSON.parse(stored);
-      } catch (e) { }
-
-      let baseAirlines = (appState.airlines && appState.airlines.length > 0)
-        ? appState.airlines
-        : (typeof IATA_AIRLINES !== "undefined"
-            ? Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name }))
-            : []);
-
-      const allAirlines = [...baseAirlines, ...customAirlines];
-      const valUpper = val.toUpperCase();
-
-      const isExisting = allAirlines.some(al => {
-        const code = (al.code || "").toUpperCase();
-        const name = (al.name || "").toUpperCase();
-        return (
-          code === valUpper ||
-          name === valUpper ||
-          `${code} - ${name}` === valUpper ||
-          `${code} | ${name}` === valUpper
-        );
-      });
-
-      if (!isExisting) {
-        saveCustomEntry("airlines", nameInput.value);
+        if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
       }
     });
   }
@@ -6046,7 +6076,7 @@ function generatePerformanceReport() {
 }
 
 // SAVE & RETRIEVE QUOTES LOGIC
-function saveCurrentQuote() {
+async function saveCurrentQuote() {
   memorizeSurchargeNames();
   const isAirActive = document.getElementById("air-freight-panel")?.classList.contains("active");
   const isSeaActive = document.getElementById("sea-freight-panel")?.classList.contains("active");
@@ -6491,11 +6521,13 @@ function saveCurrentQuote() {
       quoteData.amendmentAllowed = false; // Lock it back!
 
       appState.editingQuoteId = null; // Clear edit mode
-      DB.saveQuote(quoteData);
+      const saved = await DB.saveQuote(quoteData);
+      if (!saved) return;
       alert("Quotation amended and locked successfully!");
     }
   } else {
-    DB.saveQuote(quoteData);
+    const saved = await DB.saveQuote(quoteData);
+    if (!saved) return;
     alert("Quotation saved successfully!");
   }
 
@@ -6552,7 +6584,7 @@ function saveCurrentQuote() {
   if (seaFilenameLabel) seaFilenameLabel.textContent = "No file selected";
 
   alert("Quotation successfully saved to database!");
-  returnToWorkspace();
+  showMyQuotationLogs();
 }
 
 function resetSurchargesToDefaults() {
@@ -9147,6 +9179,9 @@ function amendQuote(id) {
       const city = quote.details.pickupCity || "";
       document.getElementById("transport-pickup-search").value = pin && city ? `${pin} - ${city}` : (pin || city || "");
     }
+    if (document.getElementById("transport-pickup-address")) {
+      document.getElementById("transport-pickup-address").value = quote.details.pickupAddress || "";
+    }
     if (document.getElementById("transport-delivery-pin")) {
       document.getElementById("transport-delivery-pin").value = quote.details.deliveryPin || "";
     }
@@ -9157,6 +9192,9 @@ function amendQuote(id) {
       const pin = quote.details.deliveryPin || "";
       const city = quote.details.deliveryCity || "";
       document.getElementById("transport-delivery-search").value = pin && city ? `${pin} - ${city}` : (pin || city || "");
+    }
+    if (document.getElementById("transport-delivery-address")) {
+      document.getElementById("transport-delivery-address").value = quote.details.deliveryAddress || "";
     }
     if (document.getElementById("transport-header-currency")) {
       document.getElementById("transport-header-currency").value = quote.currency || "INR";
@@ -10744,6 +10782,7 @@ const DB = {
 
     // Local memory update immediately so the local user doesn't see lag
     const idx = appState.quotes.findIndex(q => q.id === quote.id);
+    const previousQuote = idx !== -1 ? appState.quotes[idx] : null;
     if (idx !== -1) {
       appState.quotes[idx] = quote;
     } else {
@@ -10755,9 +10794,16 @@ const DB = {
       try {
         await this.firestoreRef.collection("quotes").doc(quote.id).set(quote);
         console.log("DB: Firestore write succeeded!");
+        return true;
       } catch (err) {
+        if (idx === -1) {
+          appState.quotes = appState.quotes.filter(q => q.id !== quote.id);
+        } else {
+          appState.quotes[idx] = previousQuote;
+        }
         console.error("DB: Firestore write failed:", err);
         alert("Cloud Database Write Error: " + err.message);
+        return false;
       }
     } else {
       localStorage.setItem("logistics_quotes", JSON.stringify(appState.quotes));
@@ -10767,6 +10813,7 @@ const DB = {
       } else {
         renderMemberDashboard(activeRole);
       }
+      return true;
     }
   },
 
@@ -12819,7 +12866,7 @@ function injectModuleFeesToFreight(module, freightType, target = 'origin') {
 }
 window.injectModuleFeesToFreight = injectModuleFeesToFreight;
 
-function saveStandaloneQuote(module) {
+async function saveStandaloneQuote(module) {
   const cur = document.getElementById(`${module}-currency`)?.value || 'INR';
   const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
   const tax = parseFloat(document.getElementById(`res-${module}-tax`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
@@ -12842,6 +12889,8 @@ function saveStandaloneQuote(module) {
   let deliveryPin = "";
   let pickupCity = "";
   let deliveryCity = "";
+  let pickupAddress = "";
+  let deliveryAddress = "";
 
   if (module === 'transport') {
     modeTitle = "Transportation";
@@ -12849,6 +12898,8 @@ function saveStandaloneQuote(module) {
     deliveryPin = document.getElementById("transport-delivery-pin")?.value || "";
     pickupCity = document.getElementById("transport-pickup-city")?.value || "";
     deliveryCity = document.getElementById("transport-delivery-city")?.value || "";
+    pickupAddress = document.getElementById("transport-pickup-address")?.value.trim() || "";
+    deliveryAddress = document.getElementById("transport-delivery-address")?.value.trim() || "";
     const from = pickupCity || pickupPin;
     const to = deliveryCity || deliveryPin;
     routingInfo = `${from} ➤ ${to}`;
@@ -12928,8 +12979,10 @@ function saveStandaloneQuote(module) {
       items: items,
       pickupPin: pickupPin,
       pickupCity: pickupCity,
+      pickupAddress: pickupAddress,
       deliveryPin: deliveryPin,
-      deliveryCity: deliveryCity
+      deliveryCity: deliveryCity,
+      deliveryAddress: deliveryAddress
     },
     notes: `Calculated standalone. Subtotal: ${subtotal}, Tax (18%): ${tax}, Total: ${total} ${cur}`
   };
@@ -12945,14 +12998,16 @@ function saveStandaloneQuote(module) {
       quoteData.amendmentAllowed = false; // Lock it back!
 
       appState.editingQuoteId = null; // Clear edit mode
-      DB.saveQuote(quoteData);
+      const saved = await DB.saveQuote(quoteData);
+      if (!saved) return;
       alert(`${modeTitle} Standalone Quotation amended and locked successfully!`);
     }
   } else {
-    DB.saveQuote(quoteData);
+    const saved = await DB.saveQuote(quoteData);
+    if (!saved) return;
     alert(`${modeTitle} Standalone Quotation saved successfully!`);
   }
-  returnToWorkspace();
+  showMyQuotationLogs();
 }
 window.saveStandaloneQuote = saveStandaloneQuote;
 
@@ -15829,20 +15884,30 @@ function filterCustomDropdown(type) {
   const query = searchInput.value.toLowerCase().trim();
   listEl.innerHTML = "";
 
-  const matches = GLOBAL_ZIP_RECORDS.filter(rec => {
-    return rec.city.toLowerCase().includes(query) ||
-      rec.zip.toLowerCase().includes(query) ||
-      rec.country.toLowerCase().includes(query);
-  });
+  if (!pincodesLoaded) {
+    listEl.textContent = "Loading location directory…";
+    loadPincodesData().then(() => filterCustomDropdown(type));
+    return;
+  }
+
+  const indiaRecords = pincodesData.map(item => ({
+    zip: item.p,
+    city: `${item.place}, ${item.d}, ${item.s}`.replace(/, ,/g, ","),
+    country: "India",
+    searchText: item.all || `${item.p} ${item.place} ${item.d} ${item.s}`.toLowerCase()
+  }));
+  const globalRecords = GLOBAL_ZIP_RECORDS.map(item => ({
+    ...item,
+    searchText: `${item.zip} ${item.city} ${item.country}`.toLowerCase()
+  }));
+  const matches = [...indiaRecords, ...globalRecords].filter(rec => rec.searchText.includes(query)).slice(0, 100);
 
   if (matches.length === 0) {
     const itemEl = document.createElement("div");
     itemEl.className = "custom-dropdown-item";
     itemEl.style.justifyContent = "center";
-    itemEl.style.fontStyle = "italic";
     itemEl.style.opacity = "0.7";
-    itemEl.textContent = `Use custom: "${searchInput.value}"`;
-    itemEl.onclick = () => selectCustomItem(type, "", searchInput.value);
+    itemEl.textContent = "No directory location found. Search by PIN code, city, district, state, or country.";
     listEl.appendChild(itemEl);
   } else {
     matches.slice(0, 100).forEach(rec => {
