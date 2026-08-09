@@ -2640,10 +2640,10 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 
 #transport-path-standalone-container .standalone-charge-controls,
 #warehouse-path-standalone-container .standalone-charge-controls {
-  margin-left: auto;
-  max-width: 100%;
+  width: 100%;
+  margin-left: 0;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 100%;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -2651,8 +2651,6 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 @media (max-width: 640px) {
   #transport-path-standalone-container .standalone-charge-controls,
   #warehouse-path-standalone-container .standalone-charge-controls {
-    width: 100%;
-    margin-left: 0;
     justify-content: flex-start;
   }
 }

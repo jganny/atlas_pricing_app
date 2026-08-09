@@ -4120,51 +4120,6 @@
       }
     };
 
-    // Task 2: Dynamic Add/Delete Columns & Rows logic
-    window.addWarehouseRow = function() {
-      const tbody = document.getElementById("warehouse-standalone-body");
-      if (!tbody) return;
-
-      const table = document.getElementById("warehouse-standalone-table");
-      const theadRow = table ? table.querySelector("thead tr") : null;
-      const totalHeaders = theadRow ? theadRow.children.length : 3;
-      const extraColCount = Math.max(0, totalHeaders - 3);
-
-      const tr = document.createElement("tr");
-
-      let extraTdHtml = '';
-      for (let i = 0; i < extraColCount; i++) {
-        extraTdHtml += `<td><input type="text" class="custom-col-val" placeholder="Enter info" style="background: rgba(255, 255, 255, 0.02); color: var(--text-dim); border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; width: 100%;"></td>`;
-      }
-
-      tr.innerHTML = `
-        <td><input type="text" class="chg-name" value="" placeholder="Fee / Surcharge Name"></td>
-        <td>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 110px; flex-shrink: 0;">
-            <input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 per Pallet per Week (Min AUD 500/month)" style="flex: 1; min-width: 140px; background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem;">
-          </div>
-        </td>
-        ${extraTdHtml}
-        <td style="text-align: center;">
-          <button type="button" class="delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: none; border: none; color: var(--rose); cursor: pointer; padding: 4px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-          </button>
-        </td>
-      `;
-
-      tbody.appendChild(tr);
-      if (typeof calculateWarehousing === 'function') calculateWarehousing();
-    };
-
-    window.removeWarehouseRow = function(btn) {
-      const tr = btn.closest("tr");
-      if (tr) {
-        tr.remove();
-        if (typeof calculateWarehousing === 'function') calculateWarehousing();
-      }
-    };
-
     window.addTableColumn = function(module) {
       const table = document.getElementById(`${module}-standalone-table`);
       if (!table) return;

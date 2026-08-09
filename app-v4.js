@@ -12703,6 +12703,9 @@ function updateModuleTabs(activeModule) {
       tab.classList.remove("active");
     }
   });
+  document.querySelectorAll(".sidebar-item[data-sidebar-module]").forEach(item => {
+    item.classList.toggle("active", item.getAttribute("data-sidebar-module") === activeModule);
+  });
 }
 window.updateModuleTabs = updateModuleTabs;
 
