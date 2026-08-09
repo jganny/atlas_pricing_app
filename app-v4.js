@@ -10351,14 +10351,16 @@ const DB = {
         if (statusDot) statusDot.style.background = "#10b981"; // green
         if (statusText) statusText.textContent = "Firebase Cloud (Online)";
 
-        this.registerSnapshotListener();
-
         // Setup persistent auth listener
         firebase.auth().onAuthStateChanged(async user => {
           if (user) {
             console.log("Auth: user logged in", user.email);
             const username = user.email.split('@')[0].toLowerCase();
             sessionStorage.setItem("gl_pricing_session", username);
+
+            // Firestore rules require an authenticated session. Start protected
+            // listeners only after Firebase Auth has supplied that session.
+            this.registerSnapshotListener();
 
             // ── SAFE DASHBOARD INIT ───────────────────────────────────────────
             // Wait for the first Firestore quotes snapshot to arrive before
@@ -10504,6 +10506,7 @@ const DB = {
           checkAndNotifyNewRequests(reqs);
         }
         window._amendmentRequests = reqs;
+        window._amendmentRequestsError = null;
         localStorage.setItem("gl_amendment_requests", JSON.stringify(reqs));
 
         // Auto refresh dashboards dynamically

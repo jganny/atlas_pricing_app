@@ -588,12 +588,6 @@
                 style="font-size: 1.25rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
                 GLOBAL CONTROL TOWER</h2>
             </div>
-            <div
-              style="display: flex; align-items: center; gap: 0.6rem; background: rgba(21, 128, 61, 0.06); border: 1px solid rgba(21, 128, 61, 0.12); padding: 0.35rem 0.75rem; border-radius: var(--r-pill); font-size: 0.68rem; color: var(--green); font-weight: 700;">
-              <span class="pulse-indicator"
-                style="display: inline-block; width: 6px; height: 6px; background: var(--green); border-radius: 50%;"></span>
-              LIVE LOGISTICS NEWS ACTIVE
-            </div>
           </div>
 
           <div class="control-tower-layout"
@@ -766,46 +760,6 @@
           </div>
         </div>
 
-        <!-- Admin Synced Reminders & Broadcast Control Hub Row -->
-        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem; align-items: stretch;">
-          <!-- Synced Desk Scratchpad Viewer -->
-          <div class="glass-card"
-            style="flex: 1.2; min-width: 300px; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem;">
-            <h3
-              style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--sky); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
-              Connected Desks Active Reminders
-            </h3>
-            <div id="admin-desk-scratchpads"
-              style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 180px; overflow-y: auto; font-size: 0.8rem;">
-              <div style="font-style: italic; color: var(--text-dim);">No active reminder syncs yet.</div>
-            </div>
-          </div>
-          <!-- Admin Broadcast Control Hub -->
-          <div class="glass-card"
-            style="flex: 1.6; min-width: 300px; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem;">
-            <h3
-              style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; color: var(--accent-warning); font-family: 'Outfit', sans-serif; border-bottom: 1px solid var(--border-1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
-              Multi-Purpose Admin Broadcast Hub
-            </h3>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-              <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.2rem;">
-                <select id="broadcast-type"
-                  style="background: rgba(27,28,92,0.9); color: #fff; border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; flex: 1;">
-                  <option value="mandate">⚠️ System Mandate Banner</option>
-                  <option value="meeting">📅 Meeting / Visit Reminder</option>
-                  <option value="holiday">🎉 Holiday / Leave Popup</option>
-                </select>
-              </div>
-              <textarea id="broadcast-message" placeholder="Type notice message here..."
-                style="height: 60px; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: #000000; padding: 0.4rem 0.6rem; font-size: 0.8rem; resize: none; font-family: inherit; outline: none; margin-bottom: 0.2rem;"></textarea>
-              <button class="btn-primary" onclick="sendAdminBroadcast()"
-                style="background: var(--accent-warning); color: #000; font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">
-                📢 Broadcast Notice to All Users
-              </button>
-            </div>
-          </div>
-        </div>
-        
         <!-- Admin Agent & Customer Directory Dashboard -->
         <div class="glass-card" id="admin-directory-dashboard" style="margin-bottom: 2rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-2); border-radius: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-1); padding-bottom: 0.75rem; flex-wrap: wrap; gap: 1rem;">
