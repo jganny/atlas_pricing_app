@@ -16,8 +16,6 @@
       "node_modules/**",
       "functions",
       "functions/**",
-      "data/airports.json",
-      "data/seaports.json",
       "*.bak",
       "**/*.bak",
       "*.py",
