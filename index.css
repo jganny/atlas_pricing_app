@@ -2482,6 +2482,37 @@ table {
 .result-value-highlight { font-variant-numeric:tabular-nums !important; font-size:clamp(1.4rem,2.5vw,1.8rem) !important; font-weight:800 !important; }
 .results-panel { position:sticky; top:clamp(80px,10vw,100px); }
 
+/* ══════════════════════════════════════════════════
+   RELEASE 3 — DESK PRESENTATION HIERARCHY
+   Visual-only treatment for existing desk headers, input cards and results.
+══════════════════════════════════════════════════ */
+#air-freight-panel .workspace > .glass-card:first-child,
+#sea-freight-panel .workspace > .glass-card:first-child,
+#transportation-panel .calculator-grid > .glass-card:first-child,
+#warehousing-panel .calculator-grid > .glass-card:first-child {
+  border-top: 3px solid var(--accent-current) !important;
+}
+
+#air-freight-panel .section-title,
+#sea-freight-panel .section-title,
+#transportation-panel .calculator-header,
+#warehousing-panel .calculator-header {
+  border-left: 4px solid var(--accent-current) !important;
+}
+
+#air-freight-panel .results-panel,
+#sea-freight-panel .results-panel,
+#transportation-panel .results-panel,
+#warehousing-panel .results-panel {
+  border-top: 3px solid var(--accent-current) !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08) !important;
+}
+
+#transportation-panel .calculator-header,
+#warehousing-panel .calculator-header {
+  padding-left: 1.25rem !important;
+}
+
 
 /* ══════════════════════════════════════════════════
    K. MODAL — Premium Glassmorphic overlay
@@ -2539,6 +2570,9 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   .bento-grid-4, .bento-grid-3 { grid-template-columns:repeat(2,1fr); }
   .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
   .workspace, .admin-grid { grid-template-columns:1fr !important; }
+  #transportation-panel .calculator-grid,
+  #warehousing-panel .calculator-grid { grid-template-columns:1fr !important; }
+  .results-panel { position:static !important; }
   main { padding: var(--space-md) !important; }
   .bento-action-grid { grid-template-columns:repeat(5,1fr) !important; }
   .bento-span-2 { grid-column:span 1; }
@@ -2550,6 +2584,13 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   .app-container,
   #app-workspace {
     grid-template-columns: 1fr !important;
+  }
+  #transportation-panel .calculator-grid,
+  #warehousing-panel .calculator-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .results-panel {
+    position: static !important;
   }
   .app-sidebar {
     display: none !important;
@@ -3401,4 +3442,3 @@ input::placeholder, textarea::placeholder {
     opacity: 1;
   }
 }
-
