@@ -4430,7 +4430,8 @@ function calculateSeaFreight() {
         const qty = parseInt(row.querySelector(".fcl-qty")?.value) || 0;
         const rate = parseFloat(row.querySelector(".fcl-sell-rate")?.value || row.querySelector(".fcl-rate")?.value) || 0;
         const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
-        const activeRate = rate > 0 ? rate : (buy > 0 ? buy : 0);
+        // A buy-only rate is a cost, never a sell rate.
+        const activeRate = rate || 0;
         containersList.push({ type: typeVal, qty, rate, buy });
         if (qty > 0 && activeRate > 0) {
           if (tariffsEnabled) {
@@ -4443,14 +4444,14 @@ function calculateSeaFreight() {
     } else if (linerMode === 'lcl') {
       const rate = parseFloat(card.querySelector(".sea-lcl-rate")?.value) || 0;
       const buy = parseFloat(card.querySelector(".sea-lcl-buy-rate")?.value) || 0;
-      const activeRate = rate > 0 ? rate : buy;
+      const activeRate = rate || 0;
       if (tariffsEnabled) {
         linerBaseFreight = chargeableCbm * activeRate;
       }
     } else {
       const rate = parseFloat(card.querySelector(".sea-bb-rate")?.value) || 0;
       const buy = parseFloat(card.querySelector(".sea-bb-buy-rate")?.value) || 0;
-      const activeRate = rate > 0 ? rate : buy;
+      const activeRate = rate || 0;
       if (tariffsEnabled) {
         linerBaseFreight = chargeableCbm * activeRate;
       }
