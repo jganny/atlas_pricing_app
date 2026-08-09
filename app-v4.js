@@ -753,6 +753,12 @@ function logoutUser() {
   appState.currentUser = null;
   updateExecutiveDashboardVisibility();
   if (DB.isCloud) {
+    // Stop the authenticated quotes listener before Firebase removes the session.
+    // This prevents a final, unauthenticated listener request on logout.
+    if (DB.snapshotUnsubscribe) {
+      DB.snapshotUnsubscribe();
+      DB.snapshotUnsubscribe = null;
+    }
     firebase.auth().signOut().catch(err => {
       console.error("Auth: Sign out failed:", err);
     });
