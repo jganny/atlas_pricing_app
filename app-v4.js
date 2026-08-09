@@ -2208,9 +2208,13 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
 
   wrapper.innerHTML = `
     <span style="font-size: 0.72rem; font-weight: 700; color: #000;">${labels[breakName] || breakName}</span>
-    <div style="display: flex; gap: 4px; align-items: center;">
-      <input type="number" class="break-rate-input break-sell-rate-input" placeholder="Sell" min="0" step="0.1" value="${sellRate > 0 ? sellRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Sell Rate per KG">
-      <input type="number" class="break-buy-rate-input" placeholder="Buy" min="0" step="0.1" value="${buyRate > 0 ? buyRate : ''}" style="width: 50px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Buy Rate per KG">
+    <div style="display: flex; gap: 6px; align-items: center;">
+      <label style="display: flex; align-items: center; gap: 3px; font-size: 0.65rem; font-weight: 800; color: #000;" title="Sell Rate per KG">Sell
+        <input type="number" class="break-rate-input break-sell-rate-input" aria-label="Sell Rate per KG" placeholder="0.00" min="0" step="0.1" value="${sellRate > 0 ? sellRate : ''}" style="width: 58px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Sell Rate per KG">
+      </label>
+      <label style="display: flex; align-items: center; gap: 3px; font-size: 0.65rem; font-weight: 800; color: #000;" title="Buy Rate per KG">Buy
+        <input type="number" class="break-buy-rate-input" aria-label="Buy Rate per KG" placeholder="0.00" min="0" step="0.1" value="${buyRate > 0 ? buyRate : ''}" style="width: 58px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Buy Rate per KG">
+      </label>
     </div>
     <span class="remove-break-btn" style="cursor: pointer; color: var(--accent-error); font-size: 0.8rem; font-weight: 800; padding: 0 2px; ${isAuto ? 'display:none;' : ''}">×</span>
   `;
