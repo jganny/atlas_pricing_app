@@ -1304,6 +1304,8 @@ function openActiveCalculator(type) {
     if (memberPanel) memberPanel.classList.remove("active");
     const managerPanel = document.getElementById("manager-panel");
     if (managerPanel) managerPanel.classList.remove("active");
+    const executivePanel = document.getElementById("executive-dashboard-panel");
+    if (executivePanel) executivePanel.classList.remove("active");
 
     // Hide all panels safely
     const airPanel = document.getElementById("air-freight-panel");
