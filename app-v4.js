@@ -15923,6 +15923,71 @@ function renderCustomDropdown(type, records, message = "") {
   }
 }
 
+function appendLocationDropdownSection(listEl, title, records, message = "") {
+  if (!listEl) return;
+
+  const heading = document.createElement("div");
+  heading.textContent = title;
+  heading.style.cssText = "padding:0.5rem 0.7rem 0.3rem; font-size:0.68rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#53627a; background:#f7f9fc; border-bottom:1px solid #e8edf5;";
+  listEl.appendChild(heading);
+
+  if (records.length) {
+    records.forEach((rec) => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "custom-dropdown-item";
+
+      const zipSpan = document.createElement("span");
+      zipSpan.className = "zip-code";
+      zipSpan.textContent = rec.zip || "—";
+
+      const citySpan = document.createElement("span");
+      citySpan.className = "city-country";
+      const displayLabel = rec.label || `${rec.city}${rec.country ? `, ${rec.country}` : ""}`;
+      citySpan.textContent = ` - ${displayLabel}`;
+
+      itemEl.append(zipSpan, citySpan);
+      itemEl.onclick = () => selectCustomItem(type, rec.zip || "", displayLabel);
+      listEl.appendChild(itemEl);
+    });
+  } else if (message) {
+    const messageEl = document.createElement("div");
+    messageEl.className = "custom-dropdown-item";
+    messageEl.style.justifyContent = "center";
+    messageEl.style.opacity = "0.75";
+    messageEl.textContent = message;
+    listEl.appendChild(messageEl);
+  }
+}
+
+function renderLocationDropdown(type, indiaRecords, globalRecords = [], globalMessage = "") {
+  const listEl = document.getElementById(type + "-dropdown-list");
+  if (!listEl) return;
+  listEl.innerHTML = "";
+
+  appendLocationDropdownSection(
+    listEl,
+    "India PIN Directory",
+    indiaRecords,
+    "No matching Indian PIN or location."
+  );
+
+  if (globalRecords.length || globalMessage) {
+    appendLocationDropdownSection(listEl, "Worldwide Locations", globalRecords, globalMessage);
+  }
+
+  if (globalRecords.some((rec) => rec.source === "geoapify")) {
+    const attribution = document.createElement("div");
+    attribution.style.cssText = "padding:0.45rem 0.7rem; font-size:0.68rem; opacity:0.72; text-align:right;";
+    const link = document.createElement("a");
+    link.href = "https://www.geoapify.com/";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Global suggestions powered by Geoapify";
+    attribution.appendChild(link);
+    listEl.appendChild(attribution);
+  }
+}
+
 async function fetchGlobalLocationSuggestions(query) {
   const callable = typeof firebase !== "undefined"
     ? firebase.functions().httpsCallable("searchGlobalLocation")
@@ -15962,21 +16027,27 @@ function filterCustomDropdown(type, resetSelection = true) {
     country: "India",
     searchText: item.all || `${item.p} ${item.place} ${item.d} ${item.s}`.toLowerCase()
   }));
-  const indiaMatches = indiaRecords.filter(rec => rec.searchText.includes(query)).slice(0, 100);
+  // Numeric PIN lookups must match from the start of an Indian PIN. Otherwise
+  // a global postcode such as 10001 is incorrectly captured by 110001/210001.
+  const isNumericPostcodeQuery = /^\d+$/.test(query);
+  const indiaMatches = indiaRecords.filter(rec =>
+    isNumericPostcodeQuery
+      ? String(rec.zip).startsWith(query)
+      : rec.searchText.includes(query)
+  ).slice(0, 100);
   if (!query) {
     renderCustomDropdown(type, indiaRecords.slice(0, 50));
     return;
   }
-  if (indiaMatches.length > 0) {
-    renderCustomDropdown(type, indiaMatches);
-    return;
-  }
-  if (query.length < 3) {
-    renderCustomDropdown(type, [], "Keep typing to search worldwide locations.");
+  if (query.length < 4) {
+    renderLocationDropdown(type, indiaMatches);
     return;
   }
 
-  renderCustomDropdown(type, [], "Searching global locations…");
+  // India keeps narrowing instantly. Worldwide search begins at four
+  // characters, when the query is specific enough to return useful results
+  // and avoid wasted calls.
+  renderLocationDropdown(type, indiaMatches, [], "Searching worldwide locations…");
   searchState.timer = setTimeout(async () => {
     try {
       const results = await fetchGlobalLocationSuggestions(searchInput.value.trim());
@@ -15988,14 +16059,15 @@ function filterCustomDropdown(type, resetSelection = true) {
         label: item.label || item.city || "",
         source: "geoapify",
       }));
-      renderCustomDropdown(
+      renderLocationDropdown(
         type,
+        indiaMatches,
         globalRecords,
         globalRecords.length ? "" : "No global location found. You can still enter the address manually."
       );
     } catch (error) {
       if (requestId !== searchState.requestId) return;
-      renderCustomDropdown(type, [], "Global suggestions are unavailable. You can still enter the address manually.");
+      renderLocationDropdown(type, indiaMatches, [], "Global suggestions are unavailable. You can still enter the address manually.");
     }
   }, 350);
 }
