@@ -13553,7 +13553,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     let foundQuote = null;
-    foundQuote = appState.quotes.find(q => (getQuoteRefId(q) || "").toLowerCase() === refInput.toLowerCase() || q.id.toLowerCase() === refInput.toLowerCase());
+    const normalizedRefInput = refInput.toLowerCase();
+    const visibleRefMatch = refInput.match(/IN(\d+)$/i);
+    const visibleRefQuoteNumber = visibleRefMatch ? Number(visibleRefMatch[1]) : null;
+    const matchesLookup = (quote) => {
+      const visibleRefId = (getQuoteRefId(quote) || "").toLowerCase();
+      const storedId = String(quote.id || "").toLowerCase();
+      return visibleRefId === normalizedRefInput || storedId === normalizedRefInput;
+    };
+
+    foundQuote = appState.quotes.find(matchesLookup);
 
     if (!foundQuote && DB.isCloud && DB.firestoreRef) {
       try {
@@ -13566,8 +13575,23 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!snapshot.empty) {
             foundQuote = snapshot.docs[0].data();
           } else {
-            const snapshot2 = await DB.firestoreRef.collection("archive_quotes").where("quoteRefNo", "==", parseInt(refInput) || refInput).get();
-            if (!snapshot2.empty) foundQuote = snapshot2.docs[0].data();
+            // The visible reference ID is generated from quote data and was not
+            // historically stored as its own Firestore field. Its final IN#####
+            // segment is the existing quoteNumber, which lets us retrieve the
+            // small candidate set without changing archived quote data.
+            if (visibleRefQuoteNumber !== null) {
+              const quoteNumberSnapshot = await DB.firestoreRef.collection("archive_quotes")
+                .where("quoteNumber", "==", visibleRefQuoteNumber)
+                .get();
+              foundQuote = quoteNumberSnapshot.docs
+                .map(doc => doc.data())
+                .find(matchesLookup) || null;
+            }
+
+            if (!foundQuote) {
+              const snapshot2 = await DB.firestoreRef.collection("archive_quotes").where("quoteRefNo", "==", parseInt(refInput) || refInput).get();
+              if (!snapshot2.empty) foundQuote = snapshot2.docs[0].data();
+            }
           }
         }
       } catch (e) {
@@ -13578,7 +13602,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!foundQuote) {
       try {
         const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
-        foundQuote = offlineArchive.find(q => (getQuoteRefId(q) || "").toLowerCase() === refInput.toLowerCase() || q.id.toLowerCase() === refInput.toLowerCase());
+        foundQuote = offlineArchive.find(matchesLookup);
       } catch (e) { }
     }
 
