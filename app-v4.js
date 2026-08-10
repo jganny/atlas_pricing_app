@@ -15924,7 +15924,9 @@ function renderCustomDropdown(type, records, message = "") {
 }
 
 async function fetchGlobalLocationSuggestions(query) {
-  const callable = window.firebase?.functions?.().httpsCallable("searchGlobalLocation");
+  const callable = typeof firebase !== "undefined"
+    ? firebase.functions().httpsCallable("searchGlobalLocation")
+    : null;
   if (!callable) throw new Error("Location lookup unavailable");
   const response = await callable({ query });
   return Array.isArray(response?.data?.results) ? response.data.results : [];
