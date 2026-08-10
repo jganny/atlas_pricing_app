@@ -12882,6 +12882,10 @@ async function saveStandaloneQuote(module) {
     deliveryPin = document.getElementById("transport-delivery-pin")?.value || "";
     pickupCity = document.getElementById("transport-pickup-city")?.value || "";
     deliveryCity = document.getElementById("transport-delivery-city")?.value || "";
+    // Preserve a manually entered global location when the lookup service has
+    // no result or is unavailable. This keeps the existing quote fields intact.
+    if (!pickupPin && !pickupCity) pickupCity = document.getElementById("transport-pickup-search")?.value.trim() || "";
+    if (!deliveryPin && !deliveryCity) deliveryCity = document.getElementById("transport-delivery-search")?.value.trim() || "";
     pickupAddress = document.getElementById("transport-pickup-address")?.value.trim() || "";
     deliveryAddress = document.getElementById("transport-delivery-address")?.value.trim() || "";
     const from = pickupCity || pickupPin;
@@ -15859,26 +15863,94 @@ const GLOBAL_ZIP_RECORDS = [
   { country: "Zimbabwe", city: "Harare", zip: "00000" }
 ];
 
+const globalLocationSearch = {
+  pickup: { timer: null, requestId: 0 },
+  delivery: { timer: null, requestId: 0 },
+};
+
 function showCustomDropdown(type) {
   const listEl = document.getElementById(type + "-dropdown-list");
   if (listEl) {
     listEl.classList.add("show");
-    filterCustomDropdown(type);
+    filterCustomDropdown(type, false);
   }
 }
 window.showCustomDropdown = showCustomDropdown;
 
-function filterCustomDropdown(type) {
+function renderCustomDropdown(type, records, message = "") {
+  const listEl = document.getElementById(type + "-dropdown-list");
+  if (!listEl) return;
+  listEl.innerHTML = "";
+
+  if (message) {
+    const messageEl = document.createElement("div");
+    messageEl.className = "custom-dropdown-item";
+    messageEl.style.justifyContent = "center";
+    messageEl.style.opacity = "0.75";
+    messageEl.textContent = message;
+    listEl.appendChild(messageEl);
+    return;
+  }
+
+  records.forEach((rec) => {
+    const itemEl = document.createElement("div");
+    itemEl.className = "custom-dropdown-item";
+
+    const zipSpan = document.createElement("span");
+    zipSpan.className = "zip-code";
+    zipSpan.textContent = rec.zip || "—";
+
+    const citySpan = document.createElement("span");
+    citySpan.className = "city-country";
+    const displayLabel = rec.label || `${rec.city}${rec.country ? `, ${rec.country}` : ""}`;
+    citySpan.textContent = ` - ${displayLabel}`;
+
+    itemEl.append(zipSpan, citySpan);
+    itemEl.onclick = () => selectCustomItem(type, rec.zip || "", displayLabel);
+    listEl.appendChild(itemEl);
+  });
+
+  if (records.some((rec) => rec.source === "geoapify")) {
+    const attribution = document.createElement("div");
+    attribution.style.cssText = "padding:0.45rem 0.7rem; font-size:0.68rem; opacity:0.72; text-align:right;";
+    const link = document.createElement("a");
+    link.href = "https://www.geoapify.com/";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Global suggestions powered by Geoapify";
+    attribution.appendChild(link);
+    listEl.appendChild(attribution);
+  }
+}
+
+async function fetchGlobalLocationSuggestions(query) {
+  const callable = window.firebase?.functions?.().httpsCallable("searchGlobalLocation");
+  if (!callable) throw new Error("Location lookup unavailable");
+  const response = await callable({ query });
+  return Array.isArray(response?.data?.results) ? response.data.results : [];
+}
+
+function filterCustomDropdown(type, resetSelection = true) {
   const searchInput = document.getElementById("transport-" + type + "-search");
   const listEl = document.getElementById(type + "-dropdown-list");
   if (!searchInput || !listEl) return;
 
   const query = searchInput.value.toLowerCase().trim();
-  listEl.innerHTML = "";
+  const searchState = globalLocationSearch[type];
+  searchState.requestId += 1;
+  const requestId = searchState.requestId;
+  clearTimeout(searchState.timer);
+
+  // Editing a previous selection returns control to the user and prevents stale
+  // hidden location values from being saved.
+  if (resetSelection) {
+    document.getElementById("transport-" + type + "-pin").value = "";
+    document.getElementById("transport-" + type + "-city").value = "";
+  }
 
   if (!pincodesLoaded) {
     listEl.textContent = "Loading location directory…";
-    loadPincodesData().then(() => filterCustomDropdown(type));
+    loadPincodesData().then(() => filterCustomDropdown(type, resetSelection));
     return;
   }
 
@@ -15888,39 +15960,42 @@ function filterCustomDropdown(type) {
     country: "India",
     searchText: item.all || `${item.p} ${item.place} ${item.d} ${item.s}`.toLowerCase()
   }));
-  const globalRecords = GLOBAL_ZIP_RECORDS.map(item => ({
-    ...item,
-    searchText: `${item.zip} ${item.city} ${item.country}`.toLowerCase()
-  }));
-  const matches = [...indiaRecords, ...globalRecords].filter(rec => rec.searchText.includes(query)).slice(0, 100);
-
-  if (matches.length === 0) {
-    const itemEl = document.createElement("div");
-    itemEl.className = "custom-dropdown-item";
-    itemEl.style.justifyContent = "center";
-    itemEl.style.opacity = "0.7";
-    itemEl.textContent = "No directory location found. Search by PIN code, city, district, state, or country.";
-    listEl.appendChild(itemEl);
-  } else {
-    matches.slice(0, 100).forEach(rec => {
-      const itemEl = document.createElement("div");
-      itemEl.className = "custom-dropdown-item";
-
-      const zipSpan = document.createElement("span");
-      zipSpan.className = "zip-code";
-      zipSpan.textContent = rec.zip;
-
-      const citySpan = document.createElement("span");
-      citySpan.className = "city-country";
-      citySpan.textContent = ` - ${rec.city}, ${rec.country}`;
-
-      itemEl.appendChild(zipSpan);
-      itemEl.appendChild(citySpan);
-
-      itemEl.onclick = () => selectCustomItem(type, rec.zip, `${rec.city}, ${rec.country}`);
-      listEl.appendChild(itemEl);
-    });
+  const indiaMatches = indiaRecords.filter(rec => rec.searchText.includes(query)).slice(0, 100);
+  if (!query) {
+    renderCustomDropdown(type, indiaRecords.slice(0, 50));
+    return;
   }
+  if (indiaMatches.length > 0) {
+    renderCustomDropdown(type, indiaMatches);
+    return;
+  }
+  if (query.length < 3) {
+    renderCustomDropdown(type, [], "Keep typing to search worldwide locations.");
+    return;
+  }
+
+  renderCustomDropdown(type, [], "Searching global locations…");
+  searchState.timer = setTimeout(async () => {
+    try {
+      const results = await fetchGlobalLocationSuggestions(searchInput.value.trim());
+      if (requestId !== searchState.requestId) return;
+      const globalRecords = results.map(item => ({
+        zip: item.postcode || "",
+        city: item.city || "",
+        country: item.country || "",
+        label: item.label || item.city || "",
+        source: "geoapify",
+      }));
+      renderCustomDropdown(
+        type,
+        globalRecords,
+        globalRecords.length ? "" : "No global location found. You can still enter the address manually."
+      );
+    } catch (error) {
+      if (requestId !== searchState.requestId) return;
+      renderCustomDropdown(type, [], "Global suggestions are unavailable. You can still enter the address manually.");
+    }
+  }, 350);
 }
 window.filterCustomDropdown = filterCustomDropdown;
 

@@ -12,8 +12,73 @@
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { defineSecret } = require("firebase-functions/params");
 
 admin.initializeApp();
+
+// Bound only to the global-location lookup function below. It is never sent to
+// the browser or stored in quote data.
+const geoapifyKey = defineSecret("GEOAPIFY_KEY");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// searchGlobalLocation
+//
+// Authenticated, server-side lookup for worldwide postcode/city suggestions.
+// Indian PIN codes remain a local browser directory and do not call this API.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.searchGlobalLocation = functions
+  .runWith({ secrets: [geoapifyKey] })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+    }
+
+    const query = typeof data?.query === "string" ? data.query.trim() : "";
+    if (query.length < 3 || query.length > 120) {
+      throw new functions.https.HttpsError("invalid-argument", "Enter 3 to 120 characters.");
+    }
+
+    const apiKey = geoapifyKey.value();
+    if (!apiKey) {
+      throw new functions.https.HttpsError("failed-precondition", "Global lookup is unavailable.");
+    }
+
+    try {
+      const endpoint = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
+      endpoint.searchParams.set("text", query);
+      endpoint.searchParams.set("format", "json");
+      endpoint.searchParams.set("limit", "8");
+      endpoint.searchParams.set("apiKey", apiKey);
+
+      const response = await fetch(endpoint);
+      if (!response.ok) {
+        functions.logger.warn("Geoapify location lookup failed", { status: response.status });
+        throw new Error("Location provider unavailable");
+      }
+
+      const payload = await response.json();
+      const results = Array.isArray(payload.results) ? payload.results : [];
+      return {
+        results: results.slice(0, 8).map((item) => {
+          const city = item.city || item.town || item.village || item.county || item.state || "";
+          const country = item.country || "";
+          return {
+            label: item.formatted || [item.postcode, city, country].filter(Boolean).join(", "),
+            postcode: item.postcode || "",
+            city,
+            country,
+          };
+        }).filter((item) => item.label),
+      };
+    } catch (error) {
+      if (error instanceof functions.https.HttpsError) throw error;
+      functions.logger.warn("Global location lookup unavailable", { message: error.message });
+      throw new functions.https.HttpsError(
+        "unavailable",
+        "Global suggestions are temporarily unavailable. You can enter the address manually."
+      );
+    }
+  });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: resolve a username to its Firebase Auth UID
