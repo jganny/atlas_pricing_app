@@ -2643,7 +2643,7 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 #transport-path-standalone-container .standalone-charge-header,
 #warehouse-path-standalone-container .standalone-charge-header {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-columns: 1fr;
   align-items: center !important;
   gap: 0.75rem !important;
 }
@@ -2651,11 +2651,11 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 #transport-path-standalone-container .standalone-charge-controls,
 #warehouse-path-standalone-container .standalone-charge-controls {
   display: flex !important;
-  width: auto !important;
-  min-width: max-content;
+  width: 100% !important;
+  min-width: 0;
   margin: 0;
-  flex-wrap: nowrap;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 @media (max-width: 900px) {
@@ -3265,7 +3265,7 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   z-index: 1000;
   max-height: 250px;
   overflow-y: auto;
-  background: #0d121f !important;
+  background: var(--bg-surface) !important;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   margin-top: 4px;
@@ -3278,7 +3278,7 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
   font-size: 0.82rem;
-  color: var(--t1);
+  color: var(--t1) !important;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   display: flex;
   justify-content: flex-start;
@@ -3295,7 +3295,7 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   margin-right: 4px;
 }
 .custom-dropdown-item .city-country {
-  color: var(--t1);
+  color: var(--t1) !important;
 }
 
 /* Small crisp dashboard back button */

@@ -7308,6 +7308,8 @@ window.viewSavedQuote = (id) => {
       <tr><td>Service Module</td><td><strong>${isTrans ? 'Transportation' : 'Warehouse'} Standalone</strong></td></tr>
       <tr><td>Service Mode</td><td><strong>${isTrans ? 'Transportation' : 'Warehouse'}</strong></td></tr>
       <tr><td>Route / Description</td><td>${quote.route || quote.details?.routing || '-'}</td></tr>
+      <tr><td>Base Freight</td><td><strong>${currencySym}${(quote.details?.baseFreight ?? quote.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td></tr>
+      ${quote.details?.gstAmount !== undefined ? `<tr><td>GST / Service Tax</td><td>${currencySym}${quote.details.gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td></tr>` : ''}
       <tr><td>Total Quoted Amount</td><td><strong>${currencySym}${(quote.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td></tr>
       ${quote.notes ? `<tr><td>Notes / Calculation</td><td>${quote.notes}</td></tr>` : ''}
     `;
@@ -9236,12 +9238,12 @@ function amendQuote(id) {
             <td><input type="text" class="chg-name" value="${item.name}" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
             <td><input type="number" class="chg-rate" value="${item.rate}" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
             <td><input type="number" class="chg-buy-rate" value="${item.buyRate || 0}" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-            <td><input type="text" class="chg-desc" value="${item.desc || ''}" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td><input type="text" class="chg-remarks" value="${item.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td style="text-align: center;">
               <button type="button" class="delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
             </td>
           `;
+          tr.dataset.description = item.desc || "";
           warehouseBody.appendChild(tr);
         });
       } else {
@@ -9251,7 +9253,6 @@ function amendQuote(id) {
           <td><input type="text" class="chg-name" value="Warehouse Charge" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td><input type="number" class="chg-rate" value="${quote.amount || 0}" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
           <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-          <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td style="text-align: center;">
             <button type="button" class="delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -12764,7 +12765,6 @@ function addWarehouseRow(type = 'surcharge') {
     <td><input type="text" class="chg-name" value="${defaultName}" placeholder="Fee / Surcharge Name" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
     <td><input type="number" class="chg-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
     <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateWarehousing()" style="width: 100%;"></td>
-    <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td style="text-align: center;">
       <button type="button" class="delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
@@ -12803,18 +12803,26 @@ function syncWarehouseCurrency() {
 }
 window.syncWarehouseCurrency = syncWarehouseCurrency;
 
-function calculateTransportation() {
-  const tbody = document.getElementById("transport-standalone-body");
+function getStandaloneRateSummary(module) {
+  const tbody = document.getElementById(`${module}-standalone-body`);
   let subtotal = 0;
+  let grossProfit = 0;
   if (tbody) {
-    tbody.querySelectorAll(".chg-rate").forEach(input => {
-      subtotal += parseFloat(input.value) || 0;
+    tbody.querySelectorAll("tr").forEach(row => {
+      const sell = parseFloat(row.querySelector(".chg-rate")?.value) || 0;
+      const buy = parseFloat(row.querySelector(".chg-buy-rate")?.value) || 0;
+      subtotal += sell > 0 ? sell : buy;
+      grossProfit += sell - buy;
     });
   }
-
-  const gstEnabled = document.getElementById("transport-gst-enabled")?.checked !== false;
+  const gstEnabled = document.getElementById(`${module}-gst-enabled`)?.checked !== false;
   const tax = gstEnabled ? subtotal * 0.18 : 0;
   const total = subtotal + tax;
+  return { subtotal, tax, total, grossProfit, gstEnabled };
+}
+
+function calculateTransportation() {
+  const { subtotal, tax, total, gstEnabled } = getStandaloneRateSummary("transport");
 
   const cur = document.getElementById("transport-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
@@ -12827,17 +12835,7 @@ function calculateTransportation() {
 window.calculateTransportation = calculateTransportation;
 
 function calculateWarehousing() {
-  const tbody = document.getElementById("warehouse-standalone-body");
-  let subtotal = 0;
-  if (tbody) {
-    tbody.querySelectorAll(".chg-rate").forEach(input => {
-      subtotal += parseFloat(input.value) || 0;
-    });
-  }
-
-  const gstEnabled = document.getElementById("warehouse-gst-enabled")?.checked !== false;
-  const tax = gstEnabled ? subtotal * 0.18 : 0;
-  const total = subtotal + tax;
+  const { subtotal, tax, total, gstEnabled } = getStandaloneRateSummary("warehouse");
 
   const cur = document.getElementById("warehouse-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : (cur === 'GBP' ? '£' : (cur === 'AED' ? 'د.إ' : (cur === 'SGD' ? 'S$' : (cur === 'AUD' ? 'A$' : '¥'))))));
@@ -12856,10 +12854,7 @@ window.injectModuleFeesToFreight = injectModuleFeesToFreight;
 
 async function saveStandaloneQuote(module) {
   const cur = document.getElementById(`${module}-currency`)?.value || 'INR';
-  const gstEnabled = document.getElementById(`${module}-gst-enabled`)?.checked !== false;
-  const subtotal = parseFloat(document.getElementById(`res-${module}-subtotal`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
-  const tax = parseFloat(document.getElementById(`res-${module}-tax`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
-  const total = parseFloat(document.getElementById(`res-${module}-total`)?.textContent.replace(/[^0-9.]/g, '')) || 0;
+  const { subtotal, tax, total, grossProfit, gstEnabled } = getStandaloneRateSummary(module);
 
   // Read customer name from the dedicated input field (no blocking prompt needed)
   const customerNameField = document.getElementById(`${module}-customer-name`);
@@ -12924,14 +12919,15 @@ async function saveStandaloneQuote(module) {
         const nameInp = tr.querySelector(".chg-name");
         const rateInp = tr.querySelector(".chg-rate");
         const buyRateInp = tr.querySelector(".chg-buy-rate");
-        const descInp = tr.querySelector(".chg-desc");
         const remarksInp = tr.querySelector(".chg-remarks");
         if (nameInp) {
           items.push({
             name: nameInp.value,
             rate: parseFloat(rateInp?.value) || 0,
             buyRate: parseFloat(buyRateInp?.value) || 0,
-            desc: descInp?.value || "",
+            // Preserve description data from older Warehouse quotes even though
+            // the unused column is no longer shown in the operational table.
+            desc: tr.dataset.description || "",
             remarks: remarksInp?.value || ""
           });
         }
@@ -12958,6 +12954,9 @@ async function saveStandaloneQuote(module) {
     amount: total,
     currency: cur,
     amountINR: rateInr,
+    grossProfit: grossProfit,
+    grossProfitCurrency: cur,
+    grossProfitINR: convertToInr(grossProfit, cur),
     route: routingInfo,
     routingDetails: routingInfo,
     details: {
@@ -12973,7 +12972,9 @@ async function saveStandaloneQuote(module) {
       deliveryCity: deliveryCity,
       deliveryAddress: deliveryAddress,
       gstEnabled: gstEnabled,
-      gstRate: gstEnabled ? 18 : 0
+      gstRate: gstEnabled ? 18 : 0,
+      baseFreight: subtotal,
+      gstAmount: tax
     },
     notes: `Calculated standalone. Subtotal: ${subtotal}, GST (${gstEnabled ? '18%' : 'not applied'}): ${tax}, Total: ${total} ${cur}`
   };
