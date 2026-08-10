@@ -1519,8 +1519,30 @@ const globalHSNHeadings = [
   { code: "2209", name: "2209 | Vinegar and substitutes for vinegar obtained from acetic acid" }
 ];
 
+// Airport, seaport and airline fields are controlled global directories.  Keep
+// historic custom values intact, but never add them to these directories again.
+function isGlobalDirectoryType(type) {
+  return type === "airports" || type === "airlines" || type === "seaports";
+}
+
+function cleanDirectoryEntries(entries) {
+  const seenCodes = new Set();
+  const seenPlaces = new Set();
+  return (Array.isArray(entries) ? entries : []).filter((entry) => {
+    const code = String(entry?.code || "").trim().toUpperCase();
+    const name = String(entry?.name || "").trim();
+    const place = String(entry?.city || name).trim().toLowerCase();
+    if (!code || !name || code === "CUSTOM") return false;
+    if (seenCodes.has(code) || seenPlaces.has(place)) return false;
+    seenCodes.add(code);
+    seenPlaces.add(place);
+    return true;
+  });
+}
+
 // Helper to save custom entries in localStorage
 function saveCustomEntry(type, value) {
+  if (isGlobalDirectoryType(type)) return;
   if (!value || typeof value !== 'string') return;
   const valTrimmed = value.trim();
   if (!valTrimmed) return;
@@ -1774,13 +1796,8 @@ function setupAutocomplete(inputEl, type) {
         { code: "NRT", name: "Narita International Airport", city: "Tokyo", country: "Japan" },
         { code: "DOH", name: "Hamad International Airport", city: "Doha", country: "Qatar" }
       ];
-      let customAirports = [];
-      const stored = localStorage.getItem("gl_custom_airports");
-      if (stored) {
-        try { customAirports = JSON.parse(stored); } catch (err) { }
-      }
       const airportsSource = (appState.airports && appState.airports.length > 0) ? appState.airports : majorAirports;
-      const combined = [...airportsSource, ...customAirports];
+      const combined = cleanDirectoryEntries(airportsSource);
       matches = combined.filter(ap =>
         (ap.code || "").toLowerCase().includes(val) ||
         (ap.city || "").toLowerCase().includes(val) ||
@@ -1788,17 +1805,12 @@ function setupAutocomplete(inputEl, type) {
         (ap.name || "").toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "airlines") {
-      let customAirlines = [];
-      const stored = localStorage.getItem("gl_custom_airlines");
-      if (stored) {
-        try { customAirlines = JSON.parse(stored); } catch (err) { }
-      }
       const baseAirlines = (appState.airlines && appState.airlines.length > 0)
         ? appState.airlines
         : (typeof IATA_AIRLINES !== "undefined"
             ? Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name }))
             : []);
-      const combined = [...baseAirlines, ...customAirlines];
+      const combined = cleanDirectoryEntries(baseAirlines);
       matches = combined.filter(al =>
         (al.code || "").toLowerCase().includes(val) ||
         (al.name || "").toLowerCase().includes(val)
@@ -1827,13 +1839,8 @@ function setupAutocomplete(inputEl, type) {
         { code: "LKCMB", name: "Colombo Port", city: "Colombo", country: "Sri Lanka" },
         { code: "DEHAM", name: "Hamburg Port", city: "Hamburg", country: "Germany" }
       ];
-      let customPorts = [];
-      const stored = localStorage.getItem("gl_custom_seaports");
-      if (stored) {
-        try { customPorts = JSON.parse(stored); } catch (err) { }
-      }
       const portsSource = (appState.seaports && appState.seaports.length > 0) ? appState.seaports : majorSeaports;
-      const combined = [...portsSource, ...customPorts];
+      const combined = cleanDirectoryEntries(portsSource);
       matches = combined.filter(sp =>
         (sp.code || "").toLowerCase().includes(val) ||
         (sp.name || "").toLowerCase().includes(val) ||
@@ -2343,9 +2350,9 @@ function addAirlineCard(data = null) {
   );
 
   card.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+    <div class="airline-card-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
       <span style="font-weight: 800; color: var(--accent-air); font-size: 0.85rem;">Airline Option #${count}</span>
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <div class="airline-card-actions" style="display: flex; gap: 0.5rem; align-items: center;">
         <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--t1);">
           <input type="radio" name="selected-airline" class="select-airline-radio" ${isSelected ? 'checked' : ''}> Select as Quoted
         </label>
@@ -2575,23 +2582,9 @@ function addAirlineCard(data = null) {
     const saveTypedAirlineIfNew = () => {
       const val = nameInput.value ? nameInput.value.trim() : "";
       if (!val || nameInput._selectedFromDropdown) return;
-
-      let customAirlines = [];
-      try {
-        const stored = localStorage.getItem("gl_custom_airlines");
-        if (stored) customAirlines = JSON.parse(stored);
-      } catch (e) { }
-
-      const baseAirlines = (appState.airlines && appState.airlines.length > 0)
-        ? appState.airlines
-        : Object.entries(IATA_AIRLINES).map(([code, airlineName]) => ({ code, name: airlineName }));
-      const valUpper = val.toUpperCase();
-      const isExisting = [...baseAirlines, ...customAirlines].some(al => {
-        const code = (al.code || "").toUpperCase();
-        const airlineName = (al.name || "").toUpperCase();
-        return code === valUpper || airlineName === valUpper || `${code} - ${airlineName}` === valUpper;
-      });
-      if (!isExisting) saveCustomEntry("airlines", val);
+      // Kept as the common blur hook; saveCustomEntry deliberately ignores
+      // global directory types so arbitrary text cannot pollute this list.
+      saveCustomEntry("airlines", val);
     };
 
     const updateAirlineDirectory = (event) => {
@@ -2604,13 +2597,7 @@ function addAirlineCard(data = null) {
       const val = nameInput.value.toUpperCase();
       dropdown.innerHTML = "";
       if (val.length >= 1) {
-        let customAirlines = [];
-        try {
-          const stored = localStorage.getItem("gl_custom_airlines");
-          if (stored) customAirlines = JSON.parse(stored);
-        } catch (e) { }
-
-        let allAirlines = [...(appState.airlines || []), ...customAirlines];
+        let allAirlines = cleanDirectoryEntries(appState.airlines || []);
         if (allAirlines.length === 0) {
           allAirlines = Object.entries(IATA_AIRLINES).map(([code, name]) => ({ code, name }));
         }
@@ -9205,7 +9192,7 @@ function amendQuote(id) {
             <td><input type="number" class="chg-buy-rate" value="${item.buyRate || 0}" step="0.01" oninput="calculateTransportation()"></td>
             <td><input type="text" class="chg-remarks" value="${item.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td style="text-align: center;">
-              <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+              <button type="button" class="delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
             </td>
           `;
           transportBody.appendChild(tr);
@@ -9218,7 +9205,7 @@ function amendQuote(id) {
           <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
           <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td style="text-align: center;">
-            <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+            <button type="button" class="delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
           </td>
         `;
         transportBody.appendChild(tr);
@@ -9252,7 +9239,7 @@ function amendQuote(id) {
             <td><input type="text" class="chg-desc" value="${item.desc || ''}" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td><input type="text" class="chg-remarks" value="${item.remarks || ''}" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
             <td style="text-align: center;">
-              <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+              <button type="button" class="delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
             </td>
           `;
           warehouseBody.appendChild(tr);
@@ -9267,7 +9254,7 @@ function amendQuote(id) {
           <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
           <td style="text-align: center;">
-            <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+            <button type="button" class="delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
           </td>
         `;
         warehouseBody.appendChild(tr);
@@ -9662,14 +9649,9 @@ function saveCustomSeaAutocompletes(originInput, destInput, lineInput, linerInpu
     return { code, name: val };
   };
 
-  const addPort = (portObj) => {
-    if (!portObj) return;
-    const existsDefault = majorSeaports.some(p => p.code.toLowerCase() === portObj.code.toLowerCase() || p.name.toLowerCase() === portObj.name.toLowerCase());
-    const existsCustom = customPorts.some(p => p.code.toLowerCase() === portObj.code.toLowerCase() || p.name.toLowerCase() === portObj.name.toLowerCase());
-    if (!existsDefault && !existsCustom) {
-      customPorts.push(portObj);
-    }
-  };
+  // Ports are selected from the global directory; do not create local entries
+  // from free-typed values when saving a quotation.
+  const addPort = () => {};
 
   const addLine = (lineObj) => {
     if (!lineObj) return;
@@ -12759,7 +12741,7 @@ function addTransportRow(type = 'surcharge') {
     <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" oninput="calculateTransportation()"></td>
     <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td style="text-align: center;">
-      <button type="button" class="btn-admin-action delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+      <button type="button" class="delete-btn" onclick="removeTransportRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
     </td>
   `;
   tbody.appendChild(tr);
@@ -12785,7 +12767,7 @@ function addWarehouseRow(type = 'surcharge') {
     <td><input type="text" class="chg-desc" placeholder="e.g. AUD 5.00 / Pallet / Wk" style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
     <td style="text-align: center;">
-      <button type="button" class="btn-admin-action delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
+      <button type="button" class="delete-btn" onclick="removeWarehouseRow(this)" title="Delete Row" style="background: #002060; border: 1px solid #002060; color: #ffffff; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.75rem;">Delete</button>
     </td>
   `;
   tbody.appendChild(tr);

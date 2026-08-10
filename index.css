@@ -1373,6 +1373,14 @@ select.table-select:focus {
   animation: grid-slow-drift 120s linear infinite;
 }
 
+/* Operational desks use clean card surfaces; the grid texture remains dashboard-only. */
+body:has(#air-freight-panel.active) .grid-overlay,
+body:has(#sea-freight-panel.active) .grid-overlay,
+body:has(#transportation-panel.active) .grid-overlay,
+body:has(#warehousing-panel.active) .grid-overlay {
+  display: none;
+}
+
 @keyframes grid-slow-drift {
   0% { background-position: 0px 0px; }
   100% { background-position: 500px 500px; }
@@ -2632,27 +2640,65 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 
 /* Standalone Transportation / Warehousing controls: keep member actions visible
    and allow the Add Row and GST controls to wrap within their own card. */
-#transport-path-standalone-container > div:first-child > h4,
-#warehouse-path-standalone-container > div:first-child > h4 {
-  flex: 1 1 15rem;
-  min-width: 0;
+#transport-path-standalone-container .standalone-charge-header,
+#warehouse-path-standalone-container .standalone-charge-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center !important;
+  gap: 0.75rem !important;
 }
 
 #transport-path-standalone-container .standalone-charge-controls,
 #warehouse-path-standalone-container .standalone-charge-controls {
-  width: 100%;
-  margin-left: 0;
-  min-width: 0;
-  flex: 1 1 100%;
-  flex-wrap: wrap;
+  display: flex !important;
+  width: auto !important;
+  min-width: max-content;
+  margin: 0;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
+  #transport-path-standalone-container .standalone-charge-header,
+  #warehouse-path-standalone-container .standalone-charge-header {
+    grid-template-columns: 1fr;
+  }
   #transport-path-standalone-container .standalone-charge-controls,
   #warehouse-path-standalone-container .standalone-charge-controls {
+    width: 100% !important;
+    min-width: 0;
+    flex-wrap: wrap;
     justify-content: flex-start;
   }
+}
+
+/* Keep the airline selector above the tariff tables and its actions readable. */
+#air-airlines-list-container,
+#air-airlines-list-container .airline-card,
+#air-airlines-list-container .form-group {
+  overflow: visible !important;
+}
+
+#air-airlines-list-container .iata-autocomplete-dropdown {
+  z-index: 3000;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+#air-airlines-list-container .iata-autocomplete-item {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#air-airlines-list-container .airline-card-heading {
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+#air-airlines-list-container .airline-card-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* iPad / Large Tablet (768-1023px) */

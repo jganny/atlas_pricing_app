@@ -320,12 +320,12 @@ if (airlineInput) {
     airlineInput.dispatchEvent(new Event("blur"));
     assert(localStorage.getItem("gl_custom_airlines") === null, "Blur on existing airline typed manually does not trigger unnecessary custom write");
 
-    // Test blur on genuinely new airline (should trigger custom write)
+    // Airline selection is now restricted to the global IATA directory.
     airlineInput.value = "XX - Brand New Sky Cargo";
     airlineInput.dispatchEvent(new Event("input"));
     airlineInput.dispatchEvent(new Event("blur"));
     const storedCustom = localStorage.getItem("gl_custom_airlines");
-    assert(storedCustom !== null && storedCustom.includes("Brand New Sky Cargo"), "Blur on genuinely new airline triggers saveCustomEntry");
+    assert(storedCustom === null, "Blur on an unlisted airline does not create a custom directory entry");
   }
 }
 
@@ -382,4 +382,3 @@ console.log(`\n==================================================`);
 console.log(`SUMMARY: Passed: ${passed}, Failed: ${failed}`);
 console.log(`==================================================`);
 process.exit(failed > 0 ? 1 : 0);
-
