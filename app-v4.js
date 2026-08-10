@@ -661,6 +661,19 @@ async function handleLogin(e) {
   }
 }
 
+function toggleLoginPasswordVisibility() {
+  const passwordInput = document.getElementById("login-password");
+  const toggleButton = document.getElementById("login-password-toggle");
+  if (!passwordInput || !toggleButton) return;
+
+  const isHidden = passwordInput.type === "password";
+  passwordInput.type = isHidden ? "text" : "password";
+  toggleButton.textContent = isHidden ? "Hide" : "Show";
+  toggleButton.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+  toggleButton.setAttribute("aria-pressed", String(isHidden));
+}
+window.toggleLoginPasswordVisibility = toggleLoginPasswordVisibility;
+
 function loginSuccess(roleId) {
 
   const roleIdLower = roleId.toLowerCase();

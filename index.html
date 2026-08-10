@@ -67,50 +67,47 @@
 
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-overlay" class="login-overlay-screen">
-    <div class="login-card" style="margin-top: 0;">
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
-        <!-- Atlas Logistics brand logo -->
-        <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo"
-          style="height: 60px; width: auto; object-fit: contain; transition: all 0.3s; margin-bottom: 0.5rem;"
-          onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+    <div class="login-card login-card-premium" style="margin-top: 0;">
+      <div class="login-brand">
+        <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo" class="login-brand-logo">
+        <div>
+          <div class="login-brand-name">ATLAS PRICING</div>
+          <div class="login-brand-tagline">Operational pricing workspace</div>
+        </div>
       </div>
-      <h2 id="pricing-desk-title" onclick="handlePathwaySelectorClick()" style="font-weight: 800; margin-bottom: 0.25rem; font-size: 1.2rem; color: #0f172a; text-align: center; cursor: pointer; user-select: none;">
-        Pricing Desk</h2>
-      <div class="login-subtitle" style="color: #475569; margin-bottom: 1rem; font-size: 0.8rem; text-align: center;">
-        Please authenticate to access your pricing desk</div>
+      <h2 id="pricing-desk-title" onclick="handlePathwaySelectorClick()" class="login-title">Sign in to your workspace</h2>
+      <div class="login-subtitle">Use your desk credentials to continue.</div>
       <div id="login-admin-reset-indicator" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; margin-bottom: 1rem; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;">
         ⚠️ Pending Password Reset Request(s) active.
       </div>
 
       <form id="login-form" onsubmit="handleLogin(event)">
-        <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
-          <label for="login-username"
-            style="color: #0f172a; font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.3rem; letter-spacing: 0.05em;">DESK
-            USERNAME</label>
+        <div class="form-group login-form-group">
+          <label for="login-username" class="login-field-label">Username</label>
           <input type="text" id="login-username" placeholder="e.g. air_nom" autocapitalize="none"
-            autocorrect="off" spellcheck="false" class="login-input-field"
-            style="border: 1.5px solid #475569 !important;">
+            autocorrect="off" spellcheck="false" class="login-input-field">
         </div>
-        <div class="form-group" style="text-align: left; margin-bottom: 0.5rem;">
-          <label for="login-password"
-            style="color: #0f172a; font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.3rem; letter-spacing: 0.05em;">DESK
-            PASSWORD</label>
-          <input type="password" id="login-password" placeholder="••••••••" autocapitalize="none"
-            autocorrect="off" spellcheck="false" class="login-input-field"
-            style="border: 1.5px solid #475569 !important;">
+        <div class="form-group login-form-group login-password-group">
+          <label for="login-password" class="login-field-label">Password</label>
+          <div class="login-password-control">
+            <input type="password" id="login-password" placeholder="Enter your password" autocapitalize="none"
+              autocorrect="off" spellcheck="false" class="login-input-field">
+            <button type="button" id="login-password-toggle" class="login-password-toggle" onclick="toggleLoginPasswordVisibility()" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
         </div>
-        <div style="text-align: right; margin-bottom: 1.25rem;">
-          <a href="#" onclick="handleForgotPassword(event)" style="color: #0f172a; font-size: 0.75rem; font-weight: 600; text-decoration: underline; font-family: 'Outfit', sans-serif;">Forgot Password?</a>
+        <div class="login-help-link">
+          <a href="#" onclick="handleForgotPassword(event)">Forgot password?</a>
         </div>
-        <button type="submit" class="login-btn"
-          style="font-weight: 800; border: none; border-radius: 8px; padding: 0.75rem; width: 100%; cursor: pointer;">Login</button>
+        <button type="submit" class="login-btn">Sign in</button>
       </form>
-      <div style="font-size: 0.65rem; color: #475569; margin-top: 0.75rem; text-align: center; line-height: 1.3;">
-        🔑 <em>Default password for all desks is <strong>password</strong> unless previously modified.</em>
+      <div class="login-support-note">
+        Need access? Contact your administrator.
       </div>
 
-      <!-- Collapsible Diagnostics Drawer -->
-      <div style="margin-top: 1rem; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 0.5rem; text-align: center;">
+      <div class="login-security-note"><span aria-hidden="true">▢</span> Secure workspace access</div>
+
+      <!-- Retained for support troubleshooting but deliberately hidden from the public login screen. -->
+      <div hidden>
         <div style="display: flex; gap: 0.6rem; justify-content: center; align-items: center; margin-bottom: 0.25rem;">
           <button type="button" onclick="resetDbConnectionLocal()"
             style="background: none; border: none; color: #0284c7; font-size: 0.65rem; font-weight: 700; cursor: pointer; text-decoration: underline; margin: 0; padding: 0;">
