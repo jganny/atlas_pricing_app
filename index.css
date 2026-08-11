@@ -3745,3 +3745,130 @@ textarea:focus {
 .btn-secondary:hover {
   transform: none !important;
 }
+
+/* -------------------------------------------------------------------------
+   Release 2 — Workspace shell (presentation only)
+   Scope: header, secondary navigation, sidebar and active navigation states.
+   No pricing desks, calculation components, data, roles, or workflows.
+   ------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .app-header {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06) !important;
+    padding: 0.7rem 1.75rem !important;
+  }
+
+  .header-content {
+    min-height: 54px;
+    max-width: none;
+  }
+
+  .header-workspace-context {
+    max-width: 340px;
+    padding: 0 1.35rem;
+    border-inline: 1px solid var(--atlas-border);
+  }
+
+  .active-user-badge {
+    background: var(--atlas-surface-muted);
+    border-color: var(--atlas-border);
+    border-radius: 8px;
+  }
+
+  .subheader-bar {
+    background: var(--atlas-surface-muted) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04) !important;
+    padding: 0.5rem 1.75rem !important;
+  }
+
+  .subheader-content {
+    max-width: none;
+    gap: 0.75rem;
+  }
+
+  .role-selector-bar,
+  #global-module-tabs {
+    background: #ffffff;
+    border: 1px solid var(--atlas-border);
+    border-radius: 9px;
+    padding: 0.2rem;
+  }
+
+  #global-module-tabs {
+    gap: 0.15rem;
+  }
+
+  .module-tab {
+    color: #475569 !important;
+    letter-spacing: 0.02em;
+    text-transform: none;
+  }
+
+  .module-tab:hover {
+    background: #eef2ff;
+    color: #263a9a !important;
+  }
+
+  .module-tab.active {
+    background: #263a9a !important;
+    border-color: #263a9a !important;
+    color: #ffffff !important;
+    box-shadow: none;
+  }
+
+  .module-tab.active::after { display: none; }
+
+  .app-sidebar {
+    background: #ffffff;
+    border-right-color: var(--atlas-border);
+    box-shadow: none;
+    padding-top: 1rem;
+  }
+
+  .sidebar-brand {
+    min-height: 74px;
+    padding: 0 1.25rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .sidebar-nav {
+    gap: 0.2rem;
+    padding: 0 0.75rem;
+  }
+
+  .sidebar-group-title {
+    margin: 0.55rem 0 0.45rem 0.65rem;
+  }
+
+  .sidebar-item {
+    min-height: 42px;
+    border-radius: 8px;
+    color: #334155 !important;
+    position: relative;
+  }
+
+  .sidebar-item:hover {
+    background: #f1f5f9;
+    color: #0f172a !important;
+  }
+
+  .sidebar-item.active {
+    background: #eef2ff;
+    color: #263a9a !important;
+  }
+
+  .sidebar-item.active::before {
+    content: '';
+    position: absolute;
+    left: -0.75rem;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: #263a9a;
+  }
+}
