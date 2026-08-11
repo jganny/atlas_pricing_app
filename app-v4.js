@@ -7428,6 +7428,50 @@ window.viewSavedQuote = (id) => {
       </table>
     ` : '';
 
+  const airOptions = quote.details?.airlines?.length > 0
+    ? quote.details.airlines
+    : [{
+      name: quote.details?.airline || 'Airline',
+      baseFreight: quote.details?.baseFreight || 0,
+      originSurcharges: quote.details?.originSurcharges || quote.details?.surcharges || [],
+      destSurcharges: quote.details?.destSurcharges || []
+    }];
+  const airBreakupHtml = quote.type === 'air' ? airOptions.map((airline) => {
+    const airlineOriginCharges = airline.originSurcharges || [];
+    const airlineDestCharges = airline.destSurcharges || [];
+    const airlineRows = `
+      <tr><td>Base Freight</td><td>Air freight</td><td style="text-align:right;">${currencySym}${Math.abs(Number(airline.baseFreight || 0)).toFixed(2)}</td></tr>
+      ${renderSeaBreakupRows(airlineOriginCharges, 'Origin fees')}
+      ${renderSeaBreakupRows(airlineDestCharges, 'Destination fees')}
+    `;
+    return `
+      <div class="print-section-title" style="margin-top: 1.5rem;">Charges Breakup — ${airline.name || 'Airline'}</div>
+      <table>
+        <thead><tr><th>Charge</th><th>Section</th><th style="text-align:right;">Amount</th></tr></thead>
+        <tbody>${airlineRows}</tbody>
+      </table>
+    `;
+  }).join('') : '';
+
+  const standaloneBreakupHtml = (quote.type === 'transport' || quote.type === 'warehouse') ? (() => {
+    const standaloneItems = quote.details?.items || [];
+    const itemRows = standaloneItems.map((item) => {
+      const billedAmount = item.rate > 0 ? item.rate : item.buyRate;
+      return `<tr><td>${item.name || 'Charge'}</td><td>${item.remarks || '—'}</td><td style="text-align:right;">${currencySym}${Math.abs(Number(billedAmount || 0)).toFixed(2)}</td></tr>`;
+    }).join('') || `<tr><td colspan="3" style="color: #666; font-style: italic;">No charges recorded</td></tr>`;
+    const gstAmount = Math.abs(Number(quote.details?.gstAmount || 0));
+    const gstRow = quote.details?.gstEnabled !== false
+      ? `<tr><td>GST / Service Tax</td><td>Applied</td><td style="text-align:right;">${currencySym}${gstAmount.toFixed(2)}</td></tr>`
+      : `<tr><td>GST / Service Tax</td><td>Not applied</td><td style="text-align:right;">${currencySym}0.00</td></tr>`;
+    return `
+      <div class="print-section-title" style="margin-top: 1.5rem;">Charges Breakup</div>
+      <table>
+        <thead><tr><th>Charge</th><th>Remarks</th><th style="text-align:right;">Amount</th></tr></thead>
+        <tbody>${itemRows}${gstRow}</tbody>
+      </table>
+    `;
+  })() : '';
+
   let termsList = "";
   const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : (isAir ? DEFAULT_AIR_TERMS : DEFAULT_SEA_TERMS);
   if (rawTerms) {
@@ -7524,7 +7568,9 @@ window.viewSavedQuote = (id) => {
       </table>
       
       ${alternativesHtml}
+      ${airBreakupHtml}
       ${seaBreakupHtml}
+      ${standaloneBreakupHtml}
       
       ${bottomTotalBox}
 
