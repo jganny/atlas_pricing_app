@@ -766,12 +766,13 @@ function logoutUser() {
   appState.currentUser = null;
   updateExecutiveDashboardVisibility();
   if (DB.isCloud) {
-    // Stop the authenticated quotes listener before Firebase removes the session.
+    // Stop every authenticated listener before Firebase removes the session.
     // This prevents a final, unauthenticated listener request on logout.
     if (DB.snapshotUnsubscribe) {
       DB.snapshotUnsubscribe();
       DB.snapshotUnsubscribe = null;
     }
+    DB.stopAuxiliaryListeners();
     firebase.auth().signOut().catch(err => {
       console.error("Auth: Sign out failed:", err);
     });
@@ -10355,6 +10356,27 @@ const DB = {
   firestoreRef: null,
   triedDefaultFallback: false,
   snapshotUnsubscribe: null,
+  auxiliaryUnsubscribes: [],
+  usersUnsubscribe: null,
+
+  stopAuxiliaryListeners() {
+    this.auxiliaryUnsubscribes.forEach(unsubscribe => {
+      try {
+        unsubscribe();
+      } catch (err) {
+        console.warn("Firestore: auxiliary listener cleanup failed:", err);
+      }
+    });
+    this.auxiliaryUnsubscribes = [];
+    if (this.usersUnsubscribe) {
+      try {
+        this.usersUnsubscribe();
+      } catch (err) {
+        console.warn("Firestore: users listener cleanup failed:", err);
+      }
+      this.usersUnsubscribe = null;
+    }
+  },
 
   async init() {
     const statusDot = document.getElementById("db-connection-dot");
@@ -10522,13 +10544,17 @@ const DB = {
       });
     }
 
+    // Replace any prior authenticated listeners before creating this session's
+    // users and supporting collection listeners.
+    this.stopAuxiliaryListeners();
+
     // Sync users list from Firestore
     this.syncUsers();
 
     // Sync customer controls list from Firestore
     if (this.firestoreRef) {
       // Sync custom autocomplete entries from Firestore
-      this.firestoreRef.collection("custom_autocomplete_entries").onSnapshot(snap => {
+      this.auxiliaryUnsubscribes.push(this.firestoreRef.collection("custom_autocomplete_entries").onSnapshot(snap => {
         snap.forEach(doc => {
           const type = doc.id;
           const data = doc.data();
@@ -10538,9 +10564,9 @@ const DB = {
         });
       }, err => {
         console.warn("Firestore: custom_autocomplete_entries listen failed, using local/cached records:", err);
-      });
+      }));
 
-      this.firestoreRef.collection("customer_control").onSnapshot(snap => {
+      this.auxiliaryUnsubscribes.push(this.firestoreRef.collection("customer_control").onSnapshot(snap => {
         let controls = {};
         snap.forEach(doc => {
           controls[doc.id] = doc.data();
@@ -10550,10 +10576,10 @@ const DB = {
         renderAdminCustomerControlList();
       }, err => {
         console.warn("Firestore: customer_control listen failed, using local/cached records:", err);
-      });
+      }));
 
       // Sync amendment requests list from Firestore
-      this.firestoreRef.collection("amendment_requests").onSnapshot(snap => {
+      this.auxiliaryUnsubscribes.push(this.firestoreRef.collection("amendment_requests").onSnapshot(snap => {
         let reqs = [];
         snap.forEach(doc => {
           reqs.push(doc.data());
@@ -10580,7 +10606,7 @@ const DB = {
         if (appState.currentUser === 'ganny') {
           renderAdminDashboard();
         }
-      });
+      }));
     }
 
     // Unsubscribe from any existing listener if applicable
@@ -10678,7 +10704,11 @@ const DB = {
       }
 
       // Set listener on users collection
-      this.firestoreRef.collection("users").onSnapshot(snap => {
+      if (this.usersUnsubscribe) {
+        this.usersUnsubscribe();
+        this.usersUnsubscribe = null;
+      }
+      this.usersUnsubscribe = this.firestoreRef.collection("users").onSnapshot(snap => {
         let customUsers = [];
 
         // ── Read existing localStorage passwords BEFORE overwriting ──────────
