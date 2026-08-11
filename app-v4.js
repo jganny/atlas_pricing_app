@@ -985,6 +985,9 @@ function switchRole(role) {
   }
 
   // Update visibility of executive dashboard panel
+  // A role switch always opens its dashboard, so reset the navigation marker
+  // as well. This prevents a previously opened desk from remaining highlighted.
+  if (typeof updateModuleTabs === 'function') updateModuleTabs('dashboard');
   updateExecutiveDashboardVisibility();
 }
 
@@ -1016,6 +1019,10 @@ function goHome() {
     renderMemberDashboard(appState.currentUser);
   }
   if (typeof updateAdminModulePermissions === 'function') updateAdminModulePermissions();
+  // Keep the visual navigation state aligned with the dashboard view.
+  // This only changes the selected sidebar/tab treatment; it does not affect
+  // permissions, data, calculations, or panel availability.
+  if (typeof updateModuleTabs === 'function') updateModuleTabs('dashboard');
 }
 window.goHome = goHome;
 

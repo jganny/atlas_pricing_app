@@ -4459,3 +4459,144 @@ textarea:focus {
   border: 1px solid #d8e1ee;
   border-radius: 8px;
 }
+
+/* ══════════════════════════════════════════════════
+   RELEASE 6 — FINAL VISUAL CONSISTENCY & QA
+   Presentation only: navigation indication, colour restraint, control sizing,
+   and desktop layout. No quote, calculation, role, data, or Firebase rule is
+   changed here.
+══════════════════════════════════════════════════ */
+
+/* One restrained Atlas accent for dashboard cards and launchers. This removes
+   the competing rainbow of module colours without changing any actions. */
+#manager-panel .bento-cell[data-accent]::after,
+#member-dashboard-panel .bento-cell[data-accent]::after {
+  background: #263a9a !important;
+}
+
+#manager-panel .bento-action-btn {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+  border-left: 4px solid #263a9a !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+}
+
+#manager-panel .bento-action-btn svg {
+  stroke: #263a9a !important;
+}
+
+#manager-panel .bento-action-btn:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  transform: none !important;
+}
+
+/* Make state visible through a modest fill and one edge, not strong colour
+   blocks. This applies consistently to every operational desk. */
+#air-freight-panel .section-title,
+#sea-freight-panel .section-title,
+#transportation-panel .calculator-header,
+#warehousing-panel .calculator-header {
+  border-left-color: #263a9a !important;
+}
+
+#air-freight-panel .results-panel,
+#sea-freight-panel .results-panel,
+#transportation-panel .results-panel,
+#warehousing-panel .results-panel {
+  border-top-color: #263a9a !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07) !important;
+}
+
+.btn-primary {
+  background: #263a9a !important;
+  border-color: #263a9a !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  background: #1e2f7d !important;
+  border-color: #1e2f7d !important;
+  box-shadow: 0 0 0 3px rgba(38, 58, 154, 0.16) !important;
+}
+
+/* Directory actions read as a compact workflow toolbar; only Add Contact is
+   a primary action, while import/reset/export remain secondary controls. */
+#directory-panel .glass-card > div:first-child > div:last-child {
+  gap: 0.5rem !important;
+}
+
+#directory-panel .btn-secondary {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+}
+
+#directory-panel .btn-secondary:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Quote preview becomes a clean document surface: neutral headers, modest
+   borders, and a single navy total rather than competing gradients. */
+.quote-print-card {
+  color: #1e293b !important;
+}
+
+.quote-print-card th {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.quote-print-card td {
+  border-color: #d8e1ee !important;
+}
+
+.quote-print-card .total-summary-box {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  border-left: 4px solid #263a9a !important;
+}
+
+.quote-print-card .total-summary-box span.val {
+  color: #172554 !important;
+}
+
+/* The transport and warehouse controls retain all existing columns and
+   behaviours, but have enough height and room to read on normal laptops. */
+#transport-standalone-table input,
+#transport-standalone-table select,
+#warehouse-standalone-table input,
+#warehouse-standalone-table select {
+  min-height: 2.5rem !important;
+}
+
+#transportation-panel .standalone-charge-controls,
+#warehousing-panel .standalone-charge-controls {
+  min-height: 2.75rem;
+  align-items: center;
+}
+
+/* Keep the full Air/Sea calculation rail visible on a wide laptop while
+   preserving the proven stacked layout where there is not enough workspace. */
+@media (min-width: 1200px) and (max-width: 1279px) {
+  #air-freight-panel .workspace,
+  #sea-freight-panel .workspace {
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr) !important;
+    align-items: start;
+  }
+
+  #air-freight-panel .results-panel,
+  #sea-freight-panel .results-panel {
+    position: sticky !important;
+    top: 88px !important;
+    align-self: start;
+    max-height: calc(100vh - 112px);
+    overflow-y: auto !important;
+  }
+}
