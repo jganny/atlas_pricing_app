@@ -7369,7 +7369,7 @@ window.viewSavedQuote = (id) => {
       <tr><td>Transit Time (TT)</td><td>${quote.details?.tt || 'N/A'}</td></tr>
       <tr><td>Validity</td><td>${quote.details?.validity || 'N/A'}</td></tr>
       <tr><td>Base Ocean Freight</td><td>${currencySym}${(quote.details?.baseFreight || 0).toFixed(2)}</td></tr>
-      <tr><td>Charges Breakup</td><td><button class="no-print" onclick="window.showSeaBreakup('${quote.id}')" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.65rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ View Breakup</button></td></tr>
+      <tr><td>Charges Breakup</td><td>Itemized below</td></tr>
     `;
   }
 
@@ -7407,6 +7407,26 @@ window.viewSavedQuote = (id) => {
   } else {
     destSurchargeRows = `<tr><td colspan="2" style="color: #666; font-style: italic;">No destination charges</td></tr>`;
   }
+
+  const seaOriginCharges = originList.length > 0
+    ? originList
+    : (quote.details?.surcharges || []);
+  const renderSeaBreakupRows = (charges, section) => charges.map((charge) => {
+    const amount = Math.abs(Number(charge.calculatedCost ?? charge.cost ?? 0));
+    const basis = charge.unit && charge.rate !== undefined ? ` (${currencySym}${charge.rate}/${charge.unit})` : '';
+    return `<tr><td>${charge.name || 'Charge'}${basis}</td><td>${section}</td><td style="text-align:right;">${currencySym}${amount.toFixed(2)}</td></tr>`;
+  }).join('');
+  const seaBreakupRows = `${renderSeaBreakupRows(seaOriginCharges, 'Origin fees')}${renderSeaBreakupRows(destList, 'Destination fees')}`
+    || `<tr><td colspan="3" style="color: #666; font-style: italic;">No charges recorded</td></tr>`;
+  const seaBreakupHtml = quote.type === 'sea' ? `
+      <div class="print-section-title" style="margin-top: 1.5rem;">Charges Breakup</div>
+      <table>
+        <thead>
+          <tr><th>Charge</th><th>Section</th><th style="text-align:right;">Amount</th></tr>
+        </thead>
+        <tbody>${seaBreakupRows}</tbody>
+      </table>
+    ` : '';
 
   let termsList = "";
   const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : (isAir ? DEFAULT_AIR_TERMS : DEFAULT_SEA_TERMS);
@@ -7504,6 +7524,7 @@ window.viewSavedQuote = (id) => {
       </table>
       
       ${alternativesHtml}
+      ${seaBreakupHtml}
       
       ${bottomTotalBox}
 
