@@ -1947,6 +1947,113 @@ body.logged-out-blur #subheader-controls {
   }
 }
 
+/* ══════════════════════════════════════════════════
+   RELEASE 5 — OPERATIONAL INTELLIGENCE
+   Dashboard presentation only: KPI, staff, approval and alert hierarchy.
+   No metrics, requests, staff access, or dashboard logic are altered.
+══════════════════════════════════════════════════ */
+.stats-grid > .stat-card,
+.exec-kpi-card {
+  background: #ffffff !important;
+  border-color: #d8e1ee !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+}
+
+.stats-grid > .stat-card:hover,
+.exec-kpi-card:hover {
+  transform: translateY(-1px);
+  border-color: #9fb1d4 !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
+}
+
+.stat-title,
+.exec-kpi-title {
+  color: #526174 !important;
+  letter-spacing: 0.08em;
+}
+
+.stat-value,
+.exec-kpi-value {
+  color: #172554 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-subtitle,
+.exec-kpi-subtitle {
+  color: #64748b !important;
+}
+
+.admin-flex-row > .glass-card,
+.exec-section-card {
+  background: #ffffff !important;
+  border-color: #d8e1ee !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+}
+
+.admin-flex-row > .glass-card > h3,
+.exec-section-card h3 {
+  color: #172554 !important;
+  font-size: 0.98rem !important;
+  letter-spacing: 0.015em;
+}
+
+#admin-amendment-requests-panel {
+  border-top: 3px solid #d69b1c !important;
+}
+
+#admin-amendment-requests-panel > h3 {
+  color: #855b00 !important;
+}
+
+#admin-amendment-requests-list {
+  color: #475569 !important;
+}
+
+#admin-amendment-requests-list > * {
+  border-color: #e2e8f0 !important;
+}
+
+#nrs-notifications-panel {
+  background: #ffffff !important;
+  border: 1px solid #9fc5e8 !important;
+  border-left: 4px solid #2d75b8 !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+}
+
+#nrs-notifications-panel h4 {
+  color: #1d4f7f !important;
+}
+
+#nrs-notifications-list {
+  color: #334155 !important;
+}
+
+.leaderboard-table-container {
+  border: 1px solid #d8e1ee !important;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.leaderboard-table thead th {
+  background: #f7f9fc !important;
+  color: #526174 !important;
+  border-bottom: 1px solid #d8e1ee !important;
+}
+
+.leaderboard-table tbody tr:nth-child(even) td {
+  background: #fafcff !important;
+}
+
+.leaderboard-table tbody tr:hover td {
+  background: #f1f5fb !important;
+}
+
+@media (max-width: 900px) {
+  .admin-flex-row > .glass-card {
+    min-width: min(100%, 320px) !important;
+  }
+}
+
 /* IATA autocomplete dropdown styling conforming to Apple Liquid Glass */
 .iata-autocomplete-dropdown {
   position: absolute;
