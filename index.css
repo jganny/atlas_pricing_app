@@ -3680,3 +3680,68 @@ input::placeholder, textarea::placeholder {
   .login-security-note { margin: 1.15rem -1.3rem -1.2rem; }
   .login-brand-name { font-size: 1.08rem; }
 }
+
+/* -------------------------------------------------------------------------
+   Release 1 — Atlas Design System foundation (presentation only)
+   Keeps operational logic, data, calculations, and workflows untouched.
+   ------------------------------------------------------------------------- */
+:root {
+  --atlas-surface: #ffffff;
+  --atlas-surface-muted: #f8fafc;
+  --atlas-border: #d9e2ec;
+  --atlas-focus-ring: rgba(38, 58, 154, 0.16);
+  --atlas-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 5px 14px rgba(15, 23, 42, 0.04);
+}
+
+/* Establish one restrained card treatment instead of competing glass effects. */
+.glass-card {
+  background: var(--atlas-surface) !important;
+  border: 1px solid var(--atlas-border) !important;
+  box-shadow: var(--atlas-shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.glass-card::before { display: none !important; }
+
+.glass-card:hover {
+  transform: none !important;
+  box-shadow: var(--atlas-shadow) !important;
+}
+
+/* Shared data-entry language: white fields, quiet borders, one clear focus cue. */
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background: #ffffff !important;
+  border-color: var(--atlas-border) !important;
+  box-shadow: none !important;
+}
+
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):hover,
+select:hover,
+textarea:hover {
+  background: #ffffff !important;
+  border-color: #aebccc !important;
+}
+
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  background: #ffffff !important;
+  border-color: var(--accent-current) !important;
+  box-shadow: 0 0 0 3px var(--atlas-focus-ring) !important;
+}
+
+/* Retain every button's existing colour while removing decorative motion. */
+.btn-primary,
+.btn-secondary {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.btn-primary::before { display: none !important; }
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  transform: none !important;
+}
