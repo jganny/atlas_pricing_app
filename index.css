@@ -4600,3 +4600,169 @@ textarea:focus {
     overflow-y: auto !important;
   }
 }
+
+/* ==========================================================================
+   RELEASE 7 — DESK DENSITY & CONTROL CONSISTENCY (PRESENTATION ONLY)
+   Scoped visual corrections for the login, Air, Sea, Transport and Warehouse
+   screens. No data, calculation, behaviour or responsive interaction changes.
+   ========================================================================== */
+
+:root {
+  --atlas-control-height: 42px;
+  --atlas-control-radius: 8px;
+  --atlas-action-navy: #243b7a;
+  --atlas-action-navy-hover: #1c3066;
+  --atlas-surface-subtle: #f5f7fb;
+  --atlas-border-subtle: #dce3ef;
+}
+
+/* Login: one clear primary action and quieter diagnostic/help actions. */
+#login-overlay .login-card {
+  width: min(440px, calc(100vw - 32px));
+  padding: clamp(28px, 4vw, 42px);
+  border-radius: 18px;
+}
+
+#login-overlay .login-card .login-btn {
+  min-height: 46px;
+  border-radius: var(--atlas-control-radius);
+  background: var(--atlas-action-navy);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(36, 59, 122, 0.18);
+}
+
+#login-overlay .login-card .login-btn:hover,
+#login-overlay .login-card .login-btn:focus-visible {
+  background: var(--atlas-action-navy-hover);
+}
+
+#login-overlay .forgot-password-link,
+#login-overlay .login-card .login-footer-actions a {
+  color: #41516f;
+}
+
+/* Air and Sea: reduce visual noise while retaining all sections and controls. */
+#air-freight-panel .workspace,
+#sea-freight-panel .workspace {
+  gap: clamp(18px, 2vw, 28px);
+}
+
+#air-freight-panel .workspace > .glass-card,
+#sea-freight-panel .workspace > .glass-card {
+  padding: clamp(18px, 2vw, 28px);
+}
+
+#air-freight-panel .section-title,
+#sea-freight-panel .section-title {
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--atlas-border-subtle);
+  border-radius: 10px;
+  background: #fff;
+}
+
+#air-freight-panel .section-card,
+#sea-freight-panel .section-card {
+  margin-block: 14px;
+  padding: 14px;
+  border-radius: 12px;
+}
+
+#air-freight-panel .results-panel,
+#sea-freight-panel .results-panel {
+  padding: clamp(18px, 2vw, 26px);
+}
+
+#air-freight-panel .results-panel .summary-row,
+#sea-freight-panel .results-panel .summary-row {
+  padding-block: 12px;
+}
+
+#air-freight-panel [onclick*="resetFreightForm"],
+#sea-freight-panel [onclick*="resetFreightForm"] {
+  min-height: var(--atlas-control-height);
+  padding-inline: 14px;
+  border-radius: var(--atlas-control-radius);
+  background: var(--atlas-surface-subtle);
+  border: 1px solid var(--atlas-border-subtle);
+  color: #334155;
+}
+
+/* Transport and Warehouse: align the row action and GST control as one toolbar. */
+#transportation-panel .standalone-charge-header,
+#warehousing-panel .standalone-charge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#transportation-panel .standalone-charge-controls,
+#warehousing-panel .standalone-charge-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+#transportation-panel .standalone-charge-controls button,
+#warehousing-panel .standalone-charge-controls button,
+#transportation-panel .standalone-add-row,
+#warehousing-panel .standalone-add-row {
+  min-height: var(--atlas-control-height);
+  padding: 0 16px;
+  border-radius: var(--atlas-control-radius);
+  background: var(--atlas-action-navy);
+  color: #fff;
+  border: 1px solid var(--atlas-action-navy);
+  box-shadow: none;
+}
+
+#transportation-panel .standalone-charge-controls label,
+#warehousing-panel .standalone-charge-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--atlas-control-height);
+  padding: 0 12px;
+  border: 1px solid var(--atlas-border-subtle);
+  border-radius: var(--atlas-control-radius);
+  background: var(--atlas-surface-subtle);
+  color: #334155;
+  white-space: nowrap;
+}
+
+#transportation-panel .standalone-summary,
+#warehousing-panel .standalone-summary {
+  padding: clamp(18px, 2vw, 26px);
+}
+
+#transportation-panel .standalone-table input,
+#warehousing-panel .standalone-table input,
+#transportation-panel .standalone-table select,
+#warehousing-panel .standalone-table select {
+  min-height: var(--atlas-control-height);
+}
+
+/* Reserve a useful working column for the desk, with a stable result rail. */
+@media (min-width: 1280px) {
+  #air-freight-panel .workspace,
+  #sea-freight-panel .workspace {
+    grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.8fr);
+  }
+}
+
+/* Small screens retain the existing single-column, non-sticky reading flow. */
+@media (max-width: 1279px) {
+  #air-freight-panel .workspace,
+  #sea-freight-panel .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #air-freight-panel .results-panel,
+  #sea-freight-panel .results-panel {
+    position: static;
+  }
+}
