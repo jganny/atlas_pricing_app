@@ -547,6 +547,9 @@ main {
   transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   overflow: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
 }
 
 .glass-card::before {
@@ -2215,6 +2218,9 @@ header {
     0 1px 0 rgba(255, 255, 255, 0.9) inset,
     0 8px 28px rgba(27, 28, 92, 0.06),
     0 2px 6px rgba(27, 28, 92, 0.04);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
   transition: transform 0.22s cubic-bezier(.4,0,.2,1), box-shadow 0.22s, border-color 0.22s;
   position: relative;
   overflow: hidden;
@@ -3648,11 +3654,12 @@ input::placeholder, textarea::placeholder {
 
 .login-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.8rem;
-  margin-bottom: 1.75rem;
-  text-align: left;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
 
 .login-brand-logo {
@@ -3695,16 +3702,17 @@ input::placeholder, textarea::placeholder {
 }
 
 .login-form-group {
-  margin-bottom: 1.05rem !important;
+  margin-bottom: 1.25rem !important;
   text-align: left;
 }
 
 .login-field-label {
   display: block;
   margin-bottom: 0.42rem;
-  color: #334155;
-  font-size: 0.78rem;
+  color: #475569;
+  font-size: 0.76rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .login-card-premium .login-input-field {
@@ -3724,7 +3732,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .login-card-premium .login-input-field::placeholder {
-  color: #94a3b8 !important;
+  color: #64748b !important;
   opacity: 1;
 }
 
@@ -3734,7 +3742,7 @@ input::placeholder, textarea::placeholder {
 .login-password-toggle {
   position: absolute;
   top: 50%;
-  right: 0.7rem;
+  right: 1rem;
   transform: translateY(-50%);
   border: 0;
   padding: 0.25rem;
@@ -3742,15 +3750,15 @@ input::placeholder, textarea::placeholder {
   color: #263a9a;
   font: inherit;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.login-help-link { margin: -0.2rem 0 1.2rem; text-align: right; }
+.login-help-link { margin: 0.2rem 0 1.5rem; text-align: right; }
 .login-help-link a {
   color: #263a9a;
   font-size: 0.78rem;
-  font-weight: 650;
+  font-weight: 500;
   text-decoration: none;
 }
 .login-help-link a:hover { text-decoration: underline; }
@@ -3760,8 +3768,35 @@ input::placeholder, textarea::placeholder {
   margin-top: 0 !important;
   border-radius: 9px !important;
   background: #1b1c5c !important;
+  color: #ffffff !important;
   box-shadow: 0 6px 16px rgba(27, 28, 92, 0.18) !important;
   font-size: 0.94rem !important;
+}
+
+/* Sign Up — ghost / outline variant */
+.login-card-premium .login-signup-btn {
+  background: transparent !important;
+  color: #1b1c5c !important;
+  border: 1.5px solid #1b1c5c !important;
+  box-shadow: none !important;
+  margin-top: 0.6rem !important;
+}
+.login-card-premium .login-signup-btn:hover {
+  background: rgba(27, 28, 92, 0.06) !important;
+  box-shadow: none !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Contact administrator live link */
+.login-contact-link {
+  color: #263a9a;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.18s;
+}
+.login-contact-link:hover {
+  border-bottom-color: #263a9a;
 }
 
 .login-support-note {
@@ -4764,5 +4799,53 @@ textarea:focus {
   #air-freight-panel .results-panel,
   #sea-freight-panel .results-panel {
     position: static;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   FIX — TRANSPORT & WAREHOUSE DESK CONTROLS ALIGNMENT & COLORS
+   Corrects standalone-charge-header from display:grid to display:flex 
+   so title and controls sit on the same baseline.
+   Fixes the width of standalone-charge-controls so 'Apply GST' is not cut off.
+   Styles the 'Add Row' button with a transparent dashed border to match other 'Add Row' buttons.
+   No calculation, data, formula, role, Firebase rule, or feature changed.
+══════════════════════════════════════════════════ */
+#transport-path-standalone-container .standalone-charge-header,
+#warehouse-path-standalone-container .standalone-charge-header {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.5rem !important;
+}
+
+/* Allow the controls container to size naturally instead of forcing 100% width */
+#transport-path-standalone-container .standalone-charge-controls,
+#warehouse-path-standalone-container .standalone-charge-controls {
+  width: auto !important;
+  flex: 0 1 auto !important;
+  justify-content: flex-end !important;
+}
+
+/* Make the Add Row button look like the standard dashed Add Row buttons */
+#transportation-panel .standalone-charge-controls button.add-transport-row-btn,
+#warehousing-panel .standalone-charge-controls button.add-warehouse-row-btn {
+  background: transparent !important;
+  color: var(--sky) !important;
+  border: 1px dashed var(--sky) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+#transportation-panel .standalone-charge-controls button.add-transport-row-btn:hover,
+#warehousing-panel .standalone-charge-controls button.add-warehouse-row-btn:hover {
+  background: rgba(56, 189, 248, 0.08) !important;
+}
+
+@media (max-width: 600px) {
+  #transport-path-standalone-container .standalone-charge-header,
+  #warehouse-path-standalone-container .standalone-charge-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
   }
 }

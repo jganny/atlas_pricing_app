@@ -99,12 +99,13 @@
           <a href="#" onclick="handleForgotPassword(event)">Forgot password?</a>
         </div>
         <button type="submit" class="login-btn">Sign in</button>
+        <button type="button" class="login-btn login-signup-btn" onclick="handleSignup(event)">Sign up</button>
       </form>
       <div class="login-support-note">
-        Need access? Contact your administrator.
+        Need access? <a href="mailto:ganesh@blr.atlaslogistics.co.in?subject=Atlas%20Pricing%20App%20%E2%80%94%20Access%20Request&body=Hello%20Admin%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Atlas%20Pricing%20workspace.%0A%0AName%3A%20%0ADepartment%3A%20%0A%0AThank%20you." class="login-contact-link">Contact your administrator.</a>
       </div>
 
-      <div class="login-security-note"><span aria-hidden="true">▢</span> Secure workspace access</div>
+      <div class="login-security-note"><span aria-hidden="true">🔒</span> Secure workspace access</div>
 
       <!-- Retained for support troubleshooting but deliberately hidden from the public login screen. -->
       <div hidden>
@@ -841,6 +842,7 @@
                   <th>Agent Details</th>
                   <th>Priced By Desk</th>
                   <th>Carrier</th>
+                  <th>Tonnage</th>
                   <th>Buy Rate</th>
                   <th>Sell Rate</th>
                   <th>GP</th>
@@ -961,6 +963,23 @@
                         </div>
                         <div class="hdr-filter-options-list" id="hdr-options-carrier">
                           <div class="hdr-filter-opt active" onclick="selectHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- TONNAGE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-hdr-tonnage">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'tonnage')">
+                        <span id="hdr-label-tonnage">All</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="hdr-menu-tonnage" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="hdr-search-tonnage" placeholder="Filter Tonnage..." oninput="onHdrSearchInput('tonnage', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="hdr-options-tonnage">
+                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('tonnage', 'all', 'All')">All</div>
                         </div>
                       </div>
                     </div>
@@ -1321,6 +1340,7 @@
                   <th>Mode</th>
                   <th>Agent Details</th>
                   <th>Carrier</th>
+                  <th>Tonnage</th>
                   <th>Buy Rate</th>
                   <th>Sell Rate</th>
                   <th>GP</th>
@@ -1420,6 +1440,23 @@
                         </div>
                         <div class="hdr-filter-options-list" id="user-hdr-options-carrier">
                           <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  <!-- TONNAGE Filter -->
+                  <th>
+                    <div class="hdr-filter-dropdown" id="dropdown-user-hdr-tonnage">
+                      <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'tonnage')">
+                        <span id="user-hdr-label-tonnage">All</span> <span class="hdr-filter-arrow">▼</span>
+                      </button>
+                      <div class="hdr-filter-menu" id="user-hdr-menu-tonnage" onclick="event.stopPropagation()">
+                        <div class="hdr-filter-search-wrap">
+                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-tonnage" placeholder="Filter Tonnage..." oninput="onUserHdrSearchInput('tonnage', this.value)">
+                        </div>
+                        <div class="hdr-filter-options-list" id="user-hdr-options-tonnage">
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('tonnage', 'all', 'All')">All</div>
                         </div>
                       </div>
                     </div>
@@ -2569,9 +2606,7 @@
                                   <td>
                                     <select class="chg-unit" onchange="calculateSeaFreight()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
                                       <option value="flat">Flat Fee</option>
-                                      <option value="container" selected>Per Container</option>
-                                      <option value="rt">Per RT (Revenue Ton)</option>
-                                      <option value="kg">Per Kg (Gross Weight)</option>
+                                      <option value="container-20'GP" selected>Per 20'GP</option>
                                     </select>
                                   </td>
                                   <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
@@ -2590,9 +2625,7 @@
                                   <td>
                                     <select class="chg-unit" onchange="calculateSeaFreight()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%;">
                                       <option value="flat" selected>Flat Fee</option>
-                                      <option value="container">Per Container</option>
-                                      <option value="rt">Per RT (Revenue Ton)</option>
-                                      <option value="kg">Per Kg (Gross Weight)</option>
+                                      <option value="container-20'GP">Per 20'GP</option>
                                     </select>
                                   </td>
                                   <td><input type="text" class="chg-remarks" placeholder="Add remarks..." style="background: rgba(255,255,255,0.03); color: var(--t1); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; width: 100%;"></td>
@@ -2887,7 +2920,7 @@
                 <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: var(--sky); margin: 0;">
                   Transportation Breakup Calculations</h4>
                 <div class="standalone-charge-controls" style="display: flex; align-items: center; gap: 0.5rem;">
-                  <button type="button" class="add-transport-row-btn" onclick="addTransportRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Row</button>
+                  <button type="button" class="add-transport-row-btn" onclick="addTransportRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: transparent; color: var(--sky); border: 1px solid var(--sky); cursor: pointer; transition: all 0.2s;">+ Add Row</button>
                   <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: var(--t1); white-space: nowrap; cursor: pointer;"><input type="checkbox" id="transport-gst-enabled" checked onchange="calculateTransportation()" style="accent-color: var(--sky);"> Apply GST (18%)</label>
                   <input type="hidden" id="transport-currency" value="INR">
                 </div>
@@ -2988,7 +3021,7 @@
                 <h4 style="font-size: 0.95rem; text-transform: uppercase; font-weight: 800; color: var(--sky); margin: 0;">
                   Warehousing Breakup Calculations</h4>
                 <div class="standalone-charge-controls" style="display: flex; align-items: center; gap: 0.5rem;">
-                  <button type="button" class="add-warehouse-row-btn" onclick="addWarehouseRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: #002060; color: #ffffff; border: 1px solid #002060; cursor: pointer;">+ Add Row</button>
+                  <button type="button" class="add-warehouse-row-btn" onclick="addWarehouseRow('surcharge')" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 700; background: transparent; color: var(--sky); border: 1px solid var(--sky); cursor: pointer; transition: all 0.2s;">+ Add Row</button>
                   <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: var(--t1); white-space: nowrap; cursor: pointer;"><input type="checkbox" id="warehouse-gst-enabled" checked onchange="calculateWarehousing()" style="accent-color: var(--sky);"> Apply GST (18%)</label>
                   <input type="hidden" id="warehouse-currency" value="INR">
                 </div>

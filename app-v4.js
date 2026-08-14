@@ -661,6 +661,46 @@ async function handleLogin(e) {
   }
 }
 
+// ── SIGN UP: Register a new user account ────────────────────────────────────
+window.handleSignup = async function (e) {
+  if (e) e.preventDefault();
+
+  const user = (document.getElementById("login-username").value || "").toLowerCase().trim();
+  const pass = document.getElementById("login-password").value || "";
+
+  if (!user) {
+    alert("Please enter a Username to sign up.");
+    return;
+  }
+  if (!pass || pass.length < 6) {
+    alert("Please enter a Password of at least 6 characters to sign up.");
+    return;
+  }
+
+  const canonicalEmail = `${user}@atlaspricing.com`;
+
+  if (!DB.isCloud) {
+    alert("⚠️ Sign up requires an active internet connection. Please check your connection and try again.");
+    return;
+  }
+
+  try {
+    await firebase.auth().createUserWithEmailAndPassword(canonicalEmail, pass);
+    alert(`✅ Account created successfully!\n\nUsername: ${user}\n\nYou can now sign in with your credentials. Please inform your administrator to assign your role.`);
+    document.getElementById("login-password").value = "";
+  } catch (err) {
+    if (err.code === "auth/email-already-in-use") {
+      alert(`⚠️ The username "${user}" is already registered.\n\nIf you have forgotten your password, please use "Forgot password?" to request a reset.`);
+    } else if (err.code === "auth/weak-password") {
+      alert("⚠️ Password is too weak. Please choose a stronger password (minimum 6 characters).");
+    } else if (err.code === "auth/invalid-email") {
+      alert("⚠️ Invalid username format. Please use only letters, numbers, underscores, or hyphens.");
+    } else {
+      alert("⚠️ Sign up failed: " + err.message);
+    }
+  }
+};
+
 function toggleLoginPasswordVisibility() {
   const passwordInput = document.getElementById("login-password");
   const toggleButton = document.getElementById("login-password-toggle");
@@ -2782,7 +2822,19 @@ function addAirlineCard(data = null) {
   }
 
   if (data && Object.keys(activeBreaks).length > 0) {
+    const usedBreak = data.usedBreak;
+    const isMinActive = usedBreak === 'min';
     for (const bName in activeBreaks) {
+      const bVal = activeBreaks[bName];
+      const bSell = typeof bVal === 'object' ? (bVal.sell || 0) : bVal;
+      const bBuy = typeof bVal === 'object' ? (bVal.buy || 0) : 0;
+      const isActiveBr = (bName === usedBreak && !isMinActive) || (bName === 'min' && isMinActive);
+      
+      // Keep only active breaks or breaks with non-zero values
+      if (!isActiveBr && bSell === 0 && bBuy === 0) {
+        continue;
+      }
+      
       addWeightBreakRow(card, bName, activeBreaks[bName]);
     }
   }
@@ -3211,6 +3263,16 @@ function calculateAirFreight() {
     const optionBaseBuyFreight = tariffsEnabled ? (isMinActive ? minBuy : (airlineChargeableWeight * activeBuyRate)) : 0;
     const optionGrossProfit = baseFreightCost - optionBaseBuyFreight;
 
+    const cleanedBreaks = {};
+    for (const bName in breaksData) {
+      const bVal = breaksData[bName];
+      const isActiveBr = (bName === usedBreak && !isMinActive) || (bName === 'min' && isMinActive);
+      if (!isActiveBr && bVal.sell === 0 && bVal.buy === 0) {
+        continue;
+      }
+      cleanedBreaks[bName] = bVal;
+    }
+
     const dataObj = {
       card,
       name: name || "Unnamed Airline",
@@ -3225,7 +3287,7 @@ function calculateAirFreight() {
       originFeesEnabled: originCardEnabled,
       destFeesEnabled: destCardEnabled,
       selected: isSelected,
-      breaks: breaksData,
+      breaks: cleanedBreaks,
       chargeableWeight: airlineChargeableWeight,
       baseFreight: baseFreightCost,
       appliedRate: isMinActive ? minSell : activeRate,
@@ -4227,8 +4289,6 @@ window.updateLinerSurchargeContainerOptions = function (linerIndex) {
 
     let html = `
       <option value="flat" ${currentVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
-      <option value="rt" ${currentVal === 'rt' ? 'selected' : ''}>Per RT (Revenue Ton)</option>
-      <option value="kg" ${currentVal === 'kg' ? 'selected' : ''}>Per Kg (Gross Weight)</option>
     `;
 
     uniqueTypes.forEach(type => {
@@ -4331,8 +4391,6 @@ window.addSeaSurchargeRowToLiner = function (linerIndex, type, nameVal = "", sel
 
   let unitOptions = `
     <option value="flat" ${selectedVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
-    <option value="rt" ${selectedVal === 'rt' ? 'selected' : ''}>Per RT (Revenue Ton)</option>
-    <option value="kg" ${selectedVal === 'kg' ? 'selected' : ''}>Per Kg (Gross Weight)</option>
   `;
   uniqueTypes.forEach(t => {
     const val = `container-${t}`;
@@ -8352,7 +8410,7 @@ window.applyUserDbFiltersAndSort = () => {
 
   tbody.innerHTML = "";
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
     return;
   }
 
@@ -8388,6 +8446,7 @@ window.applyUserDbFiltersAndSort = () => {
         <div style="font-weight: 600;">${quote.customer}</div>
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0) > 0 ? `${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0).toLocaleString()} kg` : '-'}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
       <td><div>${quoteAmount}</div></td>
       <td>
@@ -8608,7 +8667,7 @@ window.applyDbFiltersAndSort = () => {
 
   tbody.innerHTML = "";
   if (pageFiltered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
     return;
   }
 
@@ -8643,6 +8702,7 @@ window.applyDbFiltersAndSort = () => {
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t1);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${carrierName}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0) > 0 ? `${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0).toLocaleString()} kg` : '-'}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
       <td>
         <div>${amountStr}</div>
@@ -9143,96 +9203,102 @@ function amendQuote(id) {
   document.getElementById("manager-panel").classList.remove("active");
 
   if (quote.type === 'air') {
+    // Show the panel first so the browser can paint the skeleton immediately
     document.getElementById("air-freight-panel").classList.add("active");
 
-    document.getElementById("air-cust-name").value = quote.customer;
-    document.getElementById("air-origin").value = quote.details.origin || "";
-    document.getElementById("air-dest").value = quote.details.destination || "";
-    document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
-    document.getElementById("air-terms").value = quote.details.termsAndConditions || DEFAULT_AIR_TERMS;
+    // Defer all field population, card rebuilding, and calculation to the next
+    // animation frame — this prevents the blank white flash caused by heavy
+    // synchronous DOM work blocking the browser's paint cycle.
+    requestAnimationFrame(() => {
+      document.getElementById("air-cust-name").value = quote.customer;
+      document.getElementById("air-origin").value = quote.details.origin || "";
+      document.getElementById("air-dest").value = quote.details.destination || "";
+      document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
+      document.getElementById("air-terms").value = quote.details.termsAndConditions || DEFAULT_AIR_TERMS;
 
-    document.getElementById("air-commodity").value = quote.details.commodity || "GENERAL";
-    handleAirCommodityChange();
-    if (quote.details.tempType) {
-      document.getElementById("air-temp-type").value = quote.details.tempType;
-      handleAirTempTypeChange();
-    }
-    if (quote.details.tempRange) {
-      document.getElementById("air-temp-range").value = quote.details.tempRange;
-    }
-    document.getElementById("air-loadability-tilt").value = quote.details.loadabilityTilt || "TILTABLE";
-    document.getElementById("air-loadability-stack").value = quote.details.loadabilityStack || "STACKABLE";
+      document.getElementById("air-commodity").value = quote.details.commodity || "GENERAL";
+      handleAirCommodityChange();
+      if (quote.details.tempType) {
+        document.getElementById("air-temp-type").value = quote.details.tempType;
+        handleAirTempTypeChange();
+      }
+      if (quote.details.tempRange) {
+        document.getElementById("air-temp-range").value = quote.details.tempRange;
+      }
+      document.getElementById("air-loadability-tilt").value = quote.details.loadabilityTilt || "TILTABLE";
+      document.getElementById("air-loadability-stack").value = quote.details.loadabilityStack || "STACKABLE";
 
-    const airlinesContainer = document.getElementById("air-airlines-list-container");
-    if (airlinesContainer) {
-      airlinesContainer.innerHTML = "";
-      if (quote.details.airlines && quote.details.airlines.length > 0) {
-        quote.details.airlines.forEach(alt => {
-          addAirlineCard(alt);
-        });
-      } else {
-        const initialBreaks = {};
-        const cw = quote.details.chargeableWeight || 0;
-        const bName = getWeightBreakBracket(cw);
-        initialBreaks[bName] = quote.details.appliedRate || 0;
+      const airlinesContainer = document.getElementById("air-airlines-list-container");
+      if (airlinesContainer) {
+        airlinesContainer.innerHTML = "";
+        if (quote.details.airlines && quote.details.airlines.length > 0) {
+          quote.details.airlines.forEach(alt => {
+            addAirlineCard(alt);
+          });
+        } else {
+          const initialBreaks = {};
+          const cw = quote.details.chargeableWeight || 0;
+          const bName = getWeightBreakBracket(cw);
+          initialBreaks[bName] = quote.details.appliedRate || 0;
 
-        addAirlineCard({
-          name: quote.details.airline || "",
-          routing: quote.details.routing || "",
-          tt: quote.details.tt || "",
-          validity: quote.details.validity || "",
-          pivotWeight: quote.details.pivotWeight || "",
-          selected: true,
-          breaks: initialBreaks
+          addAirlineCard({
+            name: quote.details.airline || "",
+            routing: quote.details.routing || "",
+            tt: quote.details.tt || "",
+            validity: quote.details.validity || "",
+            pivotWeight: quote.details.pivotWeight || "",
+            selected: true,
+            breaks: initialBreaks
+          });
+        }
+      }
+
+      appState.currentAirFreight.module = quote.details.module || 'export';
+      const tabExp = document.getElementById("air-tab-export");
+      const tabImp = document.getElementById("air-tab-import");
+      if (tabExp && tabImp) {
+        if (quote.details.module === 'import') {
+          tabImp.classList.add("active");
+          tabExp.classList.remove("active");
+        } else {
+          tabExp.classList.add("active");
+          tabImp.classList.remove("active");
+        }
+      }
+
+      // Cargo items
+      const cargoBody = document.getElementById("air-cargo-body");
+      if (cargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
+        cargoBody.innerHTML = "";
+        quote.details.cargoItems.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.className = "cargo-item-row";
+          tr.innerHTML = `
+            <td><input type="number" class="cargo-len" min="1" placeholder="L" value="${item.l}" required></td>
+            <td><input type="number" class="cargo-wid" min="1" placeholder="W" value="${item.w}" required></td>
+            <td><input type="number" class="cargo-hei" min="1" placeholder="H" value="${item.h}" required></td>
+            <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" value="${item.qty}" required></td>
+            <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" value="${item.gw}" required></td>
+            <td>
+              <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateAirFreight();">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+              </button>
+            </td>
+          `;
+          cargoBody.appendChild(tr);
+          tr.querySelectorAll("input").forEach(inp => {
+            inp.addEventListener("input", calculateAirFreight);
+          });
         });
       }
-    }
 
-    appState.currentAirFreight.module = quote.details.module || 'export';
-    const tabExp = document.getElementById("air-tab-export");
-    const tabImp = document.getElementById("air-tab-import");
-    if (tabExp && tabImp) {
-      if (quote.details.module === 'import') {
-        tabImp.classList.add("active");
-        tabExp.classList.remove("active");
-      } else {
-        tabExp.classList.add("active");
-        tabImp.classList.remove("active");
-      }
-    }
+      // Local surcharges
+      repopulateSurchargesTable("air-origin-surcharges-body", quote.details.originSurcharges);
+      repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
 
-    // Cargo items
-    const cargoBody = document.getElementById("air-cargo-body");
-    if (cargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
-      cargoBody.innerHTML = "";
-      quote.details.cargoItems.forEach(item => {
-        const tr = document.createElement("tr");
-        tr.className = "cargo-item-row";
-        tr.innerHTML = `
-          <td><input type="number" class="cargo-len" min="1" placeholder="L" value="${item.l}" required></td>
-          <td><input type="number" class="cargo-wid" min="1" placeholder="W" value="${item.w}" required></td>
-          <td><input type="number" class="cargo-hei" min="1" placeholder="H" value="${item.h}" required></td>
-          <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" value="${item.qty}" required></td>
-          <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" value="${item.gw}" required></td>
-          <td>
-            <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateAirFreight();">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-            </button>
-          </td>
-        `;
-        cargoBody.appendChild(tr);
-        tr.querySelectorAll("input").forEach(inp => {
-          inp.addEventListener("input", calculateAirFreight);
-        });
-      });
-    }
-
-    // Local surcharges
-    repopulateSurchargesTable("air-origin-surcharges-body", quote.details.originSurcharges);
-    repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
-
-    calculateAirFreight();
-    alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+      calculateAirFreight();
+      alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+    }); // end requestAnimationFrame
   } else if (quote.type === 'transport') {
     document.getElementById("transportation-panel").classList.add("active");
     if (document.getElementById("transport-pickup-pin")) {
@@ -9355,115 +9421,121 @@ function amendQuote(id) {
     alert(`Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Enter name when saving to confirm your amendments.`);
 
   } else {
+    // Show the panel first so the browser can paint the skeleton immediately
     document.getElementById("sea-freight-panel").classList.add("active");
 
-    document.getElementById("sea-cust-name").value = quote.customer;
-    document.getElementById("sea-origin").value = quote.details.origin || "";
-    document.getElementById("sea-dest").value = quote.details.destination || "";
-    document.getElementById("sea-line").value = quote.details.shippingLine || "";
-    document.getElementById("sea-liner-name").value = quote.details.linerName || "";
-    document.getElementById("sea-commodity").value = quote.details.commodity || "";
-    document.getElementById("sea-incoterm").value = quote.details.incoterm || "EXW";
-    document.getElementById("sea-routing").value = quote.details.routing || "";
-    document.getElementById("sea-tt").value = quote.details.tt || "";
-    document.getElementById("sea-validity").value = quote.details.validity || "";
-    document.getElementById("sea-terms").value = quote.details.termsAndConditions || DEFAULT_SEA_TERMS;
+    // Defer all field population, card rebuilding, and calculation to the next
+    // animation frame — this prevents the blank white flash caused by heavy
+    // synchronous DOM work blocking the browser's paint cycle.
+    requestAnimationFrame(() => {
+      document.getElementById("sea-cust-name").value = quote.customer;
+      document.getElementById("sea-origin").value = quote.details.origin || "";
+      document.getElementById("sea-dest").value = quote.details.destination || "";
+      document.getElementById("sea-line").value = quote.details.shippingLine || "";
+      document.getElementById("sea-liner-name").value = quote.details.linerName || "";
+      document.getElementById("sea-commodity").value = quote.details.commodity || "";
+      document.getElementById("sea-incoterm").value = quote.details.incoterm || "EXW";
+      document.getElementById("sea-routing").value = quote.details.routing || "";
+      document.getElementById("sea-tt").value = quote.details.tt || "";
+      document.getElementById("sea-validity").value = quote.details.validity || "";
+      document.getElementById("sea-terms").value = quote.details.termsAndConditions || DEFAULT_SEA_TERMS;
 
-    appState.currentSeaFreight.module = quote.details.module || 'export';
-    const tabExp = document.getElementById("sea-tab-export");
-    const tabImp = document.getElementById("sea-tab-import");
-    if (tabExp && tabImp) {
-      if (quote.details.module === 'import') {
-        tabImp.classList.add("active");
-        tabExp.classList.remove("active");
-      } else {
-        tabExp.classList.add("active");
-        tabImp.classList.remove("active");
-      }
-    }
-
-    const mode = quote.details.mode || "fcl";
-    const modeTabs = document.querySelectorAll(".mode-tab-btn");
-    modeTabs.forEach(t => {
-      if (t.getAttribute("data-mode") === mode) {
-        t.classList.add("active");
-      } else {
-        t.classList.remove("active");
-      }
-    });
-
-    const fclSection = document.getElementById("sea-fcl-section");
-    const lclSection = document.getElementById("sea-lcl-section");
-    const bbForm = document.getElementById("sea-bb-form");
-
-    const container = document.getElementById("sea-liners-container");
-    if (container) {
-      container.innerHTML = "";
-      linerCardCounter = 0;
-      if (quote.details.liners && quote.details.liners.length > 0) {
-        quote.details.liners.forEach(l => {
-          addNewLinerCard({
-            linerName: l.linerName,
-            mode: l.mode || mode,
-            containers: l.containers,
-            originSurcharges: l.originSurcharges,
-            destSurcharges: l.destSurcharges
-          });
-        });
-      } else {
-        addNewLinerCard({
-          linerName: quote.details.shippingLine || quote.details.linerName || "Primary Liner",
-          mode: mode,
-          containers: quote.details.containerItems || [],
-          originSurcharges: quote.details.originSurcharges || [],
-          destSurcharges: quote.details.destSurcharges || []
-        });
-      }
-    }
-
-    // Repopulate cargo dimensions if exists
-    const seaCargoBody = document.getElementById("sea-cargo-body");
-    if (seaCargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
-      seaCargoBody.innerHTML = "";
-      quote.details.cargoItems.forEach(item => {
-        const tr = document.createElement("tr");
-        tr.className = "sea-cargo-item-row";
-        tr.innerHTML = `
-          <td><input type="number" class="sea-cargo-len" min="1" placeholder="L" value="${item.l}"></td>
-          <td><input type="number" class="sea-cargo-wid" min="1" placeholder="W" value="${item.w}"></td>
-          <td><input type="number" class="sea-cargo-hei" min="1" placeholder="H" value="${item.h}"></td>
-          <td><input type="number" class="sea-cargo-qty" min="1" placeholder="Qty" value="${item.qty}"></td>
-          <td>
-            <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaVolumeFromDimensions();">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-            </button>
-          </td>
-        `;
-        seaCargoBody.appendChild(tr);
-        tr.querySelectorAll("input").forEach(inp => {
-          inp.addEventListener("input", calculateSeaVolumeFromDimensions);
-        });
-      });
-    }
-
-    const dimUnit = quote.details.dimUnit || 'cms';
-    appState.currentSeaFreight.dimUnit = dimUnit;
-    const seaDimOptions = document.querySelectorAll("#sea-dim-unit-toggle .toggle-option");
-    if (seaDimOptions) {
-      seaDimOptions.forEach(opt => {
-        if (opt.getAttribute("data-unit") === dimUnit) {
-          opt.classList.add("active");
+      appState.currentSeaFreight.module = quote.details.module || 'export';
+      const tabExp = document.getElementById("sea-tab-export");
+      const tabImp = document.getElementById("sea-tab-import");
+      if (tabExp && tabImp) {
+        if (quote.details.module === 'import') {
+          tabImp.classList.add("active");
+          tabExp.classList.remove("active");
         } else {
-          opt.classList.remove("active");
+          tabExp.classList.add("active");
+          tabImp.classList.remove("active");
+        }
+      }
+
+      const mode = quote.details.mode || "fcl";
+      const modeTabs = document.querySelectorAll(".mode-tab-btn");
+      modeTabs.forEach(t => {
+        if (t.getAttribute("data-mode") === mode) {
+          t.classList.add("active");
+        } else {
+          t.classList.remove("active");
         }
       });
-    }
 
-    // Alternative carrier options
-    repopulateAlternativesTable("sea-alternatives-body", quote.details.alternatives);
+      const fclSection = document.getElementById("sea-fcl-section");
+      const lclSection = document.getElementById("sea-lcl-section");
+      const bbForm = document.getElementById("sea-bb-form");
 
-    calculateSeaFreight();
-    alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+      const container = document.getElementById("sea-liners-container");
+      if (container) {
+        container.innerHTML = "";
+        linerCardCounter = 0;
+        if (quote.details.liners && quote.details.liners.length > 0) {
+          quote.details.liners.forEach(l => {
+            addNewLinerCard({
+              linerName: l.linerName,
+              mode: l.mode || mode,
+              containers: l.containers,
+              originSurcharges: l.originSurcharges,
+              destSurcharges: l.destSurcharges
+            });
+          });
+        } else {
+          addNewLinerCard({
+            linerName: quote.details.shippingLine || quote.details.linerName || "Primary Liner",
+            mode: mode,
+            containers: quote.details.containerItems || [],
+            originSurcharges: quote.details.originSurcharges || [],
+            destSurcharges: quote.details.destSurcharges || []
+          });
+        }
+      }
+
+      // Repopulate cargo dimensions if exists
+      const seaCargoBody = document.getElementById("sea-cargo-body");
+      if (seaCargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
+        seaCargoBody.innerHTML = "";
+        quote.details.cargoItems.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.className = "sea-cargo-item-row";
+          tr.innerHTML = `
+            <td><input type="number" class="sea-cargo-len" min="1" placeholder="L" value="${item.l}"></td>
+            <td><input type="number" class="sea-cargo-wid" min="1" placeholder="W" value="${item.w}"></td>
+            <td><input type="number" class="sea-cargo-hei" min="1" placeholder="H" value="${item.h}"></td>
+            <td><input type="number" class="sea-cargo-qty" min="1" placeholder="Qty" value="${item.qty}"></td>
+            <td>
+              <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateSeaVolumeFromDimensions();">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+              </button>
+            </td>
+          `;
+          seaCargoBody.appendChild(tr);
+          tr.querySelectorAll("input").forEach(inp => {
+            inp.addEventListener("input", calculateSeaVolumeFromDimensions);
+          });
+        });
+      }
+
+      const dimUnit = quote.details.dimUnit || 'cms';
+      appState.currentSeaFreight.dimUnit = dimUnit;
+      const seaDimOptions = document.querySelectorAll("#sea-dim-unit-toggle .toggle-option");
+      if (seaDimOptions) {
+        seaDimOptions.forEach(opt => {
+          if (opt.getAttribute("data-unit") === dimUnit) {
+            opt.classList.add("active");
+          } else {
+            opt.classList.remove("active");
+          }
+        });
+      }
+
+      // Alternative carrier options
+      repopulateAlternativesTable("sea-alternatives-body", quote.details.alternatives);
+
+      calculateSeaFreight();
+      alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+    }); // end requestAnimationFrame
   }
 }
 window.amendQuote = amendQuote;
@@ -11547,6 +11619,8 @@ async function submitWonBookingDetails(e) {
   let surchargeSell = 0;
   let surchargeBuy = 0;
   let grossProfit = 0;
+  let subtotalSell = 0;
+  let subtotalBuy = 0;
 
   if (quote.type === 'air') {
     const chargeableWeight = quote.details.chargeableWeight || 0;
@@ -11613,8 +11687,8 @@ async function submitWonBookingDetails(e) {
     quote.amount = sellBaseFreight + surchargeSell;
     grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
   } else if (quote.type === 'transport' || quote.type === 'warehouse') {
-    let subtotalSell = 0;
-    let subtotalBuy = 0;
+    subtotalSell = 0;
+    subtotalBuy = 0;
     (quote.details.items || []).forEach(item => {
       subtotalSell += item.rate;
       subtotalBuy += item.buyRate;
@@ -11638,6 +11712,13 @@ async function submitWonBookingDetails(e) {
     grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
   }
   quote.grossProfitINR = grossProfitINR;
+
+  if (quote.type === 'air' || quote.type === 'sea') {
+    quote.buyRate = buyBaseFreight + surchargeBuy;
+  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+    quote.buyRate = subtotalBuy;
+  }
+  quote.buyRateCurrency = quote.currency;
 
   // Do not mark the quote Converted/WON until every required buy/sell validation above has passed.
   quote.status = 'converted';
