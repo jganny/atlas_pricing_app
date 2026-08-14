@@ -262,13 +262,7 @@ body {
   gap: 0.5rem;
 }
 
-.sidebar-brand-text {
-  font-family: 'Cinzel', serif;
-  font-weight: 800;
-  font-size: 1.25rem;
-  color: var(--sky);
-  letter-spacing: 0.05em;
-}
+/* .sidebar-brand-text removed — sidebar uses logo image only; class was unused dead code */
 
 .sidebar-nav {
   display: flex;
@@ -322,21 +316,18 @@ body {
 /* ══════════════════════════════════════════════════
    HEADER
 ══════════════════════════════════════════════════ */
-/* ══════════════════════════════════════════════════
-   HEADER
-══════════════════════════════════════════════════ */
 .app-header {
   grid-column: 1 / -1;
   grid-row: 1;
-  backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
-  background: rgba(255, 255, 255, 0.85) !important;
-  border-bottom: 1px solid var(--border-1) !important;
-  padding: 0.65rem var(--space-lg) !important;
+  backdrop-filter: blur(28px) saturate(160%) brightness(1.04);
+  -webkit-backdrop-filter: blur(28px) saturate(160%) brightness(1.04);
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid var(--border-1);
+  padding: 0.65rem var(--space-lg);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03) !important;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
 }
 
 .header-content {
@@ -356,47 +347,8 @@ body {
   cursor: pointer;
 }
 
-.logo-img {
-  height: 40px;
-  width: 40px;
-  object-fit: contain;
-  border-radius: 50%;
-  box-shadow: 0 3px 10px rgba(27, 28, 92, 0.12);
-  transition: transform 0.3s ease;
-}
-.logo-section:hover .logo-img {
-  transform: scale(1.05);
-}
-
-.logo-text-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.logo-text {
-  font-family: 'Cinzel', serif;
-  display: inline-flex;
-  align-items: baseline;
-  line-height: 1.0;
-}
-
-.brand-verte {
-  color: var(--sky);
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.logo-tagline {
-  font-size: 0.72rem;
-  color: var(--t3);
-  font-weight: 700;
-  font-family: 'Outfit', sans-serif;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-top: 0.15rem;
-}
+/* .logo-img, .logo-text-container, .logo-text, .brand-verte, .logo-tagline
+   removed — app uses direct inline img style; classes were unused dead code */
 
 .user-badge-container {
   display: flex;
@@ -468,15 +420,15 @@ body {
 .subheader-bar {
   grid-column: 1 / -1;
   grid-row: 2;
-  backdrop-filter: blur(22px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
-  border-bottom: 1px solid var(--border-1) !important;
-  padding: 0.45rem var(--space-lg) !important;
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid var(--border-1);
+  padding: 0.45rem var(--space-lg);
   z-index: 99;
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 12px rgba(27, 28, 92, 0.03) !important;
+  box-shadow: 0 2px 12px rgba(27, 28, 92, 0.03);
 }
 
 .subheader-content {
@@ -620,15 +572,7 @@ main {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.login-logo {
-  width: 56px; height: 56px;
-  background: linear-gradient(135deg, var(--sky), var(--indigo));
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 1.6rem; color: #fff;
-  margin: 0 auto 1.25rem;
-  box-shadow: 0 4px 16px rgba(27, 28, 92, 0.15);
-}
+/* .login-logo removed — login card uses .login-brand instead; class was unused dead code */
 
 .login-subtitle { font-size: 0.8rem; color: var(--t2); margin-top: 0.3rem; margin-bottom: 2rem; }
 
@@ -652,22 +596,7 @@ main {
 }
 .login-btn:active { transform: translateY(0); }
 
-.login-hint {
-  margin-top: 1.5rem;
-  padding: 1rem 1.1rem;
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-md);
-  font-size: 0.7rem; color: var(--t2);
-  text-align: left; line-height: 1.7;
-}
-.login-hint code {
-  background: rgba(2, 132, 199, 0.06);
-  color: var(--sky);
-  padding: 0.05rem 0.35rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-}
+/* .login-hint / .login-hint code removed — unused dead CSS */
 
 /* ══════════════════════════════════════════════════
    STATS GRID
@@ -1830,6 +1759,11 @@ body.logged-out-blur #subheader-controls {
   gap: 0.35rem;
   margin-right: auto;
   align-items: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* hide scrollbar while keeping scroll ability */
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .module-tab {
@@ -2898,10 +2832,7 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   .grid-overlay { animation:none !important; }
 }
 
-/* Print — suppress all decorative layers */
-@media print {
-  .bento-cell, .bento-grid, .atl-tag, .margin-radar-strip { box-shadow:none !important; backdrop-filter:none !important; }
-}
+/* Print — suppress decorative layers (merged into primary @media print block above) */
 
 /* ── END OF ADAPTIVE LIGHT UI UPGRADE ── */
 
@@ -4474,6 +4405,87 @@ textarea:focus {
 #warehouse-standalone-table td:nth-child(3) { width: 18% !important; }
 #warehouse-standalone-table th:nth-child(4),
 #warehouse-standalone-table td:nth-child(4) { width: 22% !important; }
+
+#warehouse-path-standalone-container .standalone-charge-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   MOBILE SIDEBAR NAVIGATION (Fix #7)
+   Hamburger + off-canvas drawer for <768px
+══════════════════════════════════════════════════ */
+
+/* Hamburger button — hidden on desktop, shown on mobile */
+.mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-sm);
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+  color: var(--t2);
+  transition: background 0.18s, color 0.18s;
+  flex-shrink: 0;
+}
+.mobile-nav-toggle:hover {
+  background: var(--bg-deep);
+  color: var(--t1);
+}
+.mobile-nav-toggle svg { display: block; }
+
+/* Sidebar overlay backdrop */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 49;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.sidebar-backdrop.open {
+  display: block;
+  opacity: 1;
+}
+
+@media (max-width: 767px) {
+  .mobile-nav-toggle {
+    display: flex;
+  }
+
+  /* Slide sidebar off-screen by default on mobile */
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 200;
+    overflow-y: auto;
+  }
+
+  /* Sidebar open state — toggled via JS class on <aside> */
+  .app-sidebar.sidebar-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.15);
+  }
+
+  /* Main content takes full width on mobile */
+  .app-container,
+  #app-workspace {
+    grid-template-columns: 1fr !important;
+  }
+
+  main {
+    grid-column: 1 !important;
+  }
+}
+
 #warehouse-standalone-table th:nth-child(5),
 #warehouse-standalone-table td:nth-child(5) { width: 10% !important; }
 
