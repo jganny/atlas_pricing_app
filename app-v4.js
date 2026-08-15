@@ -3120,6 +3120,18 @@ function calculateAirFreight() {
       isMinActive = true;
     }
 
+    if (minSell > 0 || minBuy > 0) {
+      const minus45Wrapper = card.querySelector('.dynamic-break-wrapper[data-break-name="minus45"]');
+      if (minus45Wrapper) {
+        const mSell = parseFloat(minus45Wrapper.querySelector(".break-sell-rate-input")?.value) || 0;
+        const mBuy = parseFloat(minus45Wrapper.querySelector(".break-buy-rate-input")?.value) || 0;
+        if (mSell === 0 && mBuy === 0) {
+          minus45Wrapper.remove();
+          delete breaksData['minus45'];
+        }
+      }
+    }
+
     // Toggle break display to hide unwanted weight breaks
     card.querySelectorAll(".dynamic-break-wrapper").forEach(wrapper => {
       const bName = wrapper.getAttribute("data-break-name");
@@ -4942,6 +4954,13 @@ function renderMemberDashboard(userId) {
 
   const conversionRate = totalEnquiries > 0 ? (conversions / totalEnquiries * 100) : 0;
 
+  // The Firestore quotes listener calls this on every write from any user, even
+  // when the member dashboard isn't the visible panel — skip the table rebuild
+  // below in that case so typing/scrolling elsewhere doesn't stutter.
+  const memberDashPanel = document.getElementById("member-dashboard-panel");
+  const isDashboardVisible = !!(memberDashPanel && memberDashPanel.classList.contains("active"));
+  if (!isDashboardVisible) return;
+
   // Update KPI Metrics
   document.getElementById("user-stat-revenue").textContent = `₹${totalRevenueINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   document.getElementById("user-stat-quotes").textContent = totalEnquiries;
@@ -5411,14 +5430,18 @@ function runDataReconciliationAudit(quotes, analyticsData) {
 // ADMIN DASHBOARD RENDERING
 function renderAdminDashboard() {
   const execPanel = document.getElementById("executive-dashboard-panel");
-  if (execPanel && execPanel.classList.contains("active")) {
+  // The Firestore quotes listener calls this on every write from any user, even
+  // when the dashboard isn't the visible panel — skip the heavy dashboard-only
+  // rebuilds below in that case so typing/scrolling elsewhere doesn't stutter.
+  const isDashboardVisible = !!(execPanel && execPanel.classList.contains("active"));
+  if (isDashboardVisible) {
     renderExecutiveDashboard();
     if (typeof renderExecutiveDashboardIntelligence === 'function') {
       renderExecutiveDashboardIntelligence();
     }
+    renderControlTowerFeed();
+    renderNrsRegistry();
   }
-  renderControlTowerFeed();
-  renderNrsRegistry();
   // Auto-collapse directory on first admin load
   if (typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet) {
     window._dirInitialCollapseSet = true;
@@ -5429,6 +5452,7 @@ function renderAdminDashboard() {
   if (typeof updateAdminScratchpadViewer === 'function') {
     updateAdminScratchpadViewer();
   }
+  if (!isDashboardVisible) return;
   if (typeof populateReportUsers === 'function') {
     populateReportUsers();
   }
@@ -6613,12 +6637,22 @@ async function saveCurrentQuote() {
   }
 
   // Clear inputs
-  document.getElementById(isAir ? "air-cust-name" : "sea-cust-name").value = "";
+  const custNameEl = document.getElementById(isAir ? "air-cust-name" : "sea-cust-name");
+  if (custNameEl) custNameEl.value = "";
   if (isAir) {
-    document.getElementById("air-origin").value = "";
-    document.getElementById("air-dest").value = "";
-    document.getElementById("air-airline").value = "";
-    document.getElementById("air-incoterm").value = "EXW";
+    const airOriginEl = document.getElementById("air-origin");
+    if (airOriginEl) airOriginEl.value = "";
+    const airDestEl = document.getElementById("air-dest");
+    if (airDestEl) airDestEl.value = "";
+    // Airline options are dynamic cards (no static "air-airline" element) — clear
+    // and re-add a single default card, matching the "Reset Form" button's behavior.
+    const airlinesContainer = document.getElementById("air-airlines-list-container");
+    if (airlinesContainer) {
+      airlinesContainer.innerHTML = "";
+      addAirlineCard();
+    }
+    const airIncotermEl = document.getElementById("air-incoterm");
+    if (airIncotermEl) airIncotermEl.value = "EXW";
     const airBody = document.getElementById("air-cargo-body");
     if (airBody) {
       airBody.innerHTML = `
@@ -8320,7 +8354,8 @@ window.applyUserDbFiltersAndSort = () => {
     const destStr = (q.details?.destination || "").toLowerCase();
     const carrierStr = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "").toLowerCase();
     const statusStr = (q.status || "").toLowerCase();
-    const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
+    const computedBuy = window.computeHistoricalBuyRate(q);
+    const buyRateStr = (computedBuy || "").toString().toLowerCase();
     const sellRateStr = (q.amount || "").toString().toLowerCase();
 
     const gpStr = st.gp === 'percent' ?
@@ -8419,8 +8454,10 @@ window.applyUserDbFiltersAndSort = () => {
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
     const quoteAmount = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
+    const actualBuyRateCurrency = quote.buyRateCurrency || quote.currency || 'INR';
+    const buyRateSym = actualBuyRateCurrency === 'INR' ? '₹' : (actualBuyRateCurrency === 'USD' ? '$' : (actualBuyRateCurrency === 'EUR' ? '€' : '£'));
     const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
+    const computedBuy = window.computeHistoricalBuyRate(quote);
 
     const isQuoted = quote.status === 'quoted';
     const statusLabel = quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'));
@@ -8447,7 +8484,7 @@ window.applyUserDbFiltersAndSort = () => {
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0) > 0 ? `${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0).toLocaleString()} kg` : '-'}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${computedBuy ? `${buyRateSym}${computedBuy.toLocaleString()}` : '-'}</span></td>
       <td><div>${quoteAmount}</div></td>
       <td>
         ${quote.grossProfit !== undefined ? `
@@ -8518,6 +8555,43 @@ window.changeDbPage = (dir) => {
   window._isPaging = false;
 };
 
+window.computeHistoricalBuyRate = (q) => {
+  if (q.buyRate) return q.buyRate;
+  if (q.confirmedBuyRate) return q.confirmedBuyRate;
+  if (q.details && q.details.buyRate) return q.details.buyRate;
+
+  let totalBuy = 0;
+  if (q.type === 'air') {
+    if (q.details && q.details.airlines && q.details.airlines.length > 0) {
+      const airline = q.details.airlines.find(a => a.isQuoted) || q.details.airlines[0];
+      const activeBrVal = airline.breaks ? (airline.breaks[q.details.usedBreak || 'min'] || {buy:0}) : {buy:0};
+      totalBuy += (q.details.chargeableWeight || 0) * (activeBrVal.buy || 0);
+      totalBuy += parseFloat(airline.ams_fee) || 0;
+    }
+    if (q.details && q.details.originSurcharges) {
+      q.details.originSurcharges.forEach(s => totalBuy += parseFloat(s.cost || s.buyRate || 0));
+    }
+    if (q.details && q.details.destSurcharges) {
+      q.details.destSurcharges.forEach(s => totalBuy += parseFloat(s.cost || s.buyRate || 0));
+    }
+  } else if (q.type === 'sea') {
+    if (q.details && q.details.containerItems) {
+      q.details.containerItems.forEach(c => totalBuy += parseFloat(c.buy || 0) * (q.details.mode === 'fcl' ? (c.qty||1) : (q.details.chargeableWeight||0)));
+    }
+    if (q.details && q.details.originSurcharges) {
+      q.details.originSurcharges.forEach(s => totalBuy += parseFloat(s.cost || s.buyRate || 0));
+    }
+    if (q.details && q.details.destSurcharges) {
+      q.details.destSurcharges.forEach(s => totalBuy += parseFloat(s.cost || s.buyRate || 0));
+    }
+  } else if (q.type === 'transport' || q.type === 'warehouse') {
+    if (q.details && q.details.items) {
+      q.details.items.forEach(i => totalBuy += parseFloat(i.buyRate || i.cost || 0));
+    }
+  }
+  return totalBuy;
+};
+
 window.applyDbFiltersAndSort = () => {
   const tbody = document.getElementById("admin-quotes-body");
   if (!tbody) return;
@@ -8547,7 +8621,8 @@ window.applyDbFiltersAndSort = () => {
     const destStr = (q.details?.destination || "").toLowerCase();
     const carrierStr = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "").toLowerCase();
     const statusStr = (q.status || "").toLowerCase();
-    const buyRateStr = (q.buyRate || q.details?.buyRate || "").toString().toLowerCase();
+    const computedBuy = window.computeHistoricalBuyRate(q);
+    const buyRateStr = (computedBuy || "").toString().toLowerCase();
     const sellRateStr = (q.amount || "").toString().toLowerCase();
     const gpStr = st.gp === 'percent' ?
       (q.grossProfit !== undefined && q.amount ? `${((q.grossProfit / q.amount) * 100).toFixed(2)}%` : '0.00%').toLowerCase() :
@@ -8677,7 +8752,9 @@ window.applyDbFiltersAndSort = () => {
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
     const amountStr = `${currencySym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     const amountINRStr = `₹${quote.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-    const buyRateSym = quote.buyRateCurrency === 'INR' ? '₹' : (quote.buyRateCurrency === 'USD' ? '$' : (quote.buyRateCurrency === 'EUR' ? '€' : '£'));
+    const actualBuyRateCurrency = quote.buyRateCurrency || quote.currency || 'INR';
+    const buyRateSym = actualBuyRateCurrency === 'INR' ? '₹' : (actualBuyRateCurrency === 'USD' ? '$' : (actualBuyRateCurrency === 'EUR' ? '€' : '£'));
+    const computedBuy = window.computeHistoricalBuyRate(quote);
     const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
 
     tr.innerHTML = `
@@ -8703,7 +8780,7 @@ window.applyDbFiltersAndSort = () => {
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t1);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${carrierName}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0) > 0 ? `${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0).toLocaleString()} kg` : '-'}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${quote.buyRate ? `${buyRateSym}${quote.buyRate.toLocaleString()}` : (quote.details?.buyRate ? `${currencySym}${quote.details.buyRate.toLocaleString()}` : '-')}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${computedBuy ? `${buyRateSym}${computedBuy.toLocaleString()}` : '-'}</span></td>
       <td>
         <div>${amountStr}</div>
         ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
@@ -13675,7 +13752,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     matched.forEach(q => {
       totalSell += q.amountINR || 0;
-      const buyRate = q.buyRate || q.details?.buyRate || 0;
+      const computedBuy = window.computeHistoricalBuyRate(q);
+      const buyRate = computedBuy || 0;
       if (q.grossProfit !== undefined) {
         totalGp += q.grossProfit;
         totalBuy += (q.amountINR - q.grossProfit);
@@ -13713,7 +13791,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const route = (q.route || "").replace(/,/g, " ");
       const creator = TEAM_ROLES[q.creator]?.name || q.creator || "";
       const carrier = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "-").replace(/,/g, " ");
-      const buyRate = q.buyRate || q.details?.buyRate || 0;
+      const computedBuy = window.computeHistoricalBuyRate(q);
+      const buyRate = computedBuy || 0;
       const sellRate = q.amount || 0;
       const gp = q.grossProfit !== undefined ? q.grossProfit : (sellRate - buyRate);
       const status = q.status || "";
@@ -16145,7 +16224,7 @@ function renderCustomDropdown(type, records, message = "") {
   }
 }
 
-function appendLocationDropdownSection(listEl, title, records, message = "") {
+function appendLocationDropdownSection(type, listEl, title, records, message = "") {
   if (!listEl) return;
 
   const heading = document.createElement("div");
@@ -16187,6 +16266,7 @@ function renderLocationDropdown(type, indiaRecords, globalRecords = [], globalMe
   listEl.innerHTML = "";
 
   appendLocationDropdownSection(
+    type,
     listEl,
     "India PIN Directory",
     indiaRecords,
@@ -16194,7 +16274,7 @@ function renderLocationDropdown(type, indiaRecords, globalRecords = [], globalMe
   );
 
   if (globalRecords.length || globalMessage) {
-    appendLocationDropdownSection(listEl, "Worldwide Locations", globalRecords, globalMessage);
+    appendLocationDropdownSection(type, listEl, "Worldwide Locations", globalRecords, globalMessage);
   }
 
   if (globalRecords.some((rec) => rec.source === "geoapify")) {
