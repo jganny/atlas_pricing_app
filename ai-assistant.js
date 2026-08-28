@@ -85,6 +85,9 @@
     var message = (input.value || '').trim();
     if (!message) return;
 
+    var includeCheckbox = document.getElementById('atlas-copilot-include-quote');
+    var includeQuote = includeCheckbox && includeCheckbox.checked;
+    var quoteContext = '';
     if (includeQuote && typeof window.getSelectedEnquiryQuote === 'function') {
       var selected = window.getSelectedEnquiryQuote();
       if (selected) quoteContext = formatQuoteContext(selected);
