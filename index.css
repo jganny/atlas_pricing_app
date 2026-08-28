@@ -1985,6 +1985,10 @@ body.logged-out-blur #subheader-controls {
   background: #0284c7 !important;
   border-color: #0284c7 !important;
 }
+.module-tab.active[data-module="circulars"] {
+  background: #0f766e !important;
+  border-color: #0f766e !important;
+}
 
 /* Database Connection Badge */
 #db-connection-badge {
@@ -6023,4 +6027,136 @@ tfoot.cgf-footer .cgf-gp {
 ══════════════════════════════════════════════════ */
 .break-sell-rate-input, .break-buy-rate-input {
   width: 76px !important;
+}
+
+/* ══════════════════════════════════════════════════
+   ATLAS ENTERPRISE SHELL — UI-ONLY LAYER (v128.06)
+   Visual architecture only. No calculation, data, or save-path changes.
+   Preserves picture-in-picture split layouts across all desks.
+══════════════════════════════════════════════════ */
+
+/* Calmer operational surfaces: hide decorative motion when logged in */
+body:has(#app-workspace[style*="block"]) .liquid-orb,
+body:has(#app-workspace:not([style*="none"])) .liquid-orb {
+  opacity: 0.35;
+  filter: blur(40px);
+}
+body:has(#air-freight-panel.active) .liquid-orb,
+body:has(#sea-freight-panel.active) .liquid-orb,
+body:has(#transportation-panel.active) .liquid-orb,
+body:has(#warehousing-panel.active) .liquid-orb,
+body:has(#manager-panel.active) .liquid-orb,
+body:has(#member-dashboard-panel.active) .liquid-orb {
+  opacity: 0.12;
+  animation: none !important;
+}
+
+/* Unified desk shell header (Air/Sea aligned with Transport/Warehouse) */
+.desk-shell-header {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-1);
+  border-left-width: 4px;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.desk-shell-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-family: 'Outfit', sans-serif;
+}
+.desk-shell-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  margin-top: 0.15rem;
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.15;
+}
+
+/* Picture-in-picture results inspector — sticky side panel on all desks */
+.desk-pip-panel {
+  position: sticky;
+  top: clamp(72px, 9vw, 96px);
+  align-self: start;
+  max-height: calc(100dvh - 7rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-1);
+  border-top: 3px solid var(--accent-current, #263a9a);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  scrollbar-width: thin;
+}
+.desk-shell[data-desk="air"] .desk-pip-panel { border-top-color: var(--accent-air); }
+.desk-shell[data-desk="sea"] .desk-pip-panel { border-top-color: var(--accent-sea); }
+.desk-shell[data-desk="transport"] .desk-pip-panel { border-top-color: var(--violet); }
+.desk-shell[data-desk="warehouse"] .desk-pip-panel { border-top-color: var(--sky); }
+
+/* Enquiry Database — master list + sticky reports inspector (PiP) */
+.enquiry-db-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 1.25rem;
+  align-items: start;
+}
+.enquiry-db-primary {
+  min-width: 0;
+}
+.enquiry-db-inspector {
+  position: sticky;
+  top: 0.75rem;
+  align-self: start;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.enquiry-db-inspector-card {
+  margin-top: 0 !important;
+  border-top: 3px solid var(--accent-warning);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+/* Toast stack — presentation only; uses existing showToastNotification() */
+#toast-notification-container {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+  max-width: min(420px, calc(100vw - 2rem));
+}
+
+@media (max-width: 1100px) {
+  .enquiry-db-workspace {
+    grid-template-columns: 1fr;
+  }
+  .enquiry-db-inspector {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .desk-pip-panel {
+    position: static;
+    max-height: none;
+  }
+  .desk-shell-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .desk-shell-header .btn-back-dashboard {
+    width: 100%;
+    text-align: center;
+  }
 }

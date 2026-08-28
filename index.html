@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=128.05">
+  <link rel="stylesheet" href="index.css?v=128.06">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -545,6 +545,8 @@
         <!-- Global Cargo Operations Tracking Control Center -->
         <div id="admin-tracking-control-center" style="margin-bottom: 2rem;"></div>
 
+        <div class="enquiry-db-workspace">
+        <div class="enquiry-db-primary">
         <!-- Master quotes view -->
         <div class="glass-card">
           <div class="table-header-row" style="flex-wrap: wrap; gap: 10px;">
@@ -811,9 +813,11 @@
             </button>
           </div>
         </div>
+        </div><!-- /enquiry-db-primary -->
 
+        <aside class="enquiry-db-inspector" aria-label="Reports and archival tools">
         <!-- Financial Reports & Archive Query Panel -->
-        <div class="glass-card" style="margin-top: 1.5rem;">
+        <div class="glass-card enquiry-db-inspector-card">
           <div style="border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
               <span style="font-size: 0.65rem; font-weight: 800; color: var(--accent-warning); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Admin Intelligence Hub</span>
@@ -889,6 +893,8 @@
             </div>
           </div>
         </div>
+        </aside>
+        </div><!-- /enquiry-db-workspace -->
 
         </div><!-- /desk-tab-pane[enquiry-database] -->
         <div class="desk-tab-pane" data-tab-pane="analytics" style="display:none;">
@@ -1460,10 +1466,13 @@
       </div>
 
       <!-- ==================== AIR FREIGHT CALCULATOR ==================== -->
-      <div id="air-freight-panel" class="view-panel">
-        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
-            onclick="returnToWorkspace()">← Back to Dashboard</button>
+      <div id="air-freight-panel" class="view-panel desk-shell" data-desk="air">
+        <div class="calculator-header desk-shell-header" style="border-color: var(--accent-air);">
+          <div>
+            <div class="desk-shell-eyebrow" style="color: var(--accent-air);">Operational Desk</div>
+            <h2 class="desk-shell-title" style="color: var(--accent-air);">AIR FREIGHT DESK</h2>
+          </div>
+          <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
         <div class="desk-highlights-bar" style="border-color: var(--accent-air);">
           <div class="dhb-stats">
@@ -1835,7 +1844,7 @@
           </div>
 
           <!-- Live Results Widget (Right Panel) -->
-          <div class="glass-card results-panel">
+          <div class="glass-card results-panel desk-pip-panel">
             <div class="results-header">
               <h3>Air Freight Pricing Results</h3>
               <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Live updates upon value
@@ -1915,10 +1924,13 @@
       </div>
 
       <!-- ==================== SEA FREIGHT CALCULATOR ==================== -->
-      <div id="sea-freight-panel" class="view-panel">
-        <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
-            onclick="returnToWorkspace()">← Back to Dashboard</button>
+      <div id="sea-freight-panel" class="view-panel desk-shell" data-desk="sea">
+        <div class="calculator-header desk-shell-header" style="border-color: var(--accent-sea);">
+          <div>
+            <div class="desk-shell-eyebrow" style="color: var(--accent-sea);">Operational Desk</div>
+            <h2 class="desk-shell-title" style="color: var(--accent-sea);">SEA FREIGHT DESK</h2>
+          </div>
+          <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
         <div class="desk-highlights-bar" style="border-color: var(--accent-sea);">
           <div class="dhb-stats">
@@ -2611,7 +2623,7 @@
           </div>
 
           <!-- Live Results widget -->
-          <div class="glass-card results-panel">
+          <div class="glass-card results-panel desk-pip-panel">
             <div class="results-header">
               <h3>Sea Freight Pricing Results</h3>
               <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Live updates upon value
@@ -2697,7 +2709,7 @@
       </div>
 
       <!-- ==================== TRANSPORTATION PANEL ==================== -->
-      <div id="transportation-panel" class="view-panel">
+      <div id="transportation-panel" class="view-panel desk-shell" data-desk="transport">
         <div class="calculator-header"
           style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
@@ -2799,7 +2811,7 @@
           </div>
 
           <!-- Summary sidebar -->
-          <div class="glass-card results-panel"
+          <div class="glass-card results-panel desk-pip-panel"
             style="padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
               <h3
@@ -2827,7 +2839,7 @@
       </div>
 
       <!-- ==================== WAREHOUSING PANEL ==================== -->
-      <div id="warehousing-panel" class="view-panel">
+      <div id="warehousing-panel" class="view-panel desk-shell" data-desk="warehouse">
         <div class="calculator-header"
           style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
           <div>
@@ -2905,7 +2917,7 @@
           </div>
 
           <!-- Summary sidebar -->
-          <div class="glass-card results-panel"
+          <div class="glass-card results-panel desk-pip-panel"
             style="padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
               <h3
@@ -4224,7 +4236,7 @@
   <datalist id="sea-dest-charges-list"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=128.05"></script>
+  <script src="app-v4.js?v=128.06"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4783,6 +4795,18 @@
         if (window.innerWidth <= 767) closeMobileSidebar();
       });
     });
+
+    /* UI-only: route native alert() to existing toast when available — no logic/data changes. */
+    (function () {
+      var nativeAlert = window.alert;
+      window.alert = function (message) {
+        if (typeof window.showToastNotification === 'function') {
+          window.showToastNotification(String(message));
+          return;
+        }
+        nativeAlert.call(window, message);
+      };
+    })();
   </script>
 </body>
 
