@@ -1448,7 +1448,6 @@ function openActiveCalculator(type) {
       else if (type === 'warehouse') workspaceNameEl.textContent = "Warehousing";
       else if (type === 'directory') workspaceNameEl.textContent = "Directory";
       else if (type === 'circulars') workspaceNameEl.textContent = "Circulars & Documents";
-      else if (type === 'agencylist') workspaceNameEl.textContent = "Weekly Agency List";
       else if (type === 'sales') workspaceNameEl.textContent = "Sales Pipeline";
     }
 
@@ -1466,7 +1465,6 @@ function openActiveCalculator(type) {
     const warehousePanel = document.getElementById("warehousing-panel");
     const directoryPanel = document.getElementById("directory-panel");
     const circularsPanel = document.getElementById("circulars-panel");
-    const agencylistPanel = document.getElementById("agencylist-panel");
     const salesPanel = document.getElementById("sales-panel");
 
     if (airPanel) airPanel.classList.remove("active");
@@ -1475,7 +1473,6 @@ function openActiveCalculator(type) {
     if (warehousePanel) warehousePanel.classList.remove("active");
     if (directoryPanel) directoryPanel.classList.remove("active");
     if (circularsPanel) circularsPanel.classList.remove("active");
-    if (agencylistPanel) agencylistPanel.classList.remove("active");
     if (salesPanel) salesPanel.classList.remove("active");
 
     const root = document.documentElement;
@@ -1510,11 +1507,6 @@ function openActiveCalculator(type) {
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
       try { loadCircularsLibrary(); } catch (e) { console.error("loadCircularsLibrary error:", e); }
-    } else if (type === 'agencylist') {
-      if (agencylistPanel) agencylistPanel.classList.add("active");
-      root.style.setProperty('--accent-current', 'var(--sky)');
-      root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
-      try { loadAgencyListRecipients(); } catch (e) { console.error("loadAgencyListRecipients error:", e); }
     } else if (type === 'sales') {
       if (salesPanel) salesPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--sky)');
@@ -16659,6 +16651,14 @@ function refreshDirectoryActionButtons() {
   if (agentSortSelect) {
     agentSortSelect.style.display = (activeDirectoryParent === 'agents') ? 'inline-block' : 'none';
   }
+
+  // Weekly Agency List is an Overseas-Agents-only concern (the circulation
+  // this automates is specifically about new agents), so its trigger only
+  // shows on that tab — not on Vendor Contacts.
+  const agencyListBtn = document.getElementById("dir-agency-list-btn");
+  if (agencyListBtn) {
+    agencyListBtn.style.display = (activeDirectoryParent === 'agents') ? 'inline-flex' : 'none';
+  }
 }
 window.refreshDirectoryActionButtons = refreshDirectoryActionButtons;
 
@@ -18584,6 +18584,36 @@ async function deleteCircular(id) {
 }
 window.deleteCircular = deleteCircular;
 
+// Weekly Agency List popup — opened from the Overseas Agents tab of the
+// Directory (#dir-agency-list-btn), not a standalone panel. Mirrors the
+// Air/Sea "rates & fees" modal open/close pattern exactly, wired once here
+// rather than per-card since this modal has a single, static instance.
+function openAgencyListModal() {
+  const overlay = document.getElementById("agencylist-modal-overlay");
+  if (!overlay) return;
+  overlay.style.display = "flex";
+  try { loadAgencyListRecipients(); } catch (e) { console.error("loadAgencyListRecipients error:", e); }
+}
+window.openAgencyListModal = openAgencyListModal;
+
+function closeAgencyListModal() {
+  const overlay = document.getElementById("agencylist-modal-overlay");
+  if (overlay) overlay.style.display = "none";
+}
+window.closeAgencyListModal = closeAgencyListModal;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const overlay = document.getElementById("agencylist-modal-overlay");
+  if (!overlay) return;
+  const closeBtn = overlay.querySelector(".close-agencylist-modal-btn");
+  const doneBtn = overlay.querySelector(".done-agencylist-modal-btn");
+  if (closeBtn) closeBtn.addEventListener("click", closeAgencyListModal);
+  if (doneBtn) doneBtn.addEventListener("click", closeAgencyListModal);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeAgencyListModal();
+  });
+});
+
 // ══════════════════════════════════════════════════
 // WEEKLY AGENCY LIST — recipients CRUD + preview/test-send
 // Recipient list is a single settings doc (app_settings/agencyListRecipients,
@@ -19693,7 +19723,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "128.02"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "128.03"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
 
   function showUpdateBanner(latestVersion) {
     if (document.getElementById("app-update-banner")) return; // already showing
