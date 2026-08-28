@@ -1,0 +1,1122 @@
+From 02ae3d1149e0f543916eccd075dedc2f019cdfe0 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Fri, 28 Aug 2026 18:30:45 +0000
+Subject: [PATCH 3/3] =?UTF-8?q?Atlas=20Premium=20+=20AI=20foundation=20(v1?=
+ =?UTF-8?q?28.08)=20=E2=80=94=20UI/assistive=20layer=20only?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Holistic upgrade path: premium shell + AI copilot without touching
+formulas, arithmetic, quote save/load, or Firestore data paths.
+
+UI shell (ui-shell.js):
+- Role-based landing (Air Nom → Air desk, Sea Nom → Sea desk, NRS → panel)
+- Command palette (Ctrl/⌘+K) for instant module navigation
+- Enquiry row inspector (read-only PiP panel)
+
+AI (ai-assistant.js + atlasCopilot Cloud Function):
+- Floating Atlas Copilot panel with quick prompts
+- Server-side Anthropic integration (same key as agency-list AI)
+- Strict guardrails: never calculates rates or writes quote data
+
+Premium polish (index.css/html):
+- App-wide visual rhythm, desk form grids, PiP panels
+- Enquiry DB master + inspector split layout
+
+app-v4.js: read-only __atlasUi accessors only (no calc changes)
+---
+ ai-assistant.js    | 144 +++++++++++++++
+ app-v4.js          |  16 ++
+ functions/index.js |  85 +++++++++
+ index.css          | 430 +++++++++++++++++++++++++++++++++++++++++++++
+ index.html         |  83 +++++++--
+ ui-shell.js        | 223 +++++++++++++++++++++++
+ version.txt        |   2 +-
+ 7 files changed, 972 insertions(+), 11 deletions(-)
+ create mode 100644 ai-assistant.js
+ create mode 100644 ui-shell.js
+
+diff --git a/ai-assistant.js b/ai-assistant.js
+new file mode 100644
+index 0000000..ab7add3
+--- /dev/null
++++ b/ai-assistant.js
+@@ -0,0 +1,144 @@
++/**
++ * Atlas Copilot — AI assistant UI layer (assistive only).
++ * Calls server-side atlasCopilot; never calculates rates or writes quote data.
++ */
++(function () {
++  'use strict';
++
++  var history = [];
++  var busy = false;
++
++  function ui() {
++    return window.__atlasUi || {};
++  }
++
++  function getSelectedQuoteContext() {
++    var row = document.querySelector('#admin-quotes-body tr.eri-selected');
++    if (!row) return null;
++    var id = row.getAttribute('data-quote-id');
++    if (!id) return null;
++    var quotes = typeof ui().getQuotes === 'function' ? ui().getQuotes() : [];
++    var q = quotes.find(function (x) { return x.id === id; });
++    if (!q) return null;
++    return {
++      id: q.id,
++      ref: typeof window.getQuoteRefId === 'function' ? window.getQuoteRefId(q) : q.id,
++      date: q.date,
++      type: q.type,
++      customer: q.customer,
++      status: q.status,
++      amount: q.amount,
++      currency: q.currency,
++      creator: q.creator,
++      route: q.route,
++      carrier: (q.details && (q.details.airline || q.details.shippingLine || q.details.carrier)) || null
++    };
++  }
++
++  function appendMessage(role, text) {
++    var log = document.getElementById('atlas-copilot-log');
++    if (!log) return;
++    var bubble = document.createElement('div');
++    bubble.className = 'atlas-copilot-msg atlas-copilot-msg-' + role;
++    bubble.textContent = text;
++    log.appendChild(bubble);
++    log.scrollTop = log.scrollHeight;
++  }
++
++  function setBusy(on) {
++    busy = on;
++    var btn = document.getElementById('atlas-copilot-send');
++    var input = document.getElementById('atlas-copilot-input');
++    if (btn) btn.disabled = on;
++    if (input) input.disabled = on;
++  }
++
++  function togglePanel(forceOpen) {
++    var panel = document.getElementById('atlas-copilot-panel');
++    if (!panel) return;
++    var open = forceOpen === true ? true : (forceOpen === false ? false : !panel.classList.contains('open'));
++    panel.classList.toggle('open', open);
++    panel.setAttribute('aria-hidden', open ? 'false' : 'true');
++    if (open) {
++      var input = document.getElementById('atlas-copilot-input');
++      if (input) window.setTimeout(function () { input.focus(); }, 80);
++    }
++  }
++
++  async function sendMessage() {
++    if (busy) return;
++    var input = document.getElementById('atlas-copilot-input');
++    var includeQuote = document.getElementById('atlas-copilot-include-quote');
++    if (!input) return;
++    var message = (input.value || '').trim();
++    if (!message) return;
++
++    appendMessage('user', message);
++    input.value = '';
++    history.push({ role: 'user', content: message });
++    setBusy(true);
++
++    try {
++      if (!window.firebase || !firebase.functions) {
++        throw new Error('Firebase Functions not loaded.');
++      }
++      var fn = firebase.functions().httpsCallable('atlasCopilot');
++      var payload = {
++        message: message,
++        workspace: typeof ui().getWorkspaceName === 'function' ? ui().getWorkspaceName() : 'Dashboard',
++        role: typeof ui().getCurrentUser === 'function' ? (ui().getCurrentUser() || 'user') : 'user'
++      };
++      if (includeQuote && includeQuote.checked) {
++        var ctx = getSelectedQuoteContext();
++        if (ctx) payload.quoteContext = ctx;
++      }
++      var result = await fn(payload);
++      var reply = (result && result.data && result.data.reply) || 'No response.';
++      appendMessage('assistant', reply);
++      history.push({ role: 'assistant', content: reply });
++    } catch (err) {
++      var msg = (err && err.message) ? err.message : 'Atlas Copilot is unavailable.';
++      appendMessage('assistant', msg);
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  function bindQuickPrompts() {
++    document.querySelectorAll('[data-copilot-prompt]').forEach(function (btn) {
++      btn.addEventListener('click', function () {
++        var input = document.getElementById('atlas-copilot-input');
++        if (input) input.value = btn.getAttribute('data-copilot-prompt') || '';
++        sendMessage();
++      });
++    });
++  }
++
++  function init() {
++    var fab = document.getElementById('atlas-copilot-fab');
++    var closeBtn = document.getElementById('atlas-copilot-close');
++    var sendBtn = document.getElementById('atlas-copilot-send');
++    var input = document.getElementById('atlas-copilot-input');
++
++    if (fab) fab.addEventListener('click', function () { togglePanel(); });
++    if (closeBtn) closeBtn.addEventListener('click', function () { togglePanel(false); });
++    if (sendBtn) sendBtn.addEventListener('click', sendMessage);
++    if (input) {
++      input.addEventListener('keydown', function (e) {
++        if (e.key === 'Enter' && !e.shiftKey) {
++          e.preventDefault();
++          sendMessage();
++        }
++      });
++    }
++    bindQuickPrompts();
++  }
++
++  if (document.readyState === 'loading') {
++    document.addEventListener('DOMContentLoaded', init);
++  } else {
++    init();
++  }
++
++  window.toggleAtlasCopilot = togglePanel;
++})();
+diff --git a/app-v4.js b/app-v4.js
+index 28ca078..d07e8f0 100644
+--- a/app-v4.js
++++ b/app-v4.js
+@@ -19934,3 +19934,19 @@ window.updateLinerRateSummary = updateLinerRateSummary;
+     closeRouteVendorPopup();
+   });
+ })();
++
++/* ── Read-only UI shell accessors (no calculation or persistence logic) ── */
++if (typeof window !== "undefined") {
++  window.__atlasUi = {
++    getQuotes: function () { return (appState.quotes || []).slice(); },
++    getCurrentUser: function () { return appState.currentUser; },
++    getActivePanel: function () {
++      var p = document.querySelector(".view-panel.active");
++      return p ? p.id : null;
++    },
++    getWorkspaceName: function () {
++      var el = document.getElementById("header-workspace-name");
++      return el ? el.textContent : "Dashboard";
++    }
++  };
++}
+diff --git a/functions/index.js b/functions/index.js
+index 3160b35..759bca2 100644
+--- a/functions/index.js
++++ b/functions/index.js
+@@ -658,3 +658,88 @@ exports.triggerAgencyListNow = functions
+       stats: report.stats,
+     };
+   });
++
++// ─────────────────────────────────────────────────────────────────────────────
++// atlasCopilot
++//
++// In-app AI assistant for navigation help, quote summaries, and email drafts.
++// NEVER calculates rates or writes quote data — assistive responses only.
++// Uses the same ANTHROPIC_API_KEY secret as the agency-list dedup pipeline.
++// ─────────────────────────────────────────────────────────────────────────────
++exports.atlasCopilot = functions
++  .runWith({ secrets: [anthropicApiKey] })
++  .https.onCall(async (data, context) => {
++    if (!context.auth) {
++      throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
++    }
++
++    const message = typeof data?.message === "string" ? data.message.trim() : "";
++    if (!message || message.length > 4000) {
++      throw new functions.https.HttpsError("invalid-argument", "Message must be 1–4000 characters.");
++    }
++
++    const apiKey = anthropicApiKey.value();
++    if (!apiKey) {
++      throw new functions.https.HttpsError(
++        "failed-precondition",
++        "Atlas Copilot is not configured yet. Ask your admin to set ANTHROPIC_API_KEY."
++      );
++    }
++
++    const workspace = typeof data?.workspace === "string" ? data.workspace.slice(0, 80) : "Dashboard";
++    const role = typeof data?.role === "string" ? data.role.slice(0, 40) : "user";
++    const quoteContext = data?.quoteContext && typeof data.quoteContext === "object"
++      ? JSON.stringify(data.quoteContext).slice(0, 6000)
++      : null;
++
++    const systemPrompt =
++      "You are Atlas Copilot inside Atlas Pricing — a freight-forwarding operational pricing workspace " +
++      "(Air, Sea, Transportation, Warehousing desks; enquiry database; agent directory; circulars).\n\n" +
++      "STRICT RULES — never break these:\n" +
++      "1. NEVER calculate, estimate, or invent freight rates, chargeable weights, GP, surcharges, or currency amounts.\n" +
++      "2. NEVER output data that should be saved as a quote. You assist; the desk calculators compute.\n" +
++      "3. If asked for pricing, direct the user to the correct desk and explain which fields to complete.\n" +
++      "4. You may: explain workflows, summarize read-only quote metadata supplied by the client, " +
++      "draft follow-up emails, suggest navigation, and clarify freight terminology.\n" +
++      "5. Be concise, professional, and operational — this is a live business tool.\n\n" +
++      `Current user role: ${role}. Active workspace: ${workspace}.`;
++
++    let userContent = message;
++    if (quoteContext) {
++      userContent += "\n\n--- READ-ONLY QUOTE CONTEXT (do not modify; summarize or explain only) ---\n" + quoteContext;
++    }
++
++    try {
++      const response = await fetch("https://api.anthropic.com/v1/messages", {
++        method: "POST",
++        headers: {
++          "content-type": "application/json",
++          "x-api-key": apiKey,
++          "anthropic-version": "2023-06-01",
++        },
++        body: JSON.stringify({
++          model: "claude-haiku-4-5-20251001",
++          max_tokens: 1200,
++          system: systemPrompt,
++          messages: [{ role: "user", content: userContent }],
++        }),
++      });
++
++      if (!response.ok) {
++        functions.logger.warn("atlasCopilot: API request failed", { status: response.status });
++        throw new functions.https.HttpsError("unavailable", "Atlas Copilot is temporarily unavailable.");
++      }
++
++      const payload = await response.json();
++      const reply = (payload?.content?.[0]?.text || "").trim();
++      if (!reply) {
++        throw new functions.https.HttpsError("internal", "Empty response from AI.");
++      }
++
++      return { reply };
++    } catch (err) {
++      if (err instanceof functions.https.HttpsError) throw err;
++      functions.logger.warn("atlasCopilot error", { message: err.message });
++      throw new functions.https.HttpsError("unavailable", "Atlas Copilot is temporarily unavailable.");
++    }
++  });
+diff --git a/index.css b/index.css
+index c13d89e..8b054b7 100644
+--- a/index.css
++++ b/index.css
+@@ -6160,3 +6160,433 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
+     text-align: center;
+   }
+ }
++
++/* ══════════════════════════════════════════════════
++   PHASE A COMPLETE — App-wide visual polish (CSS only)
++══════════════════════════════════════════════════ */
++
++/* Calmer glass cards on logged-in operational views */
++#app-workspace .glass-card {
++  transition: box-shadow 0.2s ease, border-color 0.2s ease;
++}
++#app-workspace .glass-card:hover {
++  transform: none;
++}
++#manager-panel .glass-card,
++#member-dashboard-panel .glass-card,
++#directory-panel .glass-card,
++#circulars-panel .glass-card,
++#sales-panel .glass-card {
++  box-shadow: var(--shadow-sm);
++  border-color: var(--border-1);
++}
++
++/* Consistent typography rhythm */
++#app-workspace h3 {
++  letter-spacing: -0.02em;
++}
++#app-workspace .form-group label,
++#app-workspace label[for] {
++  font-size: 0.72rem;
++  font-weight: 700;
++  letter-spacing: 0.04em;
++}
++
++/* Tables — clearer scan lines */
++.quotes-table tbody tr,
++.cargo-table tbody tr,
++#directory-panel table tbody tr {
++  transition: background 0.12s ease;
++}
++.quotes-table tbody tr:hover,
++#admin-quotes-body tr[data-quote-id]:hover {
++  background: rgba(38, 58, 154, 0.04);
++}
++#admin-quotes-body tr.eri-selected {
++  background: rgba(38, 58, 154, 0.09) !important;
++  box-shadow: inset 3px 0 0 #263a9a;
++}
++#admin-quotes-body tr[data-quote-id] {
++  cursor: pointer;
++}
++
++/* Member dashboard & admin KPI cards */
++.stat-card, .kpi-ring-card, .exec-section-card {
++  border-radius: var(--r-md);
++}
++#member-dashboard-panel .glass-card,
++#manager-panel .desk-tab-pane[data-tab-pane="overview"] .glass-card {
++  padding: clamp(1rem, 2vw, 1.35rem);
++}
++
++/* Directory grid breathing room */
++#directory-panel .dir-contacts-grid {
++  gap: 0.85rem;
++}
++
++/* Modals — calmer overlay */
++.modal-overlay.show {
++  backdrop-filter: blur(6px);
++  -webkit-backdrop-filter: blur(6px);
++  background: rgba(15, 23, 42, 0.45);
++}
++
++/* Sidebar — clearer active state */
++.sidebar-item.active {
++  font-weight: 700;
++}
++
++/* Module tabs — consistent hit area */
++.module-tab {
++  min-height: 36px;
++  padding: 0.45rem 0.85rem;
++}
++
++/* ══════════════════════════════════════════════════
++   PHASE B COMPLETE — Desk form grid + enquiry inspector
++══════════════════════════════════════════════════ */
++
++.desk-calculator-layout {
++  gap: clamp(18px, 2vw, 28px);
++}
++.desk-form-card {
++  padding: clamp(1.25rem, 2vw, 2rem) !important;
++}
++.desk-entry-grid {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
++  gap: 1rem;
++  margin-bottom: 1.25rem;
++  align-items: end;
++}
++.desk-shell .section-card {
++  border-radius: 12px;
++  border: 1px solid var(--border-1);
++  background: rgba(255, 255, 255, 0.6);
++}
++
++/* Enquiry row inspector (PiP above reports) */
++.enquiry-row-inspector-card {
++  margin-bottom: 1rem;
++  border-top: 3px solid #263a9a;
++  padding: 1rem 1.1rem;
++}
++.eri-header {
++  margin-bottom: 0.75rem;
++  padding-bottom: 0.6rem;
++  border-bottom: 1px solid var(--border-1);
++}
++.eri-eyebrow {
++  font-size: 0.62rem;
++  font-weight: 800;
++  text-transform: uppercase;
++  letter-spacing: 0.1em;
++  color: var(--t2);
++  display: block;
++}
++.eri-title {
++  margin: 0.2rem 0 0;
++  font-size: 0.95rem;
++  font-weight: 800;
++  color: var(--t1);
++}
++.eri-empty {
++  font-size: 0.78rem;
++  color: var(--t2);
++  line-height: 1.5;
++  padding: 0.5rem 0;
++}
++.eri-grid {
++  display: grid;
++  grid-template-columns: 1fr 1fr;
++  gap: 0.65rem 0.85rem;
++}
++.eri-field {
++  display: flex;
++  flex-direction: column;
++  gap: 0.15rem;
++  min-width: 0;
++}
++.eri-field-wide {
++  grid-column: 1 / -1;
++}
++.eri-label {
++  font-size: 0.6rem;
++  font-weight: 700;
++  text-transform: uppercase;
++  letter-spacing: 0.06em;
++  color: var(--t2);
++}
++.eri-value {
++  font-size: 0.8rem;
++  font-weight: 700;
++  color: var(--t1);
++  font-variant-numeric: tabular-nums;
++  word-break: break-word;
++}
++.eri-hint {
++  margin: 0.75rem 0 0;
++  font-size: 0.68rem;
++  color: var(--t2);
++  line-height: 1.45;
++}
++.enquiry-row-inspector-card.eri-has-selection {
++  box-shadow: 0 8px 24px rgba(38, 58, 154, 0.1);
++}
++
++@media (max-width: 640px) {
++  .eri-grid {
++    grid-template-columns: 1fr;
++  }
++}
++
++/* ══════════════════════════════════════════════════
++   ATLAS COMMAND PALETTE + COPILOT (Premium + AI shell)
++══════════════════════════════════════════════════ */
++.atlas-command-palette {
++  position: fixed;
++  inset: 0;
++  z-index: 10080;
++  background: rgba(15, 23, 42, 0.45);
++  backdrop-filter: blur(4px);
++  display: none;
++  align-items: flex-start;
++  justify-content: center;
++  padding: 12vh 1rem 1rem;
++}
++.atlas-command-palette.open {
++  display: flex;
++}
++.atlas-cp-dialog {
++  width: min(520px, 100%);
++  background: #fff;
++  border-radius: 14px;
++  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
++  border: 1px solid #e2e8f0;
++  overflow: hidden;
++}
++.atlas-cp-input {
++  width: 100%;
++  border: none;
++  border-bottom: 1px solid #e2e8f0;
++  padding: 1rem 1.1rem;
++  font-size: 0.95rem;
++  font-weight: 600;
++  outline: none;
++  font-family: inherit;
++}
++.atlas-cp-list {
++  max-height: 320px;
++  overflow-y: auto;
++  padding: 0.35rem;
++}
++.atlas-cp-item {
++  display: block;
++  width: 100%;
++  text-align: left;
++  border: none;
++  background: transparent;
++  padding: 0.65rem 0.85rem;
++  border-radius: 8px;
++  font-size: 0.88rem;
++  font-weight: 600;
++  color: #1e293b;
++  cursor: pointer;
++  font-family: inherit;
++}
++.atlas-cp-item:hover,
++.atlas-cp-item.active {
++  background: rgba(38, 58, 154, 0.08);
++  color: #263a9a;
++}
++.atlas-cp-empty {
++  padding: 1rem;
++  color: #64748b;
++  font-size: 0.82rem;
++  text-align: center;
++}
++.atlas-cp-hint {
++  padding: 0.55rem 1rem;
++  font-size: 0.68rem;
++  color: #94a3b8;
++  border-top: 1px solid #f1f5f9;
++}
++.atlas-cp-hint kbd {
++  background: #f1f5f9;
++  border: 1px solid #e2e8f0;
++  border-radius: 4px;
++  padding: 0 0.3rem;
++  font-size: 0.65rem;
++}
++
++/* Copilot FAB + slide-over panel */
++.atlas-copilot-fab {
++  position: fixed;
++  bottom: 1.25rem;
++  left: 1.25rem;
++  z-index: 10070;
++  width: 52px;
++  height: 52px;
++  border-radius: 50%;
++  border: none;
++  background: linear-gradient(135deg, #263a9a, #1b1c5c);
++  color: #fff;
++  box-shadow: 0 8px 24px rgba(38, 58, 154, 0.35);
++  cursor: pointer;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  transition: transform 0.15s ease, box-shadow 0.15s ease;
++}
++.atlas-copilot-fab:hover {
++  transform: scale(1.05);
++  box-shadow: 0 12px 32px rgba(38, 58, 154, 0.4);
++}
++body.logged-out-blur .atlas-copilot-fab,
++body.logged-out-blur .atlas-copilot-panel {
++  display: none !important;
++}
++
++.atlas-copilot-panel {
++  position: fixed;
++  top: 0;
++  right: 0;
++  width: min(400px, 100vw);
++  height: 100dvh;
++  z-index: 10075;
++  background: #fff;
++  border-left: 1px solid #e2e8f0;
++  box-shadow: -12px 0 40px rgba(15, 23, 42, 0.12);
++  display: flex;
++  flex-direction: column;
++  transform: translateX(100%);
++  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
++}
++.atlas-copilot-panel.open {
++  transform: translateX(0);
++}
++.atlas-copilot-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: flex-start;
++  padding: 1rem 1.1rem;
++  border-bottom: 1px solid #e2e8f0;
++  background: linear-gradient(180deg, #f8fafc, #fff);
++}
++.atlas-copilot-eyebrow {
++  font-size: 0.62rem;
++  font-weight: 800;
++  text-transform: uppercase;
++  letter-spacing: 0.1em;
++  color: #64748b;
++}
++.atlas-copilot-title {
++  margin: 0.15rem 0 0;
++  font-size: 1.05rem;
++  font-weight: 800;
++  color: #1b1c5c;
++}
++.atlas-copilot-close {
++  background: #f1f5f9;
++  border: none;
++  width: 32px;
++  height: 32px;
++  border-radius: 8px;
++  font-size: 1.2rem;
++  cursor: pointer;
++  color: #64748b;
++}
++.atlas-copilot-quick {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.4rem;
++  padding: 0.65rem 1rem;
++  border-bottom: 1px solid #f1f5f9;
++}
++.atlas-copilot-quick button {
++  font-size: 0.68rem;
++  font-weight: 700;
++  padding: 0.35rem 0.55rem;
++  border-radius: 999px;
++  border: 1px solid #e2e8f0;
++  background: #f8fafc;
++  color: #334155;
++  cursor: pointer;
++  font-family: inherit;
++}
++.atlas-copilot-quick button:hover {
++  border-color: #263a9a;
++  color: #263a9a;
++}
++.atlas-copilot-log {
++  flex: 1;
++  overflow-y: auto;
++  padding: 1rem;
++  display: flex;
++  flex-direction: column;
++  gap: 0.65rem;
++  background: #fafbfc;
++}
++.atlas-copilot-msg {
++  max-width: 92%;
++  padding: 0.65rem 0.85rem;
++  border-radius: 12px;
++  font-size: 0.82rem;
++  line-height: 1.5;
++  white-space: pre-wrap;
++}
++.atlas-copilot-msg-user {
++  align-self: flex-end;
++  background: #263a9a;
++  color: #fff;
++  border-bottom-right-radius: 4px;
++}
++.atlas-copilot-msg-assistant {
++  align-self: flex-start;
++  background: #fff;
++  color: #1e293b;
++  border: 1px solid #e2e8f0;
++  border-bottom-left-radius: 4px;
++}
++.atlas-copilot-include {
++  display: flex;
++  align-items: center;
++  gap: 0.45rem;
++  padding: 0.5rem 1rem;
++  font-size: 0.72rem;
++  color: #64748b;
++  border-top: 1px solid #f1f5f9;
++}
++.atlas-copilot-compose {
++  display: flex;
++  gap: 0.5rem;
++  padding: 0.75rem 1rem 1rem;
++  border-top: 1px solid #e2e8f0;
++  background: #fff;
++}
++.atlas-copilot-compose textarea {
++  flex: 1;
++  resize: none;
++  border: 1px solid #e2e8f0;
++  border-radius: 10px;
++  padding: 0.55rem 0.75rem;
++  font-size: 0.82rem;
++  font-family: inherit;
++  outline: none;
++}
++.atlas-copilot-compose textarea:focus {
++  border-color: #263a9a;
++  box-shadow: 0 0 0 3px rgba(38, 58, 154, 0.12);
++}
++.atlas-copilot-compose .btn-primary {
++  align-self: flex-end;
++  padding: 0.55rem 1rem !important;
++  font-size: 0.78rem !important;
++}
++
++@media (max-width: 640px) {
++  .atlas-copilot-fab {
++    bottom: 5rem;
++    left: 1rem;
++  }
++}
+diff --git a/index.html b/index.html
+index bd8f128..611410a 100644
+--- a/index.html
++++ b/index.html
+@@ -11,7 +11,7 @@
+   <link
+     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+     rel="stylesheet">
+-  <link rel="stylesheet" href="index.css?v=128.06">
++  <link rel="stylesheet" href="index.css?v=128.08">
+   <!-- Firebase Compat SDK -->
+   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+@@ -816,6 +816,30 @@
+         </div><!-- /enquiry-db-primary -->
+ 
+         <aside class="enquiry-db-inspector" aria-label="Reports and archival tools">
++        <!-- Enquiry row inspector (read-only PiP panel) -->
++        <div id="enquiry-row-inspector" class="glass-card enquiry-row-inspector-card" aria-live="polite">
++          <div class="eri-header">
++            <span class="eri-eyebrow">Quick Inspector</span>
++            <h4 class="eri-title">Enquiry Details</h4>
++          </div>
++          <div class="eri-empty">Select a row in the enquiry table to inspect details here.</div>
++          <div class="eri-content" style="display: none;">
++            <div class="eri-grid">
++              <div class="eri-field"><span class="eri-label">Ref ID</span><span class="eri-value" id="eri-ref">—</span></div>
++              <div class="eri-field"><span class="eri-label">Date</span><span class="eri-value" id="eri-date">—</span></div>
++              <div class="eri-field"><span class="eri-label">Mode</span><span class="eri-value" id="eri-mode">—</span></div>
++              <div class="eri-field"><span class="eri-label">Status</span><span class="eri-value" id="eri-status">—</span></div>
++              <div class="eri-field eri-field-wide"><span class="eri-label">Customer / Agent</span><span class="eri-value" id="eri-customer">—</span></div>
++              <div class="eri-field"><span class="eri-label">Priced By</span><span class="eri-value" id="eri-desk">—</span></div>
++              <div class="eri-field"><span class="eri-label">Carrier</span><span class="eri-value" id="eri-carrier">—</span></div>
++              <div class="eri-field eri-field-wide"><span class="eri-label">Route</span><span class="eri-value" id="eri-route">—</span></div>
++              <div class="eri-field"><span class="eri-label">Tonnage</span><span class="eri-value" id="eri-tonnage">—</span></div>
++              <div class="eri-field"><span class="eri-label">Sell Rate</span><span class="eri-value" id="eri-sell">—</span></div>
++              <div class="eri-field"><span class="eri-label">GP %</span><span class="eri-value" id="eri-gp">—</span></div>
++            </div>
++            <p class="eri-hint">Use row action buttons to view, amend, or convert quotes.</p>
++          </div>
++        </div>
+         <!-- Financial Reports & Archive Query Panel -->
+         <div class="glass-card enquiry-db-inspector-card">
+           <div style="border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+@@ -1487,9 +1511,9 @@
+           </div>
+         </div>
+ 
+-        <div class="workspace">
++        <div class="workspace desk-calculator-layout">
+           <!-- Inputs section -->
+-          <div class="glass-card">
++          <div class="glass-card desk-form-card">
+             <div class="section-title"
+               style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
+               <div style="display: flex; align-items: center; gap: 0.5rem;">
+@@ -1514,8 +1538,7 @@
+               <div class="toggle-option" id="air-tab-import">Air Import</div>
+             </div>
+ 
+-            <div
+-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
++            <div class="desk-entry-grid">
+               <div class="form-group autocomplete-container" style="margin-bottom: 0;">
+                 <label for="air-cust-name" id="air-cust-label">Agent Name</label>
+                 <input type="text" id="air-cust-name" placeholder="e.g. Zenith Electronics Ltd" autocomplete="off">
+@@ -1943,9 +1966,9 @@
+             <button type="button" class="btn-primary dhb-btn-save" onclick="saveCurrentQuote()">Save Quote</button>
+           </div>
+         </div>
+-        <div class="workspace">
++        <div class="workspace desk-calculator-layout">
+           <!-- Inputs Column -->
+-          <div class="glass-card">
++          <div class="glass-card desk-form-card">
+             <div class="section-title"
+               style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
+               <div style="display: flex; align-items: center; gap: 0.5rem;">
+@@ -1971,8 +1994,7 @@
+               <div class="toggle-option" id="sea-tab-import">Sea Import</div>
+             </div>
+ 
+-            <div
+-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
++            <div class="desk-entry-grid">
+               <div class="form-group autocomplete-container" style="margin-bottom: 0;">
+                 <label for="sea-cust-name" id="sea-cust-label">Agent Name</label>
+                 <input type="text" id="sea-cust-name" placeholder="e.g. Adani Enterprises" autocomplete="off">
+@@ -4235,8 +4257,49 @@
+   <datalist id="sea-origin-charges-list"></datalist>
+   <datalist id="sea-dest-charges-list"></datalist>
+ 
++  <!-- Atlas Command Palette (Ctrl/⌘ + K) -->
++  <div id="atlas-command-palette" class="atlas-command-palette" aria-hidden="true" role="dialog" aria-label="Command palette">
++    <div class="atlas-cp-dialog">
++      <input type="text" id="atlas-cp-input" class="atlas-cp-input" placeholder="Jump to a module… (try air, directory, copilot)" autocomplete="off" />
++      <div id="atlas-cp-list" class="atlas-cp-list"></div>
++      <div class="atlas-cp-hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere · <kbd>Esc</kbd> to close</div>
++    </div>
++  </div>
++
++  <!-- Atlas Copilot — AI assistant (assistive only; never calculates rates) -->
++  <button type="button" id="atlas-copilot-fab" class="atlas-copilot-fab" title="Atlas Copilot (AI)" aria-label="Open Atlas Copilot">
++    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l1 3 1-3 3-1-3-1-1-3-1 3-3 1 3 1z"/><path d="M19 13l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5L17 15l1.5-.5.5-1.5z"/></svg>
++  </button>
++  <aside id="atlas-copilot-panel" class="atlas-copilot-panel" aria-hidden="true" aria-label="Atlas Copilot">
++    <div class="atlas-copilot-header">
++      <div>
++        <span class="atlas-copilot-eyebrow">AI Assistant</span>
++        <h3 class="atlas-copilot-title">Atlas Copilot</h3>
++      </div>
++      <button type="button" id="atlas-copilot-close" class="atlas-copilot-close" aria-label="Close">×</button>
++    </div>
++    <div class="atlas-copilot-quick">
++      <button type="button" data-copilot-prompt="How do I save an air freight quote?">How to save a quote</button>
++      <button type="button" data-copilot-prompt="Explain the difference between Air Nomination and Free Hand pricing desks.">Desk roles</button>
++      <button type="button" data-copilot-prompt="Draft a short professional follow-up email for a quoted shipment.">Draft email</button>
++    </div>
++    <div id="atlas-copilot-log" class="atlas-copilot-log">
++      <div class="atlas-copilot-msg atlas-copilot-msg-assistant">Hi — I can help with navigation, workflows, and summarising enquiries. I never calculate rates; use the desks for pricing.</div>
++    </div>
++    <label class="atlas-copilot-include">
++      <input type="checkbox" id="atlas-copilot-include-quote" />
++      Include selected enquiry (read-only)
++    </label>
++    <div class="atlas-copilot-compose">
++      <textarea id="atlas-copilot-input" rows="2" placeholder="Ask Atlas Copilot…" aria-label="Message to Atlas Copilot"></textarea>
++      <button type="button" id="atlas-copilot-send" class="btn-primary">Send</button>
++    </div>
++  </aside>
++
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+-  <script src="app-v4.js?v=128.06"></script>
++  <script src="app-v4.js?v=128.08"></script>
++  <script src="ui-shell.js?v=128.08"></script>
++  <script src="ai-assistant.js?v=128.08"></script>
+ 
+   <script>
+     window.handleForgotPassword = async function(e) {
+diff --git a/ui-shell.js b/ui-shell.js
+new file mode 100644
+index 0000000..712bc94
+--- /dev/null
++++ b/ui-shell.js
+@@ -0,0 +1,223 @@
++/**
++ * Atlas UI Shell — navigation, command palette, enquiry inspector.
++ * Does NOT modify formulas, quote save/load, or calculation functions.
++ */
++(function () {
++  'use strict';
++
++  function ui() {
++    return window.__atlasUi || {};
++  }
++
++  function roleCategory(role) {
++    var r = (role || '').toLowerCase();
++    return (window.TEAM_ROLES && window.TEAM_ROLES[r] && window.TEAM_ROLES[r].category) || '';
++  }
++
++  function navigateRoleLanding(role) {
++    var r = (role || '').toLowerCase();
++    if (!r || r === 'ganny' || r === 'manager') return;
++    var cat = roleCategory(r);
++
++    if (r === 'shashank' || cat.indexOf('AIR - NOMINATION') !== -1 || cat.indexOf('AIR NOMINATION') !== -1) {
++      if (typeof window.openActiveCalculator === 'function') window.openActiveCalculator('air');
++      return;
++    }
++    if (r === 'shaheer' || cat.indexOf('SEA - NOMINATION') !== -1 || cat.indexOf('SEA NOMINATION') !== -1) {
++      if (typeof window.openActiveCalculator === 'function') window.openActiveCalculator('sea');
++      return;
++    }
++    if (r === 'cathrina' || cat.indexOf('NRS') !== -1) {
++      var nrsPanel = document.getElementById('nrs-notifications-panel');
++      if (nrsPanel) {
++        window.setTimeout(function () {
++          nrsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
++        }, 120);
++      }
++    }
++  }
++
++  if (typeof window.switchRole === 'function') {
++    var _origSwitchRole = window.switchRole;
++    window.switchRole = function (role) {
++      _origSwitchRole(role);
++      if (!window._suppressRoleLanding) navigateRoleLanding(role);
++    };
++  }
++
++  /* ── Command palette (⌘K / Ctrl+K) ── */
++  var COMMANDS = [
++    { label: 'Home Dashboard', keywords: 'home dashboard', run: function () { if (window.goHome) window.goHome(); } },
++    { label: 'Air Freight Desk', keywords: 'air freight quote', run: function () { if (window.openActiveCalculator) window.openActiveCalculator('air'); } },
++    { label: 'Sea Freight Desk', keywords: 'sea ocean freight quote', run: function () { if (window.openActiveCalculator) window.openActiveCalculator('sea'); } },
++    { label: 'Transportation Desk', keywords: 'transport trucking', run: function () { if (window.openActiveCalculator) window.openActiveCalculator('transport'); } },
++    { label: 'Warehousing Desk', keywords: 'warehouse storage', run: function () { if (window.openActiveCalculator) window.openActiveCalculator('warehouse'); } },
++    { label: 'Agent Directory', keywords: 'directory agents contacts', run: function () { if (window.openActiveCalculator) window.openActiveCalculator('directory'); } },
++    { label: 'Circulars Library', keywords: 'circulars documents tariffs', run: function () { if (window.openActiveCalculator) window.openActiveCalculator('circulars'); } },
++    { label: 'Sales Module', keywords: 'sales', run: function () { if (window.openActiveCalculator) window.openActiveCalculator('sales'); } },
++    { label: 'Atlas Copilot (AI)', keywords: 'ai assistant help copilot', run: function () { if (window.toggleAtlasCopilot) window.toggleAtlasCopilot(true); } }
++  ];
++
++  function openCommandPalette() {
++    var overlay = document.getElementById('atlas-command-palette');
++    var input = document.getElementById('atlas-cp-input');
++    if (!overlay) return;
++    overlay.classList.add('open');
++    overlay.setAttribute('aria-hidden', 'false');
++    renderCommands('');
++    if (input) {
++      input.value = '';
++      window.setTimeout(function () { input.focus(); }, 50);
++    }
++  }
++
++  function closeCommandPalette() {
++    var overlay = document.getElementById('atlas-command-palette');
++    if (!overlay) return;
++    overlay.classList.remove('open');
++    overlay.setAttribute('aria-hidden', 'true');
++  }
++
++  function renderCommands(query) {
++    var list = document.getElementById('atlas-cp-list');
++    if (!list) return;
++    var q = (query || '').toLowerCase().trim();
++    var matches = COMMANDS.filter(function (cmd) {
++      if (!q) return true;
++      return (cmd.label + ' ' + cmd.keywords).toLowerCase().indexOf(q) !== -1;
++    });
++    list.innerHTML = '';
++    matches.forEach(function (cmd, idx) {
++      var btn = document.createElement('button');
++      btn.type = 'button';
++      btn.className = 'atlas-cp-item' + (idx === 0 ? ' active' : '');
++      btn.textContent = cmd.label;
++      btn.addEventListener('click', function () {
++        closeCommandPalette();
++        cmd.run();
++      });
++      list.appendChild(btn);
++    });
++    if (!matches.length) {
++      list.innerHTML = '<div class="atlas-cp-empty">No matching commands</div>';
++    }
++  }
++
++  function initCommandPalette() {
++    var overlay = document.getElementById('atlas-command-palette');
++    var input = document.getElementById('atlas-cp-input');
++    if (!overlay) return;
++
++    document.addEventListener('keydown', function (e) {
++      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
++        e.preventDefault();
++        if (overlay.classList.contains('open')) closeCommandPalette();
++        else openCommandPalette();
++      }
++      if (e.key === 'Escape' && overlay.classList.contains('open')) {
++        closeCommandPalette();
++      }
++    });
++
++    overlay.addEventListener('click', function (e) {
++      if (e.target === overlay) closeCommandPalette();
++    });
++
++    if (input) {
++      input.addEventListener('input', function () { renderCommands(input.value); });
++      input.addEventListener('keydown', function (e) {
++        if (e.key === 'Enter') {
++          var first = overlay.querySelector('.atlas-cp-item');
++          if (first) { closeCommandPalette(); first.click(); }
++        }
++      });
++    }
++  }
++
++  /* ── Enquiry row inspector (read-only) ── */
++  function formatMoney(quote) {
++    if (!quote || quote.amount == null) return '—';
++    var sym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
++    return sym + Number(quote.amount).toLocaleString(undefined, { minimumFractionDigits: 2 });
++  }
++
++  function populateEnquiryInspector(quote) {
++    var panel = document.getElementById('enquiry-row-inspector');
++    if (!panel || !quote) return;
++    var empty = panel.querySelector('.eri-empty');
++    var content = panel.querySelector('.eri-content');
++    if (empty) empty.style.display = 'none';
++    if (content) content.style.display = 'block';
++
++    var refFn = typeof window.getQuoteRefId === 'function' ? window.getQuoteRefId : function (q) { return q.id; };
++    var set = function (id, val) {
++      var el = document.getElementById(id);
++      if (el) el.textContent = val != null && val !== '' ? val : '—';
++    };
++
++    set('eri-ref', '#' + refFn(quote));
++    set('eri-date', quote.date || '—');
++    set('eri-mode', (quote.type || '—').toUpperCase());
++    set('eri-customer', quote.customer || '—');
++    set('eri-desk', (window.TEAM_ROLES && window.TEAM_ROLES[quote.creator] && window.TEAM_ROLES[quote.creator].name) || quote.creator || '—');
++    set('eri-carrier', (quote.details && (quote.details.airline || quote.details.shippingLine || quote.details.carrier)) || '—');
++    set('eri-route', quote.route || ((quote.details && quote.details.origin) ? quote.details.origin + ' → ' + (quote.details.destination || '') : '—'));
++    set('eri-tonnage', (quote.details && (quote.details.chargeableWeight || quote.details.grossWeight))
++      ? Number(quote.details.chargeableWeight || quote.details.grossWeight).toLocaleString() + ' kg' : '—');
++    set('eri-sell', formatMoney(quote));
++    set('eri-status', quote.status ? quote.status.charAt(0).toUpperCase() + quote.status.slice(1) : '—');
++
++    var gpEl = document.getElementById('eri-gp');
++    if (gpEl) {
++      gpEl.textContent = (quote.grossProfit != null && quote.amount)
++        ? ((quote.grossProfit / quote.amount) * 100).toFixed(2) + '%' : '—';
++    }
++    panel.classList.add('eri-has-selection');
++  }
++
++  function initEnquiryRowInspector() {
++    var tbody = document.getElementById('admin-quotes-body');
++    if (!tbody || tbody._eriBound) return;
++    tbody._eriBound = true;
++
++    tbody.addEventListener('click', function (e) {
++      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
++      var row = e.target.closest('tr[data-quote-id]');
++      if (!row) return;
++      tbody.querySelectorAll('tr.eri-selected').forEach(function (r) { r.classList.remove('eri-selected'); });
++      row.classList.add('eri-selected');
++      var quoteId = row.getAttribute('data-quote-id');
++      var quotes = typeof ui().getQuotes === 'function' ? ui().getQuotes() : [];
++      var quote = quotes.find(function (q) { return q.id === quoteId; });
++      if (quote) populateEnquiryInspector(quote);
++    });
++  }
++
++  var _origApplyDb = window.applyDbFiltersAndSort;
++  if (typeof _origApplyDb === 'function') {
++    window.applyDbFiltersAndSort = function () {
++      _origApplyDb.apply(this, arguments);
++      var selected = document.querySelector('#admin-quotes-body tr.eri-selected');
++      if (selected) {
++        var quoteId = selected.getAttribute('data-quote-id');
++        var quotes = typeof ui().getQuotes === 'function' ? ui().getQuotes() : [];
++        var quote = quotes.find(function (q) { return q.id === quoteId; });
++        if (quote) populateEnquiryInspector(quote);
++      }
++    };
++  }
++
++  function boot() {
++    initEnquiryRowInspector();
++    initCommandPalette();
++  }
++
++  if (document.readyState === 'loading') {
++    document.addEventListener('DOMContentLoaded', boot);
++  } else {
++    boot();
++  }
++
++  window.navigateRoleLanding = navigateRoleLanding;
++  window.openAtlasCommandPalette = openCommandPalette;
++})();
+diff --git a/version.txt b/version.txt
+index 922953f..02a850b 100644
+--- a/version.txt
++++ b/version.txt
+@@ -1 +1 @@
+-128.06
++128.08
+-- 
+2.43.0
+

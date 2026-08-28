@@ -1,0 +1,150 @@
+From 43d2dd043e3e8a77a6ec6bb0bf3057c0b647c5f3 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Fri, 28 Aug 2026 16:38:06 +0000
+Subject: [PATCH 1/3] Priority UX fixes: preserve desk drafts, restore nav
+ tabs, sticky totals
+
+- Stop wiping Air/Sea forms when switching modules (reset only on Save or Reset)
+- Fix returnToWorkspace to deactivate all view panels including Directory/Sales
+- Re-show top module tabs after role switch (sidebar + tabs both work)
+- Add Circulars to top module navigation bar
+- Sticky desk highlights bar on Air/Sea/Transport/Warehouse scroll
+- Firebase hosting SPA rewrite so direct URLs load the app
+- Bump cache version to 128.05
+---
+ app-v4.js     | 18 ++++++++++--------
+ firebase.json |  6 ++++++
+ index.css     |  3 +++
+ index.html    |  7 ++++---
+ version.txt   |  2 +-
+ 5 files changed, 24 insertions(+), 12 deletions(-)
+
+diff --git a/app-v4.js b/app-v4.js
+index 43e3148..28ca078 100644
+--- a/app-v4.js
++++ b/app-v4.js
+@@ -1066,10 +1066,10 @@ function switchRole(role) {
+   // Currency Indicator rules based on Role
+   updateCurrencyRules(roleLower);
+ 
+-  // Show/Hide Global Module Navigation Tabs based on role (hide for all to avoid duplicate row)
++  // Keep top module tabs visible — sidebar is primary, tabs are quick secondary nav.
+   const globalModuleTabs = document.getElementById("global-module-tabs");
+   if (globalModuleTabs) {
+-    globalModuleTabs.style.display = "none";
++    globalModuleTabs.style.removeProperty("display");
+   }
+ 
+   // Show Selected view
+@@ -1481,12 +1481,12 @@ function openActiveCalculator(type) {
+       if (airPanel) airPanel.classList.add("active");
+       root.style.setProperty('--accent-current', 'var(--accent-air)');
+       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
+-      try { resetAirFreightDeskForm(); } catch (e) { console.error("resetAirFreightDeskForm error:", e); }
++      // Preserve in-progress quotes when switching modules; reset only via Reset or after Save.
+     } else if (type === 'sea') {
+       if (seaPanel) seaPanel.classList.add("active");
+       root.style.setProperty('--accent-current', 'var(--accent-sea)');
+       root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
+-      try { resetSeaFreightDeskForm(); } catch (e) { console.error("resetSeaFreightDeskForm error:", e); }
++      // Preserve in-progress quotes when switching modules; reset only via Reset or after Save.
+     } else if (type === 'transport') {
+       if (transportPanel) transportPanel.classList.add("active");
+       root.style.setProperty('--accent-current', 'var(--violet)');
+@@ -1538,10 +1538,12 @@ window.resetFreightForm = function (type) {
+ };
+ 
+ function returnToWorkspace() {
+-  document.getElementById("air-freight-panel").classList.remove("active");
+-  document.getElementById("sea-freight-panel").classList.remove("active");
+-  document.getElementById("transportation-panel").classList.remove("active");
+-  document.getElementById("warehousing-panel").classList.remove("active");
++  const workspaceNameEl = document.getElementById("header-workspace-name");
++  if (workspaceNameEl) workspaceNameEl.textContent = "Dashboard";
++
++  document.querySelectorAll(".view-panel").forEach(panel => {
++    panel.classList.remove("active");
++  });
+ 
+   if (isAdminUser(appState.currentUser)) {
+     const managerPanel = document.getElementById("manager-panel");
+diff --git a/firebase.json b/firebase.json
+index 2dc1475..3a46a8a 100644
+--- a/firebase.json
++++ b/firebase.json
+@@ -41,6 +41,12 @@
+         "source": "/sw.js",
+         "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+       }
++    ],
++    "rewrites": [
++      {
++        "source": "**",
++        "destination": "/index.html"
++      }
+     ]
+   },
+   "functions": {
+diff --git a/index.css b/index.css
+index e3d8bee..ab7b968 100644
+--- a/index.css
++++ b/index.css
+@@ -5599,6 +5599,9 @@ textarea:focus {
+   padding: 0.7rem 1.1rem;
+   margin-bottom: 1.25rem;
+   box-shadow: var(--shadow-sm);
++  position: sticky;
++  top: 0.5rem;
++  z-index: 20;
+ }
+ .dhb-stats {
+   display: flex;
+diff --git a/index.html b/index.html
+index 46c73bb..46eb57d 100644
+--- a/index.html
++++ b/index.html
+@@ -11,7 +11,7 @@
+   <link
+     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+     rel="stylesheet">
+-  <link rel="stylesheet" href="index.css?v=128.04">
++  <link rel="stylesheet" href="index.css?v=128.05">
+   <!-- Firebase Compat SDK -->
+   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+@@ -237,6 +237,7 @@
+           <button class="module-tab" data-module="transport" onclick="openActiveCalculator('transport')">Transportation</button>
+           <button class="module-tab" data-module="warehouse" onclick="openActiveCalculator('warehouse')">Warehousing</button>
+           <button class="module-tab" data-module="directory" onclick="openActiveCalculator('directory')">Directory</button>
++          <button class="module-tab" data-module="circulars" onclick="openActiveCalculator('circulars')">Circulars</button>
+           <button class="module-tab" data-module="sales" onclick="openActiveCalculator('sales')">Sales</button>
+         </div>
+ 
+@@ -4223,7 +4224,7 @@
+   <datalist id="sea-dest-charges-list"></datalist>
+ 
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+-  <script src="app-v4.js?v=128.04"></script>
++  <script src="app-v4.js?v=128.05"></script>
+ 
+   <script>
+     window.handleForgotPassword = async function(e) {
+@@ -4551,7 +4552,7 @@
+           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
+-          '<link rel="stylesheet" href="index.css?v=128.04">' +
++          '<link rel="stylesheet" href="index.css?v=128.05">' +
+           '<style>' +
+             '@page {' +
+               'size: A4;' +
+diff --git a/version.txt b/version.txt
+index 42d2c23..cb16430 100644
+--- a/version.txt
++++ b/version.txt
+@@ -1 +1 @@
+-128.04
++128.05
+-- 
+2.43.0
+
