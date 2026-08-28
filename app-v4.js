@@ -1066,10 +1066,10 @@ function switchRole(role) {
   // Currency Indicator rules based on Role
   updateCurrencyRules(roleLower);
 
-  // Show/Hide Global Module Navigation Tabs based on role (hide for all to avoid duplicate row)
+  // Keep top module tabs visible — sidebar is primary, tabs are quick secondary nav.
   const globalModuleTabs = document.getElementById("global-module-tabs");
   if (globalModuleTabs) {
-    globalModuleTabs.style.display = "none";
+    globalModuleTabs.style.removeProperty("display");
   }
 
   // Show Selected view
@@ -1481,12 +1481,12 @@ function openActiveCalculator(type) {
       if (airPanel) airPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--accent-air)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
-      try { resetAirFreightDeskForm(); } catch (e) { console.error("resetAirFreightDeskForm error:", e); }
+      // Preserve in-progress quotes when switching modules; reset only via Reset or after Save.
     } else if (type === 'sea') {
       if (seaPanel) seaPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--accent-sea)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
-      try { resetSeaFreightDeskForm(); } catch (e) { console.error("resetSeaFreightDeskForm error:", e); }
+      // Preserve in-progress quotes when switching modules; reset only via Reset or after Save.
     } else if (type === 'transport') {
       if (transportPanel) transportPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--violet)');
@@ -1538,10 +1538,12 @@ window.resetFreightForm = function (type) {
 };
 
 function returnToWorkspace() {
-  document.getElementById("air-freight-panel").classList.remove("active");
-  document.getElementById("sea-freight-panel").classList.remove("active");
-  document.getElementById("transportation-panel").classList.remove("active");
-  document.getElementById("warehousing-panel").classList.remove("active");
+  const workspaceNameEl = document.getElementById("header-workspace-name");
+  if (workspaceNameEl) workspaceNameEl.textContent = "Dashboard";
+
+  document.querySelectorAll(".view-panel").forEach(panel => {
+    panel.classList.remove("active");
+  });
 
   if (isAdminUser(appState.currentUser)) {
     const managerPanel = document.getElementById("manager-panel");

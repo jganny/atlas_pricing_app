@@ -5599,6 +5599,9 @@ textarea:focus {
   padding: 0.7rem 1.1rem;
   margin-bottom: 1.25rem;
   box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
 }
 .dhb-stats {
   display: flex;
