@@ -19934,3 +19934,19 @@ window.updateLinerRateSummary = updateLinerRateSummary;
     closeRouteVendorPopup();
   });
 })();
+
+/* ── Read-only UI shell accessors (no calculation or persistence logic) ── */
+if (typeof window !== "undefined") {
+  window.__atlasUi = {
+    getQuotes: function () { return (appState.quotes || []).slice(); },
+    getCurrentUser: function () { return appState.currentUser; },
+    getActivePanel: function () {
+      var p = document.querySelector(".view-panel.active");
+      return p ? p.id : null;
+    },
+    getWorkspaceName: function () {
+      var el = document.getElementById("header-workspace-name");
+      return el ? el.textContent : "Dashboard";
+    }
+  };
+}

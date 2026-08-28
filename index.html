@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=128.06">
+  <link rel="stylesheet" href="index.css?v=128.08">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -816,6 +816,30 @@
         </div><!-- /enquiry-db-primary -->
 
         <aside class="enquiry-db-inspector" aria-label="Reports and archival tools">
+        <!-- Enquiry row inspector (read-only PiP panel) -->
+        <div id="enquiry-row-inspector" class="glass-card enquiry-row-inspector-card" aria-live="polite">
+          <div class="eri-header">
+            <span class="eri-eyebrow">Quick Inspector</span>
+            <h4 class="eri-title">Enquiry Details</h4>
+          </div>
+          <div class="eri-empty">Select a row in the enquiry table to inspect details here.</div>
+          <div class="eri-content" style="display: none;">
+            <div class="eri-grid">
+              <div class="eri-field"><span class="eri-label">Ref ID</span><span class="eri-value" id="eri-ref">—</span></div>
+              <div class="eri-field"><span class="eri-label">Date</span><span class="eri-value" id="eri-date">—</span></div>
+              <div class="eri-field"><span class="eri-label">Mode</span><span class="eri-value" id="eri-mode">—</span></div>
+              <div class="eri-field"><span class="eri-label">Status</span><span class="eri-value" id="eri-status">—</span></div>
+              <div class="eri-field eri-field-wide"><span class="eri-label">Customer / Agent</span><span class="eri-value" id="eri-customer">—</span></div>
+              <div class="eri-field"><span class="eri-label">Priced By</span><span class="eri-value" id="eri-desk">—</span></div>
+              <div class="eri-field"><span class="eri-label">Carrier</span><span class="eri-value" id="eri-carrier">—</span></div>
+              <div class="eri-field eri-field-wide"><span class="eri-label">Route</span><span class="eri-value" id="eri-route">—</span></div>
+              <div class="eri-field"><span class="eri-label">Tonnage</span><span class="eri-value" id="eri-tonnage">—</span></div>
+              <div class="eri-field"><span class="eri-label">Sell Rate</span><span class="eri-value" id="eri-sell">—</span></div>
+              <div class="eri-field"><span class="eri-label">GP %</span><span class="eri-value" id="eri-gp">—</span></div>
+            </div>
+            <p class="eri-hint">Use row action buttons to view, amend, or convert quotes.</p>
+          </div>
+        </div>
         <!-- Financial Reports & Archive Query Panel -->
         <div class="glass-card enquiry-db-inspector-card">
           <div style="border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -1487,9 +1511,9 @@
           </div>
         </div>
 
-        <div class="workspace">
+        <div class="workspace desk-calculator-layout">
           <!-- Inputs section -->
-          <div class="glass-card">
+          <div class="glass-card desk-form-card">
             <div class="section-title"
               style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1514,8 +1538,7 @@
               <div class="toggle-option" id="air-tab-import">Air Import</div>
             </div>
 
-            <div
-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
+            <div class="desk-entry-grid">
               <div class="form-group autocomplete-container" style="margin-bottom: 0;">
                 <label for="air-cust-name" id="air-cust-label">Agent Name</label>
                 <input type="text" id="air-cust-name" placeholder="e.g. Zenith Electronics Ltd" autocomplete="off">
@@ -1943,9 +1966,9 @@
             <button type="button" class="btn-primary dhb-btn-save" onclick="saveCurrentQuote()">Save Quote</button>
           </div>
         </div>
-        <div class="workspace">
+        <div class="workspace desk-calculator-layout">
           <!-- Inputs Column -->
-          <div class="glass-card">
+          <div class="glass-card desk-form-card">
             <div class="section-title"
               style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1971,8 +1994,7 @@
               <div class="toggle-option" id="sea-tab-import">Sea Import</div>
             </div>
 
-            <div
-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; align-items: end;">
+            <div class="desk-entry-grid">
               <div class="form-group autocomplete-container" style="margin-bottom: 0;">
                 <label for="sea-cust-name" id="sea-cust-label">Agent Name</label>
                 <input type="text" id="sea-cust-name" placeholder="e.g. Adani Enterprises" autocomplete="off">
@@ -4235,8 +4257,49 @@
   <datalist id="sea-origin-charges-list"></datalist>
   <datalist id="sea-dest-charges-list"></datalist>
 
+  <!-- Atlas Command Palette (Ctrl/⌘ + K) -->
+  <div id="atlas-command-palette" class="atlas-command-palette" aria-hidden="true" role="dialog" aria-label="Command palette">
+    <div class="atlas-cp-dialog">
+      <input type="text" id="atlas-cp-input" class="atlas-cp-input" placeholder="Jump to a module… (try air, directory, copilot)" autocomplete="off" />
+      <div id="atlas-cp-list" class="atlas-cp-list"></div>
+      <div class="atlas-cp-hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere · <kbd>Esc</kbd> to close</div>
+    </div>
+  </div>
+
+  <!-- Atlas Copilot — AI assistant (assistive only; never calculates rates) -->
+  <button type="button" id="atlas-copilot-fab" class="atlas-copilot-fab" title="Atlas Copilot (AI)" aria-label="Open Atlas Copilot">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l1 3 1-3 3-1-3-1-1-3-1 3-3 1 3 1z"/><path d="M19 13l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5L17 15l1.5-.5.5-1.5z"/></svg>
+  </button>
+  <aside id="atlas-copilot-panel" class="atlas-copilot-panel" aria-hidden="true" aria-label="Atlas Copilot">
+    <div class="atlas-copilot-header">
+      <div>
+        <span class="atlas-copilot-eyebrow">AI Assistant</span>
+        <h3 class="atlas-copilot-title">Atlas Copilot</h3>
+      </div>
+      <button type="button" id="atlas-copilot-close" class="atlas-copilot-close" aria-label="Close">×</button>
+    </div>
+    <div class="atlas-copilot-quick">
+      <button type="button" data-copilot-prompt="How do I save an air freight quote?">How to save a quote</button>
+      <button type="button" data-copilot-prompt="Explain the difference between Air Nomination and Free Hand pricing desks.">Desk roles</button>
+      <button type="button" data-copilot-prompt="Draft a short professional follow-up email for a quoted shipment.">Draft email</button>
+    </div>
+    <div id="atlas-copilot-log" class="atlas-copilot-log">
+      <div class="atlas-copilot-msg atlas-copilot-msg-assistant">Hi — I can help with navigation, workflows, and summarising enquiries. I never calculate rates; use the desks for pricing.</div>
+    </div>
+    <label class="atlas-copilot-include">
+      <input type="checkbox" id="atlas-copilot-include-quote" />
+      Include selected enquiry (read-only)
+    </label>
+    <div class="atlas-copilot-compose">
+      <textarea id="atlas-copilot-input" rows="2" placeholder="Ask Atlas Copilot…" aria-label="Message to Atlas Copilot"></textarea>
+      <button type="button" id="atlas-copilot-send" class="btn-primary">Send</button>
+    </div>
+  </aside>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=128.06"></script>
+  <script src="app-v4.js?v=128.08"></script>
+  <script src="ui-shell.js?v=128.08"></script>
+  <script src="ai-assistant.js?v=128.08"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {

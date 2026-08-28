@@ -658,3 +658,88 @@ exports.triggerAgencyListNow = functions
       stats: report.stats,
     };
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// atlasCopilot
+//
+// In-app AI assistant for navigation help, quote summaries, and email drafts.
+// NEVER calculates rates or writes quote data — assistive responses only.
+// Uses the same ANTHROPIC_API_KEY secret as the agency-list dedup pipeline.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.atlasCopilot = functions
+  .runWith({ secrets: [anthropicApiKey] })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+    }
+
+    const message = typeof data?.message === "string" ? data.message.trim() : "";
+    if (!message || message.length > 4000) {
+      throw new functions.https.HttpsError("invalid-argument", "Message must be 1–4000 characters.");
+    }
+
+    const apiKey = anthropicApiKey.value();
+    if (!apiKey) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Atlas Copilot is not configured yet. Ask your admin to set ANTHROPIC_API_KEY."
+      );
+    }
+
+    const workspace = typeof data?.workspace === "string" ? data.workspace.slice(0, 80) : "Dashboard";
+    const role = typeof data?.role === "string" ? data.role.slice(0, 40) : "user";
+    const quoteContext = data?.quoteContext && typeof data.quoteContext === "object"
+      ? JSON.stringify(data.quoteContext).slice(0, 6000)
+      : null;
+
+    const systemPrompt =
+      "You are Atlas Copilot inside Atlas Pricing — a freight-forwarding operational pricing workspace " +
+      "(Air, Sea, Transportation, Warehousing desks; enquiry database; agent directory; circulars).\n\n" +
+      "STRICT RULES — never break these:\n" +
+      "1. NEVER calculate, estimate, or invent freight rates, chargeable weights, GP, surcharges, or currency amounts.\n" +
+      "2. NEVER output data that should be saved as a quote. You assist; the desk calculators compute.\n" +
+      "3. If asked for pricing, direct the user to the correct desk and explain which fields to complete.\n" +
+      "4. You may: explain workflows, summarize read-only quote metadata supplied by the client, " +
+      "draft follow-up emails, suggest navigation, and clarify freight terminology.\n" +
+      "5. Be concise, professional, and operational — this is a live business tool.\n\n" +
+      `Current user role: ${role}. Active workspace: ${workspace}.`;
+
+    let userContent = message;
+    if (quoteContext) {
+      userContent += "\n\n--- READ-ONLY QUOTE CONTEXT (do not modify; summarize or explain only) ---\n" + quoteContext;
+    }
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1200,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userContent }],
+        }),
+      });
+
+      if (!response.ok) {
+        functions.logger.warn("atlasCopilot: API request failed", { status: response.status });
+        throw new functions.https.HttpsError("unavailable", "Atlas Copilot is temporarily unavailable.");
+      }
+
+      const payload = await response.json();
+      const reply = (payload?.content?.[0]?.text || "").trim();
+      if (!reply) {
+        throw new functions.https.HttpsError("internal", "Empty response from AI.");
+      }
+
+      return { reply };
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      functions.logger.warn("atlasCopilot error", { message: err.message });
+      throw new functions.https.HttpsError("unavailable", "Atlas Copilot is temporarily unavailable.");
+    }
+  });
