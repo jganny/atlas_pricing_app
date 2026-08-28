@@ -70,20 +70,25 @@
   --text-main:     var(--t1);
   --transition-fast:   0.17s cubic-bezier(.4,0,.2,1);
   --transition-normal: 0.27s cubic-bezier(.4,0,.2,1);
-  --border-radius: 16px;
+  --border-radius: 8px;
 
-  /* Geometry */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 16px;
-  --r-xl: 22px;
+  /* Geometry — modest, consistent rounding (SLDS/Fiori/CargoWise-style
+     enterprise tools stay closer to 4-8px than to consumer-app 16-22px) */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-xl: 12px;
   --r-pill: 999px;
 
-  /* Shadows - Clean slate shadow-casting */
-  --shadow-sm:  0 1px 3px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  --shadow-md:  0 4px 18px 0 rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  --shadow-lg:  0 10px 30px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --shadow-xl:  0 20px 40px 0 rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  /* Shadows — enterprise tools (SLDS/Fiori/CargoWise) lean on a crisp 1px
+     border for definition and keep elevation minimal, reserving anything
+     stronger for true overlays (modals/dropdowns). The old values leaned on
+     a soft diffuse glow plus a glossy inset highlight — a "floating card"
+     consumer-app cue — dropped here in favor of tighter, flatter shadows. */
+  --shadow-sm:  0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md:  0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-lg:  0 4px 12px rgba(15, 23, 42, 0.10);
+  --shadow-xl:  0 8px 20px rgba(15, 23, 42, 0.14);
 
   /* Custom Brand Accent */
   --text-brand: var(--t1);
@@ -133,7 +138,7 @@
 
   /* Bento Grid Layout Tokens */
   --bento-gap:    1.5rem;  /* 24px gap for clean separation */
-  --bento-radius: 12px;    /* Clean enterprise roundness */
+  --bento-radius: 8px;     /* Clean enterprise roundness */
   --bento-pad:    1.75rem;  /* 28px cell padding for readability */
 }
 
@@ -234,6 +239,50 @@ body {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  transition: grid-template-columns 0.2s ease;
+}
+
+/* Collapsed desktop sidebar — narrow rail that keeps a short label under each icon
+   (CargoWise-style module tree) instead of hiding text entirely, so the rail stays
+   legible at rest rather than requiring a hover/tooltip to identify each icon.
+   Scoped to >=768px so it never fights the mobile off-canvas drawer rules below. */
+@media (min-width: 768px) {
+  body.sidebar-collapsed .app-container,
+  body.sidebar-collapsed #app-workspace {
+    grid-template-columns: 86px 1fr !important;
+  }
+  body.sidebar-collapsed .sidebar-group-title,
+  body.sidebar-collapsed .sidebar-collapse-toggle span {
+    display: none;
+  }
+  body.sidebar-collapsed .sidebar-item {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.55rem 0.3rem !important;
+    text-align: center;
+  }
+  body.sidebar-collapsed .sidebar-item span {
+    display: block;
+    font-size: 0.62rem;
+    line-height: 1.15;
+    white-space: normal;
+  }
+  body.sidebar-collapsed .sidebar-brand {
+    justify-content: center;
+    padding: 0 0.5rem var(--space-md);
+  }
+  body.sidebar-collapsed .sidebar-brand img {
+    height: 32px;
+  }
+  body.sidebar-collapsed .sidebar-collapse-toggle {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  body.sidebar-collapsed .sidebar-collapse-toggle svg {
+    transform: rotate(180deg);
+  }
 }
 
 .app-container[style*="display: none"],
@@ -244,6 +293,11 @@ body {
 .app-sidebar {
   grid-column: 1;
   grid-row: 3;
+  /* Without this, a grid item stretches to match the tallest item in its row —
+     which on content-heavy pages (the 500+ row Global Enquiry Database) made
+     the sidebar itself 2000px+ tall, pushing anything anchored to its bottom
+     far off-screen. This keeps the sidebar sized to its own (short) content. */
+  align-self: start;
   background: var(--bg-surface);
   border-right: 1px solid var(--border-1);
   display: flex;
@@ -313,15 +367,40 @@ body {
   color: inherit;
 }
 
+.sidebar-collapse-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem var(--space-sm) 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--t3);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.sidebar-collapse-toggle:hover {
+  background: var(--bg-deep);
+  color: var(--t1);
+}
+.sidebar-collapse-toggle svg {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
 /* ══════════════════════════════════════════════════
    HEADER
 ══════════════════════════════════════════════════ */
 .app-header {
   grid-column: 1 / -1;
   grid-row: 1;
-  backdrop-filter: blur(28px) saturate(160%) brightness(1.04);
-  -webkit-backdrop-filter: blur(28px) saturate(160%) brightness(1.04);
-  background: rgba(255, 255, 255, 0.85);
+  /* Solid background instead of a blurred/translucent one — also sidesteps
+     the per-scroll-frame backdrop-filter repaint cost on this sticky element. */
+  background: var(--atlas-surface, #ffffff);
   border-bottom: 1px solid var(--border-1);
   padding: 0.65rem var(--space-lg);
   position: sticky;
@@ -420,9 +499,7 @@ body {
 .subheader-bar {
   grid-column: 1 / -1;
   grid-row: 2;
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--atlas-surface, #ffffff);
   border-bottom: 1px solid var(--border-1);
   padding: 0.45rem var(--space-lg);
   z-index: 99;
@@ -474,6 +551,65 @@ body {
   color: #fff !important;
 }
 
+/* Role switcher: a single trigger button that opens a dropdown menu, instead
+   of showing every desk/salesperson as a permanently-visible chip row. */
+.role-switcher-wrap {
+  position: relative;
+}
+.role-switcher-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--t2);
+  background: #fff;
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  white-space: nowrap;
+}
+.role-switcher-trigger strong {
+  color: var(--t1);
+  font-weight: 700;
+}
+.role-switcher-trigger:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.role-switcher-trigger svg {
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.role-switcher-wrap.open .role-switcher-trigger svg {
+  transform: rotate(180deg);
+}
+.role-switcher-wrap .role-selector-bar {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 190px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(27, 28, 92, 0.14);
+  z-index: 60;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.role-switcher-wrap.open .role-selector-bar {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.role-switcher-wrap .role-selector-bar .role-btn {
+  text-align: left;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+}
+
 /* ══════════════════════════════════════════════════
    MAIN
 ══════════════════════════════════════════════════ */
@@ -499,9 +635,14 @@ main {
   transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   overflow: hidden;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
+  /* `will-change: transform` + translateZ(0) forced every single .glass-card
+     onto its own GPU compositor layer — harmless with one or two cards, but
+     this class appears 30-40+ times on a single form (surcharge tables,
+     airline option cards, cargo matrices). That many simultaneous layers is
+     a well-known cause of dropped frames and blank-flash-while-scrolling,
+     since the browser has to composite all of them on every scroll frame.
+     None of these cards are ever actually transform-animated, so the layer
+     promotion was pure cost with no benefit. */
 }
 
 .glass-card::before {
@@ -763,11 +904,27 @@ main {
 .status-badge.converted { background: rgba(22,163,74,0.08);  color: var(--green);  border: 1px solid rgba(22,163,74,0.25); }
 .status-badge.cancelled { background: rgba(225,29,72,0.08); color: var(--rose);   border: 1px solid rgba(225,29,72,0.25); }
 .status-badge.lost      { background: rgba(148,163,184,0.12); color: var(--t2);     border: 1px solid rgba(148,163,184,0.2); }
+.status-badge.new        { background: rgba(56,189,248,0.1);   color: var(--sky);    border: 1px solid rgba(56,189,248,0.25); }
+.status-badge.contacted  { background: rgba(124,58,237,0.08);  color: var(--violet); border: 1px solid rgba(124,58,237,0.25); }
+.status-badge.qualified  { background: rgba(217,119,6,0.08);   color: var(--amber);  border: 1px solid rgba(217,119,6,0.25); }
+.status-badge.won        { background: rgba(22,163,74,0.08);   color: var(--green);  border: 1px solid rgba(22,163,74,0.25); }
+
+/* Sales panel status tabs — a dedicated class rather than reusing
+   .dir-parent-tab, which carries a `:hover { color: var(--sky) !important }`
+   rule and an absolutely-positioned ::after underline meant for a parent
+   with position:relative; neither applies cleanly here. */
+.sales-status-tab {
+  background: none; border: none; font-size: 0.8rem; font-weight: 800;
+  padding: 0.4rem 0.85rem; color: var(--t2); cursor: pointer;
+  border-radius: var(--r-pill); transition: var(--transition-fast);
+}
+.sales-status-tab:hover { color: var(--sky); background: rgba(56,189,248,0.06); }
+.sales-status-tab.active { color: var(--sky); background: rgba(56,189,248,0.1); }
 
 /* ══════════════════════════════════════════════════
    WORKSPACE / CALCULATOR LAYOUT
 ══════════════════════════════════════════════════ */
-.workspace { display: grid; grid-template-columns: 1.45fr 1fr; gap: var(--bento-gap); align-items: start; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: var(--bento-gap); align-items: start; }
 
 
 /* ══════════════════════════════════════════════════
@@ -820,6 +977,19 @@ input:focus, select:focus, textarea:focus {
 }
 input::placeholder { color: #94a3b8; font-weight: 400; }
 select option { background: #ffffff; color: var(--t1); }
+
+/* Users reported the value boxes feeling too small to comfortably read what
+   they're typing while quoting (rates, weights, surcharges, etc. across Air,
+   Sea, Transport and Warehouse). The base input rule above is already a
+   reasonable size, but a large number of individual quote-entry fields were
+   built with smaller inline font-size/padding to fit tight table/grid
+   layouts. This raises the minimum comfortable size across all of them in
+   one place, instead of hand-editing each one — checkboxes/radios/ranges are
+   excluded since resizing those isn't the complaint and could look odd. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]) {
+  font-size: 0.82rem !important;
+  padding: 6px 10px !important;
+}
 select.table-select {
   background: var(--bg-input);
   border: 1px solid var(--border-2);
@@ -988,7 +1158,7 @@ select.table-select:focus {
 
 .btn-primary {
   flex: 2;
-  background: linear-gradient(135deg, var(--accent-current) 0%, var(--indigo) 100%);
+  background: var(--accent-current);
   color: #fff;
   border: none; padding: 0.85rem 1.2rem;
   border-radius: var(--r-md); font-weight: 700;
@@ -996,14 +1166,14 @@ select.table-select:focus {
   display: flex; align-items: center; justify-content: center;
   gap: 0.5rem; font-size: 0.85rem; font-family: inherit;
   letter-spacing: 0.01em;
-  box-shadow: 0 4px 14px rgba(27, 28, 92, 0.2);
+  box-shadow: none;
 }
 .btn-primary:hover {
-  filter: brightness(1.12);
-  box-shadow: 0 8px 24px rgba(27, 28, 92, 0.3);
-  transform: translateY(-2px);
+  filter: brightness(0.92);
+  box-shadow: none;
+  transform: none;
 }
-.btn-primary:active { transform: translateY(0); }
+.btn-primary:active { filter: brightness(0.85); }
 
 .btn-secondary {
   flex: 1;
@@ -1099,7 +1269,7 @@ select.table-select:focus {
 .quote-type-badge.land      { background: rgba(217, 119, 6, 0.06);  color: var(--amber);  border: 1px solid rgba(217, 119, 6, 0.15); }
 .quote-type-badge.warehouse { background: rgba(124, 58, 237, 0.06); color: var(--violet); border: 1px solid rgba(124, 58, 237, 0.15); }
 
-.actions-cell { display: flex; gap: 0.3rem; }
+.actions-cell-inner { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 .action-icon-btn { background: transparent; border: none; cursor: pointer; color: var(--t2); padding: 0.35rem; border-radius: 6px; transition: var(--transition-fast); display: flex; align-items: center; justify-content: center; }
 .action-icon-btn:hover        { background: rgba(0, 0, 0, 0.03); color: var(--t1); }
 .action-icon-btn.convert:hover{ background: rgba(22, 163, 74, 0.08); color: var(--green); }
@@ -1991,11 +2161,49 @@ body.logged-out-blur #subheader-controls {
   }
 }
 
+/* Purely visual cue for a cargo/container row that's been partially filled
+   in but is still missing a field it needs to count toward the live total
+   (e.g. a cargo line with dimensions but no weight yet, or a container row
+   with a quantity but no rate). Never touches any calculation — it only
+   reflects state that's already being computed, so the row highlights
+   itself the instant it becomes complete. */
+.row-incomplete-flag {
+  background: rgba(245, 158, 11, 0.07) !important;
+  box-shadow: inset 3px 0 0 0 var(--accent-warning);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.row-incomplete-flag td:first-child {
+  position: relative;
+  padding-left: 1.1rem !important;
+}
+.row-incomplete-flag td:first-child::before {
+  content: "⚠";
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.65rem;
+  color: var(--accent-warning);
+  line-height: 1;
+}
+
+/* Descending/Ascending sort toggle (Quotes By User) — explicit !important
+   here because the inactive/active state was previously set only via an
+   inline style, and something elsewhere in this stylesheet was winning
+   over it and rendering the active button's text dark-on-dark/unreadable. */
+.sort-toggle-btn {
+  color: var(--t2) !important;
+}
+.sort-toggle-btn-active {
+  color: #ffffff !important;
+}
+
 /* IATA autocomplete dropdown styling conforming to Apple Liquid Glass */
 .iata-autocomplete-dropdown {
   position: absolute;
   z-index: 1000;
   width: calc(100% - 16px);
+  min-width: 260px;
   max-height: 200px;
   overflow-y: auto;
   background: var(--bg-surface);
@@ -2098,9 +2306,14 @@ html.nrs-font-scale {
 ══════════════════════════════════════════════════ */
 
 header {
-  backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
+  /* Must stay in sync with .app-header above — this later, !important rule
+     was silently overriding that fix (an !important declaration always wins
+     over a non-important one, regardless of selector specificity), putting
+     the expensive 28px blur back on the sticky header and causing the
+     scroll flicker to persist. */
+  backdrop-filter: blur(8px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.55) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.8) inset,
@@ -2110,10 +2323,8 @@ header {
 }
 
 .subheader-bar {
-  backdrop-filter: blur(22px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
-  background: rgba(255, 255, 255, 0.68) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
+  background: var(--atlas-surface, #ffffff) !important;
+  border-bottom: 1px solid var(--border-1) !important;
   box-shadow: 0 2px 12px rgba(27, 28, 92, 0.03) !important;
 }
 
@@ -2238,16 +2449,13 @@ header {
 ══════════════════════════════════════════════════ */
 
 .btn-primary {
-  box-shadow: var(--shadow-md) !important;
-  transition: transform 0.2s cubic-bezier(.4,0,.2,1), box-shadow 0.2s, filter 0.2s !important;
+  box-shadow: none !important;
+  transition: filter 0.15s !important;
   min-height: 44px;
   position: relative;
-  overflow: hidden;
 }
-.btn-primary::before { content:''; position:absolute; top:0; left:-60%; width:40%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent); transition:left 0.55s ease; pointer-events:none; }
-.btn-primary:hover::before { left:140%; }
-.btn-primary:hover  { filter:brightness(1.1) !important; box-shadow:var(--shadow-lg) !important; transform:translateY(-2px) !important; }
-.btn-primary:active { transform:translateY(0) scale(0.98) !important; box-shadow:var(--shadow-sm) !important; }
+.btn-primary:hover  { filter:brightness(0.92) !important; box-shadow:none !important; transform:none !important; }
+.btn-primary:active { filter:brightness(0.85) !important; transform:none !important; box-shadow:none !important; }
 
 .btn-secondary {
   background: var(--neumorph-bg) !important;
@@ -2737,15 +2945,24 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   overflow-wrap: anywhere;
 }
 
-#air-airlines-list-container .airline-card-heading {
-  gap: 0.75rem;
-  flex-wrap: wrap;
+/* A previous fix here relied on flex-wrap to drop "Select as Quoted"/Remove
+   onto their own row only when a narrow card ran out of room to sit next to
+   the title. That still overlapped in Safari (a known Safari bug in how
+   multi-line flex-wrap interacts with align-items: center) — confirmed live
+   by a user screenshot even after this exact CSS shipped. Fixed for real at
+   the source instead: addAirlineCard()'s own inline styles now stack the
+   title and the actions row unconditionally (flex-direction: column), so
+   there's no wrap heuristic left to get wrong in any browser. These rules
+   are now just redundant reinforcement of what the inline styles already
+   guarantee — kept as a defensive backstop, not the actual fix.               */
+#air-airlines-list-container .airline-card-actions label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-bottom: 0;
 }
 
-#air-airlines-list-container .airline-card-actions {
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+#air-airlines-list-container .airline-card-actions .remove-airline-btn {
+  flex-shrink: 0;
 }
 
 /* iPad / Large Tablet (768-1023px) */
@@ -3138,14 +3355,35 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 }
 
 /* Contact Directory Custom CSS */
+.dir-parent-tab-row {
+  display: flex;
+  gap: 1.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-2);
+}
+
+.dir-parent-tab {
+  background: none;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  padding: 0.6rem 0.1rem 0.85rem;
+  color: var(--t2);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
 .dir-parent-tab::after {
   content: '';
   position: absolute;
-  bottom: -7px;
+  bottom: -1px;
   left: 0;
   width: 100%;
-  height: 3px;
+  height: 2.5px;
   background: transparent;
+  border-radius: 2px;
   transition: all 0.25s ease;
 }
 .dir-parent-tab.active::after {
@@ -3154,6 +3392,255 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 .dir-parent-tab:hover {
   color: var(--sky) !important;
 }
+
+/* Quick-glance summary strip above the search bar */
+.dir-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px;
+  background: var(--border-2);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+.dir-stat-cell {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.85rem 1.1rem;
+}
+.dir-stat-cell .dir-stat-num {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--t1);
+  line-height: 1.1;
+}
+.dir-stat-cell .dir-stat-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--t3);
+  margin-top: 0.2rem;
+}
+
+/* Search bar with inline icon */
+.dir-search-wrap {
+  position: relative;
+  width: 100%;
+}
+.dir-search-wrap input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-2);
+  background: var(--bg-input);
+  color: var(--t1);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.dir-search-wrap input:focus {
+  outline: none;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+.dir-search-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.dir-quick-jump {
+  padding: 0.75rem 2rem 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-2);
+  background: var(--bg-input);
+  color: var(--t1);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  min-width: 200px;
+  max-width: 280px;
+}
+/* The category names come straight from years of inconsistently-cased Excel
+   tab names ("Airline" vs "AIR CHARTERS" vs ".packers") — rather than guess
+   at title-casing acronyms like CHA/DXB/ISO wrong, this normalizes display
+   the same way the pill tabs already do (text-transform, not a data change). */
+.dir-quick-jump option {
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.dir-quick-jump:focus {
+  outline: none;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+/* Shared "Sort by" control used next to search/filter bars across the app
+   (Circulars, Vendor Contacts, Overseas Agents, Sales Leads, NRS Registry) —
+   a fixed, compact width so it never grows wide with a long option label. */
+.app-sort-select {
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-2);
+  background: var(--bg-input);
+  color: var(--t1);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 150px;
+  flex-shrink: 0;
+}
+.app-sort-select:focus {
+  outline: none;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+.dir-contacts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.1rem;
+  align-items: start;
+}
+
+/* Vendor Contacts — a dense table matching the shape of the source
+   workbook (one row per branch, grouped by the sheet it came from)
+   instead of a card grid. */
+.dir-vendor-table-wrap { display: block; }
+
+.dir-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.dir-vendor-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.dir-vendor-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--t2);
+  background: #f8fafc;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--border-2);
+  border-right: 1px solid var(--border-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dir-vendor-table thead th:last-child { border-right: none; }
+
+.dir-vendor-table tbody td {
+  padding: 0.4rem 0.85rem;
+  border-bottom: 1px solid var(--border-1);
+  border-right: 1px solid var(--border-1);
+  color: var(--t1);
+  vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+}
+.dir-vendor-table tbody td:last-child { border-right: none; }
+
+/* Blank cells (no phone/email/remarks on file) stay genuinely blank rather
+   than a row of dashes — a table with real data next to real blanks reads
+   as normal; a table where every other cell says "—" reads as broken. */
+
+.dir-vendor-table tbody tr:nth-child(even) td { background: rgba(15, 23, 42, 0.015); }
+.dir-vendor-table tbody tr:hover td { background: rgba(2, 132, 199, 0.05); }
+.dir-vendor-table tbody tr:last-child td { border-bottom: none; }
+
+.dir-table-remarks {
+  white-space: normal;
+  max-width: 260px;
+  color: var(--t2);
+  font-size: 0.76rem;
+}
+
+.dir-table-branch {
+  display: inline-block;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: #0284c7;
+  background: rgba(2, 132, 199, 0.1);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+}
+
+.dir-table-link { color: var(--sky); text-decoration: none; }
+.dir-table-link:hover { text-decoration: underline; }
+.dir-table-empty { color: var(--t3); }
+
+.dir-table-actions { display: flex; gap: 0.35rem; }
+
+/* Category divider rows — the table's equivalent of the workbook's separate
+   sheet tabs, so scrolling "All Vendors" reads like flipping through them. */
+.dir-table-group-row td {
+  background: #eef2ff;
+  color: var(--brand-ink, #1a2870);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--border-2);
+}
+.dir-table-group-row .dir-group-count {
+  font-weight: 700;
+  color: var(--t3);
+  margin-left: 0.4rem;
+}
+
+/* Country / region section headers when Overseas Agents are grouped */
+.dir-group-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0.15rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border-2);
+}
+.dir-group-header:first-child { margin-top: 0; }
+.dir-group-header .dir-group-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--t1);
+  white-space: nowrap;
+}
+.dir-group-header .dir-group-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--t3);
+  background: rgba(15, 23, 42, 0.05);
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+}
+.dir-group-header.dir-group-suspended .dir-group-title { color: #be123c; }
 
 .dir-tab {
   background: rgba(15, 23, 42, 0.05);
@@ -3184,24 +3671,43 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 }
 
 .contact-card {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--border-2);
-  border-radius: var(--r-md);
-  padding: 1.25rem;
-  transition: all 0.3s ease;
+  border-radius: 14px;
+  padding: 1.35rem 1.35rem 1.15rem 1.5rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+/* Left accent bar, colored per category — a quieter classification cue
+   than a loud filled badge, consistent with the rest of the app's premium
+   pass this session. */
+.contact-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--border-2);
+}
+.contact-card.cat-agency::before { background: #0284c7; }
+.contact-card.cat-liner::before { background: #4f46e5; }
+.contact-card.cat-coloader::before { background: #0d9488; }
+.contact-card.cat-breakbulk::before { background: #d97706; }
+.contact-card.cat-airline::before { background: #db2777; }
+.contact-card.cat-pq::before { background: #7c3aed; }
+.contact-card.cat-insurance::before { background: #4b5563; }
+.contact-card.contact-card-suspended::before { background: #be123c; }
+
 .contact-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--sky);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-3px);
+  border-color: rgba(2, 132, 199, 0.35);
+  box-shadow: 0 12px 24px -8px rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .contact-card-header {
@@ -3209,15 +3715,25 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.7rem;
 }
 
 .contact-card-title {
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 1.02rem;
   color: var(--t1);
   font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.005em;
 }
+
+.contact-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.contact-info-grid .contact-info-row { margin-bottom: 0; }
+.contact-info-grid .contact-info-row.span-2 { grid-column: 1 / -1; }
 
 .contact-card-badge {
   font-size: 0.58rem;
@@ -3237,6 +3753,137 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 .contact-card-badge.airline { background: rgba(219, 39, 119, 0.15); color: #db2777; }
 .contact-card-badge.pq { background: rgba(124, 58, 237, 0.15); color: #7c3aed; }
 .contact-card-badge.insurance { background: rgba(75, 85, 99, 0.15); color: #4b5563; }
+
+/* Overseas Agents — rating, coverage, agreement status, credit terms */
+.agent-rating {
+  color: #d97706;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.agent-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.agent-module-pill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: rgba(56, 189, 248, 0.12);
+  color: #0284c7;
+}
+
+.agent-agreement-pill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+}
+.agent-agreement-pill.agreement-yes { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+.agent-agreement-pill.agreement-no { background: rgba(217, 119, 6, 0.12); color: #b45309; }
+
+.agent-credit-line {
+  font-size: 0.72rem;
+  color: var(--t2);
+  margin-top: 0.5rem;
+}
+.agent-credit-line strong { color: var(--t1); font-weight: 700; }
+
+/* Credit Period / Credit Limit as two clean stats instead of one run-on
+   string like "30d & 30000" — parsed client-side from the imported text,
+   the raw text stays as a fallback (.agent-credit-line) when it can't be split. */
+.agent-credit-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border-2);
+}
+.agent-credit-stat .val { font-size: 0.88rem; font-weight: 800; color: var(--t1); font-family: 'Outfit', sans-serif; }
+.agent-credit-stat .lbl { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--t3); margin-top: 1px; }
+
+/* Agreement document action — upload when nothing's attached yet, download once it is */
+.agent-agreement-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  border: none;
+  margin-top: 0.1rem;
+}
+.agent-agreement-action.has-doc { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+.agent-agreement-action.has-doc:hover { background: rgba(22, 163, 74, 0.2); }
+.agent-agreement-action.no-doc { background: rgba(2, 132, 199, 0.1); color: #0284c7; }
+.agent-agreement-action.no-doc:hover { background: rgba(2, 132, 199, 0.18); }
+
+/* Multi-select */
+.dir-select-checkbox {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: var(--sky);
+  z-index: 2;
+}
+.contact-card.dir-card-selected {
+  border-color: var(--sky);
+  background: rgba(2, 132, 199, 0.05);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.dir-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: rgba(2, 132, 199, 0.06);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1.1rem;
+}
+.dir-bulk-count { font-size: 0.8rem; font-weight: 800; color: var(--t1); }
+.dir-bulk-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+.dir-bulk-actions button {
+  background: none;
+  border: none;
+  color: var(--sky);
+  font-weight: 700;
+  font-size: 0.76rem;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+.dir-bulk-actions button:hover { text-decoration: underline; }
+
+.agent-suspended-banner {
+  background: rgba(225, 29, 72, 0.1);
+  color: #be123c;
+  border: 1px solid rgba(225, 29, 72, 0.3);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.contact-card-suspended {
+  opacity: 0.72;
+  border-color: rgba(225, 29, 72, 0.3) !important;
+}
 
 .contact-info-row {
   display: flex;
@@ -3782,6 +4429,15 @@ input::placeholder, textarea::placeholder {
   box-shadow: var(--atlas-shadow) !important;
 }
 
+/* Transport/Warehouse desk headers predate this pass and still carry the
+   old glass blur — bring them in line with the rest of the flat card system. */
+.calculator-header {
+  background: var(--atlas-surface) !important;
+  box-shadow: var(--atlas-shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* Shared data-entry language: white fields, quiet borders, one clear focus cue. */
 input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 select,
@@ -3990,13 +4646,29 @@ textarea:focus {
 }
 
 /* Shared selected-state treatment: clear emphasis without heavy colour blocks. */
-#admin-role-selector .role-btn.active,
-#global-module-tabs .module-tab.active,
 #air-freight-panel .toggle-option.active.unit-active {
   background: #eaf0ff !important;
   border: 1px solid #7890d4 !important;
   color: #1d3187 !important;
   box-shadow: inset 0 -2px 0 #263a9a !important;
+}
+
+/* Role dropdown menu item — flat highlight, no boxed border, since these now
+   live inside a popover menu rather than an inline chip row. */
+#admin-role-selector .role-btn.active {
+  background: #eaf0ff !important;
+  border: 1px solid transparent !important;
+  color: #1d3187 !important;
+  box-shadow: none !important;
+}
+
+/* Module tab active state — a single underline instead of a filled/bordered
+   box, matching a plain tab-bar pattern instead of a row of buttons. */
+#global-module-tabs .module-tab.active {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #1b1c5c !important;
+  box-shadow: inset 0 -2px 0 #1b1c5c !important;
 }
 
 #air-freight-panel .section-title,
@@ -4410,7 +5082,6 @@ textarea:focus {
     flex-direction: column !important;
     align-items: flex-start !important;
   }
-}
 
 /* ══════════════════════════════════════════════════
    MOBILE SIDEBAR NAVIGATION (Fix #7)
@@ -4457,6 +5128,12 @@ textarea:focus {
     display: flex;
   }
 
+  /* The collapse-to-icon-rail control is a desktop concept; mobile already
+     uses the off-canvas drawer above, so hide it here. */
+  .sidebar-collapse-toggle {
+    display: none;
+  }
+
   /* Slide sidebar off-screen by default on mobile */
   .app-sidebar {
     position: fixed !important;
@@ -4471,6 +5148,7 @@ textarea:focus {
 
   /* Sidebar open state — toggled via JS class on <aside> */
   .app-sidebar.sidebar-open {
+    display: flex !important;
     transform: translateX(0);
     box-shadow: 4px 0 24px rgba(15, 23, 42, 0.15);
   }
@@ -4513,6 +5191,26 @@ textarea:focus {
    and desktop layout. No quote, calculation, role, data, or Firebase rule is
    changed here.
 ══════════════════════════════════════════════════ */
+
+/* Bring Transport/Warehouse's hero-style header down to the same visual
+   weight as Air/Sea Freight's compact desk header, so all four pricing
+   modules read as one product instead of two different ones. */
+#transportation-panel .calculator-header,
+#warehousing-panel .calculator-header {
+  padding: 1rem 1.25rem !important;
+}
+#transportation-panel .calculator-header h2,
+#warehousing-panel .calculator-header h2 {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+}
+#directory-panel > .glass-card:first-child {
+  padding: 1rem 1.25rem !important;
+}
+#directory-panel > .glass-card:first-child h2 {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+}
 
 /* One restrained Atlas accent for dashboard cards and launchers. This removes
    the competing rainbow of module colours without changing any actions. */
@@ -4588,30 +5286,48 @@ textarea:focus {
   border-color: #94a3b8 !important;
 }
 
-/* Quote preview becomes a clean document surface: neutral headers, modest
-   borders, and a single navy total rather than competing gradients. */
+/* Quote preview: clean document surface with the Atlas navy carried through
+   as a deliberate accent — header rule, section titles, table header tint,
+   and the total box — rather than the flat neutral-gray pass this replaces. */
 .quote-print-card {
   color: #1e293b !important;
 }
 
+.print-header {
+  border-bottom-color: #1b1c5c !important;
+}
+
+.print-title h2 {
+  color: #1b1c5c !important;
+}
+
+.print-section-title {
+  color: #1b1c5c !important;
+  border-bottom-color: #dde0ee !important;
+}
+
 .quote-print-card th {
-  background: #f1f5f9 !important;
-  color: #334155 !important;
-  border-color: #cbd5e1 !important;
+  background: #eef0fa !important;
+  color: #1b1c5c !important;
+  border-color: #d8ddf0 !important;
 }
 
 .quote-print-card td {
   border-color: #d8e1ee !important;
 }
 
+.quote-print-card tbody tr:nth-child(even) td {
+  background: #f8f9fc !important;
+}
+
 .quote-print-card .total-summary-box {
-  background: #f8fafc !important;
-  border-color: #cbd5e1 !important;
-  border-left: 4px solid #263a9a !important;
+  background: #f4f5fb !important;
+  border-color: #d8ddf0 !important;
+  border-left: 4px solid #1b1c5c !important;
 }
 
 .quote-print-card .total-summary-box span.val {
-  color: #172554 !important;
+  color: #1b1c5c !important;
 }
 
 /* The transport and warehouse controls retain all existing columns and
@@ -4860,4 +5576,448 @@ textarea:focus {
     flex-direction: column !important;
     align-items: flex-start !important;
   }
+}
+
+/* ══════════════════════════════════════════════════
+   ARCHITECTURE MOVE 1 — DESK HIGHLIGHTS BAR
+   A persistent strip under each desk header carrying the figures a pricing
+   officer checks most often, plus the primary action, so neither has to be
+   found by scrolling. Values are mirrored (via MutationObserver in app-v4.js)
+   from the existing results-panel spans — this bar never computes anything
+   itself, it only reflects numbers the calculation functions already wrote.
+══════════════════════════════════════════════════ */
+.desk-highlights-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-1);
+  border-left: 4px solid var(--t2);
+  border-radius: var(--r-md);
+  padding: 0.7rem 1.1rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.dhb-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.dhb-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.dhb-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t2);
+}
+.dhb-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--t1);
+  font-variant-numeric: tabular-nums;
+}
+.dhb-value-strong {
+  font-size: 1.1rem;
+  color: var(--t1);
+}
+.dhb-actions {
+  display: flex;
+  align-items: center;
+  /* Extra gap (not just visual color) between Reset and Save so the two
+     aren't an easy misclick target next to each other — Reset also asks
+     for confirmation before it clears anything (see resetFreightForm). */
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+.dhb-btn-reset,
+.dhb-btn-save {
+  margin: 0 !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.78rem !important;
+  flex: unset !important;
+  white-space: nowrap;
+}
+.dhb-btn-reset {
+  border: none !important;
+  color: var(--t2) !important;
+  background: transparent !important;
+  padding: 0.5rem 0.25rem !important;
+  font-size: 0.72rem !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 0.75;
+}
+.dhb-btn-reset:hover {
+  color: var(--accent-error) !important;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .desk-highlights-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dhb-actions {
+    justify-content: stretch;
+  }
+  .dhb-btn-reset, .dhb-btn-save {
+    flex: 1 !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   ARCHITECTURE MOVE 2 — DESK TAB STRIP
+   Splits each desk's long stacked form into panes toggled by
+   switchDeskTab() (pure show/hide via .desk-tab-pane display, same
+   pattern as the existing .view-panel switching). No input inside a pane
+   changes id, name, or event wiring — panes only control visibility.
+══════════════════════════════════════════════════ */
+.desk-tab-strip {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--border-1);
+  margin: 0.75rem 0 1.5rem;
+}
+.desk-tab-btn {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--t2);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.desk-tab-btn:hover {
+  color: var(--t1);
+}
+.desk-tab-btn.active {
+  color: var(--accent-current);
+  border-bottom-color: var(--accent-current);
+}
+
+/* ══════════════════════════════════════════════════
+   ARCHITECTURE MOVE 3 — COSTING GRID TOTALS FOOTER
+   A read-only summed row appended to any surcharge/tariff table that has
+   Sell Rate + Buy Rate columns (Air/Sea per-card surcharges, Transport &
+   Warehouse breakup tables). It only reads .chg-rate / .chg-buy-rate input
+   values already on screen and sums them — it never writes to an input or
+   participates in a calculation function.
+══════════════════════════════════════════════════ */
+tfoot.cgf-footer td {
+  padding: 0.5rem 0.75rem;
+  border-top: 2px solid var(--border-1);
+  border-bottom: none;
+  background: rgba(0,0,0,0.015);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+tfoot.cgf-footer .cgf-label {
+  color: var(--t2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.65rem;
+}
+tfoot.cgf-footer .cgf-val {
+  color: var(--t1);
+}
+tfoot.cgf-footer .cgf-gp {
+  color: var(--accent-success);
+  text-align: right;
+}
+
+/* Origin/Destination (and POL/POD) label rows sit side by side in a grid,
+   but "Destination Airport (IATA Code)" wraps to two lines while "Origin
+   Airport (IATA Code)" fits one — without a shared min-height the two
+   input boxes below them start at different vertical positions. */
+.field-label-row {
+  min-height: 2.7rem;
+  align-items: flex-start !important;
+}
+
+/* ══════════════════════════════════════════════════
+   RESULTS PANEL DENSITY PASS
+   Tightens vertical spacing in the sticky results/pricing panel so more of
+   it fits without scrolling — most of its height was margin/padding, not
+   content. Values only, no structural change.
+══════════════════════════════════════════════════ */
+.results-panel.glass-card {
+  padding: 1.35rem !important;
+}
+.results-header {
+  padding-bottom: 0.6rem !important;
+  margin-bottom: 0.75rem !important;
+}
+.result-row {
+  padding: 0.4rem 0 !important;
+}
+.result-value-highlight {
+  font-size: clamp(1.2rem, 2.1vw, 1.5rem) !important;
+}
+#air-pricing-results-container,
+#sea-multi-liner-results-container,
+#sea-alternatives-results-container {
+  margin-top: 0.6rem !important;
+  padding-top: 0.6rem !important;
+  gap: 0.5rem !important;
+}
+#air-pricing-results-container .glass-card {
+  padding: 0.7rem !important;
+}
+
+/* Password show/hide toggle on the login screen was rendering plain black
+   text despite .login-password-toggle declaring the brand navy (#263a9a) —
+   some other rule in the cascade was winning; forcing it here since this
+   is a small utility control, not styling worth another hunt. */
+#login-overlay .login-password-toggle {
+  color: #263a9a !important;
+}
+#login-overlay .login-password-toggle:hover {
+  color: #1b1c5c !important;
+}
+
+/* ══════════════════════════════════════════════════
+   RESULTS PANEL 2-COLUMN INFO GRID
+   The block of small reference facts (weight, volume, routing, TT, validity
+   etc.) at the top of each results panel was a single-column stack of ~10
+   rows — a meaningful share of why the panel needed scrolling to reach the
+   totals below. Laying them out two-per-row roughly halves that section's
+   height. Values, ids, and update logic are unchanged — purely a layout
+   wrapper around the same spans.
+══════════════════════════════════════════════════ */
+.result-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.25rem;
+}
+.result-row-grid .result-row {
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+/* ══════════════════════════════════════════════════
+   QUOTATION LOG TABLES — DENSITY & TYPOGRAPHY POLISH
+   Global Enquiry Database and My Quotation Logs share this markup. Tightens
+   row height and gives numeric/monetary text tabular figures so columns of
+   numbers line up — a plain, safe typographic upgrade that doesn't touch
+   column structure, filters, or any value being displayed.
+══════════════════════════════════════════════════ */
+.quotes-table td {
+  padding: 0.6rem 0.85rem !important;
+  font-variant-numeric: tabular-nums;
+}
+.quotes-table th {
+  padding: 0.55rem 0.85rem !important;
+}
+.quotes-table tbody tr:hover {
+  background: rgba(27, 28, 92, 0.02);
+}
+.quotes-table .status-badge {
+  font-variant-numeric: normal;
+}
+
+/* ══════════════════════════════════════════════════
+   GLOBAL ENQUIRY DATABASE — FILTER CHIP BAR
+   Replaces the old always-visible 12-column filter row with a search bar +
+   on-demand filter chips. Reuses the existing .hdr-filter-dropdown /
+   .hdr-filter-btn / .hdr-filter-menu / .hdr-filter-opt markup and JS
+   (toggleHdrFilterMenu, selectHdrFilter, onHdrSearchInput) completely
+   unchanged — only relocated out of <th> into a flex row, so every rule
+   here is scoped to #db-filter-controls-row / #admin-quotes-table and never
+   touches the base classes the "My Quotation Logs" twin still relies on.
+══════════════════════════════════════════════════ */
+.db-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 0.85rem;
+}
+.db-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.hdr-filter-dropdown-hidden { display: none !important; }
+#db-filter-controls-row .hdr-filter-dropdown,
+.hdr-filter-dropdown-small {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+#db-filter-controls-row .hdr-filter-btn,
+.hdr-filter-dropdown-small .hdr-filter-btn {
+  width: auto;
+  padding: 5px 9px;
+}
+#db-filter-controls-row .hdr-filter-dropdown[data-filter-key] .hdr-filter-btn {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #1d4ed8;
+  font-weight: 700;
+}
+.hdr-filter-chip-remove {
+  border: none;
+  background: transparent;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 5px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.hdr-filter-chip-remove:hover { color: var(--accent-error); }
+
+/* Add filter / Columns toolbar buttons — same visual language as
+   .hdr-filter-btn, new classes so they don't affect any existing control. */
+.hdr-toolbar-wrap { position: relative; display: inline-block; }
+.hdr-toolbar-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--t2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.hdr-toolbar-trigger:hover { background: #ffffff; border-color: #3b82f6; color: #1d4ed8; }
+.hdr-toolbar-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 190px;
+  max-width: 260px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  padding: 4px 0;
+  margin-top: 2px;
+  text-align: left;
+}
+.hdr-toolbar-panel.open { display: block; animation: fadeInDown 0.15s ease-out; }
+.hdr-toolbar-panel .hdr-filter-opt { padding: 6px 10px; }
+.hdr-toolbar-panel-empty { padding: 8px 10px; font-size: 0.7rem; color: var(--t2); }
+.hdr-toolbar-panel-title { padding: 6px 10px 2px 10px; font-size: 0.62rem; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Columns show/hide checklist */
+.hdr-col-row { display: flex; align-items: center; gap: 7px; padding: 5px 10px; font-size: 0.72rem; color: #334155; cursor: pointer; }
+.hdr-col-row:hover { background: #f1f5f9; }
+.hdr-col-row input[type="checkbox"] { margin: 0; }
+.hdr-col-row.disabled { opacity: 0.55; cursor: default; }
+
+/* Multi-month date picker */
+.hdr-filter-menu-date { min-width: 220px; }
+.hdr-month-nav {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+.hdr-month-nav:hover { border-color: #3b82f6; }
+.hdr-date-month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 8px;
+}
+.hdr-month-cell {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  padding: 6px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.12s;
+}
+.hdr-month-cell:hover { border-color: #3b82f6; }
+.hdr-month-cell.selected { background: #eff6ff; border-color: #3b82f6; color: #2563eb; font-weight: 700; }
+
+/* Frozen Ref ID + Date columns on horizontal scroll — opaque background
+   trades away the even/odd row tint on just these two columns. */
+#admin-quotes-table th:nth-child(1),
+#admin-quotes-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #ffffff;
+}
+#admin-quotes-table th:nth-child(2),
+#admin-quotes-table td:nth-child(2) {
+  position: sticky;
+  left: 90px;
+  z-index: 3;
+  background: #ffffff;
+}
+#admin-quotes-table th:nth-child(1),
+#admin-quotes-table th:nth-child(2) {
+  z-index: 4;
+  background: rgba(248, 250, 252, 0.98);
+}
+
+/* Column show/hide — Ref ID(1), Date(2) and Actions(12) are never hideable */
+#admin-quotes-table.col-hidden-3 th:nth-child(3), #admin-quotes-table.col-hidden-3 td:nth-child(3) { display: none; }
+#admin-quotes-table.col-hidden-4 th:nth-child(4), #admin-quotes-table.col-hidden-4 td:nth-child(4) { display: none; }
+#admin-quotes-table.col-hidden-5 th:nth-child(5), #admin-quotes-table.col-hidden-5 td:nth-child(5) { display: none; }
+#admin-quotes-table.col-hidden-6 th:nth-child(6), #admin-quotes-table.col-hidden-6 td:nth-child(6) { display: none; }
+#admin-quotes-table.col-hidden-7 th:nth-child(7), #admin-quotes-table.col-hidden-7 td:nth-child(7) { display: none; }
+#admin-quotes-table.col-hidden-8 th:nth-child(8), #admin-quotes-table.col-hidden-8 td:nth-child(8) { display: none; }
+#admin-quotes-table.col-hidden-9 th:nth-child(9), #admin-quotes-table.col-hidden-9 td:nth-child(9) { display: none; }
+#admin-quotes-table.col-hidden-10 th:nth-child(10), #admin-quotes-table.col-hidden-10 td:nth-child(10) { display: none; }
+#admin-quotes-table.col-hidden-11 th:nth-child(11), #admin-quotes-table.col-hidden-11 td:nth-child(11) { display: none; }
+
+/* ══════════════════════════════════════════════════
+   SURCHARGE TABLE — SELL RATE / BUY RATE COLUMN WIDTH
+   .chg-rate / .chg-buy-rate (Origin & Destination Local Fees & Surcharges
+   tables, Air/Sea/Transport/Warehouse) had no explicit width inside their
+   auto-layout .cargo-table, so on a narrow card the browser's column-shrink
+   algorithm could compress them below what they need — a user reported the
+   typed value getting visually clipped inside the box. A min-width stops
+   that column from shrinking that far without touching any other input.
+══════════════════════════════════════════════════ */
+.chg-rate, .chg-buy-rate {
+  min-width: 90px;
+}
+
+/* ══════════════════════════════════════════════════
+   AIR FREIGHT — WEIGHT BREAK TARIFF SELL/BUY PILL WIDTH
+   .break-sell-rate-input / .break-buy-rate-input (the small "+500kg SELL/BUY"
+   pill widget above the surcharges table on each airline card) carry an
+   inline width: 58px set in app-v4.js. The same global input font-size/
+   padding bump that caused the surcharges clipping above also squeezed this
+   fixed-width pill, and since the width is inline, only an !important rule
+   can widen it without editing the JS that generates it.
+══════════════════════════════════════════════════ */
+.break-sell-rate-input, .break-buy-rate-input {
+  width: 76px !important;
 }

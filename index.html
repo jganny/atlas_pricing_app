@@ -11,13 +11,15 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=4d7a6b6">
+  <link rel="stylesheet" href="index.css?v=128.02">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-functions-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -75,7 +77,7 @@
           <div class="login-brand-tagline">Operational pricing workspace</div>
         </div>
       </div>
-      <h2 id="pricing-desk-title" onclick="handlePathwaySelectorClick()" class="login-title">Sign in to your workspace</h2>
+      <h2 id="pricing-desk-title" class="login-title">Sign in to your workspace</h2>
       <div class="login-subtitle">Use your desk credentials to continue.</div>
       <div id="login-admin-reset-indicator" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; margin-bottom: 1rem; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;">
         ⚠️ Pending Password Reset Request(s) active.
@@ -144,7 +146,7 @@
     <!-- Header Area -->
     <header class="app-header">
       <div class="header-content">
-        <div class="logo-section" onclick="goHome()">
+        <div class="logo-section">
           <!-- Mobile hamburger — opens sidebar drawer on small screens; hidden on desktop via CSS -->
           <button type="button" class="mobile-nav-toggle" id="mobile-nav-toggle" onclick="toggleMobileSidebar()" aria-label="Open navigation menu" aria-expanded="false">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -153,7 +155,7 @@
               <line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo" style="height: 52px; width: auto; object-fit: contain; margin-right: 0.5rem;">
+          <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo" onclick="goHome()" style="height: 34px; width: auto; object-fit: contain; cursor: pointer;">
         </div>
 
         <!-- Workspace Context Area -->
@@ -169,23 +171,8 @@
               <span id="header-user-name" style="font-weight:700; font-size:0.85rem; line-height:1.2; color: #0f172a;">User</span>
               <span id="header-user-role" style="font-size:0.7rem; color: #475569; line-height:1.2; font-weight:600;">Role</span>
             </div>
-            <div style="background: rgba(2, 132, 199, 0.1); color: var(--sky); padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </div>
+            <div id="header-user-avatar" style="background: #3b82f6; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; font-family: 'Outfit', sans-serif; flex-shrink: 0;">G</div>
           </div>
-          <!-- Executive Dashboard button -->
-          <button id="executive-dashboard-btn" class="admin-settings-btn" onclick="showExecutiveDashboard()" style="display: none; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); color: var(--sky);">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <rect x="3" y="3" width="7" height="9" />
-              <rect x="14" y="3" width="7" height="5" />
-              <rect x="14" y="12" width="7" height="9" />
-              <rect x="3" y="16" width="7" height="5" />
-            </svg>
-            <span>Dashboard</span>
-          </button>
           <!-- Admin settings button -->
           <button id="admin-settings-btn" class="admin-settings-btn" onclick="toggleAdminSettingsModal()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -217,6 +204,12 @@
     <div class="subheader-bar" id="subheader-controls" style="display: none;">
       <div class="subheader-content">
         <!-- Workspace Role Switcher (Visible to Admin only) -->
+        <div class="role-switcher-wrap" id="role-switcher-wrap">
+          <button type="button" class="role-switcher-trigger" id="role-switcher-trigger" onclick="toggleRoleSwitcherMenu()">
+            <span>Viewing as</span>
+            <strong id="role-switcher-trigger-label">Pricing Team</strong>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
         <div class="role-selector-bar" id="admin-role-selector" style="display: none;">
           <button class="role-btn active" data-role="manager">Pricing Team</button>
           <button class="role-btn" data-role="shashank"><svg width="11" height="11"
@@ -234,6 +227,7 @@
           <button class="role-btn" data-role="jaya">Free Hand Sales</button>
           <button class="role-btn" data-role="cathrina">NRS</button>
         </div>
+        </div>
 
         <!-- Global Operational Modules Navigation Tabs -->
         <div class="module-navigation-tabs" id="global-module-tabs">
@@ -243,6 +237,7 @@
           <button class="module-tab" data-module="transport" onclick="openActiveCalculator('transport')">Transportation</button>
           <button class="module-tab" data-module="warehouse" onclick="openActiveCalculator('warehouse')">Warehousing</button>
           <button class="module-tab" data-module="directory" onclick="openActiveCalculator('directory')">Directory</button>
+          <button class="module-tab" data-module="sales" onclick="openActiveCalculator('sales')">Sales</button>
         </div>
 
         <!-- Database Sync Connection Status Badge -->
@@ -265,9 +260,6 @@
     <aside class="app-sidebar" id="enterprise-sidebar" aria-label="Primary navigation">
       <!-- Backdrop overlay for mobile drawer -->
       <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
-      <div class="sidebar-brand">
-        <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo" style="height: 54px; width: auto; object-fit: contain;">
-      </div>
       <nav class="sidebar-nav">
         <div class="sidebar-group-title">Modules</div>
         <button class="sidebar-item active" data-sidebar-module="dashboard" onclick="goHome()">
@@ -294,297 +286,29 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           <span>Directory</span>
         </button>
+        <button class="sidebar-item" data-sidebar-module="circulars" onclick="openActiveCalculator('circulars')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          <span>Circulars</span>
+        </button>
+        <button class="sidebar-item" data-sidebar-module="agencylist" onclick="openActiveCalculator('agencylist')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16v16H4z" opacity="0"></path><path d="M22 6l-10 7L2 6"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect></svg>
+          <span>Agency List</span>
+        </button>
+        <button class="sidebar-item" data-sidebar-module="sales" onclick="openActiveCalculator('sales')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"></path></svg>
+          <span>Sales</span>
+        </button>
       </nav>
+      <button type="button" class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" onclick="toggleDesktopSidebar()" aria-label="Collapse navigation" title="Collapse sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+        <span>Collapse</span>
+      </button>
     </aside>
     <main>
       <!-- ==================== EXECUTIVE DASHBOARD PANEL ==================== -->
-      <div id="executive-dashboard-panel" class="view-panel exec-dashboard-container" style="padding: 1.5rem;">
-        <!-- Header with title & sub-caption -->
-        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h2 style="font-size: 1.75rem; font-weight: 850; color: var(--t1); font-family: 'Outfit', sans-serif; margin: 0 0 0.25rem 0;">
-              EXECUTIVE COMMAND CENTER
-            </h2>
-            <p style="font-size: 0.85rem; color: var(--text-dim); margin: 0;">
-              Real-time enterprise business intelligence & operations overview
-            </p>
-          </div>
-          <!-- Back to pricing console button -->
-          <button class="btn-back-dashboard" onclick="goHome()" style="background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; color: var(--t1) !important; padding: 0.4rem 0.8rem !important; font-size: 0.75rem !important; border-radius: 6px !important; font-weight: 700 !important; cursor: pointer;">
-            ← Pricing Console
-          </button>
-        </div>
-
-        <!-- 1. Executive KPI Cards -->
-        <div class="exec-kpi-grid" style="margin-bottom: 2rem;">
-          <!-- Total Quotes -->
-          <div class="exec-kpi-card">
-            <div class="exec-kpi-title">Total Quotes</div>
-            <div class="exec-kpi-value" id="exec-kpi-total-quotes">0</div>
-            <div class="exec-kpi-subtitle">All modules combined</div>
-          </div>
-          <!-- Converted Quotes -->
-          <div class="exec-kpi-card">
-            <div class="exec-kpi-title">Converted Quotes</div>
-            <div class="exec-kpi-value" id="exec-kpi-converted-quotes">0</div>
-            <div class="exec-kpi-subtitle">Quotes marked Won</div>
-          </div>
-          <!-- Conversion % -->
-          <div class="exec-kpi-card">
-            <div class="exec-kpi-title">Conversion Rate</div>
-            <div class="exec-kpi-value" id="exec-kpi-conversion-pct">0.0%</div>
-            <div class="exec-kpi-subtitle">Overall conversion percentage</div>
-          </div>
-          <!-- Total Gross Profit -->
-          <div class="exec-kpi-card">
-            <div class="exec-kpi-title">Total Gross Profit</div>
-            <div class="exec-kpi-value" id="exec-kpi-total-gp">₹0</div>
-            <div class="exec-kpi-subtitle">Total estimated GP in INR</div>
-          </div>
-        </div>
-
-        <!-- Pipeline, Performance & Control Hub Grid -->
-        <div style="display: grid; grid-template-columns: 2fr 3fr; gap: 1.5rem; margin-bottom: 2rem; align-items: start;">
-          <!-- Left: Quote Pipeline Stats & Customer Control Summary -->
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <!-- Quote Pipeline Summary -->
-            <div class="exec-section-card">
-              <h3 style="font-weight: 700; margin-bottom: 1.25rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
-                Quote Pipeline Status
-              </h3>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); padding: 1rem; border-radius: 8px; text-align: center;">
-                  <div style="font-size: 0.75rem; color: var(--t2); font-weight: 600;">Quoted</div>
-                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--sky); margin-top: 0.25rem;" id="exec-pipe-quoted">0</div>
-                </div>
-                <div style="background: rgba(46,204,113,0.05); border: 1px solid rgba(46,204,113,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                  <div style="font-size: 0.75rem; color: var(--accent-success); font-weight: 600;">Converted</div>
-                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-success); margin-top: 0.25rem;" id="exec-pipe-converted">0</div>
-                </div>
-                <div style="background: rgba(231,76,60,0.05); border: 1px solid rgba(231,76,60,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                  <div style="font-size: 0.75rem; color: var(--accent-error); font-weight: 600;">Lost</div>
-                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-error); margin-top: 0.25rem;" id="exec-pipe-lost">0</div>
-                </div>
-                <div style="background: rgba(241,196,15,0.05); border: 1px solid rgba(241,196,15,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                  <div style="font-size: 0.75rem; color: var(--accent-warning); font-weight: 600;">Cancelled</div>
-                  <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-warning); margin-top: 0.25rem;" id="exec-pipe-cancelled">0</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Customer Control Summary -->
-            <div class="exec-section-card">
-              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--accent-warning); margin-top: 0;">
-                Customer Compliance Status
-              </h3>
-              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(231,76,60,0.08); border: 1px solid rgba(231,76,60,0.2); padding: 0.75rem 1rem; border-radius: 8px;">
-                  <div>
-                    <strong style="color: var(--accent-error); font-size: 0.85rem;">Blocked Customers</strong>
-                    <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 0.1rem;" id="exec-blocked-cust-list">None currently</div>
-                  </div>
-                  <span style="font-size: 1.25rem; font-weight: 850; color: var(--accent-error);" id="exec-blocked-cust-count">0</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(241,196,15,0.08); border: 1px solid rgba(241,196,15,0.2); padding: 0.75rem 1rem; border-radius: 8px;">
-                  <div>
-                    <strong style="color: var(--accent-warning); font-size: 0.85rem;">Agreement Pending</strong>
-                    <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 0.1rem;" id="exec-pending-cust-list">None currently</div>
-                  </div>
-                  <span style="font-size: 1.25rem; font-weight: 850; color: var(--accent-warning);" id="exec-pending-cust-count">0</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right: Pricing Team Performance Leaderboard -->
-          <div class="exec-section-card">
-            <h3 style="font-weight: 700; margin-bottom: 1.25rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
-              Pricing Team Leaderboard
-            </h3>
-            <div style="width: 100%; overflow-x: auto;">
-              <table class="exec-table">
-                <thead>
-                  <tr>
-                    <th>Officer / Desk</th>
-                    <th>Total Quotes</th>
-                    <th>Converted</th>
-                    <th>Conv. Rate (%)</th>
-                    <th>Gross Profit (INR)</th>
-                  </tr>
-                </thead>
-                <tbody id="exec-leaderboard-body">
-                  <!-- Populated dynamically -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- 5. Recent Quote Activity -->
-        <div class="exec-section-card" style="margin-bottom: 2rem;">
-          <h3 style="font-weight: 700; margin-bottom: 1.25rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
-            Recent Quotation Activity
-          </h3>
-          <div style="width: 100%; overflow-x: auto;">
-            <table class="exec-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Customer</th>
-                  <th>Creator</th>
-                  <th>Status</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody id="exec-recent-quotes-body">
-                <!-- Populated dynamically -->
-              </tbody>
-            </table>
-        </div>
-        
-        <!-- Phase 3A: Advanced Business Intelligence Suite -->
-        <div style="margin-top: 2rem; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 2rem;">
-          <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--sky); margin: 0 0 1.5rem 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 0.5rem;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
-            EXECUTIVE INTELLIGENCE SUITE
-          </h2>
-
-          <!-- Row 1: Charts (Revenue/Profit & Conversion Trends) -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-            <!-- Revenue & Gross Profit Trends -->
-            <div class="exec-section-card">
-              <h3 style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
-                Revenue & Profitability Trends
-              </h3>
-              <div id="exec-revenue-trend-chart" style="height: 220px; display: flex; align-items: center; justify-content: center;">
-                <!-- Dynamically populated SVG -->
-              </div>
-            </div>
-
-            <!-- Quote Conversion & Win/Loss Trends -->
-            <div class="exec-section-card">
-              <h3 style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
-                Quote Conversion & Win/Loss Dynamics
-              </h3>
-              <div id="exec-conversion-trend-chart" style="height: 220px; display: flex; align-items: center; justify-content: center;">
-                <!-- Dynamically populated SVG -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Row 2: Customer Concentration & Route/Trade Lane Performance -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-            <!-- Customer Concentration -->
-            <div class="exec-section-card">
-              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
-                Customer Concentration (Top Contributors)
-              </h3>
-              <div style="width: 100%; overflow-x: auto;">
-                <table class="exec-table">
-                  <thead>
-                    <tr>
-                      <th>Customer Name</th>
-                      <th>Revenue (INR)</th>
-                      <th>Gross Profit (INR)</th>
-                      <th>Quotes Count</th>
-                    </tr>
-                  </thead>
-                  <tbody id="exec-customer-concentration-body">
-                    <!-- Populated dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Route / Trade Lane Performance -->
-            <div class="exec-section-card">
-              <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
-                Route & Trade Lane Performance
-              </h3>
-              <div style="width: 100%; overflow-x: auto;">
-                <table class="exec-table">
-                  <thead>
-                    <tr>
-                      <th>Route / Trade Lane</th>
-                      <th>Quotes</th>
-                      <th>Won</th>
-                      <th>Avg Margin %</th>
-                      <th>Total GP (INR)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="exec-route-performance-body">
-                    <!-- Populated dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Row 3: Data Integrity Audit / Checksum Controls -->
-          <div class="exec-section-card" style="background: rgba(27,28,92,0.02); border: 1px solid rgba(27,28,92,0.12);">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-              <div>
-                <h4 style="margin: 0 0 0.25rem 0; font-size: 0.95rem; font-weight: 700; color: var(--sky);">
-                  SYSTEM DATA RECONCILIATION AUDIT
-                </h4>
-                <p style="margin: 0; font-size: 0.75rem; color: var(--text-dim);" id="exec-data-validation-text">
-                  Verifying data parity with Firestore instance...
-                </p>
-              </div>
-              <div style="display: flex; gap: 1.5rem; align-items: center;">
-                <div style="text-align: right;">
-                  <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; display: block;">Parity Checksum</span>
-                  <span id="exec-integrity-checksum" style="font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--accent-success);">OK (0x0)</span>
-                </div>
-                <div style="text-align: right;">
-                  <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; display: block;">Accuracy Level</span>
-                  <span id="exec-integrity-accuracy" style="font-size: 0.85rem; font-weight: 800; color: var(--accent-success);">100%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
 
       <!-- ==================== ADMIN DASHBOARD PANEL ==================== -->
       <div id="manager-panel" class="view-panel">
-
-
-        <!-- Navigation triggers for active calculators (Admin Quick Access) — Bento Grid -->
-        <div class="bento-action-grid" style="margin-bottom: 1.5rem;">
-          <button class="bento-action-btn" onclick="openActiveCalculator('air')" id="admin-goto-air" style="background:#EFF6FF; color:#0F172A; border:1.5px solid #BFDBFE; border-left:4px solid #2563EB; box-shadow:0 2px 8px rgba(37,99,235,0.12);">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5">
-              <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
-            </svg>
-            Price Air Freight
-          </button>
-          <button class="bento-action-btn" onclick="openActiveCalculator('sea')" id="admin-goto-sea" style="background:#F0FDF4; color:#0F172A; border:1.5px solid #BBF7D0; border-left:4px solid #16A34A; box-shadow:0 2px 8px rgba(22,163,74,0.12);">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-              <path d="M12 17v4M8 21h8" />
-            </svg>
-            Price Sea Freight
-          </button>
-          <button class="bento-action-btn" onclick="openActiveCalculator('transport')" id="admin-goto-transport" style="background:#FDF4FF; color:#0F172A; border:1.5px solid #E9D5FF; border-left:4px solid #9333EA; box-shadow:0 2px 8px rgba(147,51,234,0.12);">
-            <span style="font-size: 1.05rem; line-height:1;">🚛</span>
-            Price Transportation
-          </button>
-          <button class="bento-action-btn" onclick="openActiveCalculator('warehouse')" id="admin-goto-warehouse" style="background:#FFF7ED; color:#0F172A; border:1.5px solid #FED7AA; border-left:4px solid #EA580C; box-shadow:0 2px 8px rgba(234,88,12,0.12);">
-            <span style="font-size: 1.05rem; line-height:1;">🏢</span>
-            Price Warehousing
-          </button>
-          <button class="bento-action-btn" onclick="openActiveCalculator('directory')" id="admin-goto-directory" style="background:#F0F9FF; color:#0F172A; border:1.5px solid #BAE6FD; border-left:4px solid #0284C7; box-shadow:0 2px 8px rgba(2,132,199,0.12);">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            Contact Directory
-          </button>
-        </div>
 
         <!-- Control Tower Widescreen Dashboard Card -->
         <div class="glass-card" id="admin-global-control-tower" style="margin-bottom: 2rem; padding: 1.5rem; position: relative;">
@@ -649,45 +373,35 @@
           <span style="margin-left:auto; font-size:0.65rem; color:var(--t3); font-weight:700;">Rate Validity: All Desks Monitored</span>
         </div>
 
+        <div class="desk-tab-strip">
+          <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('manager-panel','overview',this)">Overview</button>
+          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','agent-directory',this); if (typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet && (appState.quotes || []).length > 0) { window._dirInitialCollapseSet = true; collapseAllDirNodes(); }">Quoting Agents</button>
+          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','enquiry-database',this); if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();">Enquiry Database</button>
+          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','analytics',this); if (typeof renderExecutiveDashboard === 'function') renderExecutiveDashboard(); if (typeof renderExecutiveDashboardIntelligence === 'function') { lastCalculatedQuotesKey = ''; renderExecutiveDashboardIntelligence(); }">Analytics</button>
+        </div>
+
+        <div class="desk-tab-pane" data-tab-pane="overview">
+
         <!-- Metrics Grid -->
         <div class="stats-grid">
-          <div class="glass-card stat-card" data-type="total">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <path d="M3 3v18h18" />
-              <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="total">
             <div class="stat-title">Total Quoted Revenue</div>
-            <div class="stat-value" id="admin-stat-revenue">₹0</div>
+            <div id="admin-stat-revenue-ring"></div>
             <div class="stat-subtitle">Calculated in INR equivalent</div>
           </div>
-          <div class="glass-card stat-card" data-type="air">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <path d="M18 20V10M12 20V4M6 20v-6" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="air">
             <div class="stat-title">Total Enquiries Quoted</div>
-            <div class="stat-value" id="admin-stat-quotes">0</div>
+            <div id="admin-stat-quotes-ring"></div>
             <div class="stat-subtitle">All desks combined</div>
           </div>
-          <div class="glass-card stat-card" data-type="sea">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="sea">
             <div class="stat-title">Total Conversions</div>
-            <div class="stat-value" id="admin-stat-conversions">0</div>
+            <div id="admin-stat-conversions-ring"></div>
             <div class="stat-subtitle">Enquiries marked Won</div>
           </div>
-          <div class="glass-card stat-card" data-type="warning">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="warning">
             <div class="stat-title">Conversion Rate</div>
-            <div class="stat-value" id="admin-stat-rate">0.0%</div>
+            <div id="admin-stat-rate-ring"></div>
             <div class="stat-subtitle">Overall conversion percentage</div>
           </div>
         </div>
@@ -769,13 +483,17 @@
           </div>
         </div>
 
+        </div><!-- /desk-tab-pane[overview] -->
+
+        <div class="desk-tab-pane" data-tab-pane="agent-directory" style="display:none;">
+
         <!-- Admin Agent & Customer Directory Dashboard -->
         <div class="glass-card" id="admin-directory-dashboard" style="margin-bottom: 2rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-2); border-radius: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-1); padding-bottom: 0.75rem; flex-wrap: wrap; gap: 1rem;">
             <div>
               <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Workspace Registry</div>
               <h3 style="font-weight: 800; margin: 0; font-size: 1.2rem; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 0.5rem; color: var(--t1); text-transform: uppercase;">
-                📁 Agent & Customer Directory
+                📁 Quoting Agents &amp; Customers
               </h3>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
@@ -784,12 +502,12 @@
               
               <!-- View Grouping Toggle -->
               <div style="display: flex; background: var(--border-1); border-radius: 8px; padding: 2px;">
-                <button type="button" id="dir-toggle-agents" onclick="toggleDirGrouping('agents')" class="active" style="border: none; padding: 6px 12px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; cursor: pointer; background: var(--sky); color: #fff; transition: all 0.2s;">Group by Agents</button>
+                <button type="button" id="dir-toggle-agents" onclick="toggleDirGrouping('agents')" class="active" style="border: none; padding: 6px 12px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; cursor: pointer; background: #eaf0ff; color: #1d3187; transition: all 0.2s;">Group by Agents</button>
                 <button type="button" id="dir-toggle-customers" onclick="toggleDirGrouping('customers')" style="border: none; padding: 6px 12px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; cursor: pointer; background: transparent; color: var(--t2); transition: all 0.2s;">Group by Customers</button>
               </div>
-              
+
               <!-- Extract Directory -->
-              <button onclick="exportDirectoryCSV()" class="btn-primary" style="background: var(--accent-success); color: #000; font-size: 0.72rem; padding: 6px 12px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+              <button onclick="exportDirectoryCSV()" style="background: rgba(22, 101, 52, 0.1); color: var(--accent-success); font-size: 0.72rem; padding: 6px 12px; border-radius: 8px; font-weight: 700; border: 1px solid rgba(22, 101, 52, 0.25); cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
                 📥 Extract Directory
               </button>
             </div>
@@ -822,6 +540,9 @@
           </div>
         </div>
 
+        </div><!-- /desk-tab-pane[agent-directory] -->
+
+        <div class="desk-tab-pane" data-tab-pane="enquiry-database" style="display:none;">
 
 
         <!-- Global Cargo Operations Tracking Control Center -->
@@ -832,7 +553,7 @@
           <div class="table-header-row" style="flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <h3 style="font-weight: 700; margin: 0;">Global Enquiry Database</h3>
-              <button onclick="restoreCachedQuotes()" class="btn-primary" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; background: var(--accent-success); color: #000; font-weight: 700; border: none; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
+              <button onclick="restoreCachedQuotes()" class="btn-primary" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); font-weight: 700; border: none; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
                 🔄 Restore Cached Quotes
               </button>
             </div>
@@ -842,8 +563,223 @@
             </div>
           </div>
 
+          <!-- Db-filter-bar: active filters live here as chips (the filter's own trigger button, revealed on demand), plus Add filter / Columns controls. Replaces the old always-visible 12-column filter row. -->
+          <div class="db-filter-bar" id="db-filter-bar">
+            <div class="db-filter-chips" id="db-filter-controls-row">
+              <!-- REF ID Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-refid" data-filter-key="refid" data-filter-label="Ref ID">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'refid')">
+                  <span id="hdr-label-refid">Ref ID</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-refid" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-refid" placeholder="Search Ref ID..." oninput="onHdrSearchInput('refid', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-refid">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('refid', 'all', 'All Ref IDs')">All Ref IDs</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DATE Filter (multi-month) -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-date" data-filter-key="date" data-filter-label="Date">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'date')">
+                  <span id="hdr-label-date">All Dates</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu hdr-filter-menu-date" id="hdr-menu-date" onclick="event.stopPropagation()">
+                  <div style="padding: 8px; border-bottom: 1px solid var(--border-2); display:flex; align-items:center; gap:6px;">
+                    <button type="button" class="hdr-month-nav" onclick="shiftDbDateYear(-1)">◀</button>
+                    <span id="hdr-date-year-label" style="flex:1; text-align:center; font-weight:700; font-size:0.75rem;">2026</span>
+                    <button type="button" class="hdr-month-nav" onclick="shiftDbDateYear(1)">▶</button>
+                  </div>
+                  <div class="hdr-date-month-grid" id="hdr-date-month-grid"></div>
+                  <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); display: flex; justify-content: space-between; align-items:center;">
+                    <span id="hdr-date-selected-summary" style="font-size: 0.65rem; color: var(--t2);">No months selected</span>
+                    <button type="button" style="background: var(--accent-error); color: #fff; border: none; border-radius: 4px; font-size: 0.65rem; font-weight: 600; padding: 3px 7px; cursor: pointer;" onclick="clearDbDateMonths()">Clear</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MODE Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-mode" data-filter-key="mode" data-filter-label="Mode">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'mode')">
+                  <span id="hdr-label-mode">All Modes</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-mode" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-mode" placeholder="Search Mode..." oninput="onHdrSearchInput('mode', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-mode">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('mode', 'all', 'All Modes')">All Modes</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'air', 'Air Freight')">Air Freight</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'sea', 'Sea Freight')">Sea Freight</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'transport', 'Transportation')">Transportation</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'warehouse', 'Warehousing')">Warehousing</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AGENT Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-agentroute" data-filter-key="agentroute" data-filter-label="Agent">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'agentroute')">
+                  <span id="hdr-label-agentroute">Agent</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-agentroute" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-agentroute" placeholder="Search Agent..." oninput="onHdrSearchInput('agentroute', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-agentroute">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('agentroute', 'all', 'All Agents')">All Agents</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PRICED BY DESK Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-desk" data-filter-key="desk" data-filter-label="Priced By Desk">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'desk')">
+                  <span id="hdr-label-desk">All Desks</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-desk" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-desk" placeholder="Search Desk..." oninput="onHdrSearchInput('desk', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-desk">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('desk', 'all', 'All Desks')">All Desks</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'shashank', 'Shashank')">Shashank</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'shaheer', 'Sea Nomination')">Sea Nomination</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'jaya', 'Jaya')">Jaya</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'cathrina', 'Cathrina')">Cathrina</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARRIER Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-carrier" data-filter-key="carrier" data-filter-label="Carrier">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'carrier')">
+                  <span id="hdr-label-carrier">All Carriers</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-carrier" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-carrier" placeholder="Search Carrier..." oninput="onHdrSearchInput('carrier', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-carrier">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TONNAGE Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-tonnage" data-filter-key="tonnage" data-filter-label="Tonnage">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'tonnage')">
+                  <span id="hdr-label-tonnage">All</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-tonnage" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-tonnage" placeholder="Filter Tonnage..." oninput="onHdrSearchInput('tonnage', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-tonnage">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('tonnage', 'all', 'All')">All</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BUY RATE Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-buyrate" data-filter-key="buyrate" data-filter-label="Buy Rate">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'buyrate')">
+                  <span id="hdr-label-buyrate">Buy Rate</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-buyrate" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-buyrate" placeholder="Filter Buy Rate..." oninput="onHdrSearchInput('buyrate', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-buyrate">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('buyrate', 'all', 'All Rates')">All Rates</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SELL RATE Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-sellrate" data-filter-key="sellrate" data-filter-label="Sell Rate">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'sellrate')">
+                  <span id="hdr-label-sellrate">Sell Rate</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-sellrate" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-sellrate" placeholder="Filter Sell Rate..." oninput="onHdrSearchInput('sellrate', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-sellrate">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('sellrate', 'all', 'All Rates')">All Rates</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- STATUS Filter -->
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-status" data-filter-key="status" data-filter-label="Status">
+                <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'status')">
+                  <span id="hdr-label-status">All Statuses</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+                <div class="hdr-filter-menu" id="hdr-menu-status" onclick="event.stopPropagation()">
+                  <div class="hdr-filter-search-wrap">
+                    <input type="text" class="hdr-filter-search-input" id="hdr-search-status" placeholder="Search Status..." oninput="onHdrSearchInput('status', this.value)">
+                  </div>
+                  <div class="hdr-filter-options-list" id="hdr-options-status">
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('status', 'all', 'All Statuses')">All Statuses</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'quoted', 'Quoted')">Quoted</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'converted', 'Converted (Won)')">Converted (Won)</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'cancelled', 'Cancelled')">Cancelled</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'lost', 'Lost')">Lost</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- GP display toggle + Sort By: not data filters, always visible, small -->
+            <div class="hdr-filter-dropdown hdr-filter-dropdown-small" id="dropdown-hdr-gp">
+              <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'gp')">
+                <span id="hdr-label-gp">GP Profit</span> <span class="hdr-filter-arrow">▼</span>
+              </button>
+              <div class="hdr-filter-menu" id="hdr-menu-gp" onclick="event.stopPropagation()">
+                <div class="hdr-filter-options-list" id="hdr-options-gp">
+                  <div class="hdr-filter-opt active" onclick="selectHdrFilter('gp', 'all', 'All Profit')">All Profit</div>
+                  <div class="hdr-filter-opt" onclick="selectHdrFilter('gp', 'percent', '%')">%</div>
+                </div>
+              </div>
+            </div>
+            <div class="hdr-filter-dropdown hdr-filter-dropdown-small" id="dropdown-hdr-actions">
+              <button type="button" class="hdr-filter-btn" style="background: rgba(79, 70, 229, 0.1); color: var(--indigo);" onclick="toggleHdrFilterMenu(event, 'actions')">
+                <span id="hdr-label-sort">Sort By: Date (Newest)</span> <span class="hdr-filter-arrow">▼</span>
+              </button>
+              <div class="hdr-filter-menu" id="hdr-menu-actions" onclick="event.stopPropagation()">
+                <div style="padding: 4px 8px; font-size: 0.65rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Sort By:</div>
+                <div class="hdr-filter-options-list" id="hdr-options-actions">
+                  <div class="hdr-filter-opt active" onclick="selectHdrSort('date-desc', 'Sort: Date (Newest)')">Date (Newest First)</div>
+                  <div class="hdr-filter-opt" onclick="selectHdrSort('date-asc', 'Sort: Date (Oldest)')">Date (Oldest First)</div>
+                  <div class="hdr-filter-opt" onclick="selectHdrSort('customer-asc', 'Sort: Customer (A-Z)')">Customer (A-Z)</div>
+                  <div class="hdr-filter-opt" onclick="selectHdrSort('customer-desc', 'Sort: Customer (Z-A)')">Customer (Z-A)</div>
+                  <div class="hdr-filter-opt" onclick="selectHdrSort('amount-desc', 'Sort: Amount (Highest)')">Amount (Highest First)</div>
+                  <div class="hdr-filter-opt" onclick="selectHdrSort('amount-asc', 'Sort: Amount (Lowest)')">Amount (Lowest First)</div>
+                </div>
+                <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); text-align: center;">
+                  <button type="button" style="background: var(--accent-error); color: #fff; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: 600; padding: 4px 8px; cursor: pointer; width: 100%;" onclick="resetAllHdrFilters()">Reset All Filters</button>
+                </div>
+              </div>
+            </div>
+            <div class="hdr-toolbar-wrap" id="db-add-filter-wrap">
+              <button type="button" class="hdr-toolbar-trigger" id="db-add-filter-trigger" onclick="toggleDbAddFilterMenu()">
+                <i>+</i> Add filter
+              </button>
+              <div class="hdr-toolbar-panel db-add-filter-panel" id="db-add-filter-panel"></div>
+            </div>
+            <div class="hdr-toolbar-wrap" id="db-columns-wrap">
+              <button type="button" class="hdr-toolbar-trigger" id="db-columns-trigger" onclick="toggleDbColumnsPanel()">
+                Columns
+              </button>
+              <div class="hdr-toolbar-panel db-columns-panel" id="db-columns-panel"></div>
+            </div>
+          </div>
+
           <div class="quotes-table-container">
-            <table class="quotes-table">
+            <table class="quotes-table" id="admin-quotes-table">
               <thead>
                 <tr class="table-header-titles">
                   <th>Ref ID</th>
@@ -858,241 +794,6 @@
                   <th>GP</th>
                   <th>Status</th>
                   <th>Actions</th>
-                </tr>
-                <tr class="table-header-filters">
-                  <!-- REF ID Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-refid">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'refid')">
-                        <span id="hdr-label-refid">Ref ID</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-refid" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-refid" placeholder="Search Ref ID..." oninput="onHdrSearchInput('refid', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-refid">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('refid', 'all', 'All Ref IDs')">All Ref IDs</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- DATE Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-date">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'date')">
-                        <span id="hdr-label-date">All Dates</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-date" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-date" placeholder="Search Date..." oninput="onHdrSearchInput('date', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-date">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('date', 'all', 'All Dates')">All Dates</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('date', '2026', '2026')">2026</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('date', '2025', '2025')">2025</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('date', '2024', '2024')">2024</div>
-                        </div>
-                        <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); display: flex; flex-direction: column; gap: 4px;">
-                          <span style="font-size: 0.65rem; color: var(--t2); font-weight: 700;">Range:</span>
-                          <input type="date" id="db-filter-start-date" class="hdr-date-input" onchange="applyDbFiltersAndSort()" placeholder="Start Date">
-                          <input type="date" id="db-filter-end-date" class="hdr-date-input" onchange="applyDbFiltersAndSort()" placeholder="End Date">
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- MODE Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-mode">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'mode')">
-                        <span id="hdr-label-mode">All Modes</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-mode" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-mode" placeholder="Search Mode..." oninput="onHdrSearchInput('mode', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-mode">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('mode', 'all', 'All Modes')">All Modes</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'air', 'Air Freight')">Air Freight</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'sea', 'Sea Freight')">Sea Freight</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'transport', 'Transportation')">Transportation</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('mode', 'warehouse', 'Warehousing')">Warehousing</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- AGENT Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-agentroute">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'agentroute')">
-                        <span id="hdr-label-agentroute">Agent</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-agentroute" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-agentroute" placeholder="Search Agent..." oninput="onHdrSearchInput('agentroute', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-agentroute">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('agentroute', 'all', 'All Agents')">All Agents</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- PRICED BY DESK Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-desk">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'desk')">
-                        <span id="hdr-label-desk">All Desks</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-desk" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-desk" placeholder="Search Desk..." oninput="onHdrSearchInput('desk', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-desk">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('desk', 'all', 'All Desks')">All Desks</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'shashank', 'Shashank')">Shashank</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'shaheer', 'Sea Nomination')">Sea Nomination</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'jaya', 'Jaya')">Jaya</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('desk', 'cathrina', 'Cathrina')">Cathrina</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- CARRIER Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-carrier">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'carrier')">
-                        <span id="hdr-label-carrier">All Carriers</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-carrier" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-carrier" placeholder="Search Carrier..." oninput="onHdrSearchInput('carrier', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-carrier">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('carrier', 'all', 'All Carriers')">All Carriers</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- TONNAGE Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-tonnage">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'tonnage')">
-                        <span id="hdr-label-tonnage">All</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-tonnage" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-tonnage" placeholder="Filter Tonnage..." oninput="onHdrSearchInput('tonnage', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-tonnage">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('tonnage', 'all', 'All')">All</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- BUY RATE Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-buyrate">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'buyrate')">
-                        <span id="hdr-label-buyrate">Buy Rate</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-buyrate" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-buyrate" placeholder="Filter Buy Rate..." oninput="onHdrSearchInput('buyrate', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-buyrate">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('buyrate', 'all', 'All Rates')">All Rates</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- SELL RATE Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-sellrate">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'sellrate')">
-                        <span id="hdr-label-sellrate">Sell Rate</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-sellrate" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-sellrate" placeholder="Filter Sell Rate..." oninput="onHdrSearchInput('sellrate', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-sellrate">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('sellrate', 'all', 'All Rates')">All Rates</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- GP Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-gp">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'gp')">
-                        <span id="hdr-label-gp">GP Profit</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-gp" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-gp" placeholder="Filter GP..." oninput="onHdrSearchInput('gp', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-gp">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('gp', 'all', 'All Profit')">All Profit</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('gp', 'percent', '%')">%</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- STATUS Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-status">
-                      <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'status')">
-                        <span id="hdr-label-status">All Statuses</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-status" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-status" placeholder="Search Status..." oninput="onHdrSearchInput('status', this.value)">
-                        </div>
-                        <div class="hdr-filter-options-list" id="hdr-options-status">
-                          <div class="hdr-filter-opt active" onclick="selectHdrFilter('status', 'all', 'All Statuses')">All Statuses</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'quoted', 'Quoted')">Quoted</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'converted', 'Converted (Won)')">Converted (Won)</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'cancelled', 'Cancelled')">Cancelled</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrFilter('status', 'lost', 'Lost')">Lost</div>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
-
-                  <!-- ACTIONS & SORT BY Filter -->
-                  <th>
-                    <div class="hdr-filter-dropdown" id="dropdown-hdr-actions">
-                      <button type="button" class="hdr-filter-btn" style="background: rgba(79, 70, 229, 0.1); color: var(--indigo);" onclick="toggleHdrFilterMenu(event, 'actions')">
-                        <span id="hdr-label-sort">Sort By: Date (Newest)</span> <span class="hdr-filter-arrow">▼</span>
-                      </button>
-                      <div class="hdr-filter-menu" id="hdr-menu-actions" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="hdr-search-actions" placeholder="Search Sort option..." oninput="onHdrSearchInput('actions', this.value)">
-                        </div>
-                        <div style="padding: 4px 8px; font-size: 0.65rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Sort By:</div>
-                        <div class="hdr-filter-options-list" id="hdr-options-actions">
-                          <div class="hdr-filter-opt active" onclick="selectHdrSort('date-desc', 'Sort: Date (Newest)')">Date (Newest First)</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrSort('date-asc', 'Sort: Date (Oldest)')">Date (Oldest First)</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrSort('customer-asc', 'Sort: Customer (A-Z)')">Customer (A-Z)</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrSort('customer-desc', 'Sort: Customer (Z-A)')">Customer (Z-A)</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrSort('amount-desc', 'Sort: Amount (Highest)')">Amount (Highest First)</div>
-                          <div class="hdr-filter-opt" onclick="selectHdrSort('amount-asc', 'Sort: Amount (Lowest)')">Amount (Lowest First)</div>
-                        </div>
-                        <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); text-align: center;">
-                          <button type="button" style="background: var(--accent-error); color: #fff; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: 600; padding: 4px 8px; cursor: pointer; width: 100%;" onclick="resetAllHdrFilters()">Reset All Filters</button>
-                        </div>
-                      </div>
-                    </div>
-                  </th>
                 </tr>
               </thead>
               <tbody id="admin-quotes-body">
@@ -1166,7 +867,7 @@
             <button onclick="generateReportSummary()" class="btn-primary" style="background: var(--sky); color: #fff; font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
               📊 Generate Summary
             </button>
-            <button onclick="exportReportToCSV()" class="btn-primary" style="background: var(--accent-success); color: #000; font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
+            <button onclick="exportReportToCSV()" class="btn-primary" style="background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
               📥 Export to CSV / Excel
             </button>
           </div>
@@ -1191,6 +892,158 @@
             </div>
           </div>
         </div>
+
+        </div><!-- /desk-tab-pane[enquiry-database] -->
+        <div class="desk-tab-pane" data-tab-pane="analytics" style="display:none;">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
+          <!-- Quote Pipeline Summary -->
+          <div class="exec-section-card">
+            <h3 style="font-weight: 700; margin-bottom: 1.25rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+              Quote Pipeline Status
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-1); padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--t2); font-weight: 600;">Quoted</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--sky); margin-top: 0.25rem;" id="exec-pipe-quoted">0</div>
+              </div>
+              <div style="background: rgba(46,204,113,0.05); border: 1px solid rgba(46,204,113,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--accent-success); font-weight: 600;">Converted</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-success); margin-top: 0.25rem;" id="exec-pipe-converted">0</div>
+              </div>
+              <div style="background: rgba(231,76,60,0.05); border: 1px solid rgba(231,76,60,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--accent-error); font-weight: 600;">Lost</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-error); margin-top: 0.25rem;" id="exec-pipe-lost">0</div>
+              </div>
+              <div style="background: rgba(241,196,15,0.05); border: 1px solid rgba(241,196,15,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--accent-warning); font-weight: 600;">Cancelled</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-warning); margin-top: 0.25rem;" id="exec-pipe-cancelled">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer Control Summary -->
+          <div class="exec-section-card">
+            <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--accent-warning); margin-top: 0;">
+              Customer Compliance Status
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(231,76,60,0.08); border: 1px solid rgba(231,76,60,0.2); padding: 0.75rem 1rem; border-radius: 8px;">
+                <div>
+                  <strong style="color: var(--accent-error); font-size: 0.85rem;">Blocked Customers</strong>
+                  <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 0.1rem;" id="exec-blocked-cust-list">None currently</div>
+                </div>
+                <span style="font-size: 1.25rem; font-weight: 850; color: var(--accent-error);" id="exec-blocked-cust-count">0</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(241,196,15,0.08); border: 1px solid rgba(241,196,15,0.2); padding: 0.75rem 1rem; border-radius: 8px;">
+                <div>
+                  <strong style="color: var(--accent-warning); font-size: 0.85rem;">Agreement Pending</strong>
+                  <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 0.1rem;" id="exec-pending-cust-list">None currently</div>
+                </div>
+                <span style="font-size: 1.25rem; font-weight: 850; color: var(--accent-warning);" id="exec-pending-cust-count">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quotes By User -->
+        <div class="exec-section-card" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+            <h3 style="font-weight: 700; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin: 0;">
+              Quotes By User
+            </h3>
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+              <select id="exec-quotes-by-user-period" onchange="renderQuotesByUserTable()" style="font-size: 0.7rem; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--t1);">
+                <option value="all">All Time</option>
+                <option value="day">Per Day (Today)</option>
+                <option value="week">Per Week</option>
+                <option value="fortnight">Per Fortnight</option>
+                <option value="month">Per Month</option>
+                <option value="quarter">Per Quarter</option>
+                <option value="half_year">Half Yearly</option>
+                <option value="year">Per Year</option>
+              </select>
+              <div style="display: flex; background: var(--border-1); border-radius: 8px; padding: 2px;">
+                <button type="button" id="exec-quotes-by-user-sort-desc" class="sort-toggle-btn sort-toggle-btn-active" onclick="renderQuotesByUserTable(undefined,'desc')" style="border: none; padding: 5px 10px; font-size: 0.68rem; font-weight: 700; border-radius: 6px; cursor: pointer; background: var(--sky); transition: all 0.2s;">▼ Descending</button>
+                <button type="button" id="exec-quotes-by-user-sort-asc" class="sort-toggle-btn" onclick="renderQuotesByUserTable(undefined,'asc')" style="border: none; padding: 5px 10px; font-size: 0.68rem; font-weight: 700; border-radius: 6px; cursor: pointer; background: transparent; transition: all 0.2s;">▲ Ascending</button>
+              </div>
+            </div>
+          </div>
+          <div style="width: 100%; overflow-x: auto;">
+            <table class="exec-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>User</th>
+                  <th>Quotes</th>
+                </tr>
+              </thead>
+              <tbody id="exec-quotes-by-user-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Revenue & Profitability By User -->
+        <div class="exec-section-card" style="margin-bottom: 1.5rem;">
+          <h3 style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+            Revenue & Profitability By User
+          </h3>
+          <div id="exec-revenue-by-user-chart" style="height: 260px; width: 100%; overflow-x: auto; display: flex; align-items: center; justify-content: flex-start;">
+            <!-- Dynamically populated SVG -->
+          </div>
+        </div>
+
+        <!-- Row 2: Customer Concentration & Route/Trade Lane Performance -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+          <!-- Customer Concentration -->
+          <div class="exec-section-card">
+            <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+              Customer Concentration (Top Contributors)
+            </h3>
+            <div style="width: 100%; overflow-x: auto;">
+              <table class="exec-table">
+                <thead>
+                  <tr>
+                    <th>Customer Name</th>
+                    <th>Revenue (INR)</th>
+                    <th>Gross Profit (INR)</th>
+                    <th>Quotes Count</th>
+                  </tr>
+                </thead>
+                <tbody id="exec-customer-concentration-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Route / Trade Lane Performance -->
+          <div class="exec-section-card">
+            <h3 style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--sky); margin-top: 0;">
+              Route & Trade Lane Performance
+            </h3>
+            <div style="width: 100%; overflow-x: auto;">
+              <table class="exec-table">
+                <thead>
+                  <tr>
+                    <th>Route / Trade Lane</th>
+                    <th>Quotes</th>
+                    <th>Won</th>
+                    <th>Avg Margin %</th>
+                    <th>Total GP (INR)</th>
+                  </tr>
+                </thead>
+                <tbody id="exec-route-performance-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        </div><!-- /desk-tab-pane[analytics] -->
       </div>
 
       <!-- ==================== TEAM MEMBER WORKSPACE ==================== -->
@@ -1216,43 +1069,24 @@
         </div>
         <!-- Personal desk metrics -->
         <div class="stats-grid">
-          <div class="glass-card stat-card" data-type="total">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <path d="M3 3v18h18" />
-              <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="total">
             <div class="stat-title">My Quoted Total</div>
-            <div class="stat-value" id="user-stat-revenue">₹0</div>
+            <div id="user-stat-revenue-ring"></div>
             <div class="stat-subtitle">In local equivalent currency</div>
           </div>
-          <div class="glass-card stat-card" data-type="air">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <path d="M18 20V10M12 20V4M6 20v-6" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="air">
             <div class="stat-title">My Total Enquiries</div>
-            <div class="stat-value" id="user-stat-quotes">0</div>
+            <div id="user-stat-quotes-ring"></div>
             <div class="stat-subtitle">Enquiries quoted this month</div>
           </div>
-          <div class="glass-card stat-card" data-type="sea">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="sea">
             <div class="stat-title">My Conversions</div>
-            <div class="stat-value" id="user-stat-conversions">0</div>
+            <div id="user-stat-conversions-ring"></div>
             <div class="stat-subtitle">Active bookings secured</div>
           </div>
-          <div class="glass-card stat-card" data-type="warning">
-            <svg class="stat-infographic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
+          <div class="glass-card stat-card kpi-ring-card" data-type="warning">
             <div class="stat-title">My Conversion Rate</div>
-            <div class="stat-value" id="user-stat-rate">0.0%</div>
+            <div id="user-stat-rate-ring"></div>
             <div class="stat-subtitle">Successful conversions</div>
           </div>
         </div>
@@ -1319,7 +1153,7 @@
               <textarea id="sms-text" placeholder="Type SMS text..."
                 style="height: 60px; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; color: var(--t1); padding: 0.4rem 0.6rem; font-size: 0.8rem; resize: none; font-family: inherit; outline: none;"></textarea>
               <button class="btn-primary" onclick="triggerSmsGateway()"
-                style="background: var(--accent-success); color: #000; font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+                style="background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
                 💬 Launch SMS App
               </button>
             </div>
@@ -1331,7 +1165,7 @@
           <div class="table-header-row" style="flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <h3 style="font-weight: 700; margin: 0;">My Quotation Logs</h3>
-              <button onclick="restoreCachedQuotes()" class="btn-primary" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; background: var(--accent-success); color: #000; font-weight: 700; border: none; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
+              <button onclick="restoreCachedQuotes()" class="btn-primary" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); font-weight: 700; border: none; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
                 🔄 Restore Cached Quotes
               </button>
             </div>
@@ -1570,6 +1404,18 @@
               </tbody>
             </table>
           </div>
+          <!-- Pagination Controls -->
+          <div class="pagination-controls" style="margin-top: 1rem;">
+            <button class="pagination-btn" id="user-db-prev-btn" onclick="changeUserDbPage(-1)">
+              ◀ Previous
+            </button>
+            <span class="pagination-info" id="user-db-pagination-info">
+              Page 1 of 1 (Showing 0-0 of 0 entries)
+            </span>
+            <button class="pagination-btn" id="user-db-next-btn" onclick="changeUserDbPage(1)">
+              Next ▶
+            </button>
+          </div>
         </div>
 
         <!-- Dedicated NRS Shippers & Consignees Registry (Visible only to Cathrina & Ganny) -->
@@ -1582,8 +1428,13 @@
               <h3 style="font-weight: 700; margin-top: 0.15rem; font-family: 'Outfit', sans-serif; font-size: 1.1rem;">
                 Confirmed Booking Directory (Shippers & Consignees)</h3>
             </div>
-            <div class="search-box-container">
-              <input type="text" placeholder="Search directory..." oninput="filterNrsRegistry(this.value)">
+            <div class="search-box-container" style="display: flex; gap: 0.6rem; align-items: center;">
+              <input type="text" id="nrs-registry-search-input" placeholder="Search directory..." oninput="filterNrsRegistry(this.value)">
+              <select id="nrs-sort-select" class="app-sort-select" onchange="filterNrsRegistry(document.getElementById('nrs-registry-search-input').value)">
+                <option value="dateWon">Date Won</option>
+                <option value="agent">Agent</option>
+                <option value="followup">Follow-up</option>
+              </select>
             </div>
           </div>
 
@@ -1617,6 +1468,19 @@
           <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
             onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
+        <div class="desk-highlights-bar" style="border-color: var(--accent-air);">
+          <div class="dhb-stats">
+            <div class="dhb-stat"><span class="dhb-label">Chargeable Wt</span><span class="dhb-value" data-mirror-of="res-air-chw">0.00 kg</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Volume</span><span class="dhb-value" data-mirror-of="res-air-vol">0.000 CBM</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Packages</span><span class="dhb-value" data-mirror-of="res-air-qty">0 Pkgs</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Grand Total (Quoted Option)</span><span class="dhb-value dhb-value-strong" data-air-grandtotal-mirror>$0.00</span></div>
+          </div>
+          <div class="dhb-actions">
+            <button type="button" class="btn-secondary dhb-btn-reset" onclick="resetFreightForm('air')">🔄 Reset</button>
+            <button type="button" class="btn-primary dhb-btn-save" id="air-save-quote-btn" onclick="saveCurrentQuote()">Save Quote</button>
+          </div>
+        </div>
+
         <div class="workspace">
           <!-- Inputs section -->
           <div class="glass-card">
@@ -1629,18 +1493,14 @@
                 </svg>
                 <span>AIR FREIGHT DESK</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div id="air-port-clocks-tile"
-                  style="display: flex; gap: 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-1); border-radius: 6px; padding: 2px 8px; font-size: 0.68rem; font-family: monospace;">
-                  <span id="air-clock-origin">Origin: --:--:--</span>
-                  <span style="color: var(--text-dim);">|</span>
-                  <span id="air-clock-dest">Dest: --:--:--</span>
-                </div>
-                <button type="button" class="btn-secondary"
-                  style="font-size: 0.65rem; padding: 2px 8px; border: 1px solid var(--accent-error); color: var(--accent-error); background: rgba(239, 68, 68, 0.05); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; margin: 0;"
-                  onclick="resetFreightForm('air')">🔄 Reset Form</button>
-              </div>
             </div>
+
+            <div class="desk-tab-strip">
+              <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('air-freight-panel','details',this)">Shipment Details</button>
+              <button type="button" class="desk-tab-btn" onclick="switchDeskTab('air-freight-panel','carrier',this)">Carrier &amp; Tariffs</button>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="details">
 
             <!-- Export/Import Toggle Tabs -->
             <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
@@ -1716,26 +1576,37 @@
 
             <div class="form-grid-3">
               <div class="form-group autocomplete-container">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="air-origin">Origin Airport (IATA Code)</label>
-                  <button type="button" class="btn-text"
-                    style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;"
-                    onclick="toggleMapHelper('air', 'origin')">🔍 View Map</button>
-                </div>
+                <label for="air-origin">Origin Airport (IATA Code)</label>
                 <input type="text" id="air-origin" placeholder="Type Airport code or city..." autocomplete="off">
               </div>
               <div class="form-group autocomplete-container">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="air-dest">Destination Airport (IATA Code)</label>
-                  <button type="button" class="btn-text"
-                    style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;"
-                    onclick="toggleMapHelper('air', 'destination')">🔍 View Map</button>
-                </div>
+                <label for="air-dest">Destination Airport (IATA Code)</label>
                 <input type="text" id="air-dest" placeholder="Type Airport code or city..." autocomplete="off">
               </div>
               <div class="form-group autocomplete-container">
                 <label for="air-commodity">Commodity Type / HSN Code</label>
                 <input type="text" id="air-commodity" placeholder="Search or enter commodity/HSN code..." value="GENERAL" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="air-dg-class">Dangerous Goods Class</label>
+                <select id="air-dg-class">
+                  <option value="">Not Applicable (Non-DG)</option>
+                  <option value="1">Class 1 — Explosives</option>
+                  <option value="2.1">Class 2.1 — Flammable Gas</option>
+                  <option value="2.2">Class 2.2 — Non-Flammable, Non-Toxic Gas</option>
+                  <option value="2.3">Class 2.3 — Toxic Gas</option>
+                  <option value="3">Class 3 — Flammable Liquid</option>
+                  <option value="4.1">Class 4.1 — Flammable Solid</option>
+                  <option value="4.2">Class 4.2 — Spontaneously Combustible</option>
+                  <option value="4.3">Class 4.3 — Dangerous When Wet</option>
+                  <option value="5.1">Class 5.1 — Oxidizer</option>
+                  <option value="5.2">Class 5.2 — Organic Peroxide</option>
+                  <option value="6.1">Class 6.1 — Toxic Substance</option>
+                  <option value="6.2">Class 6.2 — Infectious Substance</option>
+                  <option value="7">Class 7 — Radioactive Material</option>
+                  <option value="8">Class 8 — Corrosive</option>
+                  <option value="9">Class 9 — Miscellaneous Dangerous Goods</option>
+                </select>
               </div>
 
             </div>
@@ -1774,33 +1645,6 @@
                   <option value="STACKABLE">Stackable</option>
                   <option value="NON-STACKABLE">Non-Stackable</option>
                 </select>
-              </div>
-            </div>
-
-            <!-- Collapsible Google Map Helper for Air -->
-            <div id="air-map-helper-card" class="glass-card"
-              style="margin-top: 1rem; display: none; padding: 1rem; border: 1px dashed var(--sky);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span
-                  style="font-size: 0.72rem; font-weight: 700; color: var(--sky); text-transform: uppercase; display: flex; align-items: center; gap: 0.3rem;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <circle cx="12" cy="10" r="3" />
-                    <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z" />
-                  </svg>
-                  Google Map Directory: <span id="air-map-query-title"
-                    style="color: var(--t1); margin-left: 0.35rem; font-weight: 800;">India</span>
-                </span>
-                <button type="button"
-                  style="font-size: 0.68rem; color: var(--accent-error); background: transparent; border: none; cursor: pointer; font-weight: 700;"
-                  onclick="document.getElementById('air-map-helper-card').style.display = 'none';">Close Map</button>
-              </div>
-              <div id="air-map-iframe-wrapper"
-                style="border: 1px solid var(--border-2); border-radius: 6px; overflow: hidden; height: 260px; background: rgba(27,28,92,0.02); display: flex; align-items: center; justify-content: center; position: relative;">
-                <!-- Dynamically populated iframe -->
-              </div>
-              <div style="font-size: 0.65rem; color: var(--t3); margin-top: 0.4rem; line-height: 1.4;">
-                * Notice: Google Maps Platform searches may incur usage fees. External links comply with standard Terms
-                of Service (ToS).
               </div>
             </div>
 
@@ -1863,6 +1707,10 @@
               </svg>
               Add Cargo Line
             </button>
+
+            </div><!-- /desk-tab-pane[details] -->
+
+            <div class="desk-tab-pane" data-tab-pane="carrier" style="display:none;">
 
             <!-- Dynamic Airlines Container (Carrier Tariffs) -->
             <div class="section-card" id="air-tariffs-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
@@ -1985,6 +1833,8 @@
                 style="width: 100%; background: #ffffff !important; border: 1px solid #cbd5e1; color: #000000 !important; font-weight: 600; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
                 placeholder="Add custom terms..."></textarea>
             </div>
+
+            </div><!-- /desk-tab-pane[carrier] -->
           </div>
 
           <!-- Live Results Widget (Right Panel) -->
@@ -2010,50 +1860,52 @@
               <button type="button" class="apply-opt-btn" id="apply-opt">Apply Cost Savings</button>
             </div>
 
-            <div class="result-row">
-              <span class="result-label">Actual Gross Weight</span>
-              <span class="result-value" id="res-air-gw">0.00 kg</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Total Packages / Pieces</span>
-              <span class="result-value" id="res-air-qty">0 Pkgs</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Volume Weight</span>
-              <span class="result-value" id="res-air-vw">0.00 kg</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Chargeable Weight</span>
-              <span class="result-value" id="res-air-chw" style="font-weight: 700;">0.00 kg</span>
-            </div>
-            <div class="result-row" id="row-air-pivot" style="display: none;">
-              <span class="result-label">Pivot Weight</span>
-              <span class="result-value" id="res-air-pivot" style="color: #38bdf8;">0.00 kg</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Total Volume (CBM)</span>
-              <span class="result-value" id="res-air-vol">0.000 CBM</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Commodity</span>
-              <span class="result-value" id="res-air-commodity-val" style="color: #38bdf8;">GENERAL</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Loadability</span>
-              <span class="result-value" id="res-air-loadability-val" style="color: #38bdf8;">Tiltable /
-                Stackable</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Routing</span>
-              <span class="result-value" id="res-air-routing-val" style="color: #38bdf8;">-</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Transit Time (TT)</span>
-              <span class="result-value" id="res-air-tt-val" style="color: #38bdf8;">-</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Validity</span>
-              <span class="result-value" id="res-air-validity-val" style="color: #38bdf8;">-</span>
+            <div class="result-row-grid">
+              <div class="result-row">
+                <span class="result-label">Actual Gross Weight</span>
+                <span class="result-value" id="res-air-gw">0.00 kg</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Total Packages / Pieces</span>
+                <span class="result-value" id="res-air-qty">0 Pkgs</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Volume Weight</span>
+                <span class="result-value" id="res-air-vw">0.00 kg</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Chargeable Weight</span>
+                <span class="result-value" id="res-air-chw" style="font-weight: 700;">0.00 kg</span>
+              </div>
+              <div class="result-row" id="row-air-pivot" style="display: none;">
+                <span class="result-label">Pivot Weight</span>
+                <span class="result-value" id="res-air-pivot" style="color: #38bdf8;">0.00 kg</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Total Volume (CBM)</span>
+                <span class="result-value" id="res-air-vol">0.000 CBM</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Commodity</span>
+                <span class="result-value" id="res-air-commodity-val" style="color: #38bdf8;">GENERAL</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Loadability</span>
+                <span class="result-value" id="res-air-loadability-val" style="color: #38bdf8;">Tiltable /
+                  Stackable</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Routing</span>
+                <span class="result-value" id="res-air-routing-val" style="color: #38bdf8;">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Transit Time (TT)</span>
+                <span class="result-value" id="res-air-tt-val" style="color: #38bdf8;">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Validity</span>
+                <span class="result-value" id="res-air-validity-val" style="color: #38bdf8;">-</span>
+              </div>
             </div>
 
             <div id="air-pricing-results-container"
@@ -2061,18 +1913,6 @@
               <!-- Individual Airline options cost summary will render here dynamically -->
             </div>
 
-
-
-            <div class="action-buttons">
-              <button class="btn-primary" onclick="saveCurrentQuote()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                  <polyline points="17 21 17 13 7 13 7 21" />
-                  <polyline points="7 3 7 8 15 8" />
-                </svg>
-                Save Quote to Database
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -2082,6 +1922,17 @@
         <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
           <button class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; flex: unset;"
             onclick="returnToWorkspace()">← Back to Dashboard</button>
+        </div>
+        <div class="desk-highlights-bar" style="border-color: var(--accent-sea);">
+          <div class="dhb-stats">
+            <div class="dhb-stat"><span class="dhb-label">Gross Wt</span><span class="dhb-value" data-mirror-of="res-sea-gw">0.00 kg</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Volume</span><span class="dhb-value" data-mirror-of="res-sea-vol">0.00 CBM</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Grand Total</span><span class="dhb-value dhb-value-strong" data-mirror-of="res-sea-total">$0.00</span></div>
+          </div>
+          <div class="dhb-actions">
+            <button type="button" class="btn-secondary dhb-btn-reset" onclick="resetFreightForm('sea')">🔄 Reset</button>
+            <button type="button" class="btn-primary dhb-btn-save" onclick="saveCurrentQuote()">Save Quote</button>
+          </div>
         </div>
         <div class="workspace">
           <!-- Inputs Column -->
@@ -2096,18 +1947,14 @@
                 </svg>
                 <span>SEA FREIGHT DESK</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div id="sea-port-clocks-tile"
-                  style="display: flex; gap: 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-1); border-radius: 6px; padding: 2px 8px; font-size: 0.68rem; font-family: monospace;">
-                  <span id="sea-clock-origin">Origin: --:--:--</span>
-                  <span style="color: var(--text-dim);">|</span>
-                  <span id="sea-clock-dest">Dest: --:--:--</span>
-                </div>
-                <button type="button" class="btn-secondary"
-                  style="font-size: 0.65rem; padding: 2px 8px; border: 1px solid var(--accent-error); color: var(--accent-error); background: rgba(239, 68, 68, 0.05); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; margin: 0;"
-                  onclick="resetFreightForm('sea')">🔄 Reset Form</button>
-              </div>
             </div>
+
+            <div class="desk-tab-strip">
+              <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('sea-freight-panel','details',this)">Shipment Details</button>
+              <button type="button" class="desk-tab-btn" onclick="switchDeskTab('sea-freight-panel','carrier',this)">Carrier &amp; Tariffs</button>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="details">
 
             <!-- Sea Export/Import Toggle Tabs -->
             <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
@@ -2183,56 +2030,40 @@
 
             <div class="form-grid-2">
               <div class="form-group autocomplete-container">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="sea-origin">Port of Loading (POL)</label>
-                  <button type="button" class="btn-text"
-                    style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;"
-                    onclick="toggleMapHelper('sea', 'origin')">🔍 View Map</button>
-                </div>
+                <label for="sea-origin">Port of Loading (POL)</label>
                 <input type="text" id="sea-origin" placeholder="Type Port name or city..." autocomplete="off">
               </div>
               <div class="form-group autocomplete-container">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="sea-dest">Port of Discharge (POD)</label>
-                  <button type="button" class="btn-text"
-                    style="font-size: 0.65rem; padding: 0; color: var(--sky); border: none; background: transparent; cursor: pointer; text-decoration: underline;"
-                    onclick="toggleMapHelper('sea', 'destination')">🔍 View Map</button>
-                </div>
+                <label for="sea-dest">Port of Discharge (POD)</label>
                 <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
               </div>
             </div>
 
-            <div class="form-grid-1" style="margin-top: 1rem;">
+            <div class="form-grid-2" style="margin-top: 1rem;">
               <div class="form-group autocomplete-container">
                 <label for="sea-commodity">Commodity / HSN Code</label>
                 <input type="text" id="sea-commodity" placeholder="Search or enter commodity/HSN code..." autocomplete="off">
               </div>
-            </div>
-
-            <!-- Collapsible Google Map Helper for Sea -->
-            <div id="sea-map-helper-card" class="glass-card"
-              style="margin-top: 1rem; display: none; padding: 1rem; border: 1px dashed var(--sky);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span
-                  style="font-size: 0.72rem; font-weight: 700; color: var(--sky); text-transform: uppercase; display: flex; align-items: center; gap: 0.3rem;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <circle cx="12" cy="10" r="3" />
-                    <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z" />
-                  </svg>
-                  Google Map Directory: <span id="sea-map-query-title"
-                    style="color: var(--t1); margin-left: 0.35rem; font-weight: 800;">India</span>
-                </span>
-                <button type="button"
-                  style="font-size: 0.68rem; color: var(--accent-error); background: transparent; border: none; cursor: pointer; font-weight: 700;"
-                  onclick="document.getElementById('sea-map-helper-card').style.display = 'none';">Close Map</button>
-              </div>
-              <div id="sea-map-iframe-wrapper"
-                style="border: 1px solid var(--border-2); border-radius: 6px; overflow: hidden; height: 260px; background: rgba(27,28,92,0.02); display: flex; align-items: center; justify-content: center; position: relative;">
-                <!-- Dynamically populated iframe -->
-              </div>
-              <div style="font-size: 0.65rem; color: var(--t3); margin-top: 0.4rem; line-height: 1.4;">
-                * Notice: Google Maps Platform searches may incur usage fees. External links comply with standard Terms
-                of Service (ToS).
+              <div class="form-group">
+                <label for="sea-dg-class">Dangerous Goods Class</label>
+                <select id="sea-dg-class">
+                  <option value="">Not Applicable (Non-DG)</option>
+                  <option value="1">Class 1 — Explosives</option>
+                  <option value="2.1">Class 2.1 — Flammable Gas</option>
+                  <option value="2.2">Class 2.2 — Non-Flammable, Non-Toxic Gas</option>
+                  <option value="2.3">Class 2.3 — Toxic Gas</option>
+                  <option value="3">Class 3 — Flammable Liquid</option>
+                  <option value="4.1">Class 4.1 — Flammable Solid</option>
+                  <option value="4.2">Class 4.2 — Spontaneously Combustible</option>
+                  <option value="4.3">Class 4.3 — Dangerous When Wet</option>
+                  <option value="5.1">Class 5.1 — Oxidizer</option>
+                  <option value="5.2">Class 5.2 — Organic Peroxide</option>
+                  <option value="6.1">Class 6.1 — Toxic Substance</option>
+                  <option value="6.2">Class 6.2 — Infectious Substance</option>
+                  <option value="7">Class 7 — Radioactive Material</option>
+                  <option value="8">Class 8 — Corrosive</option>
+                  <option value="9">Class 9 — Miscellaneous Dangerous Goods</option>
+                </select>
               </div>
             </div>
 
@@ -2300,6 +2131,13 @@
               <div class="form-group">
                 <label for="sea-pkg-qty">Total Package Quantity</label>
                 <input type="number" id="sea-pkg-qty" placeholder="e.g. 25" min="0" value="0">
+              </div>
+            </div>
+
+            <div class="form-grid-3" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label for="sea-chargeable-cbm-override">Chargeable Volume Override (CBM)</label>
+                <input type="number" id="sea-chargeable-cbm-override" placeholder="Leave blank to auto-calculate" min="0" step="0.01" value="" oninput="calculateSeaFreight()">
               </div>
             </div>
 
@@ -2385,6 +2223,10 @@
               </svg>
               Add Cargo Line
             </button>
+
+            </div><!-- /desk-tab-pane[details] -->
+
+            <div class="desk-tab-pane" data-tab-pane="carrier" style="display:none;">
 
             <!-- Dynamic Liners / Coloaders / BreakBulk Operators Container -->
             <div id="sea-liners-container">
@@ -2516,8 +2358,8 @@
                                   <tr>
                                     <th style="width: 32%;">Container Type</th>
                                     <th style="width: 16%; text-align: center;">Qty</th>
-                                    <th style="width: 21%; text-align: center;">Sell Rate (<span class="curr-label">USD</span>)</th>
-                                    <th style="width: 21%; text-align: center;">Buy Rate (<span class="curr-label">USD</span>)</th>
+                                    <th style="width: 21%; text-align: center;">Sell Rate</th>
+                                    <th style="width: 21%; text-align: center;">Buy Rate</th>
                                     <th style="width: 10%; text-align: center;">Action</th>
                                   </tr>
                                 </thead>
@@ -2541,7 +2383,7 @@
                               LCL Freight Pricing</h4>
                             <div class="form-row">
                               <div class="form-group" style="margin-bottom: 0;">
-                                <label>LCL Freight Rate (Per Revenue Ton - RT)</label>
+                                <label>LCL Sell Rate (Per Revenue Ton - RT)</label>
                                 <input type="number" class="sea-lcl-rate" placeholder="Rate" min="0" value="0" oninput="calculateSeaFreight()">
                               </div>
                               <div class="form-group" style="margin-bottom: 0;">
@@ -2601,7 +2443,7 @@
                               <thead>
                                 <tr>
                                   <th>Surcharge Name</th>
-                                  <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                                  <th>Sell Cost</th>
                                   <th>Buy Rate</th>
                                   <th>Billing Unit</th>
                                   <th>Remarks</th>
@@ -2691,7 +2533,7 @@
                               <thead>
                                 <tr>
                                   <th>Surcharge Name</th>
-                                  <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                                  <th>Sell Cost</th>
                                   <th>Buy Rate</th>
                                   <th>Billing Unit</th>
                                   <th>Remarks</th>
@@ -2767,6 +2609,8 @@
                 style="width: 100%; background: #ffffff !important; border: 1px solid #cbd5e1; color: #000000 !important; font-weight: 600; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
                 placeholder="Add custom terms..."></textarea>
             </div>
+
+            </div><!-- /desk-tab-pane[carrier] -->
           </div>
 
           <!-- Live Results widget -->
@@ -2777,42 +2621,47 @@
                 edits</div>
             </div>
 
-            <div class="result-row">
-              <span class="result-label">Service Type</span>
-              <span class="result-value" id="res-sea-type">FCL (Full Container)</span>
+            <div class="result-row-grid">
+              <div class="result-row">
+                <span class="result-label">Service Type</span>
+                <span class="result-value" id="res-sea-type">FCL (Full Container)</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Cargo Allocation Detail</span>
+                <span class="result-value" id="res-sea-details" style="font-weight: 700;">1 x 20'GP</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Gross Weight</span>
+                <span class="result-value" id="res-sea-gw">0.00 kg</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Total Volume</span>
+                <span class="result-value" id="res-sea-vol">0.00 CBM</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Total Packages</span>
+                <span class="result-value" id="res-sea-qty">0 Pkgs</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Routing</span>
+                <span class="result-value" id="res-sea-routing-val" style="color: #38bdf8;">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Transit Time (TT)</span>
+                <span class="result-value" id="res-sea-tt-val" style="color: #38bdf8;">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Validity</span>
+                <span class="result-value" id="res-sea-validity-val" style="color: #38bdf8;">-</span>
+              </div>
             </div>
-            <div class="result-row">
-              <span class="result-label">Cargo Allocation Detail</span>
-              <span class="result-value" id="res-sea-details" style="font-weight: 700;">1 x 20'GP</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Gross Weight</span>
-              <span class="result-value" id="res-sea-gw">0.00 kg</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Total Volume</span>
-              <span class="result-value" id="res-sea-vol">0.00 CBM</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Total Packages</span>
-              <span class="result-value" id="res-sea-qty">0 Pkgs</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Routing</span>
-              <span class="result-value" id="res-sea-routing-val" style="color: #38bdf8;">-</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Transit Time (TT)</span>
-              <span class="result-value" id="res-sea-tt-val" style="color: #38bdf8;">-</span>
-            </div>
-            <div class="result-row">
-              <span class="result-label">Validity</span>
-              <span class="result-value" id="res-sea-validity-val" style="color: #38bdf8;">-</span>
-            </div>
+
+            <!-- Per-container-type breakdown (FCL only) — mirrors the saved/printed quote's presentation -->
+            <div id="res-sea-fcl-breakdown" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem; display: none;"></div>
 
             <div class="result-row"
               style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
-              <span class="result-label">Base Ocean Freight</span>
+              <span class="result-label" id="res-sea-base-label">Base Ocean Freight</span>
               <span class="result-value" id="res-sea-base">$0.00</span>
             </div>
             <div class="result-row">
@@ -2846,18 +2695,6 @@
               <div id="sea-alternatives-results-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
             </div>
 
-
-
-            <div class="action-buttons">
-              <button class="btn-primary" onclick="saveCurrentQuote()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                  <polyline points="17 21 17 13 7 13 7 21" />
-                  <polyline points="7 3 7 8 15 8" />
-                </svg>
-                Save Quote to Database
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -2877,7 +2714,17 @@
           <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
 
-        <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+        <div class="desk-highlights-bar" style="border-color: var(--violet);">
+          <div class="dhb-stats">
+            <div class="dhb-stat"><span class="dhb-label">Subtotal</span><span class="dhb-value" data-mirror-of="res-transport-subtotal">₹0.00</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Grand Total</span><span class="dhb-value dhb-value-strong" data-mirror-of="res-transport-total">₹0.00</span></div>
+          </div>
+          <div class="dhb-actions">
+            <button type="button" class="btn-primary dhb-btn-save" onclick="saveStandaloneQuote('transport')">Save Quote</button>
+          </div>
+        </div>
+
+        <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
           <div class="glass-card" style="padding: 2rem;">
             <!-- Customer Name & Currency Row -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -2975,12 +2822,8 @@
                   <span class="result-label">Estimated Grand Total</span>
                   <span class="result-value-highlight" id="res-transport-total">₹0.00</span>
                 </div>
+                <div id="transport-fallback-indicator" title="Sell Rate is blank on at least one charge line — this total is using the Buy/Cost Rate as an interim placeholder. It is not a confirmed customer price." style="display:none; margin-top:0.5rem; font-size: 0.62rem; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 3px 8px; border-radius: 4px; font-weight: 800; text-transform: uppercase; text-align: center;">⚠ Interim Estimate (Buy Rate)</div>
               </div>
-            </div>
-            <div class="action-buttons" id="transport-save-btn-container" style="display: block; margin-top: 1.5rem;">
-              <button class="btn-primary" onclick="saveStandaloneQuote('transport')" style="width: 100%;">
-                Save Standalone Quote
-              </button>
             </div>
           </div>
         </div>
@@ -3001,7 +2844,17 @@
           <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
 
-        <div class="calculator-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+        <div class="desk-highlights-bar" style="border-color: var(--sky);">
+          <div class="dhb-stats">
+            <div class="dhb-stat"><span class="dhb-label">Subtotal</span><span class="dhb-value" data-mirror-of="res-warehouse-subtotal">₹0.00</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Grand Total</span><span class="dhb-value dhb-value-strong" data-mirror-of="res-warehouse-total">₹0.00</span></div>
+          </div>
+          <div class="dhb-actions">
+            <button type="button" class="btn-primary dhb-btn-save" onclick="saveStandaloneQuote('warehouse')">Save Quote</button>
+          </div>
+        </div>
+
+        <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
           <div class="glass-card" style="padding: 2rem;">
             <!-- Customer Name & Currency Row for Warehousing -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -3076,12 +2929,8 @@
                   <span class="result-label">Estimated Grand Total</span>
                   <span class="result-value-highlight" id="res-warehouse-total">₹0.00</span>
                 </div>
+                <div id="warehouse-fallback-indicator" title="Sell Rate is blank on at least one charge line — this total is using the Buy/Cost Rate as an interim placeholder. It is not a confirmed customer price." style="display:none; margin-top:0.5rem; font-size: 0.62rem; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 3px 8px; border-radius: 4px; font-weight: 800; text-transform: uppercase; text-align: center;">⚠ Interim Estimate (Buy Rate)</div>
               </div>
-            </div>
-            <div class="action-buttons" id="warehouse-save-btn-container" style="display: block; margin-top: 1.5rem;">
-              <button class="btn-primary" onclick="saveStandaloneQuote('warehouse')" style="width: 100%;">
-                Save Standalone Quote
-              </button>
             </div>
           </div>
         </div>
@@ -3125,30 +2974,63 @@
           </div>
 
           <!-- Directory Parent Level Tabs -->
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border-2); padding-bottom: 0.5rem;">
-            <button class="dir-parent-tab active" id="dir-parent-agents" onclick="setDirectoryParent('agents')" style="background: none; border: none; font-size: 0.95rem; font-weight: 800; padding: 0.5rem 1rem; color: var(--sky); cursor: pointer; position: relative;">
+          <div class="dir-parent-tab-row">
+            <button class="dir-parent-tab active" id="dir-parent-agents" onclick="setDirectoryParent('agents')">
               🌍 Overseas Agents
             </button>
-            <button class="dir-parent-tab" id="dir-parent-vendors" onclick="setDirectoryParent('vendors')" style="background: none; border: none; font-size: 0.95rem; font-weight: 800; padding: 0.5rem 1rem; color: var(--t2); cursor: pointer; position: relative;">
+            <button class="dir-parent-tab" id="dir-parent-vendors" onclick="setDirectoryParent('vendors')">
               🏢 Vendor Contacts
             </button>
           </div>
 
+          <!-- Quick-glance summary strip -->
+          <div id="directory-stat-strip" class="dir-stat-strip"></div>
+
           <!-- Directory Search & Category Filters -->
           <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
-            <div style="display: flex; gap: 0.75rem; width: 100%;">
-              <input type="text" id="directory-search-input" placeholder="Search contacts by name, person, email, phone, location, notes..." 
-                     style="flex: 1; padding: 0.75rem 1rem; border-radius: 10px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.9rem;"
-                     oninput="filterDirectoryContacts()">
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <div class="dir-search-wrap" style="flex: 1; min-width: 220px;">
+                <span class="dir-search-icon">🔍</span>
+                <input type="text" id="directory-search-input" placeholder="Search by company, contact, email, phone, or location..."
+                       oninput="filterDirectoryContacts()">
+              </div>
+              <select id="directory-quick-jump" class="dir-quick-jump" onchange="onDirectoryQuickJumpChange(this.value)"></select>
+              <!-- Vendor Contacts only -->
+              <select id="dir-vendor-sort" class="app-sort-select" onchange="renderDirectoryContacts()" style="display: none;">
+                <option value="category">Category</option>
+                <option value="name-asc">Company A-Z</option>
+                <option value="name-desc">Company Z-A</option>
+                <option value="branch">Branch/Station</option>
+              </select>
+              <!-- Overseas Agents only -->
+              <select id="dir-agent-sort" class="app-sort-select" onchange="renderDirectoryContacts()" style="display: none;">
+                <option value="location">By Country</option>
+                <option value="name">Company A-Z</option>
+                <option value="rating">By Rating</option>
+              </select>
             </div>
-            
+
             <div class="directory-tabs-container" id="directory-subfilters-container" style="display: flex; gap: 0.5rem; flex-wrap: wrap; overflow-x: auto; padding-bottom: 0.5rem;">
               <!-- Dynamic tabs loaded by JS based on Excel sheets -->
             </div>
           </div>
 
+          <!-- Bulk selection bar (Overseas Agents only) -->
+          <div id="dir-bulk-bar" class="dir-bulk-bar" style="display: none;">
+            <span id="dir-bulk-count" class="dir-bulk-count">0 selected</span>
+            <div class="dir-bulk-actions">
+              <button type="button" class="btn-text" onclick="selectAllVisibleAgents()">Select All</button>
+              <button type="button" class="btn-text" onclick="deselectAllAgents()">Deselect All</button>
+              <button type="button" class="btn-text" onclick="exportSelectedAgents()">📤 Export Selected</button>
+              <button type="button" class="btn-text" onclick="downloadSelectedAgreements()">📄 Download Agreements</button>
+            </div>
+          </div>
+
+          <!-- Hidden file input reused for every agreement upload -->
+          <input type="file" id="agent-agreement-file-input" accept="application/pdf" style="display:none;" onchange="onAgentAgreementFileChosen(event)">
+
           <!-- Contacts Cards Grid -->
-          <div id="directory-contacts-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem;">
+          <div id="directory-contacts-grid" class="dir-contacts-grid">
             <!-- Contacts loaded dynamically by JS -->
             <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
               Loading directory contacts...
@@ -3156,7 +3038,284 @@
           </div>
         </div>
       </div>
+
+      <!-- ==================== CIRCULARS & DOCUMENTS PANEL ==================== -->
+      <div id="circulars-panel" class="view-panel">
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+                Reference Library
+              </div>
+              <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
+                CIRCULARS &amp; DOCUMENTS
+              </h2>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <!-- Edit-rights-only Add Document -->
+              <button id="circular-add-btn" class="btn-primary" onclick="openCircularModal()" style="display: none; align-items: center; gap: 0.4rem; background: var(--sky); color: #fff; font-weight: 700;">
+                <span>+</span> Add Document
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;" id="circular-category-tabs">
+            <button class="dir-tab active" data-circular-cat="all" onclick="setCircularCategory('all')">All</button>
+            <button class="dir-tab" data-circular-cat="airline_tariff" onclick="setCircularCategory('airline_tariff')">Airline Tariffs</button>
+            <button class="dir-tab" data-circular-cat="fuel_circular_airline" onclick="setCircularCategory('fuel_circular_airline')">Airline Fuel Circulars</button>
+            <button class="dir-tab" data-circular-cat="fuel_circular_shipping" onclick="setCircularCategory('fuel_circular_shipping')">Shipping Line Circulars</button>
+          </div>
+
+          <div style="margin-bottom: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="circular-search-input" placeholder="Search by title, airline, or shipping line..." oninput="renderCircularsLibrary()" style="flex: 1; min-width: 220px; max-width: 420px; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-size: 0.85rem;">
+            <select id="circular-sort-select" class="app-sort-select" onchange="renderCircularsLibrary()">
+              <option value="newest">Newest</option>
+              <option value="expiring">Expiring Soon</option>
+              <option value="title">Title A-Z</option>
+              <option value="category">Category</option>
+            </select>
+          </div>
+
+          <div id="circulars-grid" class="dir-contacts-grid">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
+              Loading documents...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== WEEKLY AGENCY LIST PANEL ==================== -->
+      <div id="agencylist-panel" class="view-panel">
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+                Automated Report
+              </div>
+              <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
+                WEEKLY AGENCY LIST
+              </h2>
+              <div style="font-size: 0.78rem; color: var(--t3); margin-top: 0.25rem;">New agents quoted or confirmed in the last 7 days, auto-compiled and emailed every Thursday. AI-assisted duplicate detection.</div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button id="agencylist-preview-btn" class="btn-secondary" onclick="previewAgencyListReport()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
+                <span>👁</span> Preview This Week's Report
+              </button>
+              <button id="agencylist-test-send-btn" class="btn-primary" onclick="sendAgencyListTestEmail()" style="display: none; align-items: center; gap: 0.4rem; background: var(--sky); color: #fff; font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
+                <span>✉</span> Send Test Email Now
+              </button>
+            </div>
+          </div>
+
+          <div id="agencylist-preview-area" style="display: none; margin-bottom: 1.5rem; border: 1px solid var(--border-1); border-radius: 10px; padding: 1rem; background: #fff; overflow-x: auto;"></div>
+
+          <div style="border-top: 1px solid var(--border-1); padding-top: 1.25rem;">
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--t1); margin-bottom: 0.4rem;">Branch Office Recipients</div>
+            <div style="font-size: 0.78rem; color: var(--t3); margin-bottom: 0.9rem;">PAN-India branch office email addresses this report is sent to every Thursday.</div>
+
+            <div id="agencylist-recipients-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+              <div style="color: var(--t3); font-style: italic; font-size: 0.85rem;">Loading recipients...</div>
+            </div>
+
+            <div id="agencylist-add-row" style="display: none; gap: 0.5rem; flex-wrap: wrap;">
+              <input type="email" id="agencylist-new-email-input" placeholder="branch-office@company.com" style="flex: 1; min-width: 220px; max-width: 360px; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-size: 0.85rem;">
+              <button class="btn-primary" onclick="addAgencyListRecipient()" style="background: var(--sky); color: #fff; font-weight: 700;">+ Add Email</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== SALES PANEL (Leads & Activities) ==================== -->
+      <div id="sales-panel" class="view-panel">
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+                Sales &amp; Business Development
+              </div>
+              <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
+                LEADS &amp; ACTIVITY PIPELINE
+              </h2>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn-primary" onclick="openLeadModal()" style="display: flex; align-items: center; gap: 0.4rem; background: var(--sky); color: #fff; font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
+                <span>+</span> Add Lead
+              </button>
+              <button class="btn-secondary" onclick="openCustomerActivityModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
+                <span>📝</span> Log Customer Activity
+              </button>
+              <button class="btn-secondary" onclick="goHome()" style="font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
+                Back to Workspace
+              </button>
+            </div>
+          </div>
+
+          <!-- Status Filter Tabs -->
+          <div id="sales-status-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button class="sales-status-tab active" data-sales-status="all" onclick="setSalesStatusFilter('all')">All</button>
+            <button class="sales-status-tab" data-sales-status="new" onclick="setSalesStatusFilter('new')">New</button>
+            <button class="sales-status-tab" data-sales-status="contacted" onclick="setSalesStatusFilter('contacted')">Contacted</button>
+            <button class="sales-status-tab" data-sales-status="qualified" onclick="setSalesStatusFilter('qualified')">Qualified</button>
+            <button class="sales-status-tab" data-sales-status="quoted" onclick="setSalesStatusFilter('quoted')">Quoted</button>
+            <button class="sales-status-tab" data-sales-status="won" onclick="setSalesStatusFilter('won')">Won</button>
+            <button class="sales-status-tab" data-sales-status="lost" onclick="setSalesStatusFilter('lost')">Lost</button>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+            <input type="text" id="sales-search-input" placeholder="Search leads by company, contact, or assigned rep..."
+                   style="flex: 1; min-width: 220px; padding: 0.75rem 1rem; border-radius: 10px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.9rem;"
+                   oninput="filterSalesLeads()">
+            <select id="sales-sort-select" class="app-sort-select" onchange="renderSalesPanel()">
+              <option value="newest">Newest</option>
+              <option value="company">Company A-Z</option>
+              <option value="assigned">Assigned Rep</option>
+              <option value="activity">Last Activity</option>
+            </select>
+          </div>
+
+          <div class="cargo-table-container" style="border: none;">
+            <table class="cargo-table quotes-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Contact</th>
+                  <th>Status</th>
+                  <th>Assigned To</th>
+                  <th>Created</th>
+                  <th>Last Activity</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="sales-leads-body">
+                <tr><td colspan="7" style="text-align: center; color: var(--t3); font-style: italic; padding: 2rem;">Loading leads...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </main>
+
+  <!-- ==================== ADD / EDIT LEAD MODAL ==================== -->
+  <div id="lead-form-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2001; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div class="glass-card modal-card"
+      style="width: 100%; max-width: 480px; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Sales Pipeline</div>
+          <h2 style="font-size: 1.2rem; font-weight: 900; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;" id="lead-modal-title">ADD NEW LEAD</h2>
+        </div>
+        <button type="button" onclick="closeLeadModal()"
+          style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700;">×</button>
+      </div>
+      <form id="lead-form" onsubmit="saveLeadForm(event)">
+        <input type="hidden" id="lead-form-id">
+        <div class="form-group">
+          <label>Company Name *</label>
+          <input type="text" id="lead-company" required placeholder="e.g. Movemax Logistics">
+        </div>
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Contact Name</label>
+            <input type="text" id="lead-contact-name" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label>Contact Phone</label>
+            <input type="text" id="lead-contact-phone" placeholder="+91...">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Contact Email</label>
+          <input type="email" id="lead-contact-email" placeholder="name@company.com">
+        </div>
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Source</label>
+            <input type="text" id="lead-source" placeholder="Referral, website, cold call...">
+          </div>
+          <div class="form-group">
+            <label>Assigned To</label>
+            <select id="lead-assigned-to"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="lead-notes" rows="3" placeholder="Anything worth remembering about this prospect..." style="width: 100%; resize: vertical; font-family: inherit;"></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem; background: var(--sky); color: #fff; font-weight: 700;">Save Lead</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== LEAD / CUSTOMER ACTIVITY MODAL ==================== -->
+  <div id="activity-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2001; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div class="glass-card modal-card"
+      style="width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;" id="activity-modal-subtitle">Lead</div>
+          <h2 style="font-size: 1.2rem; font-weight: 900; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;" id="activity-modal-title">Company Name</h2>
+        </div>
+        <button type="button" onclick="closeActivityModal()"
+          style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700;">×</button>
+      </div>
+
+      <!-- Customer picker (only shown when logging an activity against an existing customer, not a lead) -->
+      <div id="activity-customer-picker" class="form-group" style="display: none;">
+        <label>Customer</label>
+        <select id="activity-customer-select" onchange="onActivityCustomerChange()"></select>
+      </div>
+
+      <!-- Lead info + status control (only shown for lead-mode) -->
+      <div id="activity-lead-info" style="display: none; margin-bottom: 1rem;">
+        <div style="font-size: 0.8rem; color: var(--t2); margin-bottom: 0.5rem;" id="activity-lead-contact-line"></div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <label style="margin: 0; font-size: 0.7rem;">Status</label>
+          <select id="activity-lead-status" onchange="updateLeadStatusFromModal()" style="width: auto; padding: 0.35rem 0.6rem; font-size: 0.78rem;">
+            <option value="new">New</option>
+            <option value="contacted">Contacted</option>
+            <option value="qualified">Qualified</option>
+            <option value="quoted">Quoted</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid var(--border-1); padding-top: 1rem; margin-bottom: 1rem;">
+        <div style="font-size: 0.68rem; font-weight: 800; color: var(--t2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem;">Activity Timeline</div>
+        <div id="activity-timeline-list" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 220px; overflow-y: auto; margin-bottom: 1rem;">
+        </div>
+      </div>
+
+      <form id="activity-form" onsubmit="logActivityForm(event)" style="border-top: 1px solid var(--border-1); padding-top: 1rem;">
+        <input type="hidden" id="activity-related-type">
+        <input type="hidden" id="activity-related-id">
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Type</label>
+            <select id="activity-type">
+              <option value="call">Call</option>
+              <option value="email">Email</option>
+              <option value="meeting">Meeting</option>
+              <option value="follow-up">Follow-up</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Due Date (optional)</label>
+            <input type="date" id="activity-due-date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Details</label>
+          <textarea id="activity-notes" rows="2" required placeholder="What happened or what's planned..." style="width: 100%; resize: vertical; font-family: inherit;"></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; background: var(--sky); color: #fff; font-weight: 700;">Log Activity</button>
+      </form>
+    </div>
+  </div>
 
   <!-- ==================== ADD / EDIT CONTACT MODAL ==================== -->
   <div id="contact-form-modal" class="modal-overlay"
@@ -3205,8 +3364,8 @@
           <input type="text" id="contact-form-person" placeholder="e.g. John Doe" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
-          <label for="contact-form-email" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Email Address</label>
-          <input type="email" id="contact-form-email" placeholder="e.g. john@atlas.com" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+          <label for="contact-form-email" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Email Address (multiple allowed, comma-separated)</label>
+          <input type="email" id="contact-form-email" multiple placeholder="e.g. john@atlas.com, jane@atlas.com" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label for="contact-form-phone" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Phone Number</label>
@@ -3220,7 +3379,7 @@
           <label for="contact-form-notes" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Notes / Remarks</label>
           <textarea id="contact-form-notes" placeholder="Rates, contract validity, special notes..." style="width:100%; height: 70px; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.85rem; resize: none;"></textarea>
         </div>
-        <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; background: var(--accent-success); color: #000; font-weight: 700;">
+        <button type="submit" class="btn-primary" style="width: 100%; border-radius: 8px; background: var(--accent-success); color: #ffffff; font-weight: 700;">
           Save Contact
         </button>
       </form>
@@ -3267,13 +3426,77 @@
       </div>
 
       <div id="excel-import-actions" style="display: none; gap: 0.5rem; margin-top: 1.25rem;">
-        <button class="btn-primary" onclick="submitExcelImport()" style="flex: 1; border-radius: 8px; background: var(--accent-success); color: #000; font-weight: 700;">
+        <button class="btn-primary" onclick="submitExcelImport()" style="flex: 1; border-radius: 8px; background: var(--accent-success); color: #ffffff; font-weight: 700;">
           Confirm & Import (<span id="excel-import-count">0</span> rows)
         </button>
         <button class="btn-secondary" onclick="resetExcelImport()" style="border-radius: 8px;">
           Cancel
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== ADD / EDIT CIRCULAR MODAL ==================== -->
+  <div id="circular-form-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2001; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div class="glass-card modal-card"
+      style="width: 100%; max-width: 500px; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+            Reference Library
+          </div>
+          <h2 style="font-size: 1.2rem; font-weight: 900; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;" id="circular-modal-title">
+            ADD DOCUMENT
+          </h2>
+        </div>
+        <button type="button" onclick="closeCircularModal()"
+          style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700;">×</button>
+      </div>
+
+      <form id="circular-form" onsubmit="saveCircular(event)">
+        <input type="hidden" id="circular-form-id">
+        <input type="hidden" id="circular-form-existing-path">
+        <input type="hidden" id="circular-form-existing-url">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="circular-form-category" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Category</label>
+          <select id="circular-form-category" required style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+            <option value="airline_tariff">Airline Tariff</option>
+            <option value="fuel_circular_airline">Airline Fuel Circular</option>
+            <option value="fuel_circular_shipping">Shipping Line Circular</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="circular-form-title" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Title</label>
+          <input type="text" id="circular-form-title" required placeholder="e.g. Emirates SkyCargo Tariff - Aug 2026" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="circular-form-carrier" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Airline / Shipping Line</label>
+          <input type="text" id="circular-form-carrier" placeholder="e.g. Emirates, Maersk" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+          <div style="min-width: 0;">
+            <label for="circular-form-effective" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Effective From (Optional)</label>
+            <input type="month" id="circular-form-effective" style="width:100%; box-sizing: border-box; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+          </div>
+          <div style="min-width: 0;">
+            <label for="circular-form-expiry" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Valid Until (Optional)</label>
+            <input type="month" id="circular-form-expiry" style="width:100%; box-sizing: border-box; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1);">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="circular-form-notes" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Notes (Optional)</label>
+          <textarea id="circular-form-notes" placeholder="Effective date, validity, special notes..." style="width:100%; height: 60px; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.85rem; resize: none;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="circular-form-file" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">PDF File <span id="circular-form-file-hint" style="font-weight: 400; color: var(--t3);"></span></label>
+          <input type="file" id="circular-form-file" accept="application/pdf" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-size: 0.8rem;" onchange="handleCircularFileClassify(event)">
+          <div id="circular-form-classify-hint" style="font-size: 0.72rem; color: var(--sky); margin-top: 0.35rem; min-height: 1em;"></div>
+        </div>
+        <button type="submit" class="btn-primary" id="circular-form-submit-btn" style="width: 100%; border-radius: 8px; background: var(--accent-success); color: #ffffff; font-weight: 700;">
+          Save Document
+        </button>
+      </form>
     </div>
   </div>
     </main>
@@ -3328,7 +3551,7 @@
           </div>
         </div>
         <button class="btn-primary" id="print-quote-btn"
-          style="background: var(--accent-success); color: #000; box-shadow: none;">
+          style="background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); box-shadow: none;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 6 2 18 2 18 9" />
             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
@@ -3510,7 +3733,7 @@
               </small>
             </div>
             <button type="submit" class="btn-primary"
-              style="width: 100%; border-radius: 8px; margin-top: 0.75rem; background: var(--accent-success); color: #000; font-weight: 700;">
+              style="width: 100%; border-radius: 8px; margin-top: 0.75rem; background: var(--accent-success); color: #ffffff; font-weight: 700;">
               Save Settings & Reconnect
             </button>
           </form>
@@ -3538,7 +3761,7 @@
               <input type="password" id="reg-password" placeholder="••••••••" required>
             </div>
             <button type="submit" class="btn-primary"
-              style="width: 100%; border-radius: 8px; margin-top: 0.75rem; background: var(--accent-success); color: #000; font-weight: 700;">
+              style="width: 100%; border-radius: 8px; margin-top: 0.75rem; background: var(--accent-success); color: #ffffff; font-weight: 700;">
               Register New User
             </button>
           </form>
@@ -3568,6 +3791,10 @@
               </tbody>
             </table>
           </div>
+          <button type="button" onclick="window.openAdminResetOverlay()" class="btn-secondary"
+            style="width: 100%; border-radius: 8px; margin-top: 0.75rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--accent-error); font-weight: 700; padding: 0.6rem;">
+            🔑 Force Reset Staff Password
+          </button>
         </div>
 
         <!-- Card 3: Credit Control & Document Compliance (Admin Only) -->
@@ -3647,7 +3874,7 @@
           <input type="password" id="new-pass-val" placeholder="Min 6 characters" required>
         </div>
         <button type="submit" class="btn-primary"
-          style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #000; font-weight: 700;">
+          style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #ffffff; font-weight: 700;">
           Update Password
         </button>
       </form>
@@ -3675,6 +3902,14 @@
 
       <form id="won-booking-form" onsubmit="submitWonBookingDetails(event)">
         <input type="hidden" id="won-quote-id">
+
+        <div style="border: 1px solid var(--sky); background: rgba(2, 132, 199, 0.06); border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 0.6rem;">
+          <input type="checkbox" id="won-quick-convert-toggle" onchange="toggleWonQuickConvertMode()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer; margin-top: 2px;">
+          <label for="won-quick-convert-toggle" style="font-size: 0.72rem; font-weight: 700; color: var(--t1); cursor: pointer; line-height: 1.4;">
+            Quick Convert — confirm Buy/Sell rates now and mark this WON immediately.
+            <span style="display: block; font-weight: 500; color: var(--t2); margin-top: 0.15rem;">Shipper, consignee, commodity, and the agency agreement become optional — NRS will complete them from the linked registry entry.</span>
+          </label>
+        </div>
 
         <div style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem; margin-bottom: 1rem;">
           <!-- Shipper / Exporter Section -->
@@ -3782,7 +4017,7 @@
         </div>
 
         <button type="submit" class="btn-primary"
-          style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #000; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding: 0.6rem;">
+          style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #ffffff; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding: 0.6rem;">
           Confirm Won Booking & Save
         </button>
       </form>
@@ -3857,6 +4092,86 @@
     </div>
   </div>
 
+  <!-- ==================== NRS EDIT BOOKING DETAILS MODAL ==================== -->
+  <div id="nrs-edit-details-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2010; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div class="glass-card modal-card"
+      style="width: 100%; max-width: 520px; background: rgba(255, 255, 255, 0.96); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <div
+            style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
+            NRS Confirmed Booking Directory</div>
+          <h2 id="nrs-edit-details-title"
+            style="font-size: 1.05rem; font-weight: 900; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
+            SHIPPER / CONSIGNEE DETAILS</h2>
+        </div>
+        <button type="button" onclick="closeNrsEditDetailsModal()"
+          style="background: var(--bg-input); border: 1px solid var(--border-1); color: var(--t1); font-size: 1.2rem; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700;">×</button>
+      </div>
+
+      <form id="nrs-edit-details-form" onsubmit="saveNrsEditDetails(event)">
+        <input type="hidden" id="nrs-edit-id">
+        <div style="max-height: 420px; overflow-y: auto; padding-right: 0.5rem;">
+          <h4 style="font-size: 0.72rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 0 0 0.7rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Exporter (Shipper)</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.7rem;">
+            <div class="form-group">
+              <label for="nrs-edit-shipper-name" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Company Name</label>
+              <input type="text" id="nrs-edit-shipper-name" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="nrs-edit-shipper-phone" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Contact Number</label>
+              <input type="text" id="nrs-edit-shipper-phone" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.7rem;">
+            <div class="form-group">
+              <label for="nrs-edit-shipper-email" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Email ID</label>
+              <input type="email" id="nrs-edit-shipper-email" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="nrs-edit-shipper-address" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Office Address</label>
+              <input type="text" id="nrs-edit-shipper-address" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.72rem; font-weight: 800; color: var(--sky); border-bottom: 1px solid var(--border-1); padding-bottom: 3px; margin: 1.1rem 0 0.7rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Importer (Consignee)</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.7rem;">
+            <div class="form-group">
+              <label for="nrs-edit-cnee-name" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Company Name</label>
+              <input type="text" id="nrs-edit-cnee-name" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="nrs-edit-cnee-phone" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Contact Number</label>
+              <input type="text" id="nrs-edit-cnee-phone" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.7rem;">
+            <div class="form-group">
+              <label for="nrs-edit-cnee-email" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Email ID</label>
+              <input type="email" id="nrs-edit-cnee-email" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+            <div class="form-group">
+              <label for="nrs-edit-cnee-address" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Office Address</label>
+              <input type="text" id="nrs-edit-cnee-address" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label for="nrs-edit-commodity" style="font-weight: 700; font-size: 0.68rem; color: var(--indigo);">Commodity / Goods Description</label>
+            <input type="text" id="nrs-edit-commodity" style="border-radius: 8px; font-size: 0.72rem; padding: 0.4rem 0.6rem;">
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary"
+          style="width: 100%; border-radius: 8px; margin-top: 1rem; background: var(--accent-success); color: #ffffff; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; padding: 0.6rem;">
+          Save Details
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- ==================== PIN CODE SEARCH MODAL ==================== -->
   <div id="pincode-search-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 9999; justify-content: center; align-items: center; padding: 1.5rem;" onclick="closePincodeSearchModal(event)">
     <div class="glass-card modal-card" style="width: 100%; max-width: 680px; max-height: 85vh; background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 18px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); padding: 1.5rem; display: flex; flex-direction: column; color: #f8fafc; font-family: 'Inter', sans-serif;" onclick="event.stopPropagation()">
@@ -3898,7 +4213,7 @@
   <datalist id="sea-dest-charges-list"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=127.0"></script>
+  <script src="app-v4.js?v=128.02"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -3936,32 +4251,15 @@
     };
 
     // --- Admin-mediated Password Reset & Secret Override Logic ---
-    let selectorClickCount = 0;
-    let selectorClickTimer = null;
+    // Previously reachable pre-login via 5 clicks on the title + a hardcoded
+    // passkey — both the click trick and the passkey string were plainly
+    // visible in this page's source, so they provided no real protection.
+    // The overlay is now only opened from inside the already-authenticated
+    // Admin Settings Console (see toggleAdminSettingsModal's admin-only
+    // gating and the "Force Reset Staff Password" button there), and the
+    // Cloud Function this calls independently re-verifies the caller is the
+    // admin account server-side regardless of how the overlay was opened.
     window.adminPanelActivated = false;
-
-    window.handlePathwaySelectorClick = function() {
-      selectorClickCount++;
-      clearTimeout(selectorClickTimer);
-      selectorClickTimer = setTimeout(() => {
-        selectorClickCount = 0;
-      }, 2500);
-
-      if (selectorClickCount >= 5) {
-        selectorClickCount = 0;
-        const passkey = prompt("Enter Admin Master Passkey:");
-        if (passkey === "MasterPricing2026") {
-          window.openAdminResetOverlay();
-          window.adminPanelActivated = true;
-          document.getElementById("admin-passkey-sec").style.display = "none";
-          document.getElementById("admin-inputs-sec").style.display = "block";
-          if (window.updateResetListInPanel) window.updateResetListInPanel();
-          if (window.updateResetIndicators) window.updateResetIndicators();
-        } else if (passkey !== null) {
-          alert("❌ Invalid Passkey. Access Denied.");
-        }
-      }
-    };
 
     window.openAdminResetOverlay = function() {
       let overlay = document.getElementById("admin-reset-overlay");
@@ -3974,17 +4272,8 @@
             <button onclick="window.closeAdminResetOverlay()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
             <h2 style="font-weight: 800; font-size: 1.4rem; color: #0f172a; margin-top: 0; margin-bottom: 0.25rem; letter-spacing: -0.02em;">Admin Control Desk</h2>
             <p style="color: #64748b; font-size: 0.82rem; margin-bottom: 1.5rem;">Secure password override utility</p>
-            
-            <div id="admin-passkey-sec" style="display: block;">
-              <div style="margin-bottom: 1.25rem; text-align: left;">
-                <label style="display: block; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: #0f172a; margin-bottom: 0.4rem; letter-spacing: 0.05em;">Master Passkey</label>
-                <input type="password" id="admin-passkey-input" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 1rem; box-sizing: border-box; outline: none;">
-              </div>
-              <button onclick="window.verifyAdminPasskey()" style="width: 100%; background: #0f172a; color: #fff; padding: 0.75rem; border: none; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Verify Identity</button>
-              <button onclick="window.closeAdminResetOverlay()" style="width: 100%; margin-top: 0.5rem; background: transparent; border: 1.5px solid #cbd5e1; color: #64748b; padding: 0.75rem; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em;">Close Console</button>
-            </div>
 
-            <div id="admin-inputs-sec" style="display: none;">
+            <div id="admin-inputs-sec" style="display: block;">
               <div id="admin-pending-badge" style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1.25rem; text-align: left;">
                 <div style="font-size: 0.72rem; font-weight: 800; color: #ef4444; text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;">
                   <span style="display: inline-block; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
@@ -4011,28 +4300,15 @@
       }
       
       overlay.style.display = "flex";
-      document.getElementById("admin-passkey-input").value = "";
-      document.getElementById("admin-passkey-sec").style.display = "block";
-      document.getElementById("admin-inputs-sec").style.display = "none";
+      document.getElementById("admin-inputs-sec").style.display = "block";
+      window.adminPanelActivated = true;
+      if (window.updateResetListInPanel) window.updateResetListInPanel();
+      if (window.updateResetIndicators) window.updateResetIndicators();
     };
 
     window.closeAdminResetOverlay = function() {
       const overlay = document.getElementById("admin-reset-overlay");
       if (overlay) overlay.style.display = "none";
-    };
-
-    window.verifyAdminPasskey = function() {
-      const entered = document.getElementById("admin-passkey-input").value;
-      const MASTER_PASSKEY = "MasterPricing2026";
-      if (entered === MASTER_PASSKEY) {
-        window.adminPanelActivated = true;
-        document.getElementById("admin-passkey-sec").style.display = "none";
-        document.getElementById("admin-inputs-sec").style.display = "block";
-        window.updateResetListInPanel();
-        window.updateResetIndicators();
-      } else {
-        alert("❌ Invalid Passkey. Access Denied.");
-      }
     };
 
     window.fillTargetUser = function(user) {
@@ -4265,7 +4541,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=4d7a6b6">' +
+          '<link rel="stylesheet" href="index.css?v=128.02">' +
           '<style>' +
             '@page {' +
               'size: A4;' +
@@ -4468,6 +4744,28 @@
       toggle.setAttribute('aria-expanded', 'false');
       document.body.style.overflow = '';
     }
+    // Desktop sidebar collapse — purely CSS class toggling on <body>, persisted locally
+    function syncSidebarToggleLabel(collapsed) {
+      const toggle = document.getElementById('sidebar-collapse-toggle');
+      if (!toggle) return;
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      toggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+      toggle.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      const label = toggle.querySelector('span');
+      if (label) label.textContent = collapsed ? 'Expand' : 'Collapse';
+    }
+    function toggleDesktopSidebar() {
+      const collapsed = document.body.classList.toggle('sidebar-collapsed');
+      syncSidebarToggleLabel(collapsed);
+      try { localStorage.setItem('atlas_sidebar_collapsed', collapsed ? '1' : '0'); } catch (e) {}
+    }
+    (function restoreDesktopSidebarState() {
+      try {
+        const collapsed = localStorage.getItem('atlas_sidebar_collapsed') === '1';
+        if (collapsed) document.body.classList.add('sidebar-collapsed');
+        syncSidebarToggleLabel(collapsed);
+      } catch (e) {}
+    })();
     // Close sidebar when a nav item is clicked on mobile
     document.querySelectorAll('.sidebar-item').forEach(function(item) {
       item.addEventListener('click', function() {

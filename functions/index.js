@@ -250,3 +250,411 @@ exports.adminCreateUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("internal", err.message);
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Weekly Agency List — new agents (customer/agent company names) quoted or
+// confirmed (WON) in the last 7 days, auto-compiled across Air/Sea/Transport/
+// Warehouse and emailed every Thursday to the PAN-India branch office
+// distribution list managed in-app under app_settings/agencyListRecipients.
+// Read-only against "quotes" — never writes to a quote or touches pricing.
+// ─────────────────────────────────────────────────────────────────────────────
+const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
+
+const AGENCY_LIST_NOISE_WORDS = new Set([
+  "pvt", "ltd", "limited", "private", "inc", "llc", "llp", "logistics",
+  "freight", "forwarding", "forwarders", "shipping", "cargo", "co", "company",
+  "group", "india", "pte", "corp", "corporation", "services", "the", "and",
+]);
+
+function normalizeAgencyName(name) {
+  return (name || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(" ");
+}
+
+// Aggressively stripped form used only for similarity SCORING — the noise
+// words are common enough that "ABC Logistics" and "ABC Logistics Pvt Ltd"
+// should score as near-identical, but the un-stripped form is still what
+// gets shown to a human or handed to the AI as the real company name.
+function normalizeAgencyNameForScoring(name) {
+  return normalizeAgencyName(name)
+    .split(" ")
+    .filter((w) => w && !AGENCY_LIST_NOISE_WORDS.has(w))
+    .join(" ");
+}
+
+// Levenshtein-based similarity ratio in [0, 1] — 1 means identical strings.
+function stringSimilarity(a, b) {
+  if (a === b) return 1;
+  if (!a || !b) return 0;
+  const m = a.length;
+  const n = b.length;
+  const dp = new Array(n + 1);
+  for (let j = 0; j <= n; j++) dp[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = temp;
+    }
+  }
+  return 1 - dp[n] / Math.max(m, n);
+}
+
+const AGENCY_LIST_HIGH_THRESHOLD = 0.82; // score >= this -> confidently the same company
+const AGENCY_LIST_LOW_THRESHOLD = 0.55; // score <= this -> confidently a different company
+const AGENCY_LIST_MAX_AMBIGUOUS = 25; // safety cap on names sent to the AI per run
+
+// Stage 1 of the dedup: free, instant, deterministic. Scores every
+// candidate-new name against every previously-seen name (noise-word-
+// stripped form) and buckets it as confidently new, confidently a
+// duplicate, or genuinely ambiguous — only the ambiguous band costs an AI
+// call. `candidateNorms`/`priorNorms` are lightly-normalized forms (case/
+// punctuation only, corporate suffixes intact) from normalizeAgencyName().
+function algorithmicDedupPrefilter(candidateNorms, priorNorms) {
+  const priorScored = priorNorms.map((norm) => ({ norm, scoreForm: normalizeAgencyNameForScoring(norm) }));
+
+  const confirmedNew = [];
+  const confirmedDup = [];
+  const ambiguous = [];
+
+  candidateNorms.forEach((candidateNorm) => {
+    const candidateScoreForm = normalizeAgencyNameForScoring(candidateNorm);
+    let bestScore = 0;
+    let bestMatchNorm = null;
+    priorScored.forEach(({ norm, scoreForm }) => {
+      const score = stringSimilarity(candidateScoreForm, scoreForm);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatchNorm = norm;
+      }
+    });
+
+    if (bestMatchNorm && bestScore >= AGENCY_LIST_HIGH_THRESHOLD) {
+      confirmedDup.push(candidateNorm);
+    } else if (!bestMatchNorm || bestScore <= AGENCY_LIST_LOW_THRESHOLD) {
+      confirmedNew.push(candidateNorm);
+    } else {
+      ambiguous.push({ candidateNorm, matchNorm: bestMatchNorm, score: bestScore });
+    }
+  });
+
+  return { confirmedNew, confirmedDup, ambiguous };
+}
+
+// Stage 2 of the dedup: only the genuinely ambiguous pairs, with their real
+// (non-normalized) names, go to a single batched Claude call for a same-
+// company judgment. Fails open on any error, timeout, cap-overflow, or
+// malformed response — every affected pair is treated as "new" rather than
+// silently dropped, since a false positive (one extra row to eyeball) is
+// far cheaper than a false negative (a real new agent never reported).
+async function resolveAmbiguousWithAI(pairs, apiKey) {
+  if (!pairs.length) return [];
+
+  const capped = pairs.slice(0, AGENCY_LIST_MAX_AMBIGUOUS);
+  const overflow = pairs.length - capped.length;
+  if (overflow > 0) {
+    functions.logger.warn(
+      `weeklyAgencyListEmail: ${overflow} ambiguous name(s) exceeded the AI batch cap and were treated as new.`
+    );
+  }
+
+  const failOpen = () => capped.map((p) => ({ candidateNorm: p.candidateNorm, isSameCompany: false }));
+  if (!apiKey) return failOpen();
+
+  try {
+    const prompt =
+      "You are checking a freight-forwarding company's list of client/agent names for near-duplicates. " +
+      'For each numbered pair below, decide whether "candidate" is the SAME real-world company as ' +
+      '"existing" (e.g. a name variant, abbreviation, or an added/removed legal suffix), or a GENUINELY ' +
+      "DIFFERENT company that merely shares similar words. Respond with ONLY a JSON array, one object per " +
+      'pair in the same order, each shaped exactly as {"sameCompany": true|false}. No prose, no markdown, ' +
+      "just the JSON array.\n\n" +
+      capped.map((p, i) => `${i + 1}. candidate: "${p.candidateOriginal}" | existing: "${p.matchOriginal}"`).join("\n");
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      functions.logger.warn("resolveAmbiguousWithAI: API request failed", { status: response.status });
+      return failOpen();
+    }
+
+    const payload = await response.json();
+    const text = payload?.content?.[0]?.text || "";
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return failOpen();
+
+    const verdicts = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(verdicts) || verdicts.length !== capped.length) return failOpen();
+
+    return capped.map((p, i) => ({
+      candidateNorm: p.candidateNorm,
+      isSameCompany: verdicts[i]?.sameCompany === true,
+    }));
+  } catch (err) {
+    functions.logger.warn("resolveAmbiguousWithAI: falling back to fail-open", { message: err.message });
+    return failOpen();
+  }
+}
+
+// Reads the entire "quotes" collection — small enough today that the client
+// itself does the same unfiltered load via a real-time listener — and
+// returns the new-agent report for the last 7 days. Read-only.
+async function buildAgencyListReport(apiKey) {
+  const snap = await admin.firestore().collection("quotes").get();
+
+  const now = Date.now();
+  const cutoff = now - 7 * 24 * 60 * 60 * 1000;
+
+  const priorNormSet = new Set();
+  const originalNameByNorm = new Map(); // first-seen original casing, any bucket
+  const thisWeek = [];
+  const thisWeekNormSet = new Set();
+
+  snap.forEach((doc) => {
+    const q = doc.data();
+    const norm = normalizeAgencyName(q.customer);
+    if (!norm) return;
+    if (!originalNameByNorm.has(norm)) originalNameByNorm.set(norm, (q.customer || "").trim());
+
+    // No timestamp at all (legacy pre-migration doc) — treat as known/prior,
+    // never as new, so it can never produce a false "new agent" positive.
+    if (!q.timestamp || q.timestamp < cutoff) {
+      priorNormSet.add(norm);
+      return;
+    }
+
+    // lost/cancelled isn't a meaningful "this agent is active" signal
+    if (q.status === "lost" || q.status === "cancelled") return;
+
+    thisWeek.push({
+      customer: (q.customer || "").trim(),
+      normCustomer: norm,
+      type: q.type || "unknown",
+      status: q.status,
+      creator: q.creator || "",
+      conversionDate: q.conversionDate || "",
+      date: q.date || "",
+    });
+    thisWeekNormSet.add(norm);
+  });
+
+  const candidateNewNorms = [...thisWeekNormSet].filter((n) => !priorNormSet.has(n));
+  const { confirmedNew, ambiguous } = algorithmicDedupPrefilter(candidateNewNorms, [...priorNormSet]);
+
+  let aiResolved = [];
+  if (ambiguous.length > 0) {
+    const pairsWithNames = ambiguous.map((a) => ({
+      candidateNorm: a.candidateNorm,
+      candidateOriginal: originalNameByNorm.get(a.candidateNorm) || a.candidateNorm,
+      matchOriginal: originalNameByNorm.get(a.matchNorm) || a.matchNorm,
+    }));
+    aiResolved = await resolveAmbiguousWithAI(pairsWithNames, apiKey);
+  }
+
+  const finalNewNorms = new Set([
+    ...confirmedNew,
+    ...aiResolved.filter((r) => !r.isSameCompany).map((r) => r.candidateNorm),
+  ]);
+
+  const newAgentRows = thisWeek.filter((r) => finalNewNorms.has(r.normCustomer));
+
+  return {
+    quotedRows: newAgentRows.filter((r) => r.status === "quoted"),
+    wonRows: newAgentRows.filter((r) => r.status === "converted"),
+    stats: {
+      candidateCount: candidateNewNorms.length,
+      ambiguousCount: ambiguous.length,
+      aiCallMade: ambiguous.length > 0,
+    },
+  };
+}
+
+// Mirrors the app's own TEAM_ROLES display-name resolution (app-v4.js:
+// `TEAM_ROLES[creator.toLowerCase()]?.name || creator`). Cloud Functions
+// have no access to the client's live TEAM_ROLES object (which also merges
+// in dynamically-added custom users at runtime), so this only covers the
+// small fixed set of desk-role usernames; anyone else just shows their raw
+// username, same as the client's own fallback when a name isn't found.
+function resolveAgencyListCreatorName(creator) {
+  const KNOWN = {
+    ganny: "Pricing Team",
+    shashank: "Air Nom",
+    shaheer: "Sea Nomination",
+    jaya: "Free Hand",
+    cathrina: "NRS",
+  };
+  const key = (creator || "").toLowerCase();
+  return KNOWN[key] || creator || "Unknown";
+}
+
+function agencyListEscapeHtml(str) {
+  return (str || "").toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildAgencyListTable(rows, dateField) {
+  if (!rows.length) {
+    return '<p style="color:#64748b;font-size:13px;">None this week.</p>';
+  }
+  const body = rows.map((r) => `
+      <tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">${agencyListEscapeHtml(r.customer)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-transform:capitalize;">${agencyListEscapeHtml(r.type)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">${agencyListEscapeHtml(resolveAgencyListCreatorName(r.creator))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">${agencyListEscapeHtml(r[dateField] || "")}</td>
+      </tr>`).join("");
+  return `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial,sans-serif;">
+      <thead>
+        <tr style="background:#eef0fa;">
+          <th style="padding:6px 10px;text-align:left;color:#1b1c5c;">Agent / Customer</th>
+          <th style="padding:6px 10px;text-align:left;color:#1b1c5c;">Module</th>
+          <th style="padding:6px 10px;text-align:left;color:#1b1c5c;">Quoted / Won By</th>
+          <th style="padding:6px 10px;text-align:left;color:#1b1c5c;">Date</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>`;
+}
+
+function buildAgencyListHtml(report) {
+  return `
+    <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:640px;">
+      <h2 style="color:#1b1c5c;font-size:18px;margin-bottom:4px;">Weekly Agency List — New Agents</h2>
+      <p style="color:#64748b;font-size:12px;margin-top:0;">Auto-compiled for the week ending ${new Date().toISOString().slice(0, 10)}. New-agent detection is AI-assisted.</p>
+
+      <h3 style="color:#1b1c5c;font-size:14px;margin-bottom:6px;">Confirmed / WON this week</h3>
+      ${buildAgencyListTable(report.wonRows, "conversionDate")}
+
+      <h3 style="color:#1b1c5c;font-size:14px;margin:16px 0 6px;">Quoted this week</h3>
+      ${buildAgencyListTable(report.quotedRows, "date")}
+
+      <p style="color:#94a3b8;font-size:11px;margin-top:20px;">
+        ${report.stats.candidateCount} candidate name(s) checked, ${report.stats.ambiguousCount} required AI judgment.
+        This is an automated report — reply to your usual pricing desk contact with any corrections.
+      </p>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// weeklyAgencyListEmail
+//
+// Scheduled every Thursday 9:00 AM IST. Reads the recipient list from
+// app_settings/agencyListRecipients (managed in-app by AIR NOM/SEA NOM/admin
+// roles), builds the report, and writes one doc to the "mail" collection for
+// the Trigger Email extension to actually send. Skips silently (logging why)
+// if there are zero recipients configured or zero new agents this week.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.weeklyAgencyListEmail = functions
+  .runWith({ secrets: [anthropicApiKey] })
+  .pubsub.schedule("0 9 * * 4")
+  .timeZone("Asia/Kolkata")
+  .onRun(async () => {
+    const recipDoc = await admin.firestore().doc("app_settings/agencyListRecipients").get();
+    const emails = recipDoc.exists ? recipDoc.data().emails || [] : [];
+    if (!emails.length) {
+      functions.logger.warn("weeklyAgencyListEmail: no recipients configured, skipping send.");
+      return null;
+    }
+
+    const report = await buildAgencyListReport(anthropicApiKey.value());
+    if (!report.quotedRows.length && !report.wonRows.length) {
+      functions.logger.info("weeklyAgencyListEmail: no new agents this week, skipping send.");
+      return null;
+    }
+
+    await admin.firestore().collection("mail").add({
+      to: emails,
+      message: {
+        subject: `Weekly Agency List — New Agents (${new Date().toISOString().slice(0, 10)})`,
+        html: buildAgencyListHtml(report),
+      },
+    });
+
+    functions.logger.info("weeklyAgencyListEmail: sent", {
+      recipientCount: emails.length,
+      quotedCount: report.quotedRows.length,
+      wonCount: report.wonRows.length,
+      ...report.stats,
+    });
+    return null;
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// triggerAgencyListNow
+//
+// Admin-only manual trigger for testing (same admin check as
+// adminResetPassword). { dryRun: true }, the default, returns the generated
+// report HTML/stats with ZERO side effects — powers the in-app "Preview
+// This Week's Report" button. { dryRun: false } does a real send to
+// whatever recipient list is currently configured, for a one-off test
+// send before the first live Thursday run is trusted.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.triggerAgencyListNow = functions
+  .runWith({ secrets: [anthropicApiKey] })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+    }
+    const callerUsername = (context.auth.token.email || "").split("@")[0].toLowerCase();
+    if (callerUsername !== "ganny") {
+      throw new functions.https.HttpsError("permission-denied", "Admin only.");
+    }
+
+    const dryRun = data?.dryRun !== false;
+    const report = await buildAgencyListReport(anthropicApiKey.value());
+    const html = buildAgencyListHtml(report);
+
+    if (dryRun) {
+      return {
+        dryRun: true,
+        html,
+        quotedCount: report.quotedRows.length,
+        wonCount: report.wonRows.length,
+        stats: report.stats,
+      };
+    }
+
+    const recipDoc = await admin.firestore().doc("app_settings/agencyListRecipients").get();
+    const emails = recipDoc.exists ? recipDoc.data().emails || [] : [];
+    if (!emails.length) {
+      throw new functions.https.HttpsError("failed-precondition", "No recipients configured.");
+    }
+
+    await admin.firestore().collection("mail").add({
+      to: emails,
+      message: { subject: "[TEST] Weekly Agency List — New Agents", html },
+    });
+
+    return {
+      dryRun: false,
+      sent: true,
+      recipientCount: emails.length,
+      quotedCount: report.quotedRows.length,
+      wonCount: report.wonRows.length,
+      stats: report.stats,
+    };
+  });

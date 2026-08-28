@@ -5,9 +5,26 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
+    // The users collection carries each account's password (mirrored here
+    // as a fallback alongside Firebase Auth) — under the old blanket
+    // isSignedIn() write rule, any logged-in team member could overwrite
+    // (or read, in plain text) any other user's credentials. Writes are now
+    // restricted to the admin account or a user's own document (self-service
+    // password change writes only to users/{yourself}); every other
+    // collection is unchanged.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'ganny@atlaspricing.com';
+    }
+    function isOwnUserDoc(userId) {
+      return isSignedIn() && request.auth.token.email.split('@')[0] == userId;
+    }
+
     match /quotes/{quoteId} { allow read, write: if isSignedIn(); }
     match /amendment_requests/{requestId} { allow read, write: if isSignedIn(); }
-    match /users/{userId} { allow read, write: if isSignedIn(); }
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isOwnUserDoc(userId);
+    }
     match /custom_autocomplete_entries/{entryId} { allow read, write: if isSignedIn(); }
     match /customer_control/{customerId} { allow read, write: if isSignedIn(); }
     match /nrs_registry/{entryId} { allow read, write: if isSignedIn(); }
@@ -15,5 +32,17 @@ service cloud.firestore {
     match /contactsDirectory/{contactId} { allow read, write: if isSignedIn(); }
     match /password_resets/{requestId} { allow read, write: if isSignedIn(); }
     match /resetRequests/{userId} { allow read, write: if isSignedIn(); }
+    match /leads/{leadId} { allow read, write: if isSignedIn(); }
+    match /activities/{activityId} { allow read, write: if isSignedIn(); }
+    match /circularsLibrary/{circularId} { allow read, write: if isSignedIn(); }
+
+    // Weekly Agency List — recipient list stays client-writable like every
+    // other settings-style collection above (the real AIR-NOM/SEA-NOM/admin
+    // edit gate is enforced client-side, matching how circularsLibrary works
+    // today). "mail" is written only by the Trigger Email extension's own
+    // Admin-SDK function, which bypasses rules entirely — this blocks any
+    // client SDK access to it.
+    match /app_settings/{settingId} { allow read, write: if isSignedIn(); }
+    match /mail/{mailId} { allow read, write: if false; }
   }
 }

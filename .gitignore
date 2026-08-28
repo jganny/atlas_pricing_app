@@ -6,6 +6,7 @@ __pycache__/
 .pytest_cache/
 .vscode/
 .idea/
+.claude/
 
 # Node / Cloud Functions
 node_modules/

@@ -142,6 +142,8 @@ let appState = {
   airlines: [],
   seaports: [],
   quotes: [],
+  leads: [],
+  activities: [],
   currentAirFreight: {
     origin: '',
     destination: '',
@@ -150,7 +152,7 @@ let appState = {
     module: 'export', // 'export' or 'import'
     cargoItems: [{ length: '', width: '', height: '', qty: '', grossWeight: '' }],
     rates: { min: '', minus45: '', plus45: '', plus100: '', plus300: '', plus500: '', plus1000: '' },
-    surcharges: [{ name: 'Xray', rate: 0.00, unit: 'kg' }, { name: 'Cartage', rate: 6.00, unit: 'flat' }, { name: 'Misc', rate: 6.00, unit: 'flat' }],
+    surcharges: [{ name: 'Xray', rate: 0.00, unit: 'kg' }, { name: 'Cartage', rate: 0.00, unit: 'flat' }, { name: 'Misc', rate: 0.00, unit: 'flat' }],
     airlines: [],
     nominatedCurrency: 'USD',
     isOptimizedApplied: false
@@ -173,6 +175,7 @@ let appState = {
     nominatedCurrency: 'USD'
   }
 };
+
 
 function getQuoteRefId(quote) {
   let moduleCode = "XX";
@@ -216,15 +219,29 @@ function getQuoteRefId(quote) {
 window.getQuoteRefId = getQuoteRefId;
 
 function getQuoteRefIdById(id) {
+  if (!id) return 'N/A';
   const quote = appState.quotes.find(q => q.id === id);
   return quote ? getQuoteRefId(quote) : id.substring(0, 7).toUpperCase();
 }
 window.getQuoteRefIdById = getQuoteRefIdById;
 
+// An admin-approved edit unlock is time-limited (see approveAmendment), not
+// single-use: it used to get consumed by the very next save ("Lock it back!"),
+// which meant a user needing two follow-up corrections on the same quote had
+// to get a fresh admin approval for each one — indistinguishable, from the
+// admin's side, from the same request reappearing. Grants made before this
+// change have no expiry timestamp and are honored as originally intended.
+function isAmendmentGrantActive(quote) {
+  if (!quote || !quote.amendmentAllowed) return false;
+  if (!quote.amendmentUnlockedUntil) return true;
+  return Date.now() < quote.amendmentUnlockedUntil;
+}
+window.isAmendmentGrantActive = isAmendmentGrantActive;
+
 function isEditUnlocked(quote) {
   if (!quote) return false;
   const isWithin6Hours = quote.timestamp && (Date.now() - quote.timestamp) < 6 * 60 * 60 * 1000;
-  return isWithin6Hours || quote.amendmentAllowed || isAdminUser(appState.currentUser);
+  return isWithin6Hours || isAmendmentGrantActive(quote) || isAdminUser(appState.currentUser);
 }
 window.isEditUnlocked = isEditUnlocked;
 
@@ -377,9 +394,14 @@ function setupValidityDatePickerDismissal() {
       }, 50);
     };
 
-    // Dismiss on selection/change
+    // Dismiss on selection/change. Deliberately NOT listening on "input" here:
+    // that event fires on every partial keystroke while typing a date (e.g.
+    // after typing just "20" of a "2026" year), and blurring 50ms later
+    // committed whatever partial year digits were typed so far — this is
+    // what caused validity years to save as "0020" instead of "2026".
+    // "change" already fires once a complete date is committed, which is the
+    // correct signal for "the user is done."
     el.addEventListener("change", dismiss);
-    el.addEventListener("input", dismiss);
 
     // Dismiss on double-click
     el.addEventListener("dblclick", dismiss);
@@ -760,6 +782,8 @@ function loginSuccess(roleId) {
   if (headerUserNameEl) headerUserNameEl.textContent = (appState.currentUser || roleIdLower).toUpperCase();
   const headerUserRoleEl = document.getElementById("header-user-role");
   if (headerUserRoleEl) headerUserRoleEl.textContent = displayName;
+  const headerUserAvatarEl = document.getElementById("header-user-avatar");
+  if (headerUserAvatarEl) headerUserAvatarEl.textContent = (appState.currentUser || roleIdLower).charAt(0).toUpperCase();
 
   const root = document.documentElement;
   const execDashBtn = document.getElementById("executive-dashboard-btn");
@@ -867,7 +891,15 @@ function renderUserCredentialsList() {
 
   const allUsers = Object.values(allUsersMap);
   userCredsBody.innerHTML = allUsers.map(u => {
-    const roleCat = u.category || (u.role === 'admin' ? 'Admin' : 'Member');
+    // Display-only override: an admin account's Firestore record can end up
+    // with a stray category value (e.g. from a reset/registration flow's
+    // generic fallback), which isn't wrong data worth migrating, just a
+    // wrong label here. Never show a desk category for the admin account,
+    // regardless of what's actually stored on the record — this doesn't
+    // change what's stored or any of the isFreeHandOrNrs-style category
+    // checks used elsewhere in the app.
+    const isAdminAccount = u.username?.toLowerCase() === 'ganny' || u.role === 'admin';
+    const roleCat = isAdminAccount ? 'Admin' : (u.category || 'Member');
     return `
       <tr>
         <td><strong>${u.username}</strong></td>
@@ -946,6 +978,48 @@ function setupRoleSwitcher() {
   });
 }
 
+// Role switcher dropdown: the chip row (#admin-role-selector) is unchanged —
+// this only controls whether its wrapper shows/hides it as a popover, plus
+// keeping the trigger button's label in sync with whichever role is active.
+function toggleRoleSwitcherMenu(forceClose) {
+  const wrap = document.getElementById("role-switcher-wrap");
+  if (!wrap) return;
+  if (forceClose) {
+    wrap.classList.remove("open");
+  } else {
+    wrap.classList.toggle("open");
+  }
+}
+window.toggleRoleSwitcherMenu = toggleRoleSwitcherMenu;
+
+function syncRoleSwitcherTriggerLabel() {
+  const label = document.getElementById("role-switcher-trigger-label");
+  const activeBtn = document.querySelector("#admin-role-selector .role-btn.active");
+  if (label && activeBtn) {
+    label.textContent = activeBtn.textContent.trim();
+  }
+}
+window.syncRoleSwitcherTriggerLabel = syncRoleSwitcherTriggerLabel;
+
+document.addEventListener("click", (e) => {
+  const wrap = document.getElementById("role-switcher-wrap");
+  if (wrap && wrap.classList.contains("open") && !wrap.contains(e.target)) {
+    wrap.classList.remove("open");
+  }
+});
+
+// Switching modules toggles which panel has display:block via CSS classes —
+// it never navigates or reloads, so the scroll position from whatever panel
+// was previously open otherwise carries over verbatim. On a short page that
+// silently drops the user mid-content instead of at the top.
+function resetPageScroll() {
+  try {
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    window.scrollTo(0, 0);
+  } catch (e) { }
+}
+
 function switchRole(role) {
   if (!role) return;
   const roleLower = role.toLowerCase();
@@ -965,6 +1039,8 @@ function switchRole(role) {
       btn.classList.remove("active");
     }
   });
+  if (typeof syncRoleSwitcherTriggerLabel === 'function') syncRoleSwitcherTriggerLabel();
+  if (typeof toggleRoleSwitcherMenu === 'function') toggleRoleSwitcherMenu(true);
 
   // Hide all panels
   document.querySelectorAll(".view-panel").forEach(panel => {
@@ -1029,6 +1105,7 @@ function switchRole(role) {
   // as well. This prevents a previously opened desk from remaining highlighted.
   if (typeof updateModuleTabs === 'function') updateModuleTabs('dashboard');
   updateExecutiveDashboardVisibility();
+  resetPageScroll();
 }
 
 function goHome() {
@@ -1063,6 +1140,7 @@ function goHome() {
   // This only changes the selected sidebar/tab treatment; it does not affect
   // permissions, data, calculations, or panel availability.
   if (typeof updateModuleTabs === 'function') updateModuleTabs('dashboard');
+  resetPageScroll();
 }
 window.goHome = goHome;
 
@@ -1218,6 +1296,8 @@ function resetAirFreightDeskForm() {
   // Clear Commodity and Loadability options
   const commodity = document.getElementById("air-commodity");
   if (commodity) commodity.value = "GENERAL";
+  const dgClass = document.getElementById("air-dg-class");
+  if (dgClass) dgClass.value = "";
   handleAirCommodityChange();
   const tempType = document.getElementById("air-temp-type");
   if (tempType) tempType.value = "NON-TEMPERATURE";
@@ -1295,9 +1375,11 @@ function resetSeaFreightDeskForm() {
   if (document.getElementById("sea-line")) document.getElementById("sea-line").value = "";
   if (document.getElementById("sea-liner-name")) document.getElementById("sea-liner-name").value = "";
   if (document.getElementById("sea-commodity")) document.getElementById("sea-commodity").value = "";
+  if (document.getElementById("sea-dg-class")) document.getElementById("sea-dg-class").value = "";
   if (document.getElementById("sea-incoterm")) document.getElementById("sea-incoterm").value = "EXW";
   if (document.getElementById("sea-gross-weight")) document.getElementById("sea-gross-weight").value = "0";
   if (document.getElementById("sea-volume")) document.getElementById("sea-volume").value = "0";
+  if (document.getElementById("sea-chargeable-cbm-override")) document.getElementById("sea-chargeable-cbm-override").value = "";
   if (document.getElementById("sea-pkg-qty")) document.getElementById("sea-pkg-qty").value = "0";
   if (document.getElementById("sea-routing")) document.getElementById("sea-routing").value = "";
   if (document.getElementById("sea-tt")) document.getElementById("sea-tt").value = "";
@@ -1365,6 +1447,9 @@ function openActiveCalculator(type) {
       else if (type === 'transport') workspaceNameEl.textContent = "Transportation";
       else if (type === 'warehouse') workspaceNameEl.textContent = "Warehousing";
       else if (type === 'directory') workspaceNameEl.textContent = "Directory";
+      else if (type === 'circulars') workspaceNameEl.textContent = "Circulars & Documents";
+      else if (type === 'agencylist') workspaceNameEl.textContent = "Weekly Agency List";
+      else if (type === 'sales') workspaceNameEl.textContent = "Sales Pipeline";
     }
 
     const memberPanel = document.getElementById("member-dashboard-panel");
@@ -1380,12 +1465,18 @@ function openActiveCalculator(type) {
     const transportPanel = document.getElementById("transportation-panel");
     const warehousePanel = document.getElementById("warehousing-panel");
     const directoryPanel = document.getElementById("directory-panel");
+    const circularsPanel = document.getElementById("circulars-panel");
+    const agencylistPanel = document.getElementById("agencylist-panel");
+    const salesPanel = document.getElementById("sales-panel");
 
     if (airPanel) airPanel.classList.remove("active");
     if (seaPanel) seaPanel.classList.remove("active");
     if (transportPanel) transportPanel.classList.remove("active");
     if (warehousePanel) warehousePanel.classList.remove("active");
     if (directoryPanel) directoryPanel.classList.remove("active");
+    if (circularsPanel) circularsPanel.classList.remove("active");
+    if (agencylistPanel) agencylistPanel.classList.remove("active");
+    if (salesPanel) salesPanel.classList.remove("active");
 
     const root = document.documentElement;
 
@@ -1414,8 +1505,24 @@ function openActiveCalculator(type) {
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
       try { loadDirectoryContacts(); } catch (e) { console.error("loadDirectoryContacts error:", e); }
+    } else if (type === 'circulars') {
+      if (circularsPanel) circularsPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--sky)');
+      root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
+      try { loadCircularsLibrary(); } catch (e) { console.error("loadCircularsLibrary error:", e); }
+    } else if (type === 'agencylist') {
+      if (agencylistPanel) agencylistPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--sky)');
+      root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
+      try { loadAgencyListRecipients(); } catch (e) { console.error("loadAgencyListRecipients error:", e); }
+    } else if (type === 'sales') {
+      if (salesPanel) salesPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--sky)');
+      root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
+      try { renderSalesPanel(); } catch (e) { console.error("renderSalesPanel error:", e); }
     }
     updateModuleTabs(type);
+    resetPageScroll();
   } catch (err) {
     console.error("Critical error in openActiveCalculator:", err);
     if (type === 'sea') {
@@ -1426,6 +1533,11 @@ function openActiveCalculator(type) {
 }
 
 window.resetFreightForm = function (type) {
+  // Reset wipes the entire desk (customer, airline/liner cards, cargo lines,
+  // surcharges) with no undo, so confirm before clearing an in-progress quote.
+  if (!window.confirm("Reset this form? All entered details, airline/liner options, and surcharges on this desk will be cleared.")) {
+    return;
+  }
   if (type === 'air') {
     try { resetAirFreightDeskForm(); } catch (e) { }
   } else if (type === 'sea') {
@@ -1454,6 +1566,7 @@ function returnToWorkspace() {
     renderMemberDashboard(appState.currentUser);
   }
   updateModuleTabs('dashboard');
+  resetPageScroll();
 }
 
 function showMyQuotationLogs() {
@@ -1588,15 +1701,18 @@ function isGlobalDirectoryType(type) {
 
 function cleanDirectoryEntries(entries) {
   const seenCodes = new Set();
-  const seenPlaces = new Set();
   return (Array.isArray(entries) ? entries : []).filter((entry) => {
     const code = String(entry?.code || "").trim().toUpperCase();
     const name = String(entry?.name || "").trim();
-    const place = String(entry?.city || name).trim().toLowerCase();
+    // Dedupe by code only — a "same city" check here used to also drop every
+    // other airport/seaport sharing that city, which silently removed major
+    // hubs (e.g. Madrid-Barajas/MAD) whenever a lesser airport for the same
+    // city happened to appear earlier in the source data. Cities routinely
+    // have several distinct, individually bookable airports/ports; the code
+    // is the actual unique identifier, not the city name.
     if (!code || !name || code === "CUSTOM") return false;
-    if (seenCodes.has(code) || seenPlaces.has(place)) return false;
+    if (seenCodes.has(code)) return false;
     seenCodes.add(code);
-    seenPlaces.add(place);
     return true;
   });
 }
@@ -1758,6 +1874,28 @@ function saveCustomEntry(type, value) {
   }
 }
 
+// Ranks an airport/seaport match by how directly it matches the typed text,
+// so a major hub (code or city match) always sorts above an unrelated
+// record whose long name merely happens to contain the same substring —
+// e.g. typing "madrid" previously listed a Mexican airport named "...de la
+// Madrid..." ahead of Madrid-Barajas (MAD) itself, since results were left
+// in raw data-file order instead of being ranked by relevance.
+function scoreLocationMatch(record, val) {
+  const code = (record.code || "").toLowerCase();
+  const city = (record.city || "").toLowerCase();
+  const name = (record.name || "").toLowerCase();
+  const country = (record.country || "").toLowerCase();
+  if (code === val) return 0;
+  if (code.startsWith(val)) return 1;
+  if (city === val) return 2;
+  if (city.startsWith(val)) return 3;
+  if (city.includes(val)) return 4;
+  if (name.startsWith(val)) return 5;
+  if (name.includes(val)) return 6;
+  if (country.includes(val)) return 7;
+  return 8;
+}
+
 // Autocomplete Engine
 function setupAutocomplete(inputEl, type) {
   if (!inputEl) return;
@@ -1864,7 +2002,8 @@ function setupAutocomplete(inputEl, type) {
         (ap.city || "").toLowerCase().includes(val) ||
         (ap.country || "").toLowerCase().includes(val) ||
         (ap.name || "").toLowerCase().includes(val)
-      ).slice(0, 10);
+      ).sort((a, b) => scoreLocationMatch(a, val) - scoreLocationMatch(b, val))
+       .slice(0, 10);
     } else if (type === "airlines") {
       const baseAirlines = (appState.airlines && appState.airlines.length > 0)
         ? appState.airlines
@@ -1907,7 +2046,8 @@ function setupAutocomplete(inputEl, type) {
         (sp.name || "").toLowerCase().includes(val) ||
         (sp.city || "").toLowerCase().includes(val) ||
         (sp.country || "").toLowerCase().includes(val)
-      ).slice(0, 10);
+      ).sort((a, b) => scoreLocationMatch(a, val) - scoreLocationMatch(b, val))
+       .slice(0, 10);
     } else if (type === "shippinglines") {
       const majorShippingLines = [
         { code: "MSC", name: "MSC (Mediterranean Shipping Company)" },
@@ -2277,7 +2417,7 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
   wrapper.className = "dynamic-break-wrapper";
   wrapper.setAttribute("data-break-name", breakName);
   wrapper.setAttribute("data-is-auto", isAuto ? "true" : "false");
-  wrapper.style.cssText = "background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;";
+  wrapper.style.cssText = "background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; transition: all 0.2s;";
 
   const sellRate = (typeof rate === 'object' && rate !== null) ? (rate.sell || 0) : (parseFloat(rate) || 0);
   const buyRate = (typeof rate === 'object' && rate !== null) ? (rate.buy || 0) : 0;
@@ -2292,14 +2432,28 @@ function addWeightBreakRow(card, breakName, rate = 0, isAuto = false) {
         <input type="number" class="break-buy-rate-input" aria-label="Buy Rate per KG" placeholder="0.00" min="0" step="0.1" value="${buyRate > 0 ? buyRate : ''}" style="width: 58px; font-size: 0.72rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #000; font-weight: 700;" title="Buy Rate per KG">
       </label>
     </div>
+    <span class="break-gp-display" style="font-size: 0.65rem; font-weight: 800; color: var(--accent-success, #10b981); white-space: nowrap;" title="Sell minus Buy, per KG">GP 0.00</span>
     <span class="remove-break-btn" style="cursor: pointer; color: var(--accent-error); font-size: 0.8rem; font-weight: 800; padding: 0 2px; ${isAuto ? 'display:none;' : ''}">×</span>
   `;
 
   container.appendChild(wrapper);
 
-  wrapper.querySelector(".break-sell-rate-input").addEventListener("input", calculateAirFreight);
+  // Live per-KG margin next to this bracket's rates — a plain Sell minus Buy
+  // on the two rates already shown here, same numbers the user is already
+  // looking at, not a weight-multiplied total (that depends on which
+  // bracket ends up active, which is calculateAirFreight()'s job, not
+  // this — purely a "what's my margin on this rate" readout).
+  const updateBreakGp = () => {
+    const sellVal = parseFloat(wrapper.querySelector(".break-sell-rate-input")?.value) || 0;
+    const buyVal = parseFloat(wrapper.querySelector(".break-buy-rate-input")?.value) || 0;
+    const gpEl = wrapper.querySelector(".break-gp-display");
+    if (gpEl) gpEl.textContent = `GP ${(sellVal - buyVal).toFixed(2)}`;
+  };
+  updateBreakGp();
+
+  wrapper.querySelector(".break-sell-rate-input").addEventListener("input", () => { updateBreakGp(); calculateAirFreight(); });
   const buyInp = wrapper.querySelector(".break-buy-rate-input");
-  if (buyInp) buyInp.addEventListener("input", calculateAirFreight);
+  if (buyInp) buyInp.addEventListener("input", () => { updateBreakGp(); calculateAirFreight(); });
 
   if (!isAuto) {
     wrapper.querySelector(".remove-break-btn").addEventListener("click", () => {
@@ -2411,148 +2565,189 @@ function addAirlineCard(data = null) {
   );
 
   card.innerHTML = `
-    <div class="airline-card-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+    <div class="airline-card-heading" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; margin-bottom: 0.75rem;">
       <span style="font-weight: 800; color: var(--accent-air); font-size: 0.85rem;">Airline Option #${count}</span>
-      <div class="airline-card-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-        <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--t1);">
+      <div class="airline-card-actions" style="display: flex; width: 100%; justify-content: flex-end; gap: 0.75rem; align-items: center;">
+        <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--t1); white-space: nowrap;">
           <input type="radio" name="selected-airline" class="select-airline-radio" ${isSelected ? 'checked' : ''}> Select as Quoted
         </label>
-        <button type="button" class="delete-btn remove-airline-btn" style="padding: 2px 4px; margin: 0;">Remove</button>
+        <button type="button" class="delete-btn remove-airline-btn" style="padding: 2px 4px; margin: 0; white-space: nowrap; flex-shrink: 0;">Remove</button>
       </div>
     </div>
     
-    <div class="form-grid-3">
-      <div class="form-group">
-        <label>Carrier / Airline</label>
-        <div class="airline-directory-input" contenteditable="plaintext-only" role="combobox" aria-autocomplete="list" aria-expanded="false" data-placeholder="Type airline code or name..." spellcheck="false"></div>
-        <input type="hidden" class="air-name" value="">
-      </div>
-      <div class="form-grid-2 form-group" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0; padding: 0; border: none; background: none;">
-        <div class="form-group">
-          <label>Routing Details</label>
-          <input type="text" class="air-routing" placeholder="e.g. Direct / via SIN" value="${routing}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-        </div>
-        <div class="form-group">
-          <label>Transit Time (TT)</label>
-          <input type="text" class="air-tt" placeholder="e.g. 3-5 Days" value="${tt}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-        </div>
-      </div>
+    <div class="form-group" style="margin-bottom: 0.6rem;">
+      <label>Carrier / Airline</label>
+      <div class="airline-directory-input" contenteditable="plaintext-only" role="combobox" aria-autocomplete="list" aria-expanded="false" data-placeholder="Type airline code or name..." spellcheck="false"></div>
+      <input type="hidden" class="air-name" value="">
     </div>
 
-    <div style="margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
-      <div class="form-group">
-        <label>Quote Validity</label>
-        <input type="date" class="air-validity" value="${validity}" required style="color-scheme: dark; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-      </div>
-      <div class="form-group">
-        <label>Pivot Weight (Kg)</label>
-        <input type="number" class="air-pivot-weight" placeholder="optional" min="0" step="0.1" value="${pivotWeight}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-      </div>
-      <div class="form-group">
-        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; font-weight: 700;">
-          <input type="checkbox" class="air-enable-ams-fee" ${amsFeeEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
-          <span>AMS Fee</span>
-        </label>
-        <input type="number" step="0.01" min="0" class="air-ams-fee" placeholder="0.00" value="${ams_fee !== undefined && ams_fee !== '' ? ams_fee : '0.00'}" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; width: 100%;">
-      </div>
+    <div class="airline-rate-summary-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; background: #fafbfc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.6rem 0.5rem 0.75rem; margin-bottom: 0.5rem;">
+      <span class="airline-rate-summary-text" style="font-size: 0.72rem; color: var(--t2, #64748b); font-weight: 600;">No rates entered yet</span>
+      <button type="button" class="open-airline-rate-modal-btn" title="Edit rates &amp; fees" aria-label="Edit rates &amp; fees" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; background: rgba(245, 158, 11, 0.18); color: var(--accent-warning, #b45309); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 50%; cursor: pointer; padding: 0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </button>
     </div>
 
-    <div style="margin-top: 0.75rem;">
-      <div style="display: flex; align-items: center; margin-bottom: 0.5rem; gap: 8px; position: relative;">
-        <input type="checkbox" class="air-enable-weight-breaks" ${wbEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
-        <div class="weight-break-trigger" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-          <span style="font-size: 0.75rem; font-weight: 700; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">${isEligibleDeskUser() ? 'Weight Break Tariffs (Sell Rate per KG)' : 'Weight Break Tariffs (Rate per KG)'}</span>
-          <span style="font-size: 0.6rem; color: #666;">▼</span>
+    <div class="airline-rate-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 1.5rem;">
+      <div class="airline-rate-modal-dialog" style="background: var(--bg-surface, #fff); border-radius: 12px; max-width: 720px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 1.1rem 1.4rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: #1b1c5c;">Rates and fees — Airline Option #${count}</span>
+          <button type="button" class="close-airline-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
         </div>
-        <div class="weight-break-dropdown" style="display: none; position: absolute; left: 24px; top: 100%; z-index: 1000; background: var(--bg-surface, #fff); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-1, #ccc); border-radius: 8px; box-shadow: var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); padding: 6px; min-width: 160px; flex-direction: column; gap: 4px;"></div>
-      </div>
-      
-      <div class="airline-breaks-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-        <!-- Dynamic breaks will be appended here -->
-      </div>
-    </div>
 
-    <!-- Embedded Surcharges (Origin Local & Destination Local) per Airline -->
-    <div class="air-card-surcharges-wrapper" style="margin-top: 1rem; border-top: 1px dashed var(--border-1); padding-top: 0.75rem; display: ${isAirNomination ? 'none' : 'block'};">
-      <!-- Origin Local Section -->
-      <div class="air-card-local-block" style="background: rgba(0, 0, 0, 0.12); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
-        <div class="air-card-origin-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--sky); margin: 0; cursor: pointer;" onclick="event.stopPropagation();">
-              <input type="checkbox" class="air-card-enable-origin-fees" ${originFeesEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 15px; height: 15px; accent-color: var(--sky);">
-              Origin Local Fees & Surcharges
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Routing Details</label>
+            <input type="text" class="air-routing" placeholder="e.g. Direct / via SIN" value="${routing}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+          </div>
+          <div class="form-group">
+            <label>Transit Time (TT)</label>
+            <input type="text" class="air-tt" placeholder="e.g. 3-5 Days" value="${tt}" required style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+          </div>
+        </div>
+
+        <div style="margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Quote Validity</label>
+            <input type="date" class="air-validity" value="${validity}" required style="color-scheme: dark; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+          </div>
+          <div class="form-group">
+            <label>Pivot Weight (Kg)</label>
+            <input type="number" class="air-pivot-weight" placeholder="optional" min="0" step="0.1" value="${pivotWeight}" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+          </div>
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; font-weight: 700;">
+              <input type="checkbox" class="air-enable-ams-fee" ${amsFeeEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
+              <span>AMS Fee</span>
             </label>
-            <span class="air-card-origin-status-badge" style="font-size: 0.65rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 1px 6px; border-radius: 4px;">✓ Included</span>
+            <input type="number" step="0.01" min="0" class="air-ams-fee" placeholder="0.00" value="${ams_fee !== undefined && ams_fee !== '' ? ams_fee : '0.00'}" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; width: 100%;">
           </div>
-          <button type="button" class="btn-text toggle-origin-collapse-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-            <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
-          </button>
         </div>
-        
-        <div class="air-card-origin-content-body" style="margin-top: 0.5rem; display: block;">
-          <div class="cargo-table-container" style="border: none; margin-bottom: 0.5rem;">
-            <table class="cargo-table">
-              <thead>
-                <tr>
-                  <th>Surcharge Name</th>
-                  <th>Sell Rate</th>
-                  <th>Buy Rate</th>
-                  <th>Billing Unit</th>
-                  <th>Remarks</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody class="air-card-origin-surcharges-body">
-              </tbody>
-            </table>
-          </div>
-          <button type="button" class="add-row-btn add-air-card-origin-surcharge" style="font-size: 0.72rem; padding: 3px 8px;">
-            + Add Origin Surcharge
-          </button>
-        </div>
-      </div>
 
-      <!-- Destination Local Section -->
-      <div class="air-card-local-block" style="background: rgba(0, 0, 0, 0.12); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.75rem;">
-        <div class="air-card-dest-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--sky); margin: 0; cursor: pointer;" onclick="event.stopPropagation();">
-              <input type="checkbox" class="air-card-enable-dest-fees" ${destFeesEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 15px; height: 15px; accent-color: var(--sky);">
-              Destination Local Fees & Surcharges
-            </label>
-            <span class="air-card-dest-status-badge" style="font-size: 0.65rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 1px 6px; border-radius: 4px;">✓ Included</span>
+        <div style="margin-top: 0.75rem;">
+          <div style="display: flex; align-items: center; margin-bottom: 0.5rem; gap: 8px; position: relative;">
+            <input type="checkbox" class="air-enable-weight-breaks" ${wbEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
+            <div class="weight-break-trigger" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #000; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-align: left;">${isEligibleDeskUser() ? 'Weight Break Tariffs (Sell Rate per KG)' : 'Weight Break Tariffs (Rate per KG)'}</span>
+              <span style="font-size: 0.6rem; color: #666;">▼</span>
+            </div>
+            <div class="weight-break-dropdown" style="display: none; position: absolute; left: 24px; top: 100%; z-index: 1000; background: var(--bg-surface, #fff); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-1, #ccc); border-radius: 8px; box-shadow: var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.15)); padding: 6px; min-width: 160px; flex-direction: column; gap: 4px;"></div>
           </div>
-          <button type="button" class="btn-text toggle-dest-collapse-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-            <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
-          </button>
+
+          <div class="airline-breaks-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <!-- Dynamic breaks will be appended here -->
+          </div>
         </div>
-        
-        <div class="air-card-dest-content-body" style="margin-top: 0.5rem; display: block;">
-          <div class="cargo-table-container" style="border: none; margin-bottom: 0.5rem;">
-            <table class="cargo-table">
-              <thead>
-                <tr>
-                  <th>Surcharge Name</th>
-                  <th>Sell Rate</th>
-                  <th>Buy Rate</th>
-                  <th>Billing Unit</th>
-                  <th>Remarks</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody class="air-card-dest-surcharges-body">
-              </tbody>
-            </table>
+
+        <!-- Embedded Surcharges (Origin Local & Destination Local) per Airline -->
+        <div class="air-card-surcharges-wrapper" style="margin-top: 1rem; border-top: 1px dashed var(--border-1); padding-top: 0.75rem; display: ${isAirNomination ? 'none' : 'block'};">
+          <!-- Origin Local Section -->
+          <div class="air-card-local-block" style="background: rgba(0, 0, 0, 0.12); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="air-card-origin-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--sky); margin: 0; cursor: pointer;" onclick="event.stopPropagation();">
+                  <input type="checkbox" class="air-card-enable-origin-fees" ${originFeesEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 15px; height: 15px; accent-color: var(--sky);">
+                  Origin Local Fees & Surcharges
+                </label>
+                <span class="air-card-origin-status-badge" style="font-size: 0.65rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 1px 6px; border-radius: 4px;">✓ Included</span>
+              </div>
+              <button type="button" class="btn-text toggle-origin-collapse-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
+              </button>
+            </div>
+
+            <div class="air-card-origin-content-body" style="margin-top: 0.5rem; display: block;">
+              <div class="cargo-table-container" style="border: none; margin-bottom: 0.5rem;">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th>Surcharge Name</th>
+                      <th>Sell Rate</th>
+                      <th>Buy Rate</th>
+                      <th>Billing Unit</th>
+                      <th>Remarks</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="air-card-origin-surcharges-body">
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn add-air-card-origin-surcharge" style="font-size: 0.72rem; padding: 3px 8px;">
+                + Add Origin Surcharge
+              </button>
+            </div>
           </div>
-          <button type="button" class="add-row-btn add-air-card-dest-surcharge" style="font-size: 0.72rem; padding: 3px 8px;">
-            + Add Destination Surcharge
-          </button>
+
+          <!-- Destination Local Section -->
+          <div class="air-card-local-block" style="background: rgba(0, 0, 0, 0.12); border: 1px solid var(--border-1); border-radius: 8px; padding: 0.75rem;">
+            <div class="air-card-dest-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--sky); margin: 0; cursor: pointer;" onclick="event.stopPropagation();">
+                  <input type="checkbox" class="air-card-enable-dest-fees" ${destFeesEnabled ? 'checked' : ''} onchange="calculateAirFreight()" style="width: 15px; height: 15px; accent-color: var(--sky);">
+                  Destination Local Fees & Surcharges
+                </label>
+                <span class="air-card-dest-status-badge" style="font-size: 0.65rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 1px 6px; border-radius: 4px;">✓ Included</span>
+              </div>
+              <button type="button" class="btn-text toggle-dest-collapse-btn" style="font-size: 0.72rem; font-weight: 600; color: var(--sky); background: none; border: none; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <span class="collapse-icon">▼</span> <span class="collapse-text">Collapse</span>
+              </button>
+            </div>
+
+            <div class="air-card-dest-content-body" style="margin-top: 0.5rem; display: block;">
+              <div class="cargo-table-container" style="border: none; margin-bottom: 0.5rem;">
+                <table class="cargo-table">
+                  <thead>
+                    <tr>
+                      <th>Surcharge Name</th>
+                      <th>Sell Rate</th>
+                      <th>Buy Rate</th>
+                      <th>Billing Unit</th>
+                      <th>Remarks</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="air-card-dest-surcharges-body">
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="add-row-btn add-air-card-dest-surcharge" style="font-size: 0.72rem; padding: 3px 8px;">
+                + Add Destination Surcharge
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem; text-align: right; border-top: 1px solid var(--border-1); padding-top: 0.75rem;">
+          <button type="button" class="btn-primary done-airline-rate-modal-btn" style="padding: 7px 18px; font-size: 0.78rem;">Done</button>
         </div>
       </div>
     </div>
   `;
 
   container.appendChild(card);
+
+  // Rates & fees popup — keeps the airline card itself down to just the
+  // carrier field and a summary strip; everything else (routing, weight
+  // breaks, surcharges) only exists in the DOM here, shown on demand, so
+  // it's still reachable by every existing card.querySelector() call this
+  // function and calculateAirFreight() already make, just nested one level
+  // deeper. Pure show/hide — no data or calculation logic changes.
+  const rateModalOverlay = card.querySelector(".airline-rate-modal-overlay");
+  const rateModalDialog = card.querySelector(".airline-rate-modal-dialog");
+  const openRateModalBtn = card.querySelector(".open-airline-rate-modal-btn");
+  const closeRateModalBtn = card.querySelector(".close-airline-rate-modal-btn");
+  const doneRateModalBtn = card.querySelector(".done-airline-rate-modal-btn");
+
+  const openRateModal = () => { rateModalOverlay.style.display = "flex"; };
+  const closeRateModal = () => { rateModalOverlay.style.display = "none"; updateAirlineRateSummary(card); };
+
+  openRateModalBtn.addEventListener("click", openRateModal);
+  closeRateModalBtn.addEventListener("click", closeRateModal);
+  doneRateModalBtn.addEventListener("click", closeRateModal);
+  rateModalOverlay.addEventListener("click", (e) => {
+    if (e.target === rateModalOverlay) closeRateModal();
+  });
 
   // Expand/Collapse Origin Local
   const originHeader = card.querySelector(".air-card-origin-header");
@@ -2603,8 +2798,8 @@ function addAirlineCard(data = null) {
     });
   } else {
     originTbody.appendChild(createAirSurchargeRow({ name: "Xray", rate: "0.00", buyRate: "0.00", unit: "kg" }));
-    originTbody.appendChild(createAirSurchargeRow({ name: "Cartage", rate: "6.00", buyRate: "4.00", unit: "flat", readOnlyName: !isFreeHandOrNrs }));
-    originTbody.appendChild(createAirSurchargeRow({ name: "Misc", rate: "6.00", buyRate: "4.00", unit: "flat", readOnlyName: !isFreeHandOrNrs }));
+    originTbody.appendChild(createAirSurchargeRow({ name: "Cartage", rate: "0.00", buyRate: "0.00", unit: "flat", readOnlyName: !isFreeHandOrNrs }));
+    originTbody.appendChild(createAirSurchargeRow({ name: "Misc", rate: "0.00", buyRate: "0.00", unit: "flat", readOnlyName: !isFreeHandOrNrs }));
   }
 
   if (destSurchargesList && Array.isArray(destSurchargesList) && destSurchargesList.length > 0) {
@@ -2838,6 +3033,8 @@ function addAirlineCard(data = null) {
       addWeightBreakRow(card, bName, activeBreaks[bName]);
     }
   }
+
+  updateAirlineRateSummary(card);
 }
 window.addAirlineCard = addAirlineCard;
 
@@ -2893,8 +3090,8 @@ function updateCartageRowVisibility() {
 
         const newRow = createAirSurchargeRow({
           name: "Cartage",
-          rate: isFreeHandOrNrs ? "0.00" : "6.00",
-          buyRate: isFreeHandOrNrs ? "0.00" : "4.00",
+          rate: "0.00",
+          buyRate: "0.00",
           unit: "flat",
           readOnlyName: !isFreeHandOrNrs
         });
@@ -2914,6 +3111,29 @@ function updateCartageRowVisibility() {
   });
 }
 window.updateCartageRowVisibility = updateCartageRowVisibility;
+
+// Business rule (explicit product decision): during quoting — before a
+// shipment is Confirmed/WON — a pricing officer may have only one of
+// Sell/Buy filled in for a given weight break. The interim total shown and
+// saved should use whichever one is entered, so the quote isn't stuck at
+// $0. This is deliberately NOT the same as silently treating Buy as Sell —
+// callers must track `isFallback` and surface it, so an interim
+// cost-based estimate is never mistaken for a confirmed customer price.
+// Once a shipment is Confirmed/WON, both Sell and Buy are required (see
+// submitWonBookingDetails()) and the final GP is computed properly from
+// both, including surcharge margin — this fallback only ever affects the
+// pre-WON, in-progress quoting total.
+function resolveInterimRate(val) {
+  if (typeof val === 'object' && val !== null) {
+    const sell = parseFloat(val.sell) || 0;
+    const buy = parseFloat(val.buy) || 0;
+    if (sell > 0) return { rate: sell, isFallback: false };
+    if (buy > 0) return { rate: buy, isFallback: true };
+    return { rate: 0, isFallback: false };
+  }
+  return { rate: parseFloat(val) || 0, isFallback: false };
+}
+window.resolveInterimRate = resolveInterimRate;
 
 function calculateAirFreight() {
   updateCurrencyRules(appState.currentUser);
@@ -2985,6 +3205,13 @@ function calculateAirFreight() {
         totalVolume += (l * w * h * qty) * 0.0000163871;
       }
     }
+
+    // Purely visual: flag a row that's been started but is still missing a
+    // field it needs (matches the same required fields saveCurrentQuote()
+    // already enforces) — the total math above is untouched.
+    const isStarted = l > 0 || w > 0 || h > 0 || qty > 0 || gw > 0;
+    const isComplete = l > 0 && w > 0 && h > 0 && qty > 0 && gw > 0;
+    row.classList.toggle("row-incomplete-flag", isStarted && !isComplete);
   });
 
   const commodity = document.getElementById("air-commodity")?.value || "GENERAL";
@@ -3064,10 +3291,22 @@ function calculateAirFreight() {
     let activeRate = 0;
     let activeBuyRate = 0;
     let usedBreak = autoBreakName;
+    // True whenever the pre-WON interim total below used a Buy value in
+    // place of a blank Sell value on the weight break actually charged —
+    // surfaced to the user as an "Interim Estimate" indicator so a
+    // cost-based placeholder is never mistaken for a confirmed sell price.
+    let usingBuyFallback = false;
 
+    // Quoting-stage rule: use whichever of Sell/Buy is entered for the
+    // active weight break, so the interim total isn't stuck at $0 while a
+    // quote is still being worked on. Confirmed/WON conversion still
+    // requires both and computes the final GP from both, including
+    // surcharge margin (see submitWonBookingDetails()).
     const activeBrVal = breaksData[autoBreakName] || { sell: 0, buy: 0 };
-    activeRate = activeBrVal.sell > 0 ? activeBrVal.sell : activeBrVal.buy;
+    const activeResolved = resolveInterimRate(activeBrVal);
+    activeRate = activeResolved.rate;
     activeBuyRate = activeBrVal.buy;
+    usingBuyFallback = activeResolved.isFallback;
 
     if (activeRate === 0) {
       // Find the highest limit weight break that has a rate and is <= chargeable weight
@@ -3082,28 +3321,31 @@ function calculateAirFreight() {
       let bestBracket = null;
       for (const br of brackets) {
         const val = breaksData[br.name];
-        const valNum = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
+        const valNum = resolveInterimRate(val).rate;
         if (valNum > 0 && airlineChargeableWeight >= br.limit) {
           bestBracket = br;
         }
       }
       if (bestBracket) {
         const val = breaksData[bestBracket.name];
-        activeRate = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
+        const resolved = resolveInterimRate(val);
+        activeRate = resolved.rate;
         activeBuyRate = (typeof val === 'object' && val !== null) ? val.buy : 0;
         usedBreak = bestBracket.name;
+        usingBuyFallback = resolved.isFallback;
       } else {
         // Try any bracket that has a rate
         const bracketsWithRates = brackets.filter(br => {
           const val = breaksData[br.name];
-          const valNum = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
-          return valNum > 0;
+          return resolveInterimRate(val).rate > 0;
         });
         if (bracketsWithRates.length > 0) {
           const val = breaksData[bracketsWithRates[0].name];
-          activeRate = (typeof val === 'object' && val !== null) ? (val.sell > 0 ? val.sell : val.buy) : (parseFloat(val) || 0);
+          const resolved = resolveInterimRate(val);
+          activeRate = resolved.rate;
           activeBuyRate = (typeof val === 'object' && val !== null) ? val.buy : 0;
           usedBreak = bracketsWithRates[0].name;
+          usingBuyFallback = resolved.isFallback;
         }
       }
     }
@@ -3112,12 +3354,14 @@ function calculateAirFreight() {
 
     let isMinActive = false;
     const minVal = breaksData['min'];
-    const minSell = (typeof minVal === 'object' && minVal !== null) ? (minVal.sell > 0 ? minVal.sell : minVal.buy) : (parseFloat(minVal) || 0);
+    const minResolved = resolveInterimRate(minVal);
+    const minSell = minResolved.rate;
     const minBuy = (typeof minVal === 'object' && minVal !== null) ? minVal.buy : 0;
 
     if (tariffsEnabled && wbEnabled && minSell > 0 && baseFreightCost < minSell) {
       baseFreightCost = minSell;
       isMinActive = true;
+      if (minResolved.isFallback) usingBuyFallback = true;
     }
 
     if (minSell > 0 || minBuy > 0) {
@@ -3211,7 +3455,7 @@ function calculateAirFreight() {
           if (!isFreeHandOrNrs) {
             if (airlineChargeableWeight < 500) {
               if (airlineChargeableWeight <= 150) {
-                rate = 6.00;
+                rate = 0.00;
                 unit = "flat";
               } else {
                 rate = 0.04;
@@ -3230,8 +3474,10 @@ function calculateAirFreight() {
           }
         }
 
-        if (surchargeName && rate > 0) {
-          let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
+        if (surchargeName && (rate > 0 || buyRate > 0)) {
+          const effectiveRate = rate > 0 ? rate : buyRate;
+          if (rate === 0 && buyRate > 0) usingBuyFallback = true;
+          let cost = unit === 'kg' ? airlineChargeableWeight * effectiveRate : effectiveRate;
           airlineSurchargeTotal += cost;
           airlineOriginSurcharges.push({ name: surchargeName, rate, buyRate, unit, remarks, calculatedCost: cost });
         }
@@ -3257,8 +3503,10 @@ function calculateAirFreight() {
         const remarksInput = row.querySelector(".chg-remarks");
         const remarks = remarksInput ? remarksInput.value.trim() : "";
 
-        if (surchargeName && rate > 0) {
-          let cost = unit === 'kg' ? airlineChargeableWeight * rate : rate;
+        if (surchargeName && (rate > 0 || buyRate > 0)) {
+          const effectiveRate = rate > 0 ? rate : buyRate;
+          if (rate === 0 && buyRate > 0) usingBuyFallback = true;
+          let cost = unit === 'kg' ? airlineChargeableWeight * effectiveRate : effectiveRate;
           airlineSurchargeTotal += cost;
           airlineDestSurcharges.push({ name: surchargeName, rate, buyRate, unit, remarks, calculatedCost: cost });
         }
@@ -3311,7 +3559,8 @@ function calculateAirFreight() {
       grandTotal: airlineGrandTotal,
       usedBreak: isMinActive ? 'min' : usedBreak,
       baseBuyFreight: optionBaseBuyFreight,
-      grossProfit: optionGrossProfit
+      grossProfit: optionGrossProfit,
+      usingBuyFallback
     };
 
     airlinesListData.push(dataObj);
@@ -3372,7 +3621,7 @@ function calculateAirFreight() {
       } else {
         if (finalChargeableWeight < 500) {
           if (finalChargeableWeight <= 150) {
-            rateInp.value = "6.00";
+            rateInp.value = "0.00";
             unitSelect.value = "flat";
           } else {
             rateInp.value = "0.04";
@@ -3554,10 +3803,17 @@ function calculateAirFreight() {
           const isActive = (bName === alt.usedBreak) || isMinActive;
 
           const isMinType = (bName === 'min');
-          const breakBaseFreight = isMinType ? sellRate : (alt.chargeableWeight * sellRate);
+          // The active row mirrors alt.baseFreight/grandTotal/grossProfit
+          // directly — those already reflect the Sell-or-Buy interim
+          // fallback (see resolveInterimRate) — rather than recomputing from
+          // the raw, unmirrored sellRate/buyRate above, so this table's
+          // "Active" row can never show a different total than what's
+          // actually being charged/saved. Inactive rows keep the
+          // deliberately raw, unmirrored comparison figures.
+          const breakBaseFreight = isActive ? alt.baseFreight : (isMinType ? sellRate : (alt.chargeableWeight * sellRate));
           const breakBuyFreight = isMinType ? buyRate : (alt.chargeableWeight * buyRate);
-          const breakGrandTotal = breakBaseFreight + alt.surchargeTotal;
-          const breakGP = breakBaseFreight - breakBuyFreight;
+          const breakGrandTotal = isActive ? alt.grandTotal : (breakBaseFreight + alt.surchargeTotal);
+          const breakGP = isActive ? alt.grossProfit : (breakBaseFreight - breakBuyFreight);
 
           const rowStyle = isActive
             ? `background: rgba(46,204,113,0.1); border-left: 3px solid var(--accent-success); font-weight: 700;`
@@ -3580,11 +3836,14 @@ function calculateAirFreight() {
 
       return `
         <div class="glass-card" style="padding: 1rem; border: 1px solid ${alt.selected ? 'var(--accent-success)' : 'var(--border-1)'}; relative; background: ${alt.selected ? 'rgba(46,204,113,0.04)' : 'rgba(255,255,255,0.01)'}; border-radius: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
             <strong style="font-size: 0.85rem; color: ${color};">${alt.name || 'Unnamed Airline'}</strong>
-            ${isCheapest ? '<span style="font-size: 0.62rem; background: var(--accent-success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Cheapest Option</span>' : ''}
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              ${isCheapest ? '<span style="font-size: 0.62rem; background: var(--accent-success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Cheapest Option</span>' : ''}
+              ${alt.usingBuyFallback ? '<span title="Sell Rate is blank on at least one line — this total is using the Buy/Cost Rate as an interim placeholder. It is not a confirmed customer price. Fill in Sell Rate to replace it." style="font-size: 0.62rem; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">⚠ Interim Estimate (Buy Rate)</span>' : ''}
+            </div>
           </div>
-          
+
           <div style="display: flex; gap: 1rem; font-size: 0.72rem; margin-bottom: 0.5rem; color: var(--t2); border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 6px;">
             <span>Chargeable Weight: <strong style="color: var(--t1);">${alt.chargeableWeight.toFixed(2)} kg</strong></span>
             <span>Ancillary Surcharges: <strong style="color: var(--t1);">${curSymbol}${alt.surchargeTotal.toFixed(2)}</strong></span>
@@ -3638,7 +3897,9 @@ function calculateAirFreight() {
       destSurcharges: alt.destSurcharges,
       grandTotal: alt.grandTotal,
       baseBuyFreight: alt.baseBuyFreight,
-      grossProfit: alt.grossProfit
+      grossProfit: alt.grossProfit,
+      usingBuyFallback: alt.usingBuyFallback,
+      usedBreak: alt.usedBreak
     };
   });
 
@@ -3658,6 +3919,15 @@ function calculateAirFreight() {
   appState.currentAirFreight.usedBreak = selectedAirlineData.usedBreak;
   appState.currentAirFreight.appliedRate = selectedAirlineData.appliedRate;
   appState.currentAirFreight.appliedBuyRate = selectedAirlineData.appliedBuyRate;
+  appState.currentAirFreight.usingBuyFallback = selectedAirlineData.usingBuyFallback;
+  // Per-card enablement for the selected/confirmed option — for non-Air-
+  // Nomination roles this (not the top-level #air-enable-* checkboxes) is
+  // what actually gates inclusion in the total (see originCardEnabled /
+  // destCardEnabled / wbEnabled above), so it's what buildAirQuoteData()
+  // needs to persist for the WON-confirmation validation to respect.
+  appState.currentAirFreight.wbEnabled = selectedAirlineData.wbEnabled;
+  appState.currentAirFreight.originFeesEnabled = selectedAirlineData.originFeesEnabled;
+  appState.currentAirFreight.destFeesEnabled = selectedAirlineData.destFeesEnabled;
   appState.currentAirFreight.baseBuyFreight = selectedAirlineData.baseBuyFreight;
   appState.currentAirFreight.pivotWeight = selectedAirlineData.pivotWeight;
   appState.currentAirFreight.routing = selectedAirlineData.routing;
@@ -3681,10 +3951,6 @@ function calculateAirFreight() {
 
 // SEA FREIGHT CALCULATOR LOGIC
 function setupSeaFreightEvents() {
-  const tabFcl = document.getElementById("sea-tab-fcl");
-  const tabLcl = document.getElementById("sea-tab-lcl");
-  const fclForm = document.getElementById("sea-fcl-form");
-  const lclForm = document.getElementById("sea-lcl-form");
   const currencySelect = document.getElementById("sea-currency");
 
   const seaTabExport = document.getElementById("sea-tab-export");
@@ -3701,47 +3967,6 @@ function setupSeaFreightEvents() {
       seaTabExport.classList.remove("active");
       appState.currentSeaFreight.module = 'import';
       resetCargoAndRatesForSea();
-    });
-  }
-
-  const tabBb = document.getElementById("sea-tab-bb");
-  const bbForm = document.getElementById("sea-bb-form");
-
-  if (tabFcl && tabLcl && tabBb) {
-    tabFcl.addEventListener("click", () => {
-      tabFcl.classList.add("active");
-      tabLcl.classList.remove("active");
-      tabBb.classList.remove("active");
-      fclForm.style.display = "block";
-      lclForm.style.display = "none";
-      if (bbForm) bbForm.style.display = "none";
-      appState.currentSeaFreight.type = "fcl";
-      populateSeaSurcharges("fcl");
-      calculateSeaFreight();
-    });
-
-    tabLcl.addEventListener("click", () => {
-      tabLcl.classList.add("active");
-      tabFcl.classList.remove("active");
-      tabBb.classList.remove("active");
-      fclForm.style.display = "none";
-      lclForm.style.display = "block";
-      if (bbForm) bbForm.style.display = "none";
-      appState.currentSeaFreight.type = "lcl";
-      populateSeaSurcharges("lcl");
-      calculateSeaFreight();
-    });
-
-    tabBb.addEventListener("click", () => {
-      tabBb.classList.add("active");
-      tabFcl.classList.remove("active");
-      tabLcl.classList.remove("active");
-      fclForm.style.display = "none";
-      lclForm.style.display = "none";
-      if (bbForm) bbForm.style.display = "block";
-      appState.currentSeaFreight.type = "bb";
-      populateSeaSurcharges("bb");
-      calculateSeaFreight();
     });
   }
 
@@ -3936,6 +4161,7 @@ window.switchLinerMode = function (linerIndex, mode) {
     updateLinerSurchargeContainerOptions(linerIndex);
   }
   calculateSeaFreight();
+  updateLinerRateSummary(card);
 };
 
 function buildLinerOptionsHTML(selectedName = "") {
@@ -4028,6 +4254,9 @@ window.addNewLinerCard = function (data = null) {
   const isFcl = (linerCard.dataset.mode === 'fcl');
   const isLcl = (linerCard.dataset.mode === 'lcl');
   const isBb = (linerCard.dataset.mode === 'bb');
+  const tariffsEnabled = data?.tariffsEnabled !== false;
+  const originFeesEnabled = data?.originFeesEnabled !== false;
+  const destFeesEnabled = data?.destFeesEnabled !== false;
 
   linerCard.innerHTML = `
     <div class="liner-card-header">
@@ -4047,6 +4276,20 @@ window.addNewLinerCard = function (data = null) {
         </button>
       </div>
     </div>
+
+    <div class="liner-rate-summary-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; background: #fafbfc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.6rem 0.5rem 0.75rem; margin-bottom: 0.5rem;">
+      <span class="liner-rate-summary-text" style="font-size: 0.72rem; color: var(--t2, #64748b); font-weight: 600;">No rates entered yet</span>
+      <button type="button" class="open-liner-rate-modal-btn" title="Edit rates &amp; fees" aria-label="Edit rates &amp; fees" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; background: rgba(245, 158, 11, 0.18); color: var(--accent-warning, #b45309); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 50%; cursor: pointer; padding: 0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </button>
+    </div>
+
+    <div class="liner-rate-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 1.5rem;">
+      <div class="liner-rate-modal-dialog" style="background: var(--bg-surface, #fff); border-radius: 12px; max-width: 720px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 1.1rem 1.4rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: #1b1c5c;">Rates and fees — Liner ${index} Option</span>
+          <button type="button" class="close-liner-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
+        </div>
 
     <!-- Liner Accordions Group -->
     <div class="liner-accordions-group">
@@ -4068,10 +4311,10 @@ window.addNewLinerCard = function (data = null) {
           <div class="section-card" id="sea-tariffs-card-${index}" style="background: transparent; border: none; padding: 0;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
               <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-sea); cursor: pointer; margin: 0;">
-                <input type="checkbox" id="sea-enable-tariffs-${index}" class="sea-enable-tariffs" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                <input type="checkbox" id="sea-enable-tariffs-${index}" class="sea-enable-tariffs" ${tariffsEnabled ? 'checked' : ''} onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
                 Include Freight Tariff
               </label>
-              <span id="sea-tariffs-status-badge-${index}" class="sea-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+              <span id="sea-tariffs-status-badge-${index}" class="sea-tariffs-status-badge" style="font-size: 0.7rem; font-weight: 700; color: ${tariffsEnabled ? '#10b981' : '#ef4444'}; background: ${tariffsEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; padding: 2px 8px; border-radius: 4px;">${tariffsEnabled ? '✓ Included' : '✕ Excluded'}</span>
             </div>
             <div id="sea-tariffs-content-body-${index}" class="sea-tariffs-content-body">
               <div class="toggle-group liner-mode-toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
@@ -4097,8 +4340,8 @@ window.addNewLinerCard = function (data = null) {
                       <tr>
                         <th style="width: 32%;">Container Type</th>
                         <th style="width: 16%; text-align: center;">Qty</th>
-                        <th style="width: 21%; text-align: center;">Sell Rate (<span class="curr-label">USD</span>)</th>
-                        <th style="width: 21%; text-align: center;">Buy Rate (<span class="curr-label">USD</span>)</th>
+                        <th style="width: 21%; text-align: center;">Sell Rate</th>
+                        <th style="width: 21%; text-align: center;">Buy Rate</th>
                         <th style="width: 10%; text-align: center;">Action</th>
                       </tr>
                     </thead>
@@ -4129,6 +4372,7 @@ window.addNewLinerCard = function (data = null) {
                     <input type="number" class="sea-lcl-buy-rate" placeholder="Buy Rate" min="0" value="${data?.lclBuyRate || 0}" oninput="calculateSeaFreight()">
                   </div>
                 </div>
+                <div class="sea-freight-gp-inline" style="margin-top: 0.5rem; font-size: 0.72rem; font-weight: 700; color: var(--accent-success);">GP 0.00</div>
               </div>
 
               <!-- Break Bulk Fields -->
@@ -4145,6 +4389,7 @@ window.addNewLinerCard = function (data = null) {
                     <input type="number" class="sea-bb-buy-rate" placeholder="Buy Rate" min="0" value="${data?.bbBuyRate || 0}" oninput="calculateSeaFreight()">
                   </div>
                 </div>
+                <div class="sea-freight-gp-inline" style="margin-top: 0.5rem; font-size: 0.72rem; font-weight: 700; color: var(--accent-success);">GP 0.00</div>
               </div>
             </div>
           </div>
@@ -4170,10 +4415,10 @@ window.addNewLinerCard = function (data = null) {
           <div class="section-card" id="sea-origin-fees-card-${index}" style="background: transparent; border: none; padding: 0;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
               <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                <input type="checkbox" id="sea-enable-origin-fees-${index}" class="sea-enable-origin-fees" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                <input type="checkbox" id="sea-enable-origin-fees-${index}" class="sea-enable-origin-fees" ${originFeesEnabled ? 'checked' : ''} onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
                 Include Origin Local Fees
               </label>
-              <span id="sea-origin-status-badge-${index}" class="sea-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+              <span id="sea-origin-status-badge-${index}" class="sea-origin-status-badge" style="font-size: 0.7rem; font-weight: 700; color: ${originFeesEnabled ? '#10b981' : '#ef4444'}; background: ${originFeesEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; padding: 2px 8px; border-radius: 4px;">${originFeesEnabled ? '✓ Included' : '✕ Excluded'}</span>
             </div>
             <div id="sea-origin-fees-content-body-${index}" class="sea-origin-fees-content-body">
               <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
@@ -4181,7 +4426,7 @@ window.addNewLinerCard = function (data = null) {
                   <thead>
                     <tr>
                       <th>Surcharge Name</th>
-                      <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                      <th>Sell Cost</th>
                       <th>Buy Rate</th>
                       <th>Billing Unit</th>
                       <th>Remarks</th>
@@ -4222,10 +4467,10 @@ window.addNewLinerCard = function (data = null) {
           <div class="section-card" id="sea-dest-fees-card-${index}" style="background: transparent; border: none; padding: 0;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-1);">
               <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sky); cursor: pointer; margin: 0;">
-                <input type="checkbox" id="sea-enable-dest-fees-${index}" class="sea-enable-dest-fees" checked onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
+                <input type="checkbox" id="sea-enable-dest-fees-${index}" class="sea-enable-dest-fees" ${destFeesEnabled ? 'checked' : ''} onchange="calculateSeaFreight()" style="width: 16px; height: 16px; accent-color: var(--sky); cursor: pointer;">
                 Include Destination Local Fees
               </label>
-              <span id="sea-dest-status-badge-${index}" class="sea-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px;">✓ Included</span>
+              <span id="sea-dest-status-badge-${index}" class="sea-dest-status-badge" style="font-size: 0.7rem; font-weight: 700; color: ${destFeesEnabled ? '#10b981' : '#ef4444'}; background: ${destFeesEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; padding: 2px 8px; border-radius: 4px;">${destFeesEnabled ? '✓ Included' : '✕ Excluded'}</span>
             </div>
             <div id="sea-dest-fees-content-body-${index}" class="sea-dest-fees-content-body">
               <div class="cargo-table-container" style="border: none; margin-bottom: 1rem;">
@@ -4233,7 +4478,7 @@ window.addNewLinerCard = function (data = null) {
                   <thead>
                     <tr>
                       <th>Surcharge Name</th>
-                      <th>Sell Cost (<span class="curr-label">USD</span>)</th>
+                      <th>Sell Cost</th>
                       <th>Buy Rate</th>
                       <th>Billing Unit</th>
                       <th>Remarks</th>
@@ -4256,12 +4501,44 @@ window.addNewLinerCard = function (data = null) {
         </div>
       </div>
     </div>
+
+        <div style="margin-top: 1rem; text-align: right; border-top: 1px solid var(--border-1); padding-top: 0.75rem;">
+          <button type="button" class="btn-primary done-liner-rate-modal-btn" style="padding: 7px 18px; font-size: 0.78rem;">Done</button>
+        </div>
+      </div>
+    </div>
   `;
 
   container.appendChild(linerCard);
 
+  // Rates & fees popup — keeps the liner card itself down to just the
+  // liner-name field and a summary strip; everything else (freight mode,
+  // origin/destination local fees) only exists in the DOM here, shown on
+  // demand, so it's still reachable by every existing card.querySelector()
+  // lookup this function and calculateSeaFreight() already make, just
+  // nested one level deeper. Pure show/hide — no data/calculation changes.
+  const linerRateModalOverlay = linerCard.querySelector(".liner-rate-modal-overlay");
+  const openLinerRateModalBtn = linerCard.querySelector(".open-liner-rate-modal-btn");
+  const closeLinerRateModalBtn = linerCard.querySelector(".close-liner-rate-modal-btn");
+  const doneLinerRateModalBtn = linerCard.querySelector(".done-liner-rate-modal-btn");
+
+  const openLinerRateModal = () => { linerRateModalOverlay.style.display = "flex"; };
+  const closeLinerRateModal = () => { linerRateModalOverlay.style.display = "none"; updateLinerRateSummary(linerCard); };
+
+  openLinerRateModalBtn.addEventListener("click", openLinerRateModal);
+  closeLinerRateModalBtn.addEventListener("click", closeLinerRateModal);
+  doneLinerRateModalBtn.addEventListener("click", closeLinerRateModal);
+  linerRateModalOverlay.addEventListener("click", (e) => {
+    if (e.target === linerRateModalOverlay) closeLinerRateModal();
+  });
+  linerCard.addEventListener("input", (e) => {
+    if (e.target.classList.contains("sea-lcl-rate") || e.target.classList.contains("sea-bb-rate")) {
+      updateLinerRateSummary(linerCard);
+    }
+  });
+
   if (data?.containers && data.containers.length > 0) {
-    data.containers.forEach(c => addFclContainerRowToLiner(index, c.type, c.qty, c.rate));
+    data.containers.forEach(c => addFclContainerRowToLiner(index, c.type, c.qty, c.rate, c.buy));
   } else {
     addFclContainerRowToLiner(index, "20'GP", 1, 0);
   }
@@ -4278,6 +4555,7 @@ window.addNewLinerCard = function (data = null) {
   }
 
   calculateSeaFreight();
+  updateLinerRateSummary(linerCard);
 };
 
 window.updateLinerSurchargeContainerOptions = function (linerIndex) {
@@ -4301,6 +4579,7 @@ window.updateLinerSurchargeContainerOptions = function (linerIndex) {
 
     let html = `
       <option value="flat" ${currentVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
+      <option value="rt" ${currentVal === 'rt' ? 'selected' : ''}>Per RT</option>
     `;
 
     uniqueTypes.forEach(type => {
@@ -4337,12 +4616,12 @@ window.removeLinerCard = function (linerIndex) {
   }
 };
 
-window.addFclContainerRowToLiner = function (linerIndex, typeVal = "20'GP", qtyVal = 1, rateVal = 0) {
+window.addFclContainerRowToLiner = function (linerIndex, typeVal = "20'GP", qtyVal = 1, rateVal = 0, buyVal = 0) {
   const tbody = document.getElementById(`sea-fcl-body-${linerIndex}`);
   if (!tbody) return;
 
   const sellRate = (typeof rateVal === 'object' && rateVal !== null) ? (rateVal.sell || rateVal.rate || 0) : (parseFloat(rateVal) || 0);
-  const buyRate = (typeof rateVal === 'object' && rateVal !== null) ? (rateVal.buy || 0) : 0;
+  const buyRate = (typeof rateVal === 'object' && rateVal !== null) ? (rateVal.buy || 0) : (parseFloat(buyVal) || 0);
 
   const tr = document.createElement("tr");
   tr.className = "container-row";
@@ -4403,6 +4682,7 @@ window.addSeaSurchargeRowToLiner = function (linerIndex, type, nameVal = "", sel
 
   let unitOptions = `
     <option value="flat" ${selectedVal === 'flat' ? 'selected' : ''}>Flat Fee</option>
+    <option value="rt" ${selectedVal === 'rt' ? 'selected' : ''}>Per RT</option>
   `;
   uniqueTypes.forEach(t => {
     const val = `container-${t}`;
@@ -4442,7 +4722,14 @@ function calculateSeaFreight() {
   updateSeaFclStuffingVisibility();
   updateCurrencyRules(appState.currentUser);
 
-  const type = appState.currentSeaFreight.type; // 'fcl', 'lcl', or 'bb'
+  // The per-liner FCL/LCL/BB toggle (switchLinerMode) only writes to that
+  // liner card's dataset.mode; it never touches appState.currentSeaFreight.type.
+  // Read the primary (first) liner's actual selected mode here and keep the
+  // shared state in sync so saveCurrentQuote() persists the true mode instead
+  // of the frozen initial default.
+  const firstLinerCardEl = document.querySelector("#sea-liners-container .liner-card");
+  const type = (firstLinerCardEl && firstLinerCardEl.dataset.mode) || appState.currentSeaFreight.type || 'fcl'; // 'fcl', 'lcl', or 'bb'
+  appState.currentSeaFreight.type = type;
   const currency = document.getElementById("sea-currency").value;
   const curSymbol = currency === 'INR' ? '₹' : (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '£'));
 
@@ -4455,7 +4742,12 @@ function calculateSeaFreight() {
   const weightTons = weightKg / 1000;
   const isLclMode = (type === 'lcl');
   const effectiveCbm = (isLclMode && cbm < 1.0) ? 1.0 : cbm;
-  const chargeableCbm = Math.max(effectiveCbm, weightTons);
+  // Manual override for shipments where the actual chargeable volume differs
+  // from the auto-calculated dimensional CBM (e.g. carrier-quoted RT). When
+  // set, it replaces the auto-calculated figure entirely rather than being
+  // compared against it.
+  const chargeableCbmOverride = parseFloat(document.getElementById("sea-chargeable-cbm-override")?.value) || 0;
+  const chargeableCbm = chargeableCbmOverride > 0 ? chargeableCbmOverride : Math.max(effectiveCbm, weightTons);
 
   const isSeaAmsEnabled = document.getElementById("sea-enable-ams-fee") ? document.getElementById("sea-enable-ams-fee").checked : true;
   const rawSeaAms = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
@@ -4508,9 +4800,15 @@ function calculateSeaFreight() {
     const isLinerFcl = (linerMode === 'fcl');
 
     let linerBaseFreight = 0;
+    let linerBaseFreightBuy = 0;
     let linerContainersCount = 0;
     let linerContainerSummary = [];
     let containersList = [];
+    let linerLclRate = 0, linerLclBuyRate = 0, linerBbRate = 0, linerBbBuyRate = 0;
+    // Same quoting-stage rule as Air Freight: whichever of Sell/Buy is
+    // entered feeds the interim total; tracked here so it can be surfaced
+    // as an "Interim Estimate" indicator rather than silently blended in.
+    let linerUsingBuyFallback = false;
 
     if (linerMode === 'fcl') {
       const fclRows = card.querySelectorAll(".sea-fcl-body .container-row, tbody[id^='sea-fcl-body'] .container-row");
@@ -4520,36 +4818,63 @@ function calculateSeaFreight() {
         const rate = parseFloat(row.querySelector(".fcl-sell-rate")?.value || row.querySelector(".fcl-rate")?.value) || 0;
         const buy = parseFloat(row.querySelector(".fcl-buy-rate")?.value) || 0;
         const activeRate = rate > 0 ? rate : (buy > 0 ? buy : 0);
+        if (rate === 0 && buy > 0) linerUsingBuyFallback = true;
         containersList.push({ type: typeVal, qty, rate, buy });
         if (qty > 0 && activeRate > 0) {
           if (tariffsEnabled) {
             linerBaseFreight += (qty * activeRate);
+            linerBaseFreightBuy += (qty * buy);
           }
           linerContainersCount += qty;
           linerContainerSummary.push(`${qty} x ${typeVal}`);
         }
+
+        // Purely visual: flag a row with a quantity but no rate on either
+        // side — this is exactly the state saveCurrentQuote() now blocks at
+        // save time; the flag just surfaces it earlier, live. Math above
+        // (activeRate / linerBaseFreight) is untouched.
+        row.classList.toggle("row-incomplete-flag", qty > 0 && rate <= 0 && buy <= 0);
       });
     } else if (linerMode === 'lcl') {
       const rate = parseFloat(card.querySelector(".sea-lcl-rate")?.value) || 0;
       const buy = parseFloat(card.querySelector(".sea-lcl-buy-rate")?.value) || 0;
+      linerLclRate = rate;
+      linerLclBuyRate = buy;
       const activeRate = rate > 0 ? rate : buy;
+      if (rate === 0 && buy > 0) linerUsingBuyFallback = true;
       if (tariffsEnabled) {
         linerBaseFreight = chargeableCbm * activeRate;
+        linerBaseFreightBuy = chargeableCbm * buy;
       }
     } else {
       const rate = parseFloat(card.querySelector(".sea-bb-rate")?.value) || 0;
       const buy = parseFloat(card.querySelector(".sea-bb-buy-rate")?.value) || 0;
+      linerBbRate = rate;
+      linerBbBuyRate = buy;
       const activeRate = rate > 0 ? rate : buy;
+      if (rate === 0 && buy > 0) linerUsingBuyFallback = true;
       if (tariffsEnabled) {
         linerBaseFreight = chargeableCbm * activeRate;
+        linerBaseFreightBuy = chargeableCbm * buy;
       }
     }
 
+    // Live "GP" indicator next to the LCL/BB rate inputs, matching the same
+    // Total/GP footer already shown on the Origin/Destination surcharge
+    // tables below — freight-only (sell minus buy), not including surcharges.
+    const freightGpForm = linerMode === 'lcl' ? card.querySelector(".sea-lcl-form") : (linerMode === 'bb' ? card.querySelector(".sea-bb-form") : null);
+    const freightGpEl = freightGpForm ? freightGpForm.querySelector(".sea-freight-gp-inline") : null;
+    if (freightGpEl) {
+      freightGpEl.textContent = `GP ${curSymbol}${(linerBaseFreight - linerBaseFreightBuy).toFixed(2)}`;
+    }
+
     let linerOriginTotal = 0;
+    let linerOriginTotalBuy = 0;
     let linerOriginList = [];
     if (originFeesEnabled) {
       if (isSeaAmsEnabled && amsFee > 0) {
         linerOriginTotal += amsFee;
+        linerOriginTotalBuy += amsFee;
         linerOriginList.push({ name: "AMS Fee", rate: amsFee, unit: "flat", calculatedCost: amsFee });
       }
       const originRows = card.querySelectorAll(".sea-origin-surcharges-body tr, tbody[id^='sea-origin-surcharges-body'] tr");
@@ -4560,29 +4885,39 @@ function calculateSeaFreight() {
         const unit = row.querySelector(".chg-unit")?.value || 'flat';
         const remarks = row.querySelector(".chg-remarks")?.value.trim() || "";
 
-        if (name && rate > 0) {
+        if (name && (rate > 0 || buyRate > 0)) {
+          const effectiveRate = rate > 0 ? rate : buyRate;
+          if (rate === 0 && buyRate > 0) linerUsingBuyFallback = true;
           let cost = 0;
+          let costBuy = 0;
           if (unit.startsWith('container-')) {
             const cType = unit.substring(10);
             const containerObj = containersList.find(c => c.type === cType);
             const qty = containerObj ? containerObj.qty : 0;
-            cost = qty * rate;
+            cost = qty * effectiveRate;
+            costBuy = qty * buyRate;
           } else if (unit === 'container') {
-            cost = isLinerFcl ? linerContainersCount * rate : rate;
+            cost = isLinerFcl ? linerContainersCount * effectiveRate : effectiveRate;
+            costBuy = isLinerFcl ? linerContainersCount * buyRate : buyRate;
           } else if (unit === 'rt') {
-            cost = chargeableCbm * rate;
+            cost = chargeableCbm * effectiveRate;
+            costBuy = chargeableCbm * buyRate;
           } else if (unit === 'kg') {
-            cost = weightKg * rate;
+            cost = weightKg * effectiveRate;
+            costBuy = weightKg * buyRate;
           } else {
-            cost = rate;
+            cost = effectiveRate;
+            costBuy = buyRate;
           }
           linerOriginTotal += cost;
+          linerOriginTotalBuy += costBuy;
           linerOriginList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
         }
       });
     }
 
     let linerDestTotal = 0;
+    let linerDestTotalBuy = 0;
     let linerDestList = [];
     if (destFeesEnabled) {
       const destRows = card.querySelectorAll(".sea-dest-surcharges-body tr, tbody[id^='sea-dest-surcharges-body'] tr");
@@ -4593,29 +4928,39 @@ function calculateSeaFreight() {
         const unit = row.querySelector(".chg-unit")?.value || 'flat';
         const remarks = row.querySelector(".chg-remarks")?.value.trim() || "";
 
-        if (name && rate > 0) {
+        if (name && (rate > 0 || buyRate > 0)) {
+          const effectiveRate = rate > 0 ? rate : buyRate;
+          if (rate === 0 && buyRate > 0) linerUsingBuyFallback = true;
           let cost = 0;
+          let costBuy = 0;
           if (unit.startsWith('container-')) {
             const cType = unit.substring(10);
             const containerObj = containersList.find(c => c.type === cType);
             const qty = containerObj ? containerObj.qty : 0;
-            cost = qty * rate;
+            cost = qty * effectiveRate;
+            costBuy = qty * buyRate;
           } else if (unit === 'container') {
-            cost = isLinerFcl ? linerContainersCount * rate : rate;
+            cost = isLinerFcl ? linerContainersCount * effectiveRate : effectiveRate;
+            costBuy = isLinerFcl ? linerContainersCount * buyRate : buyRate;
           } else if (unit === 'rt') {
-            cost = chargeableCbm * rate;
+            cost = chargeableCbm * effectiveRate;
+            costBuy = chargeableCbm * buyRate;
           } else if (unit === 'kg') {
-            cost = weightKg * rate;
+            cost = weightKg * effectiveRate;
+            costBuy = weightKg * buyRate;
           } else {
-            cost = rate;
+            cost = effectiveRate;
+            costBuy = buyRate;
           }
           linerDestTotal += cost;
+          linerDestTotalBuy += costBuy;
           linerDestList.push({ name, rate, buyRate, unit, remarks, calculatedCost: cost });
         }
       });
     }
 
     const linerGrandTotal = (tariffsEnabled ? linerBaseFreight : 0) + (originFeesEnabled ? linerOriginTotal : 0) + (destFeesEnabled ? linerDestTotal : 0);
+    const linerGrandTotalBuy = (tariffsEnabled ? linerBaseFreightBuy : 0) + (originFeesEnabled ? linerOriginTotalBuy : 0) + (destFeesEnabled ? linerDestTotalBuy : 0);
     let linerGrandTotalINR = linerGrandTotal;
     if (currency !== 'INR') {
       linerGrandTotalINR = linerGrandTotal * EXCHANGE_RATES[`${currency}_TO_INR`];
@@ -4629,14 +4974,23 @@ function calculateSeaFreight() {
       originFeesEnabled,
       destFeesEnabled,
       baseFreight: linerBaseFreight,
+      baseFreightBuy: linerBaseFreightBuy,
+      lclRate: linerLclRate,
+      lclBuyRate: linerLclBuyRate,
+      bbRate: linerBbRate,
+      bbBuyRate: linerBbBuyRate,
       containers: containersList,
       fclSummary: linerContainerSummary,
       originSurcharges: linerOriginList,
       originTotal: linerOriginTotal,
+      originTotalBuy: linerOriginTotalBuy,
       destSurcharges: linerDestList,
       destTotal: linerDestTotal,
+      destTotalBuy: linerDestTotalBuy,
       grandTotal: linerGrandTotal,
-      grandTotalINR: linerGrandTotalINR
+      grandTotalBuy: linerGrandTotalBuy,
+      grandTotalINR: linerGrandTotalINR,
+      usingBuyFallback: linerUsingBuyFallback
     });
   });
 
@@ -4647,13 +5001,17 @@ function calculateSeaFreight() {
     originTotal: 0,
     destTotal: 0,
     grandTotal: 0,
+    grandTotalBuy: 0,
     grandTotalINR: 0,
-    fclSummary: []
+    fclSummary: [],
+    containers: []
   };
 
   const baseFreight = primaryLiner.baseFreight;
   const totalSurcharges = primaryLiner.originTotal + primaryLiner.destTotal;
   const grandTotal = primaryLiner.grandTotal;
+  const grandTotalBuy = primaryLiner.grandTotalBuy || 0;
+  const liveGP = grandTotal - grandTotalBuy;
   const totalINR = primaryLiner.grandTotalINR;
   const originSurchargesList = primaryLiner.originSurcharges;
   const destSurchargesList = primaryLiner.destSurcharges;
@@ -4695,6 +5053,39 @@ function calculateSeaFreight() {
   document.getElementById("res-sea-base").textContent = `${curSymbol}${baseFreight.toFixed(2)}`;
   document.getElementById("res-sea-sur").textContent = `${curSymbol}${totalSurcharges.toFixed(2)}`;
   document.getElementById("res-sea-total").textContent = `${curSymbol}${grandTotal.toFixed(2)}`;
+  const resSeaGpEl = document.getElementById("res-sea-gp");
+  if (resSeaGpEl) resSeaGpEl.textContent = `${curSymbol}${liveGP.toFixed(2)}`;
+
+  // Live per-container-type breakdown — mirrors the saved/printed quote's
+  // presentation so a distinct rate/subtotal per container type is visible
+  // before saving too, not only afterward.
+  const fclBreakdownEl = document.getElementById("res-sea-fcl-breakdown");
+  const baseLabelEl = document.getElementById("res-sea-base-label");
+  if (fclBreakdownEl) {
+    const fclItems = type === 'fcl' ? (primaryLiner.containers || []).filter(c => (c.qty || 0) > 0) : [];
+    if (fclItems.length > 0) {
+      fclBreakdownEl.innerHTML = `
+        <h4 style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 800; letter-spacing: 0.05em;">Container Breakdown</h4>
+        ${fclItems.map(c => {
+          const qty = c.qty || 0;
+          const rate = c.rate > 0 ? c.rate : (c.buy || 0);
+          const rowTotal = qty * rate;
+          return `
+            <div class="result-row">
+              <span class="result-label">${c.type} × ${qty}</span>
+              <span class="result-value">${curSymbol}${rate.toFixed(2)}/unit = <strong>${curSymbol}${rowTotal.toFixed(2)}</strong></span>
+            </div>
+          `;
+        }).join("")}
+      `;
+      fclBreakdownEl.style.display = "block";
+      if (baseLabelEl) baseLabelEl.textContent = "Total Base Ocean Freight (All Containers)";
+    } else {
+      fclBreakdownEl.innerHTML = "";
+      fclBreakdownEl.style.display = "none";
+      if (baseLabelEl) baseLabelEl.textContent = "Base Ocean Freight";
+    }
+  }
 
   // Render Multi-Liner Comparison Cards in Results Panel
   const multiLinerResultsList = document.getElementById("sea-multi-liner-results-list");
@@ -4709,6 +5100,7 @@ function calculateSeaFreight() {
           <span>🚢 ${l.linerName} ${i === 0 ? '(Primary)' : ''}</span>
           <span style="font-weight: 900; color: #10b981;">${curSymbol}${l.grandTotal.toFixed(2)}</span>
         </div>
+        ${l.usingBuyFallback ? '<div title="Sell Rate is blank on at least one line — this total is using the Buy/Cost Rate as an interim placeholder. It is not a confirmed customer price." style="display:inline-block; margin-top:4px; font-size: 0.6rem; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">⚠ Interim Estimate (Buy Rate)</div>' : ''}
         <div style="font-size: 0.68rem; color: var(--t2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px;">
           <span>Freight: ${curSymbol}${l.baseFreight.toFixed(2)}</span>
           <span>Origin Fees: ${curSymbol}${l.originTotal.toFixed(2)}</span>
@@ -4876,33 +5268,19 @@ function setupSurchargesEvents(freightType) {
 
 // MEMBER DASHBOARD RENDERING
 function renderMemberDashboard(userId) {
-  renderNrsRegistry();
-
-  // Load member scratchpad content
   const user = userId || appState.currentUser || "shashank";
-  let scratchpads = {};
-  try {
-    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
-    if (typeof scratchpads !== 'object' || scratchpads === null) scratchpads = {};
-  } catch (e) { scratchpads = {}; }
-  const pad = scratchpads[user];
-  const ta = document.getElementById("dashboard-scratchpad");
-  if (ta) {
-    ta.value = pad ? pad.text : "";
-  }
-  if (!window._newsLoaded) {
-    setTimeout(() => {
-      loadLogisticsNews('global');
-      window._newsLoaded = true;
-    }, 100);
-  }
-  // Check for resolved amendment requests for this member
+
+  // Resolved amendment-request notifications must be checked regardless of
+  // which page is open — this is how a user finds out an admin approved or
+  // rejected their request, not something that should wait until they
+  // happen to open the Dashboard. Cheap either way (array filter + a
+  // deferred alert), so it's fine to leave ungated.
   let requestsList = window._amendmentRequests || [];
   if (requestsList.length === 0) {
     const storedReqs = localStorage.getItem("gl_amendment_requests");
     if (storedReqs) {
-      try { 
-        requestsList = JSON.parse(storedReqs); 
+      try {
+        requestsList = JSON.parse(storedReqs);
         if (!Array.isArray(requestsList)) requestsList = [];
       } catch (e) { requestsList = []; }
     }
@@ -4939,6 +5317,36 @@ function renderMemberDashboard(userId) {
     }, 100);
   }
 
+  // Everything below only matters when the Member Dashboard is the visible
+  // panel. The Firestore quotes listener calls this function on every write
+  // from any of the team's users, system-wide — without this gate, a full
+  // NRS registry fetch, a scratchpad reload, and a scan over every quote in
+  // the company ran on every single save, even while looking at, say, the
+  // Air Freight desk, which is what was making the whole app feel sluggish.
+  const memberDashPanel = document.getElementById("member-dashboard-panel");
+  const isDashboardVisible = !!(memberDashPanel && memberDashPanel.classList.contains("active"));
+  if (!isDashboardVisible) return;
+
+  renderNrsRegistry();
+
+  // Load member scratchpad content
+  let scratchpads = {};
+  try {
+    scratchpads = JSON.parse(localStorage.getItem("gl_active_scratchpads") || "{}");
+    if (typeof scratchpads !== 'object' || scratchpads === null) scratchpads = {};
+  } catch (e) { scratchpads = {}; }
+  const pad = scratchpads[user];
+  const ta = document.getElementById("dashboard-scratchpad");
+  if (ta) {
+    ta.value = pad ? pad.text : "";
+  }
+  if (!window._newsLoaded) {
+    setTimeout(() => {
+      loadLogisticsNews('global');
+      window._newsLoaded = true;
+    }, 100);
+  }
+
   const myQuotes = (appState.quotes || []).filter(q => q.creator === userId);
   const totalEnquiries = myQuotes.length;
 
@@ -4954,18 +5362,49 @@ function renderMemberDashboard(userId) {
 
   const conversionRate = totalEnquiries > 0 ? (conversions / totalEnquiries * 100) : 0;
 
-  // The Firestore quotes listener calls this on every write from any user, even
-  // when the member dashboard isn't the visible panel — skip the table rebuild
-  // below in that case so typing/scrolling elsewhere doesn't stutter.
-  const memberDashPanel = document.getElementById("member-dashboard-panel");
-  const isDashboardVisible = !!(memberDashPanel && memberDashPanel.classList.contains("active"));
-  if (!isDashboardVisible) return;
+  // Update KPI Metrics — ring-chart KPIs, same treatment as the admin dashboard
+  const myRevenueByMode = { air: 0, sea: 0, transport: 0, warehouse: 0 };
+  const myEnquiriesByStatus = { quoted: 0, converted: 0, lost: 0, cancelled: 0 };
+  myQuotes.forEach(q => {
+    if (myRevenueByMode[q.type] !== undefined) myRevenueByMode[q.type] += (q.amountINR || 0);
+    if (myEnquiriesByStatus[q.status] !== undefined) myEnquiriesByStatus[q.status]++;
+  });
+  const RING_BLUE2 = '#3b82f6', RING_TEAL2 = '#14b8a6', RING_VIOLET2 = '#8b5cf6',
+    RING_AMBER2 = '#f59e0b', RING_GREEN2 = '#22c55e', RING_ROSE2 = '#f43f5e',
+    RING_GRAY2 = '#94a3b8', RING_TRACK2 = '#e2e8f0';
 
-  // Update KPI Metrics
-  document.getElementById("user-stat-revenue").textContent = `₹${totalRevenueINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-  document.getElementById("user-stat-quotes").textContent = totalEnquiries;
-  document.getElementById("user-stat-conversions").textContent = conversions;
-  document.getElementById("user-stat-rate").textContent = `${conversionRate.toFixed(1)}%`;
+  renderRingKPI("user-stat-revenue-ring", {
+    centerValue: `₹${totalRevenueINR.toLocaleString('en-IN', { maximumFractionDigits: 0, notation: totalRevenueINR >= 100000 ? 'compact' : 'standard' })}`,
+    segments: [
+      { value: myRevenueByMode.air, color: RING_BLUE2, label: 'Air' },
+      { value: myRevenueByMode.sea, color: RING_TEAL2, label: 'Sea' },
+      { value: myRevenueByMode.transport, color: RING_VIOLET2, label: 'Transport' },
+      { value: myRevenueByMode.warehouse, color: RING_AMBER2, label: 'Warehouse' }
+    ]
+  });
+  renderRingKPI("user-stat-quotes-ring", {
+    centerValue: totalEnquiries,
+    segments: [
+      { value: myEnquiriesByStatus.quoted, color: RING_BLUE2, label: 'Quoted' },
+      { value: myEnquiriesByStatus.converted, color: RING_GREEN2, label: 'Won' },
+      { value: myEnquiriesByStatus.lost, color: RING_ROSE2, label: 'Lost' },
+      { value: myEnquiriesByStatus.cancelled, color: RING_GRAY2, label: 'Cancelled' }
+    ]
+  });
+  renderRingKPI("user-stat-conversions-ring", {
+    centerValue: conversions,
+    segments: [
+      { value: conversions, color: RING_GREEN2, label: 'Won' },
+      { value: totalEnquiries - conversions, color: RING_TRACK2, label: 'Not yet won' }
+    ]
+  });
+  renderRingKPI("user-stat-rate-ring", {
+    centerValue: `${conversionRate.toFixed(1)}%`,
+    segments: [
+      { value: conversionRate, color: RING_BLUE2, label: 'Converted' },
+      { value: 100 - conversionRate, color: RING_TRACK2, label: 'Remaining' }
+    ]
+  });
 
   // Render Table via filters and sorting
   window.userDashboardId = userId;
@@ -5034,24 +5473,25 @@ window.deleteNrsAlert = deleteNrsAlert;
 
 // EXECUTIVE COMMAND CENTER DASHBOARD
 function showExecutiveDashboard() {
+  // The standalone "Executive Command Center" panel this used to activate
+  // has been retired — it duplicated most of the Dashboard's Overview tab
+  // (same KPIs, same leaderboard) under different labels, plus one widget
+  // ("System Data Reconciliation Audit") that never did any real check —
+  // it always reported "100%"/"No orphans detected" regardless of actual
+  // data. Its genuinely unique content (Pipeline, Compliance, Recent
+  // Activity, trend charts, Customer Concentration, Route Performance) now
+  // lives in the Dashboard's own "Analytics" tab instead of a second,
+  // separately-branded dashboard. This function now just opens that tab.
   if (!isUserAdminOrManager()) {
     console.warn("Access Denied: Executive Dashboard is restricted to user ganny.");
     alert("Access Denied: Executive Dashboard is restricted to user ganny.");
     goHome();
     return;
   }
-  document.querySelectorAll(".view-panel").forEach(panel => {
-    panel.classList.remove("active");
-  });
-  const execPanel = document.getElementById("executive-dashboard-panel");
-  if (execPanel) {
-    execPanel.classList.add("active");
-    execPanel.style.display = "";
-  }
-  renderExecutiveDashboard();
-  if (typeof renderExecutiveDashboardIntelligence === 'function') {
-    renderExecutiveDashboardIntelligence();
-  }
+  goHome();
+  const analyticsBtn = document.querySelector('#manager-panel .desk-tab-btn[data-tab="analytics"]') ||
+    [...document.querySelectorAll('#manager-panel .desk-tab-btn')].find(b => /Analytics/.test(b.textContent));
+  if (analyticsBtn) analyticsBtn.click();
 }
 window.showExecutiveDashboard = showExecutiveDashboard;
 
@@ -5059,20 +5499,19 @@ function renderExecutiveDashboard() {
   // 1. Fetch data
   const quotes = appState.quotes || [];
 
-  // 2. Executive KPI Cards Calculations
-  const totalQuotes = quotes.length;
-  const convertedQuotes = quotes.filter(q => q.status === 'converted').length;
-  const conversionPct = totalQuotes > 0 ? (convertedQuotes / totalQuotes * 100) : 0;
-  const totalGP = quotes.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
+  // Note: this used to also update a set of "Executive KPI Cards" and a
+  // "Pricing Team Leaderboard" here, but those were duplicates of cards
+  // already on the Dashboard's Overview tab (#admin-leaderboard-body, etc.)
+  // and their target elements were removed when the old standalone
+  // executive-dashboard-panel was retired (see showExecutiveDashboard).
+  // Leaving the old getElementById(...).textContent calls in meant every
+  // call to this function threw on a null element and aborted before ever
+  // reaching the Pipeline/Compliance/Recent Activity code below — which is
+  // why the Analytics tab appeared to show nothing but zeros.
 
-  // Update KPI Cards UI
-  document.getElementById("exec-kpi-total-quotes").textContent = totalQuotes;
-  document.getElementById("exec-kpi-converted-quotes").textContent = convertedQuotes;
-  document.getElementById("exec-kpi-conversion-pct").textContent = `${conversionPct.toFixed(1)}%`;
-  document.getElementById("exec-kpi-total-gp").textContent = `₹${totalGP.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-
-  // 3. Quote Pipeline Status Counts
+  // 2. Quote Pipeline Status Counts
   const pipeQuoted = quotes.filter(q => q.status === 'quoted').length;
+  const convertedQuotes = quotes.filter(q => q.status === 'converted').length;
   const pipeConverted = convertedQuotes;
   const pipeLost = quotes.filter(q => q.status === 'lost').length;
   const pipeCancelled = quotes.filter(q => q.status === 'cancelled').length;
@@ -5118,6 +5557,15 @@ function renderExecutiveDashboard() {
       return true;
     });
 
+    // Two different logins can share a display name (e.g. more than one
+    // "Free Hand Sales" account) — disambiguate before rendering, same
+    // treatment already applied to Quotes By User / Revenue By User.
+    const deskNameLookup = {};
+    desks.forEach(deskId => {
+      deskNameLookup[deskId] = { name: (TEAM_ROLES[deskId]?.name || deskId).replace(/\s*\(Free\s*Hand\)/i, "") };
+    });
+    disambiguateDuplicateNames(deskNameLookup);
+
     desks.forEach(deskId => {
       const deskIdLower = deskId.toLowerCase();
       const deskQuotes = quotes.filter(q => q.creator && q.creator.toLowerCase() === deskIdLower);
@@ -5127,7 +5575,7 @@ function renderExecutiveDashboard() {
       const deskGP = deskQuotes.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
 
       const tr = document.createElement("tr");
-      const name = (TEAM_ROLES[deskIdLower]?.name || deskIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
+      const name = deskNameLookup[deskId].name;
 
       tr.innerHTML = `
         <td><strong>${name}</strong></td>
@@ -5144,40 +5592,111 @@ function renderExecutiveDashboard() {
     });
   }
 
-  // 6. Recent Quote Activity
-  const recentBody = document.getElementById("exec-recent-quotes-body");
-  if (recentBody) {
-    recentBody.innerHTML = "";
-
-    // Sort quotes descending (newest first, based on index or date string)
-    const sortedQuotes = [...quotes].reverse().slice(0, 10);
-
-    if (sortedQuotes.length === 0) {
-      recentBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No quotations recorded yet.</td></tr>`;
-    } else {
-      sortedQuotes.forEach(q => {
-        const tr = document.createElement("tr");
-        const statusText = q.status === 'quoted' ? 'Quoted' : (q.status === 'converted' ? 'Converted' : (q.status === 'cancelled' ? 'Cancelled' : 'Lost'));
-        const creatorName = (TEAM_ROLES[q.creator?.toLowerCase()]?.name || q.creator || "").replace(/\s*\(Free\s*Hand\)/i, "");
-        const formattedAmount = q.amountINR ? `₹${q.amountINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : `₹0`;
-
-        tr.innerHTML = `
-          <td>${q.date || "-"}</td>
-          <td><strong>${q.customer || "-"}</strong></td>
-          <td>${creatorName}</td>
-          <td>
-            <span class="status-badge ${q.status}" style="font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block;">
-              ${statusText}
-            </span>
-          </td>
-          <td><strong>${formattedAmount}</strong></td>
-        `;
-        recentBody.appendChild(tr);
-      });
-    }
-  }
+  // 6. Quotes By User (replaces the old "Recent Quotation Activity" list of
+  // individual quotes with a per-user total, sortable ascending/descending)
+  renderQuotesByUserTable();
 }
 window.renderExecutiveDashboard = renderExecutiveDashboard;
+
+let _quotesByUserSortDir = 'desc';
+// Rolling trailing windows (days) from today, per period option. "day" means
+// today's date only; every other period is the trailing N-day window so
+// results are unambiguous regardless of what day of the week/month it is.
+const QUOTES_BY_USER_PERIOD_DAYS = {
+  week: 7,
+  fortnight: 14,
+  month: 30,
+  quarter: 90,
+  half_year: 182,
+  year: 365
+};
+// Two different logins can share the same display name (e.g. more than one
+// generic "Free Hand Sales" desk account that was never given an individual
+// name) — that makes per-user tables/charts show identical, indistinguishable
+// rows even though each key is a genuinely separate account with its own
+// activity. Append the login/username to only the colliding entries so every
+// row stays unique, without touching the underlying account data itself.
+function disambiguateDuplicateNames(entriesByKey) {
+  const nameCounts = {};
+  Object.values(entriesByKey).forEach(e => {
+    nameCounts[e.name] = (nameCounts[e.name] || 0) + 1;
+  });
+  Object.keys(entriesByKey).forEach(key => {
+    const e = entriesByKey[key];
+    if (nameCounts[e.name] > 1) {
+      e.name = `${e.name} (${key})`;
+    }
+  });
+}
+
+function renderQuotesByUserTable(period, sortDir) {
+  if (sortDir) _quotesByUserSortDir = sortDir;
+  const body = document.getElementById("exec-quotes-by-user-body");
+  if (!body) return;
+
+  const periodSelect = document.getElementById("exec-quotes-by-user-period");
+  if (period === undefined) {
+    period = periodSelect ? periodSelect.value : 'all';
+  } else if (periodSelect) {
+    periodSelect.value = period;
+  }
+
+  const descBtn = document.getElementById("exec-quotes-by-user-sort-desc");
+  const ascBtn = document.getElementById("exec-quotes-by-user-sort-asc");
+  if (descBtn && ascBtn) {
+    const isDesc = _quotesByUserSortDir === 'desc';
+    descBtn.classList.toggle('sort-toggle-btn-active', isDesc);
+    descBtn.style.background = isDesc ? 'var(--sky)' : 'transparent';
+    ascBtn.classList.toggle('sort-toggle-btn-active', !isDesc);
+    ascBtn.style.background = !isDesc ? 'var(--sky)' : 'transparent';
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  let cutoffStr = null;
+  if (period === 'day') {
+    cutoffStr = todayStr;
+  } else if (QUOTES_BY_USER_PERIOD_DAYS[period]) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - (QUOTES_BY_USER_PERIOD_DAYS[period] - 1));
+    cutoffStr = cutoff.toISOString().split('T')[0];
+  }
+
+  const allQuotes = appState.quotes || [];
+  const quotes = cutoffStr ? allQuotes.filter(q => (q.date || '') >= cutoffStr) : allQuotes;
+
+  const userCounts = {};
+  Object.keys(TEAM_ROLES).forEach(roleId => {
+    if (roleId === 'ganny' || roleId === 'manager') return;
+    userCounts[roleId] = { name: (TEAM_ROLES[roleId].name || roleId).replace(/\s*\(Free\s*Hand\)/i, ""), count: 0 };
+  });
+  quotes.forEach(q => {
+    const creator = (q.creator || 'unknown').toLowerCase();
+    if (!userCounts[creator]) {
+      userCounts[creator] = { name: TEAM_ROLES[creator]?.name || q.creator || 'Unknown', count: 0 };
+    }
+    userCounts[creator].count++;
+  });
+
+  disambiguateDuplicateNames(userCounts);
+
+  const rows = Object.values(userCounts).sort((a, b) =>
+    _quotesByUserSortDir === 'desc' ? b.count - a.count : a.count - b.count
+  );
+
+  if (rows.length === 0) {
+    body.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 1.5rem;">No quotations recorded yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${r.name}</strong></td>
+      <td>${r.count}</td>
+    </tr>
+  `).join("");
+}
+window.renderQuotesByUserTable = renderQuotesByUserTable;
 
 // ==========================================
 // EXECUTIVE DASHBOARD INTELLIGENCE MODULE (PHASE 3A)
@@ -5188,8 +5707,12 @@ function renderExecutiveDashboardIntelligence() {
   if (typeof isUserAdminOrManager === 'function' && !isUserAdminOrManager()) {
     return;
   }
-  const execPanel = document.getElementById("executive-dashboard-panel");
-  if (!execPanel || !execPanel.classList.contains("active")) {
+  // This content now lives in the Dashboard's "Analytics" tab pane rather
+  // than the old standalone executive-dashboard-panel (retired — see
+  // showExecutiveDashboard for why). Only compute this when that tab is
+  // actually the visible one.
+  const analyticsPane = document.querySelector('#manager-panel [data-tab-pane="analytics"]');
+  if (!analyticsPane || analyticsPane.style.display === 'none') {
     return;
   }
   const quotes = appState.quotes || [];
@@ -5199,8 +5722,7 @@ function renderExecutiveDashboardIntelligence() {
   }
   lastCalculatedQuotesKey = quotesKey;
   const analyticsData = calculateExecutiveIntelligence(quotes);
-  renderRevenueProfitChart(analyticsData.trends);
-  renderConversionDynamicsChart(analyticsData.trends);
+  renderRevenueByUserChart(analyticsData.users);
   renderCustomerConcentrationTable(analyticsData.customers);
   renderRoutePerformanceTable(analyticsData.routes);
   runDataReconciliationAudit(quotes, analyticsData);
@@ -5211,6 +5733,11 @@ function calculateExecutiveIntelligence(quotes) {
   const trendsMap = {};
   const routesMap = {};
   const customersMap = {};
+  const usersMap = {};
+  Object.keys(TEAM_ROLES).forEach(roleId => {
+    if (roleId === 'ganny' || roleId === 'manager') return;
+    usersMap[roleId] = { name: (TEAM_ROLES[roleId].name || roleId).replace(/\s*\(Free\s*Hand\)/i, ""), revenue: 0, gp: 0, count: 0 };
+  });
   let winCount = 0;
   let lossCount = 0;
   let totalCount = 0;
@@ -5258,14 +5785,21 @@ function calculateExecutiveIntelligence(quotes) {
       customersMap[cust].revenue += amt;
       customersMap[cust].gp += gp;
     }
-    let route = "Domestic/Local";
-    if (q.pol && q.pod) {
-      route = `${q.pol} → ${q.pod}`;
-    } else if (q.origin && q.destination) {
-      route = `${q.origin} → ${q.destination}`;
-    } else if (q.originPincode && q.destPincode) {
-      route = `${q.originPincode} → ${q.destPincode}`;
+    const creator = (q.creator || 'unknown').toLowerCase();
+    if (!usersMap[creator]) {
+      usersMap[creator] = { name: TEAM_ROLES[creator]?.name || q.creator || 'Unknown', revenue: 0, gp: 0, count: 0 };
     }
+    usersMap[creator].count += 1;
+    if (status === "converted") {
+      usersMap[creator].revenue += amt;
+      usersMap[creator].gp += gp;
+    }
+    // Every quote is saved with a top-level `route` string (e.g. "BOM → JFK
+    // via Any") — see quoteData.route at save time. This used to check
+    // q.pol/q.pod, q.origin/q.destination, q.originPincode/q.destPincode
+    // instead, none of which exist on a saved quote, so every single quote
+    // fell through to "Domestic/Local" and got lumped into one bucket.
+    const route = q.route || "Unspecified Route";
     if (!routesMap[route]) {
       routesMap[route] = { name: route, total: 0, won: 0, totalGP: 0, totalAmt: 0 };
     }
@@ -5279,103 +5813,96 @@ function calculateExecutiveIntelligence(quotes) {
   const trends = Object.values(trendsMap).sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
   const customers = Object.values(customersMap).sort((a, b) => b.gp - a.gp).slice(0, 5);
   const routes = Object.values(routesMap).sort((a, b) => b.totalGP - a.totalGP).slice(0, 5);
-  return { trends, customers, routes, overall: { winCount, lossCount, totalCount } };
+  disambiguateDuplicateNames(usersMap);
+  const users = Object.values(usersMap).sort((a, b) => b.revenue - a.revenue);
+  return { trends, customers, routes, users, overall: { winCount, lossCount, totalCount } };
 }
 
-function renderRevenueProfitChart(trends) {
-  const container = document.getElementById("exec-revenue-trend-chart");
+function renderRevenueByUserChart(users) {
+  const container = document.getElementById("exec-revenue-by-user-chart");
   if (!container) return;
-  if (trends.length === 0) {
+  const activeUsers = (users || []).filter(u => u.count > 0);
+  if (activeUsers.length === 0) {
     container.innerHTML = `<div style="color: var(--text-dim); font-size: 0.85rem;">Insufficient quotation data.</div>`;
     return;
   }
-  const width = 450;
-  const height = 180;
-  const padding = 35;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
-  const maxVal = Math.max(...trends.map(t => Math.max(t.revenue, t.gp)), 100000);
-  let pointsRev = "";
-  let pointsGP = "";
-  trends.forEach((t, i) => {
-    const x = padding + (i / Math.max(trends.length - 1, 1)) * chartWidth;
-    const yRev = height - padding - (t.revenue / maxVal) * chartHeight;
-    const yGP = height - padding - (t.gp / maxVal) * chartHeight;
-    pointsRev += `${x},${yRev} `;
-    pointsGP += `${x},${yGP} `;
-  });
-  let svgContent = `
-    <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
-      <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
-      <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
-      <polyline fill="none" stroke="#2563EB" stroke-width="3" points="${pointsRev.trim()}" stroke-linecap="round" stroke-linejoin="round" />
-      <polyline fill="none" stroke="#16A34A" stroke-width="3" points="${pointsGP.trim()}" stroke-linecap="round" stroke-linejoin="round" />
-  `;
-  trends.forEach((t, i) => {
-    const x = padding + (i / Math.max(trends.length - 1, 1)) * chartWidth;
-    const yRev = height - padding - (t.revenue / maxVal) * chartHeight;
-    const yGP = height - padding - (t.gp / maxVal) * chartHeight;
-    const monthLabel = t.month.split("-")[1] ? `${t.month.split("-")[1]}/${t.month.split("-")[0].substring(2)}` : t.month;
-    svgContent += `
-      <circle cx="${x}" cy="${yRev}" r="4" fill="#2563EB" />
-      <circle cx="${x}" cy="${yGP}" r="4" fill="#16A34A" />
-      <text x="${x}" y="${height - 10}" fill="var(--text-dim)" font-size="9" text-anchor="middle">${monthLabel}</text>
-    `;
-  });
-  svgContent += `
-      <g transform="translate(${padding}, 15)">
-        <rect width="8" height="8" fill="#2563EB" rx="1.5" />
-        <text x="12" y="8" fill="var(--t1)" font-size="9" font-weight="700">Revenue</text>
-        <rect x="80" width="8" height="8" fill="#16A34A" rx="1.5" />
-        <text x="92" y="8" fill="var(--t1)" font-size="9" font-weight="700">Gross Profit</text>
-      </g>
-    </svg>
-  `;
-  container.innerHTML = svgContent;
-}
+  const fmtCompactINR = (n) => {
+    const sign = n < 0 ? '-' : '';
+    const abs = Math.abs(n);
+    if (abs >= 10000000) return `${sign}₹${(abs / 10000000).toFixed(1)}Cr`;
+    if (abs >= 100000) return `${sign}₹${(abs / 100000).toFixed(1)}L`;
+    if (abs >= 1000) return `${sign}₹${(abs / 1000).toFixed(0)}K`;
+    return `${sign}₹${Math.round(abs)}`;
+  };
+  // groupWidth has a floor so bars/labels stay legible when there are many
+  // users; total width then grows past the container and scrolls (the
+  // wrapper div has overflow-x:auto) rather than squeezing every group into
+  // a fixed viewBox, which would overlap bars once more than ~10 users exist.
+  const groupWidth = 110;
+  const leftAxisWidth = 56;
+  const chartAreaWidth = Math.max(700, groupWidth * activeUsers.length);
+  const width = leftAxisWidth + chartAreaWidth;
+  const height = 260;
+  const topPad = 46; // room for the legend + tallest value label
+  const bottomPad = 30; // room for user-name labels
+  const chartHeight = height - topPad - bottomPad;
+  const maxVal = Math.max(...activeUsers.map(u => Math.max(u.revenue, u.gp)), 100000);
+  const minVal = Math.min(...activeUsers.map(u => Math.min(u.revenue, u.gp)), 0);
+  const valRange = (maxVal - minVal) || 1;
+  const scaleY = (v) => topPad + chartHeight - ((v - minVal) / valRange) * chartHeight;
+  const zeroY = scaleY(0);
+  const barWidth = Math.min(30, groupWidth * 0.26);
+  const minStubH = 3; // a genuine ₹0 still gets a faint visible stub, not nothing
 
-function renderConversionDynamicsChart(trends) {
-  const container = document.getElementById("exec-conversion-trend-chart");
-  if (!container) return;
-  if (trends.length === 0) {
-    container.innerHTML = `<div style="color: var(--text-dim); font-size: 0.85rem;">Insufficient conversion data.</div>`;
-    return;
+  // Reference gridlines across the value range (5 evenly spaced steps)
+  const GRID_STEPS = 4;
+  let gridLines = '';
+  for (let s = 0; s <= GRID_STEPS; s++) {
+    const val = minVal + (valRange * s / GRID_STEPS);
+    const y = scaleY(val);
+    gridLines += `
+      <line x1="${leftAxisWidth}" y1="${y}" x2="${width}" y2="${y}" stroke="rgba(120,130,150,0.12)" stroke-width="1" />
+      <text x="${leftAxisWidth - 8}" y="${y + 3}" fill="var(--text-dim)" font-size="9.5" text-anchor="end">${fmtCompactINR(val)}</text>
+    `;
   }
-  const width = 450;
-  const height = 180;
-  const padding = 35;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
-  const maxTotal = Math.max(...trends.map(t => t.total), 1);
-  const barWidth = Math.min(25, (chartWidth / trends.length) * 0.5);
+
   let svgContent = `
-    <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
-      <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible; flex-shrink: 0; font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;">
+      ${gridLines}
+      <line x1="${leftAxisWidth}" y1="${zeroY}" x2="${width}" y2="${zeroY}" stroke="rgba(120,130,150,0.35)" stroke-width="1.2" />
   `;
-  trends.forEach((t, i) => {
-    const x = padding + (i / Math.max(trends.length - 1, 1)) * chartWidth - barWidth / 2;
-    const winHeight = (t.won / maxTotal) * chartHeight;
-    const lostHeight = (t.lost / maxTotal) * chartHeight;
-    const yWin = height - padding - winHeight;
-    const yLost = yWin - lostHeight;
-    const monthLabel = t.month.split("-")[1] ? `${t.month.split("-")[1]}/${t.month.split("-")[0].substring(2)}` : t.month;
+  activeUsers.forEach((u, i) => {
+    const cx = leftAxisWidth + groupWidth * i + groupWidth / 2;
+    const revY = scaleY(u.revenue);
+    const gpY = scaleY(u.gp);
+    let revBarTop = Math.min(revY, zeroY);
+    let gpBarTop = Math.min(gpY, zeroY);
+    let revBarH = Math.abs(revY - zeroY);
+    let gpBarH = Math.abs(gpY - zeroY);
+    const revIsZero = revBarH < minStubH;
+    const gpIsZero = gpBarH < minStubH;
+    if (revIsZero) { revBarH = minStubH; revBarTop = zeroY - minStubH; }
+    if (gpIsZero) { gpBarH = minStubH; gpBarTop = zeroY - minStubH; }
     svgContent += `
-      <rect x="${x}" y="${yWin}" width="${barWidth}" height="${winHeight}" fill="#16A34A" rx="2" />
-      <rect x="${x}" y="${yLost}" width="${barWidth}" height="${lostHeight}" fill="#EF4444" rx="2" />
-      <text x="${x + barWidth / 2}" y="${height - 10}" fill="var(--text-dim)" font-size="9" text-anchor="middle">${monthLabel}</text>
+      <rect x="${cx - barWidth - 3}" y="${revBarTop}" width="${barWidth}" height="${revBarH}" fill="${revIsZero ? 'rgba(37,99,235,0.25)' : '#2563EB'}" rx="3" />
+      <rect x="${cx + 3}" y="${gpBarTop}" width="${barWidth}" height="${gpBarH}" fill="${gpIsZero ? 'rgba(22,163,74,0.25)' : '#16A34A'}" rx="3" />
+      <text x="${cx - barWidth - 3 + barWidth / 2}" y="${revBarTop - 6}" fill="#2563EB" font-size="10" font-weight="700" text-anchor="middle">${fmtCompactINR(u.revenue)}</text>
+      <text x="${cx + 3 + barWidth / 2}" y="${gpBarTop - 6}" fill="#16A34A" font-size="10" font-weight="700" text-anchor="middle">${fmtCompactINR(u.gp)}</text>
+      <text x="${cx}" y="${height - 10}" fill="var(--t1)" font-size="10.5" font-weight="600" text-anchor="middle">${u.name}</text>
     `;
   });
   svgContent += `
-      <g transform="translate(${padding}, 15)">
-        <rect width="8" height="8" fill="#16A34A" rx="1.5" />
-        <text x="12" y="8" fill="var(--t1)" font-size="9" font-weight="700">Won</text>
-        <rect x="60" width="8" height="8" fill="#EF4444" rx="1.5" />
-        <text x="72" y="8" fill="var(--t1)" font-size="9" font-weight="700">Lost</text>
+      <g transform="translate(${leftAxisWidth}, 14)">
+        <rect width="9" height="9" fill="#2563EB" rx="2" />
+        <text x="13" y="9" fill="var(--t1)" font-size="10.5" font-weight="700">Revenue</text>
+        <rect x="88" width="9" height="9" fill="#16A34A" rx="2" />
+        <text x="101" y="9" fill="var(--t1)" font-size="10.5" font-weight="700">Gross Profit</text>
       </g>
     </svg>
   `;
   container.innerHTML = svgContent;
 }
+window.renderRevenueByUserChart = renderRevenueByUserChart;
 
 function renderCustomerConcentrationTable(customers) {
   const tbody = document.getElementById("exec-customer-concentration-body");
@@ -5427,30 +5954,103 @@ function runDataReconciliationAudit(quotes, analyticsData) {
   accuracyEl.textContent = "100%";
 }
 
+// Renders a donut/ring-chart KPI (value centered, composition shown as colored
+// arc segments + a legend) into the given container element. Pure inline SVG —
+// no charting library dependency. `segments` is [{value, color, label}, ...];
+// segments are drawn clockwise starting at 12 o'clock, sized proportionally to
+// their share of the segment total (not to centerValue, which may be a
+// pre-formatted string like "₹4.2M" or "11.6%").
+function renderRingKPI(containerId, opts) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const { segments, centerValue, centerLabel, size = 128 } = opts;
+  const total = segments.reduce((sum, s) => sum + Math.max(0, s.value || 0), 0);
+  const r = 50, cx = 60, cy = 60, sw = 14;
+  const circumference = 2 * Math.PI * r;
+
+  let running = 0;
+  const arcs = total > 0 ? segments.map(seg => {
+    const frac = Math.max(0, seg.value || 0) / total;
+    const len = frac * circumference;
+    if (len <= 0) return '';
+    const dashoffset = -running;
+    running += len;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${sw}" stroke-dasharray="${len} ${circumference - len}" stroke-dashoffset="${dashoffset}" />`;
+  }).join('') : '';
+
+  const legendItems = segments.filter(s => (s.value || 0) > 0).map(s => `
+    <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.68rem; font-weight:600; color:var(--t2, #475569);">
+      <span style="width:8px; height:8px; border-radius:50%; background:${s.color}; display:inline-block; flex-shrink:0;"></span>${s.label}
+    </span>`).join('');
+
+  container.innerHTML = `
+    <div style="position:relative; width:${size}px; height:${size}px; margin: 0.35rem auto 0;">
+      <svg viewBox="0 0 120 120" width="${size}" height="${size}" style="transform: rotate(-90deg);">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border-1, #e2e8f0)" stroke-width="${sw}" />
+        ${arcs}
+      </svg>
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; pointer-events:none;">
+        <div style="font-size:1.05rem; font-weight:800; color:var(--sky); line-height:1.15;">${centerValue}</div>
+        ${centerLabel ? `<div style="font-size:0.58rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.03em; margin-top:2px;">${centerLabel}</div>` : ''}
+      </div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:0.4rem 0.75rem; margin-top:0.6rem;">${legendItems}</div>
+  `;
+}
+window.renderRingKPI = renderRingKPI;
+
 // ADMIN DASHBOARD RENDERING
 function renderAdminDashboard() {
-  const execPanel = document.getElementById("executive-dashboard-panel");
-  // The Firestore quotes listener calls this on every write from any user, even
-  // when the dashboard isn't the visible panel — skip the heavy dashboard-only
-  // rebuilds below in that case so typing/scrolling elsewhere doesn't stutter.
-  const isDashboardVisible = !!(execPanel && execPanel.classList.contains("active"));
-  if (isDashboardVisible) {
+  // Analytics tab content (formerly the standalone executive-dashboard-panel
+  // — see showExecutiveDashboard for why that was retired) only needs
+  // rebuilding when that specific tab is the visible one.
+  const analyticsPane = document.querySelector('#manager-panel [data-tab-pane="analytics"]');
+  if (analyticsPane && analyticsPane.style.display !== 'none') {
     renderExecutiveDashboard();
     if (typeof renderExecutiveDashboardIntelligence === 'function') {
       renderExecutiveDashboardIntelligence();
     }
+  }
+
+  // The Customer Credit Control table (inside the Admin Settings modal) reads
+  // appState.quotes — if the modal happened to be opened before the quotes
+  // snapshot listener delivered any data, it rendered with 0 rows and never
+  // got a second chance, since nothing refreshed it after data arrived. This
+  // covers that: only does the (cheap) re-render while the modal is actually
+  // open, same visibility-gated pattern as the Analytics pane above.
+  const settingsModal = document.getElementById("admin-settings-modal");
+  if (settingsModal && settingsModal.style.display === "flex" && typeof renderAdminCustomerControlList === 'function') {
+    renderAdminCustomerControlList();
+  }
+
+  // The Firestore quotes listener calls this on every write from any user, even
+  // when the dashboard isn't the visible panel — skip the heavy dashboard-only
+  // rebuilds below in that case so typing/scrolling elsewhere doesn't stutter.
+  // (This checks "manager-panel", the actual admin Dashboard container.)
+  const managerPanel = document.getElementById("manager-panel");
+  const isDashboardVisible = !!(managerPanel && managerPanel.classList.contains("active"));
+  if (isDashboardVisible) {
     renderControlTowerFeed();
     renderNrsRegistry();
-  }
-  // Auto-collapse directory on first admin load
-  if (typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet) {
-    window._dirInitialCollapseSet = true;
-    collapseAllDirNodes();
-  } else if (typeof updateAdminDirectoryView === 'function') {
-    updateAdminDirectoryView();
-  }
-  if (typeof updateAdminScratchpadViewer === 'function') {
-    updateAdminScratchpadViewer();
+    // Auto-collapse directory on first admin load. Gated on quotes actually
+    // being loaded (not just "has this function run before") — renderAdminDashboard
+    // can fire before the Firestore quotes listener has delivered any data, and
+    // collapsing an empty tree then never retried left every node expanded once
+    // the real data arrived.
+    // Both of these used to run unconditionally on every quotes write, system-wide
+    // — rebuilding the full agent/customer tree and scratchpad viewer even while
+    // an admin was looking at the Air Freight desk, not the Dashboard at all.
+    // The Quoting Agents tab already re-triggers collapseAllDirNodes() itself on
+    // click, so nothing is lost by only keeping this fresh while visible.
+    if (typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet && (appState.quotes || []).length > 0) {
+      window._dirInitialCollapseSet = true;
+      collapseAllDirNodes();
+    } else if (typeof updateAdminDirectoryView === 'function') {
+      updateAdminDirectoryView();
+    }
+    if (typeof updateAdminScratchpadViewer === 'function') {
+      updateAdminScratchpadViewer();
+    }
   }
   if (!isDashboardVisible) return;
   if (typeof populateReportUsers === 'function') {
@@ -5475,11 +6075,54 @@ function renderAdminDashboard() {
 
   const conversionRate = totalEnquiries > 0 ? (conversions / totalEnquiries * 100) : 0;
 
-  // Update top widgets
-  document.getElementById("admin-stat-revenue").textContent = `₹${totalRevenueINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-  document.getElementById("admin-stat-quotes").textContent = totalEnquiries;
-  document.getElementById("admin-stat-conversions").textContent = conversions;
-  document.getElementById("admin-stat-rate").textContent = `${conversionRate.toFixed(1)}%`;
+  // Update top widgets — ring-chart KPIs (composition, not just a bare number)
+  const revenueByMode = { air: 0, sea: 0, transport: 0, warehouse: 0 };
+  const enquiriesByStatus = { quoted: 0, converted: 0, lost: 0, cancelled: 0 };
+  appState.quotes.forEach(q => {
+    if (revenueByMode[q.type] !== undefined) revenueByMode[q.type] += (q.amountINR || 0);
+    if (enquiriesByStatus[q.status] !== undefined) enquiriesByStatus[q.status]++;
+  });
+
+  // A lighter, more distinguishable palette than the app's deep navy brand
+  // colors — those read too heavy/similar-to-each-other once used as adjacent
+  // chart segments, where quick visual differentiation matters more than
+  // brand consistency.
+  const RING_BLUE = '#3b82f6', RING_TEAL = '#14b8a6', RING_VIOLET = '#8b5cf6',
+    RING_AMBER = '#f59e0b', RING_GREEN = '#22c55e', RING_ROSE = '#f43f5e',
+    RING_GRAY = '#94a3b8', RING_TRACK = '#e2e8f0';
+
+  renderRingKPI("admin-stat-revenue-ring", {
+    centerValue: `₹${totalRevenueINR.toLocaleString('en-IN', { maximumFractionDigits: 0, notation: totalRevenueINR >= 100000 ? 'compact' : 'standard' })}`,
+    segments: [
+      { value: revenueByMode.air, color: RING_BLUE, label: 'Air' },
+      { value: revenueByMode.sea, color: RING_TEAL, label: 'Sea' },
+      { value: revenueByMode.transport, color: RING_VIOLET, label: 'Transport' },
+      { value: revenueByMode.warehouse, color: RING_AMBER, label: 'Warehouse' }
+    ]
+  });
+  renderRingKPI("admin-stat-quotes-ring", {
+    centerValue: totalEnquiries,
+    segments: [
+      { value: enquiriesByStatus.quoted, color: RING_BLUE, label: 'Quoted' },
+      { value: enquiriesByStatus.converted, color: RING_GREEN, label: 'Won' },
+      { value: enquiriesByStatus.lost, color: RING_ROSE, label: 'Lost' },
+      { value: enquiriesByStatus.cancelled, color: RING_GRAY, label: 'Cancelled' }
+    ]
+  });
+  renderRingKPI("admin-stat-conversions-ring", {
+    centerValue: conversions,
+    segments: [
+      { value: conversions, color: RING_GREEN, label: 'Won' },
+      { value: totalEnquiries - conversions, color: RING_TRACK, label: 'Not yet won' }
+    ]
+  });
+  renderRingKPI("admin-stat-rate-ring", {
+    centerValue: `${conversionRate.toFixed(1)}%`,
+    segments: [
+      { value: conversionRate, color: RING_BLUE, label: 'Converted' },
+      { value: 100 - conversionRate, color: RING_TRACK, label: 'Remaining' }
+    ]
+  });
 
   // Render leaderboard performance table
   const leadBody = document.getElementById("admin-leaderboard-body");
@@ -5491,6 +6134,15 @@ function renderAdminDashboard() {
     return true;
   });
 
+  // Two different logins can share a display name (e.g. more than one
+  // "Free Hand Sales" account) — disambiguate before rendering, same
+  // treatment applied to Quotes By User / Revenue By User.
+  const adminLeaderboardNameLookup = {};
+  desks.forEach(deskId => {
+    adminLeaderboardNameLookup[deskId] = { name: (TEAM_ROLES[deskId]?.name || deskId).replace(/\s*\(Free\s*Hand\)/i, "") };
+  });
+  disambiguateDuplicateNames(adminLeaderboardNameLookup);
+
   desks.forEach(deskId => {
     const deskIdLower = deskId.toLowerCase();
     const deskQuotes = appState.quotes.filter(q => q.creator && q.creator.toLowerCase() === deskIdLower);
@@ -5501,7 +6153,7 @@ function renderAdminDashboard() {
 
     const tr = document.createElement("tr");
     tr.style.color = "#000000";
-    const name = (TEAM_ROLES[deskIdLower]?.name || deskIdLower).replace(/\s*\(Free\s*Hand\)/i, "");
+    const name = adminLeaderboardNameLookup[deskId].name;
     tr.innerHTML = `
       <td><strong style="color:#000000;">${name}</strong></td>
       <td style="color:#000000;">${deskQuotesCount}</td>
@@ -5516,8 +6168,16 @@ function renderAdminDashboard() {
     leadBody.appendChild(tr);
   });
 
-  // Render Master logs using Filter & Sort
-  applyDbFiltersAndSort();
+  // Render Master logs using Filter & Sort — but only when that tab is
+  // actually the visible one. The table lives behind the "Enquiry Database"
+  // tab pane now; filtering/sorting all 538 quotes and rebuilding 25 rows
+  // of DOM on every Firestore write is wasted work while a different
+  // Dashboard tab (or another panel entirely) is what's on screen.
+  const enquiryDbPane = document.querySelector('#manager-panel [data-tab-pane="enquiry-database"]');
+  const isEnquiryDbTabVisible = !enquiryDbPane || enquiryDbPane.style.display !== 'none';
+  if (isEnquiryDbTabVisible) {
+    applyDbFiltersAndSort();
+  }
 
   // Render user credentials list securely
   if (typeof renderUserCredentialsList === 'function') {
@@ -5633,7 +6293,7 @@ function renderAdminDashboard() {
               ${req.reason ? `<div style="${reasonStyle}"><strong>Reason:</strong> ${req.reason}</div>` : ''}
             </div>
             <div style="display: flex; gap: 0.5rem;">
-              <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-success); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight:700;" onclick="approveAmendment('${req.id}')">Approve</button>
+              <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); border: none; border-radius: 4px; cursor: pointer; font-weight:700;" onclick="approveAmendment('${req.id}')">Approve</button>
               <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-error); color: #fff; border: none; border-radius: 4px; cursor: pointer;" onclick="rejectAmendment('${req.id}')">Reject</button>
             </div>
           </div>
@@ -5744,6 +6404,19 @@ window.convertQuote = (id) => {
   document.getElementById("won-cnee-address").value = quote.consigneeAddress || "";
 
   document.getElementById("won-commodity").value = quote.commodity || "";
+
+  // Air Nomination and Sea Nomination must only ever need Buy/Sell rate to
+  // convert to WON — that's the instructed rule, not an opt-in. Default
+  // Quick Convert to checked for those two roles specifically so it's their
+  // actual experience rather than a checkbox they'd have to notice and tick
+  // every time; every other role keeps the previous explicit opt-in default
+  // (unchecked), reopened fresh on every conversion either way.
+  const quickConvertToggle = document.getElementById("won-quick-convert-toggle");
+  if (quickConvertToggle) {
+    const autoQuickConvertRoles = ['shashank', 'shaheer'];
+    quickConvertToggle.checked = autoQuickConvertRoles.includes(appState.currentUser);
+    toggleWonQuickConvertMode();
+  }
 
   // Check if customer already has a verified agency agreement
   const customerName = quote.customer || "";
@@ -5906,8 +6579,14 @@ window.convertQuote = (id) => {
     `;
   }
 
-  const originSurcharges = quote.details.originSurcharges || [];
-  const destSurcharges = quote.details.destSurcharges || [];
+  // Sections the quote explicitly excluded (Origin/Destination Local Fees
+  // checkboxes off) never get their rows rendered here — a client asking
+  // for e.g. destination clearance only shouldn't be blocked confirming
+  // WON by mandatory-Sell-Rate checks on rows for a section they turned
+  // off. Older quotes saved before this flag existed default to enabled,
+  // preserving today's behavior for them.
+  const originSurcharges = quote.details.originFeesEnabled === false ? [] : (quote.details.originSurcharges || []);
+  const destSurcharges = quote.details.destFeesEnabled === false ? [] : (quote.details.destSurcharges || []);
 
   if (originSurcharges.length > 0 || destSurcharges.length > 0) {
     html += `
@@ -6181,6 +6860,167 @@ function generatePerformanceReport() {
 }
 
 // SAVE & RETRIEVE QUOTES LOGIC
+// Pure extraction from saveCurrentQuote()'s former inline air block — reads
+// the exact same DOM elements and appState.currentAirFreight fields, with
+// the exact same validation alert()s, and returns the same-shaped
+// {route, amount, amountINR, currency, details} saveCurrentQuote() used to
+// assign directly onto quoteData.
+function buildAirQuoteData() {
+  const originVal = document.getElementById("air-origin").value.trim();
+  const destVal = document.getElementById("air-dest").value.trim();
+  const incoterm = document.getElementById("air-incoterm").value;
+
+  if (!originVal) { alert("Please fill in Origin Airport."); return { ok: false }; }
+  if (!destVal) { alert("Please fill in Destination Airport."); return { ok: false }; }
+
+  const tariffsEnabled = document.getElementById("air-enable-tariffs")?.checked ?? true;
+  const originFeesEnabled = document.getElementById("air-enable-origin-fees")?.checked ?? true;
+  const destFeesEnabled = document.getElementById("air-enable-dest-fees")?.checked ?? true;
+
+  const primaryAirline = appState.currentAirFreight.airline || "";
+  const routing = appState.currentAirFreight.routing || "";
+  const tt = appState.currentAirFreight.tt || "";
+  const validity = appState.currentAirFreight.validity || "";
+
+  if (tariffsEnabled) {
+    if (!primaryAirline || primaryAirline === "N/A") {
+      alert("Please enter Carrier / Airline in the selected airline option.");
+      return { ok: false };
+    }
+    if (!routing) { alert("Please fill in Routing Details in the selected airline option."); return { ok: false }; }
+    if (!tt) { alert("Please fill in Transit Time (TT) in the selected airline option."); return { ok: false }; }
+    if (!validity) { alert("Please fill in Quote Validity in the selected airline option."); return { ok: false }; }
+  }
+
+  const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
+  if (rows.length === 0) {
+    alert("Please add at least one Cargo Line in the Dimensions Matrix.");
+    return { ok: false };
+  }
+
+  let hasInvalidRow = false;
+  rows.forEach(row => {
+    const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
+    const w = parseFloat(row.querySelector(".cargo-wid").value) || 0;
+    const h = parseFloat(row.querySelector(".cargo-hei").value) || 0;
+    const qty = parseInt(row.querySelector(".cargo-qty").value) || 0;
+    const gw = parseFloat(row.querySelector(".cargo-gw").value) || 0;
+    if (l <= 0 || w <= 0 || h <= 0 || qty <= 0 || gw <= 0) {
+      hasInvalidRow = true;
+    }
+  });
+
+  if (hasInvalidRow) {
+    alert("Please fill in all cells (Length, Width, Height, Quantity, Gross Weight) with values greater than zero for all Cargo Lines.");
+    return { ok: false };
+  }
+
+  if (tariffsEnabled) {
+    const sellRateVal = appState.currentAirFreight.appliedRate || 0;
+    const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
+  }
+
+  if (originFeesEnabled) {
+    const airOriginRows = document.querySelectorAll("#air-origin-surcharges-body tr");
+    let hasEmptyAirOrigin = false;
+    airOriginRows.forEach(row => {
+      const rateInput = row.querySelector(".chg-rate");
+      if (rateInput && rateInput.value.trim() === "") {
+        hasEmptyAirOrigin = true;
+      }
+    });
+    if (hasEmptyAirOrigin) {
+      alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
+      return { ok: false };
+    }
+  }
+
+  if (destFeesEnabled) {
+    const airDestRows = document.querySelectorAll("#air-dest-surcharges-body tr");
+    let hasEmptyAirDest = false;
+    airDestRows.forEach(row => {
+      const rateInput = row.querySelector(".chg-rate");
+      if (rateInput && rateInput.value.trim() === "") {
+        hasEmptyAirDest = true;
+      }
+    });
+    if (hasEmptyAirDest) {
+      alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
+      return { ok: false };
+    }
+  }
+
+  const origin = originVal.split(" - ")[0];
+  const dest = destVal.split(" - ")[0];
+  const airline = primaryAirline.split(" - ")[0];
+
+  const route = `${origin} → ${dest} via ${airline || 'Any'}`;
+  const amount = appState.currentAirFreight.grandTotal;
+  const amountINR = appState.currentAirFreight.grandTotalINR;
+  const currency = appState.currentAirFreight.currency;
+  const cargoItems = [];
+  rows.forEach(row => {
+    const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
+    const w = parseFloat(row.querySelector(".cargo-wid").value) || 0;
+    const h = parseFloat(row.querySelector(".cargo-hei").value) || 0;
+    const qty = parseInt(row.querySelector(".cargo-qty").value) || 0;
+    const gw = parseFloat(row.querySelector(".cargo-gw").value) || 0;
+    cargoItems.push({ l, w, h, qty, gw });
+  });
+
+  const details = {
+    origin: document.getElementById("air-origin").value,
+    destination: document.getElementById("air-dest").value,
+    airline: primaryAirline,
+    incoterm: incoterm,
+    module: appState.currentAirFreight.module || 'export',
+    termsAndConditions: document.getElementById("air-terms").value.trim() || DEFAULT_AIR_TERMS,
+    chargeableWeight: appState.currentAirFreight.chargeableWeight,
+    grossWeight: appState.currentAirFreight.grossWeight,
+    volumeWeight: appState.currentAirFreight.volumeWeight,
+    cbm: appState.currentAirFreight.cbm,
+    quantity: appState.currentAirFreight.quantity,
+    appliedRate: appState.currentAirFreight.appliedRate,
+    appliedBuyRate: appState.currentAirFreight.appliedBuyRate || 0,
+    baseFreight: appState.currentAirFreight.baseFreight,
+    baseBuyFreight: appState.currentAirFreight.baseBuyFreight || 0,
+    originSurcharges: appState.currentAirFreight.originSurcharges,
+    destSurcharges: appState.currentAirFreight.destSurcharges,
+    surcharges: appState.currentAirFreight.surchargesCalculated,
+    surchargeTotal: appState.currentAirFreight.surchargeTotal,
+    usedBreak: appState.currentAirFreight.usedBreak,
+    usingBuyFallback: !!appState.currentAirFreight.usingBuyFallback,
+    // Saved separately from the tariffsEnabled/originFeesEnabled/destFeesEnabled
+    // locals above (which only read the top-level #air-enable-* checkboxes,
+    // still correct for the Carrier/Routing/TT requirement check below): for
+    // non-Air-Nomination roles, actual inclusion in the total is gated by the
+    // SELECTED airline card's own per-card checkbox (see calculateAirFreight's
+    // originCardEnabled/destCardEnabled/wbEnabled), now propagated onto
+    // appState.currentAirFreight — this is what the WON-confirmation
+    // validation needs to check to correctly waive mandatory rate fields for
+    // a section the quote actually excluded.
+    tariffsEnabled: tariffsEnabled && appState.currentAirFreight.wbEnabled !== false,
+    originFeesEnabled: appState.currentAirFreight.originFeesEnabled !== false,
+    destFeesEnabled: appState.currentAirFreight.destFeesEnabled !== false,
+    pivotWeight: appState.currentAirFreight.pivotWeight,
+    routing: routing,
+    tt: tt,
+    validity: validity,
+    cargoItems: cargoItems,
+    commodity: document.getElementById("air-commodity").value,
+    dgClass: document.getElementById("air-dg-class")?.value || "",
+    tempType: document.getElementById("air-temp-type").value,
+    tempRange: document.getElementById("air-temp-range").value,
+    loadabilityTilt: document.getElementById("air-loadability-tilt").value,
+    loadabilityStack: document.getElementById("air-loadability-stack").value,
+    airlines: appState.currentAirFreight.airlines,
+    alternatives: []
+  };
+
+  return { ok: true, route, amount, amountINR, currency, details };
+}
+window.buildAirQuoteData = buildAirQuoteData;
+
 async function saveCurrentQuote() {
   memorizeSurchargeNames();
   const isAirActive = document.getElementById("air-freight-panel")?.classList.contains("active");
@@ -6240,142 +7080,14 @@ async function saveCurrentQuote() {
   }
 
   if (isAir) {
-    const originVal = document.getElementById("air-origin").value.trim();
-    const destVal = document.getElementById("air-dest").value.trim();
-    const incoterm = document.getElementById("air-incoterm").value;
-
-    if (!originVal) { alert("Please fill in Origin Airport."); return; }
-    if (!destVal) { alert("Please fill in Destination Airport."); return; }
-
-    const tariffsEnabled = document.getElementById("air-enable-tariffs")?.checked ?? true;
-    const originFeesEnabled = document.getElementById("air-enable-origin-fees")?.checked ?? true;
-    const destFeesEnabled = document.getElementById("air-enable-dest-fees")?.checked ?? true;
-
-    const primaryAirline = appState.currentAirFreight.airline || "";
-    const routing = appState.currentAirFreight.routing || "";
-    const tt = appState.currentAirFreight.tt || "";
-    const validity = appState.currentAirFreight.validity || "";
-
-    if (tariffsEnabled) {
-      if (!primaryAirline || primaryAirline === "N/A") {
-        alert("Please enter Carrier / Airline in the selected airline option.");
-        return;
-      }
-      if (!routing) { alert("Please fill in Routing Details in the selected airline option."); return; }
-      if (!tt) { alert("Please fill in Transit Time (TT) in the selected airline option."); return; }
-      if (!validity) { alert("Please fill in Quote Validity in the selected airline option."); return; }
-    }
-
-    const rows = document.querySelectorAll("#air-cargo-body .cargo-item-row");
-    if (rows.length === 0) {
-      alert("Please add at least one Cargo Line in the Dimensions Matrix.");
-      return;
-    }
-
-    let hasInvalidRow = false;
-    rows.forEach(row => {
-      const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
-      const w = parseFloat(row.querySelector(".cargo-wid").value) || 0;
-      const h = parseFloat(row.querySelector(".cargo-hei").value) || 0;
-      const qty = parseInt(row.querySelector(".cargo-qty").value) || 0;
-      const gw = parseFloat(row.querySelector(".cargo-gw").value) || 0;
-      if (l <= 0 || w <= 0 || h <= 0 || qty <= 0 || gw <= 0) {
-        hasInvalidRow = true;
-      }
-    });
-
-    if (hasInvalidRow) {
-      alert("Please fill in all cells (Length, Width, Height, Quantity, Gross Weight) with values greater than zero for all Cargo Lines.");
-      return;
-    }
-
-    if (tariffsEnabled) {
-      const sellRateVal = appState.currentAirFreight.appliedRate || 0;
-      const buyRateVal = appState.currentAirFreight.appliedBuyRate || 0;
-    }
-
-    if (originFeesEnabled) {
-      const airOriginRows = document.querySelectorAll("#air-origin-surcharges-body tr");
-      let hasEmptyAirOrigin = false;
-      airOriginRows.forEach(row => {
-        const rateInput = row.querySelector(".chg-rate");
-        if (rateInput && rateInput.value.trim() === "") {
-          hasEmptyAirOrigin = true;
-        }
-      });
-      if (hasEmptyAirOrigin) {
-        alert("Please enter a value (0 if not applicable) for all Origin Surcharges. They cannot be left empty.");
-        return;
-      }
-    }
-
-    if (destFeesEnabled) {
-      const airDestRows = document.querySelectorAll("#air-dest-surcharges-body tr");
-      let hasEmptyAirDest = false;
-      airDestRows.forEach(row => {
-        const rateInput = row.querySelector(".chg-rate");
-        if (rateInput && rateInput.value.trim() === "") {
-          hasEmptyAirDest = true;
-        }
-      });
-      if (hasEmptyAirDest) {
-        alert("Please enter a value (0 if not applicable) for all Destination Surcharges. They cannot be left empty.");
-        return;
-      }
-    }
-
-    const origin = originVal.split(" - ")[0];
-    const dest = destVal.split(" - ")[0];
-    const airline = primaryAirline.split(" - ")[0];
-
+    const built = buildAirQuoteData();
+    if (!built.ok) return;
     quoteData.type = "air";
-    quoteData.route = `${origin} → ${dest} via ${airline || 'Any'}`;
-    quoteData.amount = appState.currentAirFreight.grandTotal;
-    quoteData.amountINR = appState.currentAirFreight.grandTotalINR;
-    quoteData.currency = appState.currentAirFreight.currency;
-    const cargoItems = [];
-    rows.forEach(row => {
-      const l = parseFloat(row.querySelector(".cargo-len").value) || 0;
-      const w = parseFloat(row.querySelector(".cargo-wid").value) || 0;
-      const h = parseFloat(row.querySelector(".cargo-hei").value) || 0;
-      const qty = parseInt(row.querySelector(".cargo-qty").value) || 0;
-      const gw = parseFloat(row.querySelector(".cargo-gw").value) || 0;
-      cargoItems.push({ l, w, h, qty, gw });
-    });
-
-    quoteData.details = {
-      origin: document.getElementById("air-origin").value,
-      destination: document.getElementById("air-dest").value,
-      airline: primaryAirline,
-      incoterm: incoterm,
-      module: appState.currentAirFreight.module || 'export',
-      termsAndConditions: document.getElementById("air-terms").value.trim() || DEFAULT_AIR_TERMS,
-      chargeableWeight: appState.currentAirFreight.chargeableWeight,
-      grossWeight: appState.currentAirFreight.grossWeight,
-      volumeWeight: appState.currentAirFreight.volumeWeight,
-      cbm: appState.currentAirFreight.cbm,
-      quantity: appState.currentAirFreight.quantity,
-      appliedRate: appState.currentAirFreight.appliedRate,
-      appliedBuyRate: appState.currentAirFreight.appliedBuyRate || 0,
-      baseFreight: appState.currentAirFreight.baseFreight,
-      baseBuyFreight: appState.currentAirFreight.baseBuyFreight || 0,
-      originSurcharges: appState.currentAirFreight.originSurcharges,
-      destSurcharges: appState.currentAirFreight.destSurcharges,
-      surcharges: appState.currentAirFreight.surchargesCalculated,
-      surchargeTotal: appState.currentAirFreight.surchargeTotal,
-      pivotWeight: appState.currentAirFreight.pivotWeight,
-      routing: routing,
-      tt: tt,
-      validity: validity,
-      cargoItems: cargoItems,
-      commodity: document.getElementById("air-commodity").value,
-      tempType: document.getElementById("air-temp-type").value,
-      tempRange: document.getElementById("air-temp-range").value,
-      loadabilityTilt: document.getElementById("air-loadability-tilt").value,
-      loadabilityStack: document.getElementById("air-loadability-stack").value,
-      airlines: appState.currentAirFreight.airlines,
-      alternatives: []
-    };
+    quoteData.route = built.route;
+    quoteData.amount = built.amount;
+    quoteData.amountINR = built.amountINR;
+    quoteData.currency = built.currency;
+    quoteData.details = built.details;
   } else {
     const originVal = document.getElementById("sea-origin").value.trim();
     const destVal = document.getElementById("sea-dest").value.trim();
@@ -6419,6 +7131,7 @@ async function saveCurrentQuote() {
         }
       }
       let hasInvalidFcl = false;
+      let hasMissingRate = false;
       fclRows.forEach(row => {
         const type = row.querySelector(".fcl-type").value;
         const qty = parseInt(row.querySelector(".fcl-qty").value) || 0;
@@ -6428,11 +7141,22 @@ async function saveCurrentQuote() {
         if (qty <= 0) {
           hasInvalidFcl = true;
         }
+        // A row with a quantity but no rate on either side silently drops out
+        // of the total and the container summary with no indication to the
+        // user — this is what made a 40' container appear to "vanish" from
+        // the quote when only its rate was left blank.
+        if (qty > 0 && rate <= 0 && buy <= 0) {
+          hasMissingRate = true;
+        }
         containerItems.push({ type, qty, rate, buy });
       });
       if (tariffsEnabled) {
         if (hasInvalidFcl) {
           alert("Please fill in Container Quantity for all container rows.");
+          return;
+        }
+        if (hasMissingRate) {
+          alert("Please fill in a Sell Rate or Buy Rate (0 if not applicable) for every container row — a row with a quantity but no rate is left out of the total.");
           return;
         }
       }
@@ -6548,6 +7272,7 @@ async function saveCurrentQuote() {
       shippingLine: shippingLine,
       linerName: document.getElementById("sea-liner-name")?.value.trim() || shippingLine || "",
       commodity: document.getElementById("sea-commodity").value.trim(),
+      dgClass: document.getElementById("sea-dg-class")?.value || "",
       incoterm: incoterm,
       termsAndConditions: document.getElementById("sea-terms")?.value.trim() || DEFAULT_SEA_TERMS,
       mode: appState.currentSeaFreight.type,
@@ -6564,7 +7289,10 @@ async function saveCurrentQuote() {
       fclSummary: appState.currentSeaFreight.fclSummary || [],
       lclCbm: appState.currentSeaFreight.volumeCbm,
       lclWeight: appState.currentSeaFreight.grossWeight,
-      lclChargeable: Math.max(appState.currentSeaFreight.volumeCbm, appState.currentSeaFreight.grossWeight / 1000),
+      chargeableCbmOverride: parseFloat(document.getElementById("sea-chargeable-cbm-override")?.value) || 0,
+      lclChargeable: (parseFloat(document.getElementById("sea-chargeable-cbm-override")?.value) || 0) > 0
+        ? parseFloat(document.getElementById("sea-chargeable-cbm-override").value)
+        : Math.max(appState.currentSeaFreight.volumeCbm, appState.currentSeaFreight.grossWeight / 1000),
       lclRateApplied: parseFloat(document.querySelector(".sea-lcl-rate")?.value) || 0,
       bbRateApplied: parseFloat(document.querySelector(".sea-bb-rate")?.value) || 0,
       lclBuyRateApplied: parseFloat(document.querySelector(".sea-lcl-buy-rate")?.value) || 0,
@@ -6611,19 +7339,39 @@ async function saveCurrentQuote() {
     saveCustomSeaAutocompletes(originVal, destVal, lineVal, linerVal, commodityVal);
   }
 
-  if (!validateCreditCompliance(quoteData)) {
-    return;
-  }
-
   if (appState.editingQuoteId) {
     const existingIndex = appState.quotes.findIndex(q => q.id === appState.editingQuoteId);
     if (existingIndex !== -1) {
       const originalQuote = appState.quotes[existingIndex];
+      // saveCurrentQuote() only rebuilds the fields that live on the quoting
+      // form (type/route/amount/currency/details). Anything set outside that
+      // form — WON confirmation rates, shipper/consignee, the NRS link — is
+      // not part of quoteData at all, so merge onto the original document
+      // instead of replacing it, or amending a quote (before or after it's
+      // WON) silently wipes that data out from under it. status IS always
+      // present on quoteData (hardcoded 'quoted' above), so it must be
+      // restored explicitly rather than relying on the merge to skip it.
+      quoteData = { ...originalQuote, ...quoteData };
+      quoteData.status = originalQuote.status || 'quoted';
       quoteData.id = originalQuote.id;
       quoteData.date = new Date().toISOString().split('T')[0]; // Updated execution date
       quoteData.creator = originalQuote.creator;
       quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
-      quoteData.amendmentAllowed = false; // Lock it back!
+      // amendmentAllowed/amendmentUnlockedUntil are carried over from
+      // originalQuote by the spread above, not reset here — the unlock is
+      // time-limited (see approveAmendment / isAmendmentGrantActive) and is
+      // meant to survive multiple saves within its window, not just one.
+
+      // buyRate/grossProfit are only ever computed at WON-confirmation time
+      // (submitWonBookingDetails). Amending a quote after it's already been
+      // confirmed WON updates amount/details from the form above but, without
+      // this, would leave buyRate/grossProfit frozen at their pre-amendment
+      // values — a real, saved GP figure going stale and wrong. A quote still
+      // in 'quoted' status has no confirmed buy/sell rates yet, so it's left
+      // untouched here, same as before.
+      if (quoteData.status === 'converted') {
+        recomputeQuoteFinancials(quoteData);
+      }
 
       appState.editingQuoteId = null; // Clear edit mode
       const saved = await DB.saveQuote(quoteData);
@@ -6669,7 +7417,22 @@ async function saveCurrentQuote() {
           </td>
         </tr>
       `;
-      setupAirFreightEvents();
+      // Re-wire only the freshly-created row's own listeners — NOT the whole
+      // setupAirFreightEvents() (that function also (re)binds static,
+      // page-lifetime elements like the "Add Airline Option" and "Add Cargo
+      // Row" buttons via addEventListener; calling it again here stacked an
+      // extra click handler onto those buttons every time a quote was
+      // confirmed WON, so after N confirmations in a session, one click
+      // fired N times — the "5-6 duplicate airline options" bug).
+      airBody.querySelectorAll(".cargo-item-row input").forEach(inp => {
+        inp.addEventListener("input", calculateAirFreight);
+      });
+      airBody.querySelectorAll(".cargo-item-row .delete-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.target.closest("tr").remove();
+          calculateAirFreight();
+        });
+      });
     }
   } else {
     resetSeaFreightDeskForm();
@@ -6788,10 +7551,10 @@ function resetSurchargesToDefaults() {
         </tr>
         <tr>
           <td><input type="text" class="chg-name" value="Cartage" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-rate" value="6.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
-            <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+            <select class="chg-unit">
               <option value="kg">Per kg</option>
               <option value="flat" selected>Flat</option>
             </select>
@@ -6805,10 +7568,10 @@ function resetSurchargesToDefaults() {
         </tr>
         <tr>
           <td><input type="text" class="chg-name" value="Misc" required readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-rate" value="6.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
-          <td><input type="number" class="chg-buy-rate" value="4.00" step="0.01" readonly style="background: rgba(255,255,255,0.02); color: var(--text-dim);"></td>
+          <td><input type="number" class="chg-rate" value="0.00" step="0.01"></td>
+          <td><input type="number" class="chg-buy-rate" value="0.00" step="0.01" style="background: rgba(255,255,255,0.03); color: var(--t1);"></td>
           <td>
-            <select class="chg-unit" disabled style="background: rgba(0,0,0,0.2); color: var(--text-dim);">
+            <select class="chg-unit">
               <option value="kg">Per kg</option>
               <option value="flat" selected>Flat</option>
             </select>
@@ -7436,7 +8199,21 @@ window.viewSavedQuote = (id) => {
 
     let subDetails = "";
     if (quote.details?.mode === 'fcl') {
-      subDetails = `<tr><td>Containers Selected</td><td>${(quote.details.fclSummary || []).join(", ") || 'Containers'}</td></tr>`;
+      // Each container type gets its own row with its own rate and subtotal
+      // — previously this was one blended "2 x 20'GP, 1 x 40'GP" text line
+      // with no per-type pricing, so a client reading the quote had no way
+      // to see what each container size actually cost.
+      const fclItems = (quote.details.containerItems || []).filter(c => (c.qty || 0) > 0);
+      if (fclItems.length > 0) {
+        subDetails = fclItems.map(c => {
+          const qty = c.qty || 0;
+          const rate = c.rate > 0 ? c.rate : (c.buy || 0);
+          const rowTotal = qty * rate;
+          return `<tr><td>${c.type} &nbsp;×&nbsp; ${qty}</td><td>${currencySym}${rate.toFixed(2)} / unit &nbsp;=&nbsp; <strong>${currencySym}${rowTotal.toFixed(2)}</strong></td></tr>`;
+        }).join("");
+      } else {
+        subDetails = `<tr><td>Containers Selected</td><td>${(quote.details.fclSummary || []).join(", ") || 'Containers'}</td></tr>`;
+      }
       if (quote.details.stuffingOption) {
         const stuffingLabel = quote.details.stuffingOption === 'factory' ? 'Factory Stuffing' : 'CFS/ICD Stuffing';
         subDetails += `<tr><td>Stuffing Option</td><td><strong>${stuffingLabel}</strong></td></tr>`;
@@ -7468,7 +8245,7 @@ window.viewSavedQuote = (id) => {
       <tr><td>Routing</td><td>${quote.details?.routing || 'Direct'}</td></tr>
       <tr><td>Transit Time (TT)</td><td>${quote.details?.tt || 'N/A'}</td></tr>
       <tr><td>Validity</td><td>${quote.details?.validity || 'N/A'}</td></tr>
-      <tr><td>Base Ocean Freight</td><td>${currencySym}${(quote.details?.baseFreight || 0).toFixed(2)}</td></tr>
+      <tr><td>${quote.details?.mode === 'fcl' ? 'Total Base Ocean Freight (All Containers)' : 'Base Ocean Freight'}</td><td><strong>${currencySym}${(quote.details?.baseFreight || 0).toFixed(2)}</strong></td></tr>
       <tr><td>Charges Breakup</td><td>Itemized below</td></tr>
     `;
   }
@@ -7920,8 +8697,180 @@ window.hdrFilterState = {
   sellrate: 'all', search_sellrate: '',
   gp: 'all', search_gp: '',
   status: 'all', search_status: '',
-  actions: 'date-desc', search_actions: ''
+  actions: 'date-desc', search_actions: '',
+  dateMonths: []
 };
+
+// --- v2 chip redesign: on-demand filter reveal, Add filter / Columns menus, multi-month date ---
+// Every filter here reuses selectHdrFilter/onHdrSearchInput/populateAllHeaderFilterDropdowns
+// completely unchanged — this layer only shows/hides the existing .hdr-filter-dropdown blocks
+// and, for Date only, adds real multi-month selection logic.
+const DB_FILTER_KEYS = ['refid', 'date', 'mode', 'agentroute', 'desk', 'carrier', 'tonnage', 'buyrate', 'sellrate', 'status'];
+const DB_FILTER_LABELS = { refid: 'Ref ID', date: 'Date', mode: 'Mode', agentroute: 'Agent', desk: 'Priced By Desk', carrier: 'Carrier', tonnage: 'Tonnage', buyrate: 'Buy Rate', sellrate: 'Sell Rate', status: 'Status' };
+const DB_FILTER_DEFAULT_LABELS = { refid: 'Ref ID', date: 'All Dates', mode: 'All Modes', agentroute: 'Agent', desk: 'All Desks', carrier: 'All Carriers', tonnage: 'All', buyrate: 'Buy Rate', sellrate: 'Sell Rate', status: 'All Statuses' };
+window._dbDateViewYear = new Date().getFullYear();
+
+function dbFilterIsHidden(key) {
+  return document.getElementById(`dropdown-hdr-${key}`)?.classList.contains('hdr-filter-dropdown-hidden');
+}
+
+window.openDbFilterField = (key) => {
+  const dd = document.getElementById(`dropdown-hdr-${key}`);
+  if (!dd) return;
+  dd.classList.remove('hdr-filter-dropdown-hidden');
+  if (!dd.querySelector('.hdr-filter-chip-remove')) {
+    const x = document.createElement('span');
+    x.className = 'hdr-filter-chip-remove';
+    x.textContent = '✕';
+    x.title = 'Remove filter';
+    x.onclick = (e) => { e.stopPropagation(); window.closeDbFilterField(key); };
+    dd.appendChild(x);
+  }
+  document.getElementById('db-add-filter-panel')?.classList.remove('open');
+  if (key === 'date') renderDbDateMonthGrid();
+  dd.querySelector('.hdr-filter-btn')?.click();
+};
+
+window.closeDbFilterField = (key) => {
+  if (key === 'date') {
+    window.hdrFilterState.dateMonths = [];
+    const startDate = document.getElementById('db-filter-start-date');
+    const endDate = document.getElementById('db-filter-end-date');
+    if (startDate) startDate.value = '';
+    if (endDate) endDate.value = '';
+    updateDbDateSummary();
+  } else {
+    window.selectHdrFilter(key, 'all', DB_FILTER_DEFAULT_LABELS[key] || 'All');
+  }
+  const dd = document.getElementById(`dropdown-hdr-${key}`);
+  if (dd) {
+    dd.classList.add('hdr-filter-dropdown-hidden');
+    dd.querySelector('.hdr-filter-chip-remove')?.remove();
+    dd.querySelector('.hdr-filter-menu')?.classList.remove('open');
+  }
+  applyDbFiltersAndSort();
+};
+
+window.toggleDbAddFilterMenu = () => {
+  const panel = document.getElementById('db-add-filter-panel');
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.hdr-toolbar-panel').forEach(p => p.classList.remove('open'));
+  if (isOpen) return;
+
+  const hiddenKeys = DB_FILTER_KEYS.filter(k => dbFilterIsHidden(k));
+  panel.innerHTML = hiddenKeys.length === 0
+    ? `<div class="hdr-toolbar-panel-empty">All filters are active</div>`
+    : `<div class="hdr-toolbar-panel-title">Add filter</div>` + hiddenKeys.map(k => `<div class="hdr-filter-opt" onclick="openDbFilterField('${k}')">${DB_FILTER_LABELS[k]}</div>`).join('');
+  panel.classList.add('open');
+};
+
+function getDbHiddenColumns() {
+  try { return JSON.parse(localStorage.getItem('gl_admin_db_hidden_columns') || '[]'); }
+  catch (e) { return []; }
+}
+
+function buildDbColumnsPanelHTML() {
+  const cols = [
+    { idx: 1, label: 'Ref ID', locked: true },
+    { idx: 2, label: 'Date', locked: true },
+    { idx: 3, label: 'Mode' },
+    { idx: 4, label: 'Agent Details' },
+    { idx: 5, label: 'Priced By Desk' },
+    { idx: 6, label: 'Carrier' },
+    { idx: 7, label: 'Tonnage' },
+    { idx: 8, label: 'Buy Rate' },
+    { idx: 9, label: 'Sell Rate' },
+    { idx: 10, label: 'GP' },
+    { idx: 11, label: 'Status' },
+    { idx: 12, label: 'Actions', locked: true }
+  ];
+  const hidden = getDbHiddenColumns();
+  return `<div class="hdr-toolbar-panel-title">Columns</div>` + cols.map(c => {
+    if (c.locked) return `<div class="hdr-col-row disabled"><input type="checkbox" checked disabled> ${c.label}</div>`;
+    const checked = !hidden.includes(c.idx);
+    return `<div class="hdr-col-row" onclick="toggleDbColumn(${c.idx})"><input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation(); toggleDbColumn(${c.idx})"> ${c.label}</div>`;
+  }).join('');
+}
+
+window.toggleDbColumnsPanel = () => {
+  const panel = document.getElementById('db-columns-panel');
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.hdr-toolbar-panel').forEach(p => p.classList.remove('open'));
+  if (isOpen) return;
+  panel.innerHTML = buildDbColumnsPanelHTML();
+  panel.classList.add('open');
+};
+
+window.toggleDbColumn = (idx) => {
+  let hidden = getDbHiddenColumns();
+  hidden = hidden.includes(idx) ? hidden.filter(i => i !== idx) : [...hidden, idx];
+  localStorage.setItem('gl_admin_db_hidden_columns', JSON.stringify(hidden));
+  window.applyDbColumnVisibility();
+  const panel = document.getElementById('db-columns-panel');
+  if (panel) panel.innerHTML = buildDbColumnsPanelHTML();
+};
+
+window.applyDbColumnVisibility = () => {
+  const table = document.getElementById('admin-quotes-table');
+  if (!table) return;
+  for (let i = 3; i <= 11; i++) table.classList.remove(`col-hidden-${i}`);
+  getDbHiddenColumns().forEach(idx => table.classList.add(`col-hidden-${idx}`));
+};
+
+function renderDbDateMonthGrid() {
+  const grid = document.getElementById('hdr-date-month-grid');
+  const yearLabel = document.getElementById('hdr-date-year-label');
+  if (!grid) return;
+  const year = window._dbDateViewYear;
+  if (yearLabel) yearLabel.textContent = String(year);
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const selected = window.hdrFilterState.dateMonths || [];
+  grid.innerHTML = monthNames.map((name, i) => {
+    const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+    return `<div class="hdr-month-cell ${selected.includes(key) ? 'selected' : ''}" onclick="toggleDbDateMonth('${key}')">${name}</div>`;
+  }).join('');
+}
+
+window.shiftDbDateYear = (delta) => {
+  window._dbDateViewYear += delta;
+  renderDbDateMonthGrid();
+};
+
+window.toggleDbDateMonth = (monthKey) => {
+  const st = window.hdrFilterState;
+  if (!st.dateMonths) st.dateMonths = [];
+  const idx = st.dateMonths.indexOf(monthKey);
+  if (idx >= 0) st.dateMonths.splice(idx, 1);
+  else st.dateMonths.push(monthKey);
+  renderDbDateMonthGrid();
+  updateDbDateSummary();
+  applyDbFiltersAndSort();
+};
+
+window.clearDbDateMonths = () => {
+  window.hdrFilterState.dateMonths = [];
+  renderDbDateMonthGrid();
+  updateDbDateSummary();
+  applyDbFiltersAndSort();
+};
+
+function updateDbDateSummary() {
+  const months = window.hdrFilterState.dateMonths || [];
+  const summary = document.getElementById('hdr-date-selected-summary');
+  const label = document.getElementById('hdr-label-date');
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fmt = (key) => { const [y, m] = key.split('-'); return `${monthNames[parseInt(m, 10) - 1]} ${y}`; };
+  if (summary) summary.textContent = months.length ? `${months.length} month${months.length > 1 ? 's' : ''} selected` : 'No months selected';
+  if (label) label.textContent = months.length ? months.slice().sort().map(fmt).join(', ') : 'All Dates';
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.hdr-toolbar-wrap')) {
+    document.querySelectorAll('.hdr-toolbar-panel').forEach(p => p.classList.remove('open'));
+  }
+});
 
 window.toggleHdrFilterMenu = (event, key) => {
   if (event) event.stopPropagation();
@@ -8024,8 +8973,17 @@ window.resetAllHdrFilters = () => {
     sellrate: 'all', search_sellrate: '',
     gp: 'all', search_gp: '',
     status: 'all', search_status: '',
-    actions: 'date-desc', search_actions: ''
+    actions: 'date-desc', search_actions: '',
+    dateMonths: []
   };
+  window._dbDateViewYear = new Date().getFullYear();
+  DB_FILTER_KEYS.forEach(k => {
+    const dd = document.getElementById(`dropdown-hdr-${k}`);
+    if (dd) {
+      dd.classList.add('hdr-filter-dropdown-hidden');
+      dd.querySelector('.hdr-filter-chip-remove')?.remove();
+    }
+  });
 
   const keys = ['refid', 'date', 'mode', 'agentroute', 'desk', 'carrier', 'buyrate', 'sellrate', 'gp', 'status'];
   keys.forEach(k => {
@@ -8331,9 +9289,22 @@ window.populateAllUserHeaderFilterDropdowns = (myQuotes) => {
   }
 };
 
+window.userDbCurrentPage = 1;
+window.userDbRowsPerPage = 25;
+window.changeUserDbPage = (dir) => {
+  window._isUserPaging = true;
+  window.userDbCurrentPage += dir;
+  window.applyUserDbFiltersAndSort();
+  window._isUserPaging = false;
+};
+
 window.applyUserDbFiltersAndSort = () => {
   const tbody = document.getElementById("user-quotes-body");
   if (!tbody) return;
+
+  if (!window._isUserPaging) {
+    window.userDbCurrentPage = 1;
+  }
 
   const userId = window.userDashboardId || appState.currentUser;
   const myQuotes = (appState.quotes || []).filter(q => q.creator === userId);
@@ -8443,13 +9414,33 @@ window.applyUserDbFiltersAndSort = () => {
     return 0;
   });
 
+  const userTotalMatched = filtered.length;
+  const userTotalPages = Math.ceil(userTotalMatched / window.userDbRowsPerPage) || 1;
+  if (window.userDbCurrentPage > userTotalPages) window.userDbCurrentPage = userTotalPages;
+  if (window.userDbCurrentPage < 1) window.userDbCurrentPage = 1;
+
+  const userStartIdx = (window.userDbCurrentPage - 1) * window.userDbRowsPerPage;
+  const userEndIdx = userStartIdx + window.userDbRowsPerPage;
+  const pageFilteredUser = filtered.slice(userStartIdx, userEndIdx);
+
+  const userPrevBtn = document.getElementById("user-db-prev-btn");
+  const userNextBtn = document.getElementById("user-db-next-btn");
+  const userPagInfo = document.getElementById("user-db-pagination-info");
+  if (userPrevBtn) userPrevBtn.disabled = (window.userDbCurrentPage === 1);
+  if (userNextBtn) userNextBtn.disabled = (window.userDbCurrentPage === userTotalPages);
+  if (userPagInfo) {
+    const showStart = userTotalMatched === 0 ? 0 : userStartIdx + 1;
+    const showEnd = Math.min(userEndIdx, userTotalMatched);
+    userPagInfo.textContent = `Page ${window.userDbCurrentPage} of ${userTotalPages} (Showing ${showStart}-${showEnd} of ${userTotalMatched} entries)`;
+  }
+
   tbody.innerHTML = "";
-  if (filtered.length === 0) {
+  if (pageFilteredUser.length === 0) {
     tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-dim); padding: 2rem;">No enquiries found matching filters.</td></tr>`;
     return;
   }
 
-  filtered.forEach(quote => {
+  pageFilteredUser.forEach(quote => {
     const tr = document.createElement("tr");
     tr.setAttribute("data-quote-id", quote.id);
     const currencySym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
@@ -8483,7 +9474,7 @@ window.applyUserDbFiltersAndSort = () => {
         <div style="font-weight: 600;">${quote.customer}</div>
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0) > 0 ? `${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0).toLocaleString()} kg` : '-'}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0) > 0 ? `${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0).toLocaleString()} kg` : '-'}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${computedBuy ? `${buyRateSym}${computedBuy.toLocaleString()}` : '-'}</span></td>
       <td><div>${quoteAmount}</div></td>
       <td>
@@ -8497,7 +9488,7 @@ window.applyUserDbFiltersAndSort = () => {
         ` : '-'}
       </td>
       <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
-      <td class="actions-cell">
+      <td class="actions-cell"><div class="actions-cell-inner">
         <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
@@ -8522,7 +9513,7 @@ window.applyUserDbFiltersAndSort = () => {
         <button class="action-icon-btn delete" style="background: ${isDeleteUnlocked(quote) ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isDeleteUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${isDeleteUnlocked(quote) ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete'}" onclick="deleteQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
         </button>
-      </td>
+      </div></td>
     `;
     tbody.appendChild(tr);
   });
@@ -8556,6 +9547,20 @@ window.changeDbPage = (dir) => {
 };
 
 window.computeHistoricalBuyRate = (q) => {
+  // Whenever Gross Profit is already known, derive Buy directly from the
+  // Sell already saved on this same quote (Buy = Sell − GP) rather than
+  // trusting q.buyRate / q.confirmedBuyRate / q.details.buyRate or the
+  // line-item reconstruction further down. Those other sources have shown
+  // real inconsistencies on saved quotes — e.g. a per-kg rate (₹160) stored
+  // in confirmedBuyRate where a total was expected — so the figure shown
+  // next to Sell Rate and GP in the Global Enquiry Database didn't visually
+  // tally with GP. Sell − GP is exact by definition and always consistent
+  // with the GP already displayed in the same row; this only changes what
+  // gets displayed here, never the underlying saved fields themselves.
+  if (typeof q.grossProfit === 'number' && !isNaN(q.grossProfit) && typeof q.amount === 'number') {
+    return q.amount - q.grossProfit;
+  }
+
   if (q.buyRate) return q.buyRate;
   if (q.confirmedBuyRate) return q.confirmedBuyRate;
   if (q.details && q.details.buyRate) return q.details.buyRate;
@@ -8564,9 +9569,24 @@ window.computeHistoricalBuyRate = (q) => {
   if (q.type === 'air') {
     if (q.details && q.details.airlines && q.details.airlines.length > 0) {
       const airline = q.details.airlines.find(a => a.isQuoted) || q.details.airlines[0];
-      const activeBrVal = airline.breaks ? (airline.breaks[q.details.usedBreak || 'min'] || {buy:0}) : {buy:0};
-      totalBuy += (q.details.chargeableWeight || 0) * (activeBrVal.buy || 0);
-      totalBuy += parseFloat(airline.ams_fee) || 0;
+      const usedBreak = q.details.usedBreak || 'min';
+      const activeBrVal = airline.breaks ? (airline.breaks[usedBreak] || {buy:0}) : {buy:0};
+      // The "min" bracket is a flat minimum charge (see the Min (Flat) label
+      // in the calculator), not a per-kg rate — unlike every other bracket,
+      // it must never be multiplied by chargeable weight. Multiplying it
+      // produced a reconstructed Buy Rate several times larger than the
+      // actual flat buy amount shown on the quote itself.
+      if (usedBreak === 'min') {
+        totalBuy += (activeBrVal.buy || 0);
+      } else {
+        totalBuy += (q.details.chargeableWeight || 0) * (activeBrVal.buy || 0);
+      }
+      // AMS Fee is a flat, customer-facing charge with no buy/cost side
+      // tracked anywhere in the Air Freight calculator (calculateAirFreight()
+      // adds it straight into the sell-side surcharge total) — it was being
+      // added here into totalBuy too, inflating the reconstructed Buy Rate
+      // shown in My Quotation Logs / Global Enquiry Database by the AMS fee
+      // amount on every affected quote.
     }
     if (q.details && q.details.originSurcharges) {
       q.details.originSurcharges.forEach(s => totalBuy += parseFloat(s.cost || s.buyRate || 0));
@@ -8599,6 +9619,8 @@ window.applyDbFiltersAndSort = () => {
   if (!window._isPaging) {
     window.dbCurrentPage = 1;
   }
+
+  window.applyDbColumnVisibility();
 
   // Populate dynamic filter option lists
   populateAllHeaderFilterDropdowns();
@@ -8670,6 +9692,16 @@ window.applyDbFiltersAndSort = () => {
     // Date range filter
     if (startDateVal && new Date(q.date) < new Date(startDateVal)) return false;
     if (endDateVal && new Date(q.date) > new Date(endDateVal)) return false;
+
+    // Multi-month date filter: if any months are selected, the quote's date
+    // must fall in at least one of them (OR across selections). Additive —
+    // does nothing when no months are selected, leaving the filters above unaffected.
+    if (st.dateMonths && st.dateMonths.length > 0) {
+      const qDate = new Date(q.date);
+      if (isNaN(qDate.getTime())) return false;
+      const qMonthKey = `${qDate.getFullYear()}-${String(qDate.getMonth() + 1).padStart(2, '0')}`;
+      if (!st.dateMonths.includes(qMonthKey)) return false;
+    }
 
     // Search query matches for individual header filters
     if (st.search_refid && !refIdStr.includes(st.search_refid)) return false;
@@ -8779,7 +9811,7 @@ window.applyDbFiltersAndSort = () => {
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t1);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${carrierName}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0) > 0 ? `${(quote.details?.grossWeight || quote.details?.chargeableWeight || 0).toLocaleString()} kg` : '-'}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0) > 0 ? `${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0).toLocaleString()} kg` : '-'}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${computedBuy ? `${buyRateSym}${computedBuy.toLocaleString()}` : '-'}</span></td>
       <td>
         <div>${amountStr}</div>
@@ -8796,7 +9828,7 @@ window.applyDbFiltersAndSort = () => {
         ` : '-'}
       </td>
       <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
-      <td class="actions-cell">
+      <td class="actions-cell"><div class="actions-cell-inner">
         <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
@@ -8821,7 +9853,7 @@ window.applyDbFiltersAndSort = () => {
         <button class="action-icon-btn delete" style="background: ${isDeleteUnlocked(quote) ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isDeleteUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="Delete Quote (Admin Override)" onclick="deleteQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
         </button>
-      </td>
+      </div></td>
     `;
     tbody.appendChild(tr);
   });
@@ -8895,10 +9927,13 @@ function applyDeskNames() {
     let buttonsHtml = `<button class="role-btn active" data-role="manager">${adminName}</button>`;
 
     // Add default users
+    // 'jaya' (default label "Free Hand") is deliberately left out of this
+    // switchable list — her Auth/Firestore access was retired, and her
+    // TEAM_ROLES entry stays intact only so historical quotes she created
+    // (creatorRole === 'jaya') keep displaying/categorizing correctly.
     const defaultUsers = [
       { id: 'shashank', defaultName: 'Air Nom', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
       { id: 'shaheer', defaultName: 'Sea Nomination', icon: `<svg width="11" height="11" style="margin-right:4px; display:inline-block; vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 21h20M19.3 14.8C18 13.5 16 13.5 14.7 14.8L12 17.5l-2.7-2.7C8 13.5 6 13.5 4.7 14.8L2 17.5V19h20v-1.5l-2.7-2.7zM12 2v10M12 2l-3 3M12 2l3 3"/></svg>` },
-      { id: 'jaya', defaultName: 'Free Hand', icon: '' },
       { id: 'cathrina', defaultName: 'NRS', icon: '' }
     ];
 
@@ -8923,6 +9958,7 @@ function applyDeskNames() {
         switchRole(role);
       });
     });
+    if (typeof syncRoleSwitcherTriggerLabel === 'function') syncRoleSwitcherTriggerLabel();
   }
 
   const activeUser = appState.currentUser;
@@ -8934,6 +9970,8 @@ function applyDeskNames() {
     if (headerUserNameEl) headerUserNameEl.textContent = activeUser.toUpperCase();
     const headerUserRoleEl = document.getElementById("header-user-role");
     if (headerUserRoleEl) headerUserRoleEl.textContent = name;
+    const headerUserAvatarEl = document.getElementById("header-user-avatar");
+    if (headerUserAvatarEl) headerUserAvatarEl.textContent = activeUser.charAt(0).toUpperCase();
   }
 
   // Update report user dropdown options dynamically with all Pricing Officers
@@ -8941,13 +9979,21 @@ function applyDeskNames() {
   if (reportUserSelect) {
     const curVal = reportUserSelect.value;
     const roles = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager' && roleId !== 'mahendra');
-    let html = `<option value="all">All Pricing Officers</option>`;
+    // Disambiguate before building options — two logins sharing a display
+    // name (e.g. more than one "Free Hand Sales" account) were previously
+    // indistinguishable in this filter, same treatment as Quotes By User.
+    const roleNameLookup = {};
     roles.forEach(roleId => {
       let name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\s*\(Free\s*Hand\)/i, "");
       if (roleId === 'shaheer' && name.toLowerCase() === 'shaheer') {
         name = 'Sea Nomination';
       }
-      html += `<option value="${roleId}">${name}</option>`;
+      roleNameLookup[roleId] = { name };
+    });
+    disambiguateDuplicateNames(roleNameLookup);
+    let html = `<option value="all">All Pricing Officers</option>`;
+    roles.forEach(roleId => {
+      html += `<option value="${roleId}">${roleNameLookup[roleId].name}</option>`;
     });
     reportUserSelect.innerHTML = html;
     if ([...reportUserSelect.options].some(opt => opt.value === curVal)) {
@@ -9265,6 +10311,102 @@ function addAlternativeOptionRow(tbodyId, carrier = "", routing = "", tt = "", r
 }
 window.addAlternativeOptionRow = addAlternativeOptionRow;
 
+// Pure extraction of amendQuote()'s air DOM-population body — parameterized
+// on a details-shaped object instead of closing over `quote`. Customer name
+// and currency are set by the caller (amendQuote), not here.
+function populateAirFreightFormFromDetails(details) {
+  document.getElementById("air-origin").value = details.origin || "";
+  document.getElementById("air-dest").value = details.destination || "";
+  document.getElementById("air-incoterm").value = details.incoterm || "EXW";
+  document.getElementById("air-terms").value = details.termsAndConditions || DEFAULT_AIR_TERMS;
+
+  document.getElementById("air-commodity").value = details.commodity || "GENERAL";
+  if (document.getElementById("air-dg-class")) {
+    document.getElementById("air-dg-class").value = details.dgClass || "";
+  }
+  handleAirCommodityChange();
+  if (details.tempType) {
+    document.getElementById("air-temp-type").value = details.tempType;
+    handleAirTempTypeChange();
+  }
+  if (details.tempRange) {
+    document.getElementById("air-temp-range").value = details.tempRange;
+  }
+  document.getElementById("air-loadability-tilt").value = details.loadabilityTilt || "TILTABLE";
+  document.getElementById("air-loadability-stack").value = details.loadabilityStack || "STACKABLE";
+
+  const airlinesContainer = document.getElementById("air-airlines-list-container");
+  if (airlinesContainer) {
+    airlinesContainer.innerHTML = "";
+    if (details.airlines && details.airlines.length > 0) {
+      details.airlines.forEach(alt => {
+        addAirlineCard(alt);
+      });
+    } else {
+      const initialBreaks = {};
+      const cw = details.chargeableWeight || 0;
+      const bName = getWeightBreakBracket(cw);
+      initialBreaks[bName] = details.appliedRate || 0;
+
+      addAirlineCard({
+        name: details.airline || "",
+        routing: details.routing || "",
+        tt: details.tt || "",
+        validity: details.validity || "",
+        pivotWeight: details.pivotWeight || "",
+        selected: true,
+        breaks: initialBreaks
+      });
+    }
+  }
+
+  appState.currentAirFreight.module = details.module || 'export';
+  const tabExp = document.getElementById("air-tab-export");
+  const tabImp = document.getElementById("air-tab-import");
+  if (tabExp && tabImp) {
+    if (details.module === 'import') {
+      tabImp.classList.add("active");
+      tabExp.classList.remove("active");
+    } else {
+      tabExp.classList.add("active");
+      tabImp.classList.remove("active");
+    }
+  }
+
+  // Cargo items
+  const cargoBody = document.getElementById("air-cargo-body");
+  if (cargoBody && details.cargoItems && details.cargoItems.length > 0) {
+    cargoBody.innerHTML = "";
+    details.cargoItems.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.className = "cargo-item-row";
+      tr.innerHTML = `
+        <td><input type="number" class="cargo-len" min="1" placeholder="L" value="${item.l}" required></td>
+        <td><input type="number" class="cargo-wid" min="1" placeholder="W" value="${item.w}" required></td>
+        <td><input type="number" class="cargo-hei" min="1" placeholder="H" value="${item.h}" required></td>
+        <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" value="${item.qty}" required></td>
+        <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" value="${item.gw}" required></td>
+        <td>
+          <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateAirFreight();">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+        </td>
+      `;
+      cargoBody.appendChild(tr);
+      tr.querySelectorAll("input").forEach(inp => {
+        inp.addEventListener("input", calculateAirFreight);
+      });
+    });
+  }
+
+  // Local surcharges
+  repopulateSurchargesTable("air-origin-surcharges-body", details.originSurcharges);
+  repopulateSurchargesTable("air-dest-surcharges-body", details.destSurcharges);
+
+  calculateAirFreight();
+}
+window.populateAirFreightFormFromDetails = populateAirFreightFormFromDetails;
+
 function amendQuote(id) {
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
@@ -9288,92 +10430,10 @@ function amendQuote(id) {
     // synchronous DOM work blocking the browser's paint cycle.
     requestAnimationFrame(() => {
       document.getElementById("air-cust-name").value = quote.customer;
-      document.getElementById("air-origin").value = quote.details.origin || "";
-      document.getElementById("air-dest").value = quote.details.destination || "";
-      document.getElementById("air-incoterm").value = quote.details.incoterm || "EXW";
-      document.getElementById("air-terms").value = quote.details.termsAndConditions || DEFAULT_AIR_TERMS;
-
-      document.getElementById("air-commodity").value = quote.details.commodity || "GENERAL";
-      handleAirCommodityChange();
-      if (quote.details.tempType) {
-        document.getElementById("air-temp-type").value = quote.details.tempType;
-        handleAirTempTypeChange();
+      if (document.getElementById("air-currency")) {
+        document.getElementById("air-currency").value = quote.currency || "INR";
       }
-      if (quote.details.tempRange) {
-        document.getElementById("air-temp-range").value = quote.details.tempRange;
-      }
-      document.getElementById("air-loadability-tilt").value = quote.details.loadabilityTilt || "TILTABLE";
-      document.getElementById("air-loadability-stack").value = quote.details.loadabilityStack || "STACKABLE";
-
-      const airlinesContainer = document.getElementById("air-airlines-list-container");
-      if (airlinesContainer) {
-        airlinesContainer.innerHTML = "";
-        if (quote.details.airlines && quote.details.airlines.length > 0) {
-          quote.details.airlines.forEach(alt => {
-            addAirlineCard(alt);
-          });
-        } else {
-          const initialBreaks = {};
-          const cw = quote.details.chargeableWeight || 0;
-          const bName = getWeightBreakBracket(cw);
-          initialBreaks[bName] = quote.details.appliedRate || 0;
-
-          addAirlineCard({
-            name: quote.details.airline || "",
-            routing: quote.details.routing || "",
-            tt: quote.details.tt || "",
-            validity: quote.details.validity || "",
-            pivotWeight: quote.details.pivotWeight || "",
-            selected: true,
-            breaks: initialBreaks
-          });
-        }
-      }
-
-      appState.currentAirFreight.module = quote.details.module || 'export';
-      const tabExp = document.getElementById("air-tab-export");
-      const tabImp = document.getElementById("air-tab-import");
-      if (tabExp && tabImp) {
-        if (quote.details.module === 'import') {
-          tabImp.classList.add("active");
-          tabExp.classList.remove("active");
-        } else {
-          tabExp.classList.add("active");
-          tabImp.classList.remove("active");
-        }
-      }
-
-      // Cargo items
-      const cargoBody = document.getElementById("air-cargo-body");
-      if (cargoBody && quote.details.cargoItems && quote.details.cargoItems.length > 0) {
-        cargoBody.innerHTML = "";
-        quote.details.cargoItems.forEach(item => {
-          const tr = document.createElement("tr");
-          tr.className = "cargo-item-row";
-          tr.innerHTML = `
-            <td><input type="number" class="cargo-len" min="1" placeholder="L" value="${item.l}" required></td>
-            <td><input type="number" class="cargo-wid" min="1" placeholder="W" value="${item.w}" required></td>
-            <td><input type="number" class="cargo-hei" min="1" placeholder="H" value="${item.h}" required></td>
-            <td><input type="number" class="cargo-qty" min="1" placeholder="Qty" value="${item.qty}" required></td>
-            <td><input type="number" class="cargo-gw" min="0.1" step="0.1" placeholder="Kg" value="${item.gw}" required></td>
-            <td>
-              <button type="button" class="delete-btn" onclick="this.closest('tr').remove(); calculateAirFreight();">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-              </button>
-            </td>
-          `;
-          cargoBody.appendChild(tr);
-          tr.querySelectorAll("input").forEach(inp => {
-            inp.addEventListener("input", calculateAirFreight);
-          });
-        });
-      }
-
-      // Local surcharges
-      repopulateSurchargesTable("air-origin-surcharges-body", quote.details.originSurcharges);
-      repopulateSurchargesTable("air-dest-surcharges-body", quote.details.destSurcharges);
-
-      calculateAirFreight();
+      populateAirFreightFormFromDetails(quote.details);
       alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
     }); // end requestAnimationFrame
   } else if (quote.type === 'transport') {
@@ -9405,6 +10465,9 @@ function amendQuote(id) {
     }
     if (document.getElementById("transport-delivery-address")) {
       document.getElementById("transport-delivery-address").value = quote.details.deliveryAddress || "";
+    }
+    if (document.getElementById("transport-customer-name")) {
+      document.getElementById("transport-customer-name").value = quote.customer || "";
     }
     if (document.getElementById("transport-header-currency")) {
       document.getElementById("transport-header-currency").value = quote.currency || "INR";
@@ -9446,9 +10509,12 @@ function amendQuote(id) {
     }
     updateAdminModulePermissions();
     calculateTransportation();
-    alert(`Editing Transportation Quote #${getQuoteRefId(quote)} in progress. Enter name when saving to confirm your amendments.`);
+    alert(`Editing Transportation Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
   } else if (quote.type === 'warehouse') {
     document.getElementById("warehousing-panel").classList.add("active");
+    if (document.getElementById("warehouse-customer-name")) {
+      document.getElementById("warehouse-customer-name").value = quote.customer || "";
+    }
     if (document.getElementById("warehouse-header-currency")) {
       document.getElementById("warehouse-header-currency").value = quote.currency || "INR";
       syncWarehouseCurrency();
@@ -9495,7 +10561,7 @@ function amendQuote(id) {
 
     updateAdminModulePermissions();
     calculateWarehousing();
-    alert(`Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Enter name when saving to confirm your amendments.`);
+    alert(`Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
 
   } else {
     // Show the panel first so the browser can paint the skeleton immediately
@@ -9506,11 +10572,41 @@ function amendQuote(id) {
     // synchronous DOM work blocking the browser's paint cycle.
     requestAnimationFrame(() => {
       document.getElementById("sea-cust-name").value = quote.customer;
+      if (document.getElementById("sea-currency")) {
+        document.getElementById("sea-currency").value = quote.currency || "INR";
+      }
+      if (document.getElementById("sea-gross-weight")) {
+        document.getElementById("sea-gross-weight").value = quote.details.grossWeight || 0;
+      }
+      if (document.getElementById("sea-volume")) {
+        document.getElementById("sea-volume").value = quote.details.volumeCbm || 0;
+      }
+      if (document.getElementById("sea-chargeable-cbm-override")) {
+        document.getElementById("sea-chargeable-cbm-override").value = quote.details.chargeableCbmOverride || "";
+      }
+      if (document.getElementById("sea-pkg-qty")) {
+        document.getElementById("sea-pkg-qty").value = quote.details.packagesQuantity || 0;
+      }
+      if (document.getElementById("sea-handling-profile") && quote.details.handlingProfile) {
+        document.getElementById("sea-handling-profile").value = quote.details.handlingProfile;
+      }
+      if (document.getElementById("sea-orientation-profile") && quote.details.orientationProfile) {
+        document.getElementById("sea-orientation-profile").value = quote.details.orientationProfile;
+      }
+      if (document.getElementById("sea-cargo-risk") && quote.details.cargoRisk) {
+        document.getElementById("sea-cargo-risk").value = quote.details.cargoRisk;
+      }
+      if (document.getElementById("sea-climate-constraint") && quote.details.climateConstraint) {
+        document.getElementById("sea-climate-constraint").value = quote.details.climateConstraint;
+      }
       document.getElementById("sea-origin").value = quote.details.origin || "";
       document.getElementById("sea-dest").value = quote.details.destination || "";
-      document.getElementById("sea-line").value = quote.details.shippingLine || "";
-      document.getElementById("sea-liner-name").value = quote.details.linerName || "";
+      if (document.getElementById("sea-line")) document.getElementById("sea-line").value = quote.details.shippingLine || "";
+      if (document.getElementById("sea-liner-name")) document.getElementById("sea-liner-name").value = quote.details.linerName || "";
       document.getElementById("sea-commodity").value = quote.details.commodity || "";
+      if (document.getElementById("sea-dg-class")) {
+        document.getElementById("sea-dg-class").value = quote.details.dgClass || "";
+      }
       document.getElementById("sea-incoterm").value = quote.details.incoterm || "EXW";
       document.getElementById("sea-routing").value = quote.details.routing || "";
       document.getElementById("sea-tt").value = quote.details.tt || "";
@@ -9555,7 +10651,14 @@ function amendQuote(id) {
               mode: l.mode || mode,
               containers: l.containers,
               originSurcharges: l.originSurcharges,
-              destSurcharges: l.destSurcharges
+              destSurcharges: l.destSurcharges,
+              lclRate: l.lclRate,
+              lclBuyRate: l.lclBuyRate,
+              bbRate: l.bbRate,
+              bbBuyRate: l.bbBuyRate,
+              tariffsEnabled: l.tariffsEnabled,
+              originFeesEnabled: l.originFeesEnabled,
+              destFeesEnabled: l.destFeesEnabled
             });
           });
         } else {
@@ -9661,6 +10764,9 @@ function approveAmendment(reqId) {
           quote.deletionAllowed = true;
         } else {
           quote.amendmentAllowed = true;
+          // 2-hour window to make corrections after approval, instead of a
+          // single-use unlock consumed by the very next save.
+          quote.amendmentUnlockedUntil = Date.now() + (2 * 60 * 60 * 1000);
         }
       }
       if (quote) DB.saveQuote(quote);
@@ -9738,6 +10844,12 @@ function calculateSeaVolumeFromDimensions() {
       totalVolume += rowVol;
       totalPackages += qty;
     }
+
+    // Purely visual: flag a row started but still missing a field it needs
+    // — matches saveCurrentQuote()'s required-fields check. Math above is untouched.
+    const isStarted = l > 0 || w > 0 || h > 0 || qty > 0;
+    const isComplete = l > 0 && w > 0 && h > 0 && qty > 0;
+    row.classList.toggle("row-incomplete-flag", isStarted && !isComplete);
   });
 
   const volInput = document.getElementById("sea-volume");
@@ -10193,131 +11305,6 @@ function formatTransitTimeDisplay(tt) {
 }
 window.formatTransitTimeDisplay = formatTransitTimeDisplay;
 
-// ==================== GOOGLE MAPS DIRECTORY LOOKUP ====================
-
-function getCountryFromPortValue(val, mode) {
-  const cleanVal = val.trim().toLowerCase();
-  if (!cleanVal) return null;
-
-  let code = cleanVal;
-  if (cleanVal.includes(" - ")) {
-    code = cleanVal.split(" - ")[0].trim();
-  }
-
-  if (mode === 'air') {
-    const matchedAp = appState.airports.find(ap =>
-      ap.code.toLowerCase() === code ||
-      ap.name.toLowerCase() === cleanVal ||
-      ap.name.toLowerCase().includes(cleanVal)
-    );
-    if (matchedAp && matchedAp.country) return matchedAp.country;
-  } else {
-    const majorSeaports = [
-      { code: "CNSHA", country: "China" },
-      { code: "SGPIN", country: "Singapore" },
-      { code: "NLRTM", country: "Netherlands" },
-      { code: "BEANR", country: "Belgium" },
-      { code: "AEDXB", country: "UAE" },
-      { code: "USLAX", country: "USA" },
-      { code: "GBFXT", country: "UK" },
-      { code: "INNSA", country: "India" },
-      { code: "INMAA", country: "India" },
-      { code: "LKCMB", country: "Sri Lanka" },
-      { code: "DEHAM", country: "Germany" }
-    ];
-    let customPorts = [];
-    try {
-      const stored = localStorage.getItem("gl_custom_seaports");
-      if (stored) customPorts = JSON.parse(stored) || [];
-    } catch (e) { }
-    const combined = [...majorSeaports, ...customPorts];
-    const matchedSp = combined.find(sp =>
-      sp.code.toLowerCase() === code ||
-      sp.name.toLowerCase() === cleanVal ||
-      sp.name.toLowerCase().includes(cleanVal)
-    );
-    if (matchedSp && matchedSp.country) return matchedSp.country;
-  }
-
-  const countries = ["india", "china", "singapore", "netherlands", "belgium", "uae", "usa", "uk", "sri lanka", "germany", "vietnam", "malaysia", "thailand", "japan", "korea"];
-  for (const c of countries) {
-    if (cleanVal.includes(c)) return c.charAt(0).toUpperCase() + c.slice(1);
-  }
-  return null;
-}
-
-function toggleMapHelper(mode, type) {
-  const helperCardId = `${mode}-map-helper-card`;
-  const titleId = `${mode}-map-query-title`;
-  const wrapperId = `${mode}-map-iframe-wrapper`;
-  const inputId = `${mode}-${type === 'origin' ? 'origin' : 'dest'}`;
-
-  const helperCard = document.getElementById(helperCardId);
-  const titleEl = document.getElementById(titleId);
-  const wrapperEl = document.getElementById(wrapperId);
-  const inputEl = document.getElementById(inputId);
-
-  if (!helperCard || !titleEl || !wrapperEl || !inputEl) return;
-
-  const rawVal = inputEl.value.trim();
-  let searchQuery = "";
-  const country = getCountryFromPortValue(rawVal, mode);
-
-  if (country) {
-    searchQuery = mode === 'air' ? `Airports in ${country}` : `Seaports in ${country}`;
-  } else if (rawVal) {
-    searchQuery = rawVal;
-    if (searchQuery.length === 3) {
-      searchQuery += mode === 'air' ? ' Airport' : ' Seaport';
-    }
-  } else {
-    searchQuery = mode === 'air' ? 'International Airports' : 'Cargo Seaports';
-  }
-
-  // Update title text
-  titleEl.textContent = searchQuery;
-
-  // Read saved API key
-  const apiKey = localStorage.getItem("gl_gmaps_key") || "";
-
-  if (apiKey) {
-    // Render live Google Maps Embed API Search
-    const embedUrl = `https://www.google.com/maps/embed/v1/search?key=${apiKey}&q=${encodeURIComponent(searchQuery)}`;
-    wrapperEl.innerHTML = `
-      <iframe 
-        width="100%" 
-        height="100%" 
-        frameborder="0" 
-        style="border:0; display:block;" 
-        src="${embedUrl}" 
-        allowfullscreen>
-      </iframe>
-    `;
-  } else {
-    // Render static fallback layout with external map link
-    const externalUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
-    wrapperEl.innerHTML = `
-      <div style="text-align: center; padding: 1.5rem; color: var(--t2); font-family: 'Outfit', sans-serif;">
-        <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--sky);">Interactive Map Ready</div>
-        <p style="font-size: 0.72rem; color: var(--t3); max-width: 320px; margin: 0 auto 1rem auto; line-height: 1.4;">
-          Please configure your Google Maps API Key in Ganny's settings panel under Pricing Team configurations to load interactive embeds.
-        </p>
-        <a href="${externalUrl}" target="_blank" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; padding: 0.45rem 1rem; border-radius: 6px; text-decoration: none; color: #000; background: var(--accent-success); font-weight: 700;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Search "${searchQuery}" on Google Maps
-        </a>
-      </div>
-    `;
-  }
-
-  // Toggle visibility
-  if (helperCard.style.display === 'none' || !helperCard.style.display) {
-    helperCard.style.display = 'block';
-  } else {
-    // If clicking the other input, keep visible but update contents
-    helperCard.style.display = 'block';
-  }
-}
 function convertAmountToUSD(amount, currency) {
   if (!amount) return 0;
   if (currency === 'USD') return amount;
@@ -10327,173 +11314,6 @@ function convertAmountToUSD(amount, currency) {
   return amount;
 }
 window.convertAmountToUSD = convertAmountToUSD;
-
-function validateCreditCompliance(quoteData) {
-  const customerName = quoteData.customer;
-  if (!customerName) return true;
-  const lowerCust = customerName.toLowerCase().trim();
-  const agentUsername = (quoteData.creator || appState.currentUser || "").toLowerCase().trim();
-  const agentRoleName = (TEAM_ROLES[agentUsername]?.name || "").toLowerCase().trim();
-
-  // Load customer controls
-  let controls = window._customerControls || {};
-  if (Object.keys(controls).length === 0) {
-    try {
-      controls = JSON.parse(localStorage.getItem("gl_customer_controls") || "{}");
-    } catch (e) { }
-  }
-
-  // Get allowed credit period (defaults to 36)
-  const customerAllowedDays = controls[lowerCust] ? (controls[lowerCust].creditDays || 36) : 36;
-  const agentAllowedDays = (controls[agentUsername] ? (controls[agentUsername].creditDays || 36) :
-    (controls[agentRoleName] ? (controls[agentRoleName].creditDays || 36) : 36));
-
-  // Get all quotes
-  const allQuotes = appState.quotes || [];
-
-  // Calculate age of oldest converted quote for Customer
-  const customerQuotes = allQuotes.filter(q => q.customer.toLowerCase().trim() === lowerCust);
-  const oldestCustConfirmed = customerQuotes
-    .filter(q => q.status === 'converted' && q.conversionDate)
-    .sort((a, b) => new Date(a.conversionDate) - new Date(b.conversionDate))[0];
-
-  let oldestCustDays = 0;
-  let customerCrossed = false;
-  if (oldestCustConfirmed) {
-    const oldestDate = new Date(oldestCustConfirmed.conversionDate);
-    const currentDate = new Date();
-    const diffTime = Math.abs(currentDate - oldestDate);
-    oldestCustDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (oldestCustDays > customerAllowedDays) {
-      customerCrossed = true;
-    }
-  }
-
-  // Calculate age of oldest converted quote for Agent
-  const agentQuotes = allQuotes.filter(q => {
-    const creator = (q.creator || "").toLowerCase().trim();
-    return creator === agentUsername || (TEAM_ROLES[creator]?.name || "").toLowerCase().trim() === agentRoleName;
-  });
-  const oldestAgentConfirmed = agentQuotes
-    .filter(q => q.status === 'converted' && q.conversionDate)
-    .sort((a, b) => new Date(a.conversionDate) - new Date(b.conversionDate))[0];
-
-  let oldestAgentDays = 0;
-  let agentCrossed = false;
-  if (oldestAgentConfirmed) {
-    const oldestDate = new Date(oldestAgentConfirmed.conversionDate);
-    const currentDate = new Date();
-    const diffTime = Math.abs(currentDate - oldestDate);
-    oldestAgentDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (oldestAgentDays > agentAllowedDays) {
-      agentCrossed = true;
-    }
-  }
-
-  // If neither crossed credit limits, allow saving
-  if (!customerCrossed && !agentCrossed) {
-    return true;
-  }
-
-  // If user is Admin, they can bypass
-  const isAdmin = (appState.currentUser === 'ganny' || (TEAM_ROLES[appState.currentUser]?.type === 'admin'));
-  if (isAdmin) {
-    console.warn(`Admin Warning: Customer (${customerName}) or Agent (${agentUsername}) is crossing credit terms, but allowed because user is Admin.`);
-    return true;
-  }
-
-  // Non-Admin: Check for approved override request
-  let requests = window._amendmentRequests || [];
-  if (requests.length === 0) {
-    const stored = localStorage.getItem("gl_amendment_requests");
-    if (stored) {
-      try { requests = JSON.parse(stored); } catch (e) { }
-    }
-  }
-
-  // Check if there is an approved credit_override request matching customer or agent
-  const matchedApprovedReq = requests.find(r =>
-    r.requestType === 'credit_override' &&
-    r.status === 'approved' &&
-    ((r.customer && r.customer.toLowerCase().trim() === lowerCust) ||
-      (r.agent && r.agent.toLowerCase().trim() === agentUsername))
-  );
-
-  if (matchedApprovedReq) {
-    // Consume/complete the approved request
-    matchedApprovedReq.status = 'completed';
-    if (DB.firestoreRef) {
-      DB.firestoreRef.collection("amendment_requests").doc(matchedApprovedReq.id).set(matchedApprovedReq, { merge: true })
-        .catch(err => console.error("DB: failed to mark credit override request completed:", err));
-    } else {
-      localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
-    }
-    return true;
-  }
-
-  // Check if there is a pending request
-  const matchedPendingReq = requests.find(r =>
-    r.requestType === 'credit_override' &&
-    r.status === 'pending' &&
-    ((r.customer && r.customer.toLowerCase().trim() === lowerCust) ||
-      (r.agent && r.agent.toLowerCase().trim() === agentUsername))
-  );
-
-  if (matchedPendingReq) {
-    alert(`❌ Action Denied: Credit control block active.\n\nYour request for Admin Credit Override is still pending Ganny's approval.\n- Customer oldest shipment: ${oldestCustDays} days (allowed: ${customerAllowedDays})\n- Agent oldest shipment: ${oldestAgentDays} days (allowed: ${agentAllowedDays})`);
-    return false;
-  }
-
-  // Ask to submit a new credit override request
-  let msg = `⚠️ Credit Control Alert:\n`;
-  if (customerCrossed) {
-    msg += `- Customer "${customerName}" oldest shipment is ${oldestCustDays} days old (Allowed credit period: ${customerAllowedDays} days).\n`;
-  }
-  if (agentCrossed) {
-    msg += `- Agent/Desk "${TEAM_ROLES[agentUsername]?.name || agentUsername}" oldest shipment is ${oldestAgentDays} days old (Allowed credit period: ${agentAllowedDays} days).\n`;
-  }
-  msg += `\nDo you want to submit a Credit Override Request to Ganny (Admin) to execute this quote?`;
-
-  if (confirm(msg)) {
-    const reason = prompt("Enter a reason for requesting this Credit Override:");
-    if (reason === null) return false;
-    if (!reason.trim()) {
-      alert("A reason is required to submit the request.");
-      return false;
-    }
-
-    const newReq = {
-      id: 'REQ' + Math.random().toString(36).substr(2, 9),
-      requestType: 'credit_override',
-      customer: customerName,
-      agent: agentUsername,
-      creator: appState.currentUser,
-      creatorName: TEAM_ROLES[appState.currentUser]?.name || appState.currentUser,
-      date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-      status: 'pending',
-      reason: reason.trim(),
-      acknowledged: false
-    };
-
-    if (DB.firestoreRef) {
-      DB.firestoreRef.collection("amendment_requests").doc(newReq.id).set(newReq)
-        .then(() => {
-          alert("Credit override request submitted successfully to Ganny.");
-        })
-        .catch(err => {
-          console.error("DB: failed to save credit override request:", err);
-          alert("Failed to submit request to cloud. Saving locally...");
-          saveRequestLocallyFallback(newReq);
-        });
-    } else {
-      saveRequestLocallyFallback(newReq);
-      alert("Credit override request submitted successfully to Ganny (Offline).");
-    }
-  }
-
-  return false;
-}
-window.validateCreditCompliance = validateCreditCompliance;
 
 // ==================== DATABASE STORAGE REPOSITORY (LOCAL/FIREBASE) ====================
 
@@ -10570,16 +11390,44 @@ const DB = {
           }
         }
         firebase.initializeApp(config);
+        // Explicit LOCAL persistence — without this, Safari's default ITP/
+        // storage-partitioning behavior can let signInWithEmailAndPassword
+        // succeed server-side while onAuthStateChanged never fires client-
+        // side, leaving the login screen up forever with no error shown.
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
+          console.warn("DB: Firebase Auth setPersistence failed (continuing with default):", err.code || err.message);
+        });
         const dbId = config.databaseId || '(default)';
         console.log("DB: Stored Project ID in LocalStorage:", config.projectId);
         console.log("DB: Stored API Key in LocalStorage:", config.apiKey);
         console.log("DB: Initializing Firestore connection with database ID:", dbId);
         this.firestoreRef = firebase.firestore(firebase.app(), dbId);
         window.db = this.firestoreRef;
+        // Isolated from Firestore init on purpose — Storage isn't provisioned
+        // on every environment yet, and a failure here must never take down
+        // the core Firestore connection the rest of the app depends on.
+        // Bucket is pinned to the known-correct value rather than trusting
+        // config.storageBucket — some browsers have a stale cached config
+        // (gl_firebase_config in LocalStorage) with an old/wrong bucket
+        // (seen pointing at the *.web.app Hosting domain instead of the
+        // actual *.firebasestorage.app Storage bucket), which fails every
+        // Storage request with CORS/403 errors that look like a code bug.
+        try {
+          window.storage = firebase.storage(firebase.app(), 'gs://' + DEFAULT_FIREBASE_CONFIG.storageBucket);
+        } catch (storageErr) {
+          console.warn("DB: Firebase Storage unavailable (circulars library will be disabled):", storageErr);
+        }
         this.isCloud = true;
 
-        // Enable offline persistence
-        this.firestoreRef.enablePersistence().catch(err => {
+        // Enable offline persistence. synchronizeTabs:true makes every open
+        // tab of this app share one coordinated IndexedDB cache instead of
+        // each tab fighting for exclusive ownership of it — without this,
+        // opening the app in a second tab/window (very easy to do by
+        // accident) corrupts the SDK's internal state and produces
+        // "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state" on the
+        // next write, which is exactly the intermittent save-quote error
+        // reported by users.
+        this.firestoreRef.enablePersistence({ synchronizeTabs: true }).catch(err => {
           console.warn("Firestore offline persistence failed:", err.code);
         });
 
@@ -10601,10 +11449,20 @@ const DB = {
             // Wait for the first Firestore quotes snapshot to arrive before
             // rendering any dashboard. This ensures appState.quotes is populated
             // and TEAM_ROLES has been updated by syncUsers before the dashboard
-            // is painted. No setTimeout — uses promise-based gate set in
-            // registerSnapshotListener().
+            // is painted. registerSnapshotListener()'s success AND error paths
+            // both resolve this gate, but as a last-resort safety net against
+            // any entirely unanticipated hang (neither callback ever firing),
+            // a 12s timeout also proceeds — a logged-in user must never be
+            // stranded on the login screen indefinitely with no way out.
             if (appState._dataReadyPromise) {
-              await appState._dataReadyPromise;
+              const timedOut = await Promise.race([
+                appState._dataReadyPromise.then(() => false),
+                new Promise(resolve => setTimeout(() => resolve(true), 12000)),
+              ]);
+              if (timedOut) {
+                console.warn("DB: Data-ready gate timed out after 12s — proceeding to dashboard anyway.");
+                if (!Array.isArray(appState.quotes)) appState.quotes = [];
+              }
             }
 
             loginSuccess(username);
@@ -10734,6 +11592,26 @@ const DB = {
         console.warn("Firestore: customer_control listen failed, using local/cached records:", err);
       }));
 
+      // Sync sales leads from Firestore
+      this.auxiliaryUnsubscribes.push(this.firestoreRef.collection("leads").onSnapshot(snap => {
+        let leads = [];
+        snap.forEach(doc => leads.push({ id: doc.id, ...doc.data() }));
+        appState.leads = leads;
+        if (typeof renderSalesPanel === 'function') renderSalesPanel();
+      }, err => {
+        console.warn("Firestore: leads listen failed, using local/cached records:", err);
+      }));
+
+      // Sync sales activities from Firestore
+      this.auxiliaryUnsubscribes.push(this.firestoreRef.collection("activities").onSnapshot(snap => {
+        let activities = [];
+        snap.forEach(doc => activities.push({ id: doc.id, ...doc.data() }));
+        appState.activities = activities;
+        if (typeof renderActivityTimelineIfOpen === 'function') renderActivityTimelineIfOpen();
+      }, err => {
+        console.warn("Firestore: activities listen failed, using local/cached records:", err);
+      }));
+
       // Sync amendment requests list from Firestore
       this.auxiliaryUnsubscribes.push(this.firestoreRef.collection("amendment_requests").onSnapshot(snap => {
         let reqs = [];
@@ -10837,6 +11715,19 @@ const DB = {
 
       if (statusDot) statusDot.style.background = "#ef4444"; // red
       if (statusText) statusText.textContent = "Firebase: " + error.message;
+
+      // The data-ready gate MUST resolve even on failure — otherwise
+      // onAuthStateChanged's `await appState._dataReadyPromise` (see login
+      // flow) hangs forever, leaving the login overlay up with no error
+      // shown even though sign-in itself already succeeded. Better to show
+      // the dashboard with an empty/stale quote list (the red status
+      // indicator above already signals the sync problem) than to strand
+      // an authenticated user on the login screen indefinitely.
+      if (typeof appState._dataReadyResolve === 'function') {
+        if (!Array.isArray(appState.quotes)) appState.quotes = [];
+        appState._dataReadyResolve();
+        appState._dataReadyResolve = null;
+      }
     });
   },
 
@@ -10910,6 +11801,17 @@ const DB = {
         console.log("DB: Synced users from Firestore count:", customUsers.length);
         if (typeof window.renderUserCredentialsList === 'function') {
           window.renderUserCredentialsList();
+        }
+        // Several admin views (Quoting Agents directory tree, Staff
+        // Performance Leaderboard) read TEAM_ROLES[roleId].name directly —
+        // if they render before this sync updates a hardcoded role's name
+        // (e.g. 'jaya' starts as "Free Hand" until synced to "Free Hand
+        // Sales"), the stale name sticks around as its own separate row
+        // until something else triggers a re-render. Refresh the whole
+        // admin dashboard here too, same as the credentials list right
+        // above, so nothing keeps showing a name this sync just changed.
+        if (typeof isAdminUser === 'function' && isAdminUser(appState.currentUser) && typeof renderAdminDashboard === 'function') {
+          renderAdminDashboard();
         }
 
         // ── DYNAMIC USER RE-RENDER ────────────────────────────────────────────
@@ -11007,10 +11909,20 @@ const DB = {
       q.timestamp = Date.now() - (idx * 60 * 1000);
     }
     // Specific fix for duplicate quotes AEANT0726IN00062 / AEANT0726IN00065:
+    // The bare `q.id.includes("62")` / `q.id.includes("65")` checks that used
+    // to live here matched Firestore's randomly-generated document IDs against
+    // a plain 2-character substring — since those IDs are random strings, "62"
+    // or "65" turning up somewhere inside one is common coincidence, not a
+    // sign the quote is actually one of the two originally-targeted ones. That
+    // silently mislabeled 10 unrelated live quotes as "warehouse" (confirmed
+    // via live audit — e.g. quote #WHUFS0826IN00648, whose real id "Qi658l3lgi"
+    // just happens to contain "65"). quoteNumber is a precise, reliable field
+    // (and always set — see the fallback right above), so that alone is
+    // sufficient; the 5-digit id/notes substring checks are kept as a safety
+    // net for old records but are narrow enough not to false-positive.
     const lowercaseId = (q.id || "").toLowerCase();
     const isTargetQuote = lowercaseId.includes("00062") || lowercaseId.includes("00065") ||
       q.quoteNumber === 62 || q.quoteNumber === 65 ||
-      (q.id && (q.id.includes("62") || q.id.includes("65"))) ||
       (q.notes && (q.notes.includes("00062") || q.notes.includes("00065")));
 
     if (isTargetQuote) {
@@ -11048,7 +11960,15 @@ const DB = {
           appState.quotes[idx] = previousQuote;
         }
         console.error("DB: Firestore write failed:", err);
-        alert("Cloud Database Write Error: " + err.message);
+        // "INTERNAL ASSERTION FAILED" means this browser's local Firestore
+        // cache is stuck in a bad state, almost always from having the app
+        // open in more than one tab/window at once. A raw SDK error message
+        // isn't actionable for a pricing officer, so give the actual fix.
+        if ((err.message || "").includes("INTERNAL ASSERTION FAILED")) {
+          alert("This browser's local cache got stuck (usually from having this app open in more than one tab or window). Please close every other tab/window of this app, then reload this page and try saving again — your entry hasn't been lost, it's still in the form.");
+        } else {
+          alert("Cloud Database Write Error: " + err.message);
+        }
         return false;
       }
     } else {
@@ -11421,11 +12341,189 @@ function closeWonBookingModal() {
 }
 window.closeWonBookingModal = closeWonBookingModal;
 
+// Quick Convert only relaxes the shipper/consignee/commodity/agreement
+// requirements — it never touches Buy/Sell rate validation or any of the
+// total/GP recalculation logic in submitWonBookingDetails(), which run
+// identically either way.
+const WON_OPTIONAL_IN_QUICK_MODE = [
+  "won-shipper-name", "won-shipper-phone", "won-shipper-email", "won-shipper-address",
+  "won-cnee-name", "won-cnee-phone", "won-cnee-email", "won-cnee-address",
+  "won-commodity"
+];
+
+function toggleWonQuickConvertMode() {
+  const isQuick = document.getElementById("won-quick-convert-toggle")?.checked || false;
+
+  WON_OPTIONAL_IN_QUICK_MODE.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (isQuick) {
+      el.removeAttribute("required");
+    } else {
+      el.setAttribute("required", "required");
+    }
+  });
+
+  const agreementContainer = document.getElementById("won-agreement-upload-container");
+  const agreementStatus = document.getElementById("won-agreement-status");
+  const agreementHint = document.getElementById("won-agreement-hint");
+  if (agreementContainer) {
+    agreementContainer.style.opacity = isQuick ? "0.55" : "1";
+  }
+  if (agreementStatus && isQuick) {
+    agreementStatus.textContent = "Optional (Quick Convert)";
+    agreementStatus.style.color = "var(--t3)";
+  } else if (agreementStatus) {
+    agreementStatus.textContent = "Required";
+    agreementStatus.style.color = "var(--accent-error)";
+  }
+  if (agreementHint && isQuick) {
+    agreementHint.textContent = "Skipped for Quick Convert — NRS can attach this later from the registry entry.";
+  } else if (agreementHint) {
+    agreementHint.textContent = "Upload the PDF agreement for this customer to convert this quote.";
+  }
+}
+window.toggleWonQuickConvertMode = toggleWonQuickConvertMode;
+
+// Recomputes amount/amountINR/grossProfit/grossProfitINR/buyRate for a quote
+// from its current details — the single source of truth for Buy/Sell/GP.
+// Used both when a quote is first confirmed WON (submitWonBookingDetails)
+// and whenever an already-WON quote is later amended (saveCurrentQuote),
+// so these figures never go stale relative to the quote's actual details —
+// previously only the WON-confirmation path ever wrote buyRate/grossProfit,
+// so amending a converted quote silently froze them at their pre-amendment
+// values while amount/details moved on, producing an incorrect saved GP.
+function recomputeQuoteFinancials(quote) {
+  let sellBaseFreight = 0;
+  let buyBaseFreight = 0;
+  let surchargeSell = 0;
+  let surchargeBuy = 0;
+  let grossProfit = 0;
+  let subtotalSell = 0;
+  let subtotalBuy = 0;
+
+  if (quote.type === 'air') {
+    const chargeableWeight = quote.details.chargeableWeight || 0;
+    // The "min" bracket is a flat minimum charge, not a per-kg rate (same
+    // distinction already applied in calculateAirFreight() and
+    // computeHistoricalBuyRate()) — it must not be multiplied by weight.
+    const isMinBracket = quote.details.usedBreak === 'min';
+    // A quote with Airline / Carrier Tariffs excluded (destination-clearance-
+    // only, etc.) contributes no freight regardless of whatever rate value
+    // happens to still be sitting in appliedRate/appliedBuyRate from before
+    // the section was turned off — mirrors calculateAirFreight()'s own
+    // (tariffsEnabled && wbEnabled) gate on the live baseFreightCost.
+    const tariffsActive = quote.details.tariffsEnabled !== false;
+    sellBaseFreight = !tariffsActive ? 0 : (isMinBracket ? (quote.details.appliedRate || 0) : (chargeableWeight * (quote.details.appliedRate || 0)));
+    buyBaseFreight = !tariffsActive ? 0 : (isMinBracket ? (quote.details.appliedBuyRate || 0) : (chargeableWeight * (quote.details.appliedBuyRate || 0)));
+
+    (quote.details.surcharges || []).forEach(sch => {
+      const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
+      const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
+      if (sch.unit === 'kg') {
+        surchargeSell += chargeableWeight * sellRate;
+        surchargeBuy += chargeableWeight * buyRate;
+      } else {
+        surchargeSell += sellRate;
+        surchargeBuy += buyRate;
+      }
+    });
+
+    quote.amount = sellBaseFreight + surchargeSell;
+    grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
+  } else if (quote.type === 'sea') {
+    const weightKg = quote.details.grossWeight || 0;
+    const weightTons = weightKg / 1000;
+    const cbm = quote.details.volumeCbm || 0;
+    const isLcl = quote.details.mode === 'lcl';
+    const effectiveCbm = (isLcl && cbm < 1.0) ? 1.0 : cbm;
+    const chargeableCbm = (quote.details.chargeableCbmOverride || 0) > 0
+      ? quote.details.chargeableCbmOverride
+      : Math.max(effectiveCbm, weightTons);
+    const containerCount = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
+    const isSeaFcl = quote.details.mode === 'fcl';
+
+    if (quote.details.mode === 'fcl') {
+      sellBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.rate || 0), 0);
+      buyBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.buy || 0), 0);
+    } else {
+      const RT = quote.details.lclChargeable || 0;
+      const sellRate = quote.details.mode === 'lcl' ? quote.details.lclRateApplied : quote.details.bbRateApplied;
+      const buyRate = quote.details.mode === 'lcl' ? quote.details.lclBuyRateApplied : quote.details.bbBuyRateApplied;
+      sellBaseFreight = RT * sellRate;
+      buyBaseFreight = RT * buyRate;
+    }
+    quote.details.baseFreight = sellBaseFreight;
+
+    (quote.details.surcharges || []).forEach(sch => {
+      const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
+      const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
+      const unit = sch.unit || 'flat';
+
+      if (unit === 'container') {
+        surchargeSell += isSeaFcl ? containerCount * sellRate : sellRate;
+        surchargeBuy += isSeaFcl ? containerCount * buyRate : buyRate;
+      } else if (unit === 'rt') {
+        surchargeSell += chargeableCbm * sellRate;
+        surchargeBuy += chargeableCbm * buyRate;
+      } else if (unit === 'kg') {
+        surchargeSell += weightKg * sellRate;
+        surchargeBuy += weightKg * buyRate;
+      } else {
+        surchargeSell += sellRate;
+        surchargeBuy += buyRate;
+      }
+    });
+    quote.details.surchargeTotal = surchargeSell;
+
+    quote.amount = sellBaseFreight + surchargeSell;
+    grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
+  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+    subtotalSell = 0;
+    subtotalBuy = 0;
+    (quote.details.items || []).forEach(item => {
+      subtotalSell += item.rate;
+      subtotalBuy += item.buyRate;
+    });
+    const taxSell = subtotalSell * 0.18;
+    quote.amount = subtotalSell + taxSell;
+    grossProfit = subtotalSell - subtotalBuy;
+  }
+
+  if (quote.currency !== 'INR') {
+    quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+  } else {
+    quote.amountINR = quote.amount;
+  }
+
+  quote.grossProfit = grossProfit;
+  quote.grossProfitCurrency = quote.currency;
+
+  let grossProfitINR = grossProfit;
+  if (quote.currency !== 'INR') {
+    grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
+  }
+  quote.grossProfitINR = grossProfitINR;
+
+  if (quote.type === 'air' || quote.type === 'sea') {
+    quote.buyRate = buyBaseFreight + surchargeBuy;
+  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+    quote.buyRate = subtotalBuy;
+  }
+  quote.buyRateCurrency = quote.currency;
+}
+window.recomputeQuoteFinancials = recomputeQuoteFinancials;
+
 async function submitWonBookingDetails(e) {
   e.preventDefault();
   const id = document.getElementById("won-quote-id").value;
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
+
+  // Quick Convert relaxes shipper/consignee/commodity/agreement requirements
+  // only — Buy/Sell rate validation and every calculation below run exactly
+  // the same regardless of this flag.
+  const isQuickConvert = document.getElementById("won-quick-convert-toggle")?.checked || false;
 
   const shipperName = document.getElementById("won-shipper-name").value.trim();
   const shipperPhone = document.getElementById("won-shipper-phone").value.trim();
@@ -11439,31 +12537,33 @@ async function submitWonBookingDetails(e) {
 
   const commodity = document.getElementById("won-commodity").value.trim();
 
-  if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress ||
-    !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
-    alert("Please fill all exporter, importer and cargo details to proceed.");
-    return;
-  }
+  if (!isQuickConvert) {
+    if (!shipperName || !shipperPhone || !shipperEmail || !shipperAddress ||
+      !consigneeName || !consigneePhone || !consigneeEmail || !consigneeAddress || !commodity) {
+      alert("Please fill all exporter, importer and cargo details to proceed.");
+      return;
+    }
 
-  // Validate contacts format
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-  const phoneRegex = /[0-9+\-\s()]{7,}/;
+    // Validate contacts format
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+    const phoneRegex = /[0-9+\-\s()]{7,}/;
 
-  if (!emailRegex.test(shipperEmail)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Exporter (Shipper).");
-    return;
-  }
-  if (!phoneRegex.test(shipperPhone)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Exporter (Shipper).");
-    return;
-  }
-  if (!emailRegex.test(consigneeEmail)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Importer (Consignee).");
-    return;
-  }
-  if (!phoneRegex.test(consigneePhone)) {
-    alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Importer (Consignee).");
-    return;
+    if (!emailRegex.test(shipperEmail)) {
+      alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Exporter (Shipper).");
+      return;
+    }
+    if (!phoneRegex.test(shipperPhone)) {
+      alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Exporter (Shipper).");
+      return;
+    }
+    if (!emailRegex.test(consigneeEmail)) {
+      alert("❌ COMPLIANCE ERROR: Please enter a valid Email ID for the Importer (Consignee).");
+      return;
+    }
+    if (!phoneRegex.test(consigneePhone)) {
+      alert("❌ COMPLIANCE ERROR: Please enter a valid Contact Number for the Importer (Consignee).");
+      return;
+    }
   }
 
   // Check agreement upload
@@ -11498,7 +12598,7 @@ async function submitWonBookingDetails(e) {
     fileName = file.name;
   }
 
-  if (!hasAgreement && !fileData) {
+  if (!isQuickConvert && !hasAgreement && !fileData) {
     const reason = prompt("❌ COMPLIANCE ALERT:\nAn Agency Agreement PDF upload is required to convert this quote to WON.\n\nPlease enter the reason for requesting an Admin (Ganny) agreement waiver/permission:");
     if (reason === null) return; // User cancelled
     if (!reason.trim()) {
@@ -11578,10 +12678,13 @@ async function submitWonBookingDetails(e) {
     const idx = parseInt(originSellInputs[i].getAttribute("data-index"));
     const sellVal = parseFloat(originSellInputs[i].value) || 0;
     const buyVal = parseFloat(document.querySelector(`.won-origin-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
-    if (sellVal <= 0 || buyVal <= 0) {
-      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+    if (sellVal <= 0) {
+      alert("Sell Rate is mandatory for every local fee heading before confirming a quotation.");
       return;
     }
+    // Buy Rate is intentionally allowed to be 0 here: some headings are added
+    // purely as extra profit margin with no real underlying cost, so unlike
+    // Sell Rate, Buy Rate is not required to be positive for these local fees.
     if (quote.details.originSurcharges && quote.details.originSurcharges[idx]) {
       quote.details.originSurcharges[idx].rate = sellVal;
       quote.details.originSurcharges[idx].cost = sellVal;
@@ -11594,10 +12697,13 @@ async function submitWonBookingDetails(e) {
     const idx = parseInt(destSellInputs[i].getAttribute("data-index"));
     const sellVal = parseFloat(destSellInputs[i].value) || 0;
     const buyVal = parseFloat(document.querySelector(`.won-dest-fee-buy-input[data-index="${idx}"]`)?.value) || 0;
-    if (sellVal <= 0 || buyVal <= 0) {
-      alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
+    if (sellVal <= 0) {
+      alert("Sell Rate is mandatory for every local fee heading before confirming a quotation.");
       return;
     }
+    // Buy Rate is intentionally allowed to be 0 here: some headings are added
+    // purely as extra profit margin with no real underlying cost, so unlike
+    // Sell Rate, Buy Rate is not required to be positive for these local fees.
     if (quote.details.destSurcharges && quote.details.destSurcharges[idx]) {
       quote.details.destSurcharges[idx].rate = sellVal;
       quote.details.destSurcharges[idx].cost = sellVal;
@@ -11618,7 +12724,12 @@ async function submitWonBookingDetails(e) {
   if (quote.type === 'air') {
     finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
     finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
-    if (finalSellRate <= 0 || finalBuyRate <= 0) {
+    // A quote with Airline / Carrier Tariffs deliberately excluded (client
+    // wants only local fees, e.g. destination clearance) has no freight
+    // rate to speak of — only enforce this when tariffs are actually part
+    // of the quote. Older quotes without this flag default to enabled,
+    // preserving today's behavior for them.
+    if (quote.details.tariffsEnabled !== false && (finalSellRate <= 0 || finalBuyRate <= 0)) {
       alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
       return;
     }
@@ -11691,111 +12802,7 @@ async function submitWonBookingDetails(e) {
   }
 
   // 4. Recalculate Totals & GP based on updated rates
-  let sellBaseFreight = 0;
-  let buyBaseFreight = 0;
-  let surchargeSell = 0;
-  let surchargeBuy = 0;
-  let grossProfit = 0;
-  let subtotalSell = 0;
-  let subtotalBuy = 0;
-
-  if (quote.type === 'air') {
-    const chargeableWeight = quote.details.chargeableWeight || 0;
-    sellBaseFreight = chargeableWeight * quote.details.appliedRate;
-    buyBaseFreight = chargeableWeight * quote.details.appliedBuyRate;
-
-    (quote.details.surcharges || []).forEach(sch => {
-      const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
-      const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
-      if (sch.unit === 'kg') {
-        surchargeSell += chargeableWeight * sellRate;
-        surchargeBuy += chargeableWeight * buyRate;
-      } else {
-        surchargeSell += sellRate;
-        surchargeBuy += buyRate;
-      }
-    });
-
-    quote.amount = sellBaseFreight + surchargeSell;
-    grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
-  } else if (quote.type === 'sea') {
-    const weightKg = quote.details.grossWeight || 0;
-    const weightTons = weightKg / 1000;
-    const cbm = quote.details.volumeCbm || 0;
-    const isLcl = quote.details.mode === 'lcl';
-    const effectiveCbm = (isLcl && cbm < 1.0) ? 1.0 : cbm;
-    const chargeableCbm = Math.max(effectiveCbm, weightTons);
-    const containerCount = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
-    const isSeaFcl = quote.details.mode === 'fcl';
-
-    if (quote.details.mode === 'fcl') {
-      sellBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.rate || 0), 0);
-      buyBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.buy || 0), 0);
-    } else {
-      const RT = quote.details.lclChargeable || 0;
-      const sellRate = quote.details.mode === 'lcl' ? quote.details.lclRateApplied : quote.details.bbRateApplied;
-      const buyRate = quote.details.mode === 'lcl' ? quote.details.lclBuyRateApplied : quote.details.bbBuyRateApplied;
-      sellBaseFreight = RT * sellRate;
-      buyBaseFreight = RT * buyRate;
-    }
-    quote.details.baseFreight = sellBaseFreight;
-
-    (quote.details.surcharges || []).forEach(sch => {
-      const sellRate = sch.rate !== undefined ? sch.rate : (sch.cost !== undefined ? sch.cost : 0);
-      const buyRate = sch.buyRate !== undefined ? sch.buyRate : 0;
-      const unit = sch.unit || 'flat';
-
-      if (unit === 'container') {
-        surchargeSell += isSeaFcl ? containerCount * sellRate : sellRate;
-        surchargeBuy += isSeaFcl ? containerCount * buyRate : buyRate;
-      } else if (unit === 'rt') {
-        surchargeSell += chargeableCbm * sellRate;
-        surchargeBuy += chargeableCbm * buyRate;
-      } else if (unit === 'kg') {
-        surchargeSell += weightKg * sellRate;
-        surchargeBuy += weightKg * buyRate;
-      } else {
-        surchargeSell += sellRate;
-        surchargeBuy += buyRate;
-      }
-    });
-    quote.details.surchargeTotal = surchargeSell;
-
-    quote.amount = sellBaseFreight + surchargeSell;
-    grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
-  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
-    subtotalSell = 0;
-    subtotalBuy = 0;
-    (quote.details.items || []).forEach(item => {
-      subtotalSell += item.rate;
-      subtotalBuy += item.buyRate;
-    });
-    const taxSell = subtotalSell * 0.18;
-    quote.amount = subtotalSell + taxSell;
-    grossProfit = subtotalSell - subtotalBuy;
-  }
-
-  if (quote.currency !== 'INR') {
-    quote.amountINR = quote.amount * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
-  } else {
-    quote.amountINR = quote.amount;
-  }
-
-  quote.grossProfit = grossProfit;
-  quote.grossProfitCurrency = quote.currency;
-
-  let grossProfitINR = grossProfit;
-  if (quote.currency !== 'INR') {
-    grossProfitINR = grossProfit * EXCHANGE_RATES[`${quote.currency}_TO_INR`];
-  }
-  quote.grossProfitINR = grossProfitINR;
-
-  if (quote.type === 'air' || quote.type === 'sea') {
-    quote.buyRate = buyBaseFreight + surchargeBuy;
-  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
-    quote.buyRate = subtotalBuy;
-  }
-  quote.buyRateCurrency = quote.currency;
+  recomputeQuoteFinancials(quote);
 
   // Do not mark the quote Converted/WON until every required buy/sell validation above has passed.
   quote.status = 'converted';
@@ -11831,7 +12838,8 @@ async function submitWonBookingDetails(e) {
       grossProfit: quote.grossProfit || 0,
       grossProfitINR: quote.grossProfitINR || 0,
       grossProfitCurrency: quote.grossProfitCurrency || quote.currency,
-      creator: quote.creator
+      creator: quote.creator,
+      pendingShipperDetails: isQuickConvert && (!shipperName || !consigneeName)
     };
 
     if (DB.firestoreRef) {
@@ -11866,7 +12874,9 @@ async function submitWonBookingDetails(e) {
       localStorage.setItem("nrs_alerts", JSON.stringify(alerts));
     }
 
-    alert("🎉 Booking successfully converted to WON and registered in NRS module!");
+    alert(nrsEntry.pendingShipperDetails
+      ? "🎉 Booking converted to WON with confirmed rates! A linked entry is now in the NRS registry — shipper/consignee details are still needed there."
+      : "🎉 Booking successfully converted to WON and registered in NRS module!");
     closeWonBookingModal();
 
     // Refresh active panel
@@ -12116,8 +13126,27 @@ function displayNrsRegistryItems(list) {
     return;
   }
 
-  // Sort by dateWon descending
-  const sorted = [...list].sort((a, b) => new Date(b.dateWon) - new Date(a.dateWon));
+  const nrsSortMode = document.getElementById("nrs-sort-select")?.value || 'dateWon';
+  const sorted = [...list].sort((a, b) => {
+    if (nrsSortMode === 'agent') {
+      const na = (a.agent || a.customer || '');
+      const nb = (b.agent || b.customer || '');
+      return na.localeCompare(nb);
+    }
+    if (nrsSortMode === 'followup') {
+      // Most recent follow-up first; bookings with none sort to the end.
+      const lastFollowUp = item => {
+        const fus = item.followUps || [];
+        if (fus.length === 0) return '';
+        return fus.reduce((latest, fu) => (fu.date || '') > latest ? (fu.date || '') : latest, '');
+      };
+      const fa = lastFollowUp(a) || '0000-00-00';
+      const fb = lastFollowUp(b) || '0000-00-00';
+      return fb.localeCompare(fa);
+    }
+    // 'dateWon' (default)
+    return new Date(b.dateWon) - new Date(a.dateWon);
+  });
 
   tbody.innerHTML = sorted.map(item => {
     const agentKey = (item.agent || item.customer || "").toLowerCase().trim();
@@ -12169,7 +13198,10 @@ function displayNrsRegistryItems(list) {
 
     return `
       <tr>
-        <td style="font-weight: 750; color: var(--sky); font-size: 0.72rem;">#${item.refId}</td>
+        <td style="font-weight: 750; color: var(--sky); font-size: 0.72rem;">
+          #${item.refId}
+          ${item.pendingShipperDetails ? `<span title="Shipper/consignee details still needed" style="display: block; margin-top: 3px; font-size: 0.6rem; font-weight: 800; color: #d97706; background: rgba(217, 119, 6, 0.1); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: 4px; padding: 1px 5px; white-space: nowrap;">⚠ Needs Details</span>` : ''}
+        </td>
         <td>
           <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isAir ? 'rgba(27,28,92,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${isAir ? 'var(--accent-air)' : 'var(--accent-sea)'}">
             ${nomMode}
@@ -12185,11 +13217,11 @@ function displayNrsRegistryItems(list) {
           </div>
         </td>
         <td>
-          <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.shipperName}</div>
+          <div style="font-weight: 750; font-size: 0.72rem; color: ${item.shipperName ? 'var(--t2)' : '#d97706'}; ${item.shipperName ? '' : 'font-style: italic;'}">${item.shipperName || 'Add shipper details'}</div>
           ${shipperSubtext}
         </td>
         <td>
-          <div style="font-weight: 750; font-size: 0.72rem; color: var(--t2);">${item.consigneeName}</div>
+          <div style="font-weight: 750; font-size: 0.72rem; color: ${item.consigneeName ? 'var(--t2)' : '#d97706'}; ${item.consigneeName ? '' : 'font-style: italic;'}">${item.consigneeName || 'Add consignee details'}</div>
           ${consigneeSubtext}
         </td>
         <td>
@@ -12219,8 +13251,11 @@ function displayNrsRegistryItems(list) {
         }
         return `
               ${badgeHtml}
-              <button onclick="openNrsFollowUpModal('${item.id}')" style="font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--sky); cursor: pointer; font-weight: 700; white-space: nowrap;" title="View / Add Follow-ups">
+              <button onclick="openNrsFollowUpModal('${item.id}')" style="font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-1); background: var(--bg-input); color: var(--sky); cursor: pointer; font-weight: 700; white-space: nowrap; margin-right: 4px;" title="View / Add Follow-ups">
                 📋 ${followUps.length > 0 ? followUps.length + ' note' + (followUps.length > 1 ? 's' : '') : 'Track'}
+              </button>
+              <button onclick="openNrsEditDetailsModal('${item.id}')" style="font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; border: 1px solid ${item.pendingShipperDetails ? '#d97706' : 'var(--border-1)'}; background: ${item.pendingShipperDetails ? 'rgba(217,119,6,0.08)' : 'var(--bg-input)'}; color: ${item.pendingShipperDetails ? '#d97706' : 'var(--sky)'}; cursor: pointer; font-weight: 700; white-space: nowrap;" title="Edit shipper/consignee/commodity details">
+                ✏️ ${item.pendingShipperDetails ? 'Add Details' : 'Edit'}
               </button>
             `;
       })()}
@@ -12431,6 +13466,86 @@ function closeNrsFollowUpModal() {
 }
 window.closeNrsFollowUpModal = closeNrsFollowUpModal;
 
+// Lets the NRS user fill in shipper/consignee/commodity on a booking that
+// was Quick Converted with rates only — a direct update to the nrs_registry
+// entry itself, entirely separate from the original quote/calculation data.
+function openNrsEditDetailsModal(itemId) {
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(i => i.id === itemId);
+  if (!item) {
+    alert('Booking record not found.');
+    return;
+  }
+
+  document.getElementById('nrs-edit-id').value = itemId;
+  document.getElementById('nrs-edit-details-title').textContent = `#${item.refId} — SHIPPER / CONSIGNEE DETAILS`;
+  document.getElementById('nrs-edit-shipper-name').value = item.shipperName || '';
+  document.getElementById('nrs-edit-shipper-phone').value = item.shipperPhone || '';
+  document.getElementById('nrs-edit-shipper-email').value = item.shipperEmail || '';
+  document.getElementById('nrs-edit-shipper-address').value = item.shipperAddress || '';
+  document.getElementById('nrs-edit-cnee-name').value = item.consigneeName || '';
+  document.getElementById('nrs-edit-cnee-phone').value = item.consigneePhone || '';
+  document.getElementById('nrs-edit-cnee-email').value = item.consigneeEmail || '';
+  document.getElementById('nrs-edit-cnee-address').value = item.consigneeAddress || '';
+  document.getElementById('nrs-edit-commodity').value = item.commodity || '';
+
+  const modal = document.getElementById('nrs-edit-details-modal');
+  if (modal) modal.style.display = 'flex';
+}
+window.openNrsEditDetailsModal = openNrsEditDetailsModal;
+
+function closeNrsEditDetailsModal() {
+  const modal = document.getElementById('nrs-edit-details-modal');
+  if (modal) modal.style.display = 'none';
+}
+window.closeNrsEditDetailsModal = closeNrsEditDetailsModal;
+
+async function saveNrsEditDetails(e) {
+  e.preventDefault();
+  const itemId = document.getElementById('nrs-edit-id').value;
+  const list = window._nrsRegistryCached || [];
+  const item = list.find(i => i.id === itemId);
+  if (!item) {
+    alert('Booking record not found.');
+    return;
+  }
+
+  const updates = {
+    shipperName: document.getElementById('nrs-edit-shipper-name').value.trim(),
+    shipperPhone: document.getElementById('nrs-edit-shipper-phone').value.trim(),
+    shipperEmail: document.getElementById('nrs-edit-shipper-email').value.trim(),
+    shipperAddress: document.getElementById('nrs-edit-shipper-address').value.trim(),
+    consigneeName: document.getElementById('nrs-edit-cnee-name').value.trim(),
+    consigneePhone: document.getElementById('nrs-edit-cnee-phone').value.trim(),
+    consigneeEmail: document.getElementById('nrs-edit-cnee-email').value.trim(),
+    consigneeAddress: document.getElementById('nrs-edit-cnee-address').value.trim(),
+    commodity: document.getElementById('nrs-edit-commodity').value.trim()
+  };
+  // Clears the "Needs Details" flag once both parties are filled in — stays
+  // set (and the badge stays visible) if only one side has been completed.
+  updates.pendingShipperDetails = !(updates.shipperName && updates.consigneeName);
+
+  Object.assign(item, updates);
+
+  try {
+    if (DB.firestoreRef) {
+      await DB.firestoreRef.collection('nrs_registry').doc(itemId).set(updates, { merge: true });
+    } else {
+      let offlineNrs = {};
+      try { offlineNrs = JSON.parse(localStorage.getItem('gl_nrs_registry') || '{}'); } catch (e) { }
+      offlineNrs[itemId] = { ...(offlineNrs[itemId] || {}), ...updates };
+      localStorage.setItem('gl_nrs_registry', JSON.stringify(offlineNrs));
+    }
+  } catch (err) {
+    console.error('Failed to save NRS booking details:', err);
+    alert('⚠️ Details saved locally but Firestore sync failed: ' + err.message);
+  }
+
+  closeNrsEditDetailsModal();
+  displayNrsRegistryItems(list);
+}
+window.saveNrsEditDetails = saveNrsEditDetails;
+
 // CREDIT CONTROL & COMPLIANCE HANDLERS
 window._uploadedAgreements = { air: null, sea: null };
 function handleAgreementUpload(mode, input) {
@@ -12465,6 +13580,14 @@ async function renderAdminCustomerControlList() {
 
   const tbody = document.getElementById("admin-customer-control-body");
   if (!tbody) return;
+
+  // This list lives inside the Admin Settings modal, which is rarely open —
+  // the customer_control Firestore listener called this on every write
+  // regardless, scanning every quote in the company just to rebuild a table
+  // sitting inside a closed modal. Skip that work until the modal is visible.
+  const settingsModal = document.getElementById("admin-settings-modal");
+  const isModalVisible = !!(settingsModal && settingsModal.style.display !== "none" && settingsModal.style.display !== "");
+  if (!isModalVisible) return;
 
   // Compile unique customers from quotes and controls
   let controls = window._customerControls || {};
@@ -12951,6 +14074,390 @@ async function runDbDiagnostics() {
 window.runDbDiagnostics = runDbDiagnostics;
 
 /* ══════════════════════════════════════════════════
+   SALES MODULE — Leads & Activities (Phase A)
+   Additive only: new "leads"/"activities" Firestore collections,
+   never reads or writes quotes, customer_control, or any pricing field.
+   ══════════════════════════════════════════════════ */
+window._salesStatusFilter = 'all';
+
+function ensureSalesDataLoaded() {
+  if ((!appState.leads || appState.leads.length === 0) && !DB.isCloud) {
+    try { appState.leads = JSON.parse(localStorage.getItem("gl_leads") || "[]"); } catch (e) { appState.leads = appState.leads || []; }
+  }
+  if ((!appState.activities || appState.activities.length === 0) && !DB.isCloud) {
+    try { appState.activities = JSON.parse(localStorage.getItem("gl_activities") || "[]"); } catch (e) { appState.activities = appState.activities || []; }
+  }
+}
+
+function getAllKnownCustomerNames() {
+  const names = new Set();
+  (appState.quotes || []).forEach(q => { if (q.customer) names.add(q.customer.trim()); });
+  const controls = window._customerControls || {};
+  Object.values(controls).forEach(c => { if (c && c.customer) names.add(c.customer.trim()); });
+  return Array.from(names).sort();
+}
+
+function populateLeadAssignedToSelect() {
+  const sel = document.getElementById("lead-assigned-to");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '';
+  Object.keys(TEAM_ROLES).forEach(roleId => {
+    if (roleId === 'ganny') return;
+    const opt = document.createElement("option");
+    opt.value = roleId;
+    opt.textContent = TEAM_ROLES[roleId]?.name || roleId;
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
+  else if (appState.currentUser && TEAM_ROLES[appState.currentUser]) sel.value = appState.currentUser;
+}
+
+function formatLeadStatus(status) {
+  const map = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', quoted: 'Quoted', won: 'Won', lost: 'Lost' };
+  return map[status] || 'New';
+}
+
+function lastActivityDateFor(relatedType, relatedId) {
+  const acts = (appState.activities || []).filter(a => a.relatedType === relatedType && a.relatedId === relatedId);
+  if (acts.length === 0) return null;
+  return acts.reduce((latest, a) => (!latest || (a.createdAt || '') > (latest.createdAt || '')) ? a : latest, null);
+}
+
+function renderSalesPanel() {
+  ensureSalesDataLoaded();
+  const body = document.getElementById("sales-leads-body");
+  if (!body) return;
+  // The leads Firestore listener calls this on every write, system-wide —
+  // skip the table rebuild when the Sales panel isn't the visible one, same
+  // fix applied to the Dashboard's admin/member render paths.
+  const salesPanel = document.getElementById("sales-panel");
+  if (!salesPanel || !salesPanel.classList.contains("active")) return;
+
+  const query = (document.getElementById("sales-search-input")?.value || "").toLowerCase().trim();
+  const statusFilter = window._salesStatusFilter || 'all';
+
+  let leads = [...(appState.leads || [])];
+
+  const filtered = leads.filter(lead => {
+    if (statusFilter !== 'all' && (lead.status || 'new') !== statusFilter) return false;
+    if (!query) return true;
+    const haystack = `${lead.company || ''} ${lead.contactName || ''} ${TEAM_ROLES[lead.assignedTo]?.name || lead.assignedTo || ''}`.toLowerCase();
+    return haystack.includes(query);
+  });
+
+  const salesSortMode = document.getElementById("sales-sort-select")?.value || 'newest';
+  filtered.sort((a, b) => {
+    if (salesSortMode === 'company') {
+      return (a.company || '').localeCompare(b.company || '');
+    }
+    if (salesSortMode === 'assigned') {
+      const na = TEAM_ROLES[a.assignedTo]?.name || a.assignedTo || '';
+      const nb = TEAM_ROLES[b.assignedTo]?.name || b.assignedTo || '';
+      return na.localeCompare(nb);
+    }
+    if (salesSortMode === 'activity') {
+      const la = lastActivityDateFor('lead', a.id)?.createdAt || '';
+      const lb = lastActivityDateFor('lead', b.id)?.createdAt || '';
+      return lb.localeCompare(la); // most recent activity first
+    }
+    // 'newest' (default)
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
+
+  if (filtered.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--t3); font-style: italic; padding: 2rem;">No leads match this view yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map(lead => {
+    const lastAct = lastActivityDateFor('lead', lead.id);
+    const assignedName = (TEAM_ROLES[lead.assignedTo]?.name || lead.assignedTo || '—');
+    const safeCompany = (lead.company || '').replace(/</g, '&lt;');
+    return `
+      <tr>
+        <td><strong>${safeCompany || '—'}</strong></td>
+        <td>${(lead.contactName || '—').replace(/</g, '&lt;')}</td>
+        <td><span class="status-badge ${lead.status || 'new'}">${formatLeadStatus(lead.status)}</span></td>
+        <td>${assignedName}</td>
+        <td>${lead.createdAt ? lead.createdAt.split('T')[0] : '—'}</td>
+        <td>${lastAct ? (lastAct.createdAt || '').split('T')[0] : '—'}</td>
+        <td>
+          <button type="button" onclick="openLeadDetailModal('${lead.id}')" style="font-size: 0.72rem; font-weight: 700; color: var(--sky); background: none; border: none; cursor: pointer; margin-right: 0.5rem;">View</button>
+          <button type="button" onclick="openLeadModal('${lead.id}')" style="font-size: 0.72rem; font-weight: 700; color: var(--t2); background: none; border: none; cursor: pointer; margin-right: 0.5rem;">Edit</button>
+          <button type="button" onclick="deleteLead('${lead.id}')" style="font-size: 0.72rem; font-weight: 700; color: var(--rose, #e11d48); background: none; border: none; cursor: pointer;">Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+window.renderSalesPanel = renderSalesPanel;
+
+function filterSalesLeads() {
+  renderSalesPanel();
+}
+window.filterSalesLeads = filterSalesLeads;
+
+function setSalesStatusFilter(status) {
+  window._salesStatusFilter = status;
+  document.querySelectorAll('#sales-status-tabs [data-sales-status]').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-sales-status') === status);
+  });
+  renderSalesPanel();
+}
+window.setSalesStatusFilter = setSalesStatusFilter;
+
+function openLeadModal(leadId) {
+  const modal = document.getElementById("lead-form-modal");
+  const form = document.getElementById("lead-form");
+  form.reset();
+  document.getElementById("lead-form-id").value = leadId || '';
+  populateLeadAssignedToSelect();
+
+  if (leadId) {
+    const lead = (appState.leads || []).find(l => l.id === leadId);
+    document.getElementById("lead-modal-title").textContent = "EDIT LEAD";
+    if (lead) {
+      document.getElementById("lead-company").value = lead.company || '';
+      document.getElementById("lead-contact-name").value = lead.contactName || '';
+      document.getElementById("lead-contact-phone").value = lead.contactPhone || '';
+      document.getElementById("lead-contact-email").value = lead.contactEmail || '';
+      document.getElementById("lead-source").value = lead.source || '';
+      document.getElementById("lead-notes").value = lead.notes || '';
+      document.getElementById("lead-assigned-to").value = lead.assignedTo || '';
+    }
+  } else {
+    document.getElementById("lead-modal-title").textContent = "ADD NEW LEAD";
+  }
+
+  modal.style.display = "flex";
+}
+window.openLeadModal = openLeadModal;
+
+function closeLeadModal() {
+  document.getElementById("lead-form-modal").style.display = "none";
+}
+window.closeLeadModal = closeLeadModal;
+
+async function saveLeadForm(event) {
+  event.preventDefault();
+  const leadId = document.getElementById("lead-form-id").value;
+  const leadData = {
+    company: document.getElementById("lead-company").value.trim(),
+    contactName: document.getElementById("lead-contact-name").value.trim(),
+    contactPhone: document.getElementById("lead-contact-phone").value.trim(),
+    contactEmail: document.getElementById("lead-contact-email").value.trim(),
+    source: document.getElementById("lead-source").value.trim(),
+    assignedTo: document.getElementById("lead-assigned-to").value,
+    notes: document.getElementById("lead-notes").value.trim(),
+  };
+
+  if (!leadData.company) { alert("Company name is required."); return; }
+
+  try {
+    if (leadId) {
+      if (DB.isCloud && DB.firestoreRef) {
+        await DB.firestoreRef.collection("leads").doc(leadId).update(leadData);
+      } else {
+        const idx = appState.leads.findIndex(l => l.id === leadId);
+        if (idx > -1) appState.leads[idx] = { ...appState.leads[idx], ...leadData };
+        localStorage.setItem("gl_leads", JSON.stringify(appState.leads));
+        renderSalesPanel();
+      }
+    } else {
+      leadData.status = 'new';
+      leadData.createdAt = new Date().toISOString();
+      leadData.createdBy = appState.currentUser || '';
+      if (DB.isCloud && DB.firestoreRef) {
+        await DB.firestoreRef.collection("leads").add(leadData);
+      } else {
+        leadData.id = 'L' + Math.random().toString(36).substr(2, 9);
+        appState.leads = appState.leads || [];
+        appState.leads.push(leadData);
+        localStorage.setItem("gl_leads", JSON.stringify(appState.leads));
+        renderSalesPanel();
+      }
+    }
+    closeLeadModal();
+  } catch (err) {
+    console.error("saveLeadForm error:", err);
+    alert("Could not save this lead. Please try again.");
+  }
+}
+window.saveLeadForm = saveLeadForm;
+
+async function deleteLead(leadId) {
+  const lead = (appState.leads || []).find(l => l.id === leadId);
+  if (!lead) return;
+  if (!confirm(`Delete the lead "${lead.company || 'this lead'}"? This only removes the lead record — any logged activity stays in its history and this cannot be undone.`)) return;
+
+  try {
+    if (DB.isCloud && DB.firestoreRef) {
+      await DB.firestoreRef.collection("leads").doc(leadId).delete();
+    } else {
+      appState.leads = (appState.leads || []).filter(l => l.id !== leadId);
+      localStorage.setItem("gl_leads", JSON.stringify(appState.leads));
+      renderSalesPanel();
+    }
+  } catch (err) {
+    console.error("deleteLead error:", err);
+    alert("Could not delete this lead. Please try again.");
+  }
+}
+window.deleteLead = deleteLead;
+
+// ---- Activity modal (shared between a Lead's detail view and logging against an existing Customer) ----
+window._activityModalMode = null; // 'lead' | 'customer'
+
+function renderActivityTimelineList(relatedType, relatedId) {
+  const list = document.getElementById("activity-timeline-list");
+  if (!list) return;
+  const acts = (appState.activities || [])
+    .filter(a => a.relatedType === relatedType && a.relatedId === relatedId)
+    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+  if (acts.length === 0) {
+    list.innerHTML = `<div style="color: var(--t3); font-style: italic; font-size: 0.8rem;">No activity logged yet.</div>`;
+    return;
+  }
+
+  const typeIcon = { call: '📞', email: '✉️', meeting: '🤝', 'follow-up': '⏰', note: '📝' };
+
+  list.innerHTML = acts.map(a => `
+    <div style="border: 1px solid var(--border-1); border-radius: 8px; padding: 0.6rem 0.75rem; background: var(--bg-input);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--t1);">${typeIcon[a.type] || '📝'} ${(a.type || 'note').replace('-', ' ')}</span>
+        <span style="font-size: 0.68rem; color: var(--t3);">${a.createdAt ? a.createdAt.split('T')[0] : ''}${a.dueDate ? ' · due ' + a.dueDate : ''}</span>
+      </div>
+      <div style="font-size: 0.8rem; color: var(--t2);">${(a.notes || '').replace(/</g, '&lt;')}</div>
+      <div style="font-size: 0.68rem; color: var(--t3); margin-top: 0.25rem;">— ${TEAM_ROLES[a.createdBy]?.name || a.createdBy || 'Unknown'}</div>
+    </div>
+  `).join('');
+}
+
+function renderActivityTimelineIfOpen() {
+  const modal = document.getElementById("activity-modal");
+  if (!modal || modal.style.display === 'none') return;
+  const relatedType = document.getElementById("activity-related-type").value;
+  const relatedId = document.getElementById("activity-related-id").value;
+  if (relatedType && relatedId) renderActivityTimelineList(relatedType, relatedId);
+}
+window.renderActivityTimelineIfOpen = renderActivityTimelineIfOpen;
+
+function openLeadDetailModal(leadId) {
+  const lead = (appState.leads || []).find(l => l.id === leadId);
+  if (!lead) return;
+
+  window._activityModalMode = 'lead';
+  document.getElementById("activity-customer-picker").style.display = "none";
+  document.getElementById("activity-lead-info").style.display = "block";
+  document.getElementById("activity-modal-subtitle").textContent = "Lead";
+  document.getElementById("activity-modal-title").textContent = lead.company || 'Lead';
+  document.getElementById("activity-lead-contact-line").textContent =
+    [lead.contactName, lead.contactPhone, lead.contactEmail].filter(Boolean).join(' · ') || 'No contact details on file';
+  document.getElementById("activity-lead-status").value = lead.status || 'new';
+  document.getElementById("activity-related-type").value = 'lead';
+  document.getElementById("activity-related-id").value = lead.id;
+
+  document.getElementById("activity-form").reset();
+  renderActivityTimelineList('lead', lead.id);
+  document.getElementById("activity-modal").style.display = "flex";
+}
+window.openLeadDetailModal = openLeadDetailModal;
+
+function populateActivityCustomerSelect() {
+  const sel = document.getElementById("activity-customer-select");
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Select a customer...</option>' +
+    getAllKnownCustomerNames().map(name => `<option value="${name.replace(/"/g, '&quot;')}">${name.replace(/</g, '&lt;')}</option>`).join('');
+}
+
+function openCustomerActivityModal() {
+  window._activityModalMode = 'customer';
+  document.getElementById("activity-lead-info").style.display = "none";
+  document.getElementById("activity-customer-picker").style.display = "block";
+  document.getElementById("activity-modal-subtitle").textContent = "Customer";
+  document.getElementById("activity-modal-title").textContent = "Select a customer";
+  document.getElementById("activity-related-type").value = 'customer';
+  document.getElementById("activity-related-id").value = '';
+
+  populateActivityCustomerSelect();
+  document.getElementById("activity-timeline-list").innerHTML = `<div style="color: var(--t3); font-style: italic; font-size: 0.8rem;">Choose a customer above to see their activity.</div>`;
+  document.getElementById("activity-form").reset();
+  document.getElementById("activity-modal").style.display = "flex";
+}
+window.openCustomerActivityModal = openCustomerActivityModal;
+
+function onActivityCustomerChange() {
+  const name = document.getElementById("activity-customer-select").value;
+  document.getElementById("activity-related-id").value = name;
+  document.getElementById("activity-modal-title").textContent = name || 'Select a customer';
+  if (name) renderActivityTimelineList('customer', name);
+}
+window.onActivityCustomerChange = onActivityCustomerChange;
+
+function closeActivityModal() {
+  document.getElementById("activity-modal").style.display = "none";
+}
+window.closeActivityModal = closeActivityModal;
+
+async function updateLeadStatusFromModal() {
+  const leadId = document.getElementById("activity-related-id").value;
+  const newStatus = document.getElementById("activity-lead-status").value;
+  if (!leadId) return;
+  try {
+    if (DB.isCloud && DB.firestoreRef) {
+      await DB.firestoreRef.collection("leads").doc(leadId).update({ status: newStatus });
+    } else {
+      const idx = appState.leads.findIndex(l => l.id === leadId);
+      if (idx > -1) appState.leads[idx].status = newStatus;
+      localStorage.setItem("gl_leads", JSON.stringify(appState.leads));
+      renderSalesPanel();
+    }
+  } catch (err) {
+    console.error("updateLeadStatusFromModal error:", err);
+  }
+}
+window.updateLeadStatusFromModal = updateLeadStatusFromModal;
+
+async function logActivityForm(event) {
+  event.preventDefault();
+  const relatedType = document.getElementById("activity-related-type").value;
+  const relatedId = document.getElementById("activity-related-id").value;
+  if (!relatedId) { alert("Select a customer first."); return; }
+
+  const activityData = {
+    relatedType,
+    relatedId,
+    type: document.getElementById("activity-type").value,
+    dueDate: document.getElementById("activity-due-date").value || null,
+    notes: document.getElementById("activity-notes").value.trim(),
+    createdBy: appState.currentUser || '',
+    createdAt: new Date().toISOString(),
+  };
+
+  if (!activityData.notes) { alert("Add a few words about this activity."); return; }
+
+  try {
+    if (DB.isCloud && DB.firestoreRef) {
+      await DB.firestoreRef.collection("activities").add(activityData);
+    } else {
+      activityData.id = 'A' + Math.random().toString(36).substr(2, 9);
+      appState.activities = appState.activities || [];
+      appState.activities.push(activityData);
+      localStorage.setItem("gl_activities", JSON.stringify(appState.activities));
+      renderActivityTimelineList(relatedType, relatedId);
+      renderSalesPanel();
+    }
+    document.getElementById("activity-form").reset();
+  } catch (err) {
+    console.error("logActivityForm error:", err);
+    alert("Could not save this activity. Please try again.");
+  }
+}
+window.logActivityForm = logActivityForm;
+
+/* ══════════════════════════════════════════════════
    DUAL-MODE OPERATIONAL MODULE HANDLERS
    ══════════════════════════════════════════════════ */
 function updateModuleTabs(activeModule) {
@@ -13082,22 +14589,28 @@ function getStandaloneRateSummary(module) {
   const tbody = document.getElementById(`${module}-standalone-body`);
   let subtotal = 0;
   let grossProfit = 0;
+  let usingBuyFallback = false;
   if (tbody) {
     tbody.querySelectorAll("tr").forEach(row => {
       const sell = parseFloat(row.querySelector(".chg-rate")?.value) || 0;
       const buy = parseFloat(row.querySelector(".chg-buy-rate")?.value) || 0;
+      // Quoting-stage rule (same as Air/Sea Freight): use whichever of
+      // Sell/Buy is entered for the interim total, tracked here so it can
+      // be shown as an "Interim Estimate" indicator rather than blended in
+      // silently.
       subtotal += sell > 0 ? sell : buy;
+      if (sell === 0 && buy > 0) usingBuyFallback = true;
       grossProfit += sell - buy;
     });
   }
   const gstEnabled = document.getElementById(`${module}-gst-enabled`)?.checked !== false;
   const tax = gstEnabled ? subtotal * 0.18 : 0;
   const total = subtotal + tax;
-  return { subtotal, tax, total, grossProfit, gstEnabled };
+  return { subtotal, tax, total, grossProfit, gstEnabled, usingBuyFallback };
 }
 
 function calculateTransportation() {
-  const { subtotal, tax, total, gstEnabled } = getStandaloneRateSummary("transport");
+  const { subtotal, tax, total, gstEnabled, usingBuyFallback } = getStandaloneRateSummary("transport");
 
   const cur = document.getElementById("transport-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : '£'));
@@ -13106,11 +14619,13 @@ function calculateTransportation() {
   if (document.getElementById("res-transport-tax-label")) document.getElementById("res-transport-tax-label").textContent = gstEnabled ? "GST / Service Tax (18%)" : "GST / Service Tax (Not applied)";
   if (document.getElementById("res-transport-tax")) document.getElementById("res-transport-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   if (document.getElementById("res-transport-total")) document.getElementById("res-transport-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  const transportFallbackEl = document.getElementById("transport-fallback-indicator");
+  if (transportFallbackEl) transportFallbackEl.style.display = usingBuyFallback ? "block" : "none";
 }
 window.calculateTransportation = calculateTransportation;
 
 function calculateWarehousing() {
-  const { subtotal, tax, total, gstEnabled } = getStandaloneRateSummary("warehouse");
+  const { subtotal, tax, total, gstEnabled, usingBuyFallback } = getStandaloneRateSummary("warehouse");
 
   const cur = document.getElementById("warehouse-currency")?.value || 'INR';
   const sym = cur === 'INR' ? '₹' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : (cur === 'GBP' ? '£' : (cur === 'AED' ? 'د.إ' : (cur === 'SGD' ? 'S$' : (cur === 'AUD' ? 'A$' : '¥'))))));
@@ -13119,6 +14634,8 @@ function calculateWarehousing() {
   if (document.getElementById("res-warehouse-tax-label")) document.getElementById("res-warehouse-tax-label").textContent = gstEnabled ? "GST / Service Tax (18%)" : "GST / Service Tax (Not applied)";
   if (document.getElementById("res-warehouse-tax")) document.getElementById("res-warehouse-tax").textContent = `${sym}${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   if (document.getElementById("res-warehouse-total")) document.getElementById("res-warehouse-total").textContent = `${sym}${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  const warehouseFallbackEl = document.getElementById("warehouse-fallback-indicator");
+  if (warehouseFallbackEl) warehouseFallbackEl.style.display = usingBuyFallback ? "block" : "none";
 }
 window.calculateWarehousing = calculateWarehousing;
 
@@ -13129,7 +14646,7 @@ window.injectModuleFeesToFreight = injectModuleFeesToFreight;
 
 async function saveStandaloneQuote(module) {
   const cur = document.getElementById(`${module}-currency`)?.value || 'INR';
-  const { subtotal, tax, total, grossProfit, gstEnabled } = getStandaloneRateSummary(module);
+  const { subtotal, tax, total, grossProfit, gstEnabled, usingBuyFallback } = getStandaloneRateSummary(module);
 
   // Read customer name from the dedicated input field (no blocking prompt needed)
   const customerNameField = document.getElementById(`${module}-customer-name`);
@@ -13221,7 +14738,7 @@ async function saveStandaloneQuote(module) {
   }
   // Note: Users can save with either Sell Rate or Buy Rate (or both) — no dual-rate requirement.
 
-  const quoteData = {
+  let quoteData = {
     id: 'Q' + Math.random().toString(36).substr(2, 9),
     date: new Date().toISOString().split('T')[0],
     customer: customerName,
@@ -13253,7 +14770,8 @@ async function saveStandaloneQuote(module) {
       gstEnabled: gstEnabled,
       gstRate: gstEnabled ? 18 : 0,
       baseFreight: subtotal,
-      gstAmount: tax
+      gstAmount: tax,
+      usingBuyFallback: !!usingBuyFallback
     },
     notes: `Calculated standalone. Subtotal: ${subtotal}, GST (${gstEnabled ? '18%' : 'not applied'}): ${tax}, Total: ${total} ${cur}`
   };
@@ -13262,11 +14780,19 @@ async function saveStandaloneQuote(module) {
     const existingIndex = appState.quotes.findIndex(q => q.id === appState.editingQuoteId);
     if (existingIndex !== -1) {
       const originalQuote = appState.quotes[existingIndex];
+      // Same rule as saveCurrentQuote(): merge onto the original document
+      // instead of replacing it, so status, WON confirmation, and any other
+      // field outside this form survive an amend — before or after WON.
+      quoteData = { ...originalQuote, ...quoteData };
+      quoteData.status = originalQuote.status || 'quoted';
       quoteData.id = originalQuote.id;
       quoteData.date = new Date().toISOString().split('T')[0];
       quoteData.creator = originalQuote.creator;
       quoteData.quoteNumber = originalQuote.quoteNumber || (existingIndex + 1);
-      quoteData.amendmentAllowed = false; // Lock it back!
+      // amendmentAllowed/amendmentUnlockedUntil are carried over from
+      // originalQuote by the spread above, not reset here — the unlock is
+      // time-limited (see approveAmendment / isAmendmentGrantActive) and is
+      // meant to survive multiple saves within its window, not just one.
 
       appState.editingQuoteId = null; // Clear edit mode
       const saved = await DB.saveQuote(quoteData);
@@ -13294,6 +14820,14 @@ window.convertToInr = convertToInr;
 // ═══════════════════════════════════════════════════════════
 // MODULE-LEVEL BROADCAST FUNCTIONS (accessible to all users)
 // ═══════════════════════════════════════════════════════════
+// Rebuilding this banner's innerHTML every 3-second poll \u2014 even when the
+// broadcast hadn't changed at all \u2014 was destroying and recreating its DOM
+// (including re-triggering its own CSS transition) every single cycle for
+// as long as a broadcast stayed active, for every user, on every page.
+// That's exactly what read as "flickering" across the whole app. Track
+// what was last painted and skip the rebuild when nothing's actually new.
+window._lastPaintedBroadcastKey = window._lastPaintedBroadcastKey || null;
+
 window.checkActiveBroadcast = function () {
   var broadcast = null;
   try {
@@ -13302,10 +14836,17 @@ window.checkActiveBroadcast = function () {
   } catch (e) { }
 
   if (!broadcast || !broadcast.active) {
+    window._lastPaintedBroadcastKey = null;
     var overlayEl = document.getElementById("system-broadcast-overlay");
     if (overlayEl) overlayEl.style.display = "none";
     return;
   }
+
+  var key = broadcast.type + '|' + broadcast.message;
+  if (key === window._lastPaintedBroadcastKey && document.getElementById("system-broadcast-overlay")) {
+    return; // same broadcast already painted \u2014 nothing to do this cycle
+  }
+  window._lastPaintedBroadcastKey = key;
 
   var overlay = document.getElementById("system-broadcast-overlay");
   if (!overlay) {
@@ -13380,34 +14921,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.updateResetIndicators) window.updateResetIndicators();
   };
 
-  let titleClicks = 0;
-  let titleTimer = null;
-  const titleEl = document.getElementById("pricing-desk-title");
-  if (titleEl) {
-    titleEl.onclick = function () {
-      titleClicks++;
-      clearTimeout(titleTimer);
-      titleTimer = setTimeout(() => {
-        titleClicks = 0;
-      }, 2000);
-
-      if (titleClicks >= 5) {
-        titleClicks = 0;
-        const passkey = prompt("Enter Admin Master Passkey:");
-        if (passkey === "MasterPricing2026") {
-          window.openAdminResetOverlay();
-          window.adminPanelActivated = true;
-          document.getElementById("admin-passkey-sec").style.display = "none";
-          document.getElementById("admin-inputs-sec").style.display = "block";
-          window.updateResetListInPanel();
-          window.updateResetIndicators();
-        } else if (passkey !== null) {
-          alert("❌ Invalid Passkey. Access Denied.");
-        }
-      }
-    };
-  }
-
   window.updateResetListInPanel = async function () {
     const listEl = document.getElementById("admin-pending-list");
     if (!listEl) return;
@@ -13440,6 +14953,17 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.executeForceReset = async function () {
+    // Defense in depth: the UI path to this function is now admin-only
+    // (opened from inside the authenticated Admin Settings Console), and the
+    // adminResetPassword Cloud Function independently re-checks this
+    // server-side — but reject here too in case this is ever invoked
+    // directly (e.g. from the browser console) by someone other than the
+    // logged-in admin.
+    if (appState.currentUser !== 'ganny') {
+      alert("Access denied. Only the admin account can reset passwords.");
+      return;
+    }
+
     const rawUser = document.getElementById("admin-target-user").value;
     const newPass = document.getElementById("admin-target-pass").value;
 
@@ -13652,10 +15176,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectEl = document.getElementById("report-user");
     if (!selectEl) return;
     selectEl.innerHTML = '<option value="all">👥 All Desks / Users</option>';
-    Object.keys(TEAM_ROLES).forEach(roleId => {
+    // Disambiguate before building options — same treatment as the other
+    // report-user populator (updateExecutiveDashboardVisibility), since two
+    // logins can share a display name (e.g. more than one "Free Hand Sales"
+    // account).
+    const roleIds = Object.keys(TEAM_ROLES);
+    const nameLookup = {};
+    roleIds.forEach(roleId => {
+      nameLookup[roleId] = { name: TEAM_ROLES[roleId]?.name || roleId };
+    });
+    if (typeof disambiguateDuplicateNames === 'function') disambiguateDuplicateNames(nameLookup);
+    roleIds.forEach(roleId => {
       const option = document.createElement("option");
       option.value = roleId;
-      option.textContent = TEAM_ROLES[roleId]?.name || roleId;
+      option.textContent = nameLookup[roleId].name;
       selectEl.appendChild(option);
     });
   };
@@ -14027,7 +15561,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const timeStr = `${hours}h ${minutes}m ${seconds}s`;
         el.innerHTML = `<span style="color: ${color}; font-weight: 600;" title="Editable without permission for ${timeStr}">${label} ${hours}h ${minutes}m left</span>`;
       } else {
-        if (quote && quote.amendmentAllowed) {
+        if (quote && isAmendmentGrantActive(quote)) {
           el.innerHTML = '<span style="color: var(--accent-success); font-weight: 600;" title="Unlocked by Admin approval">🔓 Unlocked</span>';
         } else {
           el.innerHTML = '<span style="color: var(--text-muted); font-size: 0.65rem;" title="Edit window expired. Request permission to edit.">🔒 Locked</span>';
@@ -14079,15 +15613,18 @@ function collapseAllDirNodes() {
   window._dirCollapsedNodes.clear();
 
   if (window._dirGrouping === 'agents') {
+    // Keyed by each agent's stable role ID, not their display name — the
+    // display name is loaded live from Firestore and can arrive or change
+    // after this runs, which used to leave that agent's node expanded
+    // because the key computed here no longer matched the key computed at
+    // render time.
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (roleId === 'ganny' || roleId === 'manager') return;
-      const agentName = TEAM_ROLES[roleId].name || roleId;
-      window._dirCollapsedNodes.add(`agent_${agentName}`);
+      window._dirCollapsedNodes.add(`agent_${roleId}`);
     });
     quotes.forEach(q => {
-      const creator = q.creator || 'unknown';
-      const agentName = TEAM_ROLES[creator.toLowerCase()]?.name || q.creator || 'Unknown';
-      window._dirCollapsedNodes.add(`agent_${agentName}`);
+      const creator = (q.creator || 'unknown').toLowerCase();
+      window._dirCollapsedNodes.add(`agent_${creator}`);
     });
   } else {
     const allCustomers = Array.from(new Set([
@@ -14111,15 +15648,15 @@ function toggleDirGrouping(mode) {
   if (btnAgents && btnCustomers) {
     if (mode === 'agents') {
       btnAgents.classList.add("active");
-      btnAgents.style.background = "var(--sky)";
-      btnAgents.style.color = "#fff";
+      btnAgents.style.background = "#eaf0ff";
+      btnAgents.style.color = "#1d3187";
       btnCustomers.classList.remove("active");
       btnCustomers.style.background = "transparent";
       btnCustomers.style.color = "var(--t2)";
     } else {
       btnCustomers.classList.add("active");
-      btnCustomers.style.background = "var(--sky)";
-      btnCustomers.style.color = "#fff";
+      btnCustomers.style.background = "#eaf0ff";
+      btnCustomers.style.color = "#1d3187";
       btnAgents.classList.remove("active");
       btnAgents.style.background = "transparent";
       btnAgents.style.color = "var(--t2)";
@@ -14150,6 +15687,18 @@ function selectDirectoryItem(type, name) {
   showDirectoryItemDetails(type, name);
 }
 window.selectDirectoryItem = selectDirectoryItem;
+
+// Quote-count badges in the directory tree previously all used one flat
+// neutral color regardless of volume, so the busiest desk (hundreds of
+// quotes) looked visually identical to one with a single quote. Color the
+// badge by its share of the current list's max count instead.
+function getDirCountBadgeStyle(count, maxCount) {
+  if (maxCount <= 0 || count <= 0) return { bg: 'var(--border-2)', color: 'var(--t2)' };
+  const ratio = count / maxCount;
+  if (ratio >= 0.5) return { bg: 'rgba(46,204,113,0.15)', color: 'var(--accent-success)' };
+  if (ratio >= 0.15) return { bg: 'rgba(14,165,233,0.15)', color: 'var(--sky)' };
+  return { bg: 'var(--border-2)', color: 'var(--t2)' };
+}
 
 function updateAdminDirectoryView() {
   const listContainer = document.getElementById("dir-list-container");
@@ -14197,6 +15746,7 @@ function updateAdminDirectoryView() {
     // Build HTML
     let html = '';
     const sortedAgents = Object.keys(agentMap).sort();
+    const maxAgentQuotes = Math.max(...Object.values(agentMap).map(d => d.quotesCount), 0);
 
     let filteredCount = 0;
     sortedAgents.forEach(agentName => {
@@ -14212,8 +15762,9 @@ function updateAdminDirectoryView() {
         const isSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'agent' && window._dirSelectedItem.name === agentName;
         const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
         const border = isSelected ? 'var(--sky)' : 'transparent';
+        const countBadge = getDirCountBadgeStyle(data.quotesCount, maxAgentQuotes);
 
-        const nodeKey = `agent_${agentName}`;
+        const nodeKey = `agent_${String(data.roleId || agentName).toLowerCase()}`;
         const isCollapsed = window._dirCollapsedNodes.has(nodeKey);
         const arrow = isCollapsed ? '▶' : '▼';
         const displayStyle = isCollapsed ? 'none' : 'flex';
@@ -14228,7 +15779,7 @@ function updateAdminDirectoryView() {
                 <span>👤</span>
                 <span>${agentName}</span>
               </div>
-              <span style="font-size: 0.7rem; background: var(--border-2); color: var(--t2); padding: 2px 6px; border-radius: 10px; font-weight: 600;">${data.quotesCount} Quotes</span>
+              <span style="font-size: 0.7rem; background: ${countBadge.bg}; color: ${countBadge.color}; padding: 2px 6px; border-radius: 10px; font-weight: 600;">${data.quotesCount} Quotes</span>
             </div>
             
             <!-- Children (Customers under this Agent) -->
@@ -14264,9 +15815,9 @@ function updateAdminDirectoryView() {
 
     // Populate unique customers from quotes and controls
     const allCustomers = Array.from(new Set([
-      ...quotes.map(q => q.customer.trim()),
-      ...Object.values(controls).map(c => c.customer.trim())
-    ]));
+      ...quotes.map(q => (q.customer || '').trim()),
+      ...Object.values(controls).map(c => (c.customer || '').trim())
+    ].filter(Boolean)));
 
     allCustomers.forEach(cust => {
       customerMap[cust] = {
@@ -14289,6 +15840,7 @@ function updateAdminDirectoryView() {
 
     let html = '';
     const sortedCusts = Object.keys(customerMap).sort();
+    const maxCustQuotes = Math.max(...Object.values(customerMap).map(d => d.quotesCount), 0);
     let filteredCount = 0;
 
     sortedCusts.forEach(cust => {
@@ -14303,6 +15855,7 @@ function updateAdminDirectoryView() {
         const isSelected = window._dirSelectedItem && window._dirSelectedItem.type === 'customer' && window._dirSelectedItem.name === cust;
         const bg = isSelected ? 'rgba(14, 165, 233, 0.15)' : 'transparent';
         const border = isSelected ? 'var(--sky)' : 'transparent';
+        const countBadge = getDirCountBadgeStyle(data.quotesCount, maxCustQuotes);
 
         const nodeKey = `customer_${cust}`;
         const isCollapsed = window._dirCollapsedNodes.has(nodeKey);
@@ -14319,7 +15872,7 @@ function updateAdminDirectoryView() {
                 <span>🏢</span>
                 <span style="max-width: 170px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${cust}</span>
               </div>
-              <span style="font-size: 0.7rem; background: var(--border-2); color: var(--t2); padding: 2px 6px; border-radius: 10px; font-weight: 600;">${data.quotesCount} Quotes</span>
+              <span style="font-size: 0.7rem; background: ${countBadge.bg}; color: ${countBadge.color}; padding: 2px 6px; border-radius: 10px; font-weight: 600;">${data.quotesCount} Quotes</span>
             </div>
             
             <!-- Children (Agents under this Customer) -->
@@ -14981,26 +16534,50 @@ let importedExcelRows = [];
 const fallbackContacts = [];
 
 // Overseas Agents Directory can be changed by Admin, Air Nomination, Sea Nomination
+// Overseas Agents can be modified only by Admin and whoever currently holds
+// the Air/Sea Nomination role — checked by category rather than a hardcoded
+// username, so this keeps working correctly if a different person takes
+// over that desk later without needing another code change.
 function canEditAgentsDirectory() {
   const currentRole = getActiveRole()?.toLowerCase();
   const currentUser = (appState.currentUser || "").toLowerCase();
+  const category = TEAM_ROLES[currentRole]?.category;
   return currentUser === 'ganny' ||
     currentRole === 'manager' ||
-    currentRole === 'shashank' ||
-    currentRole === 'shaheer';
+    category === 'AIR - NOMINATION' ||
+    category === 'SEA - NOMINATION';
 }
 window.canEditAgentsDirectory = canEditAgentsDirectory;
 
-// Vendor Contacts Directory can be viewed & changed *only* by Admin, Air Nomination, Sea Nomination, FreeHand, and NRS
+// Weekly Agency List recipients — same edit-rights holders as the Agents
+// Directory above (Admin, Air Nomination, Sea Nomination), since it's the
+// same desk duty being automated: compiling and circulating the weekly
+// agency list to PAN-India branch offices.
+function canManageAgencyListRecipients() {
+  const currentRole = getActiveRole()?.toLowerCase();
+  const currentUser = (appState.currentUser || "").toLowerCase();
+  const category = TEAM_ROLES[currentRole]?.category;
+  return currentUser === 'ganny' ||
+    currentRole === 'manager' ||
+    category === 'AIR - NOMINATION' ||
+    category === 'SEA - NOMINATION';
+}
+window.canManageAgencyListRecipients = canManageAgencyListRecipients;
+
+// Vendor Contacts can be modified only by Admin, Air/Sea Nomination, NRS,
+// and Free Hand Sales — checked by category, not a hardcoded username, so
+// this covers whoever currently holds the Free Hand Sales desk (e.g. once
+// a new hire's account is created under that same category) automatically.
 function canAccessVendorsDirectory() {
   const currentRole = getActiveRole()?.toLowerCase();
   const currentUser = (appState.currentUser || "").toLowerCase();
+  const category = TEAM_ROLES[currentRole]?.category;
   return currentUser === 'ganny' ||
     currentRole === 'manager' ||
-    currentRole === 'shashank' ||
-    currentRole === 'shaheer' ||
-    currentRole === 'jaya' ||
-    currentRole === 'cathrina';
+    category === 'AIR - NOMINATION' ||
+    category === 'SEA - NOMINATION' ||
+    category === 'FREE HAND SALES (AIR/SEA)' ||
+    category === 'NRS (AIR/SEA)';
 }
 window.canAccessVendorsDirectory = canAccessVendorsDirectory;
 
@@ -15025,12 +16602,6 @@ function setDirectoryParent(parent) {
     }
   });
 
-  // The subfilters container is now used by both Agents and Vendors
-  const subfilters = document.getElementById("directory-subfilters-container");
-  if (subfilters) {
-    subfilters.style.display = 'flex';
-  }
-
   // Reset active category to all when switching parent
   activeDirectoryCategory = 'all';
 
@@ -15039,9 +16610,57 @@ function setDirectoryParent(parent) {
     renderDirectoryTabs();
   }
 
+  // Add/Import/Reset button visibility and labels ("Reset Vendors" vs
+  // "Reset Agents") depend on activeDirectoryParent — refresh them here too,
+  // not just on initial panel load, otherwise the Reset button label goes
+  // stale after switching tabs (the delete logic itself always reads the
+  // live activeDirectoryParent, so this was a label-only bug, not a data one).
+  refreshDirectoryActionButtons();
+
   renderDirectoryContacts();
 }
 window.setDirectoryParent = setDirectoryParent;
+
+// Show/hide + label the Add Contact / Excel Import / Reset buttons for the
+// currently active directory tab. Shared by loadDirectoryContacts() (initial
+// panel load) and setDirectoryParent() (tab switch) so the labels never go stale.
+function refreshDirectoryActionButtons() {
+  const canAccessVendors = canAccessVendorsDirectory();
+
+  let allowedToEdit = false;
+  if (activeDirectoryParent === 'agents') {
+    allowedToEdit = canEditAgentsDirectory();
+  } else {
+    allowedToEdit = canAccessVendors; // Vendor list edit rights match access rights
+  }
+
+  const addBtn = document.getElementById("dir-add-contact-btn");
+  const importBtn = document.getElementById("dir-import-excel-btn");
+  const resetBtn = document.getElementById("dir-reset-btn");
+  if (addBtn) addBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
+  if (importBtn) importBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
+
+  const isAdmin = isAdminUser(appState.currentUser);
+  if (resetBtn) {
+    resetBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (activeDirectoryParent === 'agents') {
+      resetBtn.innerHTML = '<span>🗑️</span> Reset Agents';
+    } else {
+      resetBtn.innerHTML = '<span>🗑️</span> Reset Vendors';
+    }
+  }
+
+  // Each tab gets its own sort dropdown — only one is ever visible at a time.
+  const vendorSortSelect = document.getElementById("dir-vendor-sort");
+  if (vendorSortSelect) {
+    vendorSortSelect.style.display = (activeDirectoryParent === 'vendors') ? 'inline-block' : 'none';
+  }
+  const agentSortSelect = document.getElementById("dir-agent-sort");
+  if (agentSortSelect) {
+    agentSortSelect.style.display = (activeDirectoryParent === 'agents') ? 'inline-block' : 'none';
+  }
+}
+window.refreshDirectoryActionButtons = refreshDirectoryActionButtons;
 
 // Load contacts from Firestore (with LocalStorage caching fallback)
 async function loadDirectoryContacts() {
@@ -15071,29 +16690,8 @@ async function loadDirectoryContacts() {
     }
   }
 
-  // Manage visibility of edit/add controls based on role permissions and active context
-  let allowedToEdit = false;
-  if (activeDirectoryParent === 'agents') {
-    allowedToEdit = canEditAgentsDirectory();
-  } else {
-    allowedToEdit = canAccessVendors; // Vendor list edit rights match access rights
-  }
-
-  const addBtn = document.getElementById("dir-add-contact-btn");
-  const importBtn = document.getElementById("dir-import-excel-btn");
-  const resetBtn = document.getElementById("dir-reset-btn");
-  if (addBtn) addBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
-  if (importBtn) importBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
-
-  const isAdmin = isAdminUser(appState.currentUser);
-  if (resetBtn) {
-    resetBtn.style.display = isAdmin ? 'inline-flex' : 'none';
-    if (activeDirectoryParent === 'agents') {
-      resetBtn.innerHTML = '<span>🗑️</span> Reset Agents';
-    } else {
-      resetBtn.innerHTML = '<span>🗑️</span> Reset Vendors';
-    }
-  }
+  // Manage visibility/labels of edit/add/reset controls for the active context
+  refreshDirectoryActionButtons();
 
   try {
     grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
@@ -15138,6 +16736,10 @@ async function loadDirectoryContacts() {
 }
 window.loadDirectoryContacts = loadDirectoryContacts;
 
+// Shared between renderDirectoryContacts() and populateDirectoryQuickJump()
+// — must live at module scope, not inside either function, since both need it.
+const DIR_SUSPENDED_KEY = '__SUSPENDED__';
+
 // Render directory contacts onto grid with sorting/filtering
 function renderDirectoryContacts() {
   const grid = document.getElementById("directory-contacts-grid");
@@ -15151,6 +16753,34 @@ function renderDirectoryContacts() {
     allowedToEdit = canEditAgentsDirectory();
   } else {
     allowedToEdit = canAccessVendorsDirectory();
+  }
+
+  // Quick-glance summary strip — reflects the whole section, independent of
+  // the current search/tab filter, so it reads as a stable "at a glance"
+  // view rather than jumping around as someone types.
+  const statStrip = document.getElementById("directory-stat-strip");
+  if (statStrip) {
+    if (activeDirectoryParent === 'agents') {
+      const allAgents = directoryContacts.filter(c => c.category === 'agency');
+      const activeAgentsList = allAgents.filter(c => !c.suspended);
+      const countries = new Set(activeAgentsList.map(c => (c.location || '').trim()).filter(Boolean));
+      const suspendedCount = allAgents.length - activeAgentsList.length;
+      const withAgreement = activeAgentsList.filter(c => /^y/i.test(c.agreement || '')).length;
+      const agreementPct = activeAgentsList.length > 0 ? Math.round((withAgreement / activeAgentsList.length) * 100) : 0;
+      statStrip.innerHTML = `
+        <div class="dir-stat-cell"><div class="dir-stat-num">${activeAgentsList.length}</div><div class="dir-stat-label">Active Agents</div></div>
+        <div class="dir-stat-cell"><div class="dir-stat-num">${countries.size}</div><div class="dir-stat-label">Countries</div></div>
+        <div class="dir-stat-cell"><div class="dir-stat-num">${agreementPct}%</div><div class="dir-stat-label">Agreement on File</div></div>
+        <div class="dir-stat-cell"><div class="dir-stat-num" style="${suspendedCount > 0 ? 'color:#be123c;' : ''}">${suspendedCount}</div><div class="dir-stat-label">Suspended</div></div>
+      `;
+    } else {
+      const allVendors = directoryContacts.filter(c => c.category !== 'agency');
+      const groups = new Set(allVendors.map(c => c.sheetGroup || c.category || '').filter(Boolean));
+      statStrip.innerHTML = `
+        <div class="dir-stat-cell"><div class="dir-stat-num">${allVendors.length}</div><div class="dir-stat-label">Vendor Contacts</div></div>
+        <div class="dir-stat-cell"><div class="dir-stat-num">${groups.size}</div><div class="dir-stat-label">Categories</div></div>
+      `;
+    }
   }
 
   // Filter
@@ -15187,8 +16817,65 @@ function renderDirectoryContacts() {
     return true;
   });
 
-  // Sort alphabetically by Company/Contact Name
-  filtered.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  // Overseas Agents group by country (then highest-rated first, then name),
+  // with suspended agents pulled into their own section at the end —
+  // browsing 450+ agents flat was the whole reason this felt unorganized.
+  // Vendor Contacts stay a flat alphabetical grid (already filterable by
+  // the sheet tabs above).
+  const groupKeyFor = (c) => {
+    if (activeDirectoryParent !== 'agents') return null;
+    if (c.suspended) return DIR_SUSPENDED_KEY;
+    return (c.location || '').trim() || 'Unspecified Location';
+  };
+
+  // Set (not just read) by the agents branch below — the header-rendering
+  // loop further down checks this to decide whether to print country headers.
+  let showAgentGroupHeaders = true;
+
+  if (activeDirectoryParent === 'agents') {
+    const byRatingThenName = (a, b) => {
+      const ratingDiff = (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      return (a.name || "").localeCompare(b.name || "");
+    };
+    const agentSortMode = document.getElementById("dir-agent-sort")?.value || 'location';
+    showAgentGroupHeaders = (agentSortMode === 'location');
+
+    const active = filtered.filter(c => !c.suspended).sort((a, b) => {
+      if (agentSortMode === 'name') {
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (agentSortMode === 'rating') {
+        return byRatingThenName(a, b);
+      }
+      // 'location' (default) — grouped by country, then highest-rated first
+      const countryDiff = groupKeyFor(a).localeCompare(groupKeyFor(b));
+      return countryDiff !== 0 ? countryDiff : byRatingThenName(a, b);
+    });
+    const suspended = filtered.filter(c => c.suspended).sort(byRatingThenName);
+    filtered = active.concat(suspended); // suspended agents always sit in their own section at the end
+  } else {
+    // Vendor Contacts — defaults to category-then-name (the same order the
+    // source workbook had, one sheet per category), but the sort dropdown
+    // lets the user switch to a flat company/branch order instead.
+    const vendorSortMode = document.getElementById("dir-vendor-sort")?.value || 'category';
+    filtered.sort((a, b) => {
+      if (vendorSortMode === 'name-asc') {
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (vendorSortMode === 'name-desc') {
+        return (b.name || "").localeCompare(a.name || "");
+      }
+      if (vendorSortMode === 'branch') {
+        const brDiff = (a.location || "").localeCompare(b.location || "");
+        return brDiff !== 0 ? brDiff : (a.name || "").localeCompare(b.name || "");
+      }
+      const catA = a.sheetGroup || a.category || '';
+      const catB = b.sheetGroup || b.category || '';
+      const catDiff = catA.localeCompare(catB);
+      return catDiff !== 0 ? catDiff : (a.name || "").localeCompare(b.name || "");
+    });
+  }
 
   if (filtered.length === 0) {
     grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--t3); font-style: italic; background: rgba(255,255,255,0.02); border-radius: var(--r-md); border: 1px dashed var(--border-2);">
@@ -15198,14 +16885,111 @@ function renderDirectoryContacts() {
     return;
   }
 
+  if (activeDirectoryParent !== 'agents') {
+    grid.className = 'dir-vendor-table-wrap';
+    const currentVendorSortMode = document.getElementById("dir-vendor-sort")?.value || 'category';
+    grid.innerHTML = buildVendorTableHtml(filtered, allowedToEdit, currentVendorSortMode === 'category');
+    populateDirectoryQuickJump();
+    if (typeof updateDirBulkBar === 'function') updateDirBulkBar();
+    const searchInputEarly = document.getElementById("directory-search-input");
+    if (searchInputEarly) {
+      searchInputEarly.placeholder = (activeDirectoryCategory && activeDirectoryCategory !== 'all')
+        ? `Search within ${activeDirectoryCategory}...`
+        : "Search by company, contact, email, phone, or location...";
+    }
+    return;
+  }
+  grid.className = 'dir-contacts-grid';
+
+  // Pre-count each group so its header can show "(N)" without a second pass.
+  const groupCounts = {};
+  filtered.forEach(c => {
+    const k = groupKeyFor(c);
+    groupCounts[k] = (groupCounts[k] || 0) + 1;
+  });
+
   let html = "";
+  let lastGroupKey = undefined;
   filtered.forEach(contact => {
+    const key = groupKeyFor(contact);
+    const isSuspendedGroup = key === DIR_SUSPENDED_KEY;
+    // Country headers are suppressed for a flat sort (name/rating), but the
+    // Suspended divider always shows — it's a do-not-book safety flag, not
+    // just an organizational grouping.
+    if ((showAgentGroupHeaders || isSuspendedGroup) && key !== lastGroupKey) {
+      lastGroupKey = key;
+      const title = isSuspendedGroup ? '🚫 Suspended — Do Not Book' : `🌍 ${key}`;
+      html += `<div class="dir-group-header${isSuspendedGroup ? ' dir-group-suspended' : ''}" id="${dirGroupIdFor(key)}">
+        <span class="dir-group-title">${title}</span>
+        <span class="dir-group-count">${groupCounts[key]}</span>
+      </div>`;
+    }
     const escNotes = (contact.notes || "").replace(/"/g, "&quot;");
 
     // Display sheetGroup if available, otherwise fallback to category label
     let categoryLabel = contact.sheetGroup || contact.category || "CONTACT";
     categoryLabel = categoryLabel.toUpperCase();
     if (categoryLabel === 'AGENCY') categoryLabel = 'OVERSEAS AGENT';
+
+    // Overseas Agents carry a few fields Vendor Contacts don't — a star
+    // rating, Air/Sea coverage, agency agreement status, and credit terms —
+    // surfaced here so the list is scannable at a glance instead of
+    // requiring a click into every card to find the one detail that matters.
+    const isAgencyCard = contact.category === 'agency';
+    let ratingHtml = '';
+    if (isAgencyCard && contact.rating) {
+      const full = Math.max(0, Math.min(5, Number(contact.rating) || 0));
+      ratingHtml = `<div class="agent-rating" title="${full} star rating">${'★'.repeat(full)}${'☆'.repeat(5 - full)}</div>`;
+    }
+    let moduleHtml = '';
+    if (isAgencyCard && contact.moduleType) {
+      const mt = contact.moduleType.toLowerCase();
+      const hasAir = mt.includes('air');
+      const hasSea = mt.includes('sea');
+      const moduleLabel = hasAir && hasSea ? 'Air & Sea' : hasAir ? 'Air' : hasSea ? 'Sea' : contact.moduleType;
+      moduleHtml = `<span class="agent-module-pill">${moduleLabel}</span>`;
+    }
+    // Agreement is now an actual action, not just a status pill: download the
+    // attached PDF if one's on file, or upload one if you have edit rights
+    // and none exists yet. Falls back to the plain Y/N text from the import
+    // for everyone else, so the information isn't lost for read-only users.
+    let agreementActionHtml = '';
+    if (isAgencyCard) {
+      const hasDoc = !!contact.agreementData;
+      const hasAgreementFlag = contact.agreement ? /^y/i.test(contact.agreement) : null;
+      if (hasDoc) {
+        agreementActionHtml = `<button type="button" class="agent-agreement-action has-doc" onclick="downloadAgentAgreement('${contact.id}')">📄 Download Agreement</button>`;
+      } else if (allowedToEdit) {
+        agreementActionHtml = `<button type="button" class="agent-agreement-action no-doc" onclick="triggerAgentAgreementUpload('${contact.id}')">⬆ Upload Agreement</button>`;
+      } else if (hasAgreementFlag === true) {
+        agreementActionHtml = `<span class="agent-agreement-pill agreement-yes">✓ Agreement on File</span>`;
+      } else if (hasAgreementFlag === false) {
+        agreementActionHtml = `<span class="agent-agreement-pill agreement-no">⚠ No Agreement</span>`;
+      }
+    }
+
+    // "30d & 30000" from the import splits into two clean stats when it
+    // matches that shape; anything else just falls back to showing the raw
+    // text rather than guessing wrong.
+    let creditHtml = '';
+    if (isAgencyCard && contact.creditTerms) {
+      const parsed = parseCreditTerms(contact.creditTerms);
+      creditHtml = parsed
+        ? `<div class="agent-credit-stats">
+            <div class="agent-credit-stat"><div class="val">${parsed.days}d</div><div class="lbl">Credit Period</div></div>
+            <div class="agent-credit-stat"><div class="val">${parsed.limit}</div><div class="lbl">Credit Limit</div></div>
+          </div>`
+        : `<div class="agent-credit-line"><strong>Credit:</strong> ${contact.creditTerms}</div>`;
+    }
+
+    const suspendedBannerHtml = contact.suspended
+      ? `<div class="agent-suspended-banner">🚫 SUSPENDED — do not book via this agent</div>`
+      : '';
+
+    const checkboxHtml = isAgencyCard
+      ? `<input type="checkbox" class="dir-select-checkbox" onclick="event.stopPropagation(); toggleAgentSelection('${contact.id}', this.checked)" ${(window._selectedAgentIds && window._selectedAgentIds.has(contact.id)) ? 'checked' : ''}>`
+      : '';
+    const isSelected = isAgencyCard && window._selectedAgentIds && window._selectedAgentIds.has(contact.id);
 
     // Admin action buttons (Edit/Delete) - visible only if allowed to edit
     const adminActionsHtml = allowedToEdit ? `
@@ -15249,15 +17033,20 @@ function renderDirectoryContacts() {
     ` : '';
 
     html += `
-      <div class="contact-card">
+      <div class="contact-card cat-${contact.category || 'other'}${contact.suspended ? ' contact-card-suspended' : ''}${isSelected ? ' dir-card-selected' : ''}">
+        ${checkboxHtml}
         <div>
+          ${suspendedBannerHtml}
           <div class="contact-card-header">
             <span class="contact-card-badge ${contact.category || ''}">${categoryLabel}</span>
             <div style="font-size: 0.62rem; color: var(--t3);">By: ${contact.updatedBy || 'System'}</div>
           </div>
-          
-          <div class="contact-card-title" style="margin-bottom: 0.75rem;">${contact.name || ''}</div>
-          
+
+          <div class="contact-card-title" style="margin-bottom: 0.3rem; ${isAgencyCard ? 'padding-right: 1.5rem;' : ''}">${contact.name || ''}</div>
+          ${ratingHtml}
+          ${(moduleHtml || agreementActionHtml) ? `<div class="agent-pill-row">${moduleHtml}${agreementActionHtml}</div>` : ''}
+
+          <div class="contact-info-grid">
           ${contact.contactPerson ? `
             <div class="contact-info-row" style="font-weight: 600; color: var(--t1);">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -15280,11 +17069,14 @@ function renderDirectoryContacts() {
           ` : ''}
 
           ${contact.email ? `
-            <div class="contact-info-row" style="word-break: break-all;">
+            <div class="contact-info-row span-2" style="word-break: break-all;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
               ${contact.email}
             </div>
           ` : ''}
+          </div>
+
+          ${creditHtml}
 
           ${contact.notes ? `
             <div style="font-size: 0.72rem; color: var(--t3); background: rgba(0,0,0,0.03); padding: 8px; border-radius: 6px; border: 1px solid var(--border-1); margin-top: 0.75rem; line-height: 1.35; white-space: pre-line;">
@@ -15303,7 +17095,313 @@ function renderDirectoryContacts() {
   });
 
   grid.innerHTML = html;
+  populateDirectoryQuickJump();
+  if (typeof updateDirBulkBar === 'function') updateDirBulkBar();
+
+  const searchInput = document.getElementById("directory-search-input");
+  if (searchInput) searchInput.placeholder = "Search by company, contact, email, phone, or location...";
 }
+
+// Vendor Contacts as a dense table — company, branch/station, contact
+// person, number, email, remarks, one row per contact — the same shape as
+// the source workbook (one row per branch, grouped by the sheet it came
+// from), instead of a card grid. Overseas Agents keeps its card layout;
+// this only applies to vendors.
+function buildVendorTableHtml(rows, allowedToEdit, showCategoryHeaders = true) {
+  if (!rows || rows.length === 0) return '';
+
+  // The Action column only ever holds content for editors — for everyone
+  // else it's a fully blank column running the height of the table, so it
+  // is dropped entirely rather than rendered empty.
+  const colCount = allowedToEdit ? 7 : 6;
+
+  let bodyHtml = '';
+  let lastCategoryKey = undefined;
+  rows.forEach(contact => {
+    const catKey = contact.sheetGroup || contact.category || 'Uncategorized';
+    // Category divider rows only make sense when rows are actually sorted by
+    // category — with a flat sort (name/branch) the category jumps around
+    // row to row, which would otherwise insert a header before nearly every row.
+    if (showCategoryHeaders && catKey !== lastCategoryKey) {
+      lastCategoryKey = catKey;
+      const count = rows.filter(r => (r.sheetGroup || r.category || 'Uncategorized') === catKey).length;
+      bodyHtml += `<tr class="dir-table-group-row"><td colspan="${colCount}">${catKey.toUpperCase()} <span class="dir-group-count">${count}</span></td></tr>`;
+    }
+
+    const phoneClean = (contact.phone || "").replace(/[^\d+]/g, '');
+    const phoneHtml = contact.phone
+      ? `<a href="tel:${phoneClean}" class="dir-table-link">${contact.phone}</a>`
+      : '';
+    const emailHtml = contact.email
+      ? `<a href="mailto:${contact.email}" class="dir-table-link" style="word-break: break-all;">${contact.email}</a>`
+      : '';
+
+    const actionsCellHtml = allowedToEdit ? `
+      <td class="dir-table-actions">
+        <button class="contact-action-btn" title="Edit Contact" onclick="openContactModal('${contact.id}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+        </button>
+        <button class="contact-action-btn" title="Delete Contact" onclick="deleteContact('${contact.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+        </button>
+      </td>` : '';
+
+    bodyHtml += `
+      <tr>
+        <td><strong>${contact.name || ''}</strong></td>
+        <td>${contact.location ? `<span class="dir-table-branch">${contact.location}</span>` : ''}</td>
+        <td>${contact.contactPerson || ''}</td>
+        <td>${phoneHtml}</td>
+        <td>${emailHtml}</td>
+        <td class="dir-table-remarks" title="${(contact.notes || '').replace(/"/g, '&quot;')}">${contact.notes || ''}</td>${actionsCellHtml}
+      </tr>`;
+  });
+
+  const actionColHtml = allowedToEdit ? '<col style="width: 8%;">' : '';
+  const actionThHtml = allowedToEdit ? '<th>Action</th>' : '';
+  const colWidths = allowedToEdit
+    ? ['16%', '10%', '14%', '12%', '18%', '22%']
+    : ['18%', '11%', '16%', '14%', '20%', '21%'];
+
+  return `
+    <div class="dir-table-scroll">
+      <table class="dir-vendor-table">
+        <colgroup>
+          <col style="width: ${colWidths[0]};">
+          <col style="width: ${colWidths[1]};">
+          <col style="width: ${colWidths[2]};">
+          <col style="width: ${colWidths[3]};">
+          <col style="width: ${colWidths[4]};">
+          <col style="width: ${colWidths[5]};">
+          ${actionColHtml}
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Branch / Station</th>
+            <th>Contact Person</th>
+            <th>Contact Number</th>
+            <th>Email</th>
+            <th>Remarks</th>
+            ${actionThHtml}
+          </tr>
+        </thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    </div>`;
+}
+window.buildVendorTableHtml = buildVendorTableHtml;
+
+// Turns a group key (country name, or the suspended sentinel) into a safe,
+// stable HTML id so the quick-jump dropdown can scroll straight to it.
+function dirGroupIdFor(key) {
+  return 'dir-group-' + String(key).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// Splits an imported credit-terms string like "30d & 30000" into a period
+// (days) and a limit. Only claims success on that specific shape — anything
+// else falls back to showing the raw text as-is rather than guessing wrong.
+function parseCreditTerms(raw) {
+  const m = String(raw || '').match(/(\d+)\s*d[a-z]*\D+(\d[\d,]*)/i);
+  if (!m) return null;
+  return { days: m[1], limit: Number(m[2].replace(/,/g, '')).toLocaleString('en-IN') };
+}
+
+/* ==================== Overseas Agents — multi-select & bulk actions ==================== */
+window._selectedAgentIds = window._selectedAgentIds || new Set();
+
+function toggleAgentSelection(id, checked) {
+  if (checked) window._selectedAgentIds.add(id);
+  else window._selectedAgentIds.delete(id);
+  const card = document.querySelector(`.dir-select-checkbox[onclick*="'${id}'"]`)?.closest('.contact-card');
+  if (card) card.classList.toggle('dir-card-selected', checked);
+  updateDirBulkBar();
+}
+window.toggleAgentSelection = toggleAgentSelection;
+
+function updateDirBulkBar() {
+  const bar = document.getElementById("dir-bulk-bar");
+  const countEl = document.getElementById("dir-bulk-count");
+  if (!bar || !countEl) return;
+  const n = window._selectedAgentIds.size;
+  bar.style.display = (n > 0 && activeDirectoryParent === 'agents') ? 'flex' : 'none';
+  countEl.textContent = `${n} agent${n === 1 ? '' : 's'} selected`;
+}
+window.updateDirBulkBar = updateDirBulkBar;
+
+function selectAllVisibleAgents() {
+  document.querySelectorAll('#directory-contacts-grid .dir-select-checkbox').forEach(cb => {
+    cb.checked = true;
+    cb.closest('.contact-card')?.classList.add('dir-card-selected');
+    const m = cb.getAttribute('onclick').match(/toggleAgentSelection\('([^']+)'/);
+    if (m) window._selectedAgentIds.add(m[1]);
+  });
+  updateDirBulkBar();
+}
+window.selectAllVisibleAgents = selectAllVisibleAgents;
+
+function deselectAllAgents() {
+  window._selectedAgentIds.clear();
+  document.querySelectorAll('#directory-contacts-grid .dir-select-checkbox').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.contact-card')?.classList.remove('dir-card-selected');
+  });
+  updateDirBulkBar();
+}
+window.deselectAllAgents = deselectAllAgents;
+
+function exportSelectedAgents() {
+  const selected = directoryContacts.filter(c => window._selectedAgentIds.has(c.id));
+  if (selected.length === 0) { alert("No agents selected."); return; }
+  try {
+    const dataToExport = selected.map(c => {
+      const parsed = parseCreditTerms(c.creditTerms);
+      return {
+        Company: c.name || '',
+        Country: c.location || '',
+        Rating: c.rating ? '★'.repeat(Number(c.rating)) : '',
+        Coverage: c.moduleType || '',
+        Email: c.email || '',
+        'Agency Agreement': c.agreement || '',
+        'Agreement Document': c.agreementData ? 'On file (in-app)' : 'Not uploaded',
+        'Credit Period (days)': parsed ? parsed.days : '',
+        'Credit Limit': parsed ? parsed.limit : (c.creditTerms || ''),
+        Notes: c.notes || ''
+      };
+    });
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Selected Agents");
+    XLSX.writeFile(workbook, `atlas_selected_agents_${selected.length}.xlsx`);
+  } catch (err) {
+    console.error("Export selected agents error:", err);
+    alert("Failed to export selected agents. Please check logs.");
+  }
+}
+window.exportSelectedAgents = exportSelectedAgents;
+
+function downloadSelectedAgreements() {
+  const selected = directoryContacts.filter(c => window._selectedAgentIds.has(c.id));
+  const withDocs = selected.filter(c => c.agreementData);
+  if (withDocs.length === 0) {
+    alert("None of the selected agents have an agreement PDF uploaded yet.");
+    return;
+  }
+  withDocs.forEach((c, i) => {
+    setTimeout(() => downloadAgentAgreement(c.id), i * 250); // stagger so the browser doesn't block rapid downloads
+  });
+  if (withDocs.length < selected.length) {
+    alert(`Downloading ${withDocs.length} of ${selected.length} selected — the rest don't have an agreement PDF uploaded yet.`);
+  }
+}
+window.downloadSelectedAgreements = downloadSelectedAgreements;
+
+/* ==================== Overseas Agents — agreement document upload/download ====================
+   Reuses the exact same storage pattern already used for customer
+   agreements (agreementFile/agreementData on the record, base64 PDF),
+   just written onto the contactsDirectory document instead of
+   customer_control, for consistency with the rest of the app. */
+window._pendingAgreementUploadId = null;
+
+function triggerAgentAgreementUpload(contactId) {
+  window._pendingAgreementUploadId = contactId;
+  const input = document.getElementById("agent-agreement-file-input");
+  if (input) input.click();
+}
+window.triggerAgentAgreementUpload = triggerAgentAgreementUpload;
+
+function onAgentAgreementFileChosen(event) {
+  const file = event.target.files[0];
+  const contactId = window._pendingAgreementUploadId;
+  event.target.value = ""; // allow re-selecting the same file later
+  if (!file || !contactId) return;
+
+  if (file.size > 900 * 1024) {
+    alert("This PDF is too large (over ~900KB). Please compress it before uploading — each agreement is stored as part of the agent's record.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => saveAgentAgreementFile(contactId, file.name, e.target.result);
+  reader.readAsDataURL(file);
+}
+window.onAgentAgreementFileChosen = onAgentAgreementFileChosen;
+
+async function saveAgentAgreementFile(contactId, fileName, fileData) {
+  const contact = directoryContacts.find(c => c.id === contactId);
+  if (!contact) return;
+
+  try {
+    if (window.db) {
+      await db.collection("contactsDirectory").doc(contactId).update({
+        agreementFile: fileName,
+        agreementData: fileData
+      });
+    }
+    contact.agreementFile = fileName;
+    contact.agreementData = fileData;
+    renderDirectoryContacts();
+  } catch (err) {
+    console.error("Error saving agent agreement PDF:", err);
+    alert("Could not save this agreement PDF. Please try again.");
+  }
+}
+window.saveAgentAgreementFile = saveAgentAgreementFile;
+
+function downloadAgentAgreement(contactId) {
+  const contact = directoryContacts.find(c => c.id === contactId);
+  if (!contact || !contact.agreementData) {
+    alert("No agreement PDF found for this agent.");
+    return;
+  }
+  const link = document.createElement("a");
+  link.href = contact.agreementData;
+  link.download = contact.agreementFile || `${(contact.name || 'agreement').replace(/[^a-z0-9]+/gi, '_')}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+window.downloadAgentAgreement = downloadAgentAgreement;
+
+// Quick-jump dropdown next to the search bar — categories for Vendor
+// Contacts (same list the pill tabs already show, just without needing to
+// scroll a wrapping row of 15 of them), countries for Overseas Agents
+// (jumps straight to that country's section instead of scrolling through
+// 60+ of them to find it).
+function populateDirectoryQuickJump() {
+  const sel = document.getElementById("directory-quick-jump");
+  if (!sel) return;
+
+  if (activeDirectoryParent === 'agents') {
+    const agents = directoryContacts.filter(c => c.category === 'agency' && !c.suspended);
+    const countries = Array.from(new Set(agents.map(c => (c.location || '').trim()).filter(Boolean))).sort();
+    const hasSuspended = directoryContacts.some(c => c.category === 'agency' && c.suspended);
+    let options = `<option value="">Jump to country...</option>`;
+    options += countries.map(c => `<option value="${c.replace(/"/g, '&quot;')}">${c}</option>`).join('');
+    if (hasSuspended) options += `<option value="${DIR_SUSPENDED_KEY}">🚫 Suspended</option>`;
+    sel.innerHTML = options;
+  } else {
+    const vendors = directoryContacts.filter(c => c.category !== 'agency');
+    const groups = Array.from(new Set(vendors.map(c => c.sheetGroup || c.category || '').filter(Boolean))).sort();
+    let options = `<option value="all">Jump to category...</option>`;
+    options += groups.map(g => `<option value="${g.replace(/"/g, '&quot;')}">${g}</option>`).join('');
+    sel.value = ''; // reset below after setting innerHTML
+    sel.innerHTML = options;
+    sel.value = activeDirectoryCategory || 'all';
+  }
+}
+window.populateDirectoryQuickJump = populateDirectoryQuickJump;
+
+function onDirectoryQuickJumpChange(value) {
+  if (!value) return;
+  if (activeDirectoryParent === 'agents') {
+    const target = document.getElementById(dirGroupIdFor(value));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    setDirectoryCategory(value);
+  }
+}
+window.onDirectoryQuickJumpChange = onDirectoryQuickJumpChange;
 
 // Search Filter Input handler
 function filterDirectoryContacts() {
@@ -15358,8 +17456,12 @@ function renderDirectoryTabs() {
 
   container.innerHTML = html;
 
-  // Make sure the container is visible
-  container.style.display = 'flex';
+  // Vendor Contacts has 15+ categories — that pill row was the whole
+  // "wasting time scrolling" complaint the quick-jump dropdown now solves,
+  // so it'd just be redundant clutter here. Overseas Agents only ever has
+  // two pills (Reliable / Suspended), a different toggle than the country
+  // dropdown, so it stays.
+  container.style.display = activeDirectoryParent === 'vendors' ? 'none' : 'flex';
 }
 window.renderDirectoryTabs = renderDirectoryTabs;
 
@@ -15555,17 +17657,58 @@ function handleExcelFileSelect(event) {
       // Process each sheet/tab in the workbook
       workbook.SheetNames.forEach(sheetName => {
         const sheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        const ref = sheet['!ref'];
+        if (!ref) return; // completely empty sheet
+
+        // Some real-world reports have blank/title rows before the actual
+        // header (leftover formatting with no data in it). Reading cells
+        // directly off the sheet's own decoded range — rather than trusting
+        // sheet_to_json's default "row 1 of the range is the header"
+        // behavior — avoids treating a blank row as the header and silently
+        // importing nothing.
+        const range = XLSX.utils.decode_range(ref);
+        const rawRows = [];
+        for (let r = range.s.r; r <= range.e.r; r++) {
+          const rowArr = [];
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+            rowArr.push(cell && cell.v !== undefined ? cell.v : "");
+          }
+          rawRows.push(rowArr);
+        }
+
+        let headerRowIdx = 0;
+        for (let i = 0; i < Math.min(rawRows.length, 15); i++) {
+          const nonEmptyCount = rawRows[i].filter(v => String(v).trim() !== "").length;
+          if (nonEmptyCount >= 2) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+        const headerRow = rawRows[headerRowIdx] || [];
+        const json = rawRows.slice(headerRowIdx + 1).map(r => {
+          const obj = {};
+          headerRow.forEach((h, ci) => {
+            const key = String(h || "").trim();
+            if (key) obj[key] = r[ci] !== undefined ? r[ci] : "";
+          });
+          return obj;
+        }).filter(obj => Object.keys(obj).length > 0);
 
         // Auto-detect category from sheet name (e.g. Liners, Airlines, Coloaders, NVOCCs)
+        // Matched on a hyphen/space-stripped form too, so real-world tab names like
+        // "Co-Loaders" or "BREAK-BULK" aren't missed just because of punctuation.
         let autoCategory = 'agency';
         const nameLower = sheetName.toLowerCase();
-        if (nameLower.includes('liner')) autoCategory = 'liner';
-        else if (nameLower.includes('coloader')) autoCategory = 'coloader';
-        else if (nameLower.includes('nvocc')) autoCategory = 'nvocc';
-        else if (nameLower.includes('breakbulk') || nameLower.includes('break bulk')) autoCategory = 'breakbulk';
+        const nameNorm = nameLower.replace(/[^a-z0-9]/g, '');
+        const isSuspendedSheet = nameLower.includes('suspend');
+        if (isSuspendedSheet) autoCategory = 'agency';
+        else if (nameNorm.includes('liner')) autoCategory = 'liner';
+        else if (nameNorm.includes('coloader')) autoCategory = 'coloader';
+        else if (nameNorm.includes('nvocc')) autoCategory = 'nvocc';
+        else if (nameNorm.includes('breakbulk')) autoCategory = 'breakbulk';
         else if (nameLower.includes('air') && (nameLower.includes('line') || nameLower.includes('contact'))) autoCategory = 'airline';
-        else if (nameLower.includes('pq')) autoCategory = 'pq';
+        else if (nameNorm.includes('pq') || nameNorm.includes('phyto')) autoCategory = 'pq';
         else if (nameLower.includes('insurance')) autoCategory = 'insurance';
         else if (nameLower.includes('agent') || nameLower.includes('agency')) autoCategory = 'agency';
         else autoCategory = 'other';
@@ -15579,20 +17722,48 @@ function handleExcelFileSelect(event) {
           let phone = "";
           let location = "";
           let notes = "";
+          let rating = "";
+          let agreement = "";
+          let creditTerms = "";
+          let moduleType = "";
           let rowCategory = autoCategory;
 
           keys.forEach(k => {
             const keyLower = k.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-            if (keyLower.includes('company') || keyLower.includes('name') || keyLower.includes('liner') || keyLower.includes('airline') || keyLower.includes('agency')) {
+            // These four are checked first — "Agency Agreement" would
+            // otherwise be caught by the name branch's "agency" match below
+            // (it comes first in the row and the name field, once set,
+            // isn't overwritten), silently losing the actual agreement value.
+            if (keyLower.includes('rating')) {
+              rating = (String(row[k]).match(/★/g) || []).length;
+            } else if (keyLower.includes('agreement')) {
+              agreement = String(row[k]).trim();
+            } else if (keyLower.includes('credit')) {
+              creditTerms = creditTerms ? `${creditTerms}; ${row[k]}` : String(row[k]).trim();
+            } else if (keyLower.includes('module')) {
+              moduleType = String(row[k]).trim();
+            } else if (keyLower.includes('company') || keyLower.includes('name') || keyLower.includes('liner') || keyLower.includes('airline') || keyLower.includes('agency') || keyLower.includes('coloader') || keyLower.includes('agent')) {
+              // "Coloaders" (Co-Loader sheets) and "Reliable Agent" (the
+              // Overseas Agents report) matched none of the original
+              // patterns, so every row on those sheets had no name and was
+              // silently skipped — this import requires a name to keep a row.
               if (!name) name = row[k];
             } else if (keyLower.includes('person') || keyLower.includes('contactname') || keyLower.includes('attention')) {
               person = row[k];
             } else if (keyLower.includes('email') || keyLower.includes('mail')) {
               email = row[k];
-            } else if (keyLower.includes('phone') || keyLower.includes('mobile') || keyLower.includes('contactno') || keyLower.includes('tel')) {
+            } else if (keyLower.includes('phone') || keyLower.includes('mobile') || keyLower.includes('contactno') || keyLower.includes('contactnumber') || keyLower === 'contact' || keyLower.includes('tel') || keyLower.includes('landline')) {
+              // "CONTACT NUMBER" normalizes to "contactnumber", which doesn't
+              // actually contain "contactno" as a substring (contactnUmber vs
+              // contactnO) — that variant, and a bare "CONTACT" column (used
+              // as a phone field on several vendor sheets), were silently
+              // dropped before these explicit checks were added.
               phone = row[k];
-            } else if (keyLower.includes('location') || keyLower.includes('city') || keyLower.includes('address') || keyLower.includes('branch')) {
+            } else if (keyLower.includes('location') || keyLower.includes('city') || keyLower.includes('address') || keyLower.includes('branch') || keyLower.includes('station') || keyLower.includes('country')) {
+              // "STATION" (freight vendor sheets) and "Country" (the Overseas
+              // Agents report) previously matched none of these and were
+              // silently dropped.
               location = row[k];
             } else if (keyLower.includes('notes') || keyLower.includes('remarks') || keyLower.includes('comments') || keyLower.includes('rates')) {
               notes = row[k];
@@ -15612,7 +17783,7 @@ function handleExcelFileSelect(event) {
 
           // Ensure we have a valid contact name before importing
           if (name && String(name).trim()) {
-            importedExcelRows.push({
+            const record = {
               category: rowCategory,
               name: String(name).trim(),
               contactPerson: String(person).trim(),
@@ -15623,7 +17794,13 @@ function handleExcelFileSelect(event) {
               _sheetName: sheetName.trim(),   // exact tab name, trimmed
               updatedAt: new Date(),
               updatedBy: appState.currentUser || "Pricing Team"
-            });
+            };
+            if (rating !== "") record.rating = rating;
+            if (agreement) record.agreement = agreement;
+            if (creditTerms) record.creditTerms = creditTerms;
+            if (moduleType) record.moduleType = moduleType;
+            if (isSuspendedSheet) record.suspended = true;
+            importedExcelRows.push(record);
           }
         });
       });
@@ -15925,6 +18102,639 @@ async function purgeDirectoryContacts() {
   loadDirectoryContacts();
 }
 window.purgeDirectoryContacts = purgeDirectoryContacts;
+
+// One-time cleanup utility (console-only, not wired to any button): repeated
+// accidental re-imports of the same Overseas Agents workbook created exact
+// duplicate documents (same name/location/email). This removes only the
+// extra copies — the first document found in each duplicate group is kept,
+// nothing unique is ever touched. Run from the browser console as an admin:
+//   dedupeOverseasAgents()
+async function dedupeOverseasAgents() {
+  if (!isAdminUser(appState.currentUser)) {
+    alert("You do not have permission to run this.");
+    return;
+  }
+  if (!window.db) {
+    alert("No database connection.");
+    return;
+  }
+
+  const snapshot = await db.collection("contactsDirectory").where("category", "==", "agency").get();
+  const groups = {};
+  snapshot.forEach(doc => {
+    const d = doc.data();
+    const key = [
+      (d.name || '').trim().toLowerCase(),
+      (d.location || '').trim().toLowerCase(),
+      (d.email || '').trim().toLowerCase()
+    ].join('|');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(doc.ref);
+  });
+
+  const toDelete = [];
+  let duplicateGroups = 0;
+  Object.values(groups).forEach(refs => {
+    if (refs.length > 1) {
+      duplicateGroups++;
+      // Keep the first, delete the rest — every copy is a byte-identical
+      // re-import of the same source row, so there is no "better" one.
+      toDelete.push(...refs.slice(1));
+    }
+  });
+
+  if (toDelete.length === 0) {
+    alert("No duplicates found. Nothing to clean up.");
+    return;
+  }
+
+  const uniqueRemaining = Object.keys(groups).length;
+  const proceed = confirm(
+    `Found ${duplicateGroups} duplicated agent(s) across ${snapshot.size} total agency documents.\n\n` +
+    `${toDelete.length} duplicate document(s) will be deleted.\n` +
+    `${uniqueRemaining} unique agents will remain untouched.\n\n` +
+    `Proceed?`
+  );
+  if (!proceed) return;
+
+  const chunkSize = 500;
+  for (let i = 0; i < toDelete.length; i += chunkSize) {
+    const batch = db.batch();
+    toDelete.slice(i, i + chunkSize).forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+
+  alert(`Cleanup complete. Deleted ${toDelete.length} duplicate document(s). ${uniqueRemaining} unique agents remain.`);
+  loadDirectoryContacts();
+}
+window.dedupeOverseasAgents = dedupeOverseasAgents;
+
+// ══════════════════════════════════════════════════
+// CIRCULARS & DOCUMENTS LIBRARY
+// Admin/vendor-editor-uploaded PDFs (airline tariffs, airline fuel
+// circulars, shipping line circulars) stored in Firebase Storage —
+// metadata lives in the "circularsLibrary" Firestore collection.
+// Viewing is open to every signed-in user; add/edit/delete matches
+// Vendor Contacts edit rights (canAccessVendorsDirectory()).
+// ══════════════════════════════════════════════════
+let circularsLibraryData = [];
+let activeCircularCategory = 'all';
+
+const CIRCULAR_CATEGORY_META = {
+  airline_tariff: { label: 'Airline Tariff', color: '#0ea5e9' },
+  fuel_circular_airline: { label: 'Airline Fuel Circular', color: '#f59e0b' },
+  fuel_circular_shipping: { label: 'Shipping Line Circular', color: '#8b5cf6' }
+};
+
+// Keyword lists used to auto-detect a circular's category from its own PDF
+// text — a lightweight, free, client-side classifier (no API/cloud function
+// needed) rather than a full AI-based read of the document.
+const CIRCULAR_CLASSIFY_KEYWORDS = {
+  airline: [
+    'iata', 'awb', 'air waybill', 'chargeable weight', 'cargo terminal', 'airport',
+    'flight number', 'aircraft type', 'origin airport', 'destination airport',
+    'emirates', 'skycargo', 'qatar airways', 'qr cargo', 'etihad', 'lufthansa cargo',
+    'air india', 'singapore airlines', 'cathay pacific', 'turkish airlines', 'saudia',
+    'oman air', 'srilankan', 'indigo', 'spicejet', 'fedex', 'dhl aviation', 'cargolux'
+  ],
+  shipping: [
+    'bill of lading', 'vessel', 'container', 'teu', 'feu', 'baf', 'caf',
+    'bunker adjustment', 'currency adjustment', 'ocean freight', 'port of loading',
+    'port of discharge', 'shipping line', 'liner service', 'fcl', 'lcl',
+    'maersk', 'msc mediterranean', 'cma cgm', 'hapag-lloyd', 'evergreen line',
+    'cosco shipping', 'ocean network express', 'yang ming', 'hmm co', 'zim line'
+  ]
+};
+
+// Reads the first few pages of a PDF (enough for classification, without
+// paying the cost of parsing a 50-page tariff booklet in full) and returns
+// its lowercased text via PDF.js.
+async function extractPdfText(file) {
+  if (typeof pdfjsLib === 'undefined') return '';
+  try {
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    const maxPages = Math.min(pdf.numPages, 5);
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it => it.str).join(' ') + ' ';
+    }
+    return text.toLowerCase();
+  } catch (err) {
+    console.warn("PDF text extraction failed:", err);
+    return '';
+  }
+}
+
+// Scores the extracted text against the airline/shipping keyword lists and
+// picks a category. Returns null when the signal is too weak or tied,
+// leaving the dropdown on whatever the user last selected.
+function classifyCircularText(text) {
+  if (!text) return null;
+
+  let airlineScore = 0, shippingScore = 0;
+  CIRCULAR_CLASSIFY_KEYWORDS.airline.forEach(kw => { if (text.includes(kw)) airlineScore++; });
+  CIRCULAR_CLASSIFY_KEYWORDS.shipping.forEach(kw => { if (text.includes(kw)) shippingScore++; });
+
+  if (airlineScore === 0 && shippingScore === 0) return null;
+  if (airlineScore === shippingScore) return null;
+
+  if (airlineScore > shippingScore) {
+    const looksLikeFuelCircular = /fuel surcharge|\bfsc\b|jet fuel/.test(text) &&
+      !/rate card|tariff sheet|freight rate table/.test(text);
+    return looksLikeFuelCircular ? 'fuel_circular_airline' : 'airline_tariff';
+  }
+  return 'fuel_circular_shipping';
+}
+
+// Wired to the file input's onchange — auto-detects and pre-selects the
+// category, but never locks the dropdown, so a wrong guess is one click to fix.
+async function handleCircularFileClassify(event) {
+  const file = event.target.files[0];
+  const hintEl = document.getElementById("circular-form-classify-hint");
+  if (!file) {
+    if (hintEl) hintEl.textContent = '';
+    return;
+  }
+
+  if (hintEl) hintEl.textContent = 'Scanning document to suggest a category...';
+
+  const text = await extractPdfText(file);
+  const guess = classifyCircularText(text);
+
+  if (guess) {
+    const categorySelect = document.getElementById("circular-form-category");
+    if (categorySelect) categorySelect.value = guess;
+    const label = CIRCULAR_CATEGORY_META[guess]?.label || guess;
+    if (hintEl) hintEl.textContent = `Auto-detected: ${label} — change the dropdown above if this looks wrong.`;
+  } else {
+    if (hintEl) hintEl.textContent = "Couldn't confidently detect a category from the document — please check the dropdown above.";
+  }
+}
+window.handleCircularFileClassify = handleCircularFileClassify;
+
+async function loadCircularsLibrary() {
+  const grid = document.getElementById("circulars-grid");
+  if (!grid) return;
+
+  const allowedToEdit = canAccessVendorsDirectory();
+  const addBtn = document.getElementById("circular-add-btn");
+  if (addBtn) addBtn.style.display = allowedToEdit ? 'inline-flex' : 'none';
+
+  grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">Loading documents...</div>`;
+
+  try {
+    if (window.db) {
+      const snapshot = await db.collection("circularsLibrary").orderBy("createdAt", "desc").get();
+      circularsLibraryData = [];
+      snapshot.forEach(doc => circularsLibraryData.push({ id: doc.id, ...doc.data() }));
+    } else {
+      circularsLibraryData = [];
+    }
+  } catch (err) {
+    console.error("Error loading circulars library:", err);
+    circularsLibraryData = [];
+  }
+
+  renderCircularsLibrary();
+}
+window.loadCircularsLibrary = loadCircularsLibrary;
+
+function setCircularCategory(cat) {
+  activeCircularCategory = cat;
+  document.querySelectorAll("#circular-category-tabs .dir-tab").forEach(tab => {
+    tab.classList.toggle("active", tab.getAttribute("data-circular-cat") === cat);
+  });
+  renderCircularsLibrary();
+}
+window.setCircularCategory = setCircularCategory;
+
+function renderCircularsLibrary() {
+  const grid = document.getElementById("circulars-grid");
+  if (!grid) return;
+
+  const searchQuery = (document.getElementById("circular-search-input")?.value || "").toLowerCase().trim();
+  const allowedToEdit = canAccessVendorsDirectory();
+
+  let filtered = circularsLibraryData.filter(item => {
+    if (activeCircularCategory !== 'all' && item.category !== activeCircularCategory) return false;
+    if (searchQuery) {
+      const haystack = `${item.title || ''} ${item.carrier || ''} ${item.notes || ''}`.toLowerCase();
+      if (!haystack.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
+      No documents found${(activeCircularCategory !== 'all' || searchQuery) ? ' matching this filter' : ' yet'}.
+    </div>`;
+    return;
+  }
+
+  const sortMode = document.getElementById("circular-sort-select")?.value || 'newest';
+  filtered = filtered.slice().sort((a, b) => {
+    if (sortMode === 'title') {
+      return (a.title || '').localeCompare(b.title || '');
+    }
+    if (sortMode === 'category') {
+      const la = CIRCULAR_CATEGORY_META[a.category]?.label || a.category || '';
+      const lb = CIRCULAR_CATEGORY_META[b.category]?.label || b.category || '';
+      return la.localeCompare(lb);
+    }
+    if (sortMode === 'expiring') {
+      // Documents with no expiry date sort to the end, not the front.
+      const ea = a.expiryDate || '9999-99';
+      const eb = b.expiryDate || '9999-99';
+      return ea.localeCompare(eb);
+    }
+    // 'newest' (default)
+    const ta = (a.createdAt && a.createdAt.toMillis) ? a.createdAt.toMillis() : 0;
+    const tb = (b.createdAt && b.createdAt.toMillis) ? b.createdAt.toMillis() : 0;
+    return tb - ta;
+  });
+
+  const currentYM = new Date().toISOString().slice(0, 7); // "YYYY-MM" — string-comparable
+
+  grid.innerHTML = filtered.map(item => {
+    const meta = CIRCULAR_CATEGORY_META[item.category] || { label: item.category || 'Document', color: '#6b7280' };
+    const uploadedDate = (item.createdAt && item.createdAt.toDate) ? item.createdAt.toDate().toLocaleDateString() : '';
+    const editActions = allowedToEdit ? `
+      <button class="contact-action-btn" title="Edit" onclick="openCircularModal('${item.id}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+      </button>
+      <button class="contact-action-btn" title="Delete" onclick="deleteCircular('${item.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+      </button>` : '';
+
+    // Month-year strings ("YYYY-MM") compare correctly as plain strings,
+    // so no date parsing is needed to detect an expired circular.
+    const isExpired = !!(item.expiryDate && item.expiryDate < currentYM);
+    const expiredBadge = isExpired
+      ? `<span style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; border-radius: var(--r-pill); padding: 2px 10px; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;">Expired</span>`
+      : '';
+
+    let validityLine = '';
+    if (item.effectiveDate || item.expiryDate) {
+      const parts = [];
+      if (item.effectiveDate) parts.push(`Effective ${formatMonthYear(item.effectiveDate)}`);
+      if (item.expiryDate) parts.push(`${isExpired ? 'Expired' : 'Valid until'} ${formatMonthYear(item.expiryDate)}`);
+      validityLine = `<div style="font-size: 0.72rem; font-weight: 700; color: ${isExpired ? '#dc2626' : 'var(--t2)'};">${parts.join(' · ')}</div>`;
+    }
+
+    return `<div class="glass-card" style="padding: 1.1rem; display: flex; flex-direction: column; gap: 0.6rem;${isExpired ? ' border-color: #fca5a5;' : ''}">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+          <span style="background:${meta.color}18; color:${meta.color}; border:1px solid ${meta.color}45; border-radius: var(--r-pill); padding: 2px 10px; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;">${meta.label}</span>
+          ${expiredBadge}
+        </div>
+        <div style="display: flex; gap: 0.35rem;">${editActions}</div>
+      </div>
+      <div style="font-weight: 800; font-size: 0.92rem; color: var(--t1); line-height: 1.3;">${item.title || 'Untitled'}</div>
+      ${item.carrier ? `<div style="font-size: 0.78rem; color: var(--t2);">${item.carrier}</div>` : ''}
+      ${validityLine}
+      ${item.notes ? `<div style="font-size: 0.75rem; color: var(--t3); line-height: 1.4;">${item.notes}</div>` : ''}
+      <div style="font-size: 0.68rem; color: var(--t3); margin-top: auto;">Uploaded ${uploadedDate}${item.updatedBy ? ' by ' + item.updatedBy : ''}</div>
+      <a href="${item.downloadURL}" target="_blank" rel="noopener" class="btn-secondary" style="text-align: center; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 0.8rem;">
+        📄 View / Download
+      </a>
+    </div>`;
+  }).join('');
+}
+window.renderCircularsLibrary = renderCircularsLibrary;
+
+// "YYYY-MM" -> "Mon YYYY", e.g. "2026-04" -> "Apr 2026"
+function formatMonthYear(ym) {
+  if (!ym) return '';
+  const [y, m] = ym.split('-');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const idx = parseInt(m, 10) - 1;
+  return (months[idx] || m) + ' ' + y;
+}
+
+function openCircularModal(id = null) {
+  if (!canAccessVendorsDirectory()) {
+    alert("You do not have permission to manage circulars.");
+    return;
+  }
+  const modal = document.getElementById("circular-form-modal");
+  const form = document.getElementById("circular-form");
+  if (!modal || !form) return;
+  form.reset();
+  document.getElementById("circular-form-existing-path").value = "";
+  document.getElementById("circular-form-existing-url").value = "";
+  const classifyHintEl = document.getElementById("circular-form-classify-hint");
+  if (classifyHintEl) classifyHintEl.textContent = "";
+
+  if (id) {
+    const item = circularsLibraryData.find(c => c.id === id);
+    if (!item) return;
+    document.getElementById("circular-modal-title").textContent = "EDIT DOCUMENT";
+    document.getElementById("circular-form-id").value = item.id;
+    document.getElementById("circular-form-category").value = item.category || 'airline_tariff';
+    document.getElementById("circular-form-title").value = item.title || '';
+    document.getElementById("circular-form-carrier").value = item.carrier || '';
+    document.getElementById("circular-form-effective").value = item.effectiveDate || '';
+    document.getElementById("circular-form-expiry").value = item.expiryDate || '';
+    document.getElementById("circular-form-notes").value = item.notes || '';
+    document.getElementById("circular-form-existing-path").value = item.storagePath || '';
+    document.getElementById("circular-form-existing-url").value = item.downloadURL || '';
+    document.getElementById("circular-form-file-hint").textContent = item.fileName ? `(current: ${item.fileName} — leave blank to keep)` : '';
+    document.getElementById("circular-form-submit-btn").textContent = "Save Changes";
+  } else {
+    document.getElementById("circular-modal-title").textContent = "ADD DOCUMENT";
+    document.getElementById("circular-form-id").value = "";
+    document.getElementById("circular-form-category").value =
+      (activeCircularCategory !== 'all') ? activeCircularCategory : 'airline_tariff';
+    document.getElementById("circular-form-file-hint").textContent = "";
+    document.getElementById("circular-form-submit-btn").textContent = "Save Document";
+  }
+
+  modal.style.display = "flex";
+}
+window.openCircularModal = openCircularModal;
+
+function closeCircularModal() {
+  const modal = document.getElementById("circular-form-modal");
+  if (modal) modal.style.display = "none";
+}
+window.closeCircularModal = closeCircularModal;
+
+async function saveCircular(event) {
+  event.preventDefault();
+
+  if (!canAccessVendorsDirectory()) {
+    alert("You do not have permission to manage circulars.");
+    return;
+  }
+
+  const id = document.getElementById("circular-form-id").value;
+  const category = document.getElementById("circular-form-category").value;
+  const title = document.getElementById("circular-form-title").value.trim();
+  const carrier = document.getElementById("circular-form-carrier").value.trim();
+  const effectiveDate = document.getElementById("circular-form-effective").value; // "" or "YYYY-MM"
+  const expiryDate = document.getElementById("circular-form-expiry").value;       // "" or "YYYY-MM"
+  const notes = document.getElementById("circular-form-notes").value.trim();
+  const fileInput = document.getElementById("circular-form-file");
+  const file = fileInput.files[0];
+  const existingPath = document.getElementById("circular-form-existing-path").value;
+  const existingUrl = document.getElementById("circular-form-existing-url").value;
+
+  if (!id && !file) {
+    alert("Please select a PDF file to upload.");
+    return;
+  }
+  if (file && file.type !== "application/pdf") {
+    alert("Only PDF files are supported.");
+    return;
+  }
+  const maxSizeMB = 25;
+  if (file && file.size > maxSizeMB * 1024 * 1024) {
+    alert(`File is too large. Maximum size is ${maxSizeMB}MB.`);
+    return;
+  }
+  if (!window.storage) {
+    alert("Document storage is not available right now. Please try again shortly.");
+    return;
+  }
+
+  const submitBtn = document.getElementById("circular-form-submit-btn");
+  const originalBtnText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = file ? "Uploading..." : "Saving...";
+
+  try {
+    let storagePath = existingPath;
+    let downloadURL = existingUrl;
+    let fileName = null;
+
+    if (file) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const newPath = `circulars/${category}/${Date.now()}_${safeName}`;
+      const snapshot = await storage.ref(newPath).put(file);
+      downloadURL = await snapshot.ref.getDownloadURL();
+      fileName = file.name;
+
+      // Replacing the file on an existing record — clean up the old object
+      if (id && existingPath && existingPath !== newPath) {
+        storage.ref(existingPath).delete().catch(e => console.warn("Old circular file cleanup failed:", e));
+      }
+      storagePath = newPath;
+    }
+
+    const docData = {
+      category,
+      title,
+      carrier,
+      effectiveDate,
+      expiryDate,
+      notes,
+      storagePath,
+      downloadURL,
+      updatedAt: new Date(),
+      updatedBy: appState.currentUser || "Pricing Team"
+    };
+    if (fileName) docData.fileName = fileName;
+
+    if (id) {
+      await db.collection("circularsLibrary").doc(id).update(docData);
+    } else {
+      docData.fileName = fileName;
+      docData.createdAt = new Date();
+      await db.collection("circularsLibrary").add(docData);
+    }
+
+    closeCircularModal();
+    loadCircularsLibrary();
+  } catch (err) {
+    console.error("Error saving circular:", err);
+    alert("Failed to save document: " + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText;
+  }
+}
+window.saveCircular = saveCircular;
+
+async function deleteCircular(id) {
+  if (!canAccessVendorsDirectory()) {
+    alert("You do not have permission to delete circulars.");
+    return;
+  }
+  const item = circularsLibraryData.find(c => c.id === id);
+  if (!item) return;
+
+  if (!confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
+
+  try {
+    if (item.storagePath && window.storage) {
+      await storage.ref(item.storagePath).delete().catch(e => console.warn("Storage file delete failed (may already be gone):", e));
+    }
+    await db.collection("circularsLibrary").doc(id).delete();
+    loadCircularsLibrary();
+  } catch (err) {
+    console.error("Error deleting circular:", err);
+    alert("Failed to delete document: " + err.message);
+  }
+}
+window.deleteCircular = deleteCircular;
+
+// ══════════════════════════════════════════════════
+// WEEKLY AGENCY LIST — recipients CRUD + preview/test-send
+// Recipient list is a single settings doc (app_settings/agencyListRecipients,
+// { emails: [...] }), mirroring the custom_autocomplete_entries pattern
+// elsewhere in this file. Editing is gated by canManageAgencyListRecipients()
+// (same role set as the Agents Directory). The actual weekly compile/send
+// happens server-side in functions/index.js (weeklyAgencyListEmail,
+// triggerAgencyListNow) — this block only manages the recipient list and
+// calls triggerAgencyListNow for the in-app preview/test-send buttons.
+// ══════════════════════════════════════════════════
+let agencyListRecipientsData = [];
+
+async function loadAgencyListRecipients() {
+  const listEl = document.getElementById("agencylist-recipients-list");
+  if (!listEl) return;
+  try {
+    const doc = await db.collection("app_settings").doc("agencyListRecipients").get();
+    agencyListRecipientsData = (doc.exists && Array.isArray(doc.data().emails)) ? doc.data().emails : [];
+  } catch (err) {
+    console.error("Error loading agency list recipients:", err);
+    agencyListRecipientsData = [];
+  }
+  renderAgencyListRecipients();
+}
+window.loadAgencyListRecipients = loadAgencyListRecipients;
+
+function renderAgencyListRecipients() {
+  const listEl = document.getElementById("agencylist-recipients-list");
+  const addRow = document.getElementById("agencylist-add-row");
+  const testSendBtn = document.getElementById("agencylist-test-send-btn");
+  if (!listEl) return;
+
+  const canManage = canManageAgencyListRecipients();
+  const isAdmin = (appState.currentUser || "").toLowerCase() === 'ganny';
+  if (addRow) addRow.style.display = canManage ? 'flex' : 'none';
+  if (testSendBtn) testSendBtn.style.display = isAdmin ? 'flex' : 'none';
+
+  if (agencyListRecipientsData.length === 0) {
+    listEl.innerHTML = `<div style="color: var(--t3); font-style: italic; font-size: 0.85rem;">No recipients configured yet.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = agencyListRecipientsData.map(email => `
+    <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: var(--t1); padding: 5px 8px 5px 12px; border-radius: 20px; font-size: 0.8rem;">
+      ${email}
+      ${canManage ? `<button type="button" onclick="removeAgencyListRecipient('${email.replace(/'/g, "\\'")}')" title="Remove" style="background: none; border: none; cursor: pointer; color: var(--t3); font-size: 0.9rem; line-height: 1; padding: 0 2px;">✕</button>` : ''}
+    </span>
+  `).join('');
+}
+window.renderAgencyListRecipients = renderAgencyListRecipients;
+
+async function saveAgencyListRecipients() {
+  await db.collection("app_settings").doc("agencyListRecipients").set({
+    emails: agencyListRecipientsData,
+    updatedAt: new Date(),
+    updatedBy: appState.currentUser || "Pricing Team"
+  }, { merge: true });
+}
+
+async function addAgencyListRecipient() {
+  if (!canManageAgencyListRecipients()) return;
+  const input = document.getElementById("agencylist-new-email-input");
+  const email = (input?.value || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert("Enter a valid email address.");
+    return;
+  }
+  if (agencyListRecipientsData.some(e => e.toLowerCase() === email)) {
+    alert("That email is already on the list.");
+    return;
+  }
+  agencyListRecipientsData.push(email);
+  try {
+    await saveAgencyListRecipients();
+    if (input) input.value = '';
+    renderAgencyListRecipients();
+  } catch (err) {
+    console.error("Error saving agency list recipient:", err);
+    alert("Failed to save: " + err.message);
+    agencyListRecipientsData = agencyListRecipientsData.filter(e => e !== email);
+  }
+}
+window.addAgencyListRecipient = addAgencyListRecipient;
+
+async function removeAgencyListRecipient(email) {
+  if (!canManageAgencyListRecipients()) return;
+  const prev = agencyListRecipientsData;
+  agencyListRecipientsData = agencyListRecipientsData.filter(e => e !== email);
+  try {
+    await saveAgencyListRecipients();
+    renderAgencyListRecipients();
+  } catch (err) {
+    console.error("Error removing agency list recipient:", err);
+    alert("Failed to remove: " + err.message);
+    agencyListRecipientsData = prev;
+    renderAgencyListRecipients();
+  }
+}
+window.removeAgencyListRecipient = removeAgencyListRecipient;
+
+// Admin-only, zero-side-effect preview — calls the same report-building
+// logic the real Thursday send uses (triggerAgencyListNow with dryRun),
+// and renders the returned HTML in a sandboxed iframe so the email markup
+// never collides with the app's own CSS.
+async function previewAgencyListReport() {
+  const area = document.getElementById("agencylist-preview-area");
+  const btn = document.getElementById("agencylist-preview-btn");
+  if (!area) return;
+  area.style.display = 'block';
+  area.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--t3); font-style: italic;">Compiling this week's report...</div>`;
+  if (btn) btn.disabled = true;
+  try {
+    const fn = firebase.functions().httpsCallable("triggerAgencyListNow");
+    const result = await fn({ dryRun: true });
+    const data = result.data || {};
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'width: 100%; min-height: 420px; border: none;';
+    iframe.srcdoc = data.html || '<p>No content returned.</p>';
+    area.innerHTML = '';
+    area.appendChild(iframe);
+  } catch (err) {
+    console.error("Error previewing agency list report:", err);
+    area.innerHTML = `<div style="color: #ef4444; padding: 1rem;">Failed to generate preview: ${err.message}</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+window.previewAgencyListReport = previewAgencyListReport;
+
+// Admin-only real test send (server-side check mirrors this client-side
+// gate) — sends to whichever recipients are currently configured, meant
+// for a one-off verification send (e.g. to a personal inbox) before the
+// live Thursday schedule is trusted.
+async function sendAgencyListTestEmail() {
+  if ((appState.currentUser || "").toLowerCase() !== 'ganny') return;
+  if (!confirm(`Send a real test email now to all ${agencyListRecipientsData.length} configured recipient(s)?`)) return;
+  const btn = document.getElementById("agencylist-test-send-btn");
+  if (btn) btn.disabled = true;
+  try {
+    const fn = firebase.functions().httpsCallable("triggerAgencyListNow");
+    const result = await fn({ dryRun: false });
+    const data = result.data || {};
+    alert(`Test email sent to ${data.recipientCount || 0} recipient(s).`);
+  } catch (err) {
+    console.error("Error sending agency list test email:", err);
+    alert("Failed to send test email: " + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+window.sendAgencyListTestEmail = sendAgencyListTestEmail;
 
 window.addEventListener("storage", (e) => {
   if (e.key === "gl_amendment_requests") {
@@ -16417,3 +19227,657 @@ document.addEventListener("click", function (event) {
 
 // GitHub refresh deployment
 // GitHub refresh deployment
+
+// ============================================================
+// ARCHITECTURE MOVE 1 — Desk highlights bar value mirroring.
+// Purely observational: watches the existing results-panel spans that the
+// calculation functions already write to, and copies their text into the
+// highlights bar. Never reads/writes app state or touches a calculation.
+// ============================================================
+(function setupDeskHighlightsMirror() {
+  function mirrorNode(sourceId, targetEl) {
+    const source = document.getElementById(sourceId);
+    if (!source || !targetEl) return;
+    const sync = () => { targetEl.textContent = source.textContent; };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(source, { characterData: true, childList: true, subtree: true });
+  }
+
+  function initDeskHighlightsMirrors() {
+    document.querySelectorAll('[data-mirror-of]').forEach((targetEl) => {
+      mirrorNode(targetEl.getAttribute('data-mirror-of'), targetEl);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initDeskHighlightsMirrors);
+})();
+
+// ============================================================
+// ARCHITECTURE MOVE 2 — Desk tab switching.
+// Pure show/hide of .desk-tab-pane elements, scoped to one desk panel by
+// id. Never touches input values, ids, or calculation state — identical
+// in spirit to the existing view-panel / toggle-option show/hide patterns
+// already used throughout the app.
+// ============================================================
+function switchDeskTab(panelId, tabName, btnEl) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  panel.querySelectorAll(':scope > .desk-tab-pane, :scope .glass-card > .desk-tab-pane').forEach((pane) => {
+    pane.style.display = (pane.getAttribute('data-tab-pane') === tabName) ? '' : 'none';
+  });
+  const strip = btnEl ? btnEl.closest('.desk-tab-strip') : panel.querySelector('.desk-tab-strip');
+  if (strip) {
+    strip.querySelectorAll('.desk-tab-btn').forEach((b) => b.classList.remove('active'));
+  }
+  if (btnEl) btnEl.classList.add('active');
+}
+window.switchDeskTab = switchDeskTab;
+
+// ============================================================
+// ARCHITECTURE MOVE 3 — Costing grid totals footer.
+// Purely observational, like the Move 1 mirror: finds tables that have
+// "Sell Rate" + "Buy Rate" columns (Air/Sea per-card surcharge tables,
+// Transport/Warehouse breakup tables — all share the same .chg-rate /
+// .chg-buy-rate input classes), and appends a summed <tfoot> row. Reads
+// input values already on screen; never writes to an input, never calls
+// a calculation function, never touches appState.
+// ============================================================
+(function setupCostingGridFooters() {
+  function isCostingGridTable(table) {
+    // Header wording varies by desk ("Sell Rate", "Sell Rate (USD)", "Sell
+    // Cost (USD)"...), so match loosely on "sell"/"buy" appearing in a
+    // header rather than requiring an exact string.
+    const headers = [...table.querySelectorAll('thead th')].map((th) => th.textContent.trim().toLowerCase());
+    const hasSell = headers.some((h) => h.includes('sell'));
+    const hasBuy = headers.some((h) => h.includes('buy'));
+    return hasSell && hasBuy;
+  }
+
+  function fmt(n) {
+    return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+
+  function updateFooter(table) {
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    // Sea's FCL container table uses .fcl-sell-rate/.fcl-rate + .fcl-buy-rate
+    // instead of .chg-rate/.chg-buy-rate — same "Sell Rate"/"Buy Rate"
+    // columns, just a different input class, so it needs its own selector
+    // to get the same Total/GP footer the other costing tables already have.
+    const sellInputs = tbody.querySelectorAll('.chg-rate, .fcl-sell-rate, .fcl-rate');
+    const buyInputs = tbody.querySelectorAll('.chg-buy-rate, .fcl-buy-rate');
+    let tfoot = table.querySelector('tfoot.cgf-footer');
+
+    if (sellInputs.length === 0) {
+      if (tfoot) tfoot.remove();
+      return;
+    }
+
+    let sellSum = 0, buySum = 0;
+    sellInputs.forEach((i) => { sellSum += parseFloat(i.value) || 0; });
+    buyInputs.forEach((i) => { buySum += parseFloat(i.value) || 0; });
+    const gp = sellSum - buySum;
+
+    if (!tfoot) {
+      const headerCellCount = table.querySelectorAll('thead th').length;
+      const remainingCols = Math.max(headerCellCount - 3, 1);
+      tfoot = document.createElement('tfoot');
+      tfoot.className = 'cgf-footer';
+      tfoot.innerHTML = `<tr>
+        <td class="cgf-label">Total</td>
+        <td class="cgf-val cgf-sell"></td>
+        <td class="cgf-val cgf-buy"></td>
+        <td class="cgf-gp" colspan="${remainingCols}"></td>
+      </tr>`;
+      table.appendChild(tfoot);
+    }
+    tfoot.querySelector('.cgf-sell').textContent = fmt(sellSum);
+    tfoot.querySelector('.cgf-buy').textContent = fmt(buySum);
+    tfoot.querySelector('.cgf-gp').textContent = 'GP ' + fmt(gp);
+  }
+
+  function attach(table) {
+    if (table.dataset.cgfAttached) { updateFooter(table); return; }
+    if (!isCostingGridTable(table)) return;
+    table.dataset.cgfAttached = '1';
+    updateFooter(table);
+
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+      new MutationObserver(() => updateFooter(table)).observe(tbody, { childList: true });
+    }
+    table.addEventListener('input', (e) => {
+      if (e.target.classList.contains('chg-rate') || e.target.classList.contains('chg-buy-rate') ||
+          e.target.classList.contains('fcl-sell-rate') || e.target.classList.contains('fcl-rate') || e.target.classList.contains('fcl-buy-rate')) {
+        updateFooter(table);
+      }
+    });
+  }
+
+  function scan(root) {
+    (root || document).querySelectorAll('table.cargo-table').forEach(attach);
+  }
+
+  function init() {
+    scan(document);
+    // Watch only the two containers new cards actually get appended to
+    // (Air's airline cards, Sea's liner cards) — new tables always arrive
+    // as part of a whole new card there. Deliberately NOT subtree:true on
+    // the whole desk panel: calculateAirFreight()/calculateSeaFreight()
+    // rewrite the results container on nearly every keystroke, and a
+    // panel-wide subtree observer would re-fire on all of that churn for
+    // no benefit, adding avoidable overhead to every keystroke.
+    ['air-airlines-list-container', 'sea-liners-container']
+      .map((id) => document.getElementById(id))
+      .filter(Boolean)
+      .forEach((container) => {
+        new MutationObserver((mutations) => {
+          mutations.forEach((m) => {
+            m.addedNodes.forEach((n) => {
+              if (n.nodeType === 1) scan(n);
+            });
+          });
+        }).observe(container, { childList: true });
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+// ============================================================
+// ARCHITECTURE MOVE 4 — Airline card rate/fee popup summary line.
+// The airline card's Routing/Validity/Weight Breaks/Surcharges now live
+// inside an on-demand modal (see addAirlineCard) so the card itself stays
+// to just the carrier field. This keeps the always-visible summary line in
+// sync with a plain, non-monetary count (rate tiers / origin fees / dest
+// fees configured) — deliberately not a live $ or GP figure, since that
+// would duplicate calculateAirFreight()'s own weight-break-bracket
+// selection logic and risk silently drifting from the real number.
+// ============================================================
+function updateAirlineRateSummary(card) {
+  const summaryEl = card.querySelector(".airline-rate-summary-text");
+  if (!summaryEl) return;
+  const breakCount = card.querySelectorAll(".airline-breaks-container .dynamic-break-wrapper").length;
+  const originCount = card.querySelectorAll(".air-card-origin-surcharges-body tr").length;
+  const destCount = card.querySelectorAll(".air-card-dest-surcharges-body tr").length;
+
+  if (breakCount === 0) {
+    summaryEl.textContent = "No rates entered yet";
+    return;
+  }
+  const parts = [`${breakCount} rate tier${breakCount === 1 ? '' : 's'}`];
+  if (originCount > 0) parts.push(`${originCount} origin fee${originCount === 1 ? '' : 's'}`);
+  if (destCount > 0) parts.push(`${destCount} destination fee${destCount === 1 ? '' : 's'}`);
+  summaryEl.textContent = parts.join(' · ');
+}
+window.updateAirlineRateSummary = updateAirlineRateSummary;
+
+(function setupAirlineRateSummarySync() {
+  function attach(card) {
+    if (card.dataset.rateSummarySynced) return;
+    card.dataset.rateSummarySynced = '1';
+    const breaksContainer = card.querySelector(".airline-breaks-container");
+    const originBody = card.querySelector(".air-card-origin-surcharges-body");
+    const destBody = card.querySelector(".air-card-dest-surcharges-body");
+    [breaksContainer, originBody, destBody].filter(Boolean).forEach((el) => {
+      new MutationObserver(() => updateAirlineRateSummary(card)).observe(el, { childList: true });
+    });
+  }
+
+  function scan(root) {
+    const scope = root || document;
+    if (scope.nodeType === 1 && scope.matches('.airline-card')) attach(scope);
+    scope.querySelectorAll('.airline-card').forEach(attach);
+  }
+
+  function init() {
+    const container = document.getElementById('air-airlines-list-container');
+    if (!container) return;
+    scan(container);
+    new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((n) => {
+          if (n.nodeType === 1) scan(n);
+        });
+      });
+    }).observe(container, { childList: true });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+// ============================================================
+// ARCHITECTURE MOVE 5 — Sea Freight liner card rates-&-fees summary. Same
+// non-monetary count-based readout as ARCHITECTURE MOVE 3/4 above, adapted
+// for the FCL/LCL/BB mode split: shows container-type count (FCL) or
+// "rate set" (LCL/BB) plus origin/destination fee counts. switchLinerMode()
+// and the delegated input listener on .sea-lcl-rate/.sea-bb-rate call this
+// directly (those changes aren't DOM structure changes a MutationObserver
+// would catch); FCL container rows and origin/dest surcharge rows are
+// structural, so they're covered by the observer below instead.
+// ============================================================
+function updateLinerRateSummary(card) {
+  const summaryEl = card.querySelector(".liner-rate-summary-text");
+  if (!summaryEl) return;
+  const mode = card.dataset.mode || 'fcl';
+  const originCount = card.querySelectorAll(".sea-origin-surcharges-body tr").length;
+  const destCount = card.querySelectorAll(".sea-dest-surcharges-body tr").length;
+
+  let freightPart = null;
+  if (mode === 'fcl') {
+    const containerCount = card.querySelectorAll(".sea-fcl-body .container-row").length;
+    if (containerCount > 0) freightPart = `${containerCount} container type${containerCount === 1 ? '' : 's'}`;
+  } else if (mode === 'lcl') {
+    const rate = parseFloat(card.querySelector(".sea-lcl-rate")?.value) || 0;
+    if (rate > 0) freightPart = "LCL rate set";
+  } else if (mode === 'bb') {
+    const rate = parseFloat(card.querySelector(".sea-bb-rate")?.value) || 0;
+    if (rate > 0) freightPart = "Break bulk rate set";
+  }
+
+  const parts = [];
+  if (freightPart) parts.push(freightPart);
+  if (originCount > 0) parts.push(`${originCount} origin fee${originCount === 1 ? '' : 's'}`);
+  if (destCount > 0) parts.push(`${destCount} destination fee${destCount === 1 ? '' : 's'}`);
+  summaryEl.textContent = parts.length ? parts.join(' · ') : "No rates entered yet";
+}
+window.updateLinerRateSummary = updateLinerRateSummary;
+
+(function setupLinerRateSummarySync() {
+  function attach(card) {
+    if (card.dataset.rateSummarySynced) return;
+    card.dataset.rateSummarySynced = '1';
+    const fclBody = card.querySelector(".sea-fcl-body");
+    const originBody = card.querySelector(".sea-origin-surcharges-body");
+    const destBody = card.querySelector(".sea-dest-surcharges-body");
+    [fclBody, originBody, destBody].filter(Boolean).forEach((el) => {
+      new MutationObserver(() => updateLinerRateSummary(card)).observe(el, { childList: true });
+    });
+  }
+
+  function scan(root) {
+    const scope = root || document;
+    if (scope.nodeType === 1 && scope.matches('.liner-card')) attach(scope);
+    scope.querySelectorAll('.liner-card').forEach(attach);
+  }
+
+  function init() {
+    const container = document.getElementById('sea-liners-container');
+    if (!container) return;
+    scan(container);
+    new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((n) => {
+          if (n.nodeType === 1) scan(n);
+        });
+      });
+    }).observe(container, { childList: true });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+// ============================================================
+// ARCHITECTURE MOVE 1b — Air Freight grand total in the highlights bar.
+// Air Freight can carry several airline options at once, so unlike Sea/
+// Transport/Warehouse there's no single DOM span holding "the" total to
+// mirror — the figure only exists per weight-break row inside whichever
+// option is marked "Select as Quoted". calculateAirFreight() already
+// resolves that ambiguity itself and writes the answer to
+// appState.currentAirFreight.grandTotal, so read from there instead of
+// scraping the results table.
+//
+// Polls rather than hooking calculateAirFreight directly: many of the
+// rate/weight inputs across the form were already wired with
+// addEventListener(..., calculateAirFreight) at element-creation time,
+// which captures that function value directly — reassigning
+// window.calculateAirFreight afterwards doesn't reach those already-bound
+// listeners, so a wrap silently never fires for most edits. A short
+// poll comparing the already-computed number is simpler and unaffected
+// by how any given input happens to be wired.
+// ============================================================
+(function setupAirGrandTotalMirror() {
+  function currencySymbol(code) {
+    if (code === 'INR') return '₹';
+    if (code === 'EUR') return '€';
+    if (code === 'GBP') return '£';
+    return '$';
+  }
+
+  let lastPainted = null;
+
+  function syncAirGrandTotalHighlight() {
+    const target = document.querySelector('[data-air-grandtotal-mirror]');
+    if (!target) return;
+    // appState is declared with `let` at the script's top level, so it never
+    // becomes a window property — reference it directly, not window.appState.
+    const af = (typeof appState !== 'undefined') ? appState.currentAirFreight : null;
+    if (!af) return;
+    const total = typeof af.grandTotal === 'number' && !isNaN(af.grandTotal) ? af.grandTotal : 0;
+    const currency = af.currency || 'USD';
+    const key = currency + '|' + total.toFixed(2);
+    if (key === lastPainted) return;
+    lastPainted = key;
+    target.textContent = currencySymbol(currency) + total.toFixed(2);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    syncAirGrandTotalHighlight();
+    setInterval(syncAirGrandTotalHighlight, 1000);
+  });
+})();
+
+// ============================================================
+// ARCHITECTURE MOVE — Compact weight-break tables in the results panel.
+// Once real rates are entered, each airline option's weight-break table
+// can carry up to 7 rows; only the one actually being charged (the row
+// rendered with the green "active" highlight) matters at a glance. This
+// hides the rest by default with a one-click "show all" expander, purely
+// as a post-render display pass — it never touches airlinesListData or
+// how any total is computed, only which already-rendered rows are visible.
+// Re-applied after every recalculation, since calculateAirFreight()
+// replaces the results container's innerHTML wholesale each time.
+// ============================================================
+(function setupCompactWeightBreaks() {
+  function isActiveRow(tr) {
+    return /rgba\(46,\s*204,\s*113/.test(tr.getAttribute('style') || '');
+  }
+
+  function compactCard(card) {
+    const table = card.querySelector('table');
+    if (!table || card.dataset.wbCompacted) return;
+    const tbody = table.querySelector('tbody');
+    const rows = tbody ? [...tbody.querySelectorAll('tr')] : [];
+    if (rows.length <= 2) return;
+    const inactiveRows = rows.filter((r) => !isActiveRow(r));
+    if (inactiveRows.length === 0) return;
+
+    card.dataset.wbCompacted = '1';
+    inactiveRows.forEach((r) => { r.style.display = 'none'; });
+
+    const colCount = table.querySelectorAll('thead th').length || 6;
+    const toggleTr = document.createElement('tr');
+    toggleTr.innerHTML = `<td colspan="${colCount}" style="padding:4px 8px; text-align:center; border-bottom:none;">
+      <button type="button" style="background:none;border:none;color:var(--sky);font-size:0.68rem;font-weight:700;cursor:pointer;padding:2px 6px;">Show all ${rows.length} weight breaks &#9662;</button>
+    </td>`;
+    tbody.appendChild(toggleTr);
+    let expanded = false;
+    toggleTr.querySelector('button').addEventListener('click', function () {
+      expanded = !expanded;
+      inactiveRows.forEach((r) => { r.style.display = expanded ? '' : 'none'; });
+      this.innerHTML = expanded ? 'Show fewer weight breaks &#9652;' : `Show all ${rows.length} weight breaks &#9662;`;
+    });
+  }
+
+  function processContainer(container) {
+    container.querySelectorAll(':scope > .glass-card').forEach(compactCard);
+  }
+
+  function init() {
+    const container = document.getElementById('air-pricing-results-container');
+    if (!container) return;
+    processContainer(container);
+    new MutationObserver(() => processContainer(container)).observe(container, { childList: true });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+// ============================================================
+// ARCHITECTURE MOVE — Compact multi-liner results (Sea Freight).
+// Same idea as the Air Freight weight-break collapse above, adapted to Sea's
+// shape: each liner option renders as its own summary card (not table rows).
+// Shows only the primary/cheapest liner by default with a "show all" expander.
+// Purely a post-render display pass on already-rendered cards.
+// ============================================================
+(function setupCompactLinerResults() {
+  function compactList(list) {
+    // #sea-multi-liner-results-list itself is never replaced — only its
+    // children are, via innerHTML, on every recalculation — so any
+    // "already compacted" flag stored on the list element would survive
+    // across renders and skip processing the new cards. Always reprocess
+    // the current child set instead; a leftover toggle from the previous
+    // render is removed first.
+    const oldToggle = list.querySelector(':scope > button');
+    if (oldToggle) oldToggle.remove();
+
+    const cards = [...list.querySelectorAll(':scope > .liner-result-card')];
+    if (cards.length <= 1) return;
+    const nonPrimary = cards.filter((c) => !c.classList.contains('primary-liner'));
+    if (nonPrimary.length === 0) return;
+
+    nonPrimary.forEach((c) => { c.style.display = 'none'; });
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.style.cssText = 'background:none;border:none;color:var(--sky);font-size:0.68rem;font-weight:700;cursor:pointer;padding:4px 2px;text-align:left;';
+    toggle.textContent = `Show all ${cards.length} liner options ▾`;
+    let expanded = false;
+    toggle.addEventListener('click', () => {
+      expanded = !expanded;
+      nonPrimary.forEach((c) => { c.style.display = expanded ? '' : 'none'; });
+      toggle.textContent = expanded ? 'Show fewer liner options ▴' : `Show all ${cards.length} liner options ▾`;
+    });
+    list.appendChild(toggle);
+  }
+
+  function init() {
+    const list = document.getElementById('sea-multi-liner-results-list');
+    if (!list) return;
+    // compactList() itself appends the toggle button as a direct child of
+    // `list` — the same node this observer watches — so without guarding,
+    // that append would re-trigger this callback forever. Disconnect while
+    // compactList runs, then resume observing once it's done.
+    const observer = new MutationObserver(() => {
+      observer.disconnect();
+      compactList(list);
+      observer.observe(list, { childList: true });
+    });
+    compactList(list);
+    observer.observe(list, { childList: true });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+// ==========================================
+// UPDATE-AVAILABLE NOTIFICATION
+// ==========================================
+// There is no active service worker in this app (one gets unregistered on
+// every load — see the cleanup script at the top of index.html — and
+// nothing ever re-registers one), so this can't use the usual
+// "controllerchange" pattern. Instead it polls a small version.txt file
+// (already deployed alongside the app, previously unused) and compares it
+// to the version this tab already has loaded. Entirely self-contained:
+// touches no existing DOM, function, or state — it only injects its own
+// banner element if a mismatch is found.
+(function () {
+  const APP_VERSION = "128.02"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+
+  function showUpdateBanner(latestVersion) {
+    if (document.getElementById("app-update-banner")) return; // already showing
+
+    const banner = document.createElement("div");
+    banner.id = "app-update-banner";
+    banner.style.cssText = "position: fixed; top: 80px; right: 20px; z-index: 999999; background: #ffffff; color: #1b1c5c; padding: 0.9rem 1.1rem; border-radius: 12px; border: 1px solid #dde0f0; box-shadow: 0 12px 32px rgba(27,28,92,0.22); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.82rem; display: flex; align-items: center; gap: 0.75rem; max-width: 320px;";
+    banner.innerHTML = `
+      <span style="flex: 1; font-weight: 600; color: #1b1c5c !important;">🚀 A new version of this app is available.</span>
+      <button id="app-update-refresh-btn" style="background: #1b1c5c; color: #ffffff !important; border: none; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Refresh</button>
+    `;
+    document.body.appendChild(banner);
+
+    document.getElementById("app-update-refresh-btn").addEventListener("click", () => {
+      window.location.reload();
+    });
+  }
+
+  async function checkForAppUpdate() {
+    try {
+      const res = await fetch("version.txt", { cache: "no-store" });
+      if (!res.ok) return;
+      const latest = (await res.text()).trim();
+      if (latest && latest !== APP_VERSION) {
+        showUpdateBanner(latest);
+      }
+    } catch (e) {
+      // Silent — a failed check just means we try again on the next interval.
+    }
+  }
+
+  // Check shortly after load (covers someone who's had a tab open since
+  // before a deploy went out), then periodically while the tab stays open.
+  setTimeout(checkForAppUpdate, 30000);
+  setInterval(checkForAppUpdate, 5 * 60 * 1000);
+})();
+
+// ============================================================
+// ROUTE VENDOR HISTORY — surfaces which airlines/liners this team has
+// actually used (and won with) on a given POL->POD lane, mined entirely
+// from existing quote records. No AI/API involved — pure historical
+// aggregation, so it works immediately with the data already in Firestore.
+// Triggered once both origin and destination fields are filled on the Air
+// or Sea desk; shown as a dismissible floating panel, never blocking the
+// form underneath.
+// ============================================================
+(function setupRouteVendorHistory() {
+  function normalizeRoute(val) {
+    return (val || "").trim().toLowerCase();
+  }
+
+  // Carrier names get typed inconsistently across quotes over time — e.g.
+  // a bare "6E" in one quote vs "6E - IndiGo Airlines" in another. Key on
+  // the leading IATA-style code when there is one, so these tally as the
+  // same carrier instead of two separate rows.
+  function carrierIdentityKey(name) {
+    const trimmed = (name || "").trim();
+    const codeMatch = trimmed.match(/^([A-Za-z0-9]{2,3})\s*[-–]\s*\S/);
+    if (codeMatch) return codeMatch[1].toUpperCase();
+    if (/^[A-Za-z0-9]{2,3}$/.test(trimmed)) return trimmed.toUpperCase();
+    return trimmed.toLowerCase();
+  }
+
+  // Every past quote records what was actually quoted/booked for a lane —
+  // this walks that history and tallies each carrier's track record on the
+  // exact POL->POD typed into the form right now.
+  function getRouteVendorHistory(mode, origin, destination) {
+    const o = normalizeRoute(origin);
+    const d = normalizeRoute(destination);
+    if (!o || !d) return { totalQuotes: 0, vendors: [] };
+
+    const tally = {};
+    let totalQuotes = 0;
+
+    (appState.quotes || []).forEach(q => {
+      if (q.type !== mode) return;
+      const qo = normalizeRoute(q.details && q.details.origin);
+      const qd = normalizeRoute(q.details && q.details.destination);
+      if (qo !== o || qd !== d) return;
+
+      totalQuotes++;
+      const won = q.status === 'converted';
+      const quoteDate = q.date || "";
+
+      // Prefer the carrier actually confirmed at WON time — that's the real
+      // "who we used" signal. Fall back to whichever options were quoted
+      // (airlines[]/liners[]) so unwon quotes still contribute a data point.
+      let candidateNames = [];
+      if (q.confirmedCarrier) {
+        candidateNames = [q.confirmedCarrier];
+      } else if (mode === 'air' && Array.isArray(q.details && q.details.airlines)) {
+        candidateNames = q.details.airlines.map(a => a.name).filter(Boolean);
+      } else if (mode === 'sea' && Array.isArray(q.details && q.details.liners)) {
+        candidateNames = q.details.liners.map(l => l.linerName).filter(Boolean);
+      }
+
+      candidateNames.forEach(name => {
+        const trimmedName = name.trim();
+        if (!trimmedName) return;
+        const key = carrierIdentityKey(trimmedName);
+        if (!tally[key]) tally[key] = { name: trimmedName, timesUsed: 0, timesWon: 0, lastUsed: "" };
+        // Prefer the more descriptive of the names seen so far as the display name.
+        if (trimmedName.length > tally[key].name.length) tally[key].name = trimmedName;
+        tally[key].timesUsed++;
+        if (won) tally[key].timesWon++;
+        if (quoteDate > tally[key].lastUsed) tally[key].lastUsed = quoteDate;
+      });
+    });
+
+    const vendors = Object.values(tally).sort((a, b) => {
+      if (b.timesWon !== a.timesWon) return b.timesWon - a.timesWon;
+      if (b.timesUsed !== a.timesUsed) return b.timesUsed - a.timesUsed;
+      return (b.lastUsed || "").localeCompare(a.lastUsed || "");
+    });
+
+    return { totalQuotes, vendors };
+  }
+  window.getRouteVendorHistory = getRouteVendorHistory;
+
+  function closeRouteVendorPopup() {
+    const el = document.getElementById("route-vendor-popup");
+    if (el) el.remove();
+  }
+  window.closeRouteVendorPopup = closeRouteVendorPopup;
+
+  function showRouteVendorPopup(mode) {
+    const originEl = document.getElementById(mode === 'air' ? 'air-origin' : 'sea-origin');
+    const destEl = document.getElementById(mode === 'air' ? 'air-dest' : 'sea-dest');
+    if (!originEl || !destEl) return;
+    const origin = originEl.value;
+    const destination = destEl.value;
+    if (!origin.trim() || !destination.trim()) return;
+
+    closeRouteVendorPopup();
+
+    const { totalQuotes, vendors } = getRouteVendorHistory(mode, origin, destination);
+
+    const rowsHtml = vendors.length > 0 ? vendors.map(v => `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; background:#f8fafc; margin-bottom:6px;">
+        <div>
+          <div style="font-size:0.78rem; font-weight:700; color:#0f172a;">${v.name}</div>
+          <div style="font-size:0.68rem; color:#64748b; margin-top:1px;">used ${v.timesUsed}x &middot; ${v.timesWon} won</div>
+        </div>
+        ${v.timesWon > 0 ? '<span style="font-size:0.62rem; font-weight:700; color:#166534; background:#eaf3de; padding:2px 7px; border-radius:10px; white-space:nowrap;">proven</span>' : ''}
+      </div>`).join('') : `
+      <div style="font-size:0.75rem; color:#64748b; padding:0.75rem 0.25rem;">No past quotes on this exact route yet. Check the Vendor Contacts directory for general coverage on this lane.</div>`;
+
+    const popup = document.createElement("div");
+    popup.id = "route-vendor-popup";
+    popup.style.cssText = "position:fixed; bottom:20px; right:20px; z-index:999998; width:300px; max-height:380px; background:#fff; border:1px solid #dde0f0; border-radius:12px; box-shadow:0 12px 32px rgba(27,28,92,0.18); display:flex; flex-direction:column; overflow:hidden;";
+    popup.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0.9rem; border-bottom:1px solid #eef0f7;">
+        <div>
+          <div style="font-size:0.8rem; font-weight:800; color:#1b1c5c;">${origin} &rarr; ${destination}</div>
+          <div style="font-size:0.65rem; color:#94a3b8; margin-top:1px;">${totalQuotes} past ${mode === 'air' ? 'air' : 'sea'} quote${totalQuotes === 1 ? '' : 's'} on this lane</div>
+        </div>
+        <button type="button" id="route-vendor-popup-close" style="background:none; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer; line-height:1; padding:0 0.2rem;">&times;</button>
+      </div>
+      <div style="padding:0.75rem 0.9rem; overflow-y:auto;">${rowsHtml}</div>
+    `;
+    document.body.appendChild(popup);
+    document.getElementById("route-vendor-popup-close").addEventListener("click", closeRouteVendorPopup);
+  }
+  window.showRouteVendorPopup = showRouteVendorPopup;
+
+  function wireField(id, mode) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("blur", () => showRouteVendorPopup(mode));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    wireField("air-origin", "air");
+    wireField("air-dest", "air");
+    wireField("sea-origin", "sea");
+    wireField("sea-dest", "sea");
+  });
+
+  // Dismiss on click-outside, same convention as the update banner.
+  document.addEventListener("click", (e) => {
+    const popup = document.getElementById("route-vendor-popup");
+    if (!popup) return;
+    if (popup.contains(e.target)) return;
+    if (e.target.id === "air-origin" || e.target.id === "air-dest" || e.target.id === "sea-origin" || e.target.id === "sea-dest") return;
+    closeRouteVendorPopup();
+  });
+})();
