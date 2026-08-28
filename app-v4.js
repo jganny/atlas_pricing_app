@@ -7289,6 +7289,17 @@ async function saveCurrentQuote() {
       bbRateApplied: parseFloat(document.querySelector(".sea-bb-rate")?.value) || 0,
       lclBuyRateApplied: parseFloat(document.querySelector(".sea-lcl-buy-rate")?.value) || 0,
       bbBuyRateApplied: parseFloat(document.querySelector(".sea-bb-buy-rate")?.value) || 0,
+      // These were never saved before, so submitWonBookingDetails() had no
+      // way to know a client wanted e.g. destination-clearance-only and
+      // unconditionally required a freight rate on every Sea quote — the
+      // exact bug already fixed for Air Freight (buildAirQuoteData()) but
+      // never carried over here. Read from liner card #1, matching every
+      // other rate field above (they all grab the first liner via an
+      // unindexed selector too, since that's the card whose values this
+      // object actually saves).
+      tariffsEnabled: document.querySelector("#sea-liner-card-1 .sea-enable-tariffs")?.checked ?? true,
+      originFeesEnabled: document.querySelector("#sea-liner-card-1 .sea-enable-origin-fees")?.checked ?? true,
+      destFeesEnabled: document.querySelector("#sea-liner-card-1 .sea-enable-dest-fees")?.checked ?? true,
       containerItems: containerItems,
       cargoItems: cargoItems,
       dimUnit: appState.currentSeaFreight.dimUnit || 'cms',
@@ -12434,16 +12445,21 @@ function recomputeQuoteFinancials(quote) {
       : Math.max(effectiveCbm, weightTons);
     const containerCount = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0), 0);
     const isSeaFcl = quote.details.mode === 'fcl';
+    // Same waiver as Air Freight above: a quote with Freight Tariffs
+    // deliberately excluded contributes no freight regardless of whatever
+    // rate happens to still be sitting on containerItems/lclRateApplied/
+    // bbRateApplied from before the section was turned off.
+    const tariffsActive = quote.details.tariffsEnabled !== false;
 
     if (quote.details.mode === 'fcl') {
-      sellBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.rate || 0), 0);
-      buyBaseFreight = (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.buy || 0), 0);
+      sellBaseFreight = !tariffsActive ? 0 : (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.rate || 0), 0);
+      buyBaseFreight = !tariffsActive ? 0 : (quote.details.containerItems || []).reduce((acc, c) => acc + (c.qty || 0) * (c.buy || 0), 0);
     } else {
       const RT = quote.details.lclChargeable || 0;
       const sellRate = quote.details.mode === 'lcl' ? quote.details.lclRateApplied : quote.details.bbRateApplied;
       const buyRate = quote.details.mode === 'lcl' ? quote.details.lclBuyRateApplied : quote.details.bbBuyRateApplied;
-      sellBaseFreight = RT * sellRate;
-      buyBaseFreight = RT * buyRate;
+      sellBaseFreight = !tariffsActive ? 0 : RT * sellRate;
+      buyBaseFreight = !tariffsActive ? 0 : RT * buyRate;
     }
     quote.details.baseFreight = sellBaseFreight;
 
@@ -12748,7 +12764,12 @@ async function submitWonBookingDetails(e) {
   } else if (quote.type === 'sea' && quote.details.mode !== 'fcl') {
     finalSellRate = parseFloat(document.getElementById("won-confirmed-sell-rate")?.value) || 0;
     finalBuyRate = parseFloat(document.getElementById("won-confirmed-buy-rate")?.value) || 0;
-    if (finalSellRate <= 0 || finalBuyRate <= 0) {
+    // Same waiver as Air Freight above: a quote with Freight Tariffs
+    // deliberately excluded (client wants only local fees, e.g. destination
+    // clearance) has no freight rate to speak of — only enforce this when
+    // tariffs are actually part of the quote. Older quotes without this
+    // flag default to enabled, preserving today's behavior for them.
+    if (quote.details.tariffsEnabled !== false && (finalSellRate <= 0 || finalBuyRate <= 0)) {
       alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
       return;
     }
@@ -12767,7 +12788,7 @@ async function submitWonBookingDetails(e) {
       const idx = parseInt(fclSellInputs[i].getAttribute("data-index"));
       const sellVal = parseFloat(fclSellInputs[i].value) || 0;
       const buyVal = parseFloat(document.querySelector(`.won-fcl-buy-input[data-index="${idx}"]`)?.value) || 0;
-      if (sellVal <= 0 || buyVal <= 0) {
+      if (quote.details.tariffsEnabled !== false && (sellVal <= 0 || buyVal <= 0)) {
         alert("Both Buy Rate and Sell Rate are mandatory before confirming a quotation.");
         return;
       }
@@ -19723,7 +19744,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "128.03"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "128.04"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
 
   function showUpdateBanner(latestVersion) {
     if (document.getElementById("app-update-banner")) return; // already showing
