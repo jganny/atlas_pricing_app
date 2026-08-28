@@ -6584,9 +6584,23 @@ body.logged-out-blur .atlas-copilot-panel {
   font-size: 0.78rem !important;
 }
 
-@media (max-width: 640px) {
-  .atlas-copilot-fab {
-    bottom: 5rem;
-    left: 1rem;
-  }
+.desk-tab-strip-flush {
+  margin-top: 0 !important;
+}
+.header-quick-nav-hint {
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+.header-quick-nav-hint kbd {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  padding: 0 0.25rem;
+  font-size: 0.58rem;
+  font-family: inherit;
+}
+@media (max-width: 768px) {
+  .header-quick-nav-hint { display: none; }
 }
