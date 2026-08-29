@@ -7063,6 +7063,97 @@ body.logged-out-blur .atlas-command-palette {
   color: var(--t3);
   font-style: italic;
 }
+.vsb-section {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
+}
+.vsb-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.vsb-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 0.4rem;
+}
+.vsb-section-title .vsb-muted {
+  font-weight: 500;
+  color: var(--t3);
+}
+.vsb-hint {
+  font-size: 0.65rem;
+  color: var(--t3);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+.vsb-empty {
+  font-size: 0.72rem;
+  color: var(--t3);
+  font-style: italic;
+}
+.vsb-quote-list,
+.vsb-vendor-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vsb-quote-list li,
+.vsb-vendor-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  font-size: 0.72rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+.vsb-quote-list li:last-child,
+.vsb-vendor-list li:last-child {
+  border-bottom: none;
+}
+.vsb-quote-meta {
+  flex: 1;
+  color: var(--t2);
+  line-height: 1.35;
+}
+.vsb-recreate-btn {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  border: 1px solid var(--border-1);
+  background: #fff;
+  color: var(--sky);
+  cursor: pointer;
+}
+.vsb-recreate-btn:hover {
+  background: var(--sky-g);
+  border-color: var(--sky);
+}
+.vsb-vendor-name {
+  font-weight: 600;
+  color: var(--t1);
+}
+.vsb-vendor-stat {
+  font-size: 0.65rem;
+  color: var(--t3);
+  white-space: nowrap;
+}
+.vsb-price-check .vsb-band-range {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 0.25rem;
+}
+.vsb-price-check .vsb-detail {
+  font-size: 0.72rem;
+  color: var(--t2);
+  line-height: 1.4;
+}
 
 /* Sales v129 shell */
 .sales-v129-shell .sales-v129-card {

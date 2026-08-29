@@ -9528,6 +9528,9 @@ window.applyUserDbFiltersAndSort = () => {
         <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
+        <button class="action-icon-btn view" title="Recreate as new quote (copy customer, carriers, surcharges — change route/weight/date)" onclick="recreateQuoteFromExisting('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
         <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
@@ -9867,6 +9870,9 @@ window.applyDbFiltersAndSort = () => {
       <td class="actions-cell"><div class="actions-cell-inner">
         <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <button class="action-icon-btn view" title="Recreate as new quote" onclick="recreateQuoteFromExisting('${quote.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
         <button class="action-icon-btn view" title="View Quote" onclick="viewSavedQuote('${quote.id}')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -10443,15 +10449,16 @@ function populateAirFreightFormFromDetails(details) {
 }
 window.populateAirFreightFormFromDetails = populateAirFreightFormFromDetails;
 
-function amendQuote(id) {
+function amendQuote(id, options) {
+  options = options || {};
+  const recreate = !!options.recreate;
   const quote = appState.quotes.find(q => q.id === id);
   if (!quote) return;
 
-  if (!checkAndRequestEditPermission(quote, "correct/amend")) return;
+  if (!recreate && !checkAndRequestEditPermission(quote, "correct/amend")) return;
 
-  // Load the quote back into the respective calculator
-  appState.editingQuoteId = quote.id;
-  hideQuoteModal(); // Close print preview modal if open
+  appState.editingQuoteId = recreate ? null : quote.id;
+  hideQuoteModal();
 
   // Hide dashboards
   document.getElementById("member-dashboard-panel").classList.remove("active");
@@ -10470,7 +10477,9 @@ function amendQuote(id) {
         document.getElementById("air-currency").value = quote.currency || "INR";
       }
       populateAirFreightFormFromDetails(quote.details);
-      alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+      alert(recreate
+        ? `Copied from quote #${getQuoteRefId(quote)}. Update route, weight, or date as needed, then click Save Quote — this creates a new quote and keeps the original unchanged.`
+        : `Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
     }); // end requestAnimationFrame
   } else if (quote.type === 'transport') {
     document.getElementById("transportation-panel").classList.add("active");
@@ -10545,7 +10554,9 @@ function amendQuote(id) {
     }
     updateAdminModulePermissions();
     calculateTransportation();
-    alert(`Editing Transportation Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+    alert(recreate
+      ? `Copied from quote #${getQuoteRefId(quote)}. Update details, then Save Quote to create a new quote.`
+      : `Editing Transportation Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
   } else if (quote.type === 'warehouse') {
     document.getElementById("warehousing-panel").classList.add("active");
     if (document.getElementById("warehouse-customer-name")) {
@@ -10597,7 +10608,9 @@ function amendQuote(id) {
 
     updateAdminModulePermissions();
     calculateWarehousing();
-    alert(`Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+    alert(recreate
+      ? `Copied from quote #${getQuoteRefId(quote)}. Update details, then Save Quote to create a new quote.`
+      : `Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
 
   } else {
     // Show the panel first so the browser can paint the skeleton immediately
@@ -10750,11 +10763,18 @@ function amendQuote(id) {
       repopulateAlternativesTable("sea-alternatives-body", quote.details.alternatives);
 
       calculateSeaFreight();
-      alert(`Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+      alert(recreate
+        ? `Copied from quote #${getQuoteRefId(quote)}. Update route, weight, or containers as needed, then Save Quote — this creates a new quote.`
+        : `Editing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
     }); // end requestAnimationFrame
   }
 }
 window.amendQuote = amendQuote;
+
+function recreateQuoteFromExisting(id) {
+  amendQuote(id, { recreate: true });
+}
+window.recreateQuoteFromExisting = recreateQuoteFromExisting;
 
 function approveAmendment(reqId) {
   if (!isAdminUser(appState.currentUser)) {
@@ -19805,7 +19825,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.01"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.02"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
 
   function showUpdateBanner(latestVersion) {
     if (document.getElementById("app-update-banner")) return; // already showing
