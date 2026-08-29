@@ -6913,3 +6913,329 @@ body.logged-out-blur .atlas-command-palette {
     gap: 1rem;
   }
 }
+
+/* ===== Vertex v129 — product badge, AI sell band, Sales pipeline ===== */
+
+.vertex-product-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.55rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #1b1c5c;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  font-family: 'Space Grotesk', 'Outfit', sans-serif;
+  vertical-align: middle;
+}
+
+.vertex-sell-band {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(99, 102, 241, 0.04));
+  border: 1px solid rgba(59, 130, 246, 0.18);
+}
+.vertex-sell-band .vsb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+.vertex-sell-band .vsb-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sky);
+}
+.vertex-sell-band .vsb-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.vertex-sell-band .vsb-band-range {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--t1);
+  margin-bottom: 0.35rem;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.vertex-sell-band .vsb-detail {
+  font-size: 0.78rem;
+  color: var(--t2);
+  line-height: 1.45;
+}
+.vertex-sell-band .vsb-foot {
+  margin-top: 0.5rem;
+  font-size: 0.65rem;
+  color: var(--t3);
+  font-style: italic;
+}
+
+/* Sales v129 shell */
+.sales-v129-shell .sales-v129-card {
+  padding: 1.25rem 1.5rem;
+}
+.sales-v129-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.sales-v129-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--sky);
+}
+.sales-v129-title {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--t1);
+  margin: 0.15rem 0 0;
+  font-family: 'Outfit', sans-serif;
+}
+.sales-v129-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sales-pipeline-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.sales-pipeline-stats .sps-item {
+  flex: 1 1 120px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-md);
+  background: var(--bg-deep);
+  border: 1px solid var(--border-1);
+  text-align: center;
+}
+.sales-pipeline-stats .sps-val {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--sky);
+  font-family: 'Space Grotesk', sans-serif;
+}
+.sales-pipeline-stats .sps-lbl {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--t3);
+  margin-top: 0.15rem;
+}
+.sales-view-toggle {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.sales-view-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-1);
+  background: var(--bg-deep);
+  color: var(--t2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.sales-view-btn.active,
+.sales-view-btn:hover {
+  background: var(--sky-g);
+  border-color: var(--sky);
+  color: var(--sky);
+}
+.sales-stale-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* Kanban board */
+.sales-view-kanban {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  min-height: 320px;
+}
+.sales-kanban-col {
+  flex: 0 0 200px;
+  min-width: 200px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  max-height: 480px;
+}
+.sales-kanban-col-head {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: capitalize;
+  color: var(--t1);
+  border-bottom: 1px solid var(--border-1);
+  background: rgba(255, 255, 255, 0.02);
+}
+.sales-kanban-col-head span {
+  color: var(--t3);
+  font-weight: 600;
+}
+.sales-kanban-col-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sales-kanban-card {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-1);
+  cursor: grab;
+  font-size: 0.78rem;
+}
+.sales-kanban-card strong {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--t1);
+  margin-bottom: 0.25rem;
+}
+.sales-kanban-card .sk-meta {
+  color: var(--t2);
+  font-size: 0.72rem;
+}
+.sales-kanban-card .sk-deal {
+  margin-top: 0.25rem;
+  font-weight: 700;
+  color: var(--sky);
+  font-size: 0.75rem;
+}
+.sales-kanban-card .sk-lane {
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  color: var(--t3);
+}
+.sales-kanban-card .sk-stale {
+  float: right;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+.sales-kanban-card .sk-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+.sales-kanban-card .sk-actions button {
+  flex: 1;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 5px;
+  border: 1px solid var(--border-1);
+  background: var(--bg-deep);
+  color: var(--sky);
+  cursor: pointer;
+}
+.sales-kanban-card .sk-actions button:hover {
+  background: var(--sky-g);
+  border-color: var(--sky);
+}
+.sk-empty {
+  text-align: center;
+  color: var(--t3);
+  font-size: 0.75rem;
+  padding: 1rem 0;
+  font-style: italic;
+}
+
+/* Activity modal lead extras */
+.activity-lead-extra {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-md);
+  background: var(--bg-deep);
+  border: 1px solid var(--border-1);
+  font-size: 0.78rem;
+}
+.activity-lead-extra .ale-row {
+  margin-bottom: 0.35rem;
+  color: var(--t2);
+  line-height: 1.4;
+}
+.activity-lead-extra .ale-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.activity-lead-extra .ale-quotes {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--border-1);
+}
+.activity-lead-extra .ale-quotes-title {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--t3);
+  margin-bottom: 0.35rem;
+}
+.activity-lead-extra .ale-quotes ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--t2);
+  font-size: 0.72rem;
+}
+.activity-lead-extra .ale-quotes li {
+  margin-bottom: 0.2rem;
+}
+
+@media (max-width: 768px) {
+  .vertex-product-badge {
+    display: none;
+  }
+  .sales-kanban-col {
+    flex: 0 0 170px;
+    min-width: 170px;
+  }
+  .sales-v129-header-actions {
+    width: 100%;
+  }
+}

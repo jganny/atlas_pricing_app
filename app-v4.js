@@ -14164,7 +14164,7 @@ function renderSalesPanel() {
   const filtered = leads.filter(lead => {
     if (statusFilter !== 'all' && (lead.status || 'new') !== statusFilter) return false;
     if (!query) return true;
-    const haystack = `${lead.company || ''} ${lead.contactName || ''} ${TEAM_ROLES[lead.assignedTo]?.name || lead.assignedTo || ''}`.toLowerCase();
+    const haystack = `${lead.company || ''} ${lead.contactName || ''} ${lead.lane || ''} ${lead.mode || ''} ${TEAM_ROLES[lead.assignedTo]?.name || lead.assignedTo || ''}`.toLowerCase();
     return haystack.includes(query);
   });
 
@@ -14188,25 +14188,29 @@ function renderSalesPanel() {
   });
 
   if (filtered.length === 0) {
-    body.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--t3); font-style: italic; padding: 2rem;">No leads match this view yet.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--t3); font-style: italic; padding: 2rem;">No leads match this view yet.</td></tr>`;
     return;
   }
 
   body.innerHTML = filtered.map(lead => {
-    const lastAct = lastActivityDateFor('lead', lead.id);
     const assignedName = (TEAM_ROLES[lead.assignedTo]?.name || lead.assignedTo || '—');
     const safeCompany = (lead.company || '').replace(/</g, '&lt;');
+    const laneMode = [lead.lane, lead.mode ? String(lead.mode).toUpperCase() : ''].filter(Boolean).join(' · ') || '—';
+    const dealVal = lead.dealValue ? ('₹' + Number(lead.dealValue).toLocaleString('en-IN', { maximumFractionDigits: 0 })) : '—';
+    const nextDue = lead.nextDueDate || '—';
     return `
       <tr>
         <td><strong>${safeCompany || '—'}</strong></td>
         <td>${(lead.contactName || '—').replace(/</g, '&lt;')}</td>
         <td><span class="status-badge ${lead.status || 'new'}">${formatLeadStatus(lead.status)}</span></td>
+        <td>${laneMode.replace(/</g, '&lt;')}</td>
+        <td>${dealVal}</td>
         <td>${assignedName}</td>
-        <td>${lead.createdAt ? lead.createdAt.split('T')[0] : '—'}</td>
-        <td>${lastAct ? (lastAct.createdAt || '').split('T')[0] : '—'}</td>
+        <td>${nextDue}</td>
         <td>
           <button type="button" onclick="openLeadDetailModal('${lead.id}')" style="font-size: 0.72rem; font-weight: 700; color: var(--sky); background: none; border: none; cursor: pointer; margin-right: 0.5rem;">View</button>
           <button type="button" onclick="openLeadModal('${lead.id}')" style="font-size: 0.72rem; font-weight: 700; color: var(--t2); background: none; border: none; cursor: pointer; margin-right: 0.5rem;">Edit</button>
+          <button type="button" onclick="createQuoteFromLead('${lead.id}')" style="font-size: 0.72rem; font-weight: 700; color: var(--accent-success, #059669); background: none; border: none; cursor: pointer; margin-right: 0.5rem;">Quote</button>
           <button type="button" onclick="deleteLead('${lead.id}')" style="font-size: 0.72rem; font-weight: 700; color: var(--rose, #e11d48); background: none; border: none; cursor: pointer;">Delete</button>
         </td>
       </tr>
@@ -14247,9 +14251,18 @@ function openLeadModal(leadId) {
       document.getElementById("lead-source").value = lead.source || '';
       document.getElementById("lead-notes").value = lead.notes || '';
       document.getElementById("lead-assigned-to").value = lead.assignedTo || '';
+      document.getElementById("lead-lane").value = lead.lane || '';
+      document.getElementById("lead-mode").value = lead.mode || 'air';
+      document.getElementById("lead-deal-value").value = lead.dealValue || '';
+      document.getElementById("lead-status").value = lead.status || 'new';
+      document.getElementById("lead-next-action").value = lead.nextAction || '';
+      document.getElementById("lead-next-due").value = lead.nextDueDate || '';
+      document.getElementById("lead-win-loss-reason").value = lead.winLossReason || '';
     }
   } else {
     document.getElementById("lead-modal-title").textContent = "ADD NEW LEAD";
+    document.getElementById("lead-status").value = 'new';
+    document.getElementById("lead-mode").value = 'air';
   }
 
   modal.style.display = "flex";
@@ -14272,6 +14285,13 @@ async function saveLeadForm(event) {
     source: document.getElementById("lead-source").value.trim(),
     assignedTo: document.getElementById("lead-assigned-to").value,
     notes: document.getElementById("lead-notes").value.trim(),
+    lane: document.getElementById("lead-lane").value.trim(),
+    mode: document.getElementById("lead-mode").value,
+    dealValue: parseFloat(document.getElementById("lead-deal-value").value) || 0,
+    status: document.getElementById("lead-status").value || 'new',
+    nextAction: document.getElementById("lead-next-action").value.trim(),
+    nextDueDate: document.getElementById("lead-next-due").value || '',
+    winLossReason: document.getElementById("lead-win-loss-reason").value.trim(),
   };
 
   if (!leadData.company) { alert("Company name is required."); return; }
@@ -14287,7 +14307,7 @@ async function saveLeadForm(event) {
         renderSalesPanel();
       }
     } else {
-      leadData.status = 'new';
+      if (!leadData.status) leadData.status = 'new';
       leadData.createdAt = new Date().toISOString();
       leadData.createdBy = appState.currentUser || '';
       if (DB.isCloud && DB.firestoreRef) {
@@ -19760,7 +19780,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "128.14"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.00"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
 
   function showUpdateBanner(latestVersion) {
     if (document.getElementById("app-update-banner")) return; // already showing

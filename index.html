@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=128.14">
+  <link rel="stylesheet" href="index.css?v=129.00">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -155,7 +155,8 @@
               <line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <img src="assets/atlas-logo.png" alt="Atlas Logistics Logo" onclick="goHome()" style="height: 34px; width: auto; object-fit: contain; cursor: pointer;">
+          <img src="assets/atlas-logo.png" alt="Atlas Logistics" onclick="goHome()" style="height: 34px; width: auto; object-fit: contain; cursor: pointer;">
+          <span class="vertex-product-badge" title="Vertex enterprise platform">Vertex</span>
         </div>
 
         <!-- Workspace Context Area -->
@@ -3144,32 +3145,29 @@
       </div>
 
       <!-- ==================== SALES PANEL (Leads & Activities) ==================== -->
-      <div id="sales-panel" class="view-panel">
-        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1rem;">
+      <div id="sales-panel" class="view-panel sales-v129-shell">
+        <div class="glass-card sales-v129-card">
+          <div class="sales-v129-header">
             <div>
-              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
-                Sales &amp; Business Development
-              </div>
-              <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
-                LEADS &amp; ACTIVITY PIPELINE
-              </h2>
+              <div class="sales-v129-eyebrow">Vertex Sales</div>
+              <h2 class="sales-v129-title">Leads &amp; Pipeline</h2>
             </div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn-primary" onclick="openLeadModal()" style="display: flex; align-items: center; gap: 0.4rem; background: var(--sky); color: #fff; font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
-                <span>+</span> Add Lead
-              </button>
-              <button class="btn-secondary" onclick="openCustomerActivityModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
-                <span>📝</span> Log Customer Activity
-              </button>
-              <button class="btn-secondary" onclick="goHome()" style="font-weight: 700; flex: 0 0 auto; white-space: nowrap;">
-                Back to Workspace
-              </button>
+            <div class="sales-v129-header-actions">
+              <button type="button" class="btn-primary" onclick="openLeadModal()">+ Add Lead</button>
+              <button type="button" class="btn-secondary" onclick="openCustomerActivityModal()">Log activity</button>
+              <button type="button" class="atlas-context-help-btn" data-atlas-help="How do I manage leads, move cards on the pipeline board, and create a quote from a lead?" aria-label="Sales help">?</button>
+              <button type="button" class="btn-secondary" onclick="goHome()">Back</button>
             </div>
           </div>
 
-          <!-- Status Filter Tabs -->
-          <div id="sales-status-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+          <div id="sales-pipeline-stats" class="sales-pipeline-stats"></div>
+
+          <div class="sales-view-toggle">
+            <button type="button" class="sales-view-btn active" data-sales-view="list" onclick="setSalesView('list')">List</button>
+            <button type="button" class="sales-view-btn" data-sales-view="kanban" onclick="setSalesView('kanban')">Pipeline board</button>
+          </div>
+
+          <div id="sales-status-tabs" class="sales-status-tabs">
             <button class="sales-status-tab active" data-sales-status="all" onclick="setSalesStatusFilter('all')">All</button>
             <button class="sales-status-tab" data-sales-status="new" onclick="setSalesStatusFilter('new')">New</button>
             <button class="sales-status-tab" data-sales-status="contacted" onclick="setSalesStatusFilter('contacted')">Contacted</button>
@@ -3179,10 +3177,8 @@
             <button class="sales-status-tab" data-sales-status="lost" onclick="setSalesStatusFilter('lost')">Lost</button>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
-            <input type="text" id="sales-search-input" placeholder="Search leads by company, contact, or assigned rep..."
-                   style="flex: 1; min-width: 220px; padding: 0.75rem 1rem; border-radius: 10px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.9rem;"
-                   oninput="filterSalesLeads()">
+          <div class="sales-toolbar">
+            <input type="text" id="sales-search-input" class="sales-search-input" placeholder="Search company, contact, lane, rep…" oninput="filterSalesLeads()">
             <select id="sales-sort-select" class="app-sort-select" onchange="renderSalesPanel()">
               <option value="newest">Newest</option>
               <option value="company">Company A-Z</option>
@@ -3191,24 +3187,29 @@
             </select>
           </div>
 
-          <div class="cargo-table-container" style="border: none;">
-            <table class="cargo-table quotes-table">
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Contact</th>
-                  <th>Status</th>
-                  <th>Assigned To</th>
-                  <th>Created</th>
-                  <th>Last Activity</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="sales-leads-body">
-                <tr><td colspan="7" style="text-align: center; color: var(--t3); font-style: italic; padding: 2rem;">Loading leads...</td></tr>
-              </tbody>
-            </table>
+          <div id="sales-view-list" class="sales-view-list">
+            <div class="quotes-table-container">
+              <table class="cargo-table quotes-table">
+                <thead>
+                  <tr>
+                    <th>Company</th>
+                    <th>Contact</th>
+                    <th>Status</th>
+                    <th>Lane / Mode</th>
+                    <th>Deal value</th>
+                    <th>Assigned</th>
+                    <th>Next due</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="sales-leads-body">
+                  <tr><td colspan="8" style="text-align:center;color:var(--t3);padding:2rem;">Loading leads…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          <div id="sales-view-kanban" class="sales-view-kanban" style="display:none;"></div>
         </div>
       </div>
     </main>
@@ -3217,7 +3218,7 @@
   <div id="lead-form-modal" class="modal-overlay"
     style="display: none; position: fixed; inset: 0; background: rgba(17, 18, 54, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2001; justify-content: center; align-items: center; padding: 1.5rem;">
     <div class="glass-card modal-card"
-      style="width: 100%; max-width: 480px; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
+      style="width: 100%; max-width: 520px; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-2); border-radius: 20px; box-shadow: var(--shadow-xl); padding: 2rem; position: relative;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
         <div>
           <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Sales Pipeline</div>
@@ -3255,6 +3256,52 @@
             <label>Assigned To</label>
             <select id="lead-assigned-to"></select>
           </div>
+        </div>
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Lane / Route</label>
+            <input type="text" id="lead-lane" placeholder="e.g. BOM → LHR">
+          </div>
+          <div class="form-group">
+            <label>Mode</label>
+            <select id="lead-mode">
+              <option value="air">Air</option>
+              <option value="sea">Sea</option>
+              <option value="transport">Transport</option>
+              <option value="warehouse">Warehouse</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Deal value (INR)</label>
+            <input type="number" id="lead-deal-value" min="0" step="1000" placeholder="Estimated value">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="lead-status">
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="qualified">Qualified</option>
+              <option value="quoted">Quoted</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Next action</label>
+            <input type="text" id="lead-next-action" placeholder="e.g. Send revised quote">
+          </div>
+          <div class="form-group">
+            <label>Next due date</label>
+            <input type="date" id="lead-next-due">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Win / loss reason (if lost)</label>
+          <input type="text" id="lead-win-loss-reason" placeholder="Optional — why we lost this deal">
         </div>
         <div class="form-group">
           <label>Notes</label>
@@ -3300,6 +3347,8 @@
           </select>
         </div>
       </div>
+
+      <div id="activity-lead-extra" class="activity-lead-extra"></div>
 
       <div style="border-top: 1px solid var(--border-1); padding-top: 1rem; margin-bottom: 1rem;">
         <div style="font-size: 0.68rem; font-weight: 800; color: var(--t2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem;">Activity Timeline</div>
@@ -4270,9 +4319,11 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=128.14"></script>
-  <script src="ui-shell.js?v=128.14"></script>
-  <script src="ai-assistant.js?v=128.14"></script>
+  <script src="app-v4.js?v=129.00"></script>
+  <script src="ui-shell.js?v=129.00"></script>
+  <script src="ai-assistant.js?v=129.00"></script>
+  <script src="ai-sell-band.js?v=129.00"></script>
+  <script src="sales-v129.js?v=129.00"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4600,7 +4651,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=128.14">' +
+          '<link rel="stylesheet" href="index.css?v=129.00">' +
           '<style>' +
             '@page {' +
               'size: A4;' +
