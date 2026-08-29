@@ -330,9 +330,85 @@
     };
   }
 
+  /* ── URL hash ↔ module sync (navigation only; no calc/save changes) ── */
+  var HASH_TO_MODULE = {
+    '': 'dashboard',
+    dashboard: 'dashboard',
+    home: 'dashboard',
+    'air-freight': 'air',
+    air: 'air',
+    'sea-freight': 'sea',
+    sea: 'sea',
+    transport: 'transport',
+    warehouse: 'warehouse',
+    directory: 'directory',
+    circulars: 'circulars',
+    sales: 'sales'
+  };
+  var MODULE_TO_HASH = {
+    dashboard: '',
+    air: 'air-freight',
+    sea: 'sea-freight',
+    transport: 'transport',
+    warehouse: 'warehouse',
+    directory: 'directory',
+    circulars: 'circulars',
+    sales: 'sales'
+  };
+
+  function setNavHash(module) {
+    var slug = MODULE_TO_HASH[module];
+    if (slug === undefined) return;
+    var nextHash = slug ? '#' + slug : '';
+    var current = window.location.hash || '';
+    if (current === nextHash || (nextHash === '' && (current === '' || current === '#'))) return;
+    var url = window.location.pathname + window.location.search + nextHash;
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', url);
+    } else if (slug) {
+      window.location.hash = slug;
+    } else {
+      window.location.hash = '';
+    }
+  }
+
+  function navigateFromHash() {
+    if (!isLoggedIn()) return;
+    var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase();
+    if (!raw || raw === 'dashboard' || raw === 'home') {
+      if (window.goHome && !window._suppressHashHome) window.goHome();
+      return;
+    }
+    var mod = HASH_TO_MODULE[raw];
+    if (mod && mod !== 'dashboard' && typeof window.openActiveCalculator === 'function') {
+      window.openActiveCalculator(mod);
+    }
+  }
+
+  if (typeof window.openActiveCalculator === 'function') {
+    var _origOpenCalc = window.openActiveCalculator;
+    window.openActiveCalculator = function (type) {
+      _origOpenCalc(type);
+      setNavHash(type);
+    };
+  }
+  if (typeof window.goHome === 'function') {
+    var _origGoHome = window.goHome;
+    window.goHome = function () {
+      window._suppressHashHome = true;
+      _origGoHome();
+      window._suppressHashHome = false;
+      setNavHash('dashboard');
+    };
+  }
+  window.addEventListener('hashchange', navigateFromHash);
+
   function boot() {
     initEnquiryRowInspector();
     initCommandPalette();
+    if (isLoggedIn() && window.location.hash) {
+      window.setTimeout(navigateFromHash, 400);
+    }
   }
 
   if (document.readyState === 'loading') {
