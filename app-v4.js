@@ -2596,6 +2596,44 @@ function createAirSurchargeRow(surcharge = {}) {
   return tr;
 }
 
+/** REGRESSION GUARD v129.07 — portal airline IATA dropdown to body so glass-card overflow never clips items. */
+function bindAirlineDropdownPortal(dropdown, anchorEl) {
+  if (!dropdown || dropdown._portalBound) return;
+  dropdown._portalBound = true;
+  dropdown._anchorEl = anchorEl;
+  dropdown.classList.add("iata-autocomplete-portal");
+  document.body.appendChild(dropdown);
+  const reposition = () => positionAirlineDropdown(dropdown);
+  dropdown._reposition = reposition;
+  window.addEventListener("scroll", reposition, true);
+  window.addEventListener("resize", reposition);
+}
+
+function positionAirlineDropdown(dropdown) {
+  if (!dropdown || dropdown.style.display === "none") return;
+  const anchor = dropdown._anchorEl;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  dropdown.style.position = "fixed";
+  dropdown.style.left = Math.max(8, rect.left) + "px";
+  dropdown.style.top = (rect.bottom + 4) + "px";
+  dropdown.style.width = Math.max(rect.width, 260) + "px";
+  dropdown.style.maxWidth = "calc(100vw - 16px)";
+  dropdown.style.zIndex = "5000";
+}
+
+function showAirlineDropdown(dropdown) {
+  dropdown.style.display = "block";
+  dropdown.classList.add("iata-open");
+  positionAirlineDropdown(dropdown);
+}
+
+function hideAirlineDropdown(dropdown, directoryInput) {
+  dropdown.style.display = "none";
+  dropdown.classList.remove("iata-open");
+  if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
+}
+
 function addAirlineCard(data = null) {
   const container = document.getElementById("air-airlines-list-container");
   if (!container) return;
@@ -2633,26 +2671,28 @@ function addAirlineCard(data = null) {
   );
 
   card.innerHTML = `
-    <div class="airline-card-heading" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; margin-bottom: 0.75rem;">
-      <span style="font-weight: 800; color: var(--accent-air); font-size: 0.85rem;">Airline Option #${count}</span>
-      <div class="airline-card-actions" style="display: flex; width: 100%; justify-content: flex-end; gap: 0.75rem; align-items: center;">
-        <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--t1); white-space: nowrap;">
-          <input type="radio" name="selected-airline" class="select-airline-radio" ${isSelected ? 'checked' : ''}> Select as Quoted
+    <div class="airline-card-heading">
+      <span class="airline-card-num">Airline Option #${count}</span>
+      <div class="airline-card-actions">
+        <label class="airline-select-quote-label">
+          <input type="radio" name="selected-airline" class="select-airline-radio" ${isSelected ? 'checked' : ''}>
+          <span>Select as Quoted</span>
         </label>
-        <button type="button" class="delete-btn remove-airline-btn" style="padding: 2px 4px; margin: 0; white-space: nowrap; flex-shrink: 0;">Remove</button>
+        <button type="button" class="delete-btn remove-airline-btn">Remove</button>
       </div>
     </div>
     
-    <div class="form-group" style="margin-bottom: 0.6rem;">
+    <div class="form-group airline-carrier-group" style="margin-bottom: 0.6rem;">
       <label>Carrier / Airline</label>
       <div class="airline-directory-input" contenteditable="plaintext-only" role="combobox" aria-autocomplete="list" aria-expanded="false" data-placeholder="Type airline code or name..." spellcheck="false"></div>
       <input type="hidden" class="air-name" value="">
     </div>
 
-    <div class="airline-rate-summary-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; background: #fafbfc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.6rem 0.5rem 0.75rem; margin-bottom: 0.5rem;">
-      <span class="airline-rate-summary-text" style="font-size: 0.72rem; color: var(--t2, #64748b); font-weight: 600;">No rates entered yet</span>
-      <button type="button" class="open-airline-rate-modal-btn" title="Edit rates &amp; fees" aria-label="Edit rates &amp; fees" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; background: rgba(245, 158, 11, 0.18); color: var(--accent-warning, #b45309); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 50%; cursor: pointer; padding: 0;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    <div class="airline-rate-summary-bar">
+      <span class="airline-rate-summary-text">No rates entered yet</span>
+      <button type="button" class="open-airline-rate-modal-btn atlas-rate-config-btn" title="Configure rates and fees" aria-label="Configure rates and fees">
+        <span class="arc-chip-label">Rates &amp; fees</span>
+        <span class="arc-chevron" aria-hidden="true">›</span>
       </button>
     </div>
 
@@ -2895,13 +2935,14 @@ function addAirlineCard(data = null) {
       directoryInput.textContent = name;
       nameInput.value = name;
     }
-    let dropdown = parent.querySelector(".iata-autocomplete-dropdown");
+    let dropdown = document.querySelector(".iata-autocomplete-dropdown[data-airline-card='" + airlineId + "']");
     if (!dropdown) {
       dropdown = document.createElement("div");
       dropdown.className = "iata-autocomplete-dropdown";
+      dropdown.setAttribute("data-airline-card", airlineId);
       dropdown.style.display = "none";
-      parent.appendChild(dropdown);
     }
+    bindAirlineDropdownPortal(dropdown, directoryInput || parent);
 
     const saveTypedAirlineIfNew = () => {
       const val = nameInput.value ? nameInput.value.trim() : "";
@@ -2939,7 +2980,7 @@ function addAirlineCard(data = null) {
         }).slice(0, 15);
 
         if (matches.length > 0) {
-          dropdown.style.display = "flex";
+          showAirlineDropdown(dropdown);
           if (directoryInput) directoryInput.setAttribute("aria-expanded", "true");
           matches.forEach(al => {
             const item = document.createElement("div");
@@ -2949,19 +2990,16 @@ function addAirlineCard(data = null) {
               nameInput._selectedFromDropdown = true;
               nameInput.value = `${al.code} - ${al.name}`;
               if (directoryInput) directoryInput.textContent = nameInput.value;
-              dropdown.style.display = "none";
-              if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
+              hideAirlineDropdown(dropdown, directoryInput);
               calculateAirFreight();
             });
             dropdown.appendChild(item);
           });
         } else {
-          dropdown.style.display = "none";
-          if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
+          hideAirlineDropdown(dropdown, directoryInput);
         }
       } else {
-        dropdown.style.display = "none";
-        if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
+        hideAirlineDropdown(dropdown, directoryInput);
       }
     };
 
@@ -2979,8 +3017,7 @@ function addAirlineCard(data = null) {
 
     document.addEventListener("click", (e) => {
       if (e.target !== nameInput && e.target !== directoryInput && !dropdown.contains(e.target)) {
-        dropdown.style.display = "none";
-        if (directoryInput) directoryInput.setAttribute("aria-expanded", "false");
+        hideAirlineDropdown(dropdown, directoryInput);
       }
     });
   }
@@ -2994,10 +3031,13 @@ function addAirlineCard(data = null) {
 
   card.querySelector(".remove-airline-btn").addEventListener("click", () => {
     const isChecked = card.querySelector(".select-airline-radio").checked;
+    const portalDropdown = document.querySelector(".iata-autocomplete-dropdown[data-airline-card='" + airlineId + "']");
+    if (portalDropdown) portalDropdown.remove();
     card.remove();
     const remaining = container.querySelectorAll(".airline-card");
     remaining.forEach((rcard, idx) => {
-      rcard.querySelector("span").textContent = `Airline Option #${idx + 1}`;
+      const numEl = rcard.querySelector(".airline-card-num");
+      if (numEl) numEl.textContent = `Airline Option #${idx + 1}`;
     });
     if (isChecked && remaining.length > 0) {
       remaining[0].querySelector(".select-airline-radio").checked = true;
@@ -4345,10 +4385,11 @@ window.addNewLinerCard = function (data = null) {
       </div>
     </div>
 
-    <div class="liner-rate-summary-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; background: #fafbfc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.6rem 0.5rem 0.75rem; margin-bottom: 0.5rem;">
+    <div class="liner-rate-summary-bar">
       <span class="liner-rate-summary-text" style="font-size: 0.72rem; color: var(--t2, #64748b); font-weight: 600;">No rates entered yet</span>
-      <button type="button" class="open-liner-rate-modal-btn" title="Edit rates &amp; fees" aria-label="Edit rates &amp; fees" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; background: rgba(245, 158, 11, 0.18); color: var(--accent-warning, #b45309); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 50%; cursor: pointer; padding: 0;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <button type="button" class="open-liner-rate-modal-btn atlas-rate-config-btn" title="Configure rates and fees" aria-label="Configure rates and fees">
+        <span class="arc-chip-label">Rates &amp; fees</span>
+        <span class="arc-chevron" aria-hidden="true">›</span>
       </button>
     </div>
 
@@ -19876,7 +19917,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.06"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.07"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {

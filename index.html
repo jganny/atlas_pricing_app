@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.06">
+  <link rel="stylesheet" href="index.css?v=129.07">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -1640,6 +1640,7 @@
               </div>
 
             </div>
+            <div class="vertex-quick-assist-slot" id="air-quick-assist-slot" aria-hidden="true"></div>
 
             <!-- Follow-up Temperature Questions -->
             <div id="air-commodity-temp-container"
@@ -1855,12 +1856,14 @@
             </div>
 
             <!-- Editable Terms & Conditions -->
-            <div style="margin-top: 1.5rem;">
-              <label for="air-terms"
-                style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-air);">Editable
-                Terms & Conditions</label>
-              <textarea id="air-terms" rows="6"
-                style="width: 100%; background: #ffffff !important; border: 1px solid #cbd5e1; color: #000000 !important; font-weight: 600; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
+            <div class="atlas-terms-shell" style="margin-top: 1.5rem;">
+              <div class="atlas-terms-toolbar">
+                <label for="air-terms" class="atlas-terms-label">Editable Terms &amp; Conditions</label>
+                <button type="button" class="atlas-terms-focus-btn" onclick="document.getElementById('air-terms').focus()" aria-label="Focus terms editor">
+                  <span class="ate-spark" aria-hidden="true">✦</span> Edit terms
+                </button>
+              </div>
+              <textarea id="air-terms" rows="6" class="atlas-terms-field"
                 placeholder="Add custom terms..."></textarea>
             </div>
 
@@ -2058,6 +2061,7 @@
                 <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
               </div>
             </div>
+            <div class="vertex-quick-assist-slot" id="sea-quick-assist-slot" aria-hidden="true"></div>
 
             <div class="form-grid-2" style="margin-top: 1rem;">
               <div class="form-group autocomplete-container">
@@ -2621,12 +2625,14 @@
             </div>
 
             <!-- Editable Terms & Conditions -->
-            <div style="margin-top: 1.5rem;">
-              <label for="sea-terms"
-                style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-sea);">Editable
-                Terms & Conditions</label>
-              <textarea id="sea-terms" rows="6"
-                style="width: 100%; background: #ffffff !important; border: 1px solid #cbd5e1; color: #000000 !important; font-weight: 600; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; font-family: inherit; line-height: 1.4; resize: vertical;"
+            <div class="atlas-terms-shell" style="margin-top: 1.5rem;">
+              <div class="atlas-terms-toolbar">
+                <label for="sea-terms" class="atlas-terms-label">Editable Terms &amp; Conditions</label>
+                <button type="button" class="atlas-terms-focus-btn" onclick="document.getElementById('sea-terms').focus()" aria-label="Focus terms editor">
+                  <span class="ate-spark" aria-hidden="true">✦</span> Edit terms
+                </button>
+              </div>
+              <textarea id="sea-terms" rows="6" class="atlas-terms-field"
                 placeholder="Add custom terms..."></textarea>
             </div>
 
@@ -4327,11 +4333,11 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.06"></script>
-  <script src="ui-shell.js?v=129.06"></script>
-  <script src="ai-assistant.js?v=129.06"></script>
-  <script src="ai-sell-band.js?v=129.06"></script>
-  <script src="sales-v129.js?v=129.06"></script>
+  <script src="app-v4.js?v=129.07"></script>
+  <script src="ui-shell.js?v=129.07"></script>
+  <script src="ai-assistant.js?v=129.07"></script>
+  <script src="ai-sell-band.js?v=129.07"></script>
+  <script src="sales-v129.js?v=129.07"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4659,7 +4665,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.06">' +
+          '<link rel="stylesheet" href="index.css?v=129.07">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

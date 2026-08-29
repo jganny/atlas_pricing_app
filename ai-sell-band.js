@@ -1,17 +1,18 @@
 /**
- * Desk Quick Assist — opt-in left drawer (read-only).
- * Never auto-covers pricing results. User opens via "Quick assist" button.
+ * Desk Quick Assist — draggable AI bubble near route fields (read-only).
+ * Never auto-covers pricing results. User opens via bubble tap; drag grip to move.
  */
 (function () {
   'use strict';
 
   var DESKS = {
-    air: { type: 'air', customerSel: '#air-cust-name', originSel: '#air-origin', destSel: '#air-dest', panelSel: '#air-freight-panel' },
-    sea: { type: 'sea', customerSel: '#sea-cust-name', originSel: '#sea-origin', destSel: '#sea-dest', panelSel: '#sea-freight-panel' },
+    air: { type: 'air', customerSel: '#air-cust-name', originSel: '#air-origin', destSel: '#air-dest', panelSel: '#air-freight-panel', slotSel: '#air-quick-assist-slot' },
+    sea: { type: 'sea', customerSel: '#sea-cust-name', originSel: '#sea-origin', destSel: '#sea-dest', panelSel: '#sea-freight-panel', slotSel: '#sea-quick-assist-slot' },
     transport: { type: 'transport', customerSel: '#transport-customer-name', panelSel: '#transportation-panel' },
     warehouse: { type: 'warehouse', typeAlt: 'warehousing', customerSel: '#warehouse-customer-name', panelSel: '#warehousing-panel' }
   };
 
+  var POS_KEY = 'vertex-quick-assist-pos-v129';
   var IN_AIR = ['BLR', 'BOM', 'DEL', 'MAA', 'HYD', 'CCU', 'AMD', 'COK', 'GOI', 'PNQ', 'TRV', 'ATQ', 'JAI', 'GAU', 'BBI', 'IXC'];
   var GULF = ['DXB', 'AUH', 'DOH', 'MCT', 'BAH', 'KWI', 'RUH', 'JED', 'DMM', 'SHJ'];
   var EU = ['LHR', 'LGW', 'STN', 'MAN', 'FRA', 'AMS', 'CDG', 'MUC', 'ZRH', 'MXP', 'FCO', 'MAD', 'BRU', 'VIE', 'BCN'];
@@ -67,6 +68,8 @@
   var drawer = null;
   var bodyEl = null;
   var badgeEl = null;
+  var dragState = null;
+  var posMode = 'anchor';
 
   function esc(s) {
     return String(s || '').replace(/</g, '&lt;');
@@ -221,6 +224,135 @@
     return null;
   }
 
+  function readSavedPos() {
+    try {
+      return JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function savePos(mode, x, y) {
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify({ mode: mode, x: x, y: y }));
+    } catch (e) { /* ignore quota */ }
+  }
+
+  function clamp(n, min, max) {
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function getAnchorRect() {
+    var deskKey = activeDeskKey();
+    if (!deskKey) return null;
+    var cfg = DESKS[deskKey];
+    var slot = cfg.slotSel ? document.querySelector(cfg.slotSel) : null;
+    if (slot) {
+      var r = slot.getBoundingClientRect();
+      if (r.width || r.height) return r;
+    }
+    var originEl = cfg.originSel ? document.querySelector(cfg.originSel) : null;
+    var custEl = cfg.customerSel ? document.querySelector(cfg.customerSel) : null;
+    var anchor = originEl || custEl;
+    if (!anchor) return null;
+    return anchor.getBoundingClientRect();
+  }
+
+  function applyFabPosition() {
+    if (!fab) return;
+    var saved = readSavedPos();
+    var rect = fab.getBoundingClientRect();
+    var w = rect.width || 168;
+    var h = rect.height || 44;
+
+    if (saved && saved.mode === 'free' && typeof saved.x === 'number' && typeof saved.y === 'number') {
+      posMode = 'free';
+      fab.style.left = clamp(saved.x, 8, window.innerWidth - w - 8) + 'px';
+      fab.style.top = clamp(saved.y, 8, window.innerHeight - h - 8) + 'px';
+      fab.style.bottom = 'auto';
+      fab.style.right = 'auto';
+      fab.classList.add('vqaf-free');
+      fab.classList.remove('vqaf-anchored');
+    } else {
+      posMode = 'anchor';
+      var anchor = getAnchorRect();
+      if (anchor) {
+        var left = clamp(anchor.left, 8, window.innerWidth - w - 8);
+        var top = clamp(anchor.bottom + 8, 8, window.innerHeight - h - 8);
+        fab.style.left = left + 'px';
+        fab.style.top = top + 'px';
+        fab.style.bottom = 'auto';
+        fab.style.right = 'auto';
+      } else {
+        fab.style.left = 'max(14px, calc(240px + 10px))';
+        fab.style.top = 'auto';
+        fab.style.bottom = '18px';
+      }
+      fab.classList.add('vqaf-anchored');
+      fab.classList.remove('vqaf-free');
+    }
+    positionDrawer();
+  }
+
+  function positionDrawer() {
+    if (!drawer || !fab) return;
+    var fabRect = fab.getBoundingClientRect();
+    var dw = drawer.offsetWidth || 300;
+    var left = clamp(fabRect.left, 8, window.innerWidth - dw - 8);
+    var top = fabRect.bottom + 10;
+    if (top + 200 > window.innerHeight) {
+      top = Math.max(8, fabRect.top - (drawer.offsetHeight || 280) - 10);
+    }
+    drawer.style.left = left + 'px';
+    drawer.style.top = top + 'px';
+    drawer.style.bottom = 'auto';
+  }
+
+  function onDragMove(e) {
+    if (!dragState || !fab) return;
+    var pt = e.touches ? e.touches[0] : e;
+    var x = pt.clientX - dragState.ox;
+    var y = pt.clientY - dragState.oy;
+    var w = fab.offsetWidth;
+    var h = fab.offsetHeight;
+    x = clamp(x, 8, window.innerWidth - w - 8);
+    y = clamp(y, 8, window.innerHeight - h - 8);
+    fab.style.left = x + 'px';
+    fab.style.top = y + 'px';
+    fab.style.bottom = 'auto';
+    fab.style.right = 'auto';
+    fab.classList.add('vqaf-free');
+    fab.classList.remove('vqaf-anchored');
+    posMode = 'free';
+    positionDrawer();
+  }
+
+  function onDragEnd() {
+    if (!dragState || !fab) return;
+    dragState = null;
+    fab.classList.remove('vqaf-dragging');
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup', onDragEnd);
+    document.removeEventListener('touchmove', onDragMove);
+    document.removeEventListener('touchend', onDragEnd);
+    var rect = fab.getBoundingClientRect();
+    savePos('free', rect.left, rect.top);
+  }
+
+  function onDragStart(e) {
+    if (!fab) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var pt = e.touches ? e.touches[0] : e;
+    var rect = fab.getBoundingClientRect();
+    dragState = { ox: pt.clientX - rect.left, oy: pt.clientY - rect.top };
+    fab.classList.add('vqaf-dragging');
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener('touchmove', onDragMove, { passive: false });
+    document.addEventListener('touchend', onDragEnd);
+  }
+
   function ensureUi() {
     if (fab && drawer) return;
     fab = document.getElementById('vertex-quick-assist-fab');
@@ -232,10 +364,24 @@
     fab = document.createElement('button');
     fab.type = 'button';
     fab.id = 'vertex-quick-assist-fab';
-    fab.className = 'vertex-quick-assist-fab';
+    fab.className = 'vertex-quick-assist-fab vqaf-anchored';
     fab.setAttribute('aria-expanded', 'false');
-    fab.innerHTML = '<span class="vqaf-icon">✦</span><span class="vqaf-label">Quick assist</span><span class="vqaf-badge" id="vertex-quick-assist-badge" hidden>0</span>';
-    fab.addEventListener('click', toggleDrawer);
+    fab.setAttribute('title', 'AI Quick Assist — drag the grip to move anywhere');
+    fab.innerHTML =
+      '<span class="vqaf-grip" aria-hidden="true" title="Drag to move">⠿</span>' +
+      '<span class="vqaf-bubble-core">' +
+        '<span class="vqaf-glow" aria-hidden="true"></span>' +
+        '<span class="vqaf-icon">✦</span>' +
+        '<span class="vqaf-label">AI Assist</span>' +
+        '<span class="vqaf-badge" id="vertex-quick-assist-badge" hidden>0</span>' +
+      '</span>';
+
+    fab.querySelector('.vqaf-grip').addEventListener('mousedown', onDragStart);
+    fab.querySelector('.vqaf-grip').addEventListener('touchstart', onDragStart, { passive: false });
+    fab.querySelector('.vqaf-bubble-core').addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleDrawer();
+    });
 
     drawer = document.createElement('aside');
     drawer.id = 'vertex-quick-assist-drawer';
@@ -243,17 +389,23 @@
     drawer.setAttribute('aria-hidden', 'true');
     drawer.innerHTML =
       '<div class="vqad-header">' +
-        '<div><div class="vqad-eyebrow">Quick assist</div><div class="vqad-title">Suggestions only</div></div>' +
+        '<div><div class="vqad-eyebrow">AI Quick Assist</div><div class="vqad-title">Lane &amp; customer hints</div></div>' +
         '<button type="button" class="vqad-close" aria-label="Close">&times;</button>' +
       '</div>' +
       '<div class="vqad-body" id="vertex-quick-assist-body"></div>' +
-      '<div class="vqad-foot">Nothing here changes your form or saves a quote.</div>';
+      '<div class="vqad-foot">Suggestions only — nothing here saves or changes your quote.</div>';
 
     drawer.querySelector('.vqad-close').addEventListener('click', closeDrawer);
     document.body.appendChild(fab);
     document.body.appendChild(drawer);
     bodyEl = drawer.querySelector('#vertex-quick-assist-body');
     badgeEl = fab.querySelector('#vertex-quick-assist-badge');
+
+    window.addEventListener('resize', applyFabPosition);
+    window.addEventListener('scroll', function () {
+      if (posMode === 'anchor') applyFabPosition();
+      else positionDrawer();
+    }, true);
   }
 
   function openDrawer() {
@@ -263,6 +415,7 @@
     drawer.setAttribute('aria-hidden', 'false');
     fab.classList.add('open');
     fab.setAttribute('aria-expanded', 'true');
+    positionDrawer();
     renderDrawerContent();
   }
 
@@ -291,7 +444,7 @@
     if (!bodyEl) return;
     var deskKey = activeDeskKey();
     if (!deskKey) {
-      bodyEl.innerHTML = '<p class="vqad-empty">Open a desk to see suggestions.</p>';
+      bodyEl.innerHTML = '<p class="vqad-empty">Open a desk to see AI suggestions.</p>';
       return;
     }
 
@@ -333,7 +486,7 @@
     }
 
     if (!html) {
-      html = '<p class="vqad-empty">Enter customer name and route to see suggestions. Pricing results stay fully visible — open this panel only when you want tips.</p>';
+      html = '<p class="vqad-empty">Enter customer name and route (POL/POD or origin/dest) for AI lane hints. Drag the bubble anywhere you prefer.</p>';
     }
 
     bodyEl.innerHTML = html;
@@ -374,6 +527,7 @@
 
   function refreshAll() {
     ensureUi();
+    applyFabPosition();
     updateBadge();
     if (!activeDeskKey()) closeDrawer();
   }
@@ -381,6 +535,7 @@
   function init() {
     ensureUi();
     document.querySelectorAll('.vertex-dream-bubble, #vertex-dream-dock').forEach(function (el) { el.remove(); });
+    applyFabPosition();
     refreshAll();
     window.setInterval(refreshAll, 2500);
 

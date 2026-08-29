@@ -209,18 +209,36 @@
     ];
     desks.forEach(function (d) {
       var header = document.querySelector(d.sel);
-      if (!header || header.querySelector('.atlas-context-help-btn')) return;
+      if (!header) return;
+      var existing = header.querySelector('.atlas-context-help-btn');
+      var titleEl = header.querySelector('.desk-shell-title');
+      if (titleEl) {
+        var titleRow = titleEl.closest('.desk-shell-title-row');
+        if (!titleRow) {
+          titleRow = document.createElement('div');
+          titleRow.className = 'desk-shell-title-row';
+          titleEl.parentNode.insertBefore(titleRow, titleEl);
+          titleRow.appendChild(titleEl);
+        }
+        if (existing) {
+          if (existing.parentNode !== titleRow) titleRow.appendChild(existing);
+          return;
+        }
+      }
+      if (existing || header.querySelector('.atlas-context-help-btn')) return;
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'atlas-context-help-btn';
       btn.setAttribute('data-atlas-help', d.prompt);
       btn.setAttribute('aria-label', 'Atlas Help for this desk');
       btn.textContent = '?';
-      var backBtn = header.querySelector('.btn-back-dashboard');
-      if (backBtn && backBtn.parentNode) {
-        backBtn.parentNode.insertBefore(btn, backBtn);
+      if (titleEl) {
+        var row = titleEl.closest('.desk-shell-title-row');
+        (row || titleEl.parentNode).appendChild(btn);
       } else {
-        header.appendChild(btn);
+        var titleBlock = header.querySelector('div');
+        if (titleBlock) titleBlock.appendChild(btn);
+        else header.appendChild(btn);
       }
     });
     bindContextHelpButtons();
