@@ -140,24 +140,39 @@
     }).slice(0, 5);
   }
 
+  function carrierKey(name) {
+    var trimmed = (name || '').trim();
+    var codeMatch = trimmed.match(/^([A-Za-z0-9]{2,3})\s*[-–]\s*\S/);
+    if (codeMatch) return codeMatch[1].toUpperCase();
+    if (/^[A-Za-z0-9]{2,3}$/.test(trimmed)) return trimmed.toUpperCase();
+    return trimmed.toLowerCase();
+  }
+
   function getSmartLaneCarriers(mode, origin, dest) {
     var o = parseIata(origin);
     var d = parseIata(dest);
-    if (!o || !d) return { route: '', items: [], historyCount: 0 };
+    if (!o || !d) return { route: '', items: [] };
 
     var key = corridorKey(o, d);
     var rev = reverseKey(key);
     var lookup = key;
     if (!AIR_CORRIDOR_CARRIERS[lookup] && AIR_CORRIDOR_CARRIERS[rev]) lookup = rev;
 
-    var items = [];
-    var seen = {};
+    var byKey = {};
 
-    function add(name, note, source) {
-      var k = (name || '').toLowerCase();
-      if (!k || seen[k]) return;
-      seen[k] = true;
-      items.push({ name: name, note: note || '', source: source || 'intel' });
+    function add(name, note, usedOnLane) {
+      if (!name) return;
+      var k = carrierKey(name);
+      var displayName = name.trim();
+      if (byKey[k]) {
+        if (displayName.length > byKey[k].name.length) byKey[k].name = displayName;
+        if (note && byKey[k].note.indexOf(note) === -1) {
+          byKey[k].note = byKey[k].note ? byKey[k].note + ' · ' + note : note;
+        }
+        if (usedOnLane) byKey[k].usedOnLane = true;
+        return;
+      }
+      byKey[k] = { name: displayName, note: note || '', usedOnLane: !!usedOnLane };
     }
 
     if (mode === 'air') {
@@ -171,25 +186,31 @@
         ];
       }
       intel.forEach(function (c) {
-        add(c.name, c.note, 'intel');
+        add(c.name, c.note, false);
       });
     } else if (mode === 'sea') {
       var liners = SEA_CORRIDOR_LINERS[lookup] || SEA_CORRIDOR_LINERS[rev] || SEA_CORRIDOR_LINERS['IN-EU'] || [];
       liners.forEach(function (ln) {
-        add(ln, 'Common liner on this trade lane', 'intel');
+        add(ln, 'Regular liner on this trade lane', false);
       });
     }
 
     if (typeof window.getRouteVendorHistory === 'function') {
       var hist = window.getRouteVendorHistory(mode, origin, dest);
       (hist.vendors || []).forEach(function (v) {
-        var note = 'Your team quoted ' + v.timesUsed + '×' + (v.timesWon ? ' · won ' + v.timesWon + '×' : '');
-        add(v.name, note, 'history');
+        var note = 'Previously quoted ' + v.timesUsed + '× on this lane' +
+          (v.timesWon ? ' · won ' + v.timesWon + '×' : '');
+        add(v.name, note, true);
       });
-      return { route: origin.trim() + ' → ' + dest.trim(), items: items, historyCount: hist.totalQuotes || 0 };
     }
 
-    return { route: origin.trim() + ' → ' + dest.trim(), items: items, historyCount: 0 };
+    var items = Object.keys(byKey).map(function (k) { return byKey[k]; });
+    items.sort(function (a, b) {
+      if (a.usedOnLane !== b.usedOnLane) return a.usedOnLane ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return { route: origin.trim() + ' → ' + dest.trim(), items: items };
   }
 
   function activeDeskKey() {
@@ -284,15 +305,10 @@
     if ((deskKey === 'air' || deskKey === 'sea') && origin.trim() && dest.trim()) {
       var lane = getSmartLaneCarriers(deskKey, origin, dest);
       html += '<section class="vqad-section"><h4>Carriers on ' + esc(lane.route) + '</h4>';
-      if (lane.historyCount) {
-        html += '<p class="vqad-meta">' + lane.historyCount + ' past quote' + (lane.historyCount === 1 ? '' : 's') + ' in your database</p>';
-      }
       if (lane.items.length) {
         html += '<ul class="vqad-list">';
         lane.items.forEach(function (item) {
           html += '<li><span class="vqad-item-name">' + esc(item.name) + '</span>' +
-            '<span class="vqad-item-tag vqad-tag-' + esc(item.source) + '">' +
-            (item.source === 'history' ? 'Your team' : 'Common lane') + '</span>' +
             (item.note ? '<span class="vqad-item-note">' + esc(item.note) + '</span>' : '') + '</li>';
         });
         html += '</ul>';
