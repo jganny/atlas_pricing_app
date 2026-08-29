@@ -3014,6 +3014,11 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   .logo-tagline { display: none; }
   .user-badge-container span { display: none; }
   .active-user-badge, .admin-settings-btn, .change-password-btn, .logout-btn { padding: 0.45rem !important; gap: 0; }
+  /* Even icon-only, logo + workspace context + user/admin/password/logout
+     buttons can exceed narrow viewport width — scroll rather than clip so
+     every button stays reachable (matches .module-navigation-tabs pattern). */
+  .header-content { overflow-x: auto; scrollbar-width: none; }
+  .header-content::-webkit-scrollbar { display: none; }
 }
 
 /* iPhone SE / Small (≤ 389px) */
