@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=128.05">
+  <link rel="stylesheet" href="index.css?v=128.10">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -162,6 +162,7 @@
         <div class="header-workspace-context" style="flex-grow: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; margin: 0 1rem;">
           <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Workspace</div>
           <div id="header-workspace-name" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Dashboard</div>
+          <div id="header-quick-nav-hint" class="header-quick-nav-hint" title="Open quick navigation">Press <kbd>⌘</kbd><kbd>K</kbd> for quick nav</div>
         </div>
 
         <!-- Active User Badge & Logout -->
@@ -433,8 +434,8 @@
               Report Generator</h3>
 
             <div class="form-group">
-              <label for="report-period">Reporting Timeframe</label>
-              <select id="report-period">
+              <label for="overview-report-period">Reporting Timeframe</label>
+              <select id="overview-report-period">
                 <option value="daily">Daily (Today's performance)</option>
                 <option value="monthly">Monthly (Active month)</option>
                 <option value="quarterly">Quarterly (Active Q)</option>
@@ -444,8 +445,8 @@
             </div>
 
             <div class="form-group">
-              <label for="report-user">Filter By Officer</label>
-              <select id="report-user">
+              <label for="overview-report-user">Filter By Officer</label>
+              <select id="overview-report-user">
                 <option value="all">All Pricing Officers</option>
                 <option value="shashank" id="opt-shashank">Air Nomination</option>
                 <option value="shaheer" id="opt-shaheer">Sea Nomination</option>
@@ -1514,18 +1515,7 @@
         <div class="workspace desk-calculator-layout">
           <!-- Inputs section -->
           <div class="glass-card desk-form-card">
-            <div class="section-title"
-              style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path
-                    d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-4 4H3l-2 3 3-2v-2l4-4 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z" />
-                </svg>
-                <span>AIR FREIGHT DESK</span>
-              </div>
-            </div>
-
-            <div class="desk-tab-strip">
+            <div class="desk-tab-strip desk-tab-strip-flush">
               <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('air-freight-panel','details',this)">Shipment Details</button>
               <button type="button" class="desk-tab-btn" onclick="switchDeskTab('air-freight-panel','carrier',this)">Carrier &amp; Tariffs</button>
             </div>
@@ -1969,19 +1959,7 @@
         <div class="workspace desk-calculator-layout">
           <!-- Inputs Column -->
           <div class="glass-card desk-form-card">
-            <div class="section-title"
-              style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; width: 100%;">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                  <line x1="2" y1="10" x2="22" y2="10" />
-                  <path d="M12 17v4M8 21h8" />
-                </svg>
-                <span>SEA FREIGHT DESK</span>
-              </div>
-            </div>
-
-            <div class="desk-tab-strip">
+            <div class="desk-tab-strip desk-tab-strip-flush">
               <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('sea-freight-panel','details',this)">Shipment Details</button>
               <button type="button" class="desk-tab-btn" onclick="switchDeskTab('sea-freight-panel','carrier',this)">Carrier &amp; Tariffs</button>
             </div>
@@ -2732,15 +2710,10 @@
 
       <!-- ==================== TRANSPORTATION PANEL ==================== -->
       <div id="transportation-panel" class="view-panel desk-shell" data-desk="transport">
-        <div class="calculator-header"
-          style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+        <div class="calculator-header desk-shell-header" style="border-color: var(--violet);">
           <div>
-            <div
-              style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
-              Operational Desk</div>
-            <h2
-              style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
-              TRANSPORTATION DESK</h2>
+            <div class="desk-shell-eyebrow" style="color: var(--violet);">Operational Desk</div>
+            <h2 class="desk-shell-title" style="color: var(--violet);">TRANSPORTATION DESK</h2>
           </div>
           <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
@@ -2862,15 +2835,10 @@
 
       <!-- ==================== WAREHOUSING PANEL ==================== -->
       <div id="warehousing-panel" class="view-panel desk-shell" data-desk="warehouse">
-        <div class="calculator-header"
-          style="background: var(--bg-surface); border: 1px solid var(--border-1); padding: 1.5rem; border-radius: var(--r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+        <div class="calculator-header desk-shell-header" style="border-color: var(--sky);">
           <div>
-            <div
-              style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
-              Operational Desk</div>
-            <h2
-              style="font-size: 1.5rem; font-weight: 900; color: var(--sky); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
-              WAREHOUSING DESK</h2>
+            <div class="desk-shell-eyebrow" style="color: var(--sky);">Operational Desk</div>
+            <h2 class="desk-shell-title" style="color: var(--sky);">WAREHOUSING DESK</h2>
           </div>
           <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
         </div>
@@ -4267,14 +4235,14 @@
   </div>
 
   <!-- Atlas Copilot — AI assistant (assistive only; never calculates rates) -->
-  <button type="button" id="atlas-copilot-fab" class="atlas-copilot-fab" title="Atlas Copilot (AI)" aria-label="Open Atlas Copilot">
+  <button type="button" id="atlas-copilot-fab" class="atlas-copilot-fab" title="Atlas Help" aria-label="Open Atlas Help">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l1 3 1-3 3-1-3-1-1-3-1 3-3 1 3 1z"/><path d="M19 13l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5L17 15l1.5-.5.5-1.5z"/></svg>
   </button>
   <aside id="atlas-copilot-panel" class="atlas-copilot-panel" aria-hidden="true" aria-label="Atlas Copilot">
     <div class="atlas-copilot-header">
       <div>
-        <span class="atlas-copilot-eyebrow">AI Assistant</span>
-        <h3 class="atlas-copilot-title">Atlas Copilot</h3>
+        <span class="atlas-copilot-eyebrow">Help</span>
+        <h3 class="atlas-copilot-title">Atlas Help</h3>
       </div>
       <button type="button" id="atlas-copilot-close" class="atlas-copilot-close" aria-label="Close">×</button>
     </div>
@@ -4284,22 +4252,22 @@
       <button type="button" data-copilot-prompt="Draft a short professional follow-up email for a quoted shipment.">Draft email</button>
     </div>
     <div id="atlas-copilot-log" class="atlas-copilot-log">
-      <div class="atlas-copilot-msg atlas-copilot-msg-assistant">Hi — I can help with navigation, workflows, and summarising enquiries. I never calculate rates; use the desks for pricing.</div>
+      <div class="atlas-copilot-msg atlas-copilot-msg-assistant">Quick help for navigation and workflows. Press ⌘K (Ctrl+K on Windows) to jump between modules. I never calculate rates — use the desks for pricing.</div>
     </div>
     <label class="atlas-copilot-include">
       <input type="checkbox" id="atlas-copilot-include-quote" />
       Include selected enquiry (read-only)
     </label>
     <div class="atlas-copilot-compose">
-      <textarea id="atlas-copilot-input" rows="2" placeholder="Ask Atlas Copilot…" aria-label="Message to Atlas Copilot"></textarea>
-      <button type="button" id="atlas-copilot-send" class="btn-primary">Send</button>
+      <textarea id="atlas-copilot-input" rows="2" placeholder="Ask Atlas Help…" aria-label="Message to Atlas Help"></textarea>
+      <button type="button" id="atlas-copilot-send" class="atlas-copilot-send-btn">Send</button>
     </div>
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=128.05"></script>
-  <script src="ui-shell.js?v=128.05"></script>
-  <script src="ai-assistant.js?v=128.05"></script>
+  <script src="app-v4.js?v=128.10"></script>
+  <script src="ui-shell.js?v=128.10"></script>
+  <script src="ai-assistant.js?v=128.10"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4627,7 +4595,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=128.05">' +
+          '<link rel="stylesheet" href="index.css?v=128.10">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

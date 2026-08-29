@@ -1130,6 +1130,10 @@ function goHome() {
     });
     const root = document.documentElement;
     root.style.setProperty('--accent-current', 'var(--sky)');
+    const overviewTabBtn = document.querySelector('#manager-panel .desk-tab-strip .desk-tab-btn');
+    if (typeof switchDeskTab === 'function') {
+      switchDeskTab('manager-panel', 'overview', overviewTabBtn);
+    }
     renderAdminDashboard();
   } else {
     document.getElementById("member-dashboard-panel").classList.add("active");
@@ -6653,8 +6657,8 @@ window.convertQuote = (id) => {
 
 // REPORT GENERATOR & PDF LAYOUT
 function generatePerformanceReport() {
-  const period = document.getElementById("report-period").value;
-  const officer = document.getElementById("report-user").value;
+  const period = document.getElementById("overview-report-period").value;
+  const officer = document.getElementById("overview-report-user").value;
 
   const todayStr = new Date().toISOString().split('T')[0];
   const activeYear = '2026';
@@ -9979,8 +9983,8 @@ function applyDeskNames() {
     if (headerUserAvatarEl) headerUserAvatarEl.textContent = activeUser.charAt(0).toUpperCase();
   }
 
-  // Update report user dropdown options dynamically with all Pricing Officers
-  const reportUserSelect = document.getElementById("report-user");
+  // Update overview report user dropdown (distinct from Enquiry Database report-user)
+  const reportUserSelect = document.getElementById("overview-report-user");
   if (reportUserSelect) {
     const curVal = reportUserSelect.value;
     const roles = Object.keys(TEAM_ROLES).filter(roleId => roleId !== 'ganny' && roleId !== 'manager' && roleId !== 'mahendra');
@@ -19746,7 +19750,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "128.05"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "128.10"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
 
   function showUpdateBanner(latestVersion) {
     if (document.getElementById("app-update-banner")) return; // already showing
