@@ -1,0 +1,4 @@
+{
+  "name": "Atlas Pricing (Vertex)",
+  "install": "npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts"
+}

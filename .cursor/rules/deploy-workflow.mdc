@@ -1,0 +1,27 @@
+---
+description: GitHub push and Firebase deploy workflow for Atlas Pricing
+alwaysApply: true
+---
+
+# Deploy workflow (Atlas Pricing / Vertex)
+
+- **GitHub repo:** `jganny/atlas_pricing_app`
+- **Live site:** Firebase Hosting project `vertex-35d95` (https://vertex-35d95.web.app)
+- **Auto-deploy:** GitHub Actions runs on every push to `main` (`.github/workflows/deploy-hosting.yml` uses `FIREBASE_TOKEN` secret — do not put that token in the repo or chat).
+
+## After every release
+
+1. Bump `version.txt`, `APP_VERSION` in `app-v4.js`, and all `?v=` cache-bust strings in `index.html`.
+2. Commit with a clear message (e.g. `v129.04: …`).
+3. **Push to `origin main` on GitHub** — this triggers Firebase deploy automatically.
+4. Confirm https://vertex-35d95.web.app/version.txt shows the new version.
+
+## Do not
+
+- Change pricing formulas, quote save/load logic, or existing Firestore quote data unless explicitly requested.
+- Run manual `firebase deploy` from the agent unless GitHub Actions is broken and the user asks.
+- Create pull requests unless the user explicitly asks — push to `main` for this project.
+
+## Branding
+
+- Market brand: **Vertex** (never show Namahsky Nexus in UI).
