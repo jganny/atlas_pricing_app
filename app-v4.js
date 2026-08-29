@@ -16404,6 +16404,10 @@ function playNotificationSound() {
 window.playNotificationSound = playNotificationSound;
 
 function showToastNotification(message) {
+  if (typeof window.hideVertexQuickAssist === 'function') {
+    window.hideVertexQuickAssist();
+  }
+
   let container = document.getElementById("toast-notification-container");
   if (!container) {
     container = document.createElement("div");
@@ -16414,34 +16418,35 @@ function showToastNotification(message) {
   const toast = document.createElement("div");
   toast.className = "app-toast-item";
   toast.style.cssText = `
-    background: rgba(30, 41, 59, 0.96);
-    color: #ffffff;
-    padding: 14px 20px;
+    background: #ffffff;
+    color: #1e293b;
+    padding: 14px 18px;
     border-radius: 10px;
-    border-left: 5px solid #38bdf8;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0176d3;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.45;
     min-width: 280px;
     max-width: 480px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
     opacity: 0;
-    transform: translateY(-12px);
-    transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
     pointer-events: auto;
-    backdrop-filter: blur(10px);
   `;
 
   toast.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span style="font-size: 1.1rem;">🔔</span>
+    <div style="display: flex; align-items: flex-start; gap: 10px; flex: 1;">
+      <span style="font-size: 1rem; line-height: 1;">ℹ️</span>
       <span>${message}</span>
     </div>
-    <button style="background:transparent; border:none; color:rgba(255,255,255,0.6); cursor:pointer; font-weight:bold; font-size:1.1rem; padding: 0 4px;" onclick="this.parentElement.remove()">×</button>
+    <button style="background:transparent; border:none; color:#64748b; cursor:pointer; font-weight:bold; font-size:1.1rem; padding: 0 2px; line-height:1;" onclick="this.parentElement.remove()">×</button>
   `;
 
   container.appendChild(toast);
