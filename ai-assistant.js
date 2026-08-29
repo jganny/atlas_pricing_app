@@ -1,6 +1,6 @@
 /**
  * Atlas Help — navigation & workflow assistant (UI only).
- * Uses cloud AI when atlasCopilot is deployed; falls back to built-in guides.
+ * Uses cloud AI when atlasCopilot is deployed; exact-match local guides for quick prompts.
  */
 (function () {
   'use strict';
@@ -10,6 +10,8 @@
   var LOCAL_HELP = {
     'how do i save an air freight quote': 'Open Air Freight from the sidebar, complete Shipment Details and Carrier & Tariffs, then click Save Quote in the sticky bar at the top. Use Reset only when starting a fresh quote.',
     'how do i save a quote': 'On any desk (Air, Sea, Transport, Warehouse), complete the form and click Save Quote in the sticky highlights bar at the top.',
+    'how do i save a quote on the transport desk': 'On the Transport desk, enter the customer name and charge rows, then click Save Quote in the sticky bar at the top. Reset clears the desk only after you confirm.',
+    'how do i save a quote on the warehouse desk': 'On the Warehouse desk, enter the customer name and charge rows, then click Save Quote in the sticky bar at the top. Reset clears the desk only after you confirm.',
     'explain the difference between air nomination and free hand pricing desks': 'Air Nomination desks quote in USD for nominated agent flows. Free Hand desks quote in INR for direct sales. Currency and agency rules adjust automatically per role — your formulas are unchanged.',
     'draft a short professional follow-up email for a quoted shipment': 'Subject: Freight Quotation — [Ref ID]\n\nDear [Agent Name],\n\nThank you for your enquiry. Please find our quotation for [Origin] to [Destination] attached. Rates are valid as noted on the quote. Let us know if you would like to proceed or need any adjustments.\n\nBest regards,\nAtlas Pricing Team',
     'how do i filter enquiries and generate financial reports in the enquiry database?': 'Use + Add filter to show Ref ID, Date, Mode, Desk, or Status chips. Click a table row to inspect it on the right. For reports, pick a Reporting period and User/desk, then Generate summary or Export to CSV. Your live quotes and archives are never deleted by these tools.',
@@ -46,7 +48,6 @@
     if (id.indexOf('circulars') !== -1) return 'circulars';
     if (id.indexOf('sales') !== -1) return 'sales';
     if (id.indexOf('manager') !== -1) {
-      var pane = document.querySelector('#manager-panel .desk-tab-pane[style*="display: none"]');
       var visible = document.querySelector('#manager-panel .desk-tab-pane:not([style*="display: none"])');
       if (visible && visible.getAttribute('data-tab-pane') === 'enquiry-database') return 'enquiry';
       return 'dashboard';
@@ -68,20 +69,19 @@
     ].join('\n');
   }
 
+  function normalizeQuestion(text) {
+    return (text || '').toLowerCase().trim().replace(/\?+$/, '').replace(/\s+/g, ' ');
+  }
+
+  /** Only exact matches — avoids irrelevant canned answers for free-form questions. */
   function matchLocalHelp(message) {
-    var key = (message || '').toLowerCase().trim();
+    var key = normalizeQuestion(message);
+    if (!key) return null;
     if (LOCAL_HELP[key]) return LOCAL_HELP[key];
-    for (var k in LOCAL_HELP) {
-      if (key.indexOf(k) !== -1 || k.indexOf(key) !== -1) return LOCAL_HELP[k];
+    if (key.charAt(key.length - 1) !== '?') {
+      var withQ = key + '?';
+      if (LOCAL_HELP[withQ]) return LOCAL_HELP[withQ];
     }
-    if (key.indexOf('filter') !== -1 && key.indexOf('enquir') !== -1) return LOCAL_HELP['how do i filter enquiries and generate financial reports in the enquiry database?'];
-    if (key.indexOf('report') !== -1 || key.indexOf('csv') !== -1 || key.indexOf('export') !== -1) return LOCAL_HELP['how do i run a financial report and export enquiries to csv?'];
-    if (key.indexOf('save') !== -1 && key.indexOf('quote') !== -1) return LOCAL_HELP['how do i save a quote'];
-    if (key.indexOf('nomination') !== -1 || key.indexOf('free hand') !== -1) return LOCAL_HELP['explain the difference between air nomination and free hand pricing desks'];
-    if (key.indexOf('email') !== -1 || key.indexOf('follow') !== -1) return LOCAL_HELP['draft a short professional follow-up email for a quoted shipment'];
-    if (key.indexOf('air') !== -1) return LOCAL_HELP['how do i use air freight filters and surcharges?'];
-    if (key.indexOf('sea') !== -1) return LOCAL_HELP['how do i use sea freight desk?'];
-    if (key.indexOf('enquiry') !== -1 || key.indexOf('database') !== -1) return LOCAL_HELP['how do i filter enquiries and generate financial reports in the enquiry database?'];
     return null;
   }
 
@@ -172,8 +172,9 @@
       var reply = (result && result.data && result.data.reply) || 'No response.';
       appendMessage('assistant', reply);
     } catch (err) {
-      var fallback = CONTEXT_TIPS[detectContextKey()] || 'Press ⌘K (Ctrl+K) to jump between modules.';
-      appendMessage('assistant', fallback + ' Built-in help covers save, filters, and reports. I never change your saved quotes or rates.');
+      appendMessage('assistant',
+        'I could not reach Atlas Help cloud for that question. Try rephrasing with a specific screen name (e.g. "How do I filter enquiries?" or "How do I save an air quote?"). ' +
+        'Use the quick prompts below for common tasks. I never change your saved quotes or rates.');
     } finally {
       setBusy(false);
     }

@@ -968,6 +968,8 @@ async function loadData() {
   setupAutocomplete(document.getElementById("air-commodity"), "air_commodities");
 
   setupAutocomplete(document.getElementById("sea-cust-name"), "customers");
+  setupAutocomplete(document.getElementById("transport-customer-name"), "customers");
+  setupAutocomplete(document.getElementById("warehouse-customer-name"), "customers");
   setupAutocomplete(document.getElementById("sea-origin"), "seaports");
   setupAutocomplete(document.getElementById("sea-dest"), "seaports");
   setupAutocomplete(document.getElementById("sea-line"), "shippinglines");
@@ -1740,6 +1742,53 @@ function cleanDirectoryEntries(entries) {
   });
 }
 
+// Merged customer/agent names from saved directory + quote history (read-only merge).
+function getMergedCustomerNames() {
+  let names = [];
+  try {
+    names = JSON.parse(localStorage.getItem("gl_custom_customers") || "[]");
+  } catch (e) { names = []; }
+  const seen = new Set(names.map(n => (n || "").toLowerCase().trim()));
+  (appState.quotes || []).forEach(q => {
+    const c = (q.customer || "").trim();
+    if (!c || c.length < 2) return;
+    const key = c.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    names.push(c);
+  });
+  return names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+}
+window.getMergedCustomerNames = getMergedCustomerNames;
+
+// Learns customers, carriers, ports, etc. from quote history into autocomplete stores.
+function syncDirectoryFromQuoteHistory() {
+  if (!Array.isArray(appState.quotes) || !appState.quotes.length) return;
+  appState.quotes.forEach(q => {
+    const customer = (q.customer || "").trim();
+    if (customer) saveCustomCustomer(customer);
+
+    const type = (q.type || "").toLowerCase();
+    if (type === "air" && q.details) {
+      if (q.details.origin) saveCustomEntry("airports", q.details.origin);
+      if (q.details.destination) saveCustomEntry("airports", q.details.destination);
+      if (q.confirmedCarrier) saveCustomEntry("airlines", q.confirmedCarrier);
+      (q.details.airlines || []).forEach(a => {
+        if (a && a.name) saveCustomEntry("airlines", a.name);
+      });
+    } else if (type === "sea" && q.details) {
+      if (q.details.origin) saveCustomEntry("seaports", q.details.origin);
+      if (q.details.destination) saveCustomEntry("seaports", q.details.destination);
+      if (q.confirmedCarrier) saveCustomEntry("linernames", q.confirmedCarrier);
+      (q.details.liners || []).forEach(l => {
+        if (l && l.linerName) saveCustomEntry("linernames", l.linerName);
+        if (l && l.line) saveCustomEntry("shippinglines", l.line);
+      });
+    }
+  });
+}
+window.syncDirectoryFromQuoteHistory = syncDirectoryFromQuoteHistory;
+
 // Helper to save custom entries in localStorage
 function saveCustomEntry(type, value) {
   if (isGlobalDirectoryType(type)) return;
@@ -2039,15 +2088,11 @@ function setupAutocomplete(inputEl, type) {
         (al.name || "").toLowerCase().includes(val)
       ).slice(0, 10);
     } else if (type === "customers") {
-      let customCusts = [];
-      const stored = localStorage.getItem("gl_custom_customers");
-      if (stored) {
-        try { customCusts = JSON.parse(stored); } catch (err) { }
-      }
+      const customCusts = getMergedCustomerNames();
       matches = customCusts.filter(c => c.toLowerCase().includes(val)).map(c => ({
         code: "CUST",
         name: c
-      })).slice(0, 10);
+      })).slice(0, 12);
     } else if (type === "seaports") {
       const majorSeaports = [
         { code: "CNSHA", name: "Shanghai Port", city: "Shanghai", country: "China" },
@@ -11130,9 +11175,16 @@ function saveCustomCustomer(name) {
   let customCusts = [];
   try { customCusts = JSON.parse(localStorage.getItem("gl_custom_customers") || "[]"); } catch (e) { }
   const normalized = name.trim();
-  if (normalized && !customCusts.some(c => c.toLowerCase() === normalized.toLowerCase())) {
-    customCusts.push(normalized);
-    localStorage.setItem("gl_custom_customers", JSON.stringify(customCusts));
+  if (!normalized) return;
+  if (customCusts.some(c => c.toLowerCase() === normalized.toLowerCase())) return;
+  customCusts.push(normalized);
+  localStorage.setItem("gl_custom_customers", JSON.stringify(customCusts));
+  if (DB.firestoreRef) {
+    DB.firestoreRef.collection("custom_autocomplete_entries").doc("customers").set({
+      entries: customCusts
+    }, { merge: true }).catch(err => {
+      console.error("DB: Failed to upload customer directory to Firestore:", err);
+    });
   }
 }
 window.saveCustomCustomer = saveCustomCustomer;
@@ -11729,6 +11781,7 @@ const DB = {
       list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
       appState.quotes = list;
+      syncDirectoryFromQuoteHistory();
 
       console.log("FIRESTORE LOADED QUOTES:", appState.quotes.length);
 
@@ -11946,6 +11999,7 @@ const DB = {
       }
     });
     appState.quotes = dedupedList;
+    syncDirectoryFromQuoteHistory();
   },
 
   sanitize(q, idx) {
@@ -14891,6 +14945,7 @@ async function saveStandaloneQuote(module) {
     if (!saved) return;
     alert(`${modeTitle} Standalone Quotation saved successfully!`);
   }
+  saveCustomCustomer(customerName);
   showMyQuotationLogs();
 }
 window.saveStandaloneQuote = saveStandaloneQuote;
@@ -19825,28 +19880,49 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.02"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.03"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
-    if (document.getElementById("app-update-banner")) return; // already showing
-
-    const banner = document.createElement("div");
-    banner.id = "app-update-banner";
-    banner.style.cssText = "position: fixed; top: 80px; right: 20px; z-index: 999999; background: #ffffff; color: #1b1c5c; padding: 0.9rem 1.1rem; border-radius: 12px; border: 1px solid #dde0f0; box-shadow: 0 12px 32px rgba(27,28,92,0.22); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.82rem; display: flex; align-items: center; gap: 0.75rem; max-width: 320px;";
-    banner.innerHTML = `
-      <span style="flex: 1; font-weight: 600; color: #1b1c5c !important;">🚀 A new version of this app is available.</span>
-      <button id="app-update-refresh-btn" style="background: #1b1c5c; color: #ffffff !important; border: none; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Refresh</button>
-    `;
-    document.body.appendChild(banner);
-
-    document.getElementById("app-update-refresh-btn").addEventListener("click", () => {
-      window.location.reload();
-    });
+    let banner = document.getElementById("app-update-banner");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "app-update-banner";
+      banner.style.cssText = "position: fixed; top: 80px; right: 20px; z-index: 999999; background: #ffffff; color: #1b1c5c; padding: 0.9rem 1.1rem; border-radius: 12px; border: 1px solid #dde0f0; box-shadow: 0 12px 32px rgba(27,28,92,0.22); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.82rem; display: flex; align-items: center; gap: 0.75rem; max-width: 340px; animation: appUpdatePulse 2.2s ease-in-out infinite;";
+      banner.innerHTML = `
+        <span id="app-update-banner-text" style="flex: 1; font-weight: 600; color: #1b1c5c !important;">🚀 A new version (${latestVersion || "latest"}) is ready. Click Refresh to load it.</span>
+        <button id="app-update-refresh-btn" style="background: #1b1c5c; color: #ffffff !important; border: none; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Refresh</button>
+      `;
+      document.body.appendChild(banner);
+      if (!document.getElementById("app-update-pulse-style")) {
+        const style = document.createElement("style");
+        style.id = "app-update-pulse-style";
+        style.textContent = "@keyframes appUpdatePulse { 0%, 100% { box-shadow: 0 12px 32px rgba(27,28,92,0.22); transform: scale(1); } 50% { box-shadow: 0 16px 40px rgba(27,28,92,0.35); transform: scale(1.02); } }";
+        document.head.appendChild(style);
+      }
+      document.getElementById("app-update-refresh-btn").addEventListener("click", () => {
+        window.location.reload();
+      });
+      if (!updateReminderTimer) {
+        updateReminderTimer = setInterval(() => {
+          const el = document.getElementById("app-update-banner-text");
+          if (el) {
+            el.textContent = "🚀 Still on an older version — click Refresh to get the latest update.";
+            banner.style.animation = "none";
+            void banner.offsetWidth;
+            banner.style.animation = "appUpdatePulse 2.2s ease-in-out infinite";
+          }
+        }, 45000);
+      }
+    } else {
+      const textEl = document.getElementById("app-update-banner-text");
+      if (textEl) textEl.textContent = `🚀 A new version (${latestVersion || "latest"}) is ready. Click Refresh to load it.`;
+    }
   }
 
   async function checkForAppUpdate() {
     try {
-      const res = await fetch("version.txt", { cache: "no-store" });
+      const res = await fetch("version.txt?_=" + Date.now(), { cache: "no-store" });
       if (!res.ok) return;
       const latest = (await res.text()).trim();
       if (latest && latest !== APP_VERSION) {
@@ -19857,10 +19933,9 @@ window.updateLinerRateSummary = updateLinerRateSummary;
     }
   }
 
-  // Check shortly after load (covers someone who's had a tab open since
-  // before a deploy went out), then periodically while the tab stays open.
-  setTimeout(checkForAppUpdate, 30000);
-  setInterval(checkForAppUpdate, 5 * 60 * 1000);
+  // Fast first check, then frequent polling so open tabs learn about deploys quickly.
+  checkForAppUpdate();
+  setInterval(checkForAppUpdate, 30 * 1000);
 })();
 
 // ============================================================
@@ -19991,27 +20066,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
   }
   window.showRouteVendorPopup = showRouteVendorPopup;
 
-  function wireField(id, mode) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener("blur", () => showRouteVendorPopup(mode));
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    wireField("air-origin", "air");
-    wireField("air-dest", "air");
-    wireField("sea-origin", "sea");
-    wireField("sea-dest", "sea");
-  });
-
-  // Dismiss on click-outside, same convention as the update banner.
-  document.addEventListener("click", (e) => {
-    const popup = document.getElementById("route-vendor-popup");
-    if (!popup) return;
-    if (popup.contains(e.target)) return;
-    if (e.target.id === "air-origin" || e.target.id === "air-dest" || e.target.id === "sea-origin" || e.target.id === "sea-dest") return;
-    closeRouteVendorPopup();
-  });
+  // Lane carrier hints now appear in floating Quick Assist dream bubbles (ai-sell-band.js).
 })();
 
 /* ── Read-only UI shell accessors (no calculation or persistence logic) ── */

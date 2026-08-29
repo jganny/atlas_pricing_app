@@ -7015,13 +7015,157 @@ body.logged-out-blur .atlas-command-palette {
   }
 }
 
-/* ===== Vertex v129 — AI sell band, Sales pipeline ===== */
+/* ===== Vertex v129 — floating Quick Assist dream bubbles, Sales pipeline ===== */
+.vertex-dream-bubble {
+  position: fixed;
+  right: 20px;
+  bottom: 88px;
+  z-index: 999990;
+  width: min(320px, calc(100vw - 40px));
+  max-height: min(340px, 45vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(239, 246, 255, 0.94));
+  box-shadow: 0 18px 48px rgba(59, 130, 246, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  backdrop-filter: blur(12px);
+  animation: vertexDreamFloat 4.5s ease-in-out infinite;
+  pointer-events: auto;
+}
+@keyframes vertexDreamFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.vertex-dream-bubble .vdb-shimmer {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 10%, rgba(147, 197, 253, 0.25), transparent 55%);
+  pointer-events: none;
+}
+.vertex-dream-bubble .vdb-header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem 0.5rem;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
+}
+.vertex-dream-bubble .vdb-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sky);
+  line-height: 1.35;
+  padding-right: 0.25rem;
+}
+.vertex-dream-bubble .vdb-close {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--t2);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.vertex-dream-bubble .vdb-close:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+.vertex-dream-bubble .vdb-body {
+  position: relative;
+  padding: 0.55rem 0.85rem 0.35rem;
+  overflow-y: auto;
+  flex: 1;
+}
+.vertex-dream-bubble .vdb-foot {
+  position: relative;
+  padding: 0.35rem 0.85rem 0.55rem;
+  font-size: 0.58rem;
+  color: var(--t3);
+  font-style: italic;
+  border-top: 1px dashed rgba(148, 163, 184, 0.25);
+}
+.vdb-lane-route {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--t1);
+  margin: 0 0 0.4rem;
+}
+.vdb-lane-route .vdb-muted,
+.vdb-hint .vdb-muted {
+  font-weight: 500;
+  color: var(--t3);
+}
+.vdb-hint {
+  font-size: 0.62rem;
+  color: var(--t3);
+  margin: 0.35rem 0 0;
+  line-height: 1.4;
+}
+.vdb-quote-list,
+.vdb-vendor-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vdb-quote-list li,
+.vdb-vendor-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.68rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+.vdb-quote-list li:last-child,
+.vdb-vendor-list li:last-child {
+  border-bottom: none;
+}
+.vdb-quote-meta {
+  flex: 1;
+  color: var(--t2);
+  line-height: 1.35;
+}
+.vdb-recreate-btn {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.18rem 0.45rem;
+  border-radius: 5px;
+  border: 1px solid var(--border-1);
+  background: #fff;
+  color: var(--sky);
+  cursor: pointer;
+}
+.vdb-recreate-btn:hover {
+  background: var(--sky-g);
+  border-color: var(--sky);
+}
+.vdb-vendor-name {
+  font-weight: 600;
+  color: var(--t1);
+}
+.vdb-vendor-stat {
+  font-size: 0.62rem;
+  color: var(--t3);
+  white-space: nowrap;
+}
+
+/* Legacy sell-band styles (no longer injected into results panel) */
+.vertex-sell-band {
   margin-bottom: 1rem;
   padding: 0.85rem 1rem;
   border-radius: var(--r-md);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(99, 102, 241, 0.04));
   border: 1px solid rgba(59, 130, 246, 0.18);
-}
 .vertex-sell-band .vsb-header {
   display: flex;
   align-items: center;
