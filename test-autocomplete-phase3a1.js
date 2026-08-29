@@ -298,7 +298,9 @@ assert(airlineInput !== null, "Found .air-name input inside airline card");
 if (airlineInput) {
   airlineInput.value = "em";
   airlineInput.dispatchEvent(new Event("input"));
-  const airlineDropdown = airlineInput.parentElement.querySelector(".iata-autocomplete-dropdown");
+  const airlineDropdown = document.body.children.find(function (c) {
+    return c.classList && c.classList.contains("iata-autocomplete-dropdown");
+  }) || airlineInput.parentElement.querySelector(".iata-autocomplete-dropdown");
   assert(airlineDropdown !== null, "Found airline autocomplete dropdown");
   const airlineItems = airlineDropdown.querySelectorAll(".iata-autocomplete-item");
   console.log(`Airline search 'em' produced ${airlineItems.length} suggestions.`);

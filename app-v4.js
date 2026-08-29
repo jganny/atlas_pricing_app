@@ -2613,7 +2613,13 @@ function positionAirlineDropdown(dropdown) {
   if (!dropdown || dropdown.style.display === "none") return;
   const anchor = dropdown._anchorEl;
   if (!anchor) return;
-  const rect = anchor.getBoundingClientRect();
+  let rect;
+  try {
+    rect = typeof anchor.getBoundingClientRect === "function" ? anchor.getBoundingClientRect() : null;
+  } catch (e) {
+    return;
+  }
+  if (!rect || typeof rect.bottom !== "number") return;
   dropdown.style.position = "fixed";
   dropdown.style.left = Math.max(8, rect.left) + "px";
   dropdown.style.top = (rect.bottom + 4) + "px";
