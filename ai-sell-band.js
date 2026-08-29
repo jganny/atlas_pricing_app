@@ -1,9 +1,6 @@
 /**
- * Desk Quick Assist — floating dream-style PiP bubbles (read-only).
- * - Recent quotes for this customer (Recreate as new quote)
- * - Carriers used on this lane (from saved quote history)
- * NEVER writes to inputs or saves quotes automatically.
- * Does not inject into the pricing results panel.
+ * Desk Quick Assist — compact left-side dock (read-only).
+ * Collapsed pills by default so pricing results on the right stay fully visible.
  */
 (function () {
   'use strict';
@@ -36,8 +33,8 @@
     }
   };
 
-  var STACK_BOTTOM = 88;
-  var STACK_GAP = 16;
+  var dock = null;
+  var hideUntil = 0;
 
   function dismissKey(kind, deskKey, sig) {
     return 'vertex_dream_' + kind + '_' + deskKey + '_' + sig;
@@ -94,6 +91,19 @@
     }).slice(0, 5);
   }
 
+  function ensureDock() {
+    if (dock && document.body.contains(dock)) return dock;
+    dock = document.getElementById('vertex-dream-dock');
+    if (!dock) {
+      dock = document.createElement('div');
+      dock.id = 'vertex-dream-dock';
+      dock.setAttribute('role', 'complementary');
+      dock.setAttribute('aria-label', 'Quick assist suggestions');
+      document.body.appendChild(dock);
+    }
+    return dock;
+  }
+
   function activeDeskKey() {
     for (var key in DESKS) {
       var panel = document.querySelector(DESKS[key].panelSel);
@@ -105,42 +115,63 @@
   function removeBubble(id) {
     var el = document.getElementById(id);
     if (el) el.remove();
+    if (dock && !dock.children.length) dock.classList.remove('has-bubbles');
+  }
+
+  function collapseAllExcept(exceptId) {
+    document.querySelectorAll('.vertex-dream-bubble').forEach(function (b) {
+      if (b.id !== exceptId) b.classList.add('vdb-collapsed');
+    });
   }
 
   function closeBubble(id, dismissStoreKey) {
     removeBubble(id);
     if (dismissStoreKey) setDismissed(dismissStoreKey);
-    repositionBubbles();
   }
 
-  function repositionBubbles() {
-    var bubbles = Array.from(document.querySelectorAll('.vertex-dream-bubble'));
-    var offset = STACK_BOTTOM;
-    bubbles.forEach(function (b) {
-      b.style.bottom = offset + 'px';
-      offset += (b.offsetHeight || 180) + STACK_GAP;
-    });
+  function hideDockBriefly(ms) {
+    hideUntil = Date.now() + (ms || 12000);
+    if (dock) dock.classList.add('vdb-dock-hidden');
+    window.setTimeout(function () {
+      if (Date.now() >= hideUntil && dock) dock.classList.remove('vdb-dock-hidden');
+    }, ms || 12000);
   }
 
-  function mountBubble(id, title, bodyHtml, dismissStoreKey) {
+  function mountBubble(id, title, shortLabel, bodyHtml, dismissStoreKey) {
     removeBubble(id);
+    if (Date.now() < hideUntil) return;
+
+    var host = ensureDock();
+    host.classList.add('has-bubbles');
+
     var bubble = document.createElement('div');
     bubble.id = id;
-    bubble.className = 'vertex-dream-bubble';
-    bubble.setAttribute('role', 'complementary');
+    bubble.className = 'vertex-dream-bubble vdb-collapsed';
     bubble.innerHTML =
       '<div class="vdb-shimmer" aria-hidden="true"></div>' +
       '<div class="vdb-header">' +
-        '<div class="vdb-title">' + title + '</div>' +
+        '<button type="button" class="vdb-toggle" aria-expanded="false">' +
+          '<span class="vdb-chip-icon">✦</span>' +
+          '<span class="vdb-title">' + title + '</span>' +
+          '<span class="vdb-chip-label">' + esc(shortLabel) + '</span>' +
+        '</button>' +
         '<button type="button" class="vdb-close" aria-label="Close suggestion">&times;</button>' +
       '</div>' +
       '<div class="vdb-body">' + bodyHtml + '</div>' +
       '<div class="vdb-foot">Suggestions only — nothing here saves or changes your quote.</div>';
-    document.body.appendChild(bubble);
-    bubble.querySelector('.vdb-close').addEventListener('click', function () {
+
+    host.appendChild(bubble);
+
+    bubble.querySelector('.vdb-toggle').addEventListener('click', function () {
+      var collapsed = bubble.classList.toggle('vdb-collapsed');
+      bubble.querySelector('.vdb-toggle').setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      if (!collapsed) collapseAllExcept(id);
+    });
+
+    bubble.querySelector('.vdb-close').addEventListener('click', function (e) {
+      e.stopPropagation();
       closeBubble(id, dismissStoreKey);
     });
-    window.setTimeout(repositionBubbles, 30);
   }
 
   function renderCustomerBubble(deskKey, customer) {
@@ -155,6 +186,7 @@
       removeBubble('vertex-dream-customer-' + deskKey);
       return;
     }
+
     var html = '<ul class="vdb-quote-list">';
     recent.forEach(function (q) {
       var meta = esc(routeLabel(q));
@@ -165,17 +197,22 @@
         '<button type="button" class="vdb-recreate-btn" data-quote-id="' + esc(q.id) + '">Recreate</button></li>';
     });
     html += '</ul><p class="vdb-hint">Recreate copies details into a <strong>new</strong> quote — adjust route or weight, then Save.</p>';
+
     mountBubble(
       'vertex-dream-customer-' + deskKey,
-      'Recent quotes for this customer',
+      'Recent quotes',
+      recent.length + ' for this customer',
       html,
       dKey
     );
+
     var bubble = document.getElementById('vertex-dream-customer-' + deskKey);
     if (bubble) {
       bubble.querySelectorAll('.vdb-recreate-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var qid = btn.getAttribute('data-quote-id');
+          hideDockBriefly(15000);
+          collapseAllExcept(null);
           if (qid && typeof window.recreateQuoteFromExisting === 'function') {
             window.recreateQuoteFromExisting(qid);
           }
@@ -205,6 +242,7 @@
       removeBubble('vertex-dream-lane-' + deskKey);
       return;
     }
+
     var html = '<p class="vdb-lane-route">' + esc(origin) + ' → ' + esc(dest) +
       ' <span class="vdb-muted">(' + hist.totalQuotes + ' past quote' + (hist.totalQuotes === 1 ? '' : 's') + ')</span></p>' +
       '<ul class="vdb-vendor-list">';
@@ -214,9 +252,11 @@
         (v.timesWon ? ' · won ' + v.timesWon + '×' : '') + '</span></li>';
     });
     html += '</ul><p class="vdb-hint">From your team\'s saved quotes on this lane — not live market rates.</p>';
+
     mountBubble(
       'vertex-dream-lane-' + deskKey,
-      'Carriers used on this lane',
+      'Lane carriers',
+      hist.vendors.length + ' on this route',
       html,
       dKey
     );
@@ -251,6 +291,7 @@
     if (active) refreshDesk(active);
     else {
       document.querySelectorAll('.vertex-dream-bubble').forEach(function (el) { el.remove(); });
+      if (dock) dock.classList.remove('has-bubbles');
     }
   }
 
@@ -265,6 +306,14 @@
         window.setTimeout(refreshAll, 400);
       };
     }
+
+    if (typeof window.recreateQuoteFromExisting === 'function') {
+      var origRecreate = window.recreateQuoteFromExisting;
+      window.recreateQuoteFromExisting = function (id) {
+        hideDockBriefly(15000);
+        return origRecreate.apply(this, arguments);
+      };
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -274,4 +323,5 @@
   }
 
   window.refreshVertexSellBand = refreshAll;
+  window.hideVertexDreamDock = hideDockBriefly;
 })();

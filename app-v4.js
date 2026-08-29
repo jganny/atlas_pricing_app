@@ -16408,38 +16408,29 @@ function showToastNotification(message) {
   if (!container) {
     container = document.createElement("div");
     container.id = "toast-notification-container";
-    container.style.cssText = `
-      position: fixed;
-      top: 24px;
-      right: 24px;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      pointer-events: none;
-    `;
     document.body.appendChild(container);
   }
 
   const toast = document.createElement("div");
+  toast.className = "app-toast-item";
   toast.style.cssText = `
-    background: rgba(30, 41, 59, 0.95);
+    background: rgba(30, 41, 59, 0.96);
     color: #ffffff;
     padding: 14px 20px;
     border-radius: 10px;
-    border-left: 5px solid var(--accent-error);
+    border-left: 5px solid #38bdf8;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
     font-family: 'Outfit', sans-serif;
     font-size: 0.82rem;
     font-weight: 700;
     min-width: 280px;
-    max-width: 420px;
+    max-width: 480px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     opacity: 0;
-    transform: translateX(50px);
+    transform: translateY(-12px);
     transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     pointer-events: auto;
     backdrop-filter: blur(10px);
@@ -16458,13 +16449,13 @@ function showToastNotification(message) {
   // Trigger animation
   setTimeout(() => {
     toast.style.opacity = "1";
-    toast.style.transform = "translateX(0)";
+    toast.style.transform = "translateY(0)";
   }, 10);
 
   // Auto remove after 6 seconds
   setTimeout(() => {
     toast.style.opacity = "0";
-    toast.style.transform = "translateX(50px)";
+    toast.style.transform = "translateY(-12px)";
     setTimeout(() => {
       toast.remove();
     }, 400);
