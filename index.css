@@ -1225,8 +1225,8 @@ select.table-select:focus {
   text-overflow: ellipsis;
   transition: all 0.15s ease;
 }
-.hdr-filter-btn:hover { background: #ffffff; border-color: #3b82f6; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
-.hdr-filter-btn.active-filter { background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #1d4ed8; font-weight: 700; }
+.hdr-filter-btn:hover { background: var(--bg-surface); border-color: var(--sky); box-shadow: 0 1px 4px rgba(27, 28, 92, 0.06); }
+.hdr-filter-btn.active-filter { background: var(--sky-g); border-color: var(--sky); color: var(--sky); font-weight: 700; }
 .hdr-filter-arrow { font-size: 0.55rem; opacity: 0.6; margin-left: 3px; }
 .hdr-filter-menu {
   display: none;
@@ -4309,7 +4309,7 @@ input::placeholder, textarea::placeholder {
 
 .login-card-premium .login-input-field:focus {
   background: #ffffff !important;
-  border-color: #263a9a !important;
+  border-color: var(--sky) !important;
   box-shadow: 0 0 0 3px rgba(38, 58, 154, 0.12) !important;
 }
 
@@ -4329,7 +4329,7 @@ input::placeholder, textarea::placeholder {
   border: 0;
   padding: 0.25rem;
   background: transparent;
-  color: #263a9a;
+  color: var(--sky);
   font: inherit;
   font-size: 0.75rem;
   font-weight: 600;
@@ -4338,7 +4338,7 @@ input::placeholder, textarea::placeholder {
 
 .login-help-link { margin: 0.2rem 0 1.5rem; text-align: right; }
 .login-help-link a {
-  color: #263a9a;
+  color: var(--sky);
   font-size: 0.78rem;
   font-weight: 500;
   text-decoration: none;
@@ -4371,14 +4371,14 @@ input::placeholder, textarea::placeholder {
 
 /* Contact administrator live link */
 .login-contact-link {
-  color: #263a9a;
+  color: var(--sky);
   font-weight: 600;
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition: border-color 0.18s;
 }
 .login-contact-link:hover {
-  border-bottom-color: #263a9a;
+  border-bottom-color: var(--sky);
 }
 
 .login-support-note {
@@ -4396,7 +4396,7 @@ input::placeholder, textarea::placeholder {
   font-size: 0.75rem;
   text-align: center;
 }
-.login-security-note span { margin-right: 0.35rem; color: #263a9a; }
+.login-security-note span { margin-right: 0.35rem; color: var(--sky); }
 
 @media (max-width: 560px) {
   .login-overlay-screen { padding: 1rem !important; }
@@ -4543,12 +4543,12 @@ textarea:focus {
 
   .module-tab:hover {
     background: #eef2ff;
-    color: #263a9a !important;
+    color: var(--sky) !important;
   }
 
   .module-tab.active {
-    background: #263a9a !important;
-    border-color: #263a9a !important;
+    background: var(--sky) !important;
+    border-color: var(--sky) !important;
     color: #ffffff !important;
     box-shadow: none;
   }
@@ -4591,7 +4591,7 @@ textarea:focus {
 
   .sidebar-item.active {
     background: #eef2ff;
-    color: #263a9a !important;
+    color: var(--sky) !important;
   }
 
   .sidebar-item.active::before {
@@ -4602,7 +4602,7 @@ textarea:focus {
     bottom: 8px;
     width: 3px;
     border-radius: 0 3px 3px 0;
-    background: #263a9a;
+    background: var(--sky);
   }
 }
 
@@ -4639,7 +4639,7 @@ textarea:focus {
   border-color: #7890d4;
   color: #1d3187;
   font-weight: 700;
-  box-shadow: inset 0 -2px 0 #263a9a;
+  box-shadow: inset 0 -2px 0 var(--sky);
 }
 
 #air-freight-panel .toggle-option:not(.active):hover,
@@ -4654,7 +4654,7 @@ textarea:focus {
   background: #eaf0ff !important;
   border: 1px solid #7890d4 !important;
   color: #1d3187 !important;
-  box-shadow: inset 0 -2px 0 #263a9a !important;
+  box-shadow: inset 0 -2px 0 var(--sky) !important;
 }
 
 /* Role dropdown menu item — flat highlight, no boxed border, since these now
@@ -5220,19 +5220,19 @@ textarea:focus {
    the competing rainbow of module colours without changing any actions. */
 #manager-panel .bento-cell[data-accent]::after,
 #member-dashboard-panel .bento-cell[data-accent]::after {
-  background: #263a9a !important;
+  background: var(--sky) !important;
 }
 
 #manager-panel .bento-action-btn {
   background: #ffffff !important;
   color: #1e293b !important;
   border: 1px solid #cbd5e1 !important;
-  border-left: 4px solid #263a9a !important;
+  border-left: 4px solid var(--sky) !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
 }
 
 #manager-panel .bento-action-btn svg {
-  stroke: #263a9a !important;
+  stroke: var(--sky) !important;
 }
 
 #manager-panel .bento-action-btn:hover {
@@ -5247,20 +5247,20 @@ textarea:focus {
 #sea-freight-panel .section-title,
 #transportation-panel .calculator-header,
 #warehousing-panel .calculator-header {
-  border-left-color: #263a9a !important;
+  border-left-color: var(--sky) !important;
 }
 
 #air-freight-panel .results-panel,
 #sea-freight-panel .results-panel,
 #transportation-panel .results-panel,
 #warehousing-panel .results-panel {
-  border-top-color: #263a9a !important;
+  border-top-color: var(--sky) !important;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07) !important;
 }
 
 .btn-primary {
-  background: #263a9a !important;
-  border-color: #263a9a !important;
+  background: var(--sky) !important;
+  border-color: var(--sky) !important;
   color: #ffffff !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12) !important;
 }
@@ -5669,7 +5669,7 @@ textarea:focus {
   opacity: 1;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .desk-highlights-bar {
     flex-direction: column;
     align-items: stretch;
@@ -5679,6 +5679,28 @@ textarea:focus {
   }
   .dhb-btn-reset, .dhb-btn-save {
     flex: 1 !important;
+  }
+  .desk-calculator-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .desk-pip-panel {
+    position: sticky;
+    top: 0.5rem;
+    max-height: min(42vh, 360px);
+    overflow-y: auto;
+  }
+  .quotes-table-container {
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .module-navigation-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .module-navigation-tabs::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -5788,11 +5810,11 @@ tfoot.cgf-footer .cgf-gp {
 }
 
 /* Password show/hide toggle on the login screen was rendering plain black
-   text despite .login-password-toggle declaring the brand navy (#263a9a) —
+   text despite .login-password-toggle declaring the brand navy (var(--sky)) —
    some other rule in the cascade was winning; forcing it here since this
    is a small utility control, not styling worth another hunt. */
 #login-overlay .login-password-toggle {
-  color: #263a9a !important;
+  color: var(--sky) !important;
 }
 #login-overlay .login-password-toggle:hover {
   color: #1b1c5c !important;
@@ -5876,15 +5898,15 @@ tfoot.cgf-footer .cgf-gp {
   padding: 5px 9px;
 }
 #db-filter-controls-row .hdr-filter-dropdown[data-filter-key] .hdr-filter-btn {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.35);
-  color: #1d4ed8;
+  background: var(--sky-g);
+  border-color: rgba(27, 28, 92, 0.18);
+  color: var(--sky);
   font-weight: 700;
 }
 .hdr-filter-chip-remove {
   border: none;
   background: transparent;
-  color: #1d4ed8;
+  color: var(--sky);
   font-size: 0.72rem;
   font-weight: 700;
   margin-left: 5px;
@@ -5912,7 +5934,7 @@ tfoot.cgf-footer .cgf-gp {
   white-space: nowrap;
   transition: all 0.15s ease;
 }
-.hdr-toolbar-trigger:hover { background: #ffffff; border-color: #3b82f6; color: #1d4ed8; }
+.hdr-toolbar-trigger:hover { background: var(--bg-surface); border-color: var(--sky); color: var(--sky); }
 .hdr-toolbar-panel {
   display: none;
   position: absolute;
@@ -6105,7 +6127,7 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--border-1);
-  border-top: 3px solid var(--accent-current, #263a9a);
+  border-top: 3px solid var(--accent-current, var(--sky));
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
   scrollbar-width: thin;
 }
@@ -6219,7 +6241,7 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
 }
 #admin-quotes-body tr.eri-selected {
   background: rgba(38, 58, 154, 0.09) !important;
-  box-shadow: inset 3px 0 0 #263a9a;
+  box-shadow: inset 3px 0 0 var(--sky);
 }
 #admin-quotes-body tr[data-quote-id] {
   cursor: pointer;
@@ -6283,7 +6305,7 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
 /* Enquiry row inspector (PiP above reports) */
 .enquiry-row-inspector-card {
   margin-bottom: 1rem;
-  border-top: 3px solid #263a9a;
+  border-top: 3px solid var(--sky);
   padding: 1rem 1.1rem;
 }
 .eri-header {
@@ -6374,21 +6396,23 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
 }
 .atlas-cp-dialog {
   width: min(520px, 100%);
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border-radius: var(--r-xl);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--border-1);
   overflow: hidden;
 }
 .atlas-cp-input {
   width: 100%;
   border: none;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-1);
   padding: 1rem 1.1rem;
   font-size: 0.95rem;
   font-weight: 600;
   outline: none;
   font-family: inherit;
+  background: var(--bg-surface);
+  color: var(--t1);
 }
 .atlas-cp-list {
   max-height: 320px;
@@ -6412,7 +6436,7 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
 .atlas-cp-item:hover,
 .atlas-cp-item.active {
   background: rgba(38, 58, 154, 0.08);
-  color: #263a9a;
+  color: var(--sky);
 }
 .atlas-cp-empty {
   padding: 1rem;
@@ -6459,7 +6483,8 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
   box-shadow: 0 10px 28px rgba(27, 28, 92, 0.22);
 }
 body.logged-out-blur .atlas-copilot-fab,
-body.logged-out-blur .atlas-copilot-panel {
+body.logged-out-blur .atlas-copilot-panel,
+body.logged-out-blur .atlas-command-palette {
   display: none !important;
 }
 
@@ -6644,4 +6669,242 @@ body.logged-out-blur .atlas-copilot-panel {
 }
 @media (max-width: 768px) {
   .header-quick-nav-hint { display: none; }
+}
+
+/* Production: hide developer-facing Firebase connection badge */
+#db-connection-badge {
+  display: none !important;
+}
+
+/* ══════════════════════════════════════════════════
+   PHASE 3 — Enquiry Database shell + breezy admin polish
+   UI only — no data / save / calculation changes
+══════════════════════════════════════════════════ */
+.enquiry-db-shell {
+  padding: 0.25rem 0 1rem;
+}
+#admin-tracking-control-center:empty {
+  display: none !important;
+  margin: 0 !important;
+}
+
+.enquiry-db-main-card {
+  border-top: 3px solid var(--sky);
+  padding: 1.25rem 1.35rem !important;
+}
+.enquiry-db-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.enquiry-db-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.enquiry-db-title-block {
+  flex: 1;
+  min-width: 180px;
+}
+.enquiry-db-eyebrow,
+.edb-reports-eyebrow,
+.eri-eyebrow {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-family: 'Outfit', sans-serif;
+}
+.enquiry-db-title,
+.edb-reports-title {
+  margin: 0.2rem 0 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--sky);
+  font-family: 'Outfit', sans-serif;
+}
+.enquiry-db-restore-btn {
+  font-size: 0.72rem !important;
+  padding: 0.4rem 0.75rem !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap;
+}
+.enquiry-db-search {
+  max-width: none;
+  width: 100%;
+}
+.enquiry-db-search input {
+  width: 100%;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-1);
+  background: var(--bg-input);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.enquiry-db-shell #admin-quotes-table th {
+  background: var(--bg-deep);
+  color: var(--sky);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--border-1);
+}
+.enquiry-db-shell #admin-quotes-table td {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.78rem;
+  vertical-align: middle;
+}
+.enquiry-db-shell #admin-quotes-table tbody tr:nth-child(even) td {
+  background: rgba(248, 250, 252, 0.65);
+}
+.enquiry-db-shell #admin-quotes-body tr.eri-selected td {
+  background: var(--sky-g) !important;
+  box-shadow: inset 3px 0 0 var(--sky);
+}
+.enquiry-db-shell .quotes-table-container {
+  border-color: var(--border-1);
+  box-shadow: var(--shadow-sm);
+}
+.enquiry-db-shell .pagination-controls {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-2);
+}
+
+.enquiry-row-inspector-card {
+  border-top: 3px solid var(--indigo) !important;
+  margin-bottom: 1rem !important;
+}
+.enquiry-db-inspector-card,
+.edb-reports-card {
+  border-top: 3px solid var(--sky) !important;
+  padding: 1.1rem 1.2rem !important;
+  box-shadow: var(--shadow-sm);
+}
+.edb-reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-2);
+}
+.edb-archive-btn {
+  font-size: 0.72rem !important;
+  padding: 0.45rem 0.8rem !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap;
+}
+.edb-reports-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.edb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.edb-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--t2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.edb-select,
+.edb-input {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--t1);
+  border: 1px solid var(--border-1);
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--r-md);
+  font-size: 0.8rem;
+  font-family: inherit;
+  outline: none;
+}
+.edb-select:focus,
+.edb-input:focus {
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px var(--sky-g);
+}
+.edb-custom-dates {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.edb-lookup-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.edb-find-btn {
+  flex: 0 0 auto !important;
+  padding: 0.45rem 0.85rem !important;
+  font-size: 0.75rem !important;
+}
+.edb-reports-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.edb-action-primary {
+  flex: 0 0 auto !important;
+  font-size: 0.78rem !important;
+  padding: 0.5rem 1rem !important;
+}
+.edb-action-secondary {
+  flex: 0 0 auto !important;
+  font-size: 0.78rem !important;
+  padding: 0.5rem 1rem !important;
+}
+.enquiry-db-shell .report-card {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+}
+.enquiry-db-shell .report-card-val {
+  color: var(--sky);
+}
+
+/* Contextual Atlas Help buttons (injected + static) */
+.atlas-context-help-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-1);
+  background: var(--bg-deep);
+  color: var(--sky);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  font-family: 'Outfit', sans-serif;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.atlas-context-help-btn:hover {
+  background: var(--sky-g);
+  border-color: var(--sky);
+  transform: scale(1.05);
+}
+.desk-shell-header .atlas-context-help-btn {
+  margin-left: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .enquiry-db-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
 }

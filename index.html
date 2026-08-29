@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=128.11">
+  <link rel="stylesheet" href="index.css?v=128.14">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -540,7 +540,7 @@
 
         </div><!-- /desk-tab-pane[agent-directory] -->
 
-        <div class="desk-tab-pane" data-tab-pane="enquiry-database" style="display:none;">
+        <div class="desk-tab-pane enquiry-db-shell" data-tab-pane="enquiry-database" style="display:none;">
 
 
         <!-- Global Cargo Operations Tracking Control Center -->
@@ -549,15 +549,19 @@
         <div class="enquiry-db-workspace">
         <div class="enquiry-db-primary">
         <!-- Master quotes view -->
-        <div class="glass-card">
-          <div class="table-header-row" style="flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <h3 style="font-weight: 700; margin: 0;">Global Enquiry Database</h3>
-              <button onclick="restoreCachedQuotes()" class="btn-primary" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); font-weight: 700; border: none; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
-                🔄 Restore Cached Quotes
+        <div class="glass-card enquiry-db-main-card">
+          <div class="enquiry-db-toolbar table-header-row">
+            <div class="enquiry-db-title-row">
+              <div class="enquiry-db-title-block">
+                <span class="enquiry-db-eyebrow">Operations</span>
+                <h3 class="enquiry-db-title">Global Enquiry Database</h3>
+              </div>
+              <button type="button" onclick="restoreCachedQuotes()" class="btn-secondary enquiry-db-restore-btn">
+                Restore cached quotes
               </button>
+              <button type="button" class="atlas-context-help-btn" data-atlas-help="How do I filter enquiries and generate financial reports in the Enquiry Database?" aria-label="Help for Enquiry Database">?</button>
             </div>
-            <div class="search-box-container">
+            <div class="search-box-container enquiry-db-search">
               <input type="text" id="db-search-input" placeholder="Search customer, route, reference..."
                 oninput="applyDbFiltersAndSort()">
             </div>
@@ -842,60 +846,58 @@
           </div>
         </div>
         <!-- Financial Reports & Archive Query Panel -->
-        <div class="glass-card enquiry-db-inspector-card">
-          <div style="border-bottom: 1px solid var(--border-1); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div>
-              <span style="font-size: 0.65rem; font-weight: 800; color: var(--accent-warning); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Admin Intelligence Hub</span>
-              <h3 style="font-weight: 700; margin: 0.15rem 0 0 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem;">Financial Reports & Archival Suite</h3>
+        <div class="glass-card enquiry-db-inspector-card edb-reports-card">
+          <div class="edb-reports-header">
+            <div class="edb-reports-title-block">
+              <span class="edb-reports-eyebrow">Reports</span>
+              <h3 class="edb-reports-title">Financial Reports &amp; Archive</h3>
             </div>
-            <button onclick="runAutoArchival()" class="btn-primary" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; background: var(--accent-warning); color: #000; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-              📦 Archive Old Quotes (>90 Days)
+            <button type="button" onclick="runAutoArchival()" class="btn-secondary edb-archive-btn">
+              Archive quotes older than 90 days
             </button>
           </div>
 
-          <div style="display: flex; flex-wrap: wrap; gap: 1.25rem; margin-bottom: 1.25rem;">
-            <!-- Timeframe Filter -->
-            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Reporting Period</label>
-              <select id="report-period" onchange="toggleCustomDateFields()" style="background: var(--bg-input); color: var(--t1); border: 1px solid var(--border-1); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
+          <div class="edb-reports-filters">
+            <div class="edb-field">
+              <label class="edb-label" for="report-period">Reporting period</label>
+              <select id="report-period" class="edb-select" onchange="toggleCustomDateFields()">
                 <option value="current-fy">📅 Current Financial Year (FY26-27)</option>
                 <option value="previous-fy">📅 Previous Financial Year (FY25-26)</option>
                 <option value="current-h1">📅 Current FY - H1 (Apr-Sept)</option>
                 <option value="current-h2">📅 Current FY - H2 (Oct-Mar)</option>
                 <option value="custom">📅 Custom Date Range</option>
               </select>
-              <div id="report-custom-dates" style="display: none; gap: 8px; margin-top: 6px;">
-                <input type="date" id="report-start-date" style="flex:1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 5px; border-radius: 6px; font-size: 0.75rem; color:#000;">
-                <input type="date" id="report-end-date" style="flex:1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 5px; border-radius: 6px; font-size: 0.75rem; color:#000;">
+              <div id="report-custom-dates" class="edb-custom-dates" style="display: none;">
+                <input type="date" id="report-start-date" class="edb-input">
+                <input type="date" id="report-end-date" class="edb-input">
               </div>
             </div>
 
-            <!-- User Filter -->
-            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">User / Desk</label>
-              <select id="report-user" style="background: var(--bg-input); color: var(--t1); border: 1px solid var(--border-1); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
-                <option value="all">👥 All Desks / Users</option>
+            <div class="edb-field">
+              <label class="edb-label" for="report-user">User / desk</label>
+              <select id="report-user" class="edb-select">
+                <option value="all">All desks / users</option>
               </select>
             </div>
 
-            <!-- Single Quote Lookup (by Ref ID) -->
-            <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Direct Archive Lookup</label>
-              <div style="display: flex; gap: 6px; position: relative;">
-                <input type="text" id="report-lookup-ref" list="archive-lookup-suggestions" placeholder="Ref ID (e.g. AE-1002)" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-1); padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color:#000; outline: none;" oninput="updateArchiveLookupSuggestions(this.value)">
+            <div class="edb-field">
+              <label class="edb-label" for="report-lookup-ref">Direct archive lookup</label>
+              <div class="edb-lookup-row">
+                <input type="text" id="report-lookup-ref" class="edb-input" list="archive-lookup-suggestions" placeholder="Ref ID (e.g. AE-1002)" oninput="updateArchiveLookupSuggestions(this.value)">
                 <datalist id="archive-lookup-suggestions"></datalist>
-                <button onclick="lookupSingleArchivedQuote()" class="btn-primary" style="background: var(--sky); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 700;">Find</button>
+                <button type="button" onclick="lookupSingleArchivedQuote()" class="btn-primary edb-find-btn">Find</button>
               </div>
             </div>
           </div>
 
-          <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <button onclick="generateReportSummary()" class="btn-primary" style="background: var(--sky); color: #fff; font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
-              📊 Generate Summary
+          <div class="edb-reports-actions">
+            <button type="button" onclick="generateReportSummary()" class="btn-primary edb-action-primary">
+              Generate summary
             </button>
-            <button onclick="exportReportToCSV()" class="btn-primary" style="background: rgba(22, 101, 52, 0.1); color: var(--accent-success); border: 1px solid rgba(22, 101, 52, 0.25); font-size: 0.78rem; padding: 8px 16px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer;">
-              📥 Export to CSV / Excel
+            <button type="button" onclick="exportReportToCSV()" class="btn-secondary edb-action-secondary">
+              Export to CSV
             </button>
+            <button type="button" class="atlas-context-help-btn" data-atlas-help="How do I run a financial report and export enquiries to CSV?" aria-label="Help for reports">?</button>
           </div>
 
           <!-- Report Statistics Output Cards -->
@@ -4231,17 +4233,17 @@
   <!-- Atlas Command Palette (Ctrl/⌘ + K) -->
   <div id="atlas-command-palette" class="atlas-command-palette" aria-hidden="true" role="dialog" aria-label="Command palette">
     <div class="atlas-cp-dialog">
-      <input type="text" id="atlas-cp-input" class="atlas-cp-input" placeholder="Jump to a module… (try air, directory, copilot)" autocomplete="off" />
+      <input type="text" id="atlas-cp-input" class="atlas-cp-input" placeholder="Jump to a module… (try air, directory, help)" autocomplete="off" />
       <div id="atlas-cp-list" class="atlas-cp-list"></div>
       <div class="atlas-cp-hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere · <kbd>Esc</kbd> to close</div>
     </div>
   </div>
 
-  <!-- Atlas Copilot — AI assistant (assistive only; never calculates rates) -->
+  <!-- Atlas Help — assistive navigation (never calculates rates) -->
   <button type="button" id="atlas-copilot-fab" class="atlas-copilot-fab" title="Atlas Help" aria-label="Open Atlas Help">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l1 3 1-3 3-1-3-1-1-3-1 3-3 1 3 1z"/><path d="M19 13l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5L17 15l1.5-.5.5-1.5z"/></svg>
   </button>
-  <aside id="atlas-copilot-panel" class="atlas-copilot-panel" aria-hidden="true" aria-label="Atlas Copilot">
+  <aside id="atlas-copilot-panel" class="atlas-copilot-panel" aria-hidden="true" aria-label="Atlas Help">
     <div class="atlas-copilot-header">
       <div>
         <span class="atlas-copilot-eyebrow">Help</span>
@@ -4268,9 +4270,9 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=128.11"></script>
-  <script src="ui-shell.js?v=128.11"></script>
-  <script src="ai-assistant.js?v=128.11"></script>
+  <script src="app-v4.js?v=128.14"></script>
+  <script src="ui-shell.js?v=128.14"></script>
+  <script src="ai-assistant.js?v=128.14"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4598,7 +4600,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=128.11">' +
+          '<link rel="stylesheet" href="index.css?v=128.14">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

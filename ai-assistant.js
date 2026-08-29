@@ -11,17 +11,53 @@
     'how do i save an air freight quote': 'Open Air Freight from the sidebar, complete Shipment Details and Carrier & Tariffs, then click Save Quote in the sticky bar at the top. Use Reset only when starting a fresh quote.',
     'how do i save a quote': 'On any desk (Air, Sea, Transport, Warehouse), complete the form and click Save Quote in the sticky highlights bar at the top.',
     'explain the difference between air nomination and free hand pricing desks': 'Air Nomination desks quote in USD for nominated agent flows. Free Hand desks quote in INR for direct sales. Currency and agency rules adjust automatically per role — your formulas are unchanged.',
-    'draft a short professional follow-up email for a quoted shipment': 'Subject: Freight Quotation — [Ref ID]\n\nDear [Agent Name],\n\nThank you for your enquiry. Please find our quotation for [Origin] to [Destination] attached. Rates are valid as noted on the quote. Let us know if you would like to proceed or need any adjustments.\n\nBest regards,\nAtlas Pricing Team'
+    'draft a short professional follow-up email for a quoted shipment': 'Subject: Freight Quotation — [Ref ID]\n\nDear [Agent Name],\n\nThank you for your enquiry. Please find our quotation for [Origin] to [Destination] attached. Rates are valid as noted on the quote. Let us know if you would like to proceed or need any adjustments.\n\nBest regards,\nAtlas Pricing Team',
+    'how do i filter enquiries and generate financial reports in the enquiry database?': 'Use + Add filter to show Ref ID, Date, Mode, Desk, or Status chips. Click a table row to inspect it on the right. For reports, pick a Reporting period and User/desk, then Generate summary or Export to CSV. Your live quotes and archives are never deleted by these tools.',
+    'how do i run a financial report and export enquiries to csv?': 'In Enquiry Database → right panel: choose Reporting period and User/desk, click Generate summary. To export the same filtered set, click Export to CSV. Archive lookup finds older quotes by Ref ID without changing live data.',
+    'how do i use air freight filters and surcharges?': 'On Air Freight: Shipment Details tab for cargo, Carrier & Tariffs for airline options. Use the sticky bar to watch totals. Save Quote when ready — nothing is stored until you save.',
+    'how do i use sea freight desk?': 'Sea Freight works like Air: Shipment Details then Carrier & Tariffs. Switch liner cards with the tabs inside each option. Save Quote stores your work; Reset clears the desk only after you confirm.'
+  };
+
+  var CONTEXT_TIPS = {
+    dashboard: 'Tip: Press ⌘K (Ctrl+K) to jump anywhere. Admin tabs — Overview, Enquiry Database, Analytics — are along the top of the dashboard.',
+    air: 'Air desk: fill Shipment Details, then Carrier & Tariffs. Totals update in the sticky bar. Save Quote when finished.',
+    sea: 'Sea desk: enter cargo and containers, then configure liner tariffs. Save Quote preserves your work for the team.',
+    transport: 'Transport desk: enter legs and charges, then Save Quote. Currency syncs from the header dropdown.',
+    warehouse: 'Warehouse desk: enter storage parameters and charges, then Save Quote.',
+    directory: 'Directory: search agents, expand regions, use Add Contact for new entries. Import/export stays in the toolbar.',
+    circulars: 'Circulars: browse tariff PDFs by category. Upload adds new documents for the team.',
+    sales: 'Sales pipeline: track leads and statuses. This view is read/update only — pricing still happens on the desks.',
+    enquiry: 'Enquiry Database: click + Add filter, then click any row to inspect. Reports panel on the right — filters do not delete data.'
   };
 
   function ui() {
     return window.__atlasUi || {};
   }
 
+  function detectContextKey() {
+    var active = document.querySelector('.view-panel.active');
+    if (!active) return 'dashboard';
+    var id = active.id || '';
+    if (id.indexOf('air-freight') !== -1) return 'air';
+    if (id.indexOf('sea-freight') !== -1) return 'sea';
+    if (id.indexOf('transport') !== -1) return 'transport';
+    if (id.indexOf('warehousing') !== -1) return 'warehouse';
+    if (id.indexOf('directory') !== -1) return 'directory';
+    if (id.indexOf('circulars') !== -1) return 'circulars';
+    if (id.indexOf('sales') !== -1) return 'sales';
+    if (id.indexOf('manager') !== -1) {
+      var pane = document.querySelector('#manager-panel .desk-tab-pane[style*="display: none"]');
+      var visible = document.querySelector('#manager-panel .desk-tab-pane:not([style*="display: none"])');
+      if (visible && visible.getAttribute('data-tab-pane') === 'enquiry-database') return 'enquiry';
+      return 'dashboard';
+    }
+    return 'dashboard';
+  }
+
   function formatQuoteContext(quote) {
     if (!quote) return '';
     var refFn = typeof window.getQuoteRefId === 'function' ? window.getQuoteRefId : function (q) { return q.id; };
-    var lines = [
+    return [
       'Selected enquiry (read-only):',
       'Ref: ' + refFn(quote),
       'Date: ' + (quote.date || '—'),
@@ -29,8 +65,7 @@
       'Customer: ' + (quote.customer || '—'),
       'Route: ' + (quote.route || '—'),
       'Status: ' + (quote.status || '—')
-    ];
-    return lines.join('\n');
+    ].join('\n');
   }
 
   function matchLocalHelp(message) {
@@ -39,12 +74,14 @@
     for (var k in LOCAL_HELP) {
       if (key.indexOf(k) !== -1 || k.indexOf(key) !== -1) return LOCAL_HELP[k];
     }
+    if (key.indexOf('filter') !== -1 && key.indexOf('enquir') !== -1) return LOCAL_HELP['how do i filter enquiries and generate financial reports in the enquiry database?'];
+    if (key.indexOf('report') !== -1 || key.indexOf('csv') !== -1 || key.indexOf('export') !== -1) return LOCAL_HELP['how do i run a financial report and export enquiries to csv?'];
     if (key.indexOf('save') !== -1 && key.indexOf('quote') !== -1) return LOCAL_HELP['how do i save a quote'];
     if (key.indexOf('nomination') !== -1 || key.indexOf('free hand') !== -1) return LOCAL_HELP['explain the difference between air nomination and free hand pricing desks'];
     if (key.indexOf('email') !== -1 || key.indexOf('follow') !== -1) return LOCAL_HELP['draft a short professional follow-up email for a quoted shipment'];
-    if (key.indexOf('air') !== -1 && key.indexOf('desk') !== -1) return 'Press ⌘K (Ctrl+K) and choose Air Freight Desk, or use the sidebar → Air Freight.';
-    if (key.indexOf('sea') !== -1) return 'Press ⌘K (Ctrl+K) and choose Sea Freight Desk, or use the sidebar → Sea Freight.';
-    if (key.indexOf('enquiry') !== -1 || key.indexOf('database') !== -1) return 'Admin → Enquiry Database tab. Click a row to inspect details in the right panel. Use filters at the top to narrow results.';
+    if (key.indexOf('air') !== -1) return LOCAL_HELP['how do i use air freight filters and surcharges?'];
+    if (key.indexOf('sea') !== -1) return LOCAL_HELP['how do i use sea freight desk?'];
+    if (key.indexOf('enquiry') !== -1 || key.indexOf('database') !== -1) return LOCAL_HELP['how do i filter enquiries and generate financial reports in the enquiry database?'];
     return null;
   }
 
@@ -75,6 +112,15 @@
     if (open) {
       var input = document.getElementById('atlas-copilot-input');
       if (input) window.setTimeout(function () { input.focus(); }, 80);
+    }
+  }
+
+  function openAtlasHelpWithPrompt(prompt, autoSend) {
+    togglePanel(true);
+    var input = document.getElementById('atlas-copilot-input');
+    if (input && prompt) {
+      input.value = prompt;
+      if (autoSend !== false) sendMessage();
     }
   }
 
@@ -112,7 +158,8 @@
       return;
     }
 
-    var fullMessage = quoteContext ? (quoteContext + '\n\nUser question: ' + message) : message;
+    var ctx = CONTEXT_TIPS[detectContextKey()] || '';
+    var fullMessage = (ctx ? 'Context: ' + ctx + '\n\n' : '') + (quoteContext ? quoteContext + '\n\nUser question: ' : '') + message;
 
     try {
       if (!window.firebase || !firebase.functions) throw new Error('offline');
@@ -125,10 +172,8 @@
       var reply = (result && result.data && result.data.reply) || 'No response.';
       appendMessage('assistant', reply);
     } catch (err) {
-      appendMessage('assistant',
-        'Built-in help: try the quick buttons above, or press ⌘K (Ctrl+K) to jump between modules. ' +
-        'For pricing, use Air / Sea / Transport / Warehouse desks — rates are calculated there, not here. ' +
-        'Full AI chat will be enabled when the server function is deployed.');
+      var fallback = CONTEXT_TIPS[detectContextKey()] || 'Press ⌘K (Ctrl+K) to jump between modules.';
+      appendMessage('assistant', fallback + ' Built-in help covers save, filters, and reports. I never change your saved quotes or rates.');
     } finally {
       setBusy(false);
     }
@@ -142,6 +187,47 @@
         sendMessage();
       });
     });
+  }
+
+  function bindContextHelpButtons() {
+    document.querySelectorAll('[data-atlas-help]').forEach(function (btn) {
+      if (btn._atlasHelpBound) return;
+      btn._atlasHelpBound = true;
+      btn.addEventListener('click', function () {
+        openAtlasHelpWithPrompt(btn.getAttribute('data-atlas-help') || 'How do I use this screen?', true);
+      });
+    });
+  }
+
+  function injectDeskHelpButtons() {
+    var desks = [
+      { sel: '#air-freight-panel .desk-shell-header', prompt: 'How do I use air freight filters and surcharges?' },
+      { sel: '#sea-freight-panel .desk-shell-header', prompt: 'How do I use sea freight desk?' },
+      { sel: '#transportation-panel .desk-shell-header', prompt: 'How do I save a quote on the transport desk?' },
+      { sel: '#warehousing-panel .desk-shell-header', prompt: 'How do I save a quote on the warehouse desk?' }
+    ];
+    desks.forEach(function (d) {
+      var header = document.querySelector(d.sel);
+      if (!header || header.querySelector('.atlas-context-help-btn')) return;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'atlas-context-help-btn';
+      btn.setAttribute('data-atlas-help', d.prompt);
+      btn.setAttribute('aria-label', 'Atlas Help for this desk');
+      btn.textContent = '?';
+      var backBtn = header.querySelector('.btn-back-dashboard');
+      if (backBtn && backBtn.parentNode) {
+        backBtn.parentNode.insertBefore(btn, backBtn);
+      } else {
+        header.appendChild(btn);
+      }
+    });
+    bindContextHelpButtons();
+  }
+
+  function refreshAtlasHelpContext() {
+    injectDeskHelpButtons();
+    bindContextHelpButtons();
   }
 
   function init() {
@@ -161,6 +247,8 @@
       });
     }
     bindQuickPrompts();
+    bindContextHelpButtons();
+    injectDeskHelpButtons();
   }
 
   if (document.readyState === 'loading') {
@@ -170,4 +258,6 @@
   }
 
   window.toggleAtlasCopilot = togglePanel;
+  window.openAtlasHelpWithPrompt = openAtlasHelpWithPrompt;
+  window.refreshAtlasHelpContext = refreshAtlasHelpContext;
 })();
