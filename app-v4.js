@@ -736,6 +736,30 @@ function toggleLoginPasswordVisibility() {
 }
 window.toggleLoginPasswordVisibility = toggleLoginPasswordVisibility;
 
+function formatDisplayUsername(username) {
+  if (!username) return 'User';
+  const u = String(username).trim();
+  return u ? u.charAt(0).toUpperCase() + u.slice(1).toLowerCase() : 'User';
+}
+window.formatDisplayUsername = formatDisplayUsername;
+
+function dismissAtlasTips() {
+  try { localStorage.setItem('atlas_tips_dismissed', '1'); } catch (e) {}
+  const el = document.getElementById('atlas-tips-card');
+  if (el) el.style.display = 'none';
+}
+window.dismissAtlasTips = dismissAtlasTips;
+
+function initAtlasTips() {
+  try {
+    if (localStorage.getItem('atlas_tips_dismissed') === '1') {
+      const el = document.getElementById('atlas-tips-card');
+      if (el) el.style.display = 'none';
+    }
+  } catch (e) {}
+}
+window.initAtlasTips = initAtlasTips;
+
 function loginSuccess(roleId) {
 
   const roleIdLower = roleId.toLowerCase();
@@ -779,7 +803,7 @@ function loginSuccess(roleId) {
     .replace(/\s*\(Free\s*Hand\)/i, "");
 
   const headerUserNameEl = document.getElementById("header-user-name");
-  if (headerUserNameEl) headerUserNameEl.textContent = (appState.currentUser || roleIdLower).toUpperCase();
+  if (headerUserNameEl) headerUserNameEl.textContent = formatDisplayUsername(appState.currentUser || roleIdLower);
   const headerUserRoleEl = document.getElementById("header-user-role");
   if (headerUserRoleEl) headerUserRoleEl.textContent = displayName;
   const headerUserAvatarEl = document.getElementById("header-user-avatar");
@@ -821,6 +845,7 @@ function loginSuccess(roleId) {
     }
     switchRole(roleIdLower);
   }
+  initAtlasTips();
 }
 
 function logoutUser() {
@@ -9978,7 +10003,7 @@ function applyDeskNames() {
     if (activeUser === 'shaheer') name = 'Sea Nomination';
     
     const headerUserNameEl = document.getElementById("header-user-name");
-    if (headerUserNameEl) headerUserNameEl.textContent = activeUser.toUpperCase();
+    if (headerUserNameEl) headerUserNameEl.textContent = formatDisplayUsername(activeUser);
     const headerUserRoleEl = document.getElementById("header-user-role");
     if (headerUserRoleEl) headerUserRoleEl.textContent = name;
     const headerUserAvatarEl = document.getElementById("header-user-avatar");
@@ -19780,7 +19805,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.00"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.01"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
 
   function showUpdateBanner(latestVersion) {
     if (document.getElementById("app-update-banner")) return; // already showing

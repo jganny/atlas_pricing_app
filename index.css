@@ -436,16 +436,64 @@ body {
 }
 
 .active-user-badge {
-  background: rgba(27, 28, 92, 0.05);
+  background: rgba(27, 28, 92, 0.04);
   border: 1px solid var(--border-1);
-  padding: 0.45rem 0.85rem;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--r-sm);
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--sky);
+  font-weight: 500;
+  color: var(--t1);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
+}
+
+.header-workspace-context {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0.75rem;
+  min-width: 0;
+}
+.header-workspace-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--t1);
+  font-family: inherit;
+  letter-spacing: -0.01em;
+}
+.header-user-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: right;
+}
+.header-user-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  color: var(--t1);
+}
+.header-user-role {
+  font-size: 0.72rem;
+  color: var(--t3);
+  line-height: 1.25;
+  font-weight: 500;
+}
+.header-user-avatar {
+  background: var(--sky);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .admin-settings-btn, .change-password-btn, .logout-btn {
@@ -455,8 +503,8 @@ body {
   padding: 0.45rem 0.85rem;
   border-radius: var(--r-sm);
   font-size: 0.75rem;
-  font-weight: 700;
-  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -4504,9 +4552,9 @@ textarea:focus {
   }
 
   .header-workspace-context {
-    max-width: 340px;
-    padding: 0 1.35rem;
-    border-inline: 1px solid var(--atlas-border);
+    max-width: none;
+    padding: 0;
+    border-inline: none;
   }
 
   .active-user-badge {
@@ -6469,23 +6517,24 @@ body:has(#member-dashboard-panel.active) .liquid-orb {
   bottom: 1.25rem;
   left: 1.25rem;
   z-index: 10070;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1px solid var(--border-1);
-  background: var(--sky);
-  color: #fff;
-  box-shadow: var(--shadow-md, 0 8px 24px rgba(27, 28, 92, 0.18));
+  background: #ffffff;
+  color: var(--t2);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .atlas-copilot-fab:hover {
-  transform: scale(1.05);
-  background: var(--indigo);
-  box-shadow: 0 10px 28px rgba(27, 28, 92, 0.22);
+  background: var(--bg-deep);
+  color: var(--sky);
+  border-color: var(--border-3);
+  transform: none;
 }
 body.logged-out-blur .atlas-copilot-fab,
 body.logged-out-blur .atlas-copilot-panel,
@@ -6518,21 +6567,21 @@ body.logged-out-blur .atlas-command-palette {
   align-items: flex-start;
   padding: 1rem 1.1rem;
   border-bottom: 1px solid var(--border-1);
-  background: var(--bg-deep);
+  background: var(--bg-surface);
 }
 .atlas-copilot-eyebrow {
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--t3);
 }
 .atlas-copilot-title {
   margin: 0.15rem 0 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--sky);
-  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--t1);
+  font-family: inherit;
 }
 .atlas-copilot-close {
   background: var(--bg-surface);
@@ -6592,8 +6641,9 @@ body.logged-out-blur .atlas-command-palette {
 }
 .atlas-copilot-msg-user {
   align-self: flex-end;
-  background: var(--sky);
-  color: #fff;
+  background: var(--bg-deep);
+  color: var(--t1);
+  border: 1px solid var(--border-1);
   border-bottom-right-radius: 4px;
 }
 .atlas-copilot-msg-assistant {
@@ -6645,7 +6695,7 @@ body.logged-out-blur .atlas-command-palette {
   padding: 0.55rem 1rem !important;
   font-size: 0.78rem !important;
   border-radius: var(--r-md) !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   cursor: pointer;
   font-family: inherit;
   box-shadow: none !important;
@@ -6659,22 +6709,72 @@ body.logged-out-blur .atlas-command-palette {
   margin-top: 0 !important;
 }
 .header-quick-nav-hint {
-  font-size: 0.62rem;
-  color: #94a3b8;
-  font-weight: 600;
-  margin-top: 0.15rem;
+  display: none !important;
 }
-.header-quick-nav-hint kbd {
-  background: #f1f5f9;
+
+/* Tips card on dashboard home */
+.atlas-tips-card {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 3px;
+}
+.atlas-tips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.atlas-tips-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--t1);
+}
+.atlas-tips-dismiss {
+  background: none;
+  border: none;
+  color: var(--t3);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
   padding: 0 0.25rem;
-  font-size: 0.58rem;
+}
+.atlas-tips-dismiss:hover {
+  color: var(--t1);
+}
+.atlas-tips-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.78rem;
+  color: var(--t2);
+  line-height: 1.55;
+}
+.atlas-tips-list li {
+  margin-bottom: 0.25rem;
+}
+.atlas-tips-list kbd {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.68rem;
   font-family: inherit;
 }
-@media (max-width: 768px) {
-  .header-quick-nav-hint { display: none; }
+
+/* Softer live status badges on dashboard */
+.margin-radar-strip .atl-tag {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+  font-weight: 600;
 }
+.margin-radar-strip .atl-tag-success { color: #166534; }
+.margin-radar-strip .atl-tag-success::before { background: #22c55e; }
+.margin-radar-strip .atl-tag-info::before { background: #3b82f6; }
+.margin-radar-strip .atl-tag-sea::before { background: var(--indigo); }
+.margin-radar-strip .atl-tag-violet::before { background: #8b5cf6; }
+.margin-radar-strip .atl-tag-warning::before { background: #d97706; }
 
 /* Production: hide developer-facing Firebase connection badge */
 #db-connection-badge {
@@ -6886,21 +6986,22 @@ body.logged-out-blur .atlas-command-palette {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 1px solid var(--border-1);
-  background: var(--bg-deep);
-  color: var(--sky);
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: var(--t3);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   line-height: 1;
   flex-shrink: 0;
-  font-family: 'Outfit', sans-serif;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .atlas-context-help-btn:hover {
-  background: var(--sky-g);
-  border-color: var(--sky);
-  transform: scale(1.05);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: var(--t1);
+  transform: none;
 }
 .desk-shell-header .atlas-context-help-btn {
   margin-left: 0.5rem;
@@ -6914,26 +7015,7 @@ body.logged-out-blur .atlas-command-palette {
   }
 }
 
-/* ===== Vertex v129 — product badge, AI sell band, Sales pipeline ===== */
-
-.vertex-product-badge {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 0.55rem;
-  padding: 0.18rem 0.55rem;
-  border-radius: 6px;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #1b1c5c;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.08));
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  font-family: 'Space Grotesk', 'Outfit', sans-serif;
-  vertical-align: middle;
-}
-
-.vertex-sell-band {
+/* ===== Vertex v129 — AI sell band, Sales pipeline ===== */
   margin-bottom: 1rem;
   padding: 0.85rem 1rem;
   border-radius: var(--r-md);
@@ -7228,9 +7310,6 @@ body.logged-out-blur .atlas-command-palette {
 }
 
 @media (max-width: 768px) {
-  .vertex-product-badge {
-    display: none;
-  }
   .sales-kanban-col {
     flex: 0 0 170px;
     min-width: 170px;

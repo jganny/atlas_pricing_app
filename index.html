@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.00">
+  <link rel="stylesheet" href="index.css?v=129.01">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -156,24 +156,19 @@
             </svg>
           </button>
           <img src="assets/atlas-logo.png" alt="Atlas Logistics" onclick="goHome()" style="height: 34px; width: auto; object-fit: contain; cursor: pointer;">
-          <span class="vertex-product-badge" title="Vertex enterprise platform">Vertex</span>
         </div>
 
-        <!-- Workspace Context Area -->
-        <div class="header-workspace-context" style="flex-grow: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; margin: 0 1rem;">
-          <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Workspace</div>
-          <div id="header-workspace-name" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Dashboard</div>
-          <div id="header-quick-nav-hint" class="header-quick-nav-hint" title="Open quick navigation">Press <kbd>⌘</kbd><kbd>K</kbd> for quick nav</div>
+        <div class="header-workspace-context">
+          <div id="header-workspace-name" class="header-workspace-title">Dashboard</div>
         </div>
 
-        <!-- Active User Badge & Logout -->
         <div class="user-badge-container">
-          <div class="active-user-badge" id="active-user-badge" style="display:flex; align-items:center; gap:0.5rem; text-align:right;">
-            <div style="display:flex; flex-direction:column; justify-content:center;">
-              <span id="header-user-name" style="font-weight:700; font-size:0.85rem; line-height:1.2; color: #0f172a;">User</span>
-              <span id="header-user-role" style="font-size:0.7rem; color: #475569; line-height:1.2; font-weight:600;">Role</span>
+          <div class="active-user-badge" id="active-user-badge">
+            <div class="header-user-text">
+              <span id="header-user-name" class="header-user-name">User</span>
+              <span id="header-user-role" class="header-user-role">Role</span>
             </div>
-            <div id="header-user-avatar" style="background: #3b82f6; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; font-family: 'Outfit', sans-serif; flex-shrink: 0;">G</div>
+            <div id="header-user-avatar" class="header-user-avatar">G</div>
           </div>
           <!-- Admin settings button -->
           <button id="admin-settings-btn" class="admin-settings-btn" onclick="toggleAdminSettingsModal()">
@@ -359,6 +354,19 @@
 
 
           </div>
+        </div>
+
+        <!-- Tips for new users (dismissible) -->
+        <div id="atlas-tips-card" class="atlas-tips-card">
+          <div class="atlas-tips-header">
+            <span class="atlas-tips-title">Tips</span>
+            <button type="button" class="atlas-tips-dismiss" onclick="dismissAtlasTips()" aria-label="Dismiss tips">×</button>
+          </div>
+          <ul class="atlas-tips-list">
+            <li>Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (Mac: <kbd>⌘</kbd>+<kbd>K</kbd>) to jump quickly between modules.</li>
+            <li>Open <strong>Atlas Help</strong> (bottom-left) for guided answers — it never changes your rates.</li>
+            <li>Use the <strong>Sales</strong> tab to manage leads and start quotes from prospects.</li>
+          </ul>
         </div>
 
         <!-- ✅ Atlassian Live Margin Radar Strip — Real-time monitoring (no leaf unturned) -->
@@ -4290,7 +4298,7 @@
 
   <!-- Atlas Help — assistive navigation (never calculates rates) -->
   <button type="button" id="atlas-copilot-fab" class="atlas-copilot-fab" title="Atlas Help" aria-label="Open Atlas Help">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l1 3 1-3 3-1-3-1-1-3-1 3-3 1 3 1z"/><path d="M19 13l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5L17 15l1.5-.5.5-1.5z"/></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 2-2.5 2-2.5 4"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
   </button>
   <aside id="atlas-copilot-panel" class="atlas-copilot-panel" aria-hidden="true" aria-label="Atlas Help">
     <div class="atlas-copilot-header">
@@ -4319,11 +4327,11 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.00"></script>
-  <script src="ui-shell.js?v=129.00"></script>
-  <script src="ai-assistant.js?v=129.00"></script>
-  <script src="ai-sell-band.js?v=129.00"></script>
-  <script src="sales-v129.js?v=129.00"></script>
+  <script src="app-v4.js?v=129.01"></script>
+  <script src="ui-shell.js?v=129.01"></script>
+  <script src="ai-assistant.js?v=129.01"></script>
+  <script src="ai-sell-band.js?v=129.01"></script>
+  <script src="sales-v129.js?v=129.01"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4651,7 +4659,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.00">' +
+          '<link rel="stylesheet" href="index.css?v=129.01">' +
           '<style>' +
             '@page {' +
               'size: A4;' +
