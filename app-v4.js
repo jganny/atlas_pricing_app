@@ -7456,16 +7456,18 @@ async function saveCurrentQuote() {
 
   const airStatusLabel = document.getElementById("air-agreement-status");
   if (airStatusLabel) {
-    airStatusLabel.textContent = "[Required]";
+    airStatusLabel.textContent = "Required";
     airStatusLabel.style.color = "var(--accent-error)";
+    airStatusLabel.style.background = "rgba(239, 68, 68, 0.1)";
   }
   const airFilenameLabel = document.getElementById("air-agreement-filename");
   if (airFilenameLabel) airFilenameLabel.textContent = "No file selected";
 
   const seaStatusLabel = document.getElementById("sea-agreement-status");
   if (seaStatusLabel) {
-    seaStatusLabel.textContent = "[Required]";
+    seaStatusLabel.textContent = "Required";
     seaStatusLabel.style.color = "var(--accent-error)";
+    seaStatusLabel.style.background = "rgba(239, 68, 68, 0.1)";
   }
   const seaFilenameLabel = document.getElementById("sea-agreement-filename");
   if (seaFilenameLabel) seaFilenameLabel.textContent = "No file selected";
@@ -13579,8 +13581,9 @@ function handleAgreementUpload(mode, input) {
 
   const statusLabel = document.getElementById(`${mode}-agreement-status`);
   if (statusLabel) {
-    statusLabel.textContent = "[Uploaded]";
+    statusLabel.textContent = "Uploaded";
     statusLabel.style.color = "var(--accent-success)";
+    statusLabel.style.background = "rgba(16, 185, 129, 0.1)";
   }
 
   const filenameLabel = document.getElementById(`${mode}-agreement-filename`);
@@ -18358,8 +18361,15 @@ function renderCircularsLibrary() {
   });
 
   if (filtered.length === 0) {
-    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
-      No documents found${(activeCircularCategory !== 'all' || searchQuery) ? ' matching this filter' : ' yet'}.
+    const isFiltered = activeCircularCategory !== 'all' || searchQuery;
+    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 3.5rem 1.5rem;">
+      <div style="font-size: 2rem; margin-bottom: 0.75rem; opacity: 0.5;">📄</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: var(--t1); margin-bottom: 0.3rem;">
+        ${isFiltered ? 'No documents match this filter' : 'No documents yet'}
+      </div>
+      <div style="font-size: 0.82rem; color: var(--t3);">
+        ${isFiltered ? 'Try a different category or search term.' : 'Airline tariffs, fuel circulars, and shipping line circulars uploaded here will show up in this library.'}
+      </div>
     </div>`;
     return;
   }
@@ -19750,7 +19760,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "128.10"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "128.11"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
 
   function showUpdateBanner(latestVersion) {
     if (document.getElementById("app-update-banner")) return; // already showing

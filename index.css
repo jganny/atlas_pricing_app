@@ -233,7 +233,7 @@ body {
 .app-container,
 #app-workspace {
   display: grid !important;
-  grid-template-columns: 240px 1fr !important;
+  grid-template-columns: 240px minmax(0, 1fr) !important;
   grid-template-rows: auto auto 1fr !important;
   min-height: 100vh;
   width: 100%;
@@ -249,7 +249,7 @@ body {
 @media (min-width: 768px) {
   body.sidebar-collapsed .app-container,
   body.sidebar-collapsed #app-workspace {
-    grid-template-columns: 86px 1fr !important;
+    grid-template-columns: 86px minmax(0, 1fr) !important;
   }
   body.sidebar-collapsed .sidebar-group-title,
   body.sidebar-collapsed .sidebar-collapse-toggle span {
@@ -1584,7 +1584,7 @@ body:has(#warehousing-panel.active) .grid-overlay {
   box-shadow: var(--shadow-sm);
 }
 @media (max-width: 1024px) {
-  .control-tower-layout { grid-template-columns: 1fr !important; gap: 1rem; }
+  .control-tower-layout { grid-template-columns: minmax(0, 1fr) !important; gap: 1rem; }
 }
 
 /* PREMIUM LOGISTICS NEWS CONTAINER (NAVY BLUE & YELLOW GOLD THEME) */
@@ -2443,7 +2443,7 @@ header {
 /* Control tower layout — full width 1-column single container */
 .control-tower-layout {
   display: grid !important;
-  grid-template-columns: 1fr !important;
+  grid-template-columns: minmax(0, 1fr) !important;
   gap: 1.5rem !important;
 }
 
@@ -2845,9 +2845,9 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 @media (min-width: 1024px) and (max-width: 1279px) {
   .bento-grid-4, .bento-grid-3 { grid-template-columns:repeat(2,1fr); }
   .stats-grid   { grid-template-columns:repeat(4,1fr) !important; }
-  .workspace, .admin-grid { grid-template-columns:1fr !important; }
+  .workspace, .admin-grid { grid-template-columns: minmax(0, 1fr) !important; }
   #transportation-panel .calculator-grid,
-  #warehousing-panel .calculator-grid { grid-template-columns:1fr !important; }
+  #warehousing-panel .calculator-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .results-panel { position:static !important; }
   main { padding: var(--space-md) !important; }
   .bento-action-grid { grid-template-columns:repeat(5,1fr) !important; }
@@ -2859,11 +2859,11 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 @media (max-width: 1023px) {
   .app-container,
   #app-workspace {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
   #transportation-panel .calculator-grid,
   #warehousing-panel .calculator-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
   .results-panel {
     position: static !important;
@@ -2973,8 +2973,8 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 @media (min-width: 768px) and (max-width: 1023px) {
   .bento-grid-4, .bento-grid-3, .bento-grid-2 { grid-template-columns:repeat(2,1fr); }
   .stats-grid   { grid-template-columns:repeat(2,1fr) !important; }
-  .workspace, .admin-grid { grid-template-columns:1fr !important; }
-  .form-grid-3  { grid-template-columns:1fr 1fr !important; }
+  .workspace, .admin-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .form-grid-3  { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
   .bento-action-grid { grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)) !important; }
   .bento-span-2, .bento-span-3 { grid-column:span 1; }
   main { padding: var(--space-md) !important; }
@@ -2985,12 +2985,12 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 
 /* Mobile / iPhone Large (480-767px) */
 @media (max-width: 767px) {
-  .bento-grid-4, .bento-grid-3, .bento-grid-2, .bento-grid-auto { grid-template-columns:1fr !important; }
+  .bento-grid-4, .bento-grid-3, .bento-grid-2, .bento-grid-auto { grid-template-columns: minmax(0, 1fr) !important; }
   .bento-span-2, .bento-span-3, .bento-span-full { grid-column:span 1 !important; }
-  .stats-grid   { grid-template-columns:1fr 1fr !important; gap:var(--space-sm) !important; }
-  .bento-action-grid { grid-template-columns:1fr 1fr !important; gap:var(--space-sm) !important; }
-  .workspace, .admin-grid { grid-template-columns:1fr !important; }
-  .form-row, .form-grid-3 { grid-template-columns:1fr !important; gap:var(--space-sm) !important; }
+  .stats-grid   { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap:var(--space-sm) !important; }
+  .bento-action-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap:var(--space-sm) !important; }
+  .workspace, .admin-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .form-row, .form-grid-3 { grid-template-columns: minmax(0, 1fr) !important; gap:var(--space-sm) !important; }
   .xe-ticker-container { display:none !important; }
   main { padding: var(--space-sm) !important; }
   .app-header, header { padding:0.65rem var(--space-sm) !important; }
@@ -3007,7 +3007,7 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   .result-value-highlight { font-size:clamp(1.6rem,7vw,2rem) !important; }
   .bento-stat .bento-stat-value { font-size:clamp(1.5rem,7vw,2rem) !important; }
   .modal-content { border-radius:20px 20px 0 0 !important; margin-top:auto !important; max-height:92dvh !important; }
-  .print-details { grid-template-columns:1fr !important; gap:0.5rem !important; }
+  .print-details { grid-template-columns: minmax(0, 1fr) !important; gap:0.5rem !important; }
   .surcharge-row { grid-template-columns:2fr 1fr auto !important; }
   
   /* Compact mobile header customizations */
@@ -3018,8 +3018,8 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 
 /* iPhone SE / Small (≤ 389px) */
 @media (max-width: 389px) {
-  .stats-grid { grid-template-columns:1fr !important; }
-  .bento-action-grid { grid-template-columns:1fr !important; }
+  .stats-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .bento-action-grid { grid-template-columns: minmax(0, 1fr) !important; }
   main { padding:0.6rem !important; }
   .app-header, header { padding:0.6rem 0.75rem !important; }
   .module-tab { font-size:0.6rem !important; padding:0.3rem 0.5rem !important; }
@@ -5160,7 +5160,7 @@ textarea:focus {
   /* Main content takes full width on mobile */
   .app-container,
   #app-workspace {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   main {
@@ -5971,18 +5971,33 @@ tfoot.cgf-footer .cgf-gp {
 .hdr-month-cell.selected { background: #eff6ff; border-color: #3b82f6; color: #2563eb; font-weight: 700; }
 
 /* Frozen Ref ID + Date columns on horizontal scroll — opaque background
-   trades away the even/odd row tint on just these two columns. */
+   trades away the even/odd row tint on just these two columns.
+   Ref ID's width was never fixed, so it auto-sized to whatever content was
+   on screen (as little as the 6-character "Ref ID" header with no rows
+   loaded) while Date's sticky offset assumed a hardcoded 90px — any time
+   real ref IDs (e.g. "AEPAY0826IN00452") rendered wider or narrower than
+   that guess, Date's opaque sticky box landed mid-column and visually
+   clipped whatever sat underneath it (Mode, the next column). Fixed by
+   giving Ref ID an explicit, content-independent width and pointing Date's
+   offset at that exact same value via a custom property, so they can never
+   drift apart again regardless of what ref ID text is actually loaded. */
+:root { --admin-quotes-refid-col-width: 130px; }
 #admin-quotes-table th:nth-child(1),
 #admin-quotes-table td:nth-child(1) {
   position: sticky;
   left: 0;
   z-index: 3;
   background: #ffffff;
+  width: var(--admin-quotes-refid-col-width);
+  min-width: var(--admin-quotes-refid-col-width);
+  max-width: var(--admin-quotes-refid-col-width);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #admin-quotes-table th:nth-child(2),
 #admin-quotes-table td:nth-child(2) {
   position: sticky;
-  left: 90px;
+  left: var(--admin-quotes-refid-col-width);
   z-index: 3;
   background: #ffffff;
 }

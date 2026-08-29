@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=128.10">
+  <link rel="stylesheet" href="index.css?v=128.11">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -1538,7 +1538,7 @@
                   style="display: flex; align-items: center; justify-content: space-between;">
                   <span>Agency Agreement</span>
                   <span id="air-agreement-status"
-                    style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error);">[Required]</span>
+                    style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error); background: rgba(239, 68, 68, 0.1); padding: 2px 8px; border-radius: 4px;">Required</span>
                 </label>
                 <div
                   style="display: flex; gap: 0.4rem; align-items: center; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; padding: 4px 8px; height: 38px;">
@@ -1982,7 +1982,7 @@
                   style="display: flex; align-items: center; justify-content: space-between;">
                   <span>Agency Agreement</span>
                   <span id="sea-agreement-status"
-                    style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error);">[Required]</span>
+                    style="font-size: 0.62rem; font-weight: 800; color: var(--accent-error); background: rgba(239, 68, 68, 0.1); padding: 2px 8px; border-radius: 4px;">Required</span>
                 </label>
                 <div
                   style="display: flex; gap: 0.4rem; align-items: center; background: var(--bg-input); border: 1px solid var(--border-1); border-radius: 8px; padding: 4px 8px; height: 38px;">
@@ -2957,10 +2957,6 @@
               <button id="dir-import-excel-btn" class="btn-secondary" onclick="openImportExcelModal()" style="display: none; align-items: center; gap: 0.4rem; font-weight: 700;">
                 <span>📥</span> Excel Import
               </button>
-              <!-- Admin-only Purge/Reset Directory -->
-              <button id="dir-reset-btn" class="btn-secondary" onclick="purgeDirectoryContacts()" style="display: none; align-items: center; gap: 0.4rem; font-weight: 700; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
-                <span>🗑️</span> Reset Directory
-              </button>
               <!-- All roles Export -->
               <button class="btn-secondary" onclick="exportDirectoryToExcel()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
                 <span>📤</span> Export Excel
@@ -2969,8 +2965,15 @@
               <button id="dir-agency-list-btn" class="btn-secondary" onclick="openAgencyListModal()" style="display: none; align-items: center; gap: 0.4rem; font-weight: 700;">
                 <span>📋</span> Weekly Agency List
               </button>
-              <!-- Back to Home -->
-              <button class="btn-secondary" onclick="goHome()" style="font-weight: 700;">
+              <!-- Admin-only Purge/Reset Directory — rare, destructive action:
+                   deliberately quieter than the buttons above it so it doesn't
+                   compete for attention with the ones used every day. -->
+              <button id="dir-reset-btn" onclick="purgeDirectoryContacts()" title="Reset Directory" style="display: none; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.8rem; color: #ef4444; background: none; border: none; padding: 0.5rem 0.6rem; cursor: pointer;">
+                <span>🗑️</span> Reset Directory
+              </button>
+              <!-- Back to Home — pure navigation, already reachable from the
+                   top nav/sidebar, so it doesn't need equal visual weight. -->
+              <button onclick="goHome()" style="font-weight: 600; font-size: 0.8rem; color: var(--t2, #64748b); background: none; border: none; padding: 0.5rem 0.6rem; cursor: pointer;">
                 Back to Workspace
               </button>
             </div>
@@ -4265,9 +4268,9 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=128.10"></script>
-  <script src="ui-shell.js?v=128.10"></script>
-  <script src="ai-assistant.js?v=128.10"></script>
+  <script src="app-v4.js?v=128.11"></script>
+  <script src="ui-shell.js?v=128.11"></script>
+  <script src="ai-assistant.js?v=128.11"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4595,7 +4598,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=128.10">' +
+          '<link rel="stylesheet" href="index.css?v=128.11">' +
           '<style>' +
             '@page {' +
               'size: A4;' +
