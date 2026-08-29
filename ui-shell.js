@@ -390,6 +390,7 @@
     window.openActiveCalculator = function (type) {
       _origOpenCalc(type);
       setNavHash(type);
+      if (typeof window.refreshAtlasHelpContext === 'function') window.refreshAtlasHelpContext();
     };
   }
   if (typeof window.goHome === 'function') {
@@ -399,6 +400,7 @@
       _origGoHome();
       window._suppressHashHome = false;
       setNavHash('dashboard');
+      if (typeof window.refreshAtlasHelpContext === 'function') window.refreshAtlasHelpContext();
     };
   }
   window.addEventListener('hashchange', navigateFromHash);
