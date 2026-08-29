@@ -6630,3 +6630,8 @@ body.logged-out-blur .atlas-copilot-panel {
 @media (max-width: 768px) {
   .header-quick-nav-hint { display: none; }
 }
+
+/* Production: hide developer-facing Firebase connection badge */
+#db-connection-badge {
+  display: none !important;
+}
