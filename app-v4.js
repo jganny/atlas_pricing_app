@@ -2736,6 +2736,9 @@ function addAirlineCard(data = null) {
   const tt = data ? data.tt : "";
   const validity = data ? data.validity : "";
   const pivotWeight = data ? data.pivotWeight : "";
+  const routeOrigin = data && data.origin ? data.origin : "";
+  const routeDestination = data && data.destination ? data.destination : "";
+  const hasRouteOverride = !!(routeOrigin || routeDestination);
   const isSelected = data ? !!data.selected : (count === 1);
   const activeBreaks = data ? data.breaks : {};
   const ams_fee = data ? (data.ams_fee !== undefined ? data.ams_fee : (data.amsFee !== undefined ? data.amsFee : "")) : "";
@@ -2786,6 +2789,23 @@ function addAirlineCard(data = null) {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
           <span style="font-size: 0.85rem; font-weight: 700; color: #5a7a9a;">Rates and fees — Airline Option #${count}</span>
           <button type="button" class="close-airline-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; font-size: 0.75rem;">
+            <input type="checkbox" class="air-route-override-toggle" ${hasRouteOverride ? 'checked' : ''} onchange="this.closest('.airline-rate-modal-dialog').querySelector('.air-route-override-fields').style.display = this.checked ? 'grid' : 'none'; calculateAirFreight();" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
+            <span>This option quotes a different Origin / Destination</span>
+          </label>
+          <div class="air-route-override-fields" style="display: ${hasRouteOverride ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+            <div class="form-group autocomplete-container">
+              <label>Origin Override</label>
+              <input type="text" class="air-route-origin-override" placeholder="Type Airport code or city..." value="${routeOrigin}" autocomplete="off" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+            </div>
+            <div class="form-group autocomplete-container">
+              <label>Destination Override</label>
+              <input type="text" class="air-route-dest-override" placeholder="Type Airport code or city..." value="${routeDestination}" autocomplete="off" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+            </div>
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -2919,6 +2939,11 @@ function addAirlineCard(data = null) {
   `;
 
   container.appendChild(card);
+
+  const routeOriginOverrideEl = card.querySelector(".air-route-origin-override");
+  const routeDestOverrideEl = card.querySelector(".air-route-dest-override");
+  if (routeOriginOverrideEl) setupAutocomplete(routeOriginOverrideEl, "airports");
+  if (routeDestOverrideEl) setupAutocomplete(routeDestOverrideEl, "airports");
 
   // Rates & fees popup — keeps the airline card itself down to just the
   // carrier field and a summary strip; everything else (routing, weight
@@ -3262,12 +3287,19 @@ function getAirlineColor(name) {
 window.getAirlineColor = getAirlineColor;
 
 function updateCartageRowVisibility() {
-  const originVal = document.getElementById("air-origin")?.value.trim().toUpperCase() || "";
-  const isBOM = originVal.startsWith("BOM");
+  const sharedOriginVal = document.getElementById("air-origin")?.value.trim().toUpperCase() || "";
   const originBodies = document.querySelectorAll(".air-card-origin-surcharges-body, #air-origin-surcharges-body");
   if (!originBodies || originBodies.length === 0) return;
 
   originBodies.forEach(airOriginBody => {
+    // Multi-route (Option A): a per-card surcharge table resolves BOM from
+    // THAT card's own effective origin (its route override if set, else the
+    // shared field). The single global nomination-role table has no card
+    // to resolve from and keeps using the shared field only, as before.
+    const ownerCard = airOriginBody.closest(".airline-card");
+    const cardOriginOverride = ownerCard ? (ownerCard.querySelector(".air-route-origin-override")?.value || "").trim().toUpperCase() : "";
+    const isBOM = (cardOriginOverride || sharedOriginVal).startsWith("BOM");
+
     const rows = Array.from(airOriginBody.querySelectorAll("tr"));
     const cartageRow = rows.find(row => row.querySelector(".chg-name")?.value.trim().toLowerCase() === "cartage");
 
@@ -3444,6 +3476,13 @@ function calculateAirFreight() {
 
   const airlinesListData = [];
   let selectedAirlineData = null;
+  // Multi-route (Option A): origin/destination are never a rate-lookup key
+  // anywhere in this function's math — they're pure display/grouping
+  // metadata, read here only to tag each card's already-independently-
+  // computed result with which route it belongs to. Shared fields used
+  // when a card has no override, matching today's single-route behavior.
+  const sharedAirRouteOrigin = (document.getElementById("air-origin")?.value || "").trim();
+  const sharedAirRouteDest = (document.getElementById("air-dest")?.value || "").trim();
 
   airlineCards.forEach(card => {
     const isSelected = card.querySelector(".select-airline-radio").checked;
@@ -3452,6 +3491,11 @@ function calculateAirFreight() {
     const tt = formatTransitTimeDisplay(card.querySelector(".air-tt").value.trim());
     const validity = card.querySelector(".air-validity").value;
     const pivotWeight = parseFloat(card.querySelector(".air-pivot-weight").value) || 0;
+    const routeOriginOverride = (card.querySelector(".air-route-origin-override")?.value || "").trim();
+    const routeDestOverride = (card.querySelector(".air-route-dest-override")?.value || "").trim();
+    const effectiveOrigin = (routeOriginOverride || sharedAirRouteOrigin).toUpperCase();
+    const effectiveDestination = (routeDestOverride || sharedAirRouteDest).toUpperCase();
+    const routeKey = `${effectiveOrigin}→${effectiveDestination}`;
 
     const airlineChargeableWeight = Math.max(totalGrossWeight, totalVolumeWeight, pivotWeight);
     const autoBreakName = getWeightBreakBracket(airlineChargeableWeight);
@@ -3733,6 +3777,11 @@ function calculateAirFreight() {
       tt,
       validity,
       pivotWeight,
+      origin: routeOriginOverride,
+      destination: routeDestOverride,
+      effectiveOrigin,
+      effectiveDestination,
+      routeKey,
       amsFee,
       ams_fee,
       amsFeeEnabled,
@@ -3761,6 +3810,24 @@ function calculateAirFreight() {
       selectedAirlineData = dataObj;
     }
   });
+
+  // Multi-route (Option A): "Select as Quoted" stays a single native radio
+  // group across every card, completely untouched — it still drives the
+  // one overall selectedAirlineData/grandTotal exactly as before route
+  // overrides existed. Combined Total (All Routes) is a separate, additive
+  // figure: the first card seen per distinct route wins that route's slot,
+  // mirroring Sea Freight's own pre-existing "first card = primary"
+  // convention. When every card shares the same effective route (true for
+  // every quote today), distinctAirRoutes.size is 1 and this is inert.
+  const seenAirRouteKeys = new Set();
+  airlinesListData.forEach(d => {
+    d.isRouteWinner = !seenAirRouteKeys.has(d.routeKey);
+    seenAirRouteKeys.add(d.routeKey);
+  });
+  const distinctAirRoutes = new Set(airlinesListData.map(d => d.routeKey));
+  const combinedAirRouteTotal = distinctAirRoutes.size > 1
+    ? airlinesListData.filter(d => d.isRouteWinner).reduce((sum, d) => sum + d.grandTotal, 0)
+    : null;
 
   if (!selectedAirlineData && airlinesListData.length > 0) {
     airlineCards[0].querySelector(".select-airline-radio").checked = true;
@@ -3967,7 +4034,7 @@ function calculateAirFreight() {
     // Find cheapest grand total
     const minGrandTotal = Math.min(...airlinesListData.map(alt => alt.grandTotal));
 
-    resultsContainer.innerHTML = airlinesListData.map(alt => {
+    const perCardHtmlList = airlinesListData.map(alt => {
       const color = getAirlineColor(alt.name);
       const isCheapest = (alt.grandTotal === minGrandTotal);
 
@@ -4061,7 +4128,35 @@ function calculateAirFreight() {
           </div>
         </div>
       `;
-    }).join("");
+    });
+
+    // Multi-route (Option A): when every card shares one effective route
+    // (true for every quote today), this is a plain join — pixel-identical
+    // to before route overrides existed. Only 2+ distinct routes triggers
+    // group headings and the additive Combined Total card.
+    if (distinctAirRoutes.size > 1) {
+      const airRouteGroups = new Map();
+      airlinesListData.forEach((alt, idx) => {
+        if (!airRouteGroups.has(alt.routeKey)) airRouteGroups.set(alt.routeKey, []);
+        airRouteGroups.get(alt.routeKey).push(idx);
+      });
+      let groupedHtml = "";
+      airRouteGroups.forEach((indices, routeKey) => {
+        groupedHtml += `<div style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.04em; margin: 0.75rem 0 0.4rem;">${routeKey.replace('→', ' → ')}</div>`;
+        indices.forEach(idx => { groupedHtml += perCardHtmlList[idx]; });
+      });
+      groupedHtml += `
+        <div class="glass-card" style="padding: 1rem; border: 1px solid var(--sky); border-radius: 8px; margin-top: 0.75rem; background: rgba(56, 189, 248, 0.06);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.85rem; color: var(--sky);">Combined Total (All Routes)</strong>
+            <span style="font-weight: 900; color: var(--sky);">${curSymbol}${combinedAirRouteTotal.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+      resultsContainer.innerHTML = groupedHtml;
+    } else {
+      resultsContainer.innerHTML = perCardHtmlList.join("");
+    }
   }
 
   // Update appState values
@@ -4072,6 +4167,8 @@ function calculateAirFreight() {
       tt: alt.tt,
       validity: alt.validity,
       pivotWeight: alt.pivotWeight,
+      origin: alt.origin || "",
+      destination: alt.destination || "",
       amsFee: alt.amsFee,
       ams_fee: alt.ams_fee,
       amsFeeEnabled: alt.amsFeeEnabled,
@@ -4444,6 +4541,9 @@ window.addNewLinerCard = function (data = null) {
   const tariffsEnabled = data?.tariffsEnabled !== false;
   const originFeesEnabled = data?.originFeesEnabled !== false;
   const destFeesEnabled = data?.destFeesEnabled !== false;
+  const routeOrigin = data?.origin || "";
+  const routeDestination = data?.destination || "";
+  const hasRouteOverride = !!(routeOrigin || routeDestination);
 
   linerCard.innerHTML = `
     <div class="liner-card-header">
@@ -4477,6 +4577,23 @@ window.addNewLinerCard = function (data = null) {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
           <span style="font-size: 0.85rem; font-weight: 700; color: #5a7a9a;">Rates and fees — Liner ${index} Option</span>
           <button type="button" class="close-liner-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; font-size: 0.75rem;">
+            <input type="checkbox" class="sea-route-override-toggle" ${hasRouteOverride ? 'checked' : ''} onchange="this.closest('.liner-rate-modal-dialog').querySelector('.sea-route-override-fields').style.display = this.checked ? 'grid' : 'none'; calculateSeaFreight();" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
+            <span>This option quotes a different Origin / Destination</span>
+          </label>
+          <div class="sea-route-override-fields" style="display: ${hasRouteOverride ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+            <div class="form-group autocomplete-container">
+              <label>Origin Override</label>
+              <input type="text" class="sea-route-origin-override" placeholder="Type Port name or city..." value="${routeOrigin}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+            </div>
+            <div class="form-group autocomplete-container">
+              <label>Destination Override</label>
+              <input type="text" class="sea-route-dest-override" placeholder="Type Port name or city..." value="${routeDestination}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+            </div>
+          </div>
         </div>
 
     <!-- Liner Accordions Group -->
@@ -4698,6 +4815,11 @@ window.addNewLinerCard = function (data = null) {
   `;
 
   container.appendChild(linerCard);
+
+  const seaRouteOriginOverrideEl = linerCard.querySelector(".sea-route-origin-override");
+  const seaRouteDestOverrideEl = linerCard.querySelector(".sea-route-dest-override");
+  if (seaRouteOriginOverrideEl) setupAutocomplete(seaRouteOriginOverrideEl, "seaports");
+  if (seaRouteDestOverrideEl) setupAutocomplete(seaRouteDestOverrideEl, "seaports");
 
   // Rates & fees popup — keeps the liner card itself down to just the
   // liner-name field and a summary strip; everything else (freight mode,
@@ -4926,6 +5048,14 @@ function calculateSeaFreight() {
   const cbm = parseFloat(document.getElementById("sea-volume").value) || 0;
   const pkgQty = parseInt(document.getElementById("sea-pkg-qty").value) || 0;
 
+  // Multi-route (Option A): origin/destination are never a rate-lookup key
+  // anywhere in this function's math — pure display/grouping metadata, read
+  // here only to tag each liner's already-independently-computed result
+  // with which route it belongs to. Shared fields used when a liner has no
+  // override, matching today's single-route behavior.
+  const sharedSeaRouteOrigin = (document.getElementById("sea-origin")?.value || "").trim();
+  const sharedSeaRouteDest = (document.getElementById("sea-dest")?.value || "").trim();
+
   // LCL RT Math
   const weightTons = weightKg / 1000;
   const isLclMode = (type === 'lcl');
@@ -4973,6 +5103,12 @@ function calculateSeaFreight() {
     const tariffsEnabled = card.querySelector(".sea-enable-tariffs")?.checked ?? true;
     const originFeesEnabled = card.querySelector(".sea-enable-origin-fees")?.checked ?? true;
     const destFeesEnabled = card.querySelector(".sea-enable-dest-fees")?.checked ?? true;
+
+    const routeOriginOverride = (card.querySelector(".sea-route-origin-override")?.value || "").trim();
+    const routeDestOverride = (card.querySelector(".sea-route-dest-override")?.value || "").trim();
+    const effectiveOrigin = (routeOriginOverride || sharedSeaRouteOrigin).toUpperCase();
+    const effectiveDestination = (routeDestOverride || sharedSeaRouteDest).toUpperCase();
+    const routeKey = `${effectiveOrigin}→${effectiveDestination}`;
 
     // Badges update
     const tariffsBadge = card.querySelector(".sea-tariffs-status-badge");
@@ -5170,6 +5306,11 @@ function calculateSeaFreight() {
       linerName,
       mode: linerMode,
       chargeableCbm: getLinerChargeableCbm(linerMode),
+      origin: routeOriginOverride,
+      destination: routeDestOverride,
+      effectiveOrigin,
+      effectiveDestination,
+      routeKey,
       tariffsEnabled,
       originFeesEnabled,
       destFeesEnabled,
@@ -5193,6 +5334,20 @@ function calculateSeaFreight() {
       usingBuyFallback: linerUsingBuyFallback
     });
   });
+
+  // Multi-route (Option A): mirrors the existing "first card = primary"
+  // convention, just re-scoped from "one across the whole liner list" to
+  // "one per distinct route." calculatedLiners[0] below stays the sole
+  // driver of every existing top-level result field — untouched.
+  const seenSeaRouteKeys = new Set();
+  calculatedLiners.forEach(l => {
+    l.isRouteWinner = !seenSeaRouteKeys.has(l.routeKey);
+    seenSeaRouteKeys.add(l.routeKey);
+  });
+  const distinctSeaRoutes = new Set(calculatedLiners.map(l => l.routeKey));
+  const combinedSeaRouteTotal = distinctSeaRoutes.size > 1
+    ? calculatedLiners.filter(l => l.isRouteWinner).reduce((sum, l) => sum + l.grandTotal, 0)
+    : null;
 
   const primaryLiner = calculatedLiners[0] || {
     baseFreight: 0,
@@ -5320,7 +5475,7 @@ function calculateSeaFreight() {
   }
 
   if (multiLinerResultsList) {
-    multiLinerResultsList.innerHTML = calculatedLiners.map((l, i) => `
+    const perCardHtmlList = calculatedLiners.map((l, i) => `
       <div class="liner-result-card ${i === 0 ? 'primary-liner' : ''}">
         <div class="liner-result-title">
           <span>🚢 ${l.linerName} ${i === 0 ? '(Primary)' : ''}${seaModeBadgeHtml(l.mode)}</span>
@@ -5335,7 +5490,35 @@ function calculateSeaFreight() {
           <span>INR Total: ₹${l.grandTotalINR.toFixed(2)}</span>
         </div>
       </div>
-    `).join("");
+    `);
+
+    // Multi-route (Option A): when every liner shares one effective route
+    // (true for every quote today), this is a plain join — pixel-identical
+    // to before route overrides existed. Only 2+ distinct routes triggers
+    // group headings and the additive Combined Total card.
+    if (distinctSeaRoutes.size > 1) {
+      const seaRouteGroups = new Map();
+      calculatedLiners.forEach((l, idx) => {
+        if (!seaRouteGroups.has(l.routeKey)) seaRouteGroups.set(l.routeKey, []);
+        seaRouteGroups.get(l.routeKey).push(idx);
+      });
+      let groupedHtml = "";
+      seaRouteGroups.forEach((indices, routeKey) => {
+        groupedHtml += `<div style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.04em; margin: 0.75rem 0 0.4rem;">${routeKey.replace('→', ' → ')}</div>`;
+        indices.forEach(idx => { groupedHtml += perCardHtmlList[idx]; });
+      });
+      groupedHtml += `
+        <div class="glass-card" style="padding: 1rem; border: 1px solid var(--sky); border-radius: 8px; margin-top: 0.75rem; background: rgba(56, 189, 248, 0.06);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.85rem; color: var(--sky);">Combined Total (All Routes)</strong>
+            <span style="font-weight: 900; color: var(--sky);">${curSymbol}${combinedSeaRouteTotal.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+      multiLinerResultsList.innerHTML = groupedHtml;
+    } else {
+      multiLinerResultsList.innerHTML = perCardHtmlList.join("");
+    }
   }
 
   appState.currentSeaFreight.liners = calculatedLiners;
@@ -8348,6 +8531,7 @@ window.viewSavedQuote = async (id) => {
         <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #5a7a9a; font-size: 0.7rem; font-weight: 700;">
             ${alt.name}
+            ${(alt.origin || alt.destination) ? `<div style="font-size: 0.62rem; font-weight: 600; color: #64748b; margin-top: 2px;">${alt.origin || '?'} → ${alt.destination || '?'}</div>` : ''}
           </td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.routing || '-'}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.tt || '-'}</td>
@@ -8614,6 +8798,61 @@ window.viewSavedQuote = async (id) => {
     `;
   })() : '';
 
+  // Multi-route (Option A) — reads already-saved per-card origin/destination
+  // overrides (quote.details.airlines[i]/liners[i]) to show each route's
+  // options grouped, plus a Combined Total. Gated on 2+ distinct effective
+  // routes, so single-route quotes (every quote saved before this feature,
+  // and every quote today with no override touched) render nothing here.
+  const routeCombinationsHtml = (() => {
+    const cards = quote.type === 'air' ? (quote.details?.airlines || [])
+      : quote.type === 'sea' ? (quote.details?.liners || [])
+      : [];
+    if (cards.length === 0) return '';
+    const sharedOrigin = quote.details?.origin || '';
+    const sharedDest = quote.details?.destination || '';
+    const withRoute = cards.map(c => ({
+      name: c.name || c.linerName || 'Option',
+      effectiveOrigin: (c.origin || sharedOrigin || '?').toUpperCase(),
+      effectiveDestination: (c.destination || sharedDest || '?').toUpperCase(),
+      grandTotal: c.grandTotal || 0
+    }));
+    const distinctRoutes = new Set(withRoute.map(c => `${c.effectiveOrigin}→${c.effectiveDestination}`));
+    if (distinctRoutes.size <= 1) return '';
+
+    const groups = new Map();
+    withRoute.forEach(c => {
+      const key = `${c.effectiveOrigin}→${c.effectiveDestination}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(c);
+    });
+    let combinedTotal = 0;
+    let rowsHtml = '';
+    groups.forEach((groupCards, key) => {
+      combinedTotal += groupCards[0].grandTotal; // first card per route wins, matching the live results grouping
+      rowsHtml += `<tr style="background:#f8fafc;"><td colspan="2" style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.7rem; font-weight:800; color:#5a7a9a; text-transform:uppercase;">${key.replace('→', ' → ')}</td></tr>`;
+      groupCards.forEach(c => {
+        rowsHtml += `<tr><td style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.7rem;">${c.name}</td><td style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.72rem; font-weight:700; text-align:right;">${currencySym}${c.grandTotal.toFixed(2)}</td></tr>`;
+      });
+    });
+
+    return `
+      <div class="print-section-title" style="margin-top: 1.5rem;">Route Combination Breakdown</div>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
+        <thead>
+          <tr style="background: #f8fafc;">
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;">Option</th>
+            <th style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem; padding:8px 12px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px;">
+        <strong style="font-size:0.78rem; color:#1e40af;">Combined Total (All Routes)</strong>
+        <strong style="font-size:0.85rem; color:#1e40af;">${currencySym}${combinedTotal.toFixed(2)}</strong>
+      </div>
+    `;
+  })();
+
   let termsList = "";
   const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : getDefaultFreightTerms(isAir ? 'air' : 'sea');
   if (rawTerms) {
@@ -8710,10 +8949,11 @@ window.viewSavedQuote = async (id) => {
       </table>
       
       ${alternativesHtml}
+      ${routeCombinationsHtml}
       ${airBreakupHtml}
       ${seaBreakupHtml}
       ${standaloneBreakupHtml}
-      
+
       ${bottomTotalBox}
 
     <div class="print-section-title" style="margin-top: 1.5rem; font-size: 0.85rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem;">Standard Terms & Conditions</div>
@@ -10940,7 +11180,9 @@ function amendQuote(id, options) {
               bbBuyRate: l.bbBuyRate,
               tariffsEnabled: l.tariffsEnabled,
               originFeesEnabled: l.originFeesEnabled,
-              destFeesEnabled: l.destFeesEnabled
+              destFeesEnabled: l.destFeesEnabled,
+              origin: l.origin,
+              destination: l.destination
             });
           });
         } else {
@@ -19956,14 +20198,20 @@ function updateAirlineRateSummary(card) {
   const originCount = card.querySelectorAll(".air-card-origin-surcharges-body tr").length;
   const destCount = card.querySelectorAll(".air-card-dest-surcharges-body tr").length;
 
+  const routeOrigin = (card.querySelector(".air-route-origin-override")?.value || "").trim();
+  const routeDest = (card.querySelector(".air-route-dest-override")?.value || "").trim();
+  const routeBadge = (routeOrigin || routeDest)
+    ? `<span style="font-weight: 700; color: var(--sky);">${routeOrigin || '?'} → ${routeDest || '?'}</span> · `
+    : "";
+
   if (breakCount === 0) {
-    summaryEl.textContent = "No rates entered yet";
+    summaryEl.innerHTML = routeBadge + "No rates entered yet";
     return;
   }
   const parts = [`${breakCount} rate tier${breakCount === 1 ? '' : 's'}`];
   if (originCount > 0) parts.push(`${originCount} origin fee${originCount === 1 ? '' : 's'}`);
   if (destCount > 0) parts.push(`${destCount} destination fee${destCount === 1 ? '' : 's'}`);
-  summaryEl.textContent = parts.join(' · ');
+  summaryEl.innerHTML = routeBadge + parts.join(' · ');
 }
 window.updateAirlineRateSummary = updateAirlineRateSummary;
 
@@ -20034,7 +20282,14 @@ function updateLinerRateSummary(card) {
   if (freightPart) parts.push(freightPart);
   if (originCount > 0) parts.push(`${originCount} origin fee${originCount === 1 ? '' : 's'}`);
   if (destCount > 0) parts.push(`${destCount} destination fee${destCount === 1 ? '' : 's'}`);
-  summaryEl.textContent = parts.length ? parts.join(' · ') : "No rates entered yet";
+
+  const routeOrigin = (card.querySelector(".sea-route-origin-override")?.value || "").trim();
+  const routeDest = (card.querySelector(".sea-route-dest-override")?.value || "").trim();
+  const routeBadge = (routeOrigin || routeDest)
+    ? `<span style="font-weight: 700; color: var(--sky);">${routeOrigin || '?'} → ${routeDest || '?'}</span> · `
+    : "";
+
+  summaryEl.innerHTML = routeBadge + (parts.length ? parts.join(' · ') : "No rates entered yet");
 }
 window.updateLinerRateSummary = updateLinerRateSummary;
 
@@ -20249,7 +20504,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.17"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.18"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
