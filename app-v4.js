@@ -22,7 +22,9 @@ const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
 const DEFAULT_TRANSPORT_TERMS = `1. Transportation rates are subject to vehicle availability and route confirmation.
 2. GST applies at 18% on taxable services unless otherwise agreed in writing.
 3. Waiting time, detention, and toll charges are additional unless included in the quote.
-4. Rates are valid for the quoted pickup and delivery locations only.`;
+4. Rates are valid for the quoted pickup and delivery locations only.
+5. Any other incidental/Statutory charges, if any, would be applicable at actuals at the time of shipment.
+6. Halting Charges, if any, would be applicable additional.`;
 
 const DEFAULT_WAREHOUSE_TERMS = `1. Warehousing rates are based on the storage period and handling scope quoted.
 2. GST applies at 18% on taxable services unless otherwise agreed in writing.
@@ -20179,7 +20181,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.11"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.12"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
