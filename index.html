@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.16">
+  <link rel="stylesheet" href="index.css?v=129.17">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -2725,39 +2725,8 @@
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              + Add Additional Shipping Line / Coloader / BreakBulk Rate Option
+              Add Additional Shipping Line / Coloader / BreakBulk Rate Option
             </button>
-
-
-            <!-- Alternative Carrier Option Rates -->
-            <div style="margin-top: 1.5rem; margin-bottom: 1rem;">
-              <label
-                style="display: block; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: var(--accent-sea);">Alternative
-                Carrier / Shipping Line / Co-loader / BB Option Rates</label>
-              <div class="cargo-table-container">
-                <table class="cargo-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 25%;">Carrier Name</th>
-                      <th style="width: 25%;">Routing</th>
-                      <th style="width: 20%;">Transit Time</th>
-                      <th style="width: 20%;">Rate & Cost Details</th>
-                      <th style="width: 10%;">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="sea-alternatives-body">
-                    <!-- Dynamic alternative options rows -->
-                  </tbody>
-                </table>
-              </div>
-              <button type="button" class="add-row-btn" id="sea-add-alternative" style="margin-top: 0.5rem;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add Alternative Carrier Option
-              </button>
-            </div>
 
             <div class="desk-flow-footer">
               <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('sea-freight-panel','terms')">Continue to Terms →</button>
@@ -2851,15 +2820,6 @@
                 <span id="sea-liner-count-badge" style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: var(--sky); padding: 2px 6px; border-radius: 4px;">1 Option</span>
               </h4>
               <div id="sea-multi-liner-results-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
-            </div>
-
-            <!-- Dynamic Alternative Carrier Options Summary -->
-            <div id="sea-alternatives-results-container"
-              style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem; display: none;">
-              <h4
-                style="font-size: 0.72rem; text-transform: uppercase; color: var(--accent-sea); margin-bottom: 0.5rem; font-weight: 750; letter-spacing: 0.05em;">
-                Alternative Ocean Option Rates Summary</h4>
-              <div id="sea-alternatives-results-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
             </div>
 
           </div>
@@ -4572,11 +4532,11 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.16"></script>
-  <script src="ui-shell.js?v=129.16"></script>
-  <script src="ai-assistant.js?v=129.16"></script>
-  <script src="ai-sell-band.js?v=129.16"></script>
-  <script src="sales-v129.js?v=129.16"></script>
+  <script src="app-v4.js?v=129.17"></script>
+  <script src="ui-shell.js?v=129.17"></script>
+  <script src="ai-assistant.js?v=129.17"></script>
+  <script src="ai-sell-band.js?v=129.17"></script>
+  <script src="sales-v129.js?v=129.17"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4904,7 +4864,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.16">' +
+          '<link rel="stylesheet" href="index.css?v=129.17">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

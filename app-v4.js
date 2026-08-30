@@ -4284,12 +4284,6 @@ function setupSeaFreightEvents() {
     });
   }
 
-  const addSeaAltBtn = document.getElementById("sea-add-alternative");
-  if (addSeaAltBtn) {
-    addSeaAltBtn.addEventListener("click", () => {
-      addAlternativeOptionRow("sea-alternatives-body");
-    });
-  }
 }
 
 
@@ -4717,7 +4711,7 @@ window.addNewLinerCard = function (data = null) {
   const doneLinerRateModalBtn = linerCard.querySelector(".done-liner-rate-modal-btn");
 
   const openLinerRateModal = () => { linerRateModalOverlay.style.display = "flex"; };
-  const closeLinerRateModal = () => { linerRateModalOverlay.style.display = "none"; updateLinerRateSummary(linerCard); };
+  const closeLinerRateModal = () => { linerRateModalOverlay.style.display = "none"; updateLinerRateSummary(linerCard); calculateSeaFreight(); };
 
   openLinerRateModalBtn.addEventListener("click", openLinerRateModal);
   closeLinerRateModalBtn.addEventListener("click", closeLinerRateModal);
@@ -4943,6 +4937,17 @@ function calculateSeaFreight() {
   const chargeableCbmOverride = parseFloat(document.getElementById("sea-chargeable-cbm-override")?.value) || 0;
   const chargeableCbm = chargeableCbmOverride > 0 ? chargeableCbmOverride : Math.max(effectiveCbm, weightTons);
 
+  // Per-liner chargeable RT: chargeableCbm above is scoped to the PRIMARY
+  // liner's mode only (kept as-is — it still drives the top-level summary,
+  // e.g. appState.currentSeaFreight.volumeCbm). A non-primary liner in
+  // LCL/BB mode needs its own RT floor applied independently, otherwise a
+  // primary FCL liner with no top-level CBM entered leaves every other
+  // LCL/BB liner's freight silently multiplying by 0.
+  function getLinerChargeableCbm(linerMode) {
+    const linerEffectiveCbm = (linerMode !== 'fcl' && cbm < 1.0) ? 1.0 : cbm;
+    return chargeableCbmOverride > 0 ? chargeableCbmOverride : Math.max(linerEffectiveCbm, weightTons);
+  }
+
   const isSeaAmsEnabled = document.getElementById("sea-enable-ams-fee") ? document.getElementById("sea-enable-ams-fee").checked : true;
   const rawSeaAms = parseFloat(document.getElementById("sea-ams-fee")?.value) || 0;
   const amsFee = isSeaAmsEnabled ? rawSeaAms : 0;
@@ -5037,8 +5042,8 @@ function calculateSeaFreight() {
       const activeRate = rate > 0 ? rate : buy;
       if (rate === 0 && buy > 0) linerUsingBuyFallback = true;
       if (tariffsEnabled) {
-        linerBaseFreight = chargeableCbm * activeRate;
-        linerBaseFreightBuy = chargeableCbm * buy;
+        linerBaseFreight = getLinerChargeableCbm(linerMode) * activeRate;
+        linerBaseFreightBuy = getLinerChargeableCbm(linerMode) * buy;
       }
     } else {
       const rate = parseFloat(card.querySelector(".sea-bb-rate")?.value) || 0;
@@ -5048,8 +5053,8 @@ function calculateSeaFreight() {
       const activeRate = rate > 0 ? rate : buy;
       if (rate === 0 && buy > 0) linerUsingBuyFallback = true;
       if (tariffsEnabled) {
-        linerBaseFreight = chargeableCbm * activeRate;
-        linerBaseFreightBuy = chargeableCbm * buy;
+        linerBaseFreight = getLinerChargeableCbm(linerMode) * activeRate;
+        linerBaseFreightBuy = getLinerChargeableCbm(linerMode) * buy;
       }
     }
 
@@ -5094,8 +5099,8 @@ function calculateSeaFreight() {
             cost = isLinerFcl ? linerContainersCount * effectiveRate : effectiveRate;
             costBuy = isLinerFcl ? linerContainersCount * buyRate : buyRate;
           } else if (unit === 'rt') {
-            cost = chargeableCbm * effectiveRate;
-            costBuy = chargeableCbm * buyRate;
+            cost = getLinerChargeableCbm(linerMode) * effectiveRate;
+            costBuy = getLinerChargeableCbm(linerMode) * buyRate;
           } else if (unit === 'kg') {
             cost = weightKg * effectiveRate;
             costBuy = weightKg * buyRate;
@@ -5137,8 +5142,8 @@ function calculateSeaFreight() {
             cost = isLinerFcl ? linerContainersCount * effectiveRate : effectiveRate;
             costBuy = isLinerFcl ? linerContainersCount * buyRate : buyRate;
           } else if (unit === 'rt') {
-            cost = chargeableCbm * effectiveRate;
-            costBuy = chargeableCbm * buyRate;
+            cost = getLinerChargeableCbm(linerMode) * effectiveRate;
+            costBuy = getLinerChargeableCbm(linerMode) * buyRate;
           } else if (unit === 'kg') {
             cost = weightKg * effectiveRate;
             costBuy = weightKg * buyRate;
@@ -5164,6 +5169,7 @@ function calculateSeaFreight() {
       linerIndex,
       linerName,
       mode: linerMode,
+      chargeableCbm: getLinerChargeableCbm(linerMode),
       tariffsEnabled,
       originFeesEnabled,
       destFeesEnabled,
@@ -5287,14 +5293,41 @@ function calculateSeaFreight() {
   if (linerCountBadge) {
     linerCountBadge.textContent = `${calculatedLiners.length} Option${calculatedLiners.length > 1 ? 's' : ''}`;
   }
+  // Small mode badge (FCL/LCL/Break Bulk) shown on each comparison card so
+  // a mixed FCL+LCL liner list is legible at a glance, not just by number.
+  const seaModeBadgeMeta = {
+    fcl: { label: 'FCL', bg: 'rgba(56, 189, 248, 0.15)', color: 'var(--sky)' },
+    lcl: { label: 'LCL', bg: 'rgba(16, 185, 129, 0.15)', color: '#059669' },
+    bb: { label: 'Break Bulk', bg: 'rgba(245, 158, 11, 0.15)', color: '#92400e' }
+  };
+  function seaModeBadgeHtml(mode) {
+    const m = seaModeBadgeMeta[mode] || seaModeBadgeMeta.fcl;
+    return `<span style="font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; background: ${m.bg}; color: ${m.color}; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">${m.label}</span>`;
+  }
+  // Category-specific freight detail line — container breakdown for FCL,
+  // RT × rate for LCL/BB — so each card shows HOW its freight total was
+  // reached, not just the number.
+  function seaCategoryDetailText(l) {
+    if (l.mode === 'fcl') {
+      const parts = (l.containers || []).filter(c => c.qty > 0).map(c => {
+        const rate = c.rate > 0 ? c.rate : (c.buy || 0);
+        return `${c.qty} × ${c.type} @ ${curSymbol}${rate.toFixed(2)}`;
+      });
+      return parts.length > 0 ? parts.join(', ') : 'No containers selected';
+    }
+    const rate = l.mode === 'bb' ? (l.bbRate > 0 ? l.bbRate : l.bbBuyRate) : (l.lclRate > 0 ? l.lclRate : l.lclBuyRate);
+    return `${l.chargeableCbm.toFixed(2)} RT @ ${curSymbol}${rate.toFixed(2)}/RT = ${curSymbol}${l.baseFreight.toFixed(2)}`;
+  }
+
   if (multiLinerResultsList) {
     multiLinerResultsList.innerHTML = calculatedLiners.map((l, i) => `
       <div class="liner-result-card ${i === 0 ? 'primary-liner' : ''}">
         <div class="liner-result-title">
-          <span>🚢 ${l.linerName} ${i === 0 ? '(Primary)' : ''}</span>
+          <span>🚢 ${l.linerName} ${i === 0 ? '(Primary)' : ''}${seaModeBadgeHtml(l.mode)}</span>
           <span style="font-weight: 900; color: #10b981;">${curSymbol}${l.grandTotal.toFixed(2)}</span>
         </div>
         ${l.usingBuyFallback ? '<div title="Sell Rate is blank on at least one line — this total is using the Buy/Cost Rate as an interim placeholder. It is not a confirmed customer price." style="display:inline-block; margin-top:4px; font-size: 0.6rem; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">⚠ Interim Estimate (Buy Rate)</div>' : ''}
+        <div style="font-size: 0.66rem; color: var(--t3); margin-top: 4px;">${seaCategoryDetailText(l)}</div>
         <div style="font-size: 0.68rem; color: var(--t2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px;">
           <span>Freight: ${curSymbol}${l.baseFreight.toFixed(2)}</span>
           <span>Origin Fees: ${curSymbol}${l.originTotal.toFixed(2)}</span>
@@ -5303,42 +5336,6 @@ function calculateSeaFreight() {
         </div>
       </div>
     `).join("");
-  }
-
-  // Update Alternative Sea Options Summary Live Results
-  const altContainer = document.getElementById("sea-alternatives-results-container");
-  const altList = document.getElementById("sea-alternatives-results-list");
-  let alts = [];
-  if (altContainer && altList) {
-    const rows = document.querySelectorAll("#sea-alternatives-body tr");
-    rows.forEach(row => {
-      const carrier = row.querySelector(".alt-carrier")?.value || "";
-      const route = row.querySelector(".alt-routing")?.value || "";
-      const transitTime = row.querySelector(".alt-tt")?.value || "";
-      const rateInfo = row.querySelector(".alt-rate")?.value || "";
-      if (carrier || route || transitTime || rateInfo) {
-        alts.push({ carrier, routing: route, tt: transitTime, rate: rateInfo });
-      }
-    });
-
-    if (alts.length > 0) {
-      altContainer.style.display = "block";
-      altList.innerHTML = alts.map(alt => `
-        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; font-size: 0.72rem;">
-          <div style="display: flex; justify-content: space-between; font-weight: 750; color: #fff;">
-            <span>🚢 ${alt.carrier || '-'}</span>
-            <span style="color: var(--accent-sea); font-weight: 800;">${alt.rate || '-'}</span>
-          </div>
-          <div style="font-size: 0.65rem; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 3px;">
-            <span>Route: ${alt.routing || '-'}</span>
-            <span>TT: ${alt.tt || '-'}</span>
-          </div>
-        </div>
-      `).join("");
-    } else {
-      altContainer.style.display = "none";
-      altList.innerHTML = "";
-    }
   }
 
   appState.currentSeaFreight.liners = calculatedLiners;
@@ -5356,7 +5353,6 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.routing = routing;
   appState.currentSeaFreight.tt = tt;
   appState.currentSeaFreight.validity = validity;
-  appState.currentSeaFreight.alternatives = alts;
 
   appState.currentSeaFreight.handlingProfile = document.getElementById("sea-handling-profile")?.value || "Stackable";
   appState.currentSeaFreight.orientationProfile = document.getElementById("sea-orientation-profile")?.value || "Tiltable";
@@ -19815,6 +19811,7 @@ function upgradeSeaPrimaryLinerCard() {
   const closeModal = () => {
     overlay.style.display = 'none';
     if (typeof updateLinerRateSummary === 'function') updateLinerRateSummary(card);
+    if (typeof calculateSeaFreight === 'function') calculateSeaFreight();
   };
   openBtn.addEventListener('click', openModal);
   closeBtn.addEventListener('click', closeModal);
@@ -20204,13 +20201,15 @@ window.updateLinerRateSummary = updateLinerRateSummary;
     const nonPrimary = cards.filter((c) => !c.classList.contains('primary-liner'));
     if (nonPrimary.length === 0) return;
 
-    nonPrimary.forEach((c) => { c.style.display = 'none'; });
+    // Default expanded — every liner comparison card is visible so a mixed
+    // FCL/LCL comparison never hides a non-zero option behind a click. The
+    // toggle only lets the user collapse down to the primary card if wanted.
+    let expanded = true;
 
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.style.cssText = 'background:none;border:none;color:var(--sky);font-size:0.68rem;font-weight:700;cursor:pointer;padding:4px 2px;text-align:left;';
-    toggle.textContent = `Show all ${cards.length} liner options ▾`;
-    let expanded = false;
+    toggle.textContent = 'Show fewer liner options ▴';
     toggle.addEventListener('click', () => {
       expanded = !expanded;
       nonPrimary.forEach((c) => { c.style.display = expanded ? '' : 'none'; });
@@ -20250,7 +20249,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.16"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.17"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
