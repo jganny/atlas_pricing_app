@@ -2727,6 +2727,7 @@ function addAirlineCard(data = null) {
   const card = document.createElement("div");
   card.className = "airline-card glass-card";
   card.id = airlineId;
+  if (data && data.routeWinner) card.dataset.routeWinner = "true";
   card.style.cssText = "padding: 1rem; border: 1px solid var(--border-1); border-radius: 8px; margin-bottom: 1rem; position: relative; overflow: visible !important;";
 
   const count = container.querySelectorAll(".airline-card").length + 1;
@@ -2738,7 +2739,6 @@ function addAirlineCard(data = null) {
   const pivotWeight = data ? data.pivotWeight : "";
   const routeOrigin = data && data.origin ? data.origin : "";
   const routeDestination = data && data.destination ? data.destination : "";
-  const hasRouteOverride = !!(routeOrigin || routeDestination);
   const isSelected = data ? !!data.selected : (count === 1);
   const activeBreaks = data ? data.breaks : {};
   const ams_fee = data ? (data.ams_fee !== undefined ? data.ams_fee : (data.amsFee !== undefined ? data.amsFee : "")) : "";
@@ -2792,18 +2792,15 @@ function addAirlineCard(data = null) {
         </div>
 
         <div style="margin-bottom: 0.75rem;">
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; font-size: 0.75rem;">
-            <input type="checkbox" class="air-route-override-toggle" ${hasRouteOverride ? 'checked' : ''} onchange="this.closest('.airline-rate-modal-dialog').querySelector('.air-route-override-fields').style.display = this.checked ? 'grid' : 'none'; calculateAirFreight();" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
-            <span>This option quotes a different Origin / Destination</span>
-          </label>
-          <div class="air-route-override-fields" style="display: ${hasRouteOverride ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+          <label style="font-weight: 700; font-size: 0.75rem; color: var(--t2, #64748b); display: block; margin-bottom: 0.4rem;">Route for this option (optional — leave blank to use the shipment's Origin/Destination)</label>
+          <div class="air-route-override-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div class="form-group autocomplete-container">
-              <label>Origin Override</label>
-              <input type="text" class="air-route-origin-override" placeholder="Type Airport code or city..." value="${routeOrigin}" autocomplete="off" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+              <label>Origin</label>
+              <input type="text" class="air-route-origin-override" placeholder="Same as shipment" value="${routeOrigin}" autocomplete="off" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
             </div>
             <div class="form-group autocomplete-container">
-              <label>Destination Override</label>
-              <input type="text" class="air-route-dest-override" placeholder="Type Airport code or city..." value="${routeDestination}" autocomplete="off" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+              <label>Destination</label>
+              <input type="text" class="air-route-dest-override" placeholder="Same as shipment" value="${routeDestination}" autocomplete="off" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
             </div>
           </div>
         </div>
@@ -3812,17 +3809,31 @@ function calculateAirFreight() {
   });
 
   // Multi-route (Option A): "Select as Quoted" stays a single native radio
-  // group across every card, completely untouched — it still drives the
-  // one overall selectedAirlineData/grandTotal exactly as before route
-  // overrides existed. Combined Total (All Routes) is a separate, additive
-  // figure: the first card seen per distinct route wins that route's slot,
-  // mirroring Sea Freight's own pre-existing "first card = primary"
-  // convention. When every card shares the same effective route (true for
-  // every quote today), distinctAirRoutes.size is 1 and this is inert.
-  const seenAirRouteKeys = new Set();
+  // group across every card, completely untouched. Combined Total (All
+  // Routes) needs its own per-route "which card counts" choice — two cards
+  // can legitimately compete for the same route (comparing carriers), and
+  // silently picking one without saying so was the live bug reported.
+  // Stored on each card's own DOM element (data-route-winner) so the choice
+  // survives every recalculation; defaults to the first card per route.
+  // Groups of exactly one card need no choice at all — always the winner.
+  const airRouteGroups = new Map();
   airlinesListData.forEach(d => {
-    d.isRouteWinner = !seenAirRouteKeys.has(d.routeKey);
-    seenAirRouteKeys.add(d.routeKey);
+    if (!airRouteGroups.has(d.routeKey)) airRouteGroups.set(d.routeKey, []);
+    airRouteGroups.get(d.routeKey).push(d);
+  });
+  airRouteGroups.forEach(group => {
+    group.forEach(d => { d.routeGroupSize = group.length; });
+    if (group.length === 1) {
+      group[0].isRouteWinner = true;
+      delete group[0].card.dataset.routeWinner;
+      return;
+    }
+    let winner = group.find(d => d.card.dataset.routeWinner === 'true') || group[0];
+    group.forEach(d => {
+      d.isRouteWinner = (d === winner);
+      if (d.isRouteWinner) d.card.dataset.routeWinner = 'true';
+      else delete d.card.dataset.routeWinner;
+    });
   });
   const distinctAirRoutes = new Set(airlinesListData.map(d => d.routeKey));
   const combinedAirRouteTotal = distinctAirRoutes.size > 1
@@ -4101,6 +4112,10 @@ function calculateAirFreight() {
             <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
               ${isCheapest ? '<span style="font-size: 0.62rem; background: var(--accent-success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Cheapest Option</span>' : ''}
               ${alt.usingBuyFallback ? '<span title="Sell Rate is blank on at least one line — this total is using the Buy/Cost Rate as an interim placeholder. It is not a confirmed customer price. Fill in Sell Rate to replace it." style="font-size: 0.62rem; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">⚠ Interim Estimate (Buy Rate)</span>' : ''}
+              ${alt.routeGroupSize > 1 ? (alt.isRouteWinner
+                ? '<span title="This option is counted in Combined Total (All Routes) for its route." style="font-size: 0.62rem; background: var(--sky); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">✓ Counted in total</span>'
+                : `<button type="button" onclick="markAirRouteWinner('${alt.card.id}')" title="Two or more options share this route — click to count this one in Combined Total (All Routes) instead." style="font-size: 0.62rem; background: none; border: 1px dashed var(--border-2); color: var(--t2); padding: 2px 6px; border-radius: 4px; font-weight: 700; cursor: pointer;">Count this instead</button>`
+              ) : ''}
             </div>
           </div>
 
@@ -4169,6 +4184,7 @@ function calculateAirFreight() {
       pivotWeight: alt.pivotWeight,
       origin: alt.origin || "",
       destination: alt.destination || "",
+      routeWinner: !!alt.isRouteWinner,
       amsFee: alt.amsFee,
       ams_fee: alt.ams_fee,
       amsFeeEnabled: alt.amsFeeEnabled,
@@ -4238,6 +4254,31 @@ function calculateAirFreight() {
   }
   appState.currentAirFreight.grandTotalINR = totalINR;
 }
+
+// Multi-route (Option A): when 2+ airline cards share the same effective
+// route, the officer picks which one counts toward Combined Total (All
+// Routes) by clicking it. Re-derives the clicked card's route fresh (not
+// from a stale closure) so this stays correct even if an override was
+// just edited, then marks it the winner among just its own route's cards.
+window.markAirRouteWinner = function (cardId) {
+  const card = document.getElementById(cardId);
+  const container = document.getElementById("air-airlines-list-container");
+  if (!card || !container) return;
+  const sharedOrigin = (document.getElementById("air-origin")?.value || "").trim().toUpperCase();
+  const sharedDest = (document.getElementById("air-dest")?.value || "").trim().toUpperCase();
+  const routeKeyOf = (c) => {
+    const o = (c.querySelector(".air-route-origin-override")?.value || "").trim().toUpperCase() || sharedOrigin;
+    const d = (c.querySelector(".air-route-dest-override")?.value || "").trim().toUpperCase() || sharedDest;
+    return `${o}→${d}`;
+  };
+  const targetRoute = routeKeyOf(card);
+  container.querySelectorAll(".airline-card").forEach((c) => {
+    if (routeKeyOf(c) !== targetRoute) return;
+    if (c === card) c.dataset.routeWinner = "true";
+    else delete c.dataset.routeWinner;
+  });
+  calculateAirFreight();
+};
 
 // SEA FREIGHT CALCULATOR LOGIC
 function setupSeaFreightEvents() {
@@ -4530,6 +4571,7 @@ window.addNewLinerCard = function (data = null) {
   const linerCard = document.createElement("div");
   linerCard.className = "liner-card";
   linerCard.id = `sea-liner-card-${index}`;
+  if (data?.routeWinner) linerCard.dataset.routeWinner = "true";
   linerCard.dataset.linerIndex = index;
   linerCard.dataset.mode = data?.mode || appState.currentSeaFreight.type || 'fcl';
 
@@ -4543,7 +4585,6 @@ window.addNewLinerCard = function (data = null) {
   const destFeesEnabled = data?.destFeesEnabled !== false;
   const routeOrigin = data?.origin || "";
   const routeDestination = data?.destination || "";
-  const hasRouteOverride = !!(routeOrigin || routeDestination);
 
   linerCard.innerHTML = `
     <div class="liner-card-header">
@@ -4580,18 +4621,15 @@ window.addNewLinerCard = function (data = null) {
         </div>
 
         <div style="margin-bottom: 0.75rem;">
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; font-size: 0.75rem;">
-            <input type="checkbox" class="sea-route-override-toggle" ${hasRouteOverride ? 'checked' : ''} onchange="this.closest('.liner-rate-modal-dialog').querySelector('.sea-route-override-fields').style.display = this.checked ? 'grid' : 'none'; calculateSeaFreight();" style="width: 14px; height: 14px; accent-color: var(--sky); cursor: pointer;">
-            <span>This option quotes a different Origin / Destination</span>
-          </label>
-          <div class="sea-route-override-fields" style="display: ${hasRouteOverride ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+          <label style="font-weight: 700; font-size: 0.75rem; color: var(--t2, #64748b); display: block; margin-bottom: 0.4rem;">Route for this option (optional — leave blank to use the shipment's POL/POD)</label>
+          <div class="sea-route-override-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div class="form-group autocomplete-container">
-              <label>Origin Override</label>
-              <input type="text" class="sea-route-origin-override" placeholder="Type Port name or city..." value="${routeOrigin}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+              <label>Origin</label>
+              <input type="text" class="sea-route-origin-override" placeholder="Same as shipment" value="${routeOrigin}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
             </div>
             <div class="form-group autocomplete-container">
-              <label>Destination Override</label>
-              <input type="text" class="sea-route-dest-override" placeholder="Type Port name or city..." value="${routeDestination}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
+              <label>Destination</label>
+              <input type="text" class="sea-route-dest-override" placeholder="Same as shipment" value="${routeDestination}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
             </div>
           </div>
         </div>
@@ -5302,6 +5340,7 @@ function calculateSeaFreight() {
     }
 
     calculatedLiners.push({
+      card,
       linerIndex,
       linerName,
       mode: linerMode,
@@ -5335,14 +5374,33 @@ function calculateSeaFreight() {
     });
   });
 
-  // Multi-route (Option A): mirrors the existing "first card = primary"
-  // convention, just re-scoped from "one across the whole liner list" to
-  // "one per distinct route." calculatedLiners[0] below stays the sole
-  // driver of every existing top-level result field — untouched.
-  const seenSeaRouteKeys = new Set();
+  // Multi-route (Option A): Combined Total (All Routes) needs its own
+  // per-route "which card counts" choice — two liners can legitimately
+  // compete for the same route (comparing carriers), and silently picking
+  // one without saying so was the live bug reported. Stored on each card's
+  // own DOM element (data-route-winner) so the choice survives every
+  // recalculation; defaults to the first liner per route. Groups of
+  // exactly one liner need no choice at all — always the winner.
+  // calculatedLiners[0] below stays the sole driver of every existing
+  // top-level result field — untouched.
+  const seaRouteGroups = new Map();
   calculatedLiners.forEach(l => {
-    l.isRouteWinner = !seenSeaRouteKeys.has(l.routeKey);
-    seenSeaRouteKeys.add(l.routeKey);
+    if (!seaRouteGroups.has(l.routeKey)) seaRouteGroups.set(l.routeKey, []);
+    seaRouteGroups.get(l.routeKey).push(l);
+  });
+  seaRouteGroups.forEach(group => {
+    group.forEach(l => { l.routeGroupSize = group.length; });
+    if (group.length === 1) {
+      group[0].isRouteWinner = true;
+      delete group[0].card.dataset.routeWinner;
+      return;
+    }
+    let winner = group.find(l => l.card.dataset.routeWinner === 'true') || group[0];
+    group.forEach(l => {
+      l.isRouteWinner = (l === winner);
+      if (l.isRouteWinner) l.card.dataset.routeWinner = 'true';
+      else delete l.card.dataset.routeWinner;
+    });
   });
   const distinctSeaRoutes = new Set(calculatedLiners.map(l => l.routeKey));
   const combinedSeaRouteTotal = distinctSeaRoutes.size > 1
@@ -5482,6 +5540,10 @@ function calculateSeaFreight() {
           <span style="font-weight: 900; color: #10b981;">${curSymbol}${l.grandTotal.toFixed(2)}</span>
         </div>
         ${l.usingBuyFallback ? '<div title="Sell Rate is blank on at least one line — this total is using the Buy/Cost Rate as an interim placeholder. It is not a confirmed customer price." style="display:inline-block; margin-top:4px; font-size: 0.6rem; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">⚠ Interim Estimate (Buy Rate)</div>' : ''}
+        ${l.routeGroupSize > 1 ? (l.isRouteWinner
+          ? '<div style="display:inline-block; margin-top:4px; font-size: 0.62rem; background: var(--sky); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">✓ Counted in total</div>'
+          : `<button type="button" onclick="markSeaRouteWinner('${l.card.id}')" title="Two or more options share this route — click to count this one in Combined Total (All Routes) instead." style="display:inline-block; margin-top:4px; font-size: 0.62rem; background: none; border: 1px dashed var(--border-2); color: var(--t2); padding: 2px 6px; border-radius: 4px; font-weight: 700; cursor: pointer;">Count this instead</button>`
+        ) : ''}
         <div style="font-size: 0.66rem; color: var(--t3); margin-top: 4px;">${seaCategoryDetailText(l)}</div>
         <div style="font-size: 0.68rem; color: var(--t2); display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px;">
           <span>Freight: ${curSymbol}${l.baseFreight.toFixed(2)}</span>
@@ -5521,7 +5583,12 @@ function calculateSeaFreight() {
     }
   }
 
-  appState.currentSeaFreight.liners = calculatedLiners;
+  // calculatedLiners carries a live `card` DOM reference (needed for the
+  // route-winner click handler above) — must never reach Firestore, which
+  // cannot serialize a DOM node and would fail the save. Strip it here,
+  // the same way sanitizedAirlinesList already does for Air. Field renamed
+  // isRouteWinner -> routeWinner to match Air's saved field name.
+  appState.currentSeaFreight.liners = calculatedLiners.map(({ card, isRouteWinner, ...rest }) => ({ ...rest, routeWinner: !!isRouteWinner }));
   appState.currentSeaFreight.grossWeight = weightKg;
   appState.currentSeaFreight.volumeCbm = effectiveCbm;
   appState.currentSeaFreight.packagesQuantity = pkgQty;
@@ -5542,6 +5609,31 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.cargoRisk = document.getElementById("sea-cargo-risk")?.value || "Non Hazardous";
   appState.currentSeaFreight.climateConstraint = document.getElementById("sea-climate-constraint")?.value || "Ambient (15-25 DEG)";
 }
+
+// Multi-route (Option A): when 2+ liner cards share the same effective
+// route, the officer picks which one counts toward Combined Total (All
+// Routes) by clicking it. Re-derives the clicked card's route fresh (not
+// from a stale closure) so this stays correct even if an override was
+// just edited, then marks it the winner among just its own route's cards.
+window.markSeaRouteWinner = function (cardId) {
+  const card = document.getElementById(cardId);
+  const container = document.getElementById("sea-liners-container");
+  if (!card || !container) return;
+  const sharedOrigin = (document.getElementById("sea-origin")?.value || "").trim().toUpperCase();
+  const sharedDest = (document.getElementById("sea-dest")?.value || "").trim().toUpperCase();
+  const routeKeyOf = (c) => {
+    const o = (c.querySelector(".sea-route-origin-override")?.value || "").trim().toUpperCase() || sharedOrigin;
+    const d = (c.querySelector(".sea-route-dest-override")?.value || "").trim().toUpperCase() || sharedDest;
+    return `${o}→${d}`;
+  };
+  const targetRoute = routeKeyOf(card);
+  container.querySelectorAll(".liner-card").forEach((c) => {
+    if (routeKeyOf(c) !== targetRoute) return;
+    if (c === card) c.dataset.routeWinner = "true";
+    else delete c.dataset.routeWinner;
+  });
+  calculateSeaFreight();
+};
 
 
 function setupSurchargesEvents(freightType) {
@@ -11182,7 +11274,8 @@ function amendQuote(id, options) {
               originFeesEnabled: l.originFeesEnabled,
               destFeesEnabled: l.destFeesEnabled,
               origin: l.origin,
-              destination: l.destination
+              destination: l.destination,
+              routeWinner: l.routeWinner
             });
           });
         } else {
@@ -20504,7 +20597,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.18"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.19"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
