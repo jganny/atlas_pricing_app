@@ -17625,6 +17625,12 @@ function renderDirectoryContacts() {
     const activeSelStart = activeFilterField ? activeEl.selectionStart : null;
     const activeSelEnd = activeFilterField ? activeEl.selectionEnd : null;
 
+    // Same rebuild problem applies to the full-screen "maximize" toggle —
+    // it's a class on an element inside this same generated markup, so
+    // typing a filter while maximized would otherwise silently drop back
+    // to the normal size after every character.
+    const wasMaximized = !!document.getElementById('dir-vendor-table-maximize-wrap')?.classList.contains('dir-table-maximized');
+
     grid.innerHTML = buildVendorTableHtml(filtered, allowedToEdit, currentVendorSortMode === 'category');
 
     if (activeFilterField) {
@@ -17633,6 +17639,10 @@ function renderDirectoryContacts() {
         newInput.focus();
         if (activeSelStart !== null) newInput.setSelectionRange(activeSelStart, activeSelEnd);
       }
+    }
+    if (wasMaximized) {
+      const newWrap = document.getElementById('dir-vendor-table-maximize-wrap');
+      if (newWrap && !newWrap.classList.contains('dir-table-maximized')) toggleDirTableMaximize();
     }
     populateDirectoryQuickJump();
     if (typeof updateDirBulkBar === 'function') updateDirBulkBar();
@@ -17927,42 +17937,97 @@ function buildVendorTableHtml(rows, allowedToEdit, showCategoryHeaders = true) {
     : '';
 
   return `
-    <div class="dir-table-scroll">
-      <table class="dir-vendor-table">
-        <colgroup>
-          <col style="width: ${colWidths[0]};">
-          <col style="width: ${colWidths[1]};">
-          <col style="width: ${colWidths[2]};">
-          <col style="width: ${colWidths[3]};">
-          <col style="width: ${colWidths[4]};">
-          <col style="width: ${colWidths[5]};">
-          ${actionColHtml}
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Company</th>
-            <th>Branch / Station</th>
-            <th>Contact Person</th>
-            <th>Contact Number</th>
-            <th>Email</th>
-            <th>Remarks</th>
-            ${actionThHtml}
-          </tr>
-          <tr class="dir-col-filter-row">
-            ${filterTh('company', 'Company')}
-            ${filterTh('branch', 'Branch / Station')}
-            ${filterTh('contactPerson', 'Contact Person')}
-            ${filterTh('phone', 'Contact Number')}
-            ${filterTh('email', 'Email')}
-            ${filterTh('notes', 'Remarks')}
-            ${actionFilterThHtml}
-          </tr>
-        </thead>
-        <tbody>${bodyHtml}</tbody>
-      </table>
+    <div class="dir-table-maximize-wrap" id="dir-vendor-table-maximize-wrap">
+      <div class="dir-table-toolbar">
+        <button type="button" class="dir-table-maximize-btn" onclick="toggleDirTableMaximize()" title="Expand to full screen">
+          <span class="dir-table-maximize-icon">${DIR_TABLE_EXPAND_ICON_SVG}</span>
+          <span class="dir-table-maximize-label">Expand</span>
+        </button>
+      </div>
+      <div class="dir-table-scroll">
+        <table class="dir-vendor-table">
+          <colgroup>
+            <col style="width: ${colWidths[0]};">
+            <col style="width: ${colWidths[1]};">
+            <col style="width: ${colWidths[2]};">
+            <col style="width: ${colWidths[3]};">
+            <col style="width: ${colWidths[4]};">
+            <col style="width: ${colWidths[5]};">
+            ${actionColHtml}
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Branch / Station</th>
+              <th>Contact Person</th>
+              <th>Contact Number</th>
+              <th>Email</th>
+              <th>Remarks</th>
+              ${actionThHtml}
+            </tr>
+            <tr class="dir-col-filter-row">
+              ${filterTh('company', 'Company')}
+              ${filterTh('branch', 'Branch / Station')}
+              ${filterTh('contactPerson', 'Contact Person')}
+              ${filterTh('phone', 'Contact Number')}
+              ${filterTh('email', 'Email')}
+              ${filterTh('notes', 'Remarks')}
+              ${actionFilterThHtml}
+            </tr>
+          </thead>
+          <tbody>${bodyHtml}</tbody>
+        </table>
+      </div>
     </div>`;
 }
 window.buildVendorTableHtml = buildVendorTableHtml;
+
+// Expand/compress icon paths swapped by toggleDirTableMaximize() below —
+// declared once here so both the initial render and the toggle share the
+// exact same markup.
+const DIR_TABLE_EXPAND_ICON_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+const DIR_TABLE_COMPRESS_ICON_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 3v4a2 2 0 0 1-2 2H3M15 3v4a2 2 0 0 0 2 2h4M9 21v-4a2 2 0 0 0-2-2H3M15 21v-4a2 2 0 0 1 2-2h4"/></svg>';
+
+// A whole-screen "focus mode" for the Vendor Contacts table — the table
+// itself lives inside .dir-table-maximize-wrap regardless of state; this
+// just toggles a class that CSS repositions as a fixed, full-viewport
+// overlay, plus a click-to-close backdrop and Escape-to-close. Never
+// touches Overseas Agents (the card grid doesn't use this wrapper at all).
+function toggleDirTableMaximize() {
+  const wrap = document.getElementById('dir-vendor-table-maximize-wrap');
+  if (!wrap) return;
+  const isMaximized = wrap.classList.toggle('dir-table-maximized');
+  document.body.classList.toggle('dir-table-maximize-active', isMaximized);
+
+  const btn = wrap.querySelector('.dir-table-maximize-btn');
+  if (btn) {
+    btn.title = isMaximized ? 'Exit full screen' : 'Expand to full screen';
+    const icon = btn.querySelector('.dir-table-maximize-icon');
+    if (icon) icon.innerHTML = isMaximized ? DIR_TABLE_COMPRESS_ICON_SVG : DIR_TABLE_EXPAND_ICON_SVG;
+    const label = btn.querySelector('.dir-table-maximize-label');
+    if (label) label.textContent = isMaximized ? 'Collapse' : 'Expand';
+  }
+
+  let backdrop = document.getElementById('dir-table-maximize-backdrop');
+  if (isMaximized) {
+    if (!backdrop) {
+      backdrop = document.createElement('div');
+      backdrop.id = 'dir-table-maximize-backdrop';
+      backdrop.className = 'dir-table-maximize-backdrop';
+      backdrop.onclick = () => toggleDirTableMaximize();
+      document.body.appendChild(backdrop);
+    }
+  } else if (backdrop) {
+    backdrop.remove();
+  }
+}
+window.toggleDirTableMaximize = toggleDirTableMaximize;
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const wrap = document.getElementById('dir-vendor-table-maximize-wrap');
+  if (wrap && wrap.classList.contains('dir-table-maximized')) toggleDirTableMaximize();
+});
 
 function updateDirVendorColFilter(field, value) {
   window.dirVendorColFilters[field] = (value || '').toLowerCase().trim();
@@ -20677,7 +20742,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.20"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.21"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {

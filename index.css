@@ -3706,16 +3706,75 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
   overflow-x: auto;
   /* overflow-x:auto alone makes the browser compute overflow-y as non-visible
      too (a real CSS quirk — you can't mix auto on one axis with visible on
-     the other), which silently breaks position:sticky on the header/filter
-     rows: they'd be "sticky" relative to this box, but this box itself
-     never scrolls vertically, so they'd just scroll away with the page.
-     Giving it a real bounded height + explicit overflow-y:auto makes it a
-     genuine scrolling container, so the sticky rows actually work. */
+     the other). Bounding the height + explicit overflow-y:auto at least
+     makes this a genuine internally-scrolling container for a large vendor
+     list — the header/filter rows are still marked position:sticky, but a
+     separate, confirmed table-layout:fixed conflict keeps them from
+     actually pinning while scrolling (known limitation, not fixed here —
+     see the "Expand" toggle below, which sidesteps needing sticky at all
+     by giving the user the full screen instead). */
   overflow-y: auto;
   max-height: 60vh;
   border: 1px solid var(--border-2);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.7);
+}
+
+/* Full-screen "focus mode" for the Vendor Contacts table — an alternative
+   to scrolling a 60vh-capped box: expand the whole table (toolbar + filter
+   row + body) into a fixed overlay using the full viewport instead. */
+.dir-table-maximize-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.dir-table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+.dir-table-maximize-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #fff;
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--t2);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.dir-table-maximize-btn:hover {
+  border-color: var(--sky);
+  color: var(--sky);
+  background: rgba(2, 132, 199, 0.04);
+}
+
+.dir-table-maximize-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 2999;
+}
+
+.dir-table-maximized {
+  position: fixed;
+  inset: 1.5rem;
+  z-index: 3000;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  padding: 1rem;
+}
+.dir-table-maximized .dir-table-scroll {
+  max-height: none;
+  flex: 1;
+  min-height: 0;
+}
+body.dir-table-maximize-active {
+  overflow: hidden;
 }
 
 .dir-vendor-table {
