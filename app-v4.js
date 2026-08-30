@@ -5499,6 +5499,8 @@ function calculateSeaFreight() {
     const effectiveDestination = cardRoute.effectiveDestination;
     const routeKey = cardRoute.routeKey;
     const routeId = cardRoute.routeId || 'primary';
+    const linerMode = card.dataset.mode || appState.currentSeaFreight.type || 'fcl';
+    const isLinerFcl = (linerMode === 'fcl');
     const winnerGroupKey = linerMode === 'bb' ? null : `${routeKey}|${linerMode}`;
 
     // Badges update
@@ -5521,9 +5523,6 @@ function calculateSeaFreight() {
       destBadge.style.color = destFeesEnabled ? "#10b981" : "#ef4444";
       destBadge.style.background = destFeesEnabled ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
     }
-
-    const linerMode = card.dataset.mode || appState.currentSeaFreight.type || 'fcl';
-    const isLinerFcl = (linerMode === 'fcl');
 
     let linerBaseFreight = 0;
     let linerBaseFreightBuy = 0;
@@ -21154,7 +21153,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.23"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.24"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
