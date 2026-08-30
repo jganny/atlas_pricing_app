@@ -251,57 +251,49 @@
     });
   }
 
-  /* ── Insight rail (Phases 1–4) ── */
-  function buildInsightRail(panelId, mode) {
-    var layout = document.querySelector('#' + panelId + ' .desk-calculator-layout') ||
-      document.querySelector('#' + panelId + ' .calculator-grid');
-    if (!layout || layout.querySelector('.atlas-insight-rail')) return;
+  /* ── Remove broken insight rails + restore 2-column desk grid ── */
+  function removeInsightRails() {
+    document.querySelectorAll('.atlas-insight-rail').forEach(function (el) { el.remove(); });
+    document.querySelectorAll('.atlas-has-rail').forEach(function (el) {
+      el.classList.remove('atlas-has-rail');
+      if (el.style.gridTemplateColumns) el.style.gridTemplateColumns = '';
+    });
+  }
 
-    layout.classList.add('atlas-has-rail');
-    if (layout.classList.contains('calculator-grid')) {
-      layout.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(260px, 300px) 280px';
-    }
-    var rail = document.createElement('aside');
-    rail.className = 'atlas-insight-rail';
-    rail.id = mode + '-insight-rail';
-    rail.setAttribute('aria-label', 'Quote insights');
-    rail.innerHTML =
-      '<div class="atlas-insight-card">' +
-        '<div class="atlas-insight-card-title">Quote summary</div>' +
-        '<div class="atlas-insight-stat-row"><span>Module</span><strong>' + (MODULE_LABELS[mode] || mode) + '</strong></div>' +
-        '<div id="' + mode + '-insight-total" class="atlas-insight-stat-row"><span>Total</span><strong>—</strong></div>' +
-        '<div id="' + mode + '-insight-margin" class="atlas-insight-stat-row"><span>Status</span><strong>Draft</strong></div>' +
-      '</div>' +
-      '<div class="atlas-insight-card atlas-ai-intake-card">' +
-        '<div class="atlas-insight-card-title">Atlas AI — Quick intake</div>' +
-        '<div class="atlas-ai-intake">' +
-          '<input type="text" id="' + mode + '-ai-intake" placeholder="e.g. 500kg BLR to DXB general EXW" aria-label="Describe shipment" />' +
-          '<button type="button" data-ai-desk="' + mode + '">Parse into form</button>' +
-        '</div>' +
-        '<p class="atlas-ai-tip" id="' + mode + '-ai-tip">AI suggests field values — rates always come from your desk calculators.</p>' +
-      '</div>' +
-      '<div class="atlas-insight-card">' +
-        '<div class="atlas-insight-card-title">Actions</div>' +
-        '<button type="button" class="enterprise-ghost-btn" style="width:100%;justify-content:center;margin-bottom:0.35rem" onclick="toggleAtlasCopilot(true)">Open Atlas Copilot</button>' +
-        '<button type="button" class="enterprise-ghost-btn" style="width:100%;justify-content:center" data-copilot-prompt="Draft a professional follow-up email for this quote.">Draft follow-up email</button>' +
-      '</div>';
-    layout.appendChild(rail);
+  /* ── Compact AI command bar (below record context — Dynamics command-bar pattern) ── */
+  function buildAiCommandBar(mode) {
+    var panelId = DESK_PANELS[mode];
+    if (!panelId) return;
+    var panel = $(panelId);
+    if (!panel) return;
+    var barId = mode + '-ai-command-bar';
+    if ($(barId)) return;
 
-    var parseBtn = rail.querySelector('[data-ai-desk]');
+    var anchor = panel.querySelector('.enterprise-record-context') ||
+      panel.querySelector('.desk-highlights-bar');
+    if (!anchor) return;
+
+    var bar = document.createElement('div');
+    bar.className = 'atlas-ai-command-bar';
+    bar.id = barId;
+    bar.innerHTML =
+      '<span class="atlas-ai-command-label" aria-hidden="true">AI</span>' +
+      '<input type="text" class="atlas-ai-command-input" id="' + mode + '-ai-intake" ' +
+        'placeholder="Describe shipment — e.g. 500kg BLR to DXB general EXW" aria-label="AI shipment intake" />' +
+      '<button type="button" class="atlas-ai-command-parse" data-ai-desk="' + mode + '">Parse</button>' +
+      '<button type="button" class="atlas-ai-command-copilot" onclick="toggleAtlasCopilot(true)">Copilot</button>' +
+      '<span class="atlas-ai-command-hint" id="' + mode + '-ai-tip"></span>';
+
+    anchor.insertAdjacentElement('afterend', bar);
+
+    var parseBtn = bar.querySelector('[data-ai-desk]');
     if (parseBtn) {
-      parseBtn.addEventListener('click', function () {
-        parseAiIntake(mode);
-      });
+      parseBtn.addEventListener('click', function () { parseAiIntake(mode); });
     }
-    var draftBtn = rail.querySelector('[data-copilot-prompt]');
-    if (draftBtn) {
-      draftBtn.addEventListener('click', function () {
-        if (typeof window.toggleAtlasCopilot === 'function') window.toggleAtlasCopilot(true);
-        var input = $('atlas-copilot-input');
-        if (input) {
-          input.value = draftBtn.getAttribute('data-copilot-prompt');
-          input.focus();
-        }
+    var input = bar.querySelector('.atlas-ai-command-input');
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); parseAiIntake(mode); }
       });
     }
   }
@@ -341,29 +333,9 @@
     refreshRouteChips(mode);
 
     if (tip) {
-      tip.innerHTML = applied.length
-        ? '<strong>Applied:</strong> ' + applied.join(', ') + '. Verify autocomplete matches, then refine on the form.'
-        : 'Could not parse lane/weight from text. Try: <em>500kg BLR to DXB EXW</em> or ask Copilot for help.';
-    }
-  }
-
-  function refreshInsightTotals(mode) {
-    var totalEl = $(mode + '-insight-total');
-    if (!totalEl) return;
-    var strong = totalEl.querySelector('strong');
-    if (!strong) return;
-    if (mode === 'air') {
-      var mirror = document.querySelector('[data-air-grandtotal-mirror]');
-      strong.textContent = mirror ? mirror.textContent : '—';
-    } else if (mode === 'sea') {
-      var seaMirror = document.querySelector('[data-sea-grandtotal-mirror]');
-      strong.textContent = seaMirror ? seaMirror.textContent : '—';
-    } else if (mode === 'transport') {
-      var t = $('res-transport-total');
-      strong.textContent = t ? t.textContent : '—';
-    } else if (mode === 'warehouse') {
-      var w = $('res-warehouse-total');
-      strong.textContent = w ? w.textContent : '—';
+      tip.textContent = applied.length
+        ? 'Applied: ' + applied.join(', ') + ' — verify autocomplete matches.'
+        : '';
     }
   }
 
@@ -428,15 +400,13 @@
       window.openActiveCalculator = function (type) {
         orig(type);
         setBreadcrumb(type);
-        var panel = DESK_PANELS[type];
-        if (panel) buildInsightRail(panel, type);
+        buildAiCommandBar(type);
         refreshRecordContext(type);
         bindDeskContextRefresh(type);
         if (type === 'air' || type === 'sea') {
           refreshRouteChips(type);
           refreshLaneVisual(type);
         }
-        window.setTimeout(refreshInsightTotals.bind(null, type), 500);
       };
     }
     if (typeof window.goHome === 'function') {
@@ -449,9 +419,9 @@
   }
 
   function initDesks() {
+    removeInsightRails();
     ['air', 'sea', 'transport', 'warehouse'].forEach(function (mode) {
-      var panel = DESK_PANELS[mode];
-      if (panel) buildInsightRail(panel, mode);
+      buildAiCommandBar(mode);
       bindDeskContextRefresh(mode);
       refreshRecordContext(mode);
       if (mode === 'air' || mode === 'sea') {
@@ -499,6 +469,5 @@
     refreshRecordContext(mode);
     refreshLaneVisual(mode);
     refreshRouteChips(mode);
-    refreshInsightTotals(mode);
   };
 })();

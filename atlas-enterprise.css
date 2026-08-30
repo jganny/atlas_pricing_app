@@ -482,93 +482,46 @@ body.atlas-admin-session #db-connection-badge {
   display: block !important;
 }
 
-/* ── Insight rail — Copilot / HubSpot sidebar ── */
-.atlas-insight-rail {
+/* ── AI command bar — single row below record context (not a 3rd column) ── */
+.atlas-ai-command-bar {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  width: 280px;
-  flex-shrink: 0;
-  align-self: flex-start;
-  position: sticky;
-  top: var(--space-4);
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-}
-
-.desk-shell.active .atlas-insight-rail,
-.view-panel.desk-shell.active ~ .atlas-insight-rail {
-  display: flex;
-}
-
-.desk-calculator-layout.atlas-has-rail {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 280px !important;
-  gap: var(--space-4) !important;
-  align-items: start;
-}
-
-.calculator-grid.atlas-has-rail {
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px) 280px !important;
-  gap: var(--space-4) !important;
-}
-
-@media (max-width: 1100px) {
-  .desk-calculator-layout.atlas-has-rail {
-    grid-template-columns: 1fr !important;
-  }
-  .atlas-insight-rail {
-    display: none !important;
-  }
-}
-
-.atlas-insight-card {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.6rem;
+  margin: 0 0 0.85rem;
+  padding: 0.45rem 0.65rem;
   background: var(--bg-surface);
   border: var(--enterprise-border);
-  border-radius: var(--r-lg);
-  padding: var(--space-3);
+  border-radius: var(--r-md);
   box-shadow: var(--shadow-sm);
 }
 
-.atlas-insight-card-title {
+.atlas-ai-command-label {
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--t3);
-  margin-bottom: var(--space-2);
+  color: var(--indigo);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--r-pill);
+  background: rgba(47, 49, 147, 0.06);
+  flex-shrink: 0;
 }
 
-.atlas-insight-stat-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  margin-bottom: 0.35rem;
-  color: var(--t2);
-}
-
-.atlas-insight-stat-row strong {
-  color: var(--t1);
-  font-weight: 700;
-}
-
-.atlas-ai-intake {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.atlas-ai-intake input {
-  width: 100%;
-  padding: 0.45rem 0.6rem;
+.atlas-ai-command-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
   border-radius: var(--r-sm);
-  border: var(--enterprise-border);
+  border: 1px solid var(--border-1);
   font-size: 0.72rem;
   font-family: inherit;
+  color: var(--t1);
+  background: var(--bg-input);
 }
 
-.atlas-ai-intake button {
-  padding: 0.4rem 0.65rem;
+.atlas-ai-command-parse {
+  padding: 0.38rem 0.75rem;
   border-radius: var(--r-sm);
   border: none;
   background: var(--indigo);
@@ -576,17 +529,79 @@ body.atlas-admin-session #db-connection-badge {
   font-size: 0.68rem;
   font-weight: 700;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-.atlas-ai-tip {
+.atlas-ai-command-copilot {
+  padding: 0.38rem 0.65rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-1);
+  background: transparent;
+  color: var(--sky);
   font-size: 0.68rem;
-  line-height: 1.45;
-  color: var(--t2);
-  margin: 0;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.atlas-ai-tip strong {
-  color: var(--t1);
+.atlas-ai-command-copilot:hover {
+  background: var(--sky-g);
+}
+
+.atlas-ai-command-hint {
+  flex: 1 1 100%;
+  font-size: 0.65rem;
+  color: var(--t3);
+  min-height: 0;
+}
+
+.atlas-ai-command-hint:not(:empty) {
+  padding-top: 0.15rem;
+}
+
+/* Ensure desk workspace stays form | results — never 3 columns */
+.desk-calculator-layout.atlas-has-rail,
+.calculator-grid.atlas-has-rail {
+  grid-template-columns: unset !important;
+}
+
+.atlas-insight-rail {
+  display: none !important;
+}
+
+/* Wider, readable results panel — Salesforce utility column */
+#air-freight-panel .workspace,
+#sea-freight-panel .workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px) !important;
+}
+
+.desk-pip-panel {
+  min-width: 0;
+}
+
+.desk-pip-panel .results-header h3 {
+  font-size: 0.82rem;
+}
+
+#air-pricing-results-container,
+#sea-pricing-results-container {
+  gap: 0.85rem !important;
+}
+
+/* Tighter lane panel — less vertical waste */
+.enterprise-lane-panel {
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.enterprise-lane-visual {
+  margin-bottom: var(--space-2);
+  padding: 0.25rem 0;
+}
+
+.enterprise-record-context {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.85rem;
 }
 
 /* Copilot rail mode (Phase 4) */
