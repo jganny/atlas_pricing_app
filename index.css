@@ -3704,6 +3704,15 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 
 .dir-table-scroll {
   overflow-x: auto;
+  /* overflow-x:auto alone makes the browser compute overflow-y as non-visible
+     too (a real CSS quirk — you can't mix auto on one axis with visible on
+     the other), which silently breaks position:sticky on the header/filter
+     rows: they'd be "sticky" relative to this box, but this box itself
+     never scrolls vertically, so they'd just scroll away with the page.
+     Giving it a real bounded height + explicit overflow-y:auto makes it a
+     genuine scrolling container, so the sticky rows actually work. */
+  overflow-y: auto;
+  max-height: 60vh;
   border: 1px solid var(--border-2);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.7);
@@ -3778,7 +3787,76 @@ main { padding: clamp(1rem,1.8vw,1.75rem) clamp(0.85rem,2vw,1.75rem) !important;
 .dir-table-link:hover { text-decoration: underline; }
 .dir-table-empty { color: var(--t3); }
 
-.dir-table-actions { display: flex; gap: 0.35rem; }
+/* Action column redesign (Vendor Contacts table only) — the cell itself
+   is a plain table cell (vertical-align handles centering on tall,
+   multi-line rows); an inner flex wrapper centers the two buttons within
+   it. Does NOT touch the global .contact-action-btn used on Overseas
+   Agents cards and Circulars — those keep their existing 30x30 style. */
+.dir-vendor-table td.dir-table-actions {
+  vertical-align: middle;
+  text-align: center;
+}
+.dir-table-actions-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 100%;
+}
+.dir-vendor-table .contact-action-btn {
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid transparent;
+}
+.dir-vendor-table .contact-action-btn:hover {
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.2);
+}
+
+/* Per-column header filters (Vendor Contacts table only) — a second
+   sticky row under the labels, one compact text input per filterable
+   column. top offset stacks it directly below the label row. */
+.dir-vendor-table thead tr.dir-col-filter-row th {
+  position: sticky;
+  top: 49px;
+  z-index: 1;
+  background: #fff;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border-2);
+  text-transform: none;
+  font-weight: 400;
+}
+.dir-col-filter-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.68rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--t1);
+  font-family: inherit;
+}
+.dir-col-filter-input:focus {
+  outline: none;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+}
+.dir-col-filter-input::placeholder { color: var(--t3); }
+
+.dir-clear-col-filters {
+  background: none;
+  border: none;
+  color: var(--sky);
+  font-size: 0.64rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0.25rem 0;
+  white-space: nowrap;
+}
+.dir-clear-col-filters:hover { color: #0369a1; }
 
 /* Category divider rows — the table's equivalent of the workbook's separate
    sheet tabs, so scrolling "All Vendors" reads like flipping through them. */

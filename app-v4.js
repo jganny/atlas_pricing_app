@@ -17225,6 +17225,10 @@ let directoryContacts = [];
 let activeDirectoryParent = 'agents'; // 'agents' or 'vendors'
 let activeDirectoryCategory = 'all';
 let importedExcelRows = [];
+// Vendor Contacts table per-column header filters — Overseas Agents (the
+// card grid) never reads this. Values are stored already-lowercased so the
+// filter pass above can compare directly with no repeated toLowerCase().
+window.dirVendorColFilters = window.dirVendorColFilters || { company: '', branch: '', contactPerson: '', phone: '', email: '', notes: '' };
 
 // Fallback initial data if database is empty or offline
 const fallbackContacts = [];
@@ -17515,8 +17519,23 @@ function renderDirectoryContacts() {
       const phone = (c.phone || "").toLowerCase();
       const location = (c.location || "").toLowerCase();
       const notes = (c.notes || "").toLowerCase();
-      return name.includes(searchQuery) || person.includes(searchQuery) || email.includes(searchQuery) ||
+      const matchesSearch = name.includes(searchQuery) || person.includes(searchQuery) || email.includes(searchQuery) ||
         phone.includes(searchQuery) || location.includes(searchQuery) || notes.includes(searchQuery);
+      if (!matchesSearch) return false;
+    }
+
+    // Per-column header filters (Vendor Contacts table only — Overseas
+    // Agents uses the card grid, not this table, and isn't touched by this).
+    if (activeDirectoryParent !== 'agents') {
+      const f = window.dirVendorColFilters;
+      if (f && (f.company || f.branch || f.contactPerson || f.phone || f.email || f.notes)) {
+        if (f.company && !(c.name || '').toLowerCase().includes(f.company)) return false;
+        if (f.branch && !(c.location || '').toLowerCase().includes(f.branch)) return false;
+        if (f.contactPerson && !(c.contactPerson || '').toLowerCase().includes(f.contactPerson)) return false;
+        if (f.phone && !(c.phone || '').toLowerCase().includes(f.phone)) return false;
+        if (f.email && !(c.email || '').toLowerCase().includes(f.email)) return false;
+        if (f.notes && !(c.notes || '').toLowerCase().includes(f.notes)) return false;
+      }
     }
     return true;
   });
@@ -17582,9 +17601,12 @@ function renderDirectoryContacts() {
   }
 
   if (filtered.length === 0) {
+    const vendorColFiltersActive = activeDirectoryParent !== 'agents' && window.dirVendorColFilters &&
+      Object.values(window.dirVendorColFilters).some(v => v);
     grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--t3); font-style: italic; background: rgba(255,255,255,0.02); border-radius: var(--r-md); border: 1px dashed var(--border-2);">
       <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">🔍</span>
       No contacts found in this section matching your filters.
+      ${vendorColFiltersActive ? '<div style="margin-top:0.75rem;"><button type="button" class="dir-clear-col-filters" onclick="clearDirVendorColFilters()" style="font-style:normal;">Clear column filters</button></div>' : ''}
     </div>`;
     return;
   }
@@ -17592,7 +17614,26 @@ function renderDirectoryContacts() {
   if (activeDirectoryParent !== 'agents') {
     grid.className = 'dir-vendor-table-wrap';
     const currentVendorSortMode = document.getElementById("dir-vendor-sort")?.value || 'category';
+
+    // Per-column filter inputs live inside this generated markup, so a live
+    // oninput would otherwise lose focus after every character typed —
+    // save which field (and cursor position) was focused, then restore it
+    // on the freshly-rendered input after the rebuild.
+    const activeEl = document.activeElement;
+    const activeFilterField = (activeEl && activeEl.classList && activeEl.classList.contains('dir-col-filter-input'))
+      ? activeEl.dataset.filterField : null;
+    const activeSelStart = activeFilterField ? activeEl.selectionStart : null;
+    const activeSelEnd = activeFilterField ? activeEl.selectionEnd : null;
+
     grid.innerHTML = buildVendorTableHtml(filtered, allowedToEdit, currentVendorSortMode === 'category');
+
+    if (activeFilterField) {
+      const newInput = grid.querySelector(`.dir-col-filter-input[data-filter-field="${activeFilterField}"]`);
+      if (newInput) {
+        newInput.focus();
+        if (activeSelStart !== null) newInput.setSelectionRange(activeSelStart, activeSelEnd);
+      }
+    }
     populateDirectoryQuickJump();
     if (typeof updateDirBulkBar === 'function') updateDirBulkBar();
     const searchInputEarly = document.getElementById("directory-search-input");
@@ -17842,12 +17883,14 @@ function buildVendorTableHtml(rows, allowedToEdit, showCategoryHeaders = true) {
 
     const actionsCellHtml = allowedToEdit ? `
       <td class="dir-table-actions">
-        <button class="contact-action-btn" title="Edit Contact" onclick="openContactModal('${contact.id}')">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-        </button>
-        <button class="contact-action-btn" title="Delete Contact" onclick="deleteContact('${contact.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-        </button>
+        <div class="dir-table-actions-inner">
+          <button class="contact-action-btn" title="Edit Contact" onclick="openContactModal('${contact.id}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+          </button>
+          <button class="contact-action-btn" title="Delete Contact" onclick="deleteContact('${contact.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+          </button>
+        </div>
       </td>` : '';
 
     bodyHtml += `
@@ -17866,6 +17909,22 @@ function buildVendorTableHtml(rows, allowedToEdit, showCategoryHeaders = true) {
   const colWidths = allowedToEdit
     ? ['16%', '10%', '14%', '12%', '18%', '22%']
     : ['18%', '11%', '16%', '14%', '20%', '21%'];
+
+  // Per-column header filters — one text input per filterable column,
+  // pre-filled from the persisted filter state so they survive a rebuild
+  // triggered by something else (tab switch, sort change, global search).
+  // The Action column has no filter of its own; its filter-row cell instead
+  // holds "Clear column filters" whenever any filter is active, so the
+  // control only appears when there's something to clear.
+  const cf = window.dirVendorColFilters || {};
+  const hasAnyColFilter = !!(cf.company || cf.branch || cf.contactPerson || cf.phone || cf.email || cf.notes);
+  const filterTh = (field, label) => {
+    const val = (cf[field] || '').replace(/"/g, '&quot;');
+    return `<th><input type="text" class="dir-col-filter-input" data-filter-field="${field}" placeholder="Filter…" aria-label="Filter ${label}" value="${val}" oninput="updateDirVendorColFilter('${field}', this.value)"></th>`;
+  };
+  const actionFilterThHtml = allowedToEdit
+    ? `<th>${hasAnyColFilter ? '<button type="button" class="dir-clear-col-filters" onclick="clearDirVendorColFilters()">Clear filters</button>' : ''}</th>`
+    : '';
 
   return `
     <div class="dir-table-scroll">
@@ -17889,12 +17948,33 @@ function buildVendorTableHtml(rows, allowedToEdit, showCategoryHeaders = true) {
             <th>Remarks</th>
             ${actionThHtml}
           </tr>
+          <tr class="dir-col-filter-row">
+            ${filterTh('company', 'Company')}
+            ${filterTh('branch', 'Branch / Station')}
+            ${filterTh('contactPerson', 'Contact Person')}
+            ${filterTh('phone', 'Contact Number')}
+            ${filterTh('email', 'Email')}
+            ${filterTh('notes', 'Remarks')}
+            ${actionFilterThHtml}
+          </tr>
         </thead>
         <tbody>${bodyHtml}</tbody>
       </table>
     </div>`;
 }
 window.buildVendorTableHtml = buildVendorTableHtml;
+
+function updateDirVendorColFilter(field, value) {
+  window.dirVendorColFilters[field] = (value || '').toLowerCase().trim();
+  renderDirectoryContacts();
+}
+window.updateDirVendorColFilter = updateDirVendorColFilter;
+
+function clearDirVendorColFilters() {
+  Object.keys(window.dirVendorColFilters).forEach((k) => { window.dirVendorColFilters[k] = ''; });
+  renderDirectoryContacts();
+}
+window.clearDirVendorColFilters = clearDirVendorColFilters;
 
 // Turns a group key (country name, or the suspended sentinel) into a safe,
 // stable HTML id so the quick-jump dropdown can scroll straight to it.
@@ -20597,7 +20677,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.19"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.20"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
