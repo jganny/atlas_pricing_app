@@ -5920,6 +5920,115 @@ textarea:focus {
 }
 
 /* ══════════════════════════════════════════════════
+   DESK FLOW RAIL — Apple-style sequenced steps
+   One focused step per pane; Continue advances the flow.
+══════════════════════════════════════════════════ */
+.desk-flow-rail {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--border-1);
+  border-radius: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.desk-flow-step {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  color: var(--t3);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.desk-flow-num {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1.5px solid var(--border-2);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.desk-flow-step.is-active {
+  color: var(--t1);
+}
+.desk-flow-step.is-active .desk-flow-num {
+  background: var(--accent-current, var(--sky));
+  border-color: var(--accent-current, var(--sky));
+  color: #fff;
+}
+.desk-flow-step.is-complete {
+  color: var(--t2);
+}
+.desk-flow-step.is-complete .desk-flow-num {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #059669;
+}
+.desk-flow-connector {
+  flex: 1;
+  min-width: 1.25rem;
+  max-width: 2.5rem;
+  height: 2px;
+  background: var(--border-2);
+  margin: 0 0.35rem;
+  border-radius: 1px;
+}
+.desk-flow-footer {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-1);
+  display: flex;
+  justify-content: flex-end;
+}
+.desk-flow-continue {
+  min-width: 11rem;
+  padding: 0.72rem 1.35rem !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+}
+.desk-form-card {
+  padding: 1.35rem 1.5rem !important;
+}
+.desk-tab-pane .form-group {
+  margin-bottom: 1rem;
+}
+.desk-tab-pane .desk-entry-grid,
+.desk-tab-pane .form-grid-2,
+.desk-tab-pane .form-grid-3 {
+  gap: 1rem 1.15rem;
+}
+.desk-flow-hint {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  color: var(--t2);
+  line-height: 1.45;
+}
+.desk-flow-hint strong {
+  color: var(--t1);
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  .desk-flow-label {
+    display: none;
+  }
+  .desk-flow-rail {
+    padding: 0.65rem 0.75rem;
+  }
+}
+
+/* ══════════════════════════════════════════════════
    ARCHITECTURE MOVE 3 — COSTING GRID TOTALS FOOTER
    A read-only summed row appended to any surcharge/tariff table that has
    Sell Rate + Buy Rate columns (Air/Sea per-card surcharges, Transport &

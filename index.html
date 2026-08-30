@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.09">
+  <link rel="stylesheet" href="index.css?v=129.10">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -1528,12 +1528,30 @@
         <div class="workspace desk-calculator-layout">
           <!-- Inputs section -->
           <div class="glass-card desk-form-card">
+            <nav class="desk-flow-rail" aria-label="Air quote steps">
+              <div class="desk-flow-step is-active" data-flow-step="details">
+                <span class="desk-flow-num">1</span>
+                <span class="desk-flow-label">Shipment</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="carrier">
+                <span class="desk-flow-num">2</span>
+                <span class="desk-flow-label">Carriers</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="terms">
+                <span class="desk-flow-num">3</span>
+                <span class="desk-flow-label">Terms</span>
+              </div>
+            </nav>
             <div class="desk-tab-strip desk-tab-strip-flush">
-              <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('air-freight-panel','details',this)">Shipment Details</button>
-              <button type="button" class="desk-tab-btn" onclick="switchDeskTab('air-freight-panel','carrier',this)">Carrier &amp; Tariffs</button>
+              <button type="button" class="desk-tab-btn active" data-desk-tab="details" onclick="switchDeskTab('air-freight-panel','details',this)">1. Shipment Details</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="carrier" onclick="switchDeskTab('air-freight-panel','carrier',this)">2. Carrier &amp; Tariffs</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="terms" onclick="switchDeskTab('air-freight-panel','terms',this)">3. Terms</button>
             </div>
 
             <div class="desk-tab-pane" data-tab-pane="details">
+            <p class="desk-flow-hint">Start with the shipment basics — customer, route, and cargo. Use <strong>Continue</strong> when ready to add carriers.</p>
 
             <!-- Export/Import Toggle Tabs -->
             <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
@@ -1741,9 +1759,14 @@
               Add Cargo Line
             </button>
 
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('air-freight-panel','carrier')">Continue to Carriers →</button>
+            </div>
+
             </div><!-- /desk-tab-pane[details] -->
 
             <div class="desk-tab-pane" data-tab-pane="carrier" style="display:none;">
+            <p class="desk-flow-hint">Add airline options, then open <strong>Rates &amp; fees</strong> on each card for tariffs and surcharges.</p>
 
             <!-- Dynamic Airlines Container (Carrier Tariffs) -->
             <div class="section-card" id="air-tariffs-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1.25rem;">
@@ -1857,19 +1880,25 @@
               </div>
             </div>
 
-            <!-- Editable Terms & Conditions -->
-            <div class="atlas-terms-shell" style="margin-top: 1.5rem;">
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('air-freight-panel','terms')">Continue to Terms →</button>
+            </div>
+
+            </div><!-- /desk-tab-pane[carrier] -->
+
+            <div class="desk-tab-pane" data-tab-pane="terms" style="display:none;">
+            <p class="desk-flow-hint">Review and edit the terms that will appear on the customer quotation.</p>
+            <div class="atlas-terms-shell">
               <div class="atlas-terms-toolbar">
                 <label for="air-terms" class="atlas-terms-label">Editable Terms &amp; Conditions</label>
                 <button type="button" class="atlas-terms-focus-btn" onclick="document.getElementById('air-terms').focus()" aria-label="Focus terms editor">
                   <span class="ate-spark" aria-hidden="true">✦</span> Edit terms
                 </button>
               </div>
-              <textarea id="air-terms" rows="6" class="atlas-terms-field"
+              <textarea id="air-terms" rows="10" class="atlas-terms-field"
                 placeholder="Add custom terms..."></textarea>
             </div>
-
-            </div><!-- /desk-tab-pane[carrier] -->
+            </div><!-- /desk-tab-pane[terms] -->
           </div>
 
           <!-- Live Results Widget (Right Panel) -->
@@ -1975,12 +2004,30 @@
         <div class="workspace desk-calculator-layout">
           <!-- Inputs Column -->
           <div class="glass-card desk-form-card">
+            <nav class="desk-flow-rail" aria-label="Sea quote steps">
+              <div class="desk-flow-step is-active" data-flow-step="details">
+                <span class="desk-flow-num">1</span>
+                <span class="desk-flow-label">Shipment</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="carrier">
+                <span class="desk-flow-num">2</span>
+                <span class="desk-flow-label">Carriers</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="terms">
+                <span class="desk-flow-num">3</span>
+                <span class="desk-flow-label">Terms</span>
+              </div>
+            </nav>
             <div class="desk-tab-strip desk-tab-strip-flush">
-              <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('sea-freight-panel','details',this)">Shipment Details</button>
-              <button type="button" class="desk-tab-btn" onclick="switchDeskTab('sea-freight-panel','carrier',this)">Carrier &amp; Tariffs</button>
+              <button type="button" class="desk-tab-btn active" data-desk-tab="details" onclick="switchDeskTab('sea-freight-panel','details',this)">1. Shipment Details</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="carrier" onclick="switchDeskTab('sea-freight-panel','carrier',this)">2. Carrier &amp; Tariffs</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="terms" onclick="switchDeskTab('sea-freight-panel','terms',this)">3. Terms</button>
             </div>
 
             <div class="desk-tab-pane" data-tab-pane="details">
+            <p class="desk-flow-hint">Enter shipment basics first — customer, ports, and cargo. Continue when ready to configure liners.</p>
 
             <!-- Sea Export/Import Toggle Tabs -->
             <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
@@ -2250,9 +2297,14 @@
               Add Cargo Line
             </button>
 
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('sea-freight-panel','carrier')">Continue to Carriers →</button>
+            </div>
+
             </div><!-- /desk-tab-pane[details] -->
 
             <div class="desk-tab-pane" data-tab-pane="carrier" style="display:none;">
+            <p class="desk-flow-hint">Select a liner, then tap <strong>Rates &amp; fees</strong> on each option for freight and local charges.</p>
 
             <!-- Dynamic Liners / Coloaders / BreakBulk Operators Container -->
             <div id="sea-liners-container">
@@ -2626,19 +2678,25 @@
               </button>
             </div>
 
-            <!-- Editable Terms & Conditions -->
-            <div class="atlas-terms-shell" style="margin-top: 1.5rem;">
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('sea-freight-panel','terms')">Continue to Terms →</button>
+            </div>
+
+            </div><!-- /desk-tab-pane[carrier] -->
+
+            <div class="desk-tab-pane" data-tab-pane="terms" style="display:none;">
+            <p class="desk-flow-hint">Review and edit the terms that will appear on the customer quotation.</p>
+            <div class="atlas-terms-shell">
               <div class="atlas-terms-toolbar">
                 <label for="sea-terms" class="atlas-terms-label">Editable Terms &amp; Conditions</label>
                 <button type="button" class="atlas-terms-focus-btn" onclick="document.getElementById('sea-terms').focus()" aria-label="Focus terms editor">
                   <span class="ate-spark" aria-hidden="true">✦</span> Edit terms
                 </button>
               </div>
-              <textarea id="sea-terms" rows="6" class="atlas-terms-field"
+              <textarea id="sea-terms" rows="10" class="atlas-terms-field"
                 placeholder="Add custom terms..."></textarea>
             </div>
-
-            </div><!-- /desk-tab-pane[carrier] -->
+            </div><!-- /desk-tab-pane[terms] -->
           </div>
 
           <!-- Live Results widget -->
@@ -2748,7 +2806,31 @@
         </div>
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
-          <div class="glass-card" style="padding: 2rem;">
+          <div class="glass-card desk-form-card">
+            <nav class="desk-flow-rail" aria-label="Transport quote steps">
+              <div class="desk-flow-step is-active" data-flow-step="details">
+                <span class="desk-flow-num">1</span>
+                <span class="desk-flow-label">Route</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="charges">
+                <span class="desk-flow-num">2</span>
+                <span class="desk-flow-label">Charges</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="terms">
+                <span class="desk-flow-num">3</span>
+                <span class="desk-flow-label">Terms</span>
+              </div>
+            </nav>
+            <div class="desk-tab-strip desk-tab-strip-flush">
+              <button type="button" class="desk-tab-btn active" data-desk-tab="details" onclick="switchDeskTab('transportation-panel','details',this)">1. Customer &amp; Route</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="charges" onclick="switchDeskTab('transportation-panel','charges',this)">2. Rates &amp; Fees</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="terms" onclick="switchDeskTab('transportation-panel','terms',this)">3. Terms</button>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="details">
+            <p class="desk-flow-hint">Enter customer and pickup/delivery locations first.</p>
             <!-- Customer Name & Currency Row -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div class="autocomplete-container">
@@ -2794,6 +2876,13 @@
               </div>
             </div>
 
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('transportation-panel','charges')">Continue to Rates &amp; Fees →</button>
+            </div>
+            </div><!-- /desk-tab-pane[details] -->
+
+            <div class="desk-tab-pane" data-tab-pane="charges" style="display:none;">
+            <p class="desk-flow-hint">Add charge lines with <strong>Sell Rate</strong> and <strong>Buy Rate</strong> for each fee.</p>
             <!-- Transportation Standalone Breakup Table -->
             <div id="transport-path-standalone-container" style="display: block;">
               <div class="cargo-table-container" style="margin-bottom: 0;">
@@ -2822,6 +2911,24 @@
                 </table>
               </div>
             </div>
+
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('transportation-panel','terms')">Continue to Terms →</button>
+            </div>
+            </div><!-- /desk-tab-pane[charges] -->
+
+            <div class="desk-tab-pane" data-tab-pane="terms" style="display:none;">
+            <p class="desk-flow-hint">Review and edit the terms that will appear on the customer quotation.</p>
+            <div class="atlas-terms-shell">
+              <div class="atlas-terms-toolbar">
+                <label for="transport-terms" class="atlas-terms-label">Editable Terms &amp; Conditions</label>
+                <button type="button" class="atlas-terms-focus-btn" onclick="document.getElementById('transport-terms').focus()" aria-label="Focus terms editor">
+                  <span class="ate-spark" aria-hidden="true">✦</span> Edit terms
+                </button>
+              </div>
+              <textarea id="transport-terms" rows="10" class="atlas-terms-field" placeholder="Add custom terms..."></textarea>
+            </div>
+            </div><!-- /desk-tab-pane[terms] -->
           </div>
 
           <!-- Summary sidebar -->
@@ -2873,7 +2980,31 @@
         </div>
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
-          <div class="glass-card" style="padding: 2rem;">
+          <div class="glass-card desk-form-card">
+            <nav class="desk-flow-rail" aria-label="Warehouse quote steps">
+              <div class="desk-flow-step is-active" data-flow-step="details">
+                <span class="desk-flow-num">1</span>
+                <span class="desk-flow-label">Customer</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="charges">
+                <span class="desk-flow-num">2</span>
+                <span class="desk-flow-label">Charges</span>
+              </div>
+              <div class="desk-flow-connector" aria-hidden="true"></div>
+              <div class="desk-flow-step" data-flow-step="terms">
+                <span class="desk-flow-num">3</span>
+                <span class="desk-flow-label">Terms</span>
+              </div>
+            </nav>
+            <div class="desk-tab-strip desk-tab-strip-flush">
+              <button type="button" class="desk-tab-btn active" data-desk-tab="details" onclick="switchDeskTab('warehousing-panel','details',this)">1. Customer</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="charges" onclick="switchDeskTab('warehousing-panel','charges',this)">2. Rates &amp; Fees</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="terms" onclick="switchDeskTab('warehousing-panel','terms',this)">3. Terms</button>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="details">
+            <p class="desk-flow-hint">Start with the customer and quoting currency.</p>
             <!-- Customer Name & Currency Row for Warehousing -->
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div class="autocomplete-container">
@@ -2895,6 +3026,13 @@
               </div>
             </div>
 
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('warehousing-panel','charges')">Continue to Rates &amp; Fees →</button>
+            </div>
+            </div><!-- /desk-tab-pane[details] -->
+
+            <div class="desk-tab-pane" data-tab-pane="charges" style="display:none;">
+            <p class="desk-flow-hint">Add warehousing charge lines with <strong>Sell Rate</strong> and <strong>Buy Rate</strong>.</p>
             <!-- Warehousing Standalone Breakup Table -->
             <div id="warehouse-path-standalone-container" style="display: block;">
               <div class="cargo-table-container" style="margin-bottom: 0;">
@@ -2923,6 +3061,24 @@
                 </table>
               </div>
             </div>
+
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('warehousing-panel','terms')">Continue to Terms →</button>
+            </div>
+            </div><!-- /desk-tab-pane[charges] -->
+
+            <div class="desk-tab-pane" data-tab-pane="terms" style="display:none;">
+            <p class="desk-flow-hint">Review and edit the terms that will appear on the customer quotation.</p>
+            <div class="atlas-terms-shell">
+              <div class="atlas-terms-toolbar">
+                <label for="warehouse-terms" class="atlas-terms-label">Editable Terms &amp; Conditions</label>
+                <button type="button" class="atlas-terms-focus-btn" onclick="document.getElementById('warehouse-terms').focus()" aria-label="Focus terms editor">
+                  <span class="ate-spark" aria-hidden="true">✦</span> Edit terms
+                </button>
+              </div>
+              <textarea id="warehouse-terms" rows="10" class="atlas-terms-field" placeholder="Add custom terms..."></textarea>
+            </div>
+            </div><!-- /desk-tab-pane[terms] -->
           </div>
 
           <!-- Summary sidebar -->
@@ -4335,11 +4491,11 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.09"></script>
-  <script src="ui-shell.js?v=129.09"></script>
-  <script src="ai-assistant.js?v=129.09"></script>
-  <script src="ai-sell-band.js?v=129.09"></script>
-  <script src="sales-v129.js?v=129.09"></script>
+  <script src="app-v4.js?v=129.10"></script>
+  <script src="ui-shell.js?v=129.10"></script>
+  <script src="ai-assistant.js?v=129.10"></script>
+  <script src="ai-sell-band.js?v=129.10"></script>
+  <script src="sales-v129.js?v=129.10"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4667,7 +4823,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.09">' +
+          '<link rel="stylesheet" href="index.css?v=129.10">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

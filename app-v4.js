@@ -19,6 +19,16 @@ const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
 4. Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.
 5. Rates are subject to space, booking and onward confirmation.`;
 
+const DEFAULT_TRANSPORT_TERMS = `1. Transportation rates are subject to vehicle availability and route confirmation.
+2. GST applies at 18% on taxable services unless otherwise agreed in writing.
+3. Waiting time, detention, and toll charges are additional unless included in the quote.
+4. Rates are valid for the quoted pickup and delivery locations only.`;
+
+const DEFAULT_WAREHOUSE_TERMS = `1. Warehousing rates are based on the storage period and handling scope quoted.
+2. GST applies at 18% on taxable services unless otherwise agreed in writing.
+3. Special handling, fumigation, or value-added services are chargeable at actuals.
+4. Rates are subject to space availability at the nominated facility.`;
+
 // Pricing Team Desks
 const TEAM_ROLES = {
   'ganny': { name: 'Pricing Team', type: 'admin' },
@@ -441,6 +451,11 @@ document.addEventListener("DOMContentLoaded", () => {
   setupRoleSwitcher();
   setupAirFreightEvents();
   setupSeaFreightEvents();
+  if (typeof upgradeSeaPrimaryLinerCard === 'function') upgradeSeaPrimaryLinerCard();
+  const transportTermsEl = document.getElementById('transport-terms');
+  if (transportTermsEl && !transportTermsEl.value) transportTermsEl.value = DEFAULT_TRANSPORT_TERMS;
+  const warehouseTermsEl = document.getElementById('warehouse-terms');
+  if (warehouseTermsEl && !warehouseTermsEl.value) warehouseTermsEl.value = DEFAULT_WAREHOUSE_TERMS;
   loadSavedQuotes();
   loadMemorizedSurcharges();
   checkSession();
@@ -10674,6 +10689,9 @@ function amendQuote(id, options) {
     }
     const transportGstToggle = document.getElementById("transport-gst-enabled");
     if (transportGstToggle) transportGstToggle.checked = quote.details?.gstEnabled !== false;
+    if (document.getElementById("transport-terms")) {
+      document.getElementById("transport-terms").value = quote.details?.termsAndConditions || DEFAULT_TRANSPORT_TERMS;
+    }
     const transportBody = document.getElementById("transport-standalone-body");
     if (transportBody) {
       transportBody.innerHTML = "";
@@ -10722,8 +10740,9 @@ function amendQuote(id, options) {
     }
     const warehouseGstToggle = document.getElementById("warehouse-gst-enabled");
     if (warehouseGstToggle) warehouseGstToggle.checked = quote.details?.gstEnabled !== false;
-
-
+    if (document.getElementById("warehouse-terms")) {
+      document.getElementById("warehouse-terms").value = quote.details?.termsAndConditions || DEFAULT_WAREHOUSE_TERMS;
+    }
 
     const warehouseBody = document.getElementById("warehouse-standalone-body");
     if (warehouseBody) {
@@ -15051,7 +15070,8 @@ async function saveStandaloneQuote(module) {
       gstRate: gstEnabled ? 18 : 0,
       baseFreight: subtotal,
       gstAmount: tax,
-      usingBuyFallback: !!usingBuyFallback
+      usingBuyFallback: !!usingBuyFallback,
+      termsAndConditions: (document.getElementById(`${module}-terms`)?.value.trim()) || (module === 'transport' ? DEFAULT_TRANSPORT_TERMS : DEFAULT_WAREHOUSE_TERMS)
     },
     notes: `Calculated standalone. Subtotal: ${subtotal}, GST (${gstEnabled ? '18%' : 'not applied'}): ${tax}, Total: ${total} ${cur}`
   };
@@ -19586,6 +19606,20 @@ document.addEventListener("click", function (event) {
 // in spirit to the existing view-panel / toggle-option show/hide patterns
 // already used throughout the app.
 // ============================================================
+function syncDeskFlowRail(panelId, tabName) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  panel.querySelectorAll('.desk-flow-step').forEach((step) => {
+    step.classList.toggle('is-active', step.getAttribute('data-flow-step') === tabName);
+    step.classList.toggle('is-complete', false);
+  });
+  const steps = [...panel.querySelectorAll('.desk-flow-step')];
+  const activeIdx = steps.findIndex((s) => s.getAttribute('data-flow-step') === tabName);
+  steps.forEach((step, idx) => {
+    if (activeIdx >= 0 && idx < activeIdx) step.classList.add('is-complete');
+  });
+}
+
 function switchDeskTab(panelId, tabName, btnEl) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
@@ -19597,8 +19631,81 @@ function switchDeskTab(panelId, tabName, btnEl) {
     strip.querySelectorAll('.desk-tab-btn').forEach((b) => b.classList.remove('active'));
   }
   if (btnEl) btnEl.classList.add('active');
+  syncDeskFlowRail(panelId, tabName);
 }
 window.switchDeskTab = switchDeskTab;
+
+function advanceDeskStep(panelId, tabName) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const btn = panel.querySelector(`.desk-tab-btn[data-desk-tab="${tabName}"]`);
+  if (btn) switchDeskTab(panelId, tabName, btn);
+}
+window.advanceDeskStep = advanceDeskStep;
+
+function upgradeSeaPrimaryLinerCard() {
+  const card = document.getElementById('sea-liner-card-1');
+  if (!card || card.dataset.rateModalUpgraded === '1') return;
+
+  const accordions = card.querySelector('.liner-accordions-group');
+  if (!accordions) return;
+
+  const summaryBar = document.createElement('div');
+  summaryBar.className = 'liner-rate-summary-bar';
+  summaryBar.innerHTML = `
+    <span class="liner-rate-summary-text">Configure freight, origin and destination fees</span>
+    <button type="button" class="open-liner-rate-modal-btn atlas-rate-config-btn" title="Configure rates and fees" aria-label="Configure rates and fees">
+      <span class="arc-chip-label">Rates &amp; fees</span>
+      <span class="arc-chevron" aria-hidden="true">›</span>
+    </button>`;
+  accordions.parentNode.insertBefore(summaryBar, accordions);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'liner-rate-modal-overlay';
+  overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:2000;align-items:center;justify-content:center;padding:1.5rem;';
+
+  const dialog = document.createElement('div');
+  dialog.className = 'liner-rate-modal-dialog';
+  dialog.style.cssText = 'background:var(--bg-surface,#fff);border-radius:12px;max-width:720px;width:100%;max-height:88vh;overflow-y:auto;padding:1.1rem 1.4rem;';
+
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;border-bottom:1px solid var(--border-1);padding-bottom:0.6rem;';
+  header.innerHTML = `
+    <span style="font-size:0.85rem;font-weight:700;color:#1b1c5c;">Rates and fees — Liner 1 Option</span>
+    <button type="button" class="close-liner-rate-modal-btn" style="background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1;color:var(--t2,#64748b);padding:2px 6px;">✕</button>`;
+
+  const footer = document.createElement('div');
+  footer.style.cssText = 'margin-top:1rem;text-align:right;border-top:1px solid var(--border-1);padding-top:0.75rem;';
+  footer.innerHTML = '<button type="button" class="btn-primary done-liner-rate-modal-btn" style="padding:7px 18px;font-size:0.78rem;">Done</button>';
+
+  accordions.parentNode.replaceChild(overlay, accordions);
+  dialog.appendChild(header);
+  dialog.appendChild(accordions);
+  dialog.appendChild(footer);
+  overlay.appendChild(dialog);
+
+  const openBtn = summaryBar.querySelector('.open-liner-rate-modal-btn');
+  const closeBtn = header.querySelector('.close-liner-rate-modal-btn');
+  const doneBtn = footer.querySelector('.done-liner-rate-modal-btn');
+  const openModal = () => { overlay.style.display = 'flex'; };
+  const closeModal = () => {
+    overlay.style.display = 'none';
+    if (typeof updateLinerRateSummary === 'function') updateLinerRateSummary(card);
+  };
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  doneBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+  card.addEventListener('input', (e) => {
+    if (e.target.classList.contains('sea-lcl-rate') || e.target.classList.contains('sea-bb-rate')) {
+      if (typeof updateLinerRateSummary === 'function') updateLinerRateSummary(card);
+    }
+  });
+
+  card.dataset.rateModalUpgraded = '1';
+  if (typeof updateLinerRateSummary === 'function') updateLinerRateSummary(card);
+}
+window.upgradeSeaPrimaryLinerCard = upgradeSeaPrimaryLinerCard;
 
 // ============================================================
 // ARCHITECTURE MOVE 3 — Costing grid totals footer.
@@ -20019,7 +20126,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.09"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.10"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
