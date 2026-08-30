@@ -2480,14 +2480,32 @@ function setupAirFreightEvents() {
   const airOriginInput = document.getElementById("air-origin");
   if (airOriginInput) {
     airOriginInput.addEventListener("input", () => {
+      syncPrimaryRouteRowFromMainFields('air');
+      refreshDeskRouteDropdowns('air');
       updateCartageRowVisibility();
       calculateAirFreight();
     });
     airOriginInput.addEventListener("change", () => {
+      syncPrimaryRouteRowFromMainFields('air');
+      refreshDeskRouteDropdowns('air');
       updateCartageRowVisibility();
       calculateAirFreight();
     });
   }
+  const airDestInput = document.getElementById("air-dest");
+  if (airDestInput) {
+    airDestInput.addEventListener("input", () => {
+      syncPrimaryRouteRowFromMainFields('air');
+      refreshDeskRouteDropdowns('air');
+      calculateAirFreight();
+    });
+    airDestInput.addEventListener("change", () => {
+      syncPrimaryRouteRowFromMainFields('air');
+      refreshDeskRouteDropdowns('air');
+      calculateAirFreight();
+    });
+  }
+  initDeskRoutes('air');
 
   const container = document.getElementById("air-airlines-list-container");
   if (container && container.querySelectorAll(".airline-card").length === 0) {
@@ -2739,6 +2757,7 @@ function addAirlineCard(data = null) {
   const pivotWeight = data ? data.pivotWeight : "";
   const routeOrigin = data && data.origin ? data.origin : "";
   const routeDestination = data && data.destination ? data.destination : "";
+  const routeId = data && data.routeId ? data.routeId : "primary";
   const isSelected = data ? !!data.selected : (count === 1);
   const activeBreaks = data ? data.breaks : {};
   const ams_fee = data ? (data.ams_fee !== undefined ? data.ams_fee : (data.amsFee !== undefined ? data.amsFee : "")) : "";
@@ -2776,6 +2795,11 @@ function addAirlineCard(data = null) {
       <input type="hidden" class="air-name" value="">
     </div>
 
+    <div class="card-route-select-wrap">
+      <label>Route for this option</label>
+      <select class="air-route-select card-route-select" onchange="calculateAirFreight()">${buildDeskRouteSelectOptions('air', routeId)}</select>
+    </div>
+
     <div class="airline-rate-summary-bar">
       <span class="airline-rate-summary-text">No rates entered yet</span>
       <button type="button" class="open-airline-rate-modal-btn atlas-rate-config-btn" title="Configure rates and fees" aria-label="Configure rates and fees">
@@ -2789,20 +2813,6 @@ function addAirlineCard(data = null) {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
           <span style="font-size: 0.85rem; font-weight: 700; color: #5a7a9a;">Rates and fees — Airline Option #${count}</span>
           <button type="button" class="close-airline-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
-        </div>
-
-        <div style="margin-bottom: 0.75rem;">
-          <label style="font-weight: 700; font-size: 0.75rem; color: var(--t2, #64748b); display: block; margin-bottom: 0.4rem;">Route for this option (optional — leave blank to use the shipment's Origin/Destination)</label>
-          <div class="air-route-override-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group autocomplete-container">
-              <label>Origin</label>
-              <input type="text" class="air-route-origin-override" placeholder="Same as shipment" value="${routeOrigin}" autocomplete="off" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-            </div>
-            <div class="form-group autocomplete-container">
-              <label>Destination</label>
-              <input type="text" class="air-route-dest-override" placeholder="Same as shipment" value="${routeDestination}" autocomplete="off" oninput="calculateAirFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-            </div>
-          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -2937,10 +2947,17 @@ function addAirlineCard(data = null) {
 
   container.appendChild(card);
 
-  const routeOriginOverrideEl = card.querySelector(".air-route-origin-override");
-  const routeDestOverrideEl = card.querySelector(".air-route-dest-override");
-  if (routeOriginOverrideEl) setupAutocomplete(routeOriginOverrideEl, "airports");
-  if (routeDestOverrideEl) setupAutocomplete(routeDestOverrideEl, "airports");
+  // Legacy saved quotes may still carry per-card origin/destination without routeId —
+  // infer routeId from the routes table when possible.
+  if (data && (data.origin || data.destination) && !data.routeId) {
+    const routes = getDeskRoutes('air');
+    const match = routes.find(r =>
+      (r.origin || '').trim().toUpperCase() === (data.origin || '').trim().toUpperCase() &&
+      (r.destination || '').trim().toUpperCase() === (data.destination || '').trim().toUpperCase()
+    );
+    const sel = card.querySelector('.air-route-select');
+    if (sel && match) sel.value = match.id;
+  }
 
   // Rates & fees popup — keeps the airline card itself down to just the
   // carrier field and a summary strip; everything else (routing, weight
@@ -3283,6 +3300,273 @@ function getAirlineColor(name) {
 }
 window.getAirlineColor = getAirlineColor;
 
+// ── Multi-route desk management (Air + Sea) ──────────────────────────────
+let airDeskRouteCounter = 1;
+let seaDeskRouteCounter = 1;
+
+function getDeskRouteMeta(mode) {
+  const isAir = mode === 'air';
+  return {
+    mode,
+    tbodyId: isAir ? 'air-quote-routes-body' : 'sea-quote-routes-body',
+    originFieldId: isAir ? 'air-origin' : 'sea-origin',
+    destFieldId: isAir ? 'air-dest' : 'sea-dest',
+    autocompleteType: isAir ? 'airports' : 'ports',
+    calcFn: isAir ? calculateAirFreight : calculateSeaFreight,
+    routeSelectClass: isAir ? 'air-route-select' : 'sea-route-select',
+    cardSelector: isAir ? '#air-airlines-list-container .airline-card' : '#sea-liners-container .liner-card',
+    counterRef: isAir ? 'airDeskRouteCounter' : 'seaDeskRouteCounter'
+  };
+}
+
+function getDeskRoutes(mode) {
+  const meta = getDeskRouteMeta(mode);
+  const tbody = document.getElementById(meta.tbodyId);
+  if (!tbody) return [];
+  const rows = tbody.querySelectorAll('tr[data-route-id]');
+  if (rows.length === 0) {
+    return [{
+      id: 'primary',
+      origin: document.getElementById(meta.originFieldId)?.value || '',
+      destination: document.getElementById(meta.destFieldId)?.value || '',
+      label: 'Route 1'
+    }];
+  }
+  return Array.from(rows).map((row, idx) => ({
+    id: row.dataset.routeId,
+    origin: row.querySelector('.desk-route-origin')?.value || '',
+    destination: row.querySelector('.desk-route-dest')?.value || '',
+    label: `Route ${idx + 1}`
+  }));
+}
+window.getDeskRoutes = getDeskRoutes;
+
+function buildDeskRouteSelectOptions(mode, selectedId) {
+  const routes = getDeskRoutes(mode);
+  return routes.map(r => {
+    const o = (r.origin || '—').trim();
+    const d = (r.destination || '—').trim();
+    const label = `${r.label}: ${o || '?'} → ${d || '?'}`;
+    const sel = (selectedId === r.id || (!selectedId && r.id === 'primary')) ? ' selected' : '';
+    return `<option value="${r.id}"${sel}>${label}</option>`;
+  }).join('');
+}
+
+function refreshDeskRouteDropdowns(mode) {
+  const meta = getDeskRouteMeta(mode);
+  document.querySelectorAll(meta.cardSelector).forEach(card => {
+    const sel = card.querySelector(`.${meta.routeSelectClass}`);
+    if (!sel || sel.disabled) return;
+    const current = sel.value || 'primary';
+    sel.innerHTML = buildDeskRouteSelectOptions(mode, current);
+    if (!sel.value) sel.value = 'primary';
+  });
+}
+window.refreshDeskRouteDropdowns = refreshDeskRouteDropdowns;
+
+function syncPrimaryRouteRowFromMainFields(mode) {
+  const meta = getDeskRouteMeta(mode);
+  const tbody = document.getElementById(meta.tbodyId);
+  if (!tbody) return;
+  const primaryRow = tbody.querySelector('tr[data-route-id="primary"]');
+  if (!primaryRow) return;
+  const originInp = primaryRow.querySelector('.desk-route-origin');
+  const destInp = primaryRow.querySelector('.desk-route-dest');
+  const mainOrigin = document.getElementById(meta.originFieldId)?.value || '';
+  const mainDest = document.getElementById(meta.destFieldId)?.value || '';
+  if (originInp && document.activeElement !== originInp) originInp.value = mainOrigin;
+  if (destInp && document.activeElement !== destInp) destInp.value = mainDest;
+}
+
+function syncMainFieldsFromPrimaryRouteRow(mode) {
+  const meta = getDeskRouteMeta(mode);
+  const tbody = document.getElementById(meta.tbodyId);
+  if (!tbody) return;
+  const primaryRow = tbody.querySelector('tr[data-route-id="primary"]');
+  if (!primaryRow) return;
+  const originInp = primaryRow.querySelector('.desk-route-origin');
+  const destInp = primaryRow.querySelector('.desk-route-dest');
+  const mainOrigin = document.getElementById(meta.originFieldId);
+  const mainDest = document.getElementById(meta.destFieldId);
+  if (mainOrigin && originInp) mainOrigin.value = originInp.value;
+  if (mainDest && destInp) mainDest.value = destInp.value;
+}
+
+function bindDeskRouteRowEvents(mode, row, routeId) {
+  const meta = getDeskRouteMeta(mode);
+  const originInp = row.querySelector('.desk-route-origin');
+  const destInp = row.querySelector('.desk-route-dest');
+  const onChange = () => {
+    if (routeId === 'primary') syncMainFieldsFromPrimaryRouteRow(mode);
+    refreshDeskRouteDropdowns(mode);
+    meta.calcFn();
+  };
+  if (originInp) {
+    setupAutocomplete(originInp, meta.autocompleteType);
+    originInp.addEventListener('input', onChange);
+  }
+  if (destInp) {
+    setupAutocomplete(destInp, meta.autocompleteType);
+    destInp.addEventListener('input', onChange);
+  }
+}
+
+function renderDeskRoutesTable(mode, routesData) {
+  const meta = getDeskRouteMeta(mode);
+  const tbody = document.getElementById(meta.tbodyId);
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const routes = (routesData && routesData.length > 0) ? routesData : [{
+    id: 'primary',
+    origin: document.getElementById(meta.originFieldId)?.value || '',
+    destination: document.getElementById(meta.destFieldId)?.value || ''
+  }];
+  routes.forEach((route, idx) => {
+    const routeId = route.id || (idx === 0 ? 'primary' : `route-${mode}-${++window[meta.counterRef]}`);
+    const tr = document.createElement('tr');
+    tr.dataset.routeId = routeId;
+    tr.innerHTML = `
+      <td style="font-weight:700; color:var(--t2);">${idx + 1}</td>
+      <td class="autocomplete-container"><input type="text" class="desk-route-origin" placeholder="${mode === 'air' ? 'Origin airport' : 'Port of loading'}" value="${route.origin || ''}" autocomplete="off"></td>
+      <td class="autocomplete-container"><input type="text" class="desk-route-dest" placeholder="${mode === 'air' ? 'Destination airport' : 'Port of discharge'}" value="${route.destination || ''}" autocomplete="off"></td>
+      <td style="text-align:center; width:48px;">${idx === 0 ? '' : `<button type="button" class="delete-btn desk-route-remove-btn" title="Remove route" onclick="removeDeskRoute('${mode}', '${routeId}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg></button>`}</td>
+    `;
+    tbody.appendChild(tr);
+    bindDeskRouteRowEvents(mode, tr, routeId);
+  });
+  refreshDeskRouteDropdowns(mode);
+}
+
+function initDeskRoutes(mode, routesData) {
+  renderDeskRoutesTable(mode, routesData);
+}
+window.initDeskRoutes = initDeskRoutes;
+
+function addDeskRoute(mode) {
+  const meta = getDeskRouteMeta(mode);
+  const tbody = document.getElementById(meta.tbodyId);
+  if (!tbody) return;
+  const routeId = `route-${mode}-${++window[meta.counterRef]}`;
+  const tr = document.createElement('tr');
+  tr.dataset.routeId = routeId;
+  const rowNum = tbody.querySelectorAll('tr[data-route-id]').length + 1;
+  tr.innerHTML = `
+    <td style="font-weight:700; color:var(--t2);">${rowNum}</td>
+    <td class="autocomplete-container"><input type="text" class="desk-route-origin" placeholder="${mode === 'air' ? 'Origin airport' : 'Port of loading'}" autocomplete="off"></td>
+    <td class="autocomplete-container"><input type="text" class="desk-route-dest" placeholder="${mode === 'air' ? 'Destination airport' : 'Port of discharge'}" autocomplete="off"></td>
+    <td style="text-align:center; width:48px;"><button type="button" class="delete-btn desk-route-remove-btn" title="Remove route" onclick="removeDeskRoute('${mode}', '${routeId}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg></button></td>
+  `;
+  tbody.appendChild(tr);
+  bindDeskRouteRowEvents(mode, tr, routeId);
+  refreshDeskRouteDropdowns(mode);
+  meta.calcFn();
+}
+window.addDeskRoute = addDeskRoute;
+
+function removeDeskRoute(mode, routeId) {
+  if (routeId === 'primary') return;
+  const meta = getDeskRouteMeta(mode);
+  const tbody = document.getElementById(meta.tbodyId);
+  if (!tbody) return;
+  const row = tbody.querySelector(`tr[data-route-id="${routeId}"]`);
+  if (row) row.remove();
+  tbody.querySelectorAll('tr[data-route-id]').forEach((tr, idx) => {
+    tr.querySelector('td:first-child').textContent = String(idx + 1);
+  });
+  document.querySelectorAll(meta.cardSelector).forEach(card => {
+    const sel = card.querySelector(`.${meta.routeSelectClass}`);
+    if (sel && sel.value === routeId) sel.value = 'primary';
+  });
+  refreshDeskRouteDropdowns(mode);
+  meta.calcFn();
+}
+window.removeDeskRoute = removeDeskRoute;
+
+function resolveCardEffectiveRoute(mode, card) {
+  const meta = getDeskRouteMeta(mode);
+  const routes = getDeskRoutes(mode);
+  const routeSelect = card.querySelector(`.${meta.routeSelectClass}`);
+  let origin = '';
+  let destination = '';
+  let routeId = '';
+
+  // Break Bulk sea liners always use the main shipment route only.
+  if (mode === 'sea' && (card.dataset.mode === 'bb')) {
+    origin = document.getElementById(meta.originFieldId)?.value || '';
+    destination = document.getElementById(meta.destFieldId)?.value || '';
+  } else if (routeSelect && routeSelect.value && !routeSelect.disabled) {
+    routeId = routeSelect.value;
+    const route = routes.find(r => r.id === routeId);
+    if (route) {
+      origin = route.origin;
+      destination = route.destination;
+    }
+  }
+
+  if (!origin && !destination) {
+    const overrideOrigin = card.querySelector(mode === 'air' ? '.air-route-origin-override' : '.sea-route-origin-override');
+    const overrideDest = card.querySelector(mode === 'air' ? '.air-route-dest-override' : '.sea-route-dest-override');
+    origin = overrideOrigin?.value || document.getElementById(meta.originFieldId)?.value || '';
+    destination = overrideDest?.value || document.getElementById(meta.destFieldId)?.value || '';
+  } else {
+    origin = origin || document.getElementById(meta.originFieldId)?.value || '';
+    destination = destination || document.getElementById(meta.destFieldId)?.value || '';
+  }
+
+  const effectiveOrigin = origin.trim().toUpperCase();
+  const effectiveDestination = destination.trim().toUpperCase();
+  return {
+    origin: origin.trim(),
+    destination: destination.trim(),
+    effectiveOrigin,
+    effectiveDestination,
+    routeKey: `${effectiveOrigin}→${effectiveDestination}`,
+    routeId
+  };
+}
+window.resolveCardEffectiveRoute = resolveCardEffectiveRoute;
+
+function deriveQuoteRoutesFromSavedQuote(mode, details) {
+  if (details?.quoteRoutes && details.quoteRoutes.length > 0) return details.quoteRoutes;
+  const cards = mode === 'air' ? (details?.airlines || []) : (details?.liners || []);
+  const routes = [];
+  const seen = new Set();
+  const pushRoute = (origin, destination) => {
+    const o = (origin || '').trim();
+    const d = (destination || '').trim();
+    const key = `${o.toUpperCase()}|${d.toUpperCase()}`;
+    if (!o && !d) return;
+    if (seen.has(key)) return;
+    seen.add(key);
+    routes.push({
+      id: routes.length === 0 ? 'primary' : `route-${mode}-derived-${routes.length}`,
+      origin: o,
+      destination: d
+    });
+  };
+  pushRoute(details?.origin, details?.destination);
+  cards.forEach(c => {
+    if (c.origin || c.destination) {
+      pushRoute(c.origin || details?.origin, c.destination || details?.destination);
+    }
+  });
+  if (routes.length === 0) {
+    return [{ id: 'primary', origin: details?.origin || '', destination: details?.destination || '' }];
+  }
+  return routes;
+}
+window.deriveQuoteRoutesFromSavedQuote = deriveQuoteRoutesFromSavedQuote;
+
+function updateSeaCardRouteSelectVisibility(card) {
+  const wrap = card.querySelector('.card-route-select-wrap');
+  const sel = card.querySelector('.sea-route-select');
+  if (!wrap || !sel) return;
+  const isBb = card.dataset.mode === 'bb';
+  wrap.classList.toggle('is-bb-only', isBb);
+  sel.disabled = isBb;
+  if (isBb) sel.value = 'primary';
+}
+
 function updateCartageRowVisibility() {
   const sharedOriginVal = document.getElementById("air-origin")?.value.trim().toUpperCase() || "";
   const originBodies = document.querySelectorAll(".air-card-origin-surcharges-body, #air-origin-surcharges-body");
@@ -3294,8 +3578,8 @@ function updateCartageRowVisibility() {
     // shared field). The single global nomination-role table has no card
     // to resolve from and keeps using the shared field only, as before.
     const ownerCard = airOriginBody.closest(".airline-card");
-    const cardOriginOverride = ownerCard ? (ownerCard.querySelector(".air-route-origin-override")?.value || "").trim().toUpperCase() : "";
-    const isBOM = (cardOriginOverride || sharedOriginVal).startsWith("BOM");
+    const cardRoute = ownerCard ? resolveCardEffectiveRoute('air', ownerCard) : null;
+    const isBOM = (cardRoute ? cardRoute.effectiveOrigin : sharedOriginVal).startsWith("BOM");
 
     const rows = Array.from(airOriginBody.querySelectorAll("tr"));
     const cartageRow = rows.find(row => row.querySelector(".chg-name")?.value.trim().toLowerCase() === "cartage");
@@ -3488,11 +3772,11 @@ function calculateAirFreight() {
     const tt = formatTransitTimeDisplay(card.querySelector(".air-tt").value.trim());
     const validity = card.querySelector(".air-validity").value;
     const pivotWeight = parseFloat(card.querySelector(".air-pivot-weight").value) || 0;
-    const routeOriginOverride = (card.querySelector(".air-route-origin-override")?.value || "").trim();
-    const routeDestOverride = (card.querySelector(".air-route-dest-override")?.value || "").trim();
-    const effectiveOrigin = (routeOriginOverride || sharedAirRouteOrigin).toUpperCase();
-    const effectiveDestination = (routeDestOverride || sharedAirRouteDest).toUpperCase();
-    const routeKey = `${effectiveOrigin}→${effectiveDestination}`;
+    const cardRoute = resolveCardEffectiveRoute('air', card);
+    const effectiveOrigin = cardRoute.effectiveOrigin;
+    const effectiveDestination = cardRoute.effectiveDestination;
+    const routeKey = cardRoute.routeKey;
+    const routeId = cardRoute.routeId || 'primary';
 
     const airlineChargeableWeight = Math.max(totalGrossWeight, totalVolumeWeight, pivotWeight);
     const autoBreakName = getWeightBreakBracket(airlineChargeableWeight);
@@ -3774,8 +4058,9 @@ function calculateAirFreight() {
       tt,
       validity,
       pivotWeight,
-      origin: routeOriginOverride,
-      destination: routeDestOverride,
+      origin: cardRoute.origin,
+      destination: cardRoute.destination,
+      routeId,
       effectiveOrigin,
       effectiveDestination,
       routeKey,
@@ -4184,6 +4469,7 @@ function calculateAirFreight() {
       pivotWeight: alt.pivotWeight,
       origin: alt.origin || "",
       destination: alt.destination || "",
+      routeId: alt.routeId || "primary",
       routeWinner: !!alt.isRouteWinner,
       amsFee: alt.amsFee,
       ams_fee: alt.ams_fee,
@@ -4253,6 +4539,8 @@ function calculateAirFreight() {
     totalINR = selectedAirlineData.grandTotal * (EXCHANGE_RATES.GBP_TO_USD || 1.25) * (EXCHANGE_RATES.USD_TO_INR || 83);
   }
   appState.currentAirFreight.grandTotalINR = totalINR;
+  appState.currentAirFreight.combinedRouteTotal = combinedAirRouteTotal;
+  appState.currentAirFreight.quoteRoutes = getDeskRoutes('air');
 }
 
 // Multi-route (Option A): when 2+ airline cards share the same effective
@@ -4264,16 +4552,9 @@ window.markAirRouteWinner = function (cardId) {
   const card = document.getElementById(cardId);
   const container = document.getElementById("air-airlines-list-container");
   if (!card || !container) return;
-  const sharedOrigin = (document.getElementById("air-origin")?.value || "").trim().toUpperCase();
-  const sharedDest = (document.getElementById("air-dest")?.value || "").trim().toUpperCase();
-  const routeKeyOf = (c) => {
-    const o = (c.querySelector(".air-route-origin-override")?.value || "").trim().toUpperCase() || sharedOrigin;
-    const d = (c.querySelector(".air-route-dest-override")?.value || "").trim().toUpperCase() || sharedDest;
-    return `${o}→${d}`;
-  };
-  const targetRoute = routeKeyOf(card);
+  const targetRoute = resolveCardEffectiveRoute('air', card).routeKey;
   container.querySelectorAll(".airline-card").forEach((c) => {
-    if (routeKeyOf(c) !== targetRoute) return;
+    if (resolveCardEffectiveRoute('air', c).routeKey !== targetRoute) return;
     if (c === card) c.dataset.routeWinner = "true";
     else delete c.dataset.routeWinner;
   });
@@ -4422,6 +4703,28 @@ function setupSeaFreightEvents() {
     });
   }
 
+  const seaOriginInput = document.getElementById("sea-origin");
+  if (seaOriginInput) {
+    const onSeaRouteFieldChange = () => {
+      syncPrimaryRouteRowFromMainFields('sea');
+      refreshDeskRouteDropdowns('sea');
+      calculateSeaFreight();
+    };
+    seaOriginInput.addEventListener("input", onSeaRouteFieldChange);
+    seaOriginInput.addEventListener("change", onSeaRouteFieldChange);
+  }
+  const seaDestInput = document.getElementById("sea-dest");
+  if (seaDestInput) {
+    const onSeaRouteFieldChange = () => {
+      syncPrimaryRouteRowFromMainFields('sea');
+      refreshDeskRouteDropdowns('sea');
+      calculateSeaFreight();
+    };
+    seaDestInput.addEventListener("input", onSeaRouteFieldChange);
+    seaDestInput.addEventListener("change", onSeaRouteFieldChange);
+  }
+  initDeskRoutes('sea');
+
 }
 
 
@@ -4482,6 +4785,7 @@ window.switchLinerMode = function (linerIndex, mode) {
   if (bbForm) bbForm.style.display = (mode === 'bb') ? "block" : "none";
 
   card.dataset.mode = mode;
+  updateSeaCardRouteSelectVisibility(card);
   if (mode === 'fcl') {
     updateLinerSurchargeContainerOptions(linerIndex);
   }
@@ -4585,6 +4889,7 @@ window.addNewLinerCard = function (data = null) {
   const destFeesEnabled = data?.destFeesEnabled !== false;
   const routeOrigin = data?.origin || "";
   const routeDestination = data?.destination || "";
+  const routeId = data?.routeId || "primary";
 
   linerCard.innerHTML = `
     <div class="liner-card-header">
@@ -4605,6 +4910,12 @@ window.addNewLinerCard = function (data = null) {
       </div>
     </div>
 
+    <div class="card-route-select-wrap${isBb ? ' is-bb-only' : ''}">
+      <label>Route for this liner${isBb ? ' (Break Bulk uses main POL/POD)' : ''}</label>
+      <select class="sea-route-select card-route-select" onchange="calculateSeaFreight()" ${isBb ? 'disabled' : ''}>${buildDeskRouteSelectOptions('sea', routeId)}</select>
+      ${isBb ? '<span class="card-route-bb-note">Break Bulk / RoRo quotes the main shipment route only.</span>' : ''}
+    </div>
+
     <div class="liner-rate-summary-bar">
       <span class="liner-rate-summary-text" style="font-size: 0.72rem; color: var(--t2, #64748b); font-weight: 600;">No rates entered yet</span>
       <button type="button" class="open-liner-rate-modal-btn atlas-rate-config-btn" title="Configure rates and fees" aria-label="Configure rates and fees">
@@ -4618,20 +4929,6 @@ window.addNewLinerCard = function (data = null) {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
           <span style="font-size: 0.85rem; font-weight: 700; color: #5a7a9a;">Rates and fees — Liner ${index} Option</span>
           <button type="button" class="close-liner-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
-        </div>
-
-        <div style="margin-bottom: 0.75rem;">
-          <label style="font-weight: 700; font-size: 0.75rem; color: var(--t2, #64748b); display: block; margin-bottom: 0.4rem;">Route for this option (optional — leave blank to use the shipment's POL/POD)</label>
-          <div class="sea-route-override-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group autocomplete-container">
-              <label>Origin</label>
-              <input type="text" class="sea-route-origin-override" placeholder="Same as shipment" value="${routeOrigin}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-            </div>
-            <div class="form-group autocomplete-container">
-              <label>Destination</label>
-              <input type="text" class="sea-route-dest-override" placeholder="Same as shipment" value="${routeDestination}" autocomplete="off" oninput="calculateSeaFreight()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px;">
-            </div>
-          </div>
         </div>
 
     <!-- Liner Accordions Group -->
@@ -4854,10 +5151,16 @@ window.addNewLinerCard = function (data = null) {
 
   container.appendChild(linerCard);
 
-  const seaRouteOriginOverrideEl = linerCard.querySelector(".sea-route-origin-override");
-  const seaRouteDestOverrideEl = linerCard.querySelector(".sea-route-dest-override");
-  if (seaRouteOriginOverrideEl) setupAutocomplete(seaRouteOriginOverrideEl, "seaports");
-  if (seaRouteDestOverrideEl) setupAutocomplete(seaRouteDestOverrideEl, "seaports");
+  if (data && (data.origin || data.destination) && !data.routeId) {
+    const routes = getDeskRoutes('sea');
+    const match = routes.find(r =>
+      (r.origin || '').trim().toUpperCase() === (data.origin || '').trim().toUpperCase() &&
+      (r.destination || '').trim().toUpperCase() === (data.destination || '').trim().toUpperCase()
+    );
+    const sel = linerCard.querySelector('.sea-route-select');
+    if (sel && match) sel.value = match.id;
+  }
+  updateSeaCardRouteSelectVisibility(linerCard);
 
   // Rates & fees popup — keeps the liner card itself down to just the
   // liner-name field and a summary strip; everything else (freight mode,
@@ -5142,11 +5445,12 @@ function calculateSeaFreight() {
     const originFeesEnabled = card.querySelector(".sea-enable-origin-fees")?.checked ?? true;
     const destFeesEnabled = card.querySelector(".sea-enable-dest-fees")?.checked ?? true;
 
-    const routeOriginOverride = (card.querySelector(".sea-route-origin-override")?.value || "").trim();
-    const routeDestOverride = (card.querySelector(".sea-route-dest-override")?.value || "").trim();
-    const effectiveOrigin = (routeOriginOverride || sharedSeaRouteOrigin).toUpperCase();
-    const effectiveDestination = (routeDestOverride || sharedSeaRouteDest).toUpperCase();
-    const routeKey = `${effectiveOrigin}→${effectiveDestination}`;
+    const cardRoute = resolveCardEffectiveRoute('sea', card);
+    const effectiveOrigin = cardRoute.effectiveOrigin;
+    const effectiveDestination = cardRoute.effectiveDestination;
+    const routeKey = cardRoute.routeKey;
+    const routeId = cardRoute.routeId || 'primary';
+    const winnerGroupKey = linerMode === 'bb' ? null : `${routeKey}|${linerMode}`;
 
     // Badges update
     const tariffsBadge = card.querySelector(".sea-tariffs-status-badge");
@@ -5345,11 +5649,13 @@ function calculateSeaFreight() {
       linerName,
       mode: linerMode,
       chargeableCbm: getLinerChargeableCbm(linerMode),
-      origin: routeOriginOverride,
-      destination: routeDestOverride,
+      origin: cardRoute.origin,
+      destination: cardRoute.destination,
+      routeId,
       effectiveOrigin,
       effectiveDestination,
       routeKey,
+      winnerGroupKey,
       tariffsEnabled,
       originFeesEnabled,
       destFeesEnabled,
@@ -5383,10 +5689,16 @@ function calculateSeaFreight() {
   // exactly one liner need no choice at all — always the winner.
   // calculatedLiners[0] below stays the sole driver of every existing
   // top-level result field — untouched.
+  // Multi-route: FCL and LCL liners participate in Combined Total (All Routes).
+  // Break Bulk stays on the main route only and is excluded from the combined
+  // multi-route total. Winner groups are per route + mode so an FCL and LCL
+  // option on the same route both count (typical FCL+LCL combo quote).
+  const multiRouteSeaLiners = calculatedLiners.filter(l => l.mode !== 'bb');
   const seaRouteGroups = new Map();
-  calculatedLiners.forEach(l => {
-    if (!seaRouteGroups.has(l.routeKey)) seaRouteGroups.set(l.routeKey, []);
-    seaRouteGroups.get(l.routeKey).push(l);
+  multiRouteSeaLiners.forEach(l => {
+    if (!l.winnerGroupKey) return;
+    if (!seaRouteGroups.has(l.winnerGroupKey)) seaRouteGroups.set(l.winnerGroupKey, []);
+    seaRouteGroups.get(l.winnerGroupKey).push(l);
   });
   seaRouteGroups.forEach(group => {
     group.forEach(l => { l.routeGroupSize = group.length; });
@@ -5402,9 +5714,16 @@ function calculateSeaFreight() {
       else delete l.card.dataset.routeWinner;
     });
   });
-  const distinctSeaRoutes = new Set(calculatedLiners.map(l => l.routeKey));
+  calculatedLiners.forEach(l => {
+    if (l.mode === 'bb') {
+      l.isRouteWinner = false;
+      l.routeGroupSize = 0;
+      delete l.card.dataset.routeWinner;
+    }
+  });
+  const distinctSeaRoutes = new Set(multiRouteSeaLiners.map(l => l.routeKey));
   const combinedSeaRouteTotal = distinctSeaRoutes.size > 1
-    ? calculatedLiners.filter(l => l.isRouteWinner).reduce((sum, l) => sum + l.grandTotal, 0)
+    ? multiRouteSeaLiners.filter(l => l.isRouteWinner).reduce((sum, l) => sum + l.grandTotal, 0)
     : null;
 
   const primaryLiner = calculatedLiners[0] || {
@@ -5608,6 +5927,8 @@ function calculateSeaFreight() {
   appState.currentSeaFreight.orientationProfile = document.getElementById("sea-orientation-profile")?.value || "Tiltable";
   appState.currentSeaFreight.cargoRisk = document.getElementById("sea-cargo-risk")?.value || "Non Hazardous";
   appState.currentSeaFreight.climateConstraint = document.getElementById("sea-climate-constraint")?.value || "Ambient (15-25 DEG)";
+  appState.currentSeaFreight.combinedRouteTotal = combinedSeaRouteTotal;
+  appState.currentSeaFreight.quoteRoutes = getDeskRoutes('sea');
 }
 
 // Multi-route (Option A): when 2+ liner cards share the same effective
@@ -5619,16 +5940,18 @@ window.markSeaRouteWinner = function (cardId) {
   const card = document.getElementById(cardId);
   const container = document.getElementById("sea-liners-container");
   if (!card || !container) return;
-  const sharedOrigin = (document.getElementById("sea-origin")?.value || "").trim().toUpperCase();
-  const sharedDest = (document.getElementById("sea-dest")?.value || "").trim().toUpperCase();
-  const routeKeyOf = (c) => {
-    const o = (c.querySelector(".sea-route-origin-override")?.value || "").trim().toUpperCase() || sharedOrigin;
-    const d = (c.querySelector(".sea-route-dest-override")?.value || "").trim().toUpperCase() || sharedDest;
-    return `${o}→${d}`;
-  };
-  const targetRoute = routeKeyOf(card);
+  if (card.dataset.mode === 'bb') return;
+  const targetGroup = (() => {
+    const r = resolveCardEffectiveRoute('sea', card);
+    return `${r.routeKey}|${card.dataset.mode || 'fcl'}`;
+  })();
   container.querySelectorAll(".liner-card").forEach((c) => {
-    if (routeKeyOf(c) !== targetRoute) return;
+    if (c.dataset.mode === 'bb') return;
+    const cGroup = (() => {
+      const r = resolveCardEffectiveRoute('sea', c);
+      return `${r.routeKey}|${c.dataset.mode || 'fcl'}`;
+    })();
+    if (cGroup !== targetGroup) return;
     if (c === card) c.dataset.routeWinner = "true";
     else delete c.dataset.routeWinner;
   });
@@ -7479,7 +7802,9 @@ function buildAirQuoteData() {
     loadabilityTilt: document.getElementById("air-loadability-tilt").value,
     loadabilityStack: document.getElementById("air-loadability-stack").value,
     airlines: appState.currentAirFreight.airlines,
-    alternatives: []
+    alternatives: [],
+    quoteRoutes: getDeskRoutes('air'),
+    combinedRouteTotal: appState.currentAirFreight.combinedRouteTotal ?? null
   };
 
   return { ok: true, route, amount, amountINR, currency, details };
@@ -7790,6 +8115,8 @@ async function saveCurrentQuote() {
       bbStowage: appState.currentSeaFreight.type === 'bb' ? (appState.currentSeaFreight.bbStowage || "Under Deck") : null,
       bbLaydays: appState.currentSeaFreight.type === 'bb' ? (appState.currentSeaFreight.bbLaydays || "") : null,
       bbCancelling: appState.currentSeaFreight.type === 'bb' ? (appState.currentSeaFreight.bbCancelling || "") : null,
+      quoteRoutes: getDeskRoutes('sea'),
+      combinedRouteTotal: appState.currentSeaFreight.combinedRouteTotal ?? null,
       alternatives: (() => {
         const alts = [];
         document.querySelectorAll("#sea-alternatives-body tr").forEach(row => {
@@ -8904,26 +9231,52 @@ window.viewSavedQuote = async (id) => {
     const sharedDest = quote.details?.destination || '';
     const withRoute = cards.map(c => ({
       name: c.name || c.linerName || 'Option',
+      mode: c.mode || '',
+      routeWinner: !!c.routeWinner,
       effectiveOrigin: (c.origin || sharedOrigin || '?').toUpperCase(),
       effectiveDestination: (c.destination || sharedDest || '?').toUpperCase(),
       grandTotal: c.grandTotal || 0
     }));
-    const distinctRoutes = new Set(withRoute.map(c => `${c.effectiveOrigin}→${c.effectiveDestination}`));
+    const multiRouteCards = quote.type === 'sea'
+      ? withRoute.filter(c => c.mode !== 'bb')
+      : withRoute;
+    const distinctRoutes = new Set(multiRouteCards.map(c => `${c.effectiveOrigin}→${c.effectiveDestination}`));
     if (distinctRoutes.size <= 1) return '';
 
     const groups = new Map();
-    withRoute.forEach(c => {
+    multiRouteCards.forEach(c => {
       const key = `${c.effectiveOrigin}→${c.effectiveDestination}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(c);
     });
+
+    const winnerGroupKey = (c) => quote.type === 'sea' && c.mode
+      ? `${c.effectiveOrigin}→${c.effectiveDestination}|${c.mode}`
+      : `${c.effectiveOrigin}→${c.effectiveDestination}`;
+
+    const winnerGroups = new Map();
+    multiRouteCards.forEach(c => {
+      const gk = winnerGroupKey(c);
+      if (!winnerGroups.has(gk)) winnerGroups.set(gk, []);
+      winnerGroups.get(gk).push(c);
+    });
+
     let combinedTotal = 0;
+    winnerGroups.forEach(group => {
+      const winner = group.find(c => c.routeWinner) || group[0];
+      combinedTotal += winner.grandTotal;
+    });
+    if (quote.details?.combinedRouteTotal != null) {
+      combinedTotal = quote.details.combinedRouteTotal;
+    }
+
     let rowsHtml = '';
     groups.forEach((groupCards, key) => {
-      combinedTotal += groupCards[0].grandTotal; // first card per route wins, matching the live results grouping
       rowsHtml += `<tr style="background:#f8fafc;"><td colspan="2" style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.7rem; font-weight:800; color:#5a7a9a; text-transform:uppercase;">${key.replace('→', ' → ')}</td></tr>`;
       groupCards.forEach(c => {
-        rowsHtml += `<tr><td style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.7rem;">${c.name}</td><td style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.72rem; font-weight:700; text-align:right;">${currencySym}${c.grandTotal.toFixed(2)}</td></tr>`;
+        const modeLabel = (quote.type === 'sea' && c.mode) ? ` <span style="font-size:0.62rem; color:#64748b;">(${c.mode.toUpperCase()})</span>` : '';
+        const counted = c.routeWinner ? ' ✓' : '';
+        rowsHtml += `<tr><td style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.7rem;">${c.name}${modeLabel}${counted}</td><td style="border:1px solid #e2e8f0; padding:6px 12px; font-size:0.72rem; font-weight:700; text-align:right;">${currencySym}${c.grandTotal.toFixed(2)}</td></tr>`;
       });
     });
 
@@ -10920,6 +11273,7 @@ window.addAlternativeOptionRow = addAlternativeOptionRow;
 function populateAirFreightFormFromDetails(details) {
   document.getElementById("air-origin").value = details.origin || "";
   document.getElementById("air-dest").value = details.destination || "";
+  initDeskRoutes('air', deriveQuoteRoutesFromSavedQuote('air', details));
   document.getElementById("air-incoterm").value = details.incoterm || "EXW";
   document.getElementById("air-terms").value = details.termsAndConditions || getDefaultFreightTerms('air');
 
@@ -11215,6 +11569,7 @@ function amendQuote(id, options) {
       }
       document.getElementById("sea-origin").value = quote.details.origin || "";
       document.getElementById("sea-dest").value = quote.details.destination || "";
+      initDeskRoutes('sea', deriveQuoteRoutesFromSavedQuote('sea', quote.details));
       if (document.getElementById("sea-line")) document.getElementById("sea-line").value = quote.details.shippingLine || "";
       if (document.getElementById("sea-liner-name")) document.getElementById("sea-liner-name").value = quote.details.linerName || "";
       document.getElementById("sea-commodity").value = quote.details.commodity || "";
@@ -11275,6 +11630,7 @@ function amendQuote(id, options) {
               destFeesEnabled: l.destFeesEnabled,
               origin: l.origin,
               destination: l.destination,
+              routeId: l.routeId,
               routeWinner: l.routeWinner
             });
           });

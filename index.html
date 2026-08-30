@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.19">
+  <link rel="stylesheet" href="index.css?v=129.20">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -1741,6 +1741,26 @@
               </div>
 
             </div>
+
+            <div id="air-quote-routes-section" class="quote-routes-section">
+              <div class="quote-routes-header">
+                <h4 class="quote-routes-title">Routes to quote</h4>
+                <button type="button" class="add-row-btn quote-routes-add-btn" onclick="addDeskRoute('air')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add route
+                </button>
+              </div>
+              <p class="quote-routes-hint">Route 1 matches Origin/Destination above. Add routes for multi-leg quotes, then assign each airline on step 2.</p>
+              <div class="cargo-table-container">
+                <table class="cargo-table quote-routes-table">
+                  <thead>
+                    <tr><th>#</th><th>Origin</th><th>Destination</th><th></th></tr>
+                  </thead>
+                  <tbody id="air-quote-routes-body"></tbody>
+                </table>
+              </div>
+            </div>
+
             <div class="vertex-quick-assist-slot" id="air-quick-assist-slot" aria-hidden="true"></div>
 
             <!-- Follow-up Temperature Questions -->
@@ -2191,6 +2211,26 @@
                 <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
               </div>
             </div>
+
+            <div id="sea-quote-routes-section" class="quote-routes-section">
+              <div class="quote-routes-header">
+                <h4 class="quote-routes-title">Routes to quote</h4>
+                <button type="button" class="add-row-btn quote-routes-add-btn" onclick="addDeskRoute('sea')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add route
+                </button>
+              </div>
+              <p class="quote-routes-hint">Route 1 matches POL/POD above. FCL and LCL liners can each quote a route; Break Bulk stays on the main route only.</p>
+              <div class="cargo-table-container">
+                <table class="cargo-table quote-routes-table">
+                  <thead>
+                    <tr><th>#</th><th>Origin (POL)</th><th>Destination (POD)</th><th></th></tr>
+                  </thead>
+                  <tbody id="sea-quote-routes-body"></tbody>
+                </table>
+              </div>
+            </div>
+
             <div class="vertex-quick-assist-slot" id="sea-quick-assist-slot" aria-hidden="true"></div>
 
             <div class="form-grid-2" style="margin-top: 1rem;">
@@ -4532,11 +4572,11 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.19"></script>
-  <script src="ui-shell.js?v=129.19"></script>
-  <script src="ai-assistant.js?v=129.19"></script>
-  <script src="ai-sell-band.js?v=129.19"></script>
-  <script src="sales-v129.js?v=129.19"></script>
+  <script src="app-v4.js?v=129.20"></script>
+  <script src="ui-shell.js?v=129.20"></script>
+  <script src="ai-assistant.js?v=129.20"></script>
+  <script src="ai-sell-band.js?v=129.20"></script>
+  <script src="sales-v129.js?v=129.20"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4864,7 +4904,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.19">' +
+          '<link rel="stylesheet" href="index.css?v=129.20">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

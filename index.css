@@ -6041,6 +6041,82 @@ textarea:focus {
   color: var(--t1);
   font-weight: 700;
 }
+
+.quote-routes-section {
+  margin: 1rem 0 1.25rem;
+  padding: 1rem 1.1rem;
+  background: rgba(90, 122, 154, 0.04);
+  border: 1px solid rgba(90, 122, 154, 0.12);
+  border-radius: var(--r-md);
+}
+.quote-routes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+.quote-routes-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--t1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.quote-routes-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.72rem;
+  color: var(--t2);
+  line-height: 1.4;
+}
+.quote-routes-add-btn {
+  font-size: 0.72rem;
+  padding: 0.35rem 0.65rem;
+}
+.quote-routes-table th,
+.quote-routes-table td {
+  font-size: 0.78rem;
+}
+.quote-routes-table .desk-route-origin,
+.quote-routes-table .desk-route-dest {
+  width: 100%;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-1);
+  background: var(--bg-input);
+  color: var(--t1);
+}
+.card-route-select-wrap {
+  margin-bottom: 0.55rem;
+}
+.card-route-select-wrap label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--t2);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.card-route-select {
+  width: 100%;
+  max-width: 320px;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-1);
+  background: var(--bg-input);
+  color: var(--t1);
+}
+.card-route-select-wrap.is-bb-only {
+  opacity: 0.65;
+}
+.card-route-select-wrap.is-bb-only .card-route-bb-note {
+  font-size: 0.68rem;
+  color: var(--t3);
+  font-style: italic;
+}
+
 @media (max-width: 640px) {
   .desk-flow-label {
     display: none;
