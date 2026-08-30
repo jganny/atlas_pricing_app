@@ -1,0 +1,637 @@
+/**
+ * Atlas Enterprise UI — Phases 0–5
+ * Presentation layer only. Does not alter calculation or save schemas.
+ */
+
+/* ── Phase 0: tokens & workspace calm ── */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --enterprise-font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --enterprise-radius: 6px;
+  --enterprise-border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+body.atlas-enterprise-ui {
+  font-family: var(--enterprise-font);
+}
+
+#app-workspace .grid-overlay,
+#app-workspace .liquid-orb {
+  display: none !important;
+}
+
+#app-workspace {
+  background: var(--bg-void);
+}
+
+/* Breadcrumb — Dynamics / Salesforce utility bar */
+.atlas-breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-2);
+}
+
+.atlas-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--t3);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.atlas-breadcrumb .bc-root {
+  color: var(--t2);
+  cursor: pointer;
+}
+
+.atlas-breadcrumb .bc-root:hover {
+  color: var(--sky);
+}
+
+.atlas-breadcrumb .bc-sep {
+  opacity: 0.45;
+  user-select: none;
+}
+
+.atlas-breadcrumb .bc-current {
+  color: var(--t1);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+.header-cmdk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--r-sm);
+  border: var(--enterprise-border);
+  background: var(--bg-surface);
+  color: var(--t2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.header-cmdk-btn:hover {
+  border-color: var(--sky);
+  color: var(--t1);
+}
+
+.header-cmdk-btn kbd {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-1);
+  font-family: inherit;
+}
+
+.header-density-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--r-sm);
+  border: var(--enterprise-border);
+  background: var(--bg-surface);
+  color: var(--t2);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body.atlas-density-compact .desk-form-card,
+body.atlas-density-compact .glass-card {
+  padding: 0.75rem 0.9rem !important;
+}
+
+body.atlas-density-compact .form-group {
+  margin-bottom: 0.65rem !important;
+}
+
+/* Admin-only sync badge restored (Phase 5) */
+body.atlas-admin-session #db-connection-badge {
+  display: flex !important;
+}
+
+/* ── Record highlight context — Salesforce Lightning header strip ── */
+.enterprise-record-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0.65rem 1rem;
+  margin: 0 0 0.75rem;
+  background: var(--bg-surface);
+  border: var(--enterprise-border);
+  border-radius: var(--enterprise-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.enterprise-record-context--sea {
+  border-left: 3px solid var(--indigo);
+}
+
+.enterprise-record-context:not(.enterprise-record-context--sea) {
+  border-left: 3px solid var(--sky);
+}
+
+.enterprise-record-context--transport {
+  border-left: 3px solid var(--violet);
+}
+
+.enterprise-record-context--warehouse {
+  border-left: 3px solid var(--teal);
+}
+
+.erc-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 80px;
+}
+
+.erc-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.erc-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+/* ── Lane panel — Fiori object section ── */
+.enterprise-lane-panel {
+  grid-column: 1 / -1;
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: var(--enterprise-border);
+  border-radius: var(--r-lg);
+  margin-bottom: var(--space-3);
+}
+
+.enterprise-lane-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.enterprise-section-kicker {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.enterprise-lane-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.enterprise-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border-1);
+  background: transparent;
+  color: var(--sky);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.enterprise-ghost-btn:hover {
+  background: var(--sky-g);
+  border-color: rgba(90, 122, 154, 0.35);
+}
+
+.enterprise-lane-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  margin-bottom: var(--space-3);
+}
+
+.lane-node {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--t1);
+  letter-spacing: 0.04em;
+}
+
+.lane-track {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  max-width: 120px;
+}
+
+.lane-track-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--border-1), var(--sky), var(--border-1));
+  border-radius: 1px;
+}
+
+.lane-mode-icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.enterprise-lane-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .enterprise-lane-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Route chips — HubSpot tag strip */
+.enterprise-route-chip-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.enterprise-route-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--r-pill);
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-1);
+  color: var(--t2);
+}
+
+.enterprise-route-chip.is-primary {
+  background: rgba(90, 122, 154, 0.08);
+  border-color: rgba(90, 122, 154, 0.25);
+  color: var(--sky);
+}
+
+/* Advanced facet — SAP Fiori collapsible section */
+.enterprise-facet {
+  margin: var(--space-3) 0;
+  border: var(--enterprise-border);
+  border-radius: var(--r-md);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.enterprise-facet-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.enterprise-facet-summary::-webkit-details-marker {
+  display: none;
+}
+
+.enterprise-facet-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.enterprise-facet-meta {
+  font-size: 0.65rem;
+  color: var(--t3);
+  font-weight: 600;
+}
+
+.enterprise-facet-body {
+  padding: 0 0.85rem 0.85rem;
+  border-top: 1px solid var(--border-2);
+}
+
+/* Route composer drawer — Dynamics / Redwood panel */
+.enterprise-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  pointer-events: none;
+  visibility: hidden;
+  transition: visibility 0.25s;
+}
+
+.enterprise-drawer.open {
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.enterprise-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.enterprise-drawer.open .enterprise-drawer-backdrop {
+  opacity: 1;
+}
+
+.enterprise-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(420px, 92vw);
+  height: 100%;
+  background: var(--bg-surface);
+  border-left: var(--enterprise-border);
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.enterprise-drawer.open .enterprise-drawer-panel {
+  transform: translateX(0);
+}
+
+.enterprise-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: var(--enterprise-border);
+}
+
+.enterprise-drawer-eyebrow {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.enterprise-drawer-title {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--t1);
+}
+
+.enterprise-drawer-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: var(--t2);
+  line-height: 1.45;
+  max-width: 320px;
+}
+
+.enterprise-drawer-close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--t3);
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.enterprise-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.enterprise-drawer-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--enterprise-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quote-routes-drawer-host .quote-routes-header {
+  margin-bottom: var(--space-3);
+}
+
+/* Carrier route override — collapsed by default */
+.card-route-select-wrap.enterprise-route-default .enterprise-route-select-panel[hidden] {
+  display: none !important;
+}
+
+.enterprise-route-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0.35rem 0;
+  margin-bottom: 0.35rem;
+}
+
+.enterprise-route-same-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--t2);
+}
+
+.card-route-select-wrap.is-route-expanded .enterprise-route-inline {
+  display: none;
+}
+
+.card-route-select-wrap.is-route-expanded .enterprise-route-select-panel {
+  display: block !important;
+}
+
+/* ── Insight rail — Copilot / HubSpot sidebar ── */
+.atlas-insight-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 280px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.desk-shell.active .atlas-insight-rail,
+.view-panel.desk-shell.active ~ .atlas-insight-rail {
+  display: flex;
+}
+
+.desk-calculator-layout.atlas-has-rail {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 280px !important;
+  gap: var(--space-4) !important;
+  align-items: start;
+}
+
+.calculator-grid.atlas-has-rail {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px) 280px !important;
+  gap: var(--space-4) !important;
+}
+
+@media (max-width: 1100px) {
+  .desk-calculator-layout.atlas-has-rail {
+    grid-template-columns: 1fr !important;
+  }
+  .atlas-insight-rail {
+    display: none !important;
+  }
+}
+
+.atlas-insight-card {
+  background: var(--bg-surface);
+  border: var(--enterprise-border);
+  border-radius: var(--r-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.atlas-insight-card-title {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t3);
+  margin-bottom: var(--space-2);
+}
+
+.atlas-insight-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+  color: var(--t2);
+}
+
+.atlas-insight-stat-row strong {
+  color: var(--t1);
+  font-weight: 700;
+}
+
+.atlas-ai-intake {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.atlas-ai-intake input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--r-sm);
+  border: var(--enterprise-border);
+  font-size: 0.72rem;
+  font-family: inherit;
+}
+
+.atlas-ai-intake button {
+  padding: 0.4rem 0.65rem;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.atlas-ai-tip {
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: var(--t2);
+  margin: 0;
+}
+
+.atlas-ai-tip strong {
+  color: var(--t1);
+}
+
+/* Copilot rail mode (Phase 4) */
+body.atlas-copilot-rail-mode #atlas-copilot-panel {
+  width: min(360px, 92vw);
+}
+
+body.atlas-copilot-rail-mode .atlas-copilot-fab {
+  bottom: 1.25rem;
+  right: 1.25rem;
+}
+
+/* Module shell polish — Home / Directory / Sales headers */
+.enterprise-module-header {
+  padding: var(--space-4) 0 var(--space-3);
+  border-bottom: var(--enterprise-border);
+  margin-bottom: var(--space-4);
+}
+
+.enterprise-module-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--t1);
+}
+
+.enterprise-module-header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--t2);
+}
+
+/* Empty states */
+.atlas-empty-state {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  color: var(--t3);
+  font-size: 0.78rem;
+  border: 1px dashed var(--border-1);
+  border-radius: var(--r-lg);
+  background: rgba(248, 250, 252, 0.6);
+}
+
+.atlas-empty-state-icon {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-2);
+  opacity: 0.5;
+}

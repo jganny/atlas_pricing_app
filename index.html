@@ -9,9 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.24">
+  <link rel="stylesheet" href="index.css?v=129.25">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.25">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -158,7 +159,20 @@
           <img src="assets/atlas-logo.png" alt="Atlas Logistics" class="header-logo-img" onclick="goHome()">
         </div>
 
-        <div class="header-workspace-context">
+        <div class="atlas-breadcrumb-bar">
+          <nav class="atlas-breadcrumb" id="atlas-breadcrumb" aria-label="Breadcrumb">
+            <span class="bc-root" role="link" tabindex="0">Atlas Pricing</span>
+            <span class="bc-sep" aria-hidden="true">›</span>
+            <span class="bc-current" id="atlas-breadcrumb-current">Home</span>
+          </nav>
+          <button type="button" class="header-cmdk-btn" id="header-cmdk-btn" title="Command palette">
+            <span>Search</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+          <button type="button" class="header-density-btn" id="header-density-btn" title="Toggle compact density">Compact</button>
+        </div>
+
+        <div class="header-workspace-context" aria-hidden="true" style="display:none;">
           <div id="header-workspace-name" class="header-workspace-title">Home</div>
         </div>
 
@@ -1605,6 +1619,12 @@
             <button type="button" class="btn-primary dhb-btn-save" id="air-save-quote-btn" onclick="saveCurrentQuote()">Save Quote</button>
           </div>
         </div>
+        <div class="enterprise-record-context" id="air-record-context" aria-label="Quote context">
+          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="air-ctx-customer">—</span></div>
+          <div class="erc-item"><span class="erc-label">Lane</span><span class="erc-value" id="air-ctx-lane">—</span></div>
+          <div class="erc-item"><span class="erc-label">Incoterm</span><span class="erc-value" id="air-ctx-incoterm">EXW</span></div>
+          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="air-ctx-currency">USD</span></div>
+        </div>
 
         <div class="workspace desk-calculator-layout">
           <!-- Inputs section -->
@@ -1706,18 +1726,45 @@
             </div>
 
             <div class="form-grid-3">
-              <div class="form-group autocomplete-container">
-                <label for="air-origin">Origin Airport (IATA Code)</label>
-                <input type="text" id="air-origin" placeholder="Type Airport code or city..." autocomplete="off">
-              </div>
-              <div class="form-group autocomplete-container">
-                <label for="air-dest">Destination Airport (IATA Code)</label>
-                <input type="text" id="air-dest" placeholder="Type Airport code or city..." autocomplete="off">
-              </div>
+              <section class="enterprise-lane-panel enterprise-lane-panel--air" aria-label="Shipment route">
+                <div class="enterprise-lane-panel-head">
+                  <span class="enterprise-section-kicker">Lane</span>
+                  <div class="enterprise-lane-toolbar">
+                    <div class="enterprise-route-chip-strip" id="air-route-chip-strip" aria-live="polite"></div>
+                    <button type="button" class="enterprise-ghost-btn" id="air-route-manage-btn" onclick="openRouteComposer('air')">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M12 3v18"/></svg>
+                      Alternate routes
+                    </button>
+                  </div>
+                </div>
+                <div class="enterprise-lane-visual" id="air-lane-visual" aria-hidden="true">
+                  <span class="lane-node" id="air-lane-origin-code">—</span>
+                  <span class="lane-track"><span class="lane-track-line"></span><span class="lane-mode-icon" aria-hidden="true">✈</span></span>
+                  <span class="lane-node" id="air-lane-dest-code">—</span>
+                </div>
+                <div class="enterprise-lane-fields">
+                  <div class="form-group autocomplete-container">
+                    <label for="air-origin">Origin Airport (IATA Code)</label>
+                    <input type="text" id="air-origin" placeholder="Type Airport code or city..." autocomplete="off">
+                  </div>
+                  <div class="form-group autocomplete-container">
+                    <label for="air-dest">Destination Airport (IATA Code)</label>
+                    <input type="text" id="air-dest" placeholder="Type Airport code or city..." autocomplete="off">
+                  </div>
+                </div>
+              </section>
               <div class="form-group autocomplete-container">
                 <label for="air-commodity">Commodity Type / HSN Code</label>
                 <input type="text" id="air-commodity" placeholder="Search or enter commodity/HSN code..." value="GENERAL" autocomplete="off">
               </div>
+            </div>
+
+            <details class="enterprise-facet">
+              <summary class="enterprise-facet-summary">
+                <span class="enterprise-facet-title">Compliance &amp; restrictions</span>
+                <span class="enterprise-facet-meta">DG class, temperature</span>
+              </summary>
+              <div class="enterprise-facet-body">
               <div class="form-group">
                 <label for="air-dg-class">Dangerous Goods Class</label>
                 <select id="air-dg-class">
@@ -1739,18 +1786,17 @@
                   <option value="9">Class 9 — Miscellaneous Dangerous Goods</option>
                 </select>
               </div>
+              </div>
+            </details>
 
-            </div>
-
-            <div id="air-quote-routes-section" class="quote-routes-section">
+            <div id="air-quote-routes-host" class="quote-routes-host">
+            <div id="air-quote-routes-section" class="quote-routes-section quote-routes-drawer-host" hidden>
               <div class="quote-routes-header">
-                <h4 class="quote-routes-title">Routes to quote</h4>
                 <button type="button" class="add-row-btn quote-routes-add-btn" onclick="addDeskRoute('air')">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Add route
+                  Add route leg
                 </button>
               </div>
-              <p class="quote-routes-hint">Route 1 matches Origin/Destination above. Add routes for multi-leg quotes, then assign each airline on step 2.</p>
               <div class="cargo-table-container">
                 <table class="cargo-table quote-routes-table">
                   <thead>
@@ -1758,6 +1804,7 @@
                   </thead>
                   <tbody id="air-quote-routes-body"></tbody>
                 </table>
+              </div>
               </div>
             </div>
 
@@ -2102,6 +2149,12 @@
             <button type="button" class="btn-primary dhb-btn-save" onclick="saveCurrentQuote()">Save Quote</button>
           </div>
         </div>
+        <div class="enterprise-record-context enterprise-record-context--sea" id="sea-record-context" aria-label="Quote context">
+          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="sea-ctx-customer">—</span></div>
+          <div class="erc-item"><span class="erc-label">Lane</span><span class="erc-value" id="sea-ctx-lane">—</span></div>
+          <div class="erc-item"><span class="erc-label">Incoterm</span><span class="erc-value" id="sea-ctx-incoterm">EXW</span></div>
+          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="sea-ctx-currency">USD</span></div>
+        </div>
         <div class="workspace desk-calculator-layout">
           <!-- Inputs Column -->
           <div class="glass-card desk-form-card">
@@ -2201,26 +2254,42 @@
               </div>
             </div>
 
-            <div class="form-grid-2">
-              <div class="form-group autocomplete-container">
-                <label for="sea-origin">Port of Loading (POL)</label>
-                <input type="text" id="sea-origin" placeholder="Type Port name or city..." autocomplete="off">
+            <section class="enterprise-lane-panel enterprise-lane-panel--sea" aria-label="Shipment route">
+              <div class="enterprise-lane-panel-head">
+                <span class="enterprise-section-kicker">Lane</span>
+                <div class="enterprise-lane-toolbar">
+                  <div class="enterprise-route-chip-strip" id="sea-route-chip-strip" aria-live="polite"></div>
+                  <button type="button" class="enterprise-ghost-btn" id="sea-route-manage-btn" onclick="openRouteComposer('sea')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M12 3v18"/></svg>
+                    Alternate routes
+                  </button>
+                </div>
               </div>
-              <div class="form-group autocomplete-container">
-                <label for="sea-dest">Port of Discharge (POD)</label>
-                <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
+              <div class="enterprise-lane-visual" id="sea-lane-visual" aria-hidden="true">
+                <span class="lane-node" id="sea-lane-origin-code">—</span>
+                <span class="lane-track"><span class="lane-track-line"></span><span class="lane-mode-icon" aria-hidden="true">⚓</span></span>
+                <span class="lane-node" id="sea-lane-dest-code">—</span>
               </div>
-            </div>
+              <div class="enterprise-lane-fields form-grid-2">
+                <div class="form-group autocomplete-container">
+                  <label for="sea-origin">Port of Loading (POL)</label>
+                  <input type="text" id="sea-origin" placeholder="Type Port name or city..." autocomplete="off">
+                </div>
+                <div class="form-group autocomplete-container">
+                  <label for="sea-dest">Port of Discharge (POD)</label>
+                  <input type="text" id="sea-dest" placeholder="Type Port name or city..." autocomplete="off">
+                </div>
+              </div>
+            </section>
 
-            <div id="sea-quote-routes-section" class="quote-routes-section">
+            <div id="sea-quote-routes-host" class="quote-routes-host">
+            <div id="sea-quote-routes-section" class="quote-routes-section quote-routes-drawer-host" hidden>
               <div class="quote-routes-header">
-                <h4 class="quote-routes-title">Routes to quote</h4>
                 <button type="button" class="add-row-btn quote-routes-add-btn" onclick="addDeskRoute('sea')">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Add route
+                  Add route leg
                 </button>
               </div>
-              <p class="quote-routes-hint">Route 1 matches POL/POD above. FCL and LCL liners can each quote a route; Break Bulk stays on the main route only.</p>
               <div class="cargo-table-container">
                 <table class="cargo-table quote-routes-table">
                   <thead>
@@ -2228,6 +2297,7 @@
                   </thead>
                   <tbody id="sea-quote-routes-body"></tbody>
                 </table>
+              </div>
               </div>
             </div>
 
@@ -2886,6 +2956,12 @@
           </div>
         </div>
 
+        <div class="enterprise-record-context enterprise-record-context--transport" id="transport-record-context" aria-label="Quote context">
+          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="transport-ctx-customer">—</span></div>
+          <div class="erc-item"><span class="erc-label">Route</span><span class="erc-value" id="transport-ctx-lane">—</span></div>
+          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="transport-ctx-currency">INR</span></div>
+        </div>
+
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
           <div class="glass-card desk-form-card">
             <nav class="desk-flow-rail" aria-label="Transport quote steps">
@@ -3058,6 +3134,11 @@
           <div class="dhb-actions">
             <button type="button" class="btn-primary dhb-btn-save" onclick="saveStandaloneQuote('warehouse')">Save Quote</button>
           </div>
+        </div>
+
+        <div class="enterprise-record-context enterprise-record-context--warehouse" id="warehouse-record-context" aria-label="Quote context">
+          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="warehouse-ctx-customer">—</span></div>
+          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="warehouse-ctx-currency">INR</span></div>
         </div>
 
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
@@ -4548,8 +4629,8 @@
   <aside id="atlas-copilot-panel" class="atlas-copilot-panel" aria-hidden="true" aria-label="Atlas Help">
     <div class="atlas-copilot-header">
       <div>
-        <span class="atlas-copilot-eyebrow">Help</span>
-        <h3 class="atlas-copilot-title">Atlas Help</h3>
+        <span class="atlas-copilot-eyebrow">Atlas AI</span>
+        <h3 class="atlas-copilot-title">Copilot</h3>
       </div>
       <button type="button" id="atlas-copilot-close" class="atlas-copilot-close" aria-label="Close">×</button>
     </div>
@@ -4571,12 +4652,32 @@
     </div>
   </aside>
 
+  <!-- Route Composer — Dynamics 365 / HubSpot-style side panel for multi-route quotes -->
+  <div id="route-composer-drawer" class="enterprise-drawer" aria-hidden="true" role="presentation">
+    <div class="enterprise-drawer-backdrop" onclick="closeRouteComposer()" aria-hidden="true"></div>
+    <aside class="enterprise-drawer-panel" role="dialog" aria-labelledby="route-composer-title" aria-modal="true">
+      <header class="enterprise-drawer-header">
+        <div>
+          <span class="enterprise-drawer-eyebrow">Route composer</span>
+          <h2 id="route-composer-title" class="enterprise-drawer-title">Alternate lanes</h2>
+          <p class="enterprise-drawer-subtitle">Route 1 mirrors the main lane above. Add legs only when carriers quote different origin–destination pairs.</p>
+        </div>
+        <button type="button" class="enterprise-drawer-close" onclick="closeRouteComposer()" aria-label="Close route composer">✕</button>
+      </header>
+      <div class="enterprise-drawer-body" id="route-composer-drawer-body"></div>
+      <footer class="enterprise-drawer-footer">
+        <button type="button" class="btn-secondary" onclick="closeRouteComposer()">Done</button>
+      </footer>
+    </aside>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.24"></script>
-  <script src="ui-shell.js?v=129.24"></script>
-  <script src="ai-assistant.js?v=129.24"></script>
-  <script src="ai-sell-band.js?v=129.24"></script>
-  <script src="sales-v129.js?v=129.24"></script>
+  <script src="app-v4.js?v=129.25"></script>
+  <script src="ui-shell.js?v=129.25"></script>
+  <script src="atlas-enterprise.js?v=129.25"></script>
+  <script src="ai-assistant.js?v=129.25"></script>
+  <script src="ai-sell-band.js?v=129.25"></script>
+  <script src="sales-v129.js?v=129.25"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4904,7 +5005,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.24">' +
+          '<link rel="stylesheet" href="index.css?v=129.25">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

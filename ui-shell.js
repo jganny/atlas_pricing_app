@@ -396,6 +396,7 @@
       _origOpenCalc(type);
       setNavHash(type);
       if (typeof window.refreshAtlasHelpContext === 'function') window.refreshAtlasHelpContext();
+      if (typeof window.setAtlasBreadcrumb === 'function') window.setAtlasBreadcrumb(type);
     };
   }
   if (typeof window.goHome === 'function') {
@@ -406,6 +407,7 @@
       window._suppressHashHome = false;
       setNavHash('dashboard');
       if (typeof window.refreshAtlasHelpContext === 'function') window.refreshAtlasHelpContext();
+      if (typeof window.setAtlasBreadcrumb === 'function') window.setAtlasBreadcrumb('dashboard');
     };
   }
   window.addEventListener('hashchange', navigateFromHash);
