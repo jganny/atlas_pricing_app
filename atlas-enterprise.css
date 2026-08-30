@@ -3,7 +3,7 @@
  * Presentation layer only. Does not alter calculation or save schemas.
  */
 
-/* ── Phase 0: tokens & workspace calm ── */
+/* ── Phase 0: Premium design tokens (Salesforce / Dynamics / Fiori reference) ── */
 :root {
   --space-1: 4px;
   --space-2: 8px;
@@ -13,7 +13,90 @@
   --space-6: 32px;
   --enterprise-font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --enterprise-radius: 6px;
-  --enterprise-border: 1px solid rgba(226, 232, 240, 0.95);
+  --enterprise-border: 1px solid #E5E7EB;
+
+  /* Shell — SAP Fiori / Dynamics neutral (not cold washed slate) */
+  --bg-void: #F3F5F9;
+  --bg-deep: #EEF2F7;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-input: #FFFFFF;
+  --bg-panel: #FFFFFF;
+
+  /* Text — crisp enterprise contrast */
+  --t1: #0F172A;
+  --t2: #334155;
+  --t3: #64748B;
+  --text-main: #0F172A;
+  --text-muted: #334155;
+  --text-dim: #64748B;
+
+  /* Borders — visible definition (not faint rgba) */
+  --border-1: #E2E8F0;
+  --border-2: #E2E8F0;
+  --border-3: #CBD5E1;
+  --border-color: #E2E8F0;
+
+  /* Brand — Salesforce Lightning / SAP Horizon blue */
+  --atlas-brand: #0070D2;
+  --atlas-brand-hover: #005FB2;
+  --atlas-brand-soft: rgba(0, 112, 210, 0.1);
+
+  /* Desk accents — vivid, module-identifiable */
+  --sky: #0284C7;
+  --sky-rgb: 2, 132, 199;
+  --sky-g: rgba(2, 132, 199, 0.1);
+  --sky-glow: rgba(2, 132, 199, 0.18);
+
+  --indigo: #3730A3;
+  --indigo-g: rgba(55, 48, 163, 0.1);
+
+  --violet: #7C3AED;
+  --violet-g: rgba(124, 58, 237, 0.1);
+
+  --teal: #0D9488;
+  --teal-g: rgba(13, 148, 136, 0.1);
+
+  --green: #059669;
+  --green-g: rgba(5, 150, 105, 0.1);
+  --amber: #D97706;
+  --amber-g: rgba(217, 119, 6, 0.1);
+  --rose: #DC2626;
+  --rose-g: rgba(220, 38, 38, 0.1);
+
+  --accent: var(--atlas-brand);
+  --accent-g: var(--atlas-brand-soft);
+  --accent-air: #0284C7;
+  --accent-air-glow: rgba(2, 132, 199, 0.14);
+  --accent-sea: #3730A3;
+  --accent-sea-glow: rgba(55, 48, 163, 0.14);
+  --accent-success: #059669;
+  --accent-warning: #D97706;
+  --accent-error: #DC2626;
+
+  --accent-current: var(--atlas-brand);
+  --accent-current-glow: var(--atlas-brand-soft);
+
+  /* Status tags — HubSpot / Atlassian clarity */
+  --atl-green-bg: #ECFDF5;
+  --atl-green-bdr: #6EE7B7;
+  --atl-green-text: #047857;
+  --atl-amber-bg: #FFFBEB;
+  --atl-amber-bdr: #FCD34D;
+  --atl-amber-text: #B45309;
+  --atl-rose-bg: #FEF2F2;
+  --atl-rose-bdr: #FCA5A5;
+  --atl-rose-text: #B91C1C;
+  --atl-sky-bg: #EFF6FF;
+  --atl-sky-bdr: #93C5FD;
+  --atl-sky-text: #1D4ED8;
+  --atl-violet-bg: #F5F3FF;
+  --atl-violet-bdr: #C4B5FD;
+  --atl-violet-text: #6D28D9;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 2px 8px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 4px 16px rgba(15, 23, 42, 0.09);
 }
 
 body.atlas-enterprise-ui {
@@ -231,7 +314,7 @@ body.atlas-admin-session #db-connection-badge {
 
 .enterprise-ghost-btn:hover {
   background: var(--sky-g);
-  border-color: rgba(90, 122, 154, 0.35);
+  border-color: rgba(2, 132, 199, 0.35);
 }
 
 .enterprise-lane-visual {
@@ -304,8 +387,8 @@ body.atlas-admin-session #db-connection-badge {
 }
 
 .enterprise-route-chip.is-primary {
-  background: rgba(90, 122, 154, 0.08);
-  border-color: rgba(90, 122, 154, 0.25);
+  background: var(--sky-g);
+  border-color: rgba(2, 132, 199, 0.35);
   color: var(--sky);
 }
 
@@ -504,7 +587,7 @@ body.atlas-admin-session #db-connection-badge {
   color: var(--indigo);
   padding: 0.15rem 0.45rem;
   border-radius: var(--r-pill);
-  background: rgba(47, 49, 147, 0.06);
+  background: var(--indigo-g);
   flex-shrink: 0;
 }
 
@@ -649,4 +732,325 @@ body.atlas-copilot-rail-mode .atlas-copilot-fab {
   font-size: 1.5rem;
   margin-bottom: var(--space-2);
   opacity: 0.5;
+}
+
+/* ══════════════════════════════════════════════════
+   v129.27 — PREMIUM COLOR REFRESH (app-wide)
+   Reference: Salesforce Lightning, Dynamics 365, SAP Fiori,
+   HubSpot, CargoWise — vivid brand blues, crisp surfaces,
+   module-identifiable accents. UI-only; no calc/save changes.
+══════════════════════════════════════════════════ */
+
+:root {
+  --atlas-surface: #FFFFFF;
+  --atlas-surface-muted: #F3F5F9;
+  --atlas-border: #E2E8F0;
+  --atlas-focus-ring: rgba(0, 112, 210, 0.18);
+  --atlas-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-xl: 0 8px 20px rgba(15, 23, 42, 0.14);
+}
+
+body.atlas-enterprise-ui {
+  background: var(--bg-void) !important;
+}
+
+/* Module-scoped accent rails */
+#air-freight-panel {
+  --accent-current: var(--accent-air);
+  --accent-current-glow: var(--accent-air-glow);
+}
+#sea-freight-panel {
+  --accent-current: var(--accent-sea);
+  --accent-current-glow: var(--accent-sea-glow);
+}
+#transportation-panel {
+  --accent-current: var(--violet);
+  --accent-current-glow: var(--violet-g);
+}
+#warehousing-panel {
+  --accent-current: var(--teal);
+  --accent-current-glow: var(--teal-g);
+}
+
+/* Desk highlights — Salesforce record header strip */
+#air-freight-panel .desk-highlights-bar {
+  border-left-color: var(--sky);
+  background: linear-gradient(90deg, rgba(2, 132, 199, 0.06) 0%, #ffffff 28%);
+}
+#sea-freight-panel .desk-highlights-bar {
+  border-left-color: var(--indigo);
+  background: linear-gradient(90deg, rgba(55, 48, 163, 0.07) 0%, #ffffff 28%);
+}
+#transportation-panel .desk-highlights-bar {
+  border-left-color: var(--violet);
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.06) 0%, #ffffff 28%);
+}
+#warehousing-panel .desk-highlights-bar {
+  border-left-color: var(--teal);
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0.06) 0%, #ffffff 28%);
+}
+
+.dhb-value-strong {
+  color: var(--accent-current) !important;
+}
+
+.dhb-label,
+.dhb-value {
+  font-family: var(--enterprise-font) !important;
+}
+
+/* Primary actions — brand blue */
+body.atlas-enterprise-ui .btn-primary,
+body.atlas-enterprise-ui .dhb-btn-save {
+  background: var(--atlas-brand) !important;
+  border-color: var(--atlas-brand) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 112, 210, 0.22) !important;
+}
+
+body.atlas-enterprise-ui .btn-primary:hover,
+body.atlas-enterprise-ui .btn-primary:focus-visible,
+body.atlas-enterprise-ui .dhb-btn-save:hover {
+  background: var(--atlas-brand-hover) !important;
+  border-color: var(--atlas-brand-hover) !important;
+  box-shadow: 0 0 0 3px var(--atlas-focus-ring) !important;
+}
+
+/* Secondary buttons — clean, not neumorphic gray */
+body.atlas-enterprise-ui .btn-secondary {
+  background: #ffffff !important;
+  border: 1px solid var(--border-1) !important;
+  box-shadow: var(--shadow-sm) !important;
+  color: var(--t1) !important;
+}
+
+body.atlas-enterprise-ui .btn-secondary:hover {
+  background: var(--atlas-brand-soft) !important;
+  border-color: rgba(0, 112, 210, 0.35) !important;
+  color: var(--atlas-brand) !important;
+}
+
+/* Sidebar — vivid active state */
+body.atlas-enterprise-ui .sidebar-item.active {
+  background: var(--atlas-brand-soft) !important;
+  color: var(--atlas-brand) !important;
+}
+
+body.atlas-enterprise-ui .sidebar-item:hover {
+  background: #EEF2FF !important;
+  color: var(--t1) !important;
+}
+
+/* Module tabs — brand underline, not dull slate */
+#global-module-tabs .module-tab.active,
+#global-module-tabs .module-tab.active[data-module="dashboard"],
+#global-module-tabs .module-tab.active[data-module="air"],
+#global-module-tabs .module-tab.active[data-module="sea"],
+#global-module-tabs .module-tab.active[data-module="transport"],
+#global-module-tabs .module-tab.active[data-module="warehouse"],
+#global-module-tabs .module-tab.active[data-module="directory"],
+#global-module-tabs .module-tab.active[data-module="circulars"],
+#global-module-tabs .module-tab.active[data-module="sales"] {
+  color: var(--atlas-brand) !important;
+  border-color: transparent !important;
+  box-shadow: inset 0 -2px 0 var(--atlas-brand) !important;
+}
+
+#global-module-tabs .module-tab:hover {
+  color: var(--atlas-brand) !important;
+  background: var(--atlas-brand-soft) !important;
+}
+
+/* Header avatar & user chrome */
+.header-user-avatar {
+  background: var(--atlas-brand) !important;
+}
+
+.vqad-recreate-btn {
+  color: var(--atlas-brand) !important;
+}
+
+/* Results panel — module top accent */
+#air-freight-panel .results-panel,
+#air-freight-panel .results-panel.glass-card {
+  border-top-color: var(--sky) !important;
+}
+
+#sea-freight-panel .results-panel,
+#sea-freight-panel .results-panel.glass-card {
+  border-top-color: var(--indigo) !important;
+}
+
+#transportation-panel .results-panel,
+#transportation-panel .results-panel.glass-card {
+  border-top-color: var(--violet) !important;
+}
+
+#warehousing-panel .results-panel,
+#warehousing-panel .results-panel.glass-card {
+  border-top-color: var(--teal) !important;
+}
+
+.result-value-highlight {
+  color: var(--accent-current) !important;
+}
+
+/* Stat cards — brighter module gradients */
+.stat-card[data-type="air"]::after {
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.35) !important;
+}
+.stat-card[data-type="sea"]::after {
+  box-shadow: 0 0 10px rgba(55, 48, 163, 0.35) !important;
+}
+.stat-card[data-type="total"]::after {
+  box-shadow: 0 0 10px rgba(0, 112, 210, 0.3) !important;
+}
+
+/* Tables — brand-tinted selection */
+.quotes-table tbody tr:hover,
+#admin-quotes-body tr[data-quote-id]:hover {
+  background: rgba(0, 112, 210, 0.04) !important;
+}
+
+#admin-quotes-body tr.eri-selected {
+  background: rgba(0, 112, 210, 0.08) !important;
+  box-shadow: inset 3px 0 0 var(--atlas-brand) !important;
+}
+
+/* Toggle groups — clearer active state */
+#air-freight-panel .toggle-option.active,
+#sea-freight-panel .toggle-option.active {
+  background: var(--atl-sky-bg) !important;
+  border-color: #38BDF8 !important;
+  color: #0369A1 !important;
+  box-shadow: inset 0 -2px 0 var(--sky) !important;
+}
+
+#sea-freight-panel .toggle-option.active {
+  background: var(--atl-violet-bg) !important;
+  border-color: #A5B4FC !important;
+  color: #4338CA !important;
+  box-shadow: inset 0 -2px 0 var(--indigo) !important;
+}
+
+/* Section titles — left accent bar */
+#air-freight-panel .section-title {
+  border-left-color: var(--sky) !important;
+}
+#sea-freight-panel .section-title {
+  border-left-color: var(--indigo) !important;
+}
+
+/* Enterprise route chips */
+.enterprise-route-chip.is-primary {
+  background: var(--sky-g) !important;
+  border-color: rgba(2, 132, 199, 0.35) !important;
+  color: var(--sky) !important;
+}
+
+.enterprise-ghost-btn:hover {
+  border-color: rgba(2, 132, 199, 0.35) !important;
+}
+
+/* AI command bar — Copilot accent */
+.atlas-ai-command-label {
+  color: var(--indigo) !important;
+  background: var(--indigo-g) !important;
+}
+
+.atlas-ai-command-parse {
+  background: var(--indigo) !important;
+}
+
+.atlas-ai-command-copilot {
+  color: var(--atlas-brand) !important;
+}
+
+.atlas-ai-command-copilot:hover {
+  background: var(--atlas-brand-soft) !important;
+}
+
+/* Login screen */
+.login-brand-name {
+  color: var(--atlas-brand) !important;
+}
+
+.login-card-premium .login-btn {
+  background: var(--atlas-brand) !important;
+  box-shadow: 0 6px 16px rgba(0, 112, 210, 0.22) !important;
+}
+
+.login-card-premium .login-signup-btn {
+  color: var(--atlas-brand) !important;
+  border-color: var(--atlas-brand) !important;
+}
+
+#login-overlay .login-password-toggle:hover {
+  color: var(--atlas-brand-hover) !important;
+}
+
+/* News widget — rich logistics gradient */
+.news-container {
+  background: linear-gradient(135deg, #0070D2 0%, #1e1b4b 100%) !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 10px 30px rgba(0, 112, 210, 0.28) !important;
+}
+
+/* Carrier cards in results */
+#air-pricing-results-container .glass-card,
+#sea-multi-liner-results-container .glass-card {
+  border-color: var(--border-1) !important;
+}
+
+#air-pricing-results-container .glass-card:hover,
+#sea-multi-liner-results-container .glass-card:hover {
+  border-color: rgba(2, 132, 199, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12) !important;
+}
+
+/* Enquiry inspector accent */
+.enquiry-row-inspector-card {
+  border-top-color: var(--atlas-brand) !important;
+}
+
+.enquiry-row-inspector-card.eri-has-selection {
+  box-shadow: 0 8px 24px rgba(0, 112, 210, 0.12) !important;
+}
+
+/* Command palette */
+.atlas-cmd-item:hover,
+.atlas-cmd-item.is-active {
+  background: var(--atlas-brand-soft) !important;
+}
+
+/* Neutralize neumorphic dullness on operational views */
+body.atlas-enterprise-ui .glass-card,
+body.atlas-enterprise-ui .desk-form-card,
+body.atlas-enterprise-ui .desk-shell .section-card {
+  background: #ffffff !important;
+  border-color: var(--border-1) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+body.atlas-enterprise-ui input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+body.atlas-enterprise-ui select,
+body.atlas-enterprise-ui textarea {
+  box-shadow: none !important;
+  border-color: var(--border-1) !important;
+}
+
+body.atlas-enterprise-ui input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
+body.atlas-enterprise-ui select:focus,
+body.atlas-enterprise-ui textarea:focus {
+  border-color: var(--atlas-brand) !important;
+  box-shadow: 0 0 0 3px var(--atlas-focus-ring) !important;
+}
+
+/* Scrollbars — brand tint */
+body.atlas-enterprise-ui ::-webkit-scrollbar-thumb {
+  background: rgba(0, 112, 210, 0.22) !important;
+}
+
+body.atlas-enterprise-ui ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 112, 210, 0.38) !important;
 }

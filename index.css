@@ -5,59 +5,64 @@
    Premium Light Theme ("Glass Bubble" aesthetic)
 ══════════════════════════════════════════════════ */
 :root {
-  /* Base palette - Modern clean enterprise */
-  --bg-void:      #f8fafc; /* Very light slate grey */
-  --bg-deep:      #f1f5f9; /* Structured layout background */
-  --bg-surface:   #ffffff; /* Solid, crisp white card base */
-  --bg-elevated:  #ffffff; /* Elevated container */
-  --bg-input:     #ffffff; /* Input background */
-  --bg-input-focus: #ffffff;
+  /* Base palette — Salesforce / Dynamics / Fiori shell */
+  --bg-void:      #F3F5F9;
+  --bg-deep:      #EEF2F7;
+  --bg-surface:   #FFFFFF;
+  --bg-elevated:  #FFFFFF;
+  --bg-input:     #FFFFFF;
+  --bg-input-focus: #FFFFFF;
 
-  /* Borders (Ultra clean, neutral slate lines) */
-  --border-1: rgba(226, 232, 240, 0.8); /* Soft white/light-grey border edge */
-  --border-2: rgba(226, 232, 240, 0.5); /* Standard dividing lines */
-  --border-3: rgba(148, 163, 184, 0.3); /* Hover border highlights */
+  /* Borders — crisp definition, not washed-out rgba */
+  --border-1: #E2E8F0;
+  --border-2: #E2E8F0;
+  --border-3: #CBD5E1;
 
-  /* Text - Deep Slate Charcoal */
-  --t1: #1e293b; /* Slate-800 primary text */
-  --t2: #475569; /* Slate-600 secondary text */
-  --t3: #64748b; /* Slate-500 muted text */
+  /* Text — high-contrast enterprise */
+  --t1: #0F172A;
+  --t2: #334155;
+  --t3: #64748B;
 
-  /* Accents - Refined brand colors */
-  --sky:    #5a7a9a; /* Soft Slate Blue */
-  --sky-rgb: 90, 122, 154;
-  --sky-g:  rgba(90, 122, 154, 0.05);
-  --sky-glow: 0 4px 12px rgba(90, 122, 154, 0.05);
+  /* Brand — Salesforce Lightning / SAP Horizon */
+  --atlas-brand:       #0070D2;
+  --atlas-brand-hover: #005FB2;
+  --atlas-brand-soft:  rgba(0, 112, 210, 0.1);
 
-  --indigo:   #2f3193; /* Royal Blue */
-  --indigo-g: rgba(47, 49, 147, 0.05);
+  /* Module accents — vivid, identifiable */
+  --sky:    #0284C7;
+  --sky-rgb: 2, 132, 199;
+  --sky-g:  rgba(2, 132, 199, 0.1);
+  --sky-glow: rgba(2, 132, 199, 0.18);
 
-  --violet:   #6d28d9;
-  --violet-g: rgba(109, 40, 217, 0.05);
+  --indigo:   #3730A3;
+  --indigo-g: rgba(55, 48, 163, 0.1);
 
-  --teal:     #0f766e;
-  --teal-g:   rgba(15, 118, 110, 0.05);
-  --teal-glow: 0 4px 12px rgba(15, 118, 110, 0.05);
+  --violet:   #7C3AED;
+  --violet-g: rgba(124, 58, 237, 0.1);
 
-  --green:    #166534; /* Muted Green */
-  --green-g:  rgba(22, 101, 52, 0.05);
+  --teal:     #0D9488;
+  --teal-g:   rgba(13, 148, 136, 0.1);
+  --teal-glow: rgba(13, 148, 136, 0.14);
 
-  --amber:    #9a3412; /* Muted Amber */
-  --amber-g:  rgba(154, 52, 18, 0.05);
+  --green:    #059669;
+  --green-g:  rgba(5, 150, 105, 0.1);
 
-  --rose:     #991b1b; /* Muted Rose */
-  --rose-g:   rgba(153, 27, 27, 0.05);
+  --amber:    #D97706;
+  --amber-g:  rgba(217, 119, 6, 0.1);
+
+  --rose:     #DC2626;
+  --rose-g:   rgba(220, 38, 38, 0.1);
 
   /* Semantic */
-  --accent:      var(--sky);
-  --accent-g:    var(--sky-g);
+  --accent:      var(--atlas-brand);
+  --accent-g:    var(--atlas-brand-soft);
   --accent-glow: var(--sky-glow);
-  --accent-current:      var(--sky);
-  --accent-current-glow: var(--sky-g);
-  --accent-air:      var(--sky);
-  --accent-air-glow: var(--sky-g);
-  --accent-sea:      var(--indigo);
-  --accent-sea-glow: var(--indigo-g);
+  --accent-current:      var(--atlas-brand);
+  --accent-current-glow: var(--atlas-brand-soft);
+  --accent-air:      #0284C7;
+  --accent-air-glow: rgba(2, 132, 199, 0.14);
+  --accent-sea:      #3730A3;
+  --accent-sea-glow: rgba(55, 48, 163, 0.14);
   --accent-success:  var(--green);
   --accent-warning:  var(--amber);
   --accent-error:    var(--rose);
@@ -103,25 +108,25 @@
   --neumorph-hover:  6px 6px 14px rgba(148, 163, 184, 0.18), -6px -6px 14px rgba(255, 255, 255, 0.95);
   --neumorph-active: inset 1px 1px 4px rgba(148, 163, 184, 0.12), inset -1px -1px 4px rgba(255, 255, 255, 0.7);
 
-  /* Atlassian Enterprise Status Tag Tokens */
-  --atl-green-bg:   #f0fdf4;
-  --atl-green-bdr:  #bbf7d0;
-  --atl-green-text: #166534;
-  --atl-amber-bg:   #fff7ed;
-  --atl-amber-bdr:  #fed7aa;
-  --atl-amber-text: #9a3412;
-  --atl-rose-bg:    #fef2f2;
-  --atl-rose-bdr:   #fecaca;
-  --atl-rose-text:  #991b1b;
-  --atl-sky-bg:     #f0f9ff;
-  --atl-sky-bdr:    #bae6fd;
-  --atl-sky-text:   #075985;
-  --atl-violet-bg:  #faf5ff;
-  --atl-violet-bdr: #e9d5ff;
-  --atl-violet-text:#6b21a8;
-  --atl-teal-bg:    #f0fdfa;
-  --atl-teal-bdr:   #ccfbf1;
-  --atl-teal-text:  #115e59;
+  /* Status tags — HubSpot / Atlassian clarity */
+  --atl-green-bg:   #ECFDF5;
+  --atl-green-bdr:  #6EE7B7;
+  --atl-green-text: #047857;
+  --atl-amber-bg:   #FFFBEB;
+  --atl-amber-bdr:  #FCD34D;
+  --atl-amber-text: #B45309;
+  --atl-rose-bg:    #FEF2F2;
+  --atl-rose-bdr:   #FCA5A5;
+  --atl-rose-text:  #B91C1C;
+  --atl-sky-bg:     #EFF6FF;
+  --atl-sky-bdr:    #93C5FD;
+  --atl-sky-text:   #1D4ED8;
+  --atl-violet-bg:  #F5F3FF;
+  --atl-violet-bdr: #C4B5FD;
+  --atl-violet-text:#6D28D9;
+  --atl-teal-bg:    #F0FDFA;
+  --atl-teal-bdr:   #5EEAD4;
+  --atl-teal-text:  #0F766E;
 
   /* iOS PWA Safe Area Tokens */
   --safe-top:    env(safe-area-inset-top,    0px);
@@ -157,7 +162,7 @@
   position: absolute;
   top: 0; left: 0.22em;
   width: 0.14em; height: 100%;
-  background: #5a7a9a; /* Slate Blue */
+  background: #0070D2; /* Brand blue */
   transform: rotate(32deg);
   border-radius: 2px;
 }
@@ -188,7 +193,7 @@ html, body {
 
 body {
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  background: #F3F5F9;
   background-attachment: fixed;
   color: var(--t1);
   min-height: 100vh;
@@ -832,9 +837,9 @@ main {
   height: 2px;
 }
 
-.stat-card[data-type="air"]::after     { background: linear-gradient(90deg, var(--sky), var(--indigo), #eab308); box-shadow: 0 0 8px rgba(90,122,154,0.2); }
-.stat-card[data-type="sea"]::after     { background: linear-gradient(90deg, var(--indigo), var(--teal), #eab308); box-shadow: 0 0 8px rgba(47,49,147,0.2); }
-.stat-card[data-type="total"]::after   { background: linear-gradient(90deg, var(--sky), var(--green), #eab308); box-shadow: 0 0 8px rgba(90,122,154,0.2); }
+.stat-card[data-type="air"]::after     { background: linear-gradient(90deg, var(--sky), var(--indigo), #eab308); box-shadow: 0 0 10px rgba(2, 132, 199, 0.35); }
+.stat-card[data-type="sea"]::after     { background: linear-gradient(90deg, var(--indigo), var(--teal), #eab308); box-shadow: 0 0 10px rgba(55, 48, 163, 0.35); }
+.stat-card[data-type="total"]::after   { background: linear-gradient(90deg, var(--sky), var(--green), #eab308); box-shadow: 0 0 10px rgba(0, 112, 210, 0.3); }
 .stat-card[data-type="warning"]::after { background: linear-gradient(90deg, var(--amber), #eab308); box-shadow: 0 0 8px rgba(217,119,6,0.2); }
 
 .stat-title {
@@ -1656,9 +1661,9 @@ body:has(#warehousing-panel.active) .grid-overlay {
 
 /* PREMIUM LOGISTICS NEWS CONTAINER (NAVY BLUE & YELLOW GOLD THEME) */
 .news-container {
-  background: linear-gradient(135deg, #5a7a9a 0%, #0d0e3a 100%) !important;
-  border: 1px solid rgba(254, 204, 0, 0.3) !important;
-  box-shadow: 0 10px 30px rgba(90, 122, 154, 0.45) !important;
+  background: linear-gradient(135deg, #0070D2 0%, #1e1b4b 100%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 10px 30px rgba(0, 112, 210, 0.28) !important;
   color: #ffffff !important;
 }
 .news-container div,
@@ -4570,7 +4575,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .login-brand-name {
-  color: #5a7a9a;
+  color: #0070D2;
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -4668,7 +4673,7 @@ input::placeholder, textarea::placeholder {
   min-height: 48px !important;
   margin-top: 0 !important;
   border-radius: 9px !important;
-  background: #5a7a9a !important;
+  background: var(--atlas-brand) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 16px rgba(90, 122, 154, 0.18) !important;
   font-size: 0.94rem !important;
@@ -4677,8 +4682,8 @@ input::placeholder, textarea::placeholder {
 /* Sign Up — ghost / outline variant */
 .login-card-premium .login-signup-btn {
   background: transparent !important;
-  color: #5a7a9a !important;
-  border: 1.5px solid #5a7a9a !important;
+  color: var(--atlas-brand-hover) !important;
+  border: 1.5px solid var(--atlas-brand) !important;
   box-shadow: none !important;
   margin-top: 0.6rem !important;
 }
@@ -4730,10 +4735,10 @@ input::placeholder, textarea::placeholder {
    ------------------------------------------------------------------------- */
 :root {
   --atlas-surface: #ffffff;
-  --atlas-surface-muted: #f8fafc;
-  --atlas-border: #d9e2ec;
-  --atlas-focus-ring: rgba(38, 58, 154, 0.16);
-  --atlas-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 5px 14px rgba(15, 23, 42, 0.04);
+  --atlas-surface-muted: #F3F5F9;
+  --atlas-border: #E2E8F0;
+  --atlas-focus-ring: rgba(0, 112, 210, 0.18);
+  --atlas-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
 /* Establish one restrained card treatment instead of competing glass effects. */
@@ -4990,8 +4995,8 @@ textarea:focus {
 #global-module-tabs .module-tab.active {
   background: transparent !important;
   border: 1px solid transparent !important;
-  color: #5a7a9a !important;
-  box-shadow: inset 0 -2px 0 #5a7a9a !important;
+  color: var(--atlas-brand) !important;
+  box-shadow: inset 0 -2px 0 var(--atlas-brand) !important;
 }
 
 #air-freight-panel .section-title,
@@ -5189,7 +5194,7 @@ textarea:focus {
 }
 
 .login-input-field:focus {
-  border-color: #5a7a9a !important;
+  border-color: var(--atlas-brand) !important;
   box-shadow: 0 0 0 3px rgba(90, 122, 154, 0.12) !important;
 }
 
@@ -5223,8 +5228,8 @@ textarea:focus {
 .module-tab.active[data-module="transport"],
 .module-tab.active[data-module="warehouse"],
 .module-tab.active[data-module="directory"] {
-  background: #5a7a9a !important;
-  border-color: #5a7a9a !important;
+  background: var(--atlas-brand) !important;
+  border-color: var(--atlas-brand) !important;
   color: #ffffff !important;
   box-shadow: 0 2px 6px rgba(90, 122, 154, 0.16) !important;
 }
@@ -5355,7 +5360,7 @@ textarea:focus {
 /* Release B: consistent, recognisable Atlas surfaces on public and review
    screens. The changes are intentionally colour and separation only. */
 #quote-modal .modal-content {
-  border-top: 4px solid #5a7a9a !important;
+  border-top: 4px solid var(--sky) !important;
 }
 
 #directory-panel .glass-card > h2,
@@ -5578,17 +5583,17 @@ textarea:focus {
 }
 
 .btn-primary {
-  background: var(--sky) !important;
-  border-color: var(--sky) !important;
+  background: var(--atlas-brand) !important;
+  border-color: var(--atlas-brand) !important;
   color: #ffffff !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 1px 3px rgba(0, 112, 210, 0.22) !important;
 }
 
 .btn-primary:hover,
 .btn-primary:focus-visible {
-  background: #1e2f7d !important;
-  border-color: #1e2f7d !important;
-  box-shadow: 0 0 0 3px rgba(38, 58, 154, 0.16) !important;
+  background: var(--atlas-brand-hover) !important;
+  border-color: var(--atlas-brand-hover) !important;
+  box-shadow: 0 0 0 3px var(--atlas-focus-ring) !important;
 }
 
 /* Directory actions read as a compact workflow toolbar; only Add Contact is
@@ -5617,21 +5622,21 @@ textarea:focus {
 }
 
 .print-header {
-  border-bottom-color: #5a7a9a !important;
+  border-bottom-color: var(--sky) !important;
 }
 
 .print-title h2 {
-  color: #5a7a9a !important;
+  color: var(--atlas-brand-hover) !important;
 }
 
 .print-section-title {
-  color: #5a7a9a !important;
+  color: var(--atlas-brand-hover) !important;
   border-bottom-color: #dde0ee !important;
 }
 
 .quote-print-card th {
   background: #eef0fa !important;
-  color: #5a7a9a !important;
+  color: var(--atlas-brand-hover) !important;
   border-color: #d8ddf0 !important;
 }
 
@@ -5646,11 +5651,11 @@ textarea:focus {
 .quote-print-card .total-summary-box {
   background: #f4f5fb !important;
   border-color: #d8ddf0 !important;
-  border-left: 4px solid #5a7a9a !important;
+  border-left: 4px solid var(--sky) !important;
 }
 
 .quote-print-card .total-summary-box span.val {
-  color: #5a7a9a !important;
+  color: var(--atlas-brand-hover) !important;
 }
 
 /* The transport and warehouse controls retain all existing columns and
@@ -6479,7 +6484,7 @@ tfoot.cgf-footer .cgf-gp {
   color: var(--sky) !important;
 }
 #login-overlay .login-password-toggle:hover {
-  color: #5a7a9a !important;
+  color: var(--atlas-brand-hover) !important;
 }
 
 /* ══════════════════════════════════════════════════
