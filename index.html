@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.14">
+  <link rel="stylesheet" href="index.css?v=129.15">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -1602,17 +1602,17 @@
           <!-- Inputs section -->
           <div class="glass-card desk-form-card">
             <nav class="desk-flow-rail" aria-label="Air quote steps">
-              <div class="desk-flow-step is-active" data-flow-step="details">
+              <div class="desk-flow-step is-active" data-flow-step="details" onclick="advanceDeskStep('air-freight-panel','details')">
                 <span class="desk-flow-num">1</span>
                 <span class="desk-flow-label">Shipment</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="carrier">
+              <div class="desk-flow-step" data-flow-step="carrier" onclick="advanceDeskStep('air-freight-panel','carrier')">
                 <span class="desk-flow-num">2</span>
                 <span class="desk-flow-label">Carriers</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="terms">
+              <div class="desk-flow-step" data-flow-step="terms" onclick="advanceDeskStep('air-freight-panel','terms')">
                 <span class="desk-flow-num">3</span>
                 <span class="desk-flow-label">Terms</span>
               </div>
@@ -2078,17 +2078,17 @@
           <!-- Inputs Column -->
           <div class="glass-card desk-form-card">
             <nav class="desk-flow-rail" aria-label="Sea quote steps">
-              <div class="desk-flow-step is-active" data-flow-step="details">
+              <div class="desk-flow-step is-active" data-flow-step="details" onclick="advanceDeskStep('sea-freight-panel','details')">
                 <span class="desk-flow-num">1</span>
                 <span class="desk-flow-label">Shipment</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="carrier">
+              <div class="desk-flow-step" data-flow-step="carrier" onclick="advanceDeskStep('sea-freight-panel','carrier')">
                 <span class="desk-flow-num">2</span>
                 <span class="desk-flow-label">Carriers</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="terms">
+              <div class="desk-flow-step" data-flow-step="terms" onclick="advanceDeskStep('sea-freight-panel','terms')">
                 <span class="desk-flow-num">3</span>
                 <span class="desk-flow-label">Terms</span>
               </div>
@@ -2881,17 +2881,17 @@
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
           <div class="glass-card desk-form-card">
             <nav class="desk-flow-rail" aria-label="Transport quote steps">
-              <div class="desk-flow-step is-active" data-flow-step="details">
+              <div class="desk-flow-step is-active" data-flow-step="details" onclick="advanceDeskStep('transportation-panel','details')">
                 <span class="desk-flow-num">1</span>
                 <span class="desk-flow-label">Route</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="charges">
+              <div class="desk-flow-step" data-flow-step="charges" onclick="advanceDeskStep('transportation-panel','charges')">
                 <span class="desk-flow-num">2</span>
                 <span class="desk-flow-label">Charges</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="terms">
+              <div class="desk-flow-step" data-flow-step="terms" onclick="advanceDeskStep('transportation-panel','terms')">
                 <span class="desk-flow-num">3</span>
                 <span class="desk-flow-label">Terms</span>
               </div>
@@ -3055,17 +3055,17 @@
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
           <div class="glass-card desk-form-card">
             <nav class="desk-flow-rail" aria-label="Warehouse quote steps">
-              <div class="desk-flow-step is-active" data-flow-step="details">
+              <div class="desk-flow-step is-active" data-flow-step="details" onclick="advanceDeskStep('warehousing-panel','details')">
                 <span class="desk-flow-num">1</span>
                 <span class="desk-flow-label">Customer</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="charges">
+              <div class="desk-flow-step" data-flow-step="charges" onclick="advanceDeskStep('warehousing-panel','charges')">
                 <span class="desk-flow-num">2</span>
                 <span class="desk-flow-label">Charges</span>
               </div>
               <div class="desk-flow-connector" aria-hidden="true"></div>
-              <div class="desk-flow-step" data-flow-step="terms">
+              <div class="desk-flow-step" data-flow-step="terms" onclick="advanceDeskStep('warehousing-panel','terms')">
                 <span class="desk-flow-num">3</span>
                 <span class="desk-flow-label">Terms</span>
               </div>
@@ -4564,11 +4564,11 @@
   </aside>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.14"></script>
-  <script src="ui-shell.js?v=129.14"></script>
-  <script src="ai-assistant.js?v=129.14"></script>
-  <script src="ai-sell-band.js?v=129.14"></script>
-  <script src="sales-v129.js?v=129.14"></script>
+  <script src="app-v4.js?v=129.15"></script>
+  <script src="ui-shell.js?v=129.15"></script>
+  <script src="ai-assistant.js?v=129.15"></script>
+  <script src="ai-sell-band.js?v=129.15"></script>
+  <script src="sales-v129.js?v=129.15"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4896,7 +4896,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.14">' +
+          '<link rel="stylesheet" href="index.css?v=129.15">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

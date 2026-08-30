@@ -875,7 +875,7 @@ function loginSuccess(roleId) {
     document.getElementById("admin-role-selector").style.display = "flex";
     if (execDashBtn) execDashBtn.style.display = "flex";
     root.style.setProperty('--accent-current', 'var(--sky)');
-    root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
+    root.style.setProperty('--accent-current-glow', 'rgba(90, 122, 154, 0.2)');
     switchRole('manager');
   } else {
     document.getElementById("admin-settings-btn").style.display = "none";
@@ -890,7 +890,7 @@ function loginSuccess(roleId) {
 
     if (roleIdLower === 'manager') {
       root.style.setProperty('--accent-current', 'var(--sky)');
-      root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
+      root.style.setProperty('--accent-current-glow', 'rgba(90, 122, 154, 0.2)');
     } else if (roleIdLower.startsWith('air')) {
       root.style.setProperty('--accent-current', 'var(--accent-air)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
@@ -1139,7 +1139,7 @@ function switchRole(role) {
     root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
   } else if (roleLower === 'manager' || roleLower === 'ganny') {
     root.style.setProperty('--accent-current', 'var(--sky)');
-    root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
+    root.style.setProperty('--accent-current-glow', 'rgba(90, 122, 154, 0.2)');
   } else {
     root.style.setProperty('--accent-current', 'var(--indigo)');
     root.style.setProperty('--accent-current-glow', 'rgba(47, 49, 147, 0.2)');
@@ -1660,7 +1660,7 @@ function returnToWorkspace() {
     if (managerPanel) managerPanel.classList.add("active");
     const root = document.documentElement;
     root.style.setProperty('--accent-current', 'var(--sky)');
-    root.style.setProperty('--accent-current-glow', 'rgba(27, 28, 92, 0.2)');
+    root.style.setProperty('--accent-current-glow', 'rgba(90, 122, 154, 0.2)');
     renderAdminDashboard();
   } else {
     document.getElementById("member-dashboard-panel").classList.add("active");
@@ -2784,7 +2784,7 @@ function addAirlineCard(data = null) {
     <div class="airline-rate-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 1.5rem;">
       <div class="airline-rate-modal-dialog" style="background: var(--bg-surface, #fff); border-radius: 12px; max-width: 720px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 1.1rem 1.4rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
-          <span style="font-size: 0.85rem; font-weight: 700; color: #1b1c5c;">Rates and fees — Airline Option #${count}</span>
+          <span style="font-size: 0.85rem; font-weight: 700; color: #5a7a9a;">Rates and fees — Airline Option #${count}</span>
           <button type="button" class="close-airline-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
         </div>
 
@@ -4481,7 +4481,7 @@ window.addNewLinerCard = function (data = null) {
     <div class="liner-rate-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 1.5rem;">
       <div class="liner-rate-modal-dialog" style="background: var(--bg-surface, #fff); border-radius: 12px; max-width: 720px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 1.1rem 1.4rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem;">
-          <span style="font-size: 0.85rem; font-weight: 700; color: #1b1c5c;">Rates and fees — Liner ${index} Option</span>
+          <span style="font-size: 0.85rem; font-weight: 700; color: #5a7a9a;">Rates and fees — Liner ${index} Option</span>
           <button type="button" class="close-liner-rate-modal-btn" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--t2, #64748b); padding: 2px 6px;">✕</button>
         </div>
 
@@ -6528,7 +6528,7 @@ function renderControlTowerFeed() {
   const quotes = appState.quotes || [];
   if (quotes.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; color: var(--t3); font-size: 0.72rem; padding: 2rem 0; font-style: italic; border: 1px dashed var(--border-1); border-radius: var(--r-sm); background: rgba(27,28,92,0.01);">
+      <div style="text-align: center; color: var(--t3); font-size: 0.72rem; padding: 2rem 0; font-style: italic; border: 1px dashed var(--border-1); border-radius: var(--r-sm); background: rgba(90,122,154,0.01);">
         No active shipments logged yet.<br>Create pricing enquiries to populate tracking.
       </div>
     `;
@@ -8147,7 +8147,7 @@ window.showAirlineBreakup = (quoteId, airlineIndex) => {
   breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
   breakupModal.innerHTML = `
     <div style="background:#fff; border-radius:12px; width:450px; padding:1.5rem; box-shadow:0 10px 25px rgba(0,0,0,0.2); position:relative;">
-      <h3 style="margin-top:0; color:#1b1c5c; border-bottom:2px solid #eee; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin-top:0; color:#5a7a9a; border-bottom:2px solid #eee; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
         <span>📊 Cost Breakup: ${alt.name}</span>
         <span onclick="document.getElementById('breakup-submodal').remove()" style="cursor:pointer; font-size:1.5rem; color:#888;">&times;</span>
       </h3>
@@ -8174,13 +8174,13 @@ window.showAirlineBreakup = (quoteId, airlineIndex) => {
         </div>
       </div>
       
-      <div style="border-top:2px solid #eee; padding-top:10px; margin-top:15px; display:flex; justify-content:space-between; align-items:center; font-size:1.05rem; font-weight:bold; color:#1b1c5c;">
+      <div style="border-top:2px solid #eee; padding-top:10px; margin-top:15px; display:flex; justify-content:space-between; align-items:center; font-size:1.05rem; font-weight:bold; color:#5a7a9a;">
         <span>Grand Total:</span>
         <span>${currencySym}${alt.grandTotal.toFixed(2)}</span>
       </div>
       
       <div style="text-align:right; margin-top:1.5rem;">
-        <button onclick="document.getElementById('breakup-submodal').remove()" style="background:#1b1c5c; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">Close</button>
+        <button onclick="document.getElementById('breakup-submodal').remove()" style="background:#5a7a9a; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">Close</button>
       </div>
     </div>
   `;
@@ -8224,7 +8224,7 @@ window.showSeaBreakup = (quoteId) => {
   breakupModal.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:10000; font-family:sans-serif; color:#333;";
   breakupModal.innerHTML = `
     <div style="background:#fff; border-radius:12px; width:450px; padding:1.5rem; box-shadow:0 10px 25px rgba(0,0,0,0.2); position:relative;">
-      <h3 style="margin-top:0; color:#1b1c5c; border-bottom:2px solid #eee; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin-top:0; color:#5a7a9a; border-bottom:2px solid #eee; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
         <span>📊 Cost Breakup: ${quote.details.shippingLine || quote.details.airline || 'Details'}</span>
         <span onclick="document.getElementById('breakup-submodal').remove()" style="cursor:pointer; font-size:1.5rem; color:#888;">&times;</span>
       </h3>
@@ -8251,13 +8251,13 @@ window.showSeaBreakup = (quoteId) => {
         </div>
       </div>
       
-      <div style="border-top:2px solid #eee; padding-top:10px; margin-top:15px; display:flex; justify-content:space-between; align-items:center; font-size:1.05rem; font-weight:bold; color:#1b1c5c;">
+      <div style="border-top:2px solid #eee; padding-top:10px; margin-top:15px; display:flex; justify-content:space-between; align-items:center; font-size:1.05rem; font-weight:bold; color:#5a7a9a;">
         <span>Grand Total:</span>
         <span>${currencySym}${quote.amount.toFixed(2)}</span>
       </div>
       
       <div style="text-align:right; margin-top:1.5rem;">
-        <button onclick="document.getElementById('breakup-submodal').remove()" style="background:#1b1c5c; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">Close</button>
+        <button onclick="document.getElementById('breakup-submodal').remove()" style="background:#5a7a9a; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">Close</button>
       </div>
     </div>
   `;
@@ -8350,7 +8350,7 @@ window.viewSavedQuote = async (id) => {
 
       return `
         <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
-          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1b1c5c; font-size: 0.7rem; font-weight: 700;">
+          <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #5a7a9a; font-size: 0.7rem; font-weight: 700;">
             ${alt.name}
           </td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.routing || '-'}</td>
@@ -8360,13 +8360,13 @@ window.viewSavedQuote = async (id) => {
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${chgWt.toFixed(2)} kg</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193; line-height: 1.3;">
             <div style="font-size: 0.65rem; opacity: 0.85;">${currencySym}${rate.toFixed(2)} / kg</div>
-            <strong style="color: #1b1c5c; font-size: 0.75rem;">${currencySym}${baseFr.toFixed(2)}</strong>
+            <strong style="color: #5a7a9a; font-size: 0.75rem;">${currencySym}${baseFr.toFixed(2)}</strong>
           </td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem; color: #2f3193;">${currencySym}${surch.toFixed(2)}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.72rem; font-weight: 800;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
-              <span style="color: ${alt.selected ? 'var(--accent-success)' : '#1b1c5c'};">${currencySym}${gTotal.toFixed(2)}</span>
-              <button class="no-print" onclick="window.showAirlineBreakup('${quote.id}', ${index})" style="background:#1b1c5c; color:#fff; border:none; border-radius:4px; padding:2px 6px; font-size:0.6rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ Info</button>
+              <span style="color: ${alt.selected ? 'var(--accent-success)' : '#5a7a9a'};">${currencySym}${gTotal.toFixed(2)}</span>
+              <button class="no-print" onclick="window.showAirlineBreakup('${quote.id}', ${index})" style="background:#5a7a9a; color:#fff; border:none; border-radius:4px; padding:2px 6px; font-size:0.6rem; cursor:pointer; font-weight:bold; outline:none; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">👁️ Info</button>
             </div>
           </td>
         </tr>
@@ -8397,7 +8397,7 @@ window.viewSavedQuote = async (id) => {
   } else if (quote.details && quote.details.alternatives && quote.details.alternatives.length > 0) {
     const altRows = quote.details.alternatives.map(alt => `
       <tr>
-        <td style="font-weight: 700; color: #1b1c5c;">${alt.carrier}</td>
+        <td style="font-weight: 700; color: #5a7a9a;">${alt.carrier}</td>
         <td>${alt.routing}</td>
         <td>${alt.tt}</td>
         <td style="font-weight: 700; color: #2f3193;">${alt.rate}</td>
@@ -8664,7 +8664,7 @@ window.viewSavedQuote = async (id) => {
       </div>
       
       <!-- Sleek Horizontal Corporate Timeline -->
-      <div class="shipment-status-timeline no-print" style="display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0 2rem 0; padding: 1rem; background: rgba(27,28,92,0.02); border: 1px solid rgba(27,28,92,0.06); border-radius: 8px; position: relative;">
+      <div class="shipment-status-timeline no-print" style="display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0 2rem 0; padding: 1rem; background: rgba(90,122,154,0.02); border: 1px solid rgba(90,122,154,0.06); border-radius: 8px; position: relative;">
         <!-- connecting line background -->
         <div style="position: absolute; top: 50%; left: 10%; right: 10%; height: 3px; background: #e2e8f0; transform: translateY(-50%); z-index: 1;"></div>
         <!-- active progress fill -->
@@ -13545,7 +13545,7 @@ function displayNrsRegistryItems(list) {
           ${item.pendingShipperDetails ? `<span title="Shipper/consignee details still needed" style="display: block; margin-top: 3px; font-size: 0.6rem; font-weight: 800; color: #d97706; background: rgba(217, 119, 6, 0.1); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: 4px; padding: 1px 5px; white-space: nowrap;">⚠ Needs Details</span>` : ''}
         </td>
         <td>
-          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isAir ? 'rgba(27,28,92,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${isAir ? 'var(--accent-air)' : 'var(--accent-sea)'}">
+          <span style="font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isAir ? 'rgba(90,122,154,0.05)' : 'rgba(47,49,147,0.05)'}; color: ${isAir ? 'var(--accent-air)' : 'var(--accent-sea)'}">
             ${nomMode}
           </span>
         </td>
@@ -16456,7 +16456,7 @@ function showDirectoryItemDetails(type, name) {
         <div>
           <div style="font-size: 0.72rem; font-weight: 700; color: var(--t2); margin-bottom: 0.4rem; text-transform: uppercase;">Assigned Agents (${associatedAgents.length})</div>
           <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-            ${associatedAgents.map(a => `<span style="font-size: 0.68rem; padding: 3px 8px; border-radius: 4px; background: rgba(27,28,92,0.04); color: var(--sky); border: 1px solid var(--border-1); font-weight:600;">${a}</span>`).join('') || '<span style="font-size: 0.7rem; color: var(--text-dim); font-style: italic;">No agents assigned yet.</span>'}
+            ${associatedAgents.map(a => `<span style="font-size: 0.68rem; padding: 3px 8px; border-radius: 4px; background: rgba(90,122,154,0.04); color: var(--sky); border: 1px solid var(--border-1); font-weight:600;">${a}</span>`).join('') || '<span style="font-size: 0.7rem; color: var(--text-dim); font-style: italic;">No agents assigned yet.</span>'}
           </div>
         </div>
         
@@ -19780,7 +19780,7 @@ function upgradeSeaPrimaryLinerCard() {
   const header = document.createElement('div');
   header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;border-bottom:1px solid var(--border-1);padding-bottom:0.6rem;';
   header.innerHTML = `
-    <span style="font-size:0.85rem;font-weight:700;color:#1b1c5c;">Rates and fees — Liner 1 Option</span>
+    <span style="font-size:0.85rem;font-weight:700;color:#5a7a9a;">Rates and fees — Liner 1 Option</span>
     <button type="button" class="close-liner-rate-modal-btn" style="background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1;color:var(--t2,#64748b);padding:2px 6px;">✕</button>`;
 
   const footer = document.createElement('div');
@@ -20235,7 +20235,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.14"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.15"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
@@ -20243,16 +20243,16 @@ window.updateLinerRateSummary = updateLinerRateSummary;
     if (!banner) {
       banner = document.createElement("div");
       banner.id = "app-update-banner";
-      banner.style.cssText = "position: fixed; top: 80px; right: 20px; z-index: 999999; background: #ffffff; color: #1b1c5c; padding: 0.9rem 1.1rem; border-radius: 12px; border: 1px solid #dde0f0; box-shadow: 0 12px 32px rgba(27,28,92,0.22); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.82rem; display: flex; align-items: center; gap: 0.75rem; max-width: 340px; animation: appUpdatePulse 2.2s ease-in-out infinite;";
+      banner.style.cssText = "position: fixed; top: 80px; right: 20px; z-index: 999999; background: #ffffff; color: #5a7a9a; padding: 0.9rem 1.1rem; border-radius: 12px; border: 1px solid #dde0f0; box-shadow: 0 12px 32px rgba(90,122,154,0.22); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.82rem; display: flex; align-items: center; gap: 0.75rem; max-width: 340px; animation: appUpdatePulse 2.2s ease-in-out infinite;";
       banner.innerHTML = `
-        <span id="app-update-banner-text" style="flex: 1; font-weight: 600; color: #1b1c5c !important;">🚀 A new version (${latestVersion || "latest"}) is ready. Click Refresh to load it.</span>
-        <button id="app-update-refresh-btn" style="background: #1b1c5c; color: #ffffff !important; border: none; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Refresh</button>
+        <span id="app-update-banner-text" style="flex: 1; font-weight: 600; color: #5a7a9a !important;">🚀 A new version (${latestVersion || "latest"}) is ready. Click Refresh to load it.</span>
+        <button id="app-update-refresh-btn" style="background: #5a7a9a; color: #ffffff !important; border: none; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Refresh</button>
       `;
       document.body.appendChild(banner);
       if (!document.getElementById("app-update-pulse-style")) {
         const style = document.createElement("style");
         style.id = "app-update-pulse-style";
-        style.textContent = "@keyframes appUpdatePulse { 0%, 100% { box-shadow: 0 12px 32px rgba(27,28,92,0.22); transform: scale(1); } 50% { box-shadow: 0 16px 40px rgba(27,28,92,0.35); transform: scale(1.02); } }";
+        style.textContent = "@keyframes appUpdatePulse { 0%, 100% { box-shadow: 0 12px 32px rgba(90,122,154,0.22); transform: scale(1); } 50% { box-shadow: 0 16px 40px rgba(90,122,154,0.35); transform: scale(1.02); } }";
         document.head.appendChild(style);
       }
       document.getElementById("app-update-refresh-btn").addEventListener("click", () => {
@@ -20405,11 +20405,11 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 
     const popup = document.createElement("div");
     popup.id = "route-vendor-popup";
-    popup.style.cssText = "position:fixed; bottom:20px; right:20px; z-index:999998; width:300px; max-height:380px; background:#fff; border:1px solid #dde0f0; border-radius:12px; box-shadow:0 12px 32px rgba(27,28,92,0.18); display:flex; flex-direction:column; overflow:hidden;";
+    popup.style.cssText = "position:fixed; bottom:20px; right:20px; z-index:999998; width:300px; max-height:380px; background:#fff; border:1px solid #dde0f0; border-radius:12px; box-shadow:0 12px 32px rgba(90,122,154,0.18); display:flex; flex-direction:column; overflow:hidden;";
     popup.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0.9rem; border-bottom:1px solid #eef0f7;">
         <div>
-          <div style="font-size:0.8rem; font-weight:800; color:#1b1c5c;">${origin} &rarr; ${destination}</div>
+          <div style="font-size:0.8rem; font-weight:800; color:#5a7a9a;">${origin} &rarr; ${destination}</div>
           <div style="font-size:0.65rem; color:#94a3b8; margin-top:1px;">${totalQuotes} past ${mode === 'air' ? 'air' : 'sea'} quote${totalQuotes === 1 ? '' : 's'} on this lane</div>
         </div>
         <button type="button" id="route-vendor-popup-close" style="background:none; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer; line-height:1; padding:0 0.2rem;">&times;</button>
