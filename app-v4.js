@@ -10924,7 +10924,16 @@ function approveAmendment(reqId) {
     // Sync change to DB
     if (DB.firestoreRef) {
       DB.firestoreRef.collection("amendment_requests").doc(req.id).set(req, { merge: true })
-        .catch(err => console.error("DB: failed to update request status:", err));
+        .then(() => {
+          window._amendmentRequests = requests;
+          localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+          renderAdminDashboard();
+        })
+        .catch(err => {
+          console.error("DB: failed to update request status:", err);
+          localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+          renderAdminDashboard();
+        });
     } else {
       localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
       renderAdminDashboard();
@@ -10960,7 +10969,16 @@ function rejectAmendment(reqId) {
     // Sync change to DB
     if (DB.firestoreRef) {
       DB.firestoreRef.collection("amendment_requests").doc(req.id).set(req, { merge: true })
-        .catch(err => console.error("DB: failed to reject request status:", err));
+        .then(() => {
+          window._amendmentRequests = requests;
+          localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+          renderAdminDashboard();
+        })
+        .catch(err => {
+          console.error("DB: failed to reject request status:", err);
+          localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
+          renderAdminDashboard();
+        });
     } else {
       localStorage.setItem("gl_amendment_requests", JSON.stringify(requests));
       renderAdminDashboard();
@@ -11673,13 +11691,25 @@ const DB = {
           }
         }
 
-        // Check for migration from local to cloud for amendment requests
+        // Check for migration from local to cloud for amendment requests.
+        // REGRESSION GUARD v129.08: never overwrite a cloud-resolved request
+        // (approved/rejected) with a stale local copy still marked pending —
+        // that was causing the same approval to reappear after every deploy.
         const localReqs = JSON.parse(localStorage.getItem("gl_amendment_requests") || "[]");
         if (localReqs.length > 0) {
-          console.log(`DB: Found ${localReqs.length} local amendment requests. Migrating to Firestore...`);
+          console.log(`DB: Found ${localReqs.length} local amendment requests. Migrating new entries to Firestore...`);
           try {
-            const migrationPromises = localReqs.map(async r => {
-              return this.firestoreRef.collection("amendment_requests").doc(r.id).set(r);
+            const migrationPromises = localReqs.map(async (r) => {
+              const docRef = this.firestoreRef.collection("amendment_requests").doc(r.id);
+              const existing = await docRef.get();
+              if (!existing.exists) {
+                return docRef.set(r);
+              }
+              const cloud = existing.data() || {};
+              if (r.status === "pending" && cloud.status && cloud.status !== "pending") {
+                return; // Cloud already resolved — do not resurrect pending
+              }
+              return docRef.set(r, { merge: true });
             });
             await Promise.all(migrationPromises);
             console.log("DB: Local amendment requests migration succeeded!");
@@ -19923,7 +19953,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.07"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.08"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
