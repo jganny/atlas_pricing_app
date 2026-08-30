@@ -6185,6 +6185,14 @@ textarea:focus {
   background: rgba(90, 122, 154, 0.04);
   border: 1px solid rgba(90, 122, 154, 0.12);
   border-radius: var(--r-md);
+  overflow: visible;
+}
+.quote-routes-section .cargo-table-container {
+  overflow: visible;
+}
+.quote-routes-table td.autocomplete-container {
+  overflow: visible;
+  position: relative;
 }
 .quote-routes-header {
   display: flex;
@@ -6237,13 +6245,16 @@ textarea:focus {
 }
 .card-route-select {
   width: 100%;
-  max-width: 320px;
+  max-width: none;
   font-size: 0.78rem;
   padding: 0.4rem 0.55rem;
   border-radius: 6px;
   border: 1px solid var(--border-1);
   background: var(--bg-input);
   color: var(--t1);
+}
+.card-route-select option {
+  font-size: 0.78rem;
 }
 .card-route-select-wrap.is-bb-only {
   opacity: 0.65;

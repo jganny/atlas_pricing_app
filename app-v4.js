@@ -2329,6 +2329,7 @@ function setupAutocomplete(inputEl, type) {
         dropdown.appendChild(div);
       });
       dropdown.classList.add("show");
+      dropdown._reposition?.();
     } else {
       dropdown.classList.remove("show");
     }
@@ -2345,13 +2346,45 @@ function setupAutocomplete(inputEl, type) {
   });
 
   document.addEventListener("click", (e) => {
-    if (!container.contains(e.target)) {
+    if (!container.contains(e.target) && !dropdown.contains(e.target)) {
       dropdown.classList.remove("show");
       activeIndex = -1;
     }
   });
+
+  // Route-table airport/port fields sit inside a scrollable table — portal the
+  // dropdown to body so suggestions aren't clipped below the second route row.
+  if (inputEl.classList.contains('desk-route-origin') || inputEl.classList.contains('desk-route-dest')) {
+    bindAutocompleteDropdownPortal(dropdown, inputEl);
+  }
 }
 window.setupAutocomplete = setupAutocomplete;
+
+function bindAutocompleteDropdownPortal(dropdown, anchorEl) {
+  if (!dropdown || dropdown._portalBound) return;
+  dropdown._portalBound = true;
+  dropdown._anchorEl = anchorEl;
+  document.body.appendChild(dropdown);
+  const reposition = () => positionAutocompleteDropdownPortal(dropdown);
+  dropdown._reposition = reposition;
+  window.addEventListener('scroll', reposition, true);
+  window.addEventListener('resize', reposition);
+}
+
+function positionAutocompleteDropdownPortal(dropdown) {
+  if (!dropdown || !dropdown.classList.contains('show')) return;
+  const anchor = dropdown._anchorEl;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  if (!rect || typeof rect.bottom !== 'number') return;
+  dropdown.style.position = 'fixed';
+  dropdown.style.left = Math.max(8, rect.left) + 'px';
+  dropdown.style.top = (rect.bottom + 4) + 'px';
+  dropdown.style.width = Math.max(rect.width, 260) + 'px';
+  dropdown.style.maxWidth = 'calc(100vw - 16px)';
+  dropdown.style.right = 'auto';
+  dropdown.style.zIndex = '5000';
+}
 
 // AIR FREIGHT CALCULATOR LOGIC
 // AIR FREIGHT CALCULATOR LOGIC
@@ -3341,14 +3374,28 @@ function getDeskRoutes(mode) {
 }
 window.getDeskRoutes = getDeskRoutes;
 
+function extractDeskRouteShortLabel(value) {
+  const v = (value || '').trim();
+  if (!v) return '?';
+  const dashIdx = v.indexOf(' - ');
+  if (dashIdx > 0) return v.substring(0, dashIdx).trim().toUpperCase();
+  if (v.length <= 8 && !v.includes(' ')) return v.toUpperCase();
+  return v.split(/\s+/)[0].substring(0, 8).toUpperCase();
+}
+window.extractDeskRouteShortLabel = extractDeskRouteShortLabel;
+
 function buildDeskRouteSelectOptions(mode, selectedId) {
   const routes = getDeskRoutes(mode);
   return routes.map(r => {
-    const o = (r.origin || '—').trim();
-    const d = (r.destination || '—').trim();
-    const label = `${r.label}: ${o || '?'} → ${d || '?'}`;
+    const o = (r.origin || '').trim();
+    const d = (r.destination || '').trim();
+    const oShort = extractDeskRouteShortLabel(o);
+    const dShort = extractDeskRouteShortLabel(d);
+    const label = `${r.label}: ${oShort} → ${dShort}`;
+    const fullLabel = `${r.label}: ${o || '?'} → ${d || '?'}`;
     const sel = (selectedId === r.id || (!selectedId && r.id === 'primary')) ? ' selected' : '';
-    return `<option value="${r.id}"${sel}>${label}</option>`;
+    const safeTitle = fullLabel.replace(/"/g, '&quot;');
+    return `<option value="${r.id}" title="${safeTitle}"${sel}>${label}</option>`;
   }).join('');
 }
 
@@ -3459,6 +3506,8 @@ function addDeskRoute(mode) {
   tbody.appendChild(tr);
   bindDeskRouteRowEvents(mode, tr, routeId);
   refreshDeskRouteDropdowns(mode);
+  tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  tr.querySelector('.desk-route-origin')?.focus({ preventScroll: true });
   meta.calcFn();
 }
 window.addDeskRoute = addDeskRoute;
@@ -20536,6 +20585,13 @@ function advanceDeskStep(panelId, tabName) {
   if (!panel) return;
   const btn = panel.querySelector(`.desk-tab-btn[data-desk-tab="${tabName}"]`);
   if (btn) switchDeskTab(panelId, tabName, btn);
+  if (tabName === 'carrier') {
+    requestAnimationFrame(() => {
+      const routeSelect = panel.querySelector('.card-route-select');
+      const container = panel.querySelector('#air-airlines-list-container, #sea-liners-container');
+      (routeSelect || container)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 window.advanceDeskStep = advanceDeskStep;
 
@@ -21098,7 +21154,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.22"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.23"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
