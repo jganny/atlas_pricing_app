@@ -1137,7 +1137,7 @@ function switchRole(role) {
 
 function goHome() {
   const workspaceNameEl = document.getElementById("header-workspace-name");
-  if (workspaceNameEl) workspaceNameEl.textContent = "Dashboard";
+  if (workspaceNameEl) workspaceNameEl.textContent = "Home";
 
   document.querySelectorAll(".view-panel").forEach(panel => {
     panel.classList.remove("active");
@@ -1570,7 +1570,7 @@ window.resetFreightForm = function (type) {
 
 function returnToWorkspace() {
   const workspaceNameEl = document.getElementById("header-workspace-name");
-  if (workspaceNameEl) workspaceNameEl.textContent = "Dashboard";
+  if (workspaceNameEl) workspaceNameEl.textContent = "Home";
 
   document.querySelectorAll(".view-panel").forEach(panel => {
     panel.classList.remove("active");
@@ -7995,7 +7995,7 @@ function loadSavedQuotes() {
 async function restoreCachedQuotes() {
   const saved = localStorage.getItem("logistics_quotes");
   if (!saved) {
-    alert("No cached quotes found in this browser.");
+    alert("No browser backup found. Your quotes are normally stored in the cloud — use Enquiry Database search or Find old quote (archive) instead.");
     return;
   }
   let quotes = [];
@@ -8010,7 +8010,7 @@ async function restoreCachedQuotes() {
     return;
   }
 
-  if (!confirm(`Found ${quotes.length} quotes in your browser cache. Do you want to restore them to the server?`)) {
+  if (!confirm(`Found ${quotes.length} quotes in this browser's offline backup.\n\nOnly use this if quotes failed to sync to the cloud. Continue?`)) {
     return;
   }
 
@@ -8185,9 +8185,71 @@ window.showSeaBreakup = (quoteId) => {
   document.body.appendChild(breakupModal);
 };
 
-window.viewSavedQuote = (id) => {
-  const quote = appState.quotes.find(q => q.id === id);
-  if (!quote) return;
+async function resolveQuoteByRefOrId(refOrId) {
+  const needle = String(refOrId || "").trim();
+  if (!needle) return null;
+
+  const normalized = needle.toLowerCase();
+  const visibleRefMatch = needle.match(/IN(\d+)$/i);
+  const visibleRefQuoteNumber = visibleRefMatch ? Number(visibleRefMatch[1]) : null;
+
+  const matchesLookup = (quote) => {
+    if (!quote) return false;
+    const visibleRefId = (getQuoteRefId(quote) || "").toLowerCase();
+    const storedId = String(quote.id || "").toLowerCase();
+    return visibleRefId === normalized || storedId === normalized ||
+      visibleRefId.includes(normalized) || storedId.includes(normalized);
+  };
+
+  let found = (appState.quotes || []).find(matchesLookup);
+  if (found) return found;
+
+  try {
+    const offlineArchive = JSON.parse(localStorage.getItem("logistics_archive_quotes") || "[]");
+    found = offlineArchive.find(matchesLookup);
+    if (found) return found;
+  } catch (e) { }
+
+  if (DB.isCloud && DB.firestoreRef) {
+    try {
+      const activeDoc = await DB.firestoreRef.collection("quotes").doc(needle).get();
+      if (activeDoc.exists) return activeDoc.data();
+
+      const archiveDoc = await DB.firestoreRef.collection("archive_quotes").doc(needle).get();
+      if (archiveDoc.exists) return archiveDoc.data();
+
+      for (const col of ["quotes", "archive_quotes"]) {
+        const byId = await DB.firestoreRef.collection(col).where("id", "==", needle).limit(1).get();
+        if (!byId.empty) return byId.docs[0].data();
+      }
+
+      if (visibleRefQuoteNumber !== null) {
+        for (const col of ["quotes", "archive_quotes"]) {
+          const byNum = await DB.firestoreRef.collection(col)
+            .where("quoteNumber", "==", visibleRefQuoteNumber)
+            .get();
+          found = byNum.docs.map(d => d.data()).find(matchesLookup) || null;
+          if (found) return found;
+        }
+      }
+    } catch (e) {
+      console.error("resolveQuoteByRefOrId:", e);
+    }
+  }
+
+  return null;
+}
+window.resolveQuoteByRefOrId = resolveQuoteByRefOrId;
+
+window.viewSavedQuote = async (id) => {
+  let quote = appState.quotes.find(q => q.id === id);
+  if (!quote) {
+    quote = await resolveQuoteByRefOrId(id);
+  }
+  if (!quote) {
+    alert("Quote not found in live enquiries. If it is older than 90 days, open Admin → Enquiry Database → Find old quote (archive) on the right panel.");
+    return;
+  }
 
   const printCard = document.getElementById("quote-print-card");
   if (!printCard) return;
@@ -15581,6 +15643,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     foundQuote = appState.quotes.find(matchesLookup);
 
+    if (!foundQuote) {
+      foundQuote = await resolveQuoteByRefOrId(refInput);
+    }
+
     if (!foundQuote && DB.isCloud && DB.firestoreRef) {
       try {
         const docRef = DB.firestoreRef.collection("archive_quotes").doc(refInput);
@@ -19953,7 +20019,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.08"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.09"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {

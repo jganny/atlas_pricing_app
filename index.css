@@ -426,6 +426,24 @@ body {
   cursor: pointer;
 }
 
+.header-logo-img {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+/* Desktop: sidebar is primary nav — hide duplicate horizontal module tabs */
+@media (min-width: 901px) {
+  #global-module-tabs {
+    display: none !important;
+  }
+  .subheader-content {
+    justify-content: flex-start;
+    gap: 1rem;
+  }
+}
+
 /* .logo-img, .logo-text-container, .logo-text, .brand-verte, .logo-tagline
    removed — app uses direct inline img style; classes were unused dead code */
 
@@ -6909,19 +6927,19 @@ body.logged-out-blur .atlas-command-palette {
 
 .enquiry-db-main-card {
   border-top: 3px solid var(--sky);
-  padding: 1.25rem 1.35rem !important;
+  padding: 1rem 1.15rem !important;
 }
 .enquiry-db-toolbar {
   flex-direction: column;
   align-items: stretch;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 .enquiry-db-title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: 0.5rem 0.75rem;
 }
 .enquiry-db-title-block {
   flex: 1;
@@ -6946,35 +6964,67 @@ body.logged-out-blur .atlas-command-palette {
   color: var(--sky);
   font-family: 'Outfit', sans-serif;
 }
-.enquiry-db-restore-btn {
-  font-size: 0.72rem !important;
-  padding: 0.4rem 0.75rem !important;
+.enquiry-db-restore-link {
+  font-size: 0.68rem !important;
+  color: var(--t3) !important;
+  padding: 0.15rem 0.35rem !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
   flex: 0 0 auto !important;
   white-space: nowrap;
+}
+.enquiry-db-restore-link:hover {
+  color: var(--sky) !important;
 }
 .enquiry-db-search {
   max-width: none;
   width: 100%;
+}
+.enquiry-db-search-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--t3);
+  margin-bottom: 0.3rem;
 }
 .enquiry-db-search input {
   width: 100%;
   border-radius: var(--r-md);
   border: 1px solid var(--border-1);
   background: var(--bg-input);
-  padding: 0.55rem 0.85rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+}
+.enquiry-db-search-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  color: var(--t3);
+  line-height: 1.4;
+}
+.enquiry-db-shell .db-filter-bar {
+  margin-bottom: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(248, 250, 252, 0.85);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-md);
 }
 
 .enquiry-db-shell #admin-quotes-table th {
   background: var(--bg-deep);
   color: var(--sky);
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   letter-spacing: 0.08em;
   border-bottom: 2px solid var(--border-1);
+  padding: 0.45rem 0.6rem;
 }
 .enquiry-db-shell #admin-quotes-table td {
-  padding: 0.65rem 0.75rem;
-  font-size: 0.78rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.74rem;
   vertical-align: middle;
 }
 .enquiry-db-shell #admin-quotes-table tbody tr:nth-child(even) td {
@@ -6987,6 +7037,8 @@ body.logged-out-blur .atlas-command-palette {
 .enquiry-db-shell .quotes-table-container {
   border-color: var(--border-1);
   box-shadow: var(--shadow-sm);
+  max-height: min(62vh, 720px);
+  overflow: auto;
 }
 .enquiry-db-shell .pagination-controls {
   margin-top: 1rem;

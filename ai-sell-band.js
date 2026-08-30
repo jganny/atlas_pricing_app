@@ -19,6 +19,8 @@
   var US = ['JFK', 'LAX', 'ORD', 'SFO', 'EWR', 'IAD', 'MIA', 'DFW', 'ATL', 'SEA'];
   var APAC = ['SIN', 'HKG', 'BKK', 'KUL', 'NRT', 'HND', 'ICN', 'PVG', 'PEK', 'SYD', 'MEL', 'CGK'];
 
+  var AFRICA = ['NBO', 'JNB', 'CPT', 'DUR', 'CAI', 'ADD', 'LOS', 'ACC', 'DAR', 'EBB', 'KGL', 'ABV', 'CMN', 'TUN', 'ALG', 'MRU', 'MPM', 'HRE', 'LUN', 'NIM', 'FIH', 'LAD', 'DKR'];
+
   var AIR_CORRIDOR_CARRIERS = {
     'IN-EU': [
       { name: 'EK - Emirates', note: 'Daily via Dubai — common on India–Europe lanes' },
@@ -50,6 +52,16 @@
       { name: 'TG - Thai Airways', note: 'Bangkok connection' },
       { name: 'MH - Malaysia Airlines', note: 'Kuala Lumpur hub' }
     ],
+    'IN-AFRICA': [
+      { name: 'KQ - Kenya Airways', note: 'Nairobi hub — East Africa leader on India–Kenya lanes' },
+      { name: 'ET - Ethiopian Airlines', note: 'Addis Ababa hub — pan-Africa network, strong BLR/NBO/DAR' },
+      { name: 'MS - EgyptAir', note: 'Cairo hub — North & East Africa connections' },
+      { name: 'EK - Emirates', note: 'Daily Dubai connection — India to East Africa' },
+      { name: 'QR - Qatar Airways', note: 'Doha hub — competitive Africa transit' },
+      { name: 'AI - Air India', note: 'Direct Africa sectors where filed from Indian gateways' },
+      { name: 'WY - Oman Air', note: 'Muscat hub — alternative Gulf routing to Africa' }
+    ],
+    'AFRICA-IN': null,
     'EU-IN': null,
     'GULF-IN': null,
     'US-IN': null,
@@ -95,6 +107,7 @@
     if (EU.indexOf(code) >= 0) return 'EU';
     if (US.indexOf(code) >= 0) return 'US';
     if (APAC.indexOf(code) >= 0) return 'APAC';
+    if (AFRICA.indexOf(code) >= 0) return 'AFRICA';
     return 'OTHER';
   }
 
@@ -179,7 +192,7 @@
     }
 
     if (mode === 'air') {
-      var intel = AIR_CORRIDOR_CARRIERS[lookup] || AIR_CORRIDOR_CARRIERS['IN-EU'] || [];
+      var intel = AIR_CORRIDOR_CARRIERS[lookup] || AIR_CORRIDOR_CARRIERS[rev] || [];
       if (lookup === 'IN-LOCAL' || lookup === 'GULF-LOCAL') {
         intel = [
           { name: '6E - IndiGo', note: 'Domestic / short-haul leader' },
@@ -192,7 +205,7 @@
         add(c.name, c.note, false);
       });
     } else if (mode === 'sea') {
-      var liners = SEA_CORRIDOR_LINERS[lookup] || SEA_CORRIDOR_LINERS[rev] || SEA_CORRIDOR_LINERS['IN-EU'] || [];
+      var liners = SEA_CORRIDOR_LINERS[lookup] || SEA_CORRIDOR_LINERS[rev] || [];
       liners.forEach(function (ln) {
         add(ln, 'Regular liner on this trade lane', false);
       });
