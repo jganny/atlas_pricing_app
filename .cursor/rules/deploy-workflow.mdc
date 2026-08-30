@@ -7,19 +7,19 @@ alwaysApply: true
 
 - **GitHub repo:** `jganny/atlas_pricing_app`
 - **Live site:** Firebase Hosting project `vertex-35d95` (https://vertex-35d95.web.app)
-- **Auto-deploy:** GitHub Actions runs on every push to `main` (`.github/workflows/deploy-hosting.yml` uses `FIREBASE_TOKEN` secret — do not put that token in the repo or chat).
+- **Auto-deploy is OFF.** The workflow lives at `.github/workflows-disabled/deploy-hosting.yml` (moved out of `.github/workflows/` on 2026-08-30 at the owner's request — pushing to `main` no longer deploys anything). Do not move it back or re-add a workflow that deploys on push without the owner's explicit go-ahead.
 
 ## After every release
 
 1. Bump `version.txt`, `APP_VERSION` in `app-v4.js`, and all `?v=` cache-bust strings in `index.html`.
-2. Commit with a clear message (e.g. `v129.04: …`).
-3. **Push to `origin main` on GitHub** — this triggers Firebase deploy automatically.
-4. Confirm https://vertex-35d95.web.app/version.txt shows the new version.
+2. Commit with a clear message (e.g. `v129.04: …`) and push to `origin main` on GitHub.
+3. Deploy is a separate, explicit step — `firebase deploy --only hosting --project vertex-35d95` — run only when the owner asks for that specific release to go live.
+4. Confirm https://vertex-35d95.web.app/version.txt shows the new version afterward.
 
 ## Do not
 
 - Change pricing formulas, quote save/load logic, or existing Firestore quote data unless explicitly requested.
-- Run manual `firebase deploy` from the agent unless GitHub Actions is broken and the user asks.
+- Re-enable auto-deploy-on-push without the owner explicitly asking for it.
 - Create pull requests unless the user explicitly asks — push to `main` for this project.
 
 ## Branding
