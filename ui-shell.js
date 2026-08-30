@@ -67,6 +67,11 @@
   function switchAdminTab(tabName) {
     var panel = document.getElementById('manager-panel');
     if (!panel) return;
+    var hubCard = panel.querySelector('.home-hub-card[data-hub-tab="' + tabName + '"]');
+    if (typeof window.switchHomeHubTab === 'function') {
+      window.switchHomeHubTab(tabName, hubCard);
+      return;
+    }
     var buttons = panel.querySelectorAll('.desk-tab-strip .desk-tab-btn');
     var targetBtn = null;
     buttons.forEach(function (btn) {

@@ -304,59 +304,70 @@
       <!-- ==================== ADMIN DASHBOARD PANEL ==================== -->
       <div id="manager-panel" class="view-panel">
 
-        <!-- Control Tower Widescreen Dashboard Card -->
-        <div class="glass-card" id="admin-global-control-tower" style="margin-bottom: 2rem; padding: 1.5rem; position: relative;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-            <div>
-              <div
-                style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
-                Logistics & Supply Chain Intelligence</div>
-              <h2
-                style="font-size: 1.25rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
-                GLOBAL CONTROL TOWER</h2>
-            </div>
-          </div>
-
-          <div class="control-tower-layout"
-            style="display: grid; grid-template-columns: 3.2fr 1.8fr; gap: 1.5rem; min-height: 280px;">
-            <!-- Left Side: Interactive SVG Map Grid -->
-            <!-- Left Side: Live Logistics & Supply Chain News Feed -->
-            <div class="news-container"
-              style="background: rgba(255, 255, 255, 0.45); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1rem; min-height: 280px; width: 100%; display: flex; flex-direction: column; gap: 0.75rem;">
-              <div
-                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem; margin-bottom: 0.25rem;">
-                <div
-                  style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 0.4rem;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path
-                      d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 1 2 2v-1.5M20 7a2 2 0 0 0-2-2h-2m-4-3H9v4h6V4z" />
-                  </svg>
-                  Real-time Logistics News Feed
-                </div>
-                <!-- Tabs to switch between Global and India news -->
-                <div style="display: flex; gap: 0.45rem;">
-                  <button type="button" id="news-tab-global" class="news-tab active"
-                    onclick="loadLogisticsNews('global')"
-                    style="background: none; border: none; font-size: 0.65rem; font-weight: 800; color: var(--sky); cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--sky);">Global</button>
-                  <button type="button" id="news-tab-india" class="news-tab" onclick="loadLogisticsNews('india')"
-                    style="background: none; border: none; font-size: 0.65rem; font-weight: 800; color: var(--t3); cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent;">India</button>
-                </div>
-              </div>
-              <!-- News Feed items list -->
-              <div id="logistics-news-list"
-                style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 220px; padding-right: 0.25rem;">
-                <div
-                  style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">
-                  Loading logistics news feed...
-                </div>
-              </div>
-            </div>
-
-
-          </div>
+        <div class="desk-tab-strip" style="display:none !important;" aria-hidden="true">
+          <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('manager-panel','overview',this)">Overview</button>
+          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','agent-directory',this); if (typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet && (appState.quotes || []).length > 0) { window._dirInitialCollapseSet = true; collapseAllDirNodes(); }">Quoting Agents</button>
+          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','enquiry-database',this); if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();">Enquiry Database</button>
+          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','analytics',this); if (typeof renderExecutiveDashboard === 'function') renderExecutiveDashboard(); if (typeof renderExecutiveDashboardIntelligence === 'function') { lastCalculatedQuotesKey = ''; renderExecutiveDashboardIntelligence(); }">Analytics</button>
         </div>
 
-        <!-- Tips for new users (dismissible) -->
+        <div class="home-hub-shell">
+          <nav class="home-hub-grid" aria-label="Home sections">
+            <button type="button" class="home-hub-card active" data-hub-tab="overview" onclick="switchHomeHubTab('overview', this)">
+              <span class="home-hub-eyebrow">Command</span>
+              <span class="home-hub-label">Overview</span>
+              <span class="home-hub-desc">KPIs, team performance, and approvals</span>
+              <span class="home-hub-chevron" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="home-hub-card" data-hub-tab="agent-directory" onclick="switchHomeHubTab('agent-directory', this)">
+              <span class="home-hub-eyebrow">Registry</span>
+              <span class="home-hub-label">Quoting Agents</span>
+              <span class="home-hub-desc">Agent and customer directory</span>
+              <span class="home-hub-chevron" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="home-hub-card" data-hub-tab="enquiry-database" onclick="switchHomeHubTab('enquiry-database', this)">
+              <span class="home-hub-eyebrow">Operations</span>
+              <span class="home-hub-label">Enquiry Database</span>
+              <span class="home-hub-desc">Search, browse, and archive quotes</span>
+              <span class="home-hub-chevron" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="home-hub-card" data-hub-tab="analytics" onclick="switchHomeHubTab('analytics', this)">
+              <span class="home-hub-eyebrow">Intelligence</span>
+              <span class="home-hub-label">Analytics</span>
+              <span class="home-hub-desc">Pipeline, compliance, and trends</span>
+              <span class="home-hub-chevron" aria-hidden="true">›</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="desk-tab-pane" data-tab-pane="overview">
+
+        <div class="home-overview-hero">
+        <div class="glass-card" id="admin-global-control-tower" style="margin-bottom: 0; padding: 1.5rem; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div>
+              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">Logistics &amp; Supply Chain Intelligence</div>
+              <h2 style="font-size: 1.25rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">GLOBAL CONTROL TOWER</h2>
+            </div>
+          </div>
+          <div class="control-tower-layout" style="display: grid; grid-template-columns: 3.2fr 1.8fr; gap: 1.5rem; min-height: 280px;">
+            <div class="news-container" style="background: rgba(255, 255, 255, 0.45); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 1rem; min-height: 280px; width: 100%; display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-1); padding-bottom: 0.6rem; margin-bottom: 0.25rem;">
+                <div style="font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 0.4rem;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 1 2 2v-1.5M20 7a2 2 0 0 0-2-2h-2m-4-3H9v4h6V4z" /></svg>
+                  Real-time Logistics News Feed
+                </div>
+                <div style="display: flex; gap: 0.45rem;">
+                  <button type="button" id="news-tab-global" class="news-tab active" onclick="loadLogisticsNews('global')" style="background: none; border: none; font-size: 0.65rem; font-weight: 800; color: var(--sky); cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--sky);">Global</button>
+                  <button type="button" id="news-tab-india" class="news-tab" onclick="loadLogisticsNews('india')" style="background: none; border: none; font-size: 0.65rem; font-weight: 800; color: var(--t3); cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent;">India</button>
+                </div>
+              </div>
+              <div id="logistics-news-list" style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; max-height: 220px; padding-right: 0.25rem;">
+                <div style="font-size: 0.72rem; color: var(--t3); font-style: italic; text-align: center; margin-top: 1.5rem;">Loading logistics news feed...</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div id="atlas-tips-card" class="atlas-tips-card">
           <div class="atlas-tips-header">
             <span class="atlas-tips-title">Tips</span>
@@ -368,8 +379,6 @@
             <li>Use <strong>Recreate</strong> (copy icon on a saved quote, or Quick assist on the desk) to start a new quote from an old one — same customer/carriers, change route or weight.</li>
           </ul>
         </div>
-
-        <!-- ✅ Atlassian Live Margin Radar Strip — Real-time monitoring (no leaf unturned) -->
         <div class="margin-radar-strip">
           <span class="margin-radar-label">Live System Status:</span>
           <span class="atl-tag atl-tag-success atl-tag-live">✦ Pricing Desk Online</span>
@@ -379,17 +388,28 @@
           <span class="atl-tag atl-tag-warning">Warehousing Active</span>
           <span style="margin-left:auto; font-size:0.65rem; color:var(--t3); font-weight:700;">Rate Validity: All Desks Monitored</span>
         </div>
+        </div><!-- /home-overview-hero -->
 
-        <div class="desk-tab-strip">
-          <button type="button" class="desk-tab-btn active" onclick="switchDeskTab('manager-panel','overview',this)">Overview</button>
-          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','agent-directory',this); if (typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet && (appState.quotes || []).length > 0) { window._dirInitialCollapseSet = true; collapseAllDirNodes(); }">Quoting Agents</button>
-          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','enquiry-database',this); if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();">Enquiry Database</button>
-          <button type="button" class="desk-tab-btn" onclick="switchDeskTab('manager-panel','analytics',this); if (typeof renderExecutiveDashboard === 'function') renderExecutiveDashboard(); if (typeof renderExecutiveDashboardIntelligence === 'function') { lastCalculatedQuotesKey = ''; renderExecutiveDashboardIntelligence(); }">Analytics</button>
-        </div>
+        <div id="home-overview-shell" class="atlas-sequence-shell">
+          <nav class="desk-flow-rail" aria-label="Overview steps">
+            <div class="desk-flow-step is-active" data-flow-step="pulse">
+              <span class="desk-flow-num">1</span>
+              <span class="desk-flow-label">Pulse</span>
+            </div>
+            <div class="desk-flow-connector" aria-hidden="true"></div>
+            <div class="desk-flow-step" data-flow-step="performance">
+              <span class="desk-flow-num">2</span>
+              <span class="desk-flow-label">Performance</span>
+            </div>
+            <div class="desk-flow-connector" aria-hidden="true"></div>
+            <div class="desk-flow-step" data-flow-step="approvals">
+              <span class="desk-flow-num">3</span>
+              <span class="desk-flow-label">Approvals</span>
+            </div>
+          </nav>
 
-        <div class="desk-tab-pane" data-tab-pane="overview">
-
-        <!-- Metrics Grid -->
+          <div class="atlas-seq-pane" data-seq-pane="pulse">
+            <p class="desk-flow-hint">Your business pulse at a glance — revenue, enquiries, conversions, and conversion rate.</p>
         <div class="stats-grid">
           <div class="glass-card stat-card kpi-ring-card" data-type="total">
             <div class="stat-title">Total Quoted Revenue</div>
@@ -412,8 +432,13 @@
             <div class="stat-subtitle">Overall conversion percentage</div>
           </div>
         </div>
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceSequenceStep('home-overview-shell','performance')">Continue to Performance →</button>
+            </div>
+          </div><!-- /pulse -->
 
-        <!-- Row 1: Dashboard Analytics and Approvals -->
+          <div class="atlas-seq-pane" data-seq-pane="performance" style="display:none;">
+            <p class="desk-flow-hint">Review team leaderboard and extract performance reports for any officer or period.</p>
         <div class="admin-flex-row">
           <!-- Leaderboard metrics -->
           <div class="glass-card" style="flex: 2.2; min-width: 320px;">
@@ -477,9 +502,16 @@
               Extract & View Report
             </button>
           </div>
+        </div><!-- /admin-flex-row -->
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceSequenceStep('home-overview-shell','approvals')">Continue to Approvals →</button>
+            </div>
+          </div><!-- /performance -->
 
+          <div class="atlas-seq-pane" data-seq-pane="approvals" style="display:none;">
+            <p class="desk-flow-hint">Pending edit and delete requests from pricing officers — approve or reject here.</p>
           <!-- Amendment Requests Approvals Panel (Admin Only) -->
-          <div class="glass-card" id="admin-amendment-requests-panel" style="flex: 1.6; min-width: 300px;">
+          <div class="glass-card" id="admin-amendment-requests-panel" style="max-width: 720px;">
             <h3
               style="font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem; text-transform: uppercase; color: var(--accent-warning);">
               Admin Approvals Control Deck (Edit & Delete)</h3>
@@ -488,7 +520,8 @@
               <div style="color: var(--text-dim); font-style: italic;">No pending amendment requests.</div>
             </div>
           </div>
-        </div>
+          </div><!-- /approvals -->
+        </div><!-- /home-overview-shell -->
 
         </div><!-- /desk-tab-pane[overview] -->
 
@@ -551,13 +584,28 @@
 
         <div class="desk-tab-pane enquiry-db-shell" data-tab-pane="enquiry-database" style="display:none;">
 
+        <div id="admin-tracking-control-center" style="margin-bottom: 1rem;"></div>
 
-        <!-- Global Cargo Operations Tracking Control Center -->
-        <div id="admin-tracking-control-center" style="margin-bottom: 2rem;"></div>
+        <div id="enquiry-db-sequence-shell" class="atlas-sequence-shell">
+          <nav class="desk-flow-rail" aria-label="Enquiry database steps">
+            <div class="desk-flow-step is-active" data-flow-step="find">
+              <span class="desk-flow-num">1</span>
+              <span class="desk-flow-label">Find</span>
+            </div>
+            <div class="desk-flow-connector" aria-hidden="true"></div>
+            <div class="desk-flow-step" data-flow-step="browse">
+              <span class="desk-flow-num">2</span>
+              <span class="desk-flow-label">Browse</span>
+            </div>
+            <div class="desk-flow-connector" aria-hidden="true"></div>
+            <div class="desk-flow-step" data-flow-step="reports">
+              <span class="desk-flow-num">3</span>
+              <span class="desk-flow-label">Reports</span>
+            </div>
+          </nav>
 
-        <div class="enquiry-db-workspace">
-        <div class="enquiry-db-primary">
-        <!-- Master quotes view -->
+          <div class="atlas-seq-pane enquiry-seq-find" data-seq-pane="find">
+            <p class="desk-flow-hint">Search live enquiries and add filters — then continue to browse matching quotes.</p>
         <div class="glass-card enquiry-db-main-card">
           <div class="enquiry-db-toolbar table-header-row">
             <div class="enquiry-db-title-row">
@@ -792,6 +840,23 @@
               <div class="hdr-toolbar-panel db-columns-panel" id="db-columns-panel"></div>
             </div>
           </div>
+        </div>
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceSequenceStep('enquiry-db-sequence-shell','browse')">Continue to Browse →</button>
+            </div>
+          </div><!-- /find -->
+
+          <div class="atlas-seq-pane enquiry-seq-browse" data-seq-pane="browse" style="display:none;">
+            <p class="desk-flow-hint">Tap a row to inspect details on the right. Use row actions to view, amend, or convert.</p>
+        <div class="enquiry-db-workspace">
+        <div class="enquiry-db-primary">
+        <div class="glass-card enquiry-db-main-card enquiry-db-table-card">
+          <div class="enquiry-db-title-row" style="margin-bottom:0.75rem;">
+            <div class="enquiry-db-title-block">
+              <span class="enquiry-db-eyebrow">Results</span>
+              <h3 class="enquiry-db-title" style="font-size:1rem;">Matching Enquiries</h3>
+            </div>
+          </div>
 
           <div class="quotes-table-container">
             <table class="quotes-table" id="admin-quotes-table">
@@ -831,8 +896,7 @@
         </div>
         </div><!-- /enquiry-db-primary -->
 
-        <aside class="enquiry-db-inspector" aria-label="Reports and archival tools">
-        <!-- Enquiry row inspector (read-only PiP panel) -->
+        <aside class="enquiry-db-inspector" aria-label="Enquiry inspector">
         <div id="enquiry-row-inspector" class="glass-card enquiry-row-inspector-card" aria-live="polite">
           <div class="eri-header">
             <span class="eri-eyebrow">Quick Inspector</span>
@@ -856,6 +920,15 @@
             <p class="eri-hint">Use row action buttons to view, amend, or convert quotes.</p>
           </div>
         </div>
+        </aside>
+        </div><!-- /enquiry-db-workspace -->
+            <div class="desk-flow-footer">
+              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceSequenceStep('enquiry-db-sequence-shell','reports')">Continue to Reports →</button>
+            </div>
+          </div><!-- /browse -->
+
+          <div class="atlas-seq-pane enquiry-seq-reports" data-seq-pane="reports" style="display:none;">
+            <p class="desk-flow-hint">Generate financial summaries, export CSV, or retrieve archived quotes older than 90 days.</p>
         <!-- Financial Reports & Archive Query Panel -->
         <div class="glass-card enquiry-db-inspector-card edb-reports-card">
           <div class="edb-reports-header">
@@ -931,8 +1004,8 @@
             </div>
           </div>
         </div>
-        </aside>
-        </div><!-- /enquiry-db-workspace -->
+          </div><!-- /reports -->
+        </div><!-- /enquiry-db-sequence-shell -->
 
         </div><!-- /desk-tab-pane[enquiry-database] -->
         <div class="desk-tab-pane" data-tab-pane="analytics" style="display:none;">

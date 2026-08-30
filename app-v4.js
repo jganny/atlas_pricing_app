@@ -1172,9 +1172,17 @@ function goHome() {
     });
     const root = document.documentElement;
     root.style.setProperty('--accent-current', 'var(--sky)');
-    const overviewTabBtn = document.querySelector('#manager-panel .desk-tab-strip .desk-tab-btn');
-    if (typeof switchDeskTab === 'function') {
-      switchDeskTab('manager-panel', 'overview', overviewTabBtn);
+    const overviewHubCard = document.querySelector('#manager-panel .home-hub-card[data-hub-tab="overview"]');
+    if (typeof switchHomeHubTab === 'function') {
+      switchHomeHubTab('overview', overviewHubCard);
+    } else {
+      const overviewTabBtn = document.querySelector('#manager-panel .desk-tab-strip .desk-tab-btn');
+      if (typeof switchDeskTab === 'function') {
+        switchDeskTab('manager-panel', 'overview', overviewTabBtn);
+      }
+    }
+    if (typeof switchSequenceStep === 'function') {
+      switchSequenceStep('home-overview-shell', 'pulse');
     }
     renderAdminDashboard();
   } else {
@@ -19642,6 +19650,51 @@ function advanceDeskStep(panelId, tabName) {
   if (btn) switchDeskTab(panelId, tabName, btn);
 }
 window.advanceDeskStep = advanceDeskStep;
+
+function switchSequenceStep(shellId, stepName) {
+  const shell = document.getElementById(shellId);
+  if (!shell) return;
+  shell.querySelectorAll('.atlas-seq-pane').forEach((pane) => {
+    pane.style.display = (pane.getAttribute('data-seq-pane') === stepName) ? '' : 'none';
+  });
+  const steps = [...shell.querySelectorAll('.desk-flow-step')];
+  const activeIdx = steps.findIndex((s) => s.getAttribute('data-flow-step') === stepName);
+  steps.forEach((step, idx) => {
+    step.classList.toggle('is-active', step.getAttribute('data-flow-step') === stepName);
+    step.classList.toggle('is-complete', activeIdx >= 0 && idx < activeIdx);
+  });
+}
+window.switchSequenceStep = switchSequenceStep;
+
+function advanceSequenceStep(shellId, stepName) {
+  switchSequenceStep(shellId, stepName);
+  if (stepName === 'browse' && typeof applyDbFiltersAndSort === 'function') {
+    applyDbFiltersAndSort();
+  }
+}
+window.advanceSequenceStep = advanceSequenceStep;
+
+function switchHomeHubTab(tabName, cardEl) {
+  switchDeskTab('manager-panel', tabName, cardEl);
+  document.querySelectorAll('#manager-panel .home-hub-card').forEach((c) => c.classList.remove('active'));
+  if (cardEl) cardEl.classList.add('active');
+  if (tabName === 'agent-directory' && typeof collapseAllDirNodes === 'function' && !window._dirInitialCollapseSet && (appState.quotes || []).length > 0) {
+    window._dirInitialCollapseSet = true;
+    collapseAllDirNodes();
+  }
+  if (tabName === 'enquiry-database') {
+    switchSequenceStep('enquiry-db-sequence-shell', 'find');
+    if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();
+  }
+  if (tabName === 'analytics') {
+    if (typeof renderExecutiveDashboard === 'function') renderExecutiveDashboard();
+    if (typeof renderExecutiveDashboardIntelligence === 'function') {
+      lastCalculatedQuotesKey = '';
+      renderExecutiveDashboardIntelligence();
+    }
+  }
+}
+window.switchHomeHubTab = switchHomeHubTab;
 
 function upgradeSeaPrimaryLinerCard() {
   const card = document.getElementById('sea-liner-card-1');
