@@ -6121,8 +6121,12 @@ textarea:focus {
 #home-overview-shell .stats-grid {
   margin-bottom: 0;
 }
-#home-overview-shell .admin-flex-row {
-  margin-top: 0;
+#member-dashboard-panel .stats-grid {
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+#member-dashboard-panel .glass-card.stat-card {
+  border-radius: 16px;
 }
 .home-overview-hero {
   margin-bottom: 1.25rem;
