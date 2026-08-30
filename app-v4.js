@@ -19730,6 +19730,21 @@ function advanceSequenceStep(shellId, stepName) {
 }
 window.advanceSequenceStep = advanceSequenceStep;
 
+// Steps back one position from whichever .desk-flow-step is currently
+// active in the shell — mirrors advanceSequenceStep so back navigation
+// reuses the exact same pane-switching/flow-rail-sync logic.
+function retreatSequenceStep(shellId) {
+  const shell = document.getElementById(shellId);
+  if (!shell) return;
+  const steps = [...shell.querySelectorAll('.desk-flow-step')];
+  const activeIdx = steps.findIndex((s) => s.classList.contains('is-active'));
+  if (activeIdx > 0) {
+    const prevStep = steps[activeIdx - 1].getAttribute('data-flow-step');
+    advanceSequenceStep(shellId, prevStep);
+  }
+}
+window.retreatSequenceStep = retreatSequenceStep;
+
 function switchHomeHubTab(tabName, cardEl) {
   switchDeskTab('manager-panel', tabName, cardEl);
   document.querySelectorAll('#manager-panel .home-hub-card').forEach((c) => c.classList.remove('active'));
@@ -20235,7 +20250,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.15"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.16"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {

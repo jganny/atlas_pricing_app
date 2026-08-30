@@ -25,6 +25,7 @@
 
   /* Accents - Refined brand colors */
   --sky:    #5a7a9a; /* Soft Slate Blue */
+  --sky-rgb: 90, 122, 154;
   --sky-g:  rgba(90, 122, 154, 0.05);
   --sky-glow: 0 4px 12px rgba(90, 122, 154, 0.05);
 
@@ -5973,9 +5974,11 @@ textarea:focus {
   color: var(--t1);
 }
 .desk-flow-step.is-active .desk-flow-num {
-  background: var(--accent-current, var(--sky));
-  border-color: var(--accent-current, var(--sky));
-  color: #fff;
+  background: #f0f5fa;
+  border: 2px solid var(--sky);
+  color: #2d4a63;
+  font-weight: 800;
+  box-shadow: 0 0 0 3px rgba(var(--sky-rgb), 0.1);
 }
 .desk-flow-step.is-complete {
   color: var(--t2);
@@ -6001,8 +6004,17 @@ textarea:focus {
   display: flex;
   justify-content: flex-end;
 }
+.desk-flow-footer-split {
+  justify-content: space-between;
+}
 .desk-flow-continue {
   min-width: 11rem;
+  padding: 0.72rem 1.35rem !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+}
+.desk-flow-back {
   padding: 0.72rem 1.35rem !important;
   border-radius: 999px !important;
   font-weight: 700 !important;
