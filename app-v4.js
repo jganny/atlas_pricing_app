@@ -29,7 +29,8 @@ const DEFAULT_TRANSPORT_TERMS = `1. Transportation rates are subject to vehicle 
 const DEFAULT_WAREHOUSE_TERMS = `1. Warehousing rates are based on the storage period and handling scope quoted.
 2. GST applies at 18% on taxable services unless otherwise agreed in writing.
 3. Special handling, fumigation, or value-added services are chargeable at actuals.
-4. Rates are subject to space availability at the nominated facility.`;
+4. Rates are subject to space availability at the nominated facility.
+5. Any other incidental/Statutory charges, if any, would be applicable at actuals at the time of shipment.`;
 
 // Pricing Team Desks
 const TEAM_ROLES = {
@@ -20181,7 +20182,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.12"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.13"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
