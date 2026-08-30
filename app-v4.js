@@ -19,6 +19,16 @@ const DEFAULT_SEA_TERMS = `1. The Above rates are NET NET
 4. Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.
 5. Rates are subject to space, booking and onward confirmation.`;
 
+// Default Air/Sea terms for NRS and Free Hand Sales desks — Port to Port,
+// distinct from the Nomination desks' NET NET terms above.
+const DEFAULT_NRS_FREEHAND_TERMS = `Note:
+1. The above rates are Port to Port
+2. Rates quoted are valid for General/ Non Haz/ Stackable, unless specified.
+3. Quoted rates are subject to space and booking confirmation.
+4. Transit Times are subject to the Service chosen.
+5. Any incidental or statutory charges, if any, would be applicable at the time of shipment, at actuals.
+6. GST AT ACTUALS`;
+
 const DEFAULT_TRANSPORT_TERMS = `1. Transportation rates are subject to vehicle availability and route confirmation.
 2. GST applies at 18% on taxable services unless otherwise agreed in writing.
 3. Waiting time, detention, and toll charges are additional unless included in the quote.
@@ -40,6 +50,33 @@ const TEAM_ROLES = {
   'jaya': { name: 'Free Hand', type: 'member', category: 'FREE HAND SALES (AIR/SEA)', currency: 'INR' },
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
+
+// Resolves which desk role is currently active for terms purposes — same
+// "viewing as" resolution as updateCurrencyRules: ganny/manager can be
+// viewing a specific desk via the role switcher, so prefer that over the
+// raw logged-in user.
+function getActivePricingRoleForTerms() {
+  let activeRole = appState.currentUser;
+  if (activeRole === 'ganny' || activeRole === 'manager') {
+    const activeBtn = document.querySelector(".role-btn.active");
+    const selectedRole = activeBtn ? activeBtn.getAttribute("data-role") : null;
+    if (selectedRole && selectedRole !== 'manager') {
+      activeRole = selectedRole;
+    }
+  }
+  return activeRole || 'ganny';
+}
+
+// Default Air/Sea terms for the currently active desk role: NRS and Free
+// Hand Sales get the Port-to-Port note, Nomination desks keep NET NET.
+function getDefaultFreightTerms(mode) {
+  const activeRole = getActivePricingRoleForTerms();
+  const isNrsOrFreeHand = activeRole === 'cathrina' || activeRole === 'jaya' ||
+    TEAM_ROLES[activeRole]?.category === 'NRS (AIR/SEA)' ||
+    TEAM_ROLES[activeRole]?.category === 'FREE HAND SALES (AIR/SEA)';
+  if (isNrsOrFreeHand) return DEFAULT_NRS_FREEHAND_TERMS;
+  return mode === 'sea' ? DEFAULT_SEA_TERMS : DEFAULT_AIR_TERMS;
+}
 
 // Apply saved desk names from localStorage
 const savedNames = localStorage.getItem("gl_desk_names");
@@ -1111,6 +1148,22 @@ function switchRole(role) {
   // Currency Indicator rules based on Role
   updateCurrencyRules(roleLower);
 
+  // Refresh Air/Sea Terms & Conditions to match the newly active desk role
+  // (NRS/Free Hand vs Nomination), but only when the field still holds a
+  // known default and no saved quote is currently being edited — never
+  // overwrite a user's in-progress custom terms or an open amendment.
+  if (!appState.editingQuoteId) {
+    const knownDefaults = [DEFAULT_AIR_TERMS, DEFAULT_SEA_TERMS, DEFAULT_NRS_FREEHAND_TERMS];
+    const airTermsEl = document.getElementById("air-terms");
+    if (airTermsEl && (!airTermsEl.value.trim() || knownDefaults.includes(airTermsEl.value))) {
+      airTermsEl.value = getDefaultFreightTerms('air');
+    }
+    const seaTermsEl = document.getElementById("sea-terms");
+    if (seaTermsEl && (!seaTermsEl.value.trim() || knownDefaults.includes(seaTermsEl.value))) {
+      seaTermsEl.value = getDefaultFreightTerms('sea');
+    }
+  }
+
   // Keep top module tabs visible — sidebar is primary, tabs are quick secondary nav.
   const globalModuleTabs = document.getElementById("global-module-tabs");
   if (globalModuleTabs) {
@@ -1348,7 +1401,7 @@ function resetAirFreightDeskForm() {
   const incoterm = document.getElementById("air-incoterm");
   if (incoterm) incoterm.value = "EXW";
   const terms = document.getElementById("air-terms");
-  if (terms) terms.value = DEFAULT_AIR_TERMS;
+  if (terms) terms.value = getDefaultFreightTerms('air');
 
   // Clear Commodity and Loadability options
   const commodity = document.getElementById("air-commodity");
@@ -1443,7 +1496,7 @@ function resetSeaFreightDeskForm() {
   if (document.getElementById("sea-validity")) document.getElementById("sea-validity").value = "";
   document.querySelectorAll(".sea-lcl-rate").forEach(el => el.value = "0");
   document.querySelectorAll(".sea-bb-rate").forEach(el => el.value = "0");
-  if (document.getElementById("sea-terms")) document.getElementById("sea-terms").value = DEFAULT_SEA_TERMS;
+  if (document.getElementById("sea-terms")) document.getElementById("sea-terms").value = getDefaultFreightTerms('sea');
 
   // Reset module switcher
   appState.currentSeaFreight.module = 'export';
@@ -7115,7 +7168,7 @@ function buildAirQuoteData() {
     airline: primaryAirline,
     incoterm: incoterm,
     module: appState.currentAirFreight.module || 'export',
-    termsAndConditions: document.getElementById("air-terms").value.trim() || DEFAULT_AIR_TERMS,
+    termsAndConditions: document.getElementById("air-terms").value.trim() || getDefaultFreightTerms('air'),
     chargeableWeight: appState.currentAirFreight.chargeableWeight,
     grossWeight: appState.currentAirFreight.grossWeight,
     volumeWeight: appState.currentAirFreight.volumeWeight,
@@ -7415,7 +7468,7 @@ async function saveCurrentQuote() {
       commodity: document.getElementById("sea-commodity").value.trim(),
       dgClass: document.getElementById("sea-dg-class")?.value || "",
       incoterm: incoterm,
-      termsAndConditions: document.getElementById("sea-terms")?.value.trim() || DEFAULT_SEA_TERMS,
+      termsAndConditions: document.getElementById("sea-terms")?.value.trim() || getDefaultFreightTerms('sea'),
       mode: appState.currentSeaFreight.type,
       module: appState.currentSeaFreight.module || 'export',
       liners: appState.currentSeaFreight.liners || [],
@@ -8566,7 +8619,7 @@ window.viewSavedQuote = async (id) => {
   })() : '';
 
   let termsList = "";
-  const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : (isAir ? DEFAULT_AIR_TERMS : DEFAULT_SEA_TERMS);
+  const rawTerms = quote.details && quote.details.termsAndConditions ? quote.details.termsAndConditions : getDefaultFreightTerms(isAir ? 'air' : 'sea');
   if (rawTerms) {
     rawTerms.split("\n").map(l => l.trim()).filter(l => l.length > 0).forEach(line => {
       termsList += `<li>${line.replace(/^\s*\d+[.)]?\s*/, '')}</li>`;
@@ -10540,7 +10593,7 @@ function populateAirFreightFormFromDetails(details) {
   document.getElementById("air-origin").value = details.origin || "";
   document.getElementById("air-dest").value = details.destination || "";
   document.getElementById("air-incoterm").value = details.incoterm || "EXW";
-  document.getElementById("air-terms").value = details.termsAndConditions || DEFAULT_AIR_TERMS;
+  document.getElementById("air-terms").value = details.termsAndConditions || getDefaultFreightTerms('air');
 
   document.getElementById("air-commodity").value = details.commodity || "GENERAL";
   if (document.getElementById("air-dg-class")) {
@@ -10844,7 +10897,7 @@ function amendQuote(id, options) {
       document.getElementById("sea-routing").value = quote.details.routing || "";
       document.getElementById("sea-tt").value = quote.details.tt || "";
       document.getElementById("sea-validity").value = quote.details.validity || "";
-      document.getElementById("sea-terms").value = quote.details.termsAndConditions || DEFAULT_SEA_TERMS;
+      document.getElementById("sea-terms").value = quote.details.termsAndConditions || getDefaultFreightTerms('sea');
 
       appState.currentSeaFreight.module = quote.details.module || 'export';
       const tabExp = document.getElementById("sea-tab-export");
@@ -20182,7 +20235,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.13"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.14"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
