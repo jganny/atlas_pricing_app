@@ -1145,23 +1145,7 @@ body.atlas-enterprise-ui .sidebar-item:hover {
   border-color: rgba(2, 132, 199, 0.35) !important;
 }
 
-/* AI command bar — Copilot accent */
-.atlas-ai-command-label {
-  color: var(--indigo) !important;
-  background: var(--indigo-g) !important;
-}
-
-.atlas-ai-command-parse {
-  background: var(--indigo) !important;
-}
-
-.atlas-ai-command-copilot {
-  color: var(--atlas-brand) !important;
-}
-
-.atlas-ai-command-copilot:hover {
-  background: var(--atlas-brand-soft) !important;
-}
+/* Quick fill uses brand tokens defined above — no indigo override */
 
 /* Login screen */
 .login-brand-name {
