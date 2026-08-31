@@ -6,23 +6,14 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.36">
-  <script>
-    (function () {
-      try {
-        if (localStorage.getItem('gl_ui_density') === 'compact') {
-          document.documentElement.classList.add('atlas-density-compact-pending');
-        }
-      } catch (e) { /* ignore */ }
-    })();
-  </script>
+  <meta name="app-version" content="129.37">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.36">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.36">
+  <link rel="stylesheet" href="index.css?v=129.37">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.37">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -179,7 +170,6 @@
             <span>Search</span>
             <kbd>Ctrl K</kbd>
           </button>
-          <button type="button" class="header-density-btn" id="header-density-btn" title="Toggle compact density">Compact</button>
         </div>
 
         <div class="header-workspace-context" aria-hidden="true" style="display:none;">
@@ -1650,12 +1640,6 @@
             <button type="button" class="btn-primary dhb-btn-save" id="air-save-quote-btn" onclick="saveCurrentQuote()">Save Quote</button>
           </div>
         </div>
-        <div class="enterprise-record-context" id="air-record-context" aria-label="Quote context">
-          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="air-ctx-customer">—</span></div>
-          <div class="erc-item"><span class="erc-label">Lane</span><span class="erc-value" id="air-ctx-lane">—</span></div>
-          <div class="erc-item"><span class="erc-label">Incoterm</span><span class="erc-value" id="air-ctx-incoterm">EXW</span></div>
-          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="air-ctx-currency">USD</span></div>
-        </div>
 
         <div class="workspace desk-calculator-layout">
           <!-- Inputs section -->
@@ -2179,12 +2163,6 @@
             <button type="button" class="btn-secondary dhb-btn-reset" onclick="resetFreightForm('sea')">🔄 Reset</button>
             <button type="button" class="btn-primary dhb-btn-save" onclick="saveCurrentQuote()">Save Quote</button>
           </div>
-        </div>
-        <div class="enterprise-record-context enterprise-record-context--sea" id="sea-record-context" aria-label="Quote context">
-          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="sea-ctx-customer">—</span></div>
-          <div class="erc-item"><span class="erc-label">Lane</span><span class="erc-value" id="sea-ctx-lane">—</span></div>
-          <div class="erc-item"><span class="erc-label">Incoterm</span><span class="erc-value" id="sea-ctx-incoterm">EXW</span></div>
-          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="sea-ctx-currency">USD</span></div>
         </div>
         <div class="workspace desk-calculator-layout">
           <!-- Inputs Column -->
@@ -2987,12 +2965,6 @@
           </div>
         </div>
 
-        <div class="enterprise-record-context enterprise-record-context--transport" id="transport-record-context" aria-label="Quote context">
-          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="transport-ctx-customer">—</span></div>
-          <div class="erc-item"><span class="erc-label">Route</span><span class="erc-value" id="transport-ctx-lane">—</span></div>
-          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="transport-ctx-currency">INR</span></div>
-        </div>
-
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
           <div class="glass-card desk-form-card">
             <nav class="desk-flow-rail" aria-label="Transport quote steps">
@@ -3167,11 +3139,6 @@
           </div>
         </div>
 
-        <div class="enterprise-record-context enterprise-record-context--warehouse" id="warehouse-record-context" aria-label="Quote context">
-          <div class="erc-item"><span class="erc-label">Customer</span><span class="erc-value" id="warehouse-ctx-customer">—</span></div>
-          <div class="erc-item"><span class="erc-label">Currency</span><span class="erc-value" id="warehouse-ctx-currency">INR</span></div>
-        </div>
-
         <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
           <div class="glass-card desk-form-card">
             <nav class="desk-flow-rail" aria-label="Warehouse quote steps">
@@ -3305,107 +3272,87 @@
 
       <!-- ==================== CONTACT & AGENCY DIRECTORY PANEL ==================== -->
       <div id="directory-panel" class="view-panel">
-        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-1); padding-bottom: 1rem;">
+        <div class="glass-card dir-shell-card" style="margin-bottom: 2rem; padding: 1.25rem 1.35rem; overflow: visible;">
+          <div class="dir-shell-header">
             <div>
-              <div style="font-size: 0.65rem; font-weight: 800; color: var(--sky); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'Outfit', sans-serif;">
-                Logistics & Pricing Directory
-              </div>
-              <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--t1); margin-top: 0.1rem; font-family: 'Outfit', sans-serif;">
-                PARTNER & CONTACT DIRECTORY
-              </h2>
+              <div class="dir-shell-eyebrow">Partner network</div>
+              <h2 class="dir-shell-title">Directory</h2>
+              <p class="dir-shell-subtitle">Find overseas agents and vendors fast — search, filter by country, open a record.</p>
             </div>
             
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <!-- Admin-only Add Contact -->
+            <div class="dir-shell-actions">
               <button id="dir-add-contact-btn" class="btn-primary" onclick="openContactModal()" style="display: none; align-items: center; gap: 0.4rem; background: var(--sky); color: #fff; font-weight: 700;">
                 <span>+</span> Add Contact
               </button>
-              <!-- Admin-only One-Time Excel Import -->
               <button id="dir-import-excel-btn" class="btn-secondary" onclick="openImportExcelModal()" style="display: none; align-items: center; gap: 0.4rem; font-weight: 700;">
-                <span>📥</span> Excel Import
+                Import Excel
               </button>
-              <!-- All roles Export -->
               <button class="btn-secondary" onclick="exportDirectoryToExcel()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-                <span>📤</span> Export Excel
+                Export Excel
               </button>
-              <!-- Overseas Agents tab only -->
               <button id="dir-agency-list-btn" class="btn-secondary" onclick="openAgencyListModal()" style="display: none; align-items: center; gap: 0.4rem; font-weight: 700;">
-                <span>📋</span> Weekly Agency List
+                Weekly Agency List
               </button>
-              <!-- Admin-only Purge/Reset Directory — rare, destructive action:
-                   deliberately quieter than the buttons above it so it doesn't
-                   compete for attention with the ones used every day. -->
               <button id="dir-reset-btn" onclick="purgeDirectoryContacts()" title="Reset Directory" style="display: none; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.8rem; color: #ef4444; background: none; border: none; padding: 0.5rem 0.6rem; cursor: pointer;">
-                <span>🗑️</span> Reset Directory
-              </button>
-              <!-- Back to Home — pure navigation, already reachable from the
-                   top nav/sidebar, so it doesn't need equal visual weight. -->
-              <button onclick="goHome()" style="font-weight: 600; font-size: 0.8rem; color: var(--t2, #64748b); background: none; border: none; padding: 0.5rem 0.6rem; cursor: pointer;">
-                Back to Workspace
+                Reset Directory
               </button>
             </div>
           </div>
 
-          <!-- Directory Parent Level Tabs -->
           <div class="dir-parent-tab-row">
             <button class="dir-parent-tab active" id="dir-parent-agents" onclick="setDirectoryParent('agents')">
-              🌍 Overseas Agents
+              Overseas Agents
             </button>
             <button class="dir-parent-tab" id="dir-parent-vendors" onclick="setDirectoryParent('vendors')">
-              🏢 Vendor Contacts
+              Vendor Contacts
             </button>
           </div>
 
-          <!-- Quick-glance summary strip -->
           <div id="directory-stat-strip" class="dir-stat-strip"></div>
 
-          <!-- Directory Search & Category Filters -->
-          <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-              <div class="dir-search-wrap" style="flex: 1; min-width: 220px;">
-                <span class="dir-search-icon">🔍</span>
-                <input type="text" id="directory-search-input" placeholder="Search by company, contact, email, phone, or location..."
-                       oninput="filterDirectoryContacts()">
-              </div>
-              <select id="directory-quick-jump" class="dir-quick-jump" onchange="onDirectoryQuickJumpChange(this.value)"></select>
-              <!-- Vendor Contacts only -->
-              <select id="dir-vendor-sort" class="app-sort-select" onchange="renderDirectoryContacts()" style="display: none;">
-                <option value="category">Category</option>
-                <option value="name-asc">Company A-Z</option>
-                <option value="name-desc">Company Z-A</option>
-                <option value="branch">Branch/Station</option>
-              </select>
-              <!-- Overseas Agents only -->
-              <select id="dir-agent-sort" class="app-sort-select" onchange="renderDirectoryContacts()" style="display: none;">
-                <option value="location">By Country</option>
-                <option value="name">Company A-Z</option>
-                <option value="rating">By Rating</option>
-              </select>
+          <div class="dir-toolbar">
+            <div class="dir-search-wrap" style="flex: 1; min-width: 220px;">
+              <span class="dir-search-icon" aria-hidden="true">⌕</span>
+              <input type="text" id="directory-search-input" placeholder="Search company, contact, email, phone, country…"
+                     oninput="filterDirectoryContacts()">
             </div>
-
-            <div class="directory-tabs-container" id="directory-subfilters-container" style="display: flex; gap: 0.5rem; flex-wrap: wrap; overflow-x: auto; padding-bottom: 0.5rem;">
-              <!-- Dynamic tabs loaded by JS based on Excel sheets -->
+            <select id="directory-quick-jump" class="dir-quick-jump" onchange="onDirectoryQuickJumpChange(this.value)"></select>
+            <select id="dir-vendor-sort" class="app-sort-select" onchange="renderDirectoryContacts()" style="display: none;">
+              <option value="category">Category</option>
+              <option value="name-asc">Company A-Z</option>
+              <option value="name-desc">Company Z-A</option>
+              <option value="branch">Branch/Station</option>
+            </select>
+            <select id="dir-agent-sort" class="app-sort-select" onchange="renderDirectoryContacts()" style="display: none;">
+              <option value="location">By Country</option>
+              <option value="name">Company A-Z</option>
+              <option value="rating">By Rating</option>
+            </select>
+            <div id="oa-status-filters" class="oa-status-filters" style="display:none;" role="group" aria-label="Agent status filters">
+              <button type="button" class="oa-status-chip is-active" data-oa-filter="all" onclick="setOverseasAgentFilter('all', this)">All</button>
+              <button type="button" class="oa-status-chip" data-oa-filter="agreement" onclick="setOverseasAgentFilter('agreement', this)">Agreement</button>
+              <button type="button" class="oa-status-chip" data-oa-filter="no-agreement" onclick="setOverseasAgentFilter('no-agreement', this)">No agreement</button>
+              <button type="button" class="oa-status-chip" data-oa-filter="air" onclick="setOverseasAgentFilter('air', this)">Air</button>
+              <button type="button" class="oa-status-chip" data-oa-filter="sea" onclick="setOverseasAgentFilter('sea', this)">Sea</button>
+              <button type="button" class="oa-status-chip oa-status-chip-warn" data-oa-filter="suspended" onclick="setOverseasAgentFilter('suspended', this)">Suspended</button>
             </div>
           </div>
 
-          <!-- Bulk selection bar (Overseas Agents only) -->
+          <div class="directory-tabs-container" id="directory-subfilters-container" style="display: flex; gap: 0.5rem; flex-wrap: wrap; overflow-x: auto; padding-bottom: 0.5rem;"></div>
+
           <div id="dir-bulk-bar" class="dir-bulk-bar" style="display: none;">
             <span id="dir-bulk-count" class="dir-bulk-count">0 selected</span>
             <div class="dir-bulk-actions">
               <button type="button" class="btn-text" onclick="selectAllVisibleAgents()">Select All</button>
               <button type="button" class="btn-text" onclick="deselectAllAgents()">Deselect All</button>
-              <button type="button" class="btn-text" onclick="exportSelectedAgents()">📤 Export Selected</button>
-              <button type="button" class="btn-text" onclick="downloadSelectedAgreements()">📄 Download Agreements</button>
+              <button type="button" class="btn-text" onclick="exportSelectedAgents()">Export Selected</button>
+              <button type="button" class="btn-text" onclick="downloadSelectedAgreements()">Download Agreements</button>
             </div>
           </div>
 
-          <!-- Hidden file input reused for every agreement upload -->
           <input type="file" id="agent-agreement-file-input" accept="application/pdf" style="display:none;" onchange="onAgentAgreementFileChosen(event)">
 
-          <!-- Contacts Cards Grid -->
           <div id="directory-contacts-grid" class="dir-contacts-grid">
-            <!-- Contacts loaded dynamically by JS -->
             <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--t3); font-style: italic;">
               Loading directory contacts...
             </div>
@@ -4705,12 +4652,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.36"></script>
-  <script src="ui-shell.js?v=129.36"></script>
-  <script src="atlas-enterprise.js?v=129.36"></script>
-  <script src="ai-assistant.js?v=129.36"></script>
-  <script src="ai-sell-band.js?v=129.36"></script>
-  <script src="sales-v129.js?v=129.36"></script>
+  <script src="app-v4.js?v=129.37"></script>
+  <script src="ui-shell.js?v=129.37"></script>
+  <script src="atlas-enterprise.js?v=129.37"></script>
+  <script src="ai-assistant.js?v=129.37"></script>
+  <script src="ai-sell-band.js?v=129.37"></script>
+  <script src="sales-v129.js?v=129.37"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -5038,7 +4985,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.36">' +
+          '<link rel="stylesheet" href="index.css?v=129.37">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

@@ -17975,6 +17975,9 @@ let directoryContacts = [];
 let activeDirectoryParent = 'agents'; // 'agents' or 'vendors'
 let activeDirectoryCategory = 'all';
 let importedExcelRows = [];
+window._oaStatusFilter = window._oaStatusFilter || 'all';
+window._oaCountryFilter = window._oaCountryFilter || null;
+window._oaSelectedId = window._oaSelectedId || null;
 // Vendor Contacts table per-column header filters — Overseas Agents (the
 // card grid) never reads this. Values are stored already-lowercased so the
 // filter pass above can compare directly with no repeated toLowerCase().
@@ -18116,6 +18119,10 @@ function refreshDirectoryActionButtons() {
   const agencyListBtn = document.getElementById("dir-agency-list-btn");
   if (agencyListBtn) {
     agencyListBtn.style.display = (activeDirectoryParent === 'agents') ? 'inline-flex' : 'none';
+  }
+  const oaFilters = document.getElementById("oa-status-filters");
+  if (oaFilters) {
+    oaFilters.style.display = (activeDirectoryParent === 'agents') ? 'flex' : 'none';
   }
 }
 window.refreshDirectoryActionButtons = refreshDirectoryActionButtons;
@@ -18287,6 +18294,27 @@ function renderDirectoryContacts() {
         if (f.notes && !(c.notes || '').toLowerCase().includes(f.notes)) return false;
       }
     }
+
+    // Overseas Agents status chips (Agreement / Air / Sea / Suspended)
+    if (activeDirectoryParent === 'agents') {
+      const oaFilter = window._oaStatusFilter || 'all';
+      const mt = (c.moduleType || '').toLowerCase();
+      const hasAgreement = !!c.agreementData || /^y/i.test(c.agreement || '');
+      if (oaFilter === 'agreement' && !hasAgreement) return false;
+      if (oaFilter === 'no-agreement' && (hasAgreement || c.suspended)) return false;
+      if (oaFilter === 'air' && !mt.includes('air')) return false;
+      if (oaFilter === 'sea' && !mt.includes('sea')) return false;
+      if (oaFilter === 'suspended' && !c.suspended) return false;
+      if (window._oaCountryFilter) {
+        const loc = (c.location || '').trim() || 'Unspecified Location';
+        if (window._oaCountryFilter === 'Suspended') {
+          if (!c.suspended) return false;
+        } else {
+          if (c.suspended) return false;
+          if (loc !== window._oaCountryFilter) return false;
+        }
+      }
+    }
     return true;
   });
 
@@ -18404,214 +18432,185 @@ function renderDirectoryContacts() {
     }
     return;
   }
-  grid.className = 'dir-contacts-grid';
+  grid.className = 'oa-workspace-host';
 
-  // Pre-count each group so its header can show "(N)" without a second pass.
-  const groupCounts = {};
-  filtered.forEach(c => {
-    const k = groupKeyFor(c);
-    groupCounts[k] = (groupCounts[k] || 0) + 1;
+  // Country rail should stay complete even when one country is selected —
+  // count from status/search matches only (ignore country chip).
+  const searchQ = (document.getElementById("directory-search-input")?.value || "").toLowerCase().trim();
+  const oaFilter = window._oaStatusFilter || 'all';
+  const countryCounts = {};
+  directoryContacts.forEach(c => {
+    if (c.category !== 'agency') return;
+    if (searchQ) {
+      const blob = `${c.name || ''} ${c.contactPerson || ''} ${c.email || ''} ${c.phone || ''} ${c.location || ''} ${c.notes || ''}`.toLowerCase();
+      if (!blob.includes(searchQ)) return;
+    }
+    const mt = (c.moduleType || '').toLowerCase();
+    const hasAgreement = !!c.agreementData || /^y/i.test(c.agreement || '');
+    if (oaFilter === 'agreement' && !hasAgreement) return;
+    if (oaFilter === 'no-agreement' && (hasAgreement || c.suspended)) return;
+    if (oaFilter === 'air' && !mt.includes('air')) return;
+    if (oaFilter === 'sea' && !mt.includes('sea')) return;
+    if (oaFilter === 'suspended' && !c.suspended) return;
+    const k = c.suspended ? 'Suspended' : ((c.location || '').trim() || 'Unspecified Location');
+    countryCounts[k] = (countryCounts[k] || 0) + 1;
   });
+  const countryKeys = Object.keys(countryCounts).filter(k => k !== 'Suspended').sort((a, b) => a.localeCompare(b));
+  if (countryCounts['Suspended']) countryKeys.push('Suspended');
+  const railTotal = Object.values(countryCounts).reduce((a, b) => a + b, 0);
 
-  let html = "";
-  let lastGroupKey = undefined;
+  const countryRailHtml = `
+    <aside class="oa-country-rail" aria-label="Countries">
+      <button type="button" class="oa-country-item${!window._oaCountryFilter ? ' is-active' : ''}" onclick="setOverseasCountryFilter(null)">
+        <span>All countries</span><span class="oa-country-count">${railTotal}</span>
+      </button>
+      ${countryKeys.map(k => `
+        <button type="button" class="oa-country-item${window._oaCountryFilter === k ? ' is-active' : ''}${k === 'Suspended' ? ' is-warn' : ''}" onclick="setOverseasCountryFilter('${String(k).replace(/'/g, "\\'")}')">
+          <span>${k === 'Suspended' ? 'Suspended' : k}</span><span class="oa-country-count">${countryCounts[k]}</span>
+        </button>
+      `).join('')}
+    </aside>
+  `;
+
+  let listHtml = '';
   filtered.forEach(contact => {
-    const key = groupKeyFor(contact);
-    const isSuspendedGroup = key === DIR_SUSPENDED_KEY;
-    // Country headers are suppressed for a flat sort (name/rating), but the
-    // Suspended divider always shows — it's a do-not-book safety flag, not
-    // just an organizational grouping.
-    if ((showAgentGroupHeaders || isSuspendedGroup) && key !== lastGroupKey) {
-      lastGroupKey = key;
-      const title = isSuspendedGroup ? '🚫 Suspended — Do Not Book' : `🌍 ${key}`;
-      html += `<div class="dir-group-header${isSuspendedGroup ? ' dir-group-suspended' : ''}" id="${dirGroupIdFor(key)}">
-        <span class="dir-group-title">${title}</span>
-        <span class="dir-group-count">${groupCounts[key]}</span>
-      </div>`;
-    }
-    const escNotes = (contact.notes || "").replace(/"/g, "&quot;");
-
-    // Display sheetGroup if available, otherwise fallback to category label
-    let categoryLabel = contact.sheetGroup || contact.category || "CONTACT";
-    categoryLabel = categoryLabel.toUpperCase();
-    if (categoryLabel === 'AGENCY') categoryLabel = 'OVERSEAS AGENT';
-
-    // Overseas Agents carry a few fields Vendor Contacts don't — a star
-    // rating, Air/Sea coverage, agency agreement status, and credit terms —
-    // surfaced here so the list is scannable at a glance instead of
-    // requiring a click into every card to find the one detail that matters.
-    const isAgencyCard = contact.category === 'agency';
-    let ratingHtml = '';
-    if (isAgencyCard && contact.rating) {
-      const full = Math.max(0, Math.min(5, Number(contact.rating) || 0));
-      ratingHtml = `<div class="agent-rating" title="${full} star rating">${'★'.repeat(full)}${'☆'.repeat(5 - full)}</div>`;
-    }
-    let moduleHtml = '';
-    if (isAgencyCard && contact.moduleType) {
-      const mt = contact.moduleType.toLowerCase();
-      const hasAir = mt.includes('air');
-      const hasSea = mt.includes('sea');
-      const moduleLabel = hasAir && hasSea ? 'Air & Sea' : hasAir ? 'Air' : hasSea ? 'Sea' : contact.moduleType;
-      moduleHtml = `<span class="agent-module-pill">${moduleLabel}</span>`;
-    }
-    // Agreement is now an actual action, not just a status pill: download the
-    // attached PDF if one's on file, or upload one if you have edit rights
-    // and none exists yet. Falls back to the plain Y/N text from the import
-    // for everyone else, so the information isn't lost for read-only users.
-    let agreementActionHtml = '';
-    if (isAgencyCard) {
-      const hasDoc = !!contact.agreementData;
-      const hasAgreementFlag = contact.agreement ? /^y/i.test(contact.agreement) : null;
-      if (hasDoc) {
-        agreementActionHtml = `<button type="button" class="agent-agreement-action has-doc" onclick="downloadAgentAgreement('${contact.id}')">📄 Download Agreement</button>`;
-      } else if (allowedToEdit) {
-        agreementActionHtml = `<button type="button" class="agent-agreement-action no-doc" onclick="triggerAgentAgreementUpload('${contact.id}')">⬆ Upload Agreement</button>`;
-      } else if (hasAgreementFlag === true) {
-        agreementActionHtml = `<span class="agent-agreement-pill agreement-yes">✓ Agreement on File</span>`;
-      } else if (hasAgreementFlag === false) {
-        agreementActionHtml = `<span class="agent-agreement-pill agreement-no">⚠ No Agreement</span>`;
-      }
-    }
-
-    // "30d & 30000" from the import splits into two clean stats when it
-    // matches that shape; anything else just falls back to showing the raw
-    // text rather than guessing wrong.
-    let creditHtml = '';
-    if (isAgencyCard && contact.creditTerms) {
-      const parsed = parseCreditTerms(contact.creditTerms);
-      creditHtml = parsed
-        ? `<div class="agent-credit-stats">
-            <div class="agent-credit-stat"><div class="val">${parsed.days}d</div><div class="lbl">Credit Period</div></div>
-            <div class="agent-credit-stat"><div class="val">${parsed.limit}</div><div class="lbl">Credit Limit</div></div>
-          </div>`
-        : `<div class="agent-credit-line"><strong>Credit:</strong> ${contact.creditTerms}</div>`;
-    }
-
-    const suspendedBannerHtml = contact.suspended
-      ? `<div class="agent-suspended-banner">🚫 SUSPENDED — do not book via this agent</div>`
-      : '';
-
-    const checkboxHtml = isAgencyCard
-      ? `<input type="checkbox" class="dir-select-checkbox" onclick="event.stopPropagation(); toggleAgentSelection('${contact.id}', this.checked)" ${(window._selectedAgentIds && window._selectedAgentIds.has(contact.id)) ? 'checked' : ''}>`
-      : '';
-    const isSelected = isAgencyCard && window._selectedAgentIds && window._selectedAgentIds.has(contact.id);
-
-    // Admin action buttons (Edit/Delete) - visible only if allowed to edit
-    const adminActionsHtml = allowedToEdit ? `
-      <button class="contact-action-btn" title="Edit Contact" onclick="openContactModal('${contact.id}')" style="margin-left: auto;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-          <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-        </svg>
-      </button>
-      <button class="contact-action-btn" title="Delete Contact" onclick="deleteContact('${contact.id}')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="3 6 5 6 21 6" />
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        </svg>
-      </button>
-    ` : '';
-
-    // Contact action shortcuts (Call, Email, WhatsApp)
-    const phoneClean = (contact.phone || "").replace(/[^\d+]/g, '');
-    const callButtonHtml = contact.phone ? `
-      <a href="tel:${phoneClean}" class="contact-action-btn" title="Call Contact">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-        </svg>
-      </a>
-    ` : '';
-
-    const emailButtonHtml = contact.email ? `
-      <a href="mailto:${contact.email}" class="contact-action-btn" title="Send Email">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-          <polyline points="22,6 12,13 2,6" />
-        </svg>
-      </a>
-    ` : '';
-
-    const waButtonHtml = contact.phone && contact.phone.includes("+") ? `
-      <a href="https://wa.me/${phoneClean}" target="_blank" class="contact-action-btn" title="Chat on WhatsApp" style="color: #25D366; border-color: rgba(37, 211, 102, 0.2);">
-        <span>💬</span>
-      </a>
-    ` : '';
-
-    html += `
-      <div class="contact-card cat-${contact.category || 'other'}${contact.suspended ? ' contact-card-suspended' : ''}${isSelected ? ' dir-card-selected' : ''}">
-        ${checkboxHtml}
-        <div>
-          ${suspendedBannerHtml}
-          <div class="contact-card-header">
-            <span class="contact-card-badge ${contact.category || ''}">${categoryLabel}</span>
-            <div style="font-size: 0.62rem; color: var(--t3);">By: ${contact.updatedBy || 'System'}</div>
-          </div>
-
-          <div class="contact-card-title" style="margin-bottom: 0.3rem; ${isAgencyCard ? 'padding-right: 1.5rem;' : ''}">${contact.name || ''}</div>
-          ${ratingHtml}
-          ${(moduleHtml || agreementActionHtml) ? `<div class="agent-pill-row">${moduleHtml}${agreementActionHtml}</div>` : ''}
-
-          <div class="contact-info-grid">
-          ${contact.contactPerson ? `
-            <div class="contact-info-row" style="font-weight: 600; color: var(--t1);">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              ${contact.contactPerson}
-            </div>
-          ` : ''}
-
-          ${contact.location ? `
-            <div class="contact-info-row">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
-              ${contact.location}
-            </div>
-          ` : ''}
-
-          ${contact.phone ? `
-            <div class="contact-info-row">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              ${contact.phone}
-            </div>
-          ` : ''}
-
-          ${contact.email ? `
-            <div class="contact-info-row span-2" style="word-break: break-all;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              ${contact.email}
-            </div>
-          ` : ''}
-          </div>
-
-          ${creditHtml}
-
-          ${contact.notes ? `
-            <div style="font-size: 0.72rem; color: var(--t3); background: rgba(0,0,0,0.03); padding: 8px; border-radius: 6px; border: 1px solid var(--border-1); margin-top: 0.75rem; line-height: 1.35; white-space: pre-line;">
-              ${contact.notes}
-            </div>
-          ` : ''}
-        </div>
-        
-        <div class="contact-actions">
-          ${callButtonHtml}
-          ${emailButtonHtml}
-          ${waButtonHtml}
-          ${adminActionsHtml}
-        </div>
-      </div>`;
+    const isSelected = window._oaSelectedId === contact.id || (window._selectedAgentIds && window._selectedAgentIds.has(contact.id));
+    const rating = Math.max(0, Math.min(5, Number(contact.rating) || 0));
+    const mt = (contact.moduleType || '').toLowerCase();
+    const moduleLabel = mt.includes('air') && mt.includes('sea') ? 'Air+Sea' : mt.includes('air') ? 'Air' : mt.includes('sea') ? 'Sea' : '—';
+    const hasDoc = !!contact.agreementData || /^y/i.test(contact.agreement || '');
+    const checkboxHtml = `<input type="checkbox" class="dir-select-checkbox" onclick="event.stopPropagation(); toggleAgentSelection('${contact.id}', this.checked)" ${(window._selectedAgentIds && window._selectedAgentIds.has(contact.id)) ? 'checked' : ''}>`;
+    listHtml += `
+      <button type="button" class="oa-list-row${contact.suspended ? ' is-suspended' : ''}${window._oaSelectedId === contact.id ? ' is-active' : ''}${isSelected && window._selectedAgentIds && window._selectedAgentIds.has(contact.id) ? ' is-checked' : ''}"
+        data-agent-id="${contact.id}" onclick="selectOverseasAgentDetail('${contact.id}')">
+        <span class="oa-list-check" onclick="event.stopPropagation()">${checkboxHtml}</span>
+        <span class="oa-list-main">
+          <span class="oa-list-name">${contact.name || 'Untitled agent'}</span>
+          <span class="oa-list-meta">${contact.location || '—'} · ${contact.contactPerson || 'No contact'}</span>
+        </span>
+        <span class="oa-list-pills">
+          <span class="oa-mini-pill">${moduleLabel}</span>
+          <span class="oa-mini-pill ${hasDoc ? 'ok' : 'warn'}">${hasDoc ? 'Agreement' : 'No agr.'}</span>
+          ${rating ? `<span class="oa-mini-pill rating">${'★'.repeat(rating)}</span>` : ''}
+        </span>
+      </button>`;
   });
 
-  grid.innerHTML = html;
+  if (!window._oaSelectedId && filtered[0]) window._oaSelectedId = filtered[0].id;
+  if (window._oaSelectedId && !filtered.some(c => c.id === window._oaSelectedId)) {
+    window._oaSelectedId = filtered[0] ? filtered[0].id : null;
+  }
+
+  const detailContact = filtered.find(c => c.id === window._oaSelectedId) || null;
+  const detailHtml = buildOverseasAgentDetailHtml(detailContact, allowedToEdit);
+
+  grid.innerHTML = `
+    <div class="oa-workspace">
+      ${countryRailHtml}
+      <div class="oa-list-pane">
+        <div class="oa-list-header">
+          <strong>${filtered.length}</strong> agent${filtered.length === 1 ? '' : 's'}
+          <span class="oa-list-hint">Select a row to open details</span>
+        </div>
+        <div class="oa-list-scroll">${listHtml || '<div class="oa-empty">No agents match these filters.</div>'}</div>
+      </div>
+      <aside class="oa-detail-pane" id="oa-detail-pane">${detailHtml}</aside>
+    </div>
+  `;
+
+  // Re-mark active row after rebuild
+  if (window._oaSelectedId) {
+    const activeRow = grid.querySelector(`.oa-list-row[data-agent-id="${window._oaSelectedId}"]`);
+    if (activeRow) activeRow.classList.add('is-active');
+  }
+
   populateDirectoryQuickJump();
   if (typeof updateDirBulkBar === 'function') updateDirBulkBar();
 
   const searchInput = document.getElementById("directory-search-input");
-  if (searchInput) searchInput.placeholder = "Search by company, contact, email, phone, or location...";
+  if (searchInput) searchInput.placeholder = "Search company, contact, email, phone, country…";
+}
+
+function setOverseasAgentFilter(filter, btn) {
+  window._oaStatusFilter = filter || 'all';
+  document.querySelectorAll('#oa-status-filters .oa-status-chip').forEach(el => {
+    el.classList.toggle('is-active', el.getAttribute('data-oa-filter') === window._oaStatusFilter);
+  });
+  renderDirectoryContacts();
+}
+window.setOverseasAgentFilter = setOverseasAgentFilter;
+
+function setOverseasCountryFilter(country) {
+  window._oaCountryFilter = country || null;
+  renderDirectoryContacts();
+}
+window.setOverseasCountryFilter = setOverseasCountryFilter;
+
+function selectOverseasAgentDetail(id) {
+  window._oaSelectedId = id;
+  const contact = (directoryContacts || []).find(c => c.id === id) || null;
+  const allowedToEdit = canEditAgentsDirectory();
+  const pane = document.getElementById('oa-detail-pane');
+  if (pane) pane.innerHTML = buildOverseasAgentDetailHtml(contact, allowedToEdit);
+  document.querySelectorAll('.oa-list-row').forEach(row => {
+    row.classList.toggle('is-active', row.getAttribute('data-agent-id') === id);
+  });
+}
+window.selectOverseasAgentDetail = selectOverseasAgentDetail;
+
+function buildOverseasAgentDetailHtml(contact, allowedToEdit) {
+  if (!contact) {
+    return `<div class="oa-detail-empty">Select an agent from the list to view contacts, agreement, and credit terms.</div>`;
+  }
+  const rating = Math.max(0, Math.min(5, Number(contact.rating) || 0));
+  const mt = (contact.moduleType || '').toLowerCase();
+  const moduleLabel = mt.includes('air') && mt.includes('sea') ? 'Air & Sea' : mt.includes('air') ? 'Air' : mt.includes('sea') ? 'Sea' : (contact.moduleType || '—');
+  const hasDoc = !!contact.agreementData;
+  const hasAgreementFlag = contact.agreement ? /^y/i.test(contact.agreement) : null;
+  let agreementHtml = '';
+  if (hasDoc) {
+    agreementHtml = `<button type="button" class="btn-secondary" onclick="downloadAgentAgreement('${contact.id}')">Download agreement</button>`;
+  } else if (allowedToEdit) {
+    agreementHtml = `<button type="button" class="btn-primary" onclick="triggerAgentAgreementUpload('${contact.id}')">Upload agreement</button>`;
+  } else if (hasAgreementFlag === true) {
+    agreementHtml = `<span class="oa-detail-badge ok">Agreement on file</span>`;
+  } else {
+    agreementHtml = `<span class="oa-detail-badge warn">No agreement</span>`;
+  }
+  const phoneClean = (contact.phone || '').replace(/[^\d+]/g, '');
+  const parsed = contact.creditTerms ? parseCreditTerms(contact.creditTerms) : null;
+  const creditHtml = parsed
+    ? `<div class="oa-detail-stats"><div><strong>${parsed.days}d</strong><span>Credit period</span></div><div><strong>${parsed.limit}</strong><span>Credit limit</span></div></div>`
+    : (contact.creditTerms ? `<p class="oa-detail-note"><strong>Credit:</strong> ${contact.creditTerms}</p>` : '');
+
+  return `
+    <div class="oa-detail-card${contact.suspended ? ' is-suspended' : ''}">
+      ${contact.suspended ? `<div class="oa-detail-banner">Suspended — do not book</div>` : ''}
+      <div class="oa-detail-kicker">${contact.location || 'Location unknown'} · ${moduleLabel}</div>
+      <h3 class="oa-detail-title">${contact.name || 'Untitled agent'}</h3>
+      ${rating ? `<div class="oa-detail-rating">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</div>` : ''}
+      <div class="oa-detail-fields">
+        <div><span>Contact</span><strong>${contact.contactPerson || '—'}</strong></div>
+        <div><span>Phone</span><strong>${contact.phone ? `<a href="tel:${phoneClean}">${contact.phone}</a>` : '—'}</strong></div>
+        <div><span>Email</span><strong>${contact.email ? `<a href="mailto:${contact.email}">${contact.email}</a>` : '—'}</strong></div>
+        <div><span>Updated by</span><strong>${contact.updatedBy || 'System'}</strong></div>
+      </div>
+      ${creditHtml}
+      ${contact.notes ? `<p class="oa-detail-note">${contact.notes}</p>` : ''}
+      <div class="oa-detail-actions">
+        ${contact.phone ? `<a class="btn-secondary" href="tel:${phoneClean}">Call</a>` : ''}
+        ${contact.email ? `<a class="btn-secondary" href="mailto:${contact.email}">Email</a>` : ''}
+        ${contact.phone && contact.phone.includes('+') ? `<a class="btn-secondary" href="https://wa.me/${phoneClean}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+        ${agreementHtml}
+        ${allowedToEdit ? `<button type="button" class="btn-secondary" onclick="openContactModal('${contact.id}')">Edit</button>` : ''}
+        ${allowedToEdit ? `<button type="button" class="btn-text" style="color:#ef4444;" onclick="deleteContact('${contact.id}')">Delete</button>` : ''}
+      </div>
+    </div>
+  `;
 }
 
 // Vendor Contacts as a dense table — company, branch/station, contact
-// person, number, email, remarks, one row per contact — the same shape as
-// the source workbook (one row per branch, grouped by the sheet it came
-// from), instead of a card grid. Overseas Agents keeps its card layout;
-// this only applies to vendors.
+// person, number, email, remarks. Overseas Agents uses master-detail above.
 function buildVendorTableHtml(rows, allowedToEdit, showCategoryHeaders = true) {
   if (!rows || rows.length === 0) return '';
 

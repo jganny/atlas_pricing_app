@@ -563,9 +563,6 @@
       window.openActiveCalculator = function (type) {
         orig(type);
         setBreadcrumb(type);
-        buildAiCommandBar(type);
-        refreshRecordContext(type);
-        bindDeskContextRefresh(type);
         if (type === 'air' || type === 'sea') {
           refreshRouteChips(type);
           refreshLaneVisual(type);
@@ -583,14 +580,11 @@
 
   function initDesks() {
     removeInsightRails();
-    ['air', 'sea', 'transport', 'warehouse'].forEach(function (mode) {
-      buildAiCommandBar(mode);
-      bindDeskContextRefresh(mode);
-      refreshRecordContext(mode);
-      if (mode === 'air' || mode === 'sea') {
-        refreshRouteChips(mode);
-        refreshLaneVisual(mode);
-      }
+    // Remove leftover Quick Fill bars / density chrome from earlier builds
+    document.querySelectorAll('.atlas-ai-command-bar').forEach(function (el) { el.remove(); });
+    ['air', 'sea'].forEach(function (mode) {
+      refreshRouteChips(mode);
+      refreshLaneVisual(mode);
     });
     observeCarrierCards();
   }
@@ -598,11 +592,13 @@
   function boot() {
     document.body.classList.add('atlas-enterprise-ui');
     initBreadcrumb();
-    initDensityToggle();
     wrapRouteFns();
     hookNavigation();
     setBreadcrumb('dashboard');
     document.body.classList.add('atlas-copilot-rail-mode');
+    document.body.classList.remove('atlas-density-compact', 'atlas-density-comfortable');
+    document.documentElement.classList.remove('atlas-density-compact-pending');
+    try { localStorage.removeItem('gl_ui_density'); } catch (e) { /* ignore */ }
 
     if (document.readyState === 'complete' || document.getElementById('app-workspace')) {
       window.setTimeout(function () {
