@@ -4671,13 +4671,15 @@
     <div id="atlas-copilot-log" class="atlas-copilot-log">
       <div class="atlas-copilot-msg atlas-copilot-msg-assistant">Quick help for navigation and workflows. Press ⌘K (Ctrl+K on Windows) to jump between modules. I never calculate rates — use the desks for pricing.</div>
     </div>
-    <label class="atlas-copilot-include">
-      <input type="checkbox" id="atlas-copilot-include-quote" />
-      Include selected enquiry (read-only)
-    </label>
-    <div class="atlas-copilot-compose">
-      <textarea id="atlas-copilot-input" rows="2" placeholder="Ask Atlas Help…" aria-label="Message to Atlas Help"></textarea>
-      <button type="button" id="atlas-copilot-send" class="atlas-copilot-send-btn">Send</button>
+    <div class="atlas-copilot-footer">
+      <label class="atlas-copilot-include">
+        <input type="checkbox" id="atlas-copilot-include-quote" />
+        <span class="atlas-copilot-include-text">Include selected enquiry (read-only)</span>
+      </label>
+      <div class="atlas-copilot-compose">
+        <textarea id="atlas-copilot-input" rows="2" placeholder="Ask Atlas Help…" aria-label="Message to Atlas Help"></textarea>
+        <button type="button" id="atlas-copilot-send" class="atlas-copilot-send-btn">Send</button>
+      </div>
     </div>
   </aside>
 

@@ -7271,21 +7271,37 @@ body.logged-out-blur .atlas-command-palette {
   border: 1px solid var(--border-1);
   border-bottom-left-radius: 4px;
 }
-.atlas-copilot-include {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.72rem;
-  color: var(--t3);
+.atlas-copilot-footer {
+  flex-shrink: 0;
+  margin-top: auto;
   border-top: 1px solid var(--border-2);
   background: var(--bg-surface);
+}
+.atlas-copilot-include {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.72rem;
+  color: var(--t3);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.atlas-copilot-include input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: 0.12rem;
+}
+.atlas-copilot-include-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .atlas-copilot-compose {
   display: flex;
   gap: 0.5rem;
-  padding: 0.75rem 1rem 1rem;
-  border-top: 1px solid var(--border-1);
+  padding: 0 1rem 1rem;
   background: var(--bg-surface);
 }
 .atlas-copilot-compose textarea {

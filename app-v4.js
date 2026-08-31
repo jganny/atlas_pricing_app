@@ -1124,6 +1124,11 @@ function switchRole(role) {
   });
   if (typeof syncRoleSwitcherTriggerLabel === 'function') syncRoleSwitcherTriggerLabel();
   if (typeof toggleRoleSwitcherMenu === 'function') toggleRoleSwitcherMenu(true);
+  if (isAdminUser(appState.currentUser)) {
+    try {
+      sessionStorage.setItem('atlas_admin_viewing_as', roleLower);
+    } catch (e) { /* private browsing */ }
+  }
 
   // Hide all panels
   document.querySelectorAll(".view-panel").forEach(panel => {
@@ -1211,45 +1216,40 @@ function goHome() {
   const workspaceNameEl = document.getElementById("header-workspace-name");
   if (workspaceNameEl) workspaceNameEl.textContent = "Home";
 
-  document.querySelectorAll(".view-panel").forEach(panel => {
-    panel.classList.remove("active");
-  });
   document.querySelectorAll(".modal-overlay").forEach(modal => {
     modal.classList.remove("show");
   });
 
   if (isAdminUser(appState.currentUser)) {
-    document.getElementById("manager-panel").classList.add("active");
-    document.querySelectorAll(".role-btn").forEach(btn => {
-      if (btn.getAttribute("data-role") === 'manager') {
-        btn.classList.add("active");
+    // Preserve admin "Viewing as" context — do not reset to Pricing Team when
+    // returning Home from another module while impersonating a desk user.
+    const viewingRole = getActiveRole() || 'manager';
+    switchRole(viewingRole);
+    const isManagerView = viewingRole === 'manager' || viewingRole === 'ganny';
+    if (isManagerView) {
+      const overviewHubCard = document.querySelector('#manager-panel .home-hub-card[data-hub-tab="overview"]');
+      if (typeof switchHomeHubTab === 'function') {
+        switchHomeHubTab('overview', overviewHubCard);
       } else {
-        btn.classList.remove("active");
+        const overviewTabBtn = document.querySelector('#manager-panel .desk-tab-strip .desk-tab-btn');
+        if (typeof switchDeskTab === 'function') {
+          switchDeskTab('manager-panel', 'overview', overviewTabBtn);
+        }
       }
-    });
-    const root = document.documentElement;
-    root.style.setProperty('--accent-current', 'var(--sky)');
-    const overviewHubCard = document.querySelector('#manager-panel .home-hub-card[data-hub-tab="overview"]');
-    if (typeof switchHomeHubTab === 'function') {
-      switchHomeHubTab('overview', overviewHubCard);
-    } else {
-      const overviewTabBtn = document.querySelector('#manager-panel .desk-tab-strip .desk-tab-btn');
-      if (typeof switchDeskTab === 'function') {
-        switchDeskTab('manager-panel', 'overview', overviewTabBtn);
+      if (typeof switchSequenceStep === 'function') {
+        switchSequenceStep('home-overview-shell', 'pulse');
       }
     }
-    if (typeof switchSequenceStep === 'function') {
-      switchSequenceStep('home-overview-shell', 'pulse');
-    }
-    renderAdminDashboard();
-  } else {
-    document.getElementById("member-dashboard-panel").classList.add("active");
-    renderMemberDashboard(appState.currentUser);
+    if (typeof updateAdminModulePermissions === 'function') updateAdminModulePermissions();
+    return;
   }
+
+  document.querySelectorAll(".view-panel").forEach(panel => {
+    panel.classList.remove("active");
+  });
+  document.getElementById("member-dashboard-panel").classList.add("active");
+  renderMemberDashboard(appState.currentUser);
   if (typeof updateAdminModulePermissions === 'function') updateAdminModulePermissions();
-  // Keep the visual navigation state aligned with the dashboard view.
-  // This only changes the selected sidebar/tab treatment; it does not affect
-  // permissions, data, calculations, or panel availability.
   if (typeof updateModuleTabs === 'function') updateModuleTabs('dashboard');
   resetPageScroll();
 }
@@ -11220,7 +11220,18 @@ function applyDeskNames() {
   const switcher = document.getElementById("admin-role-selector");
   if (switcher) {
     const adminName = (TEAM_ROLES['ganny']?.name || 'Pricing Team').replace(/\(Free Hand\)/g, "");
-    let buttonsHtml = `<button class="role-btn active" data-role="manager">${adminName}</button>`;
+    let viewingAs = (typeof getActiveRole === 'function' ? getActiveRole() : 'manager') || 'manager';
+    try {
+      const stored = sessionStorage.getItem('atlas_admin_viewing_as');
+      if (stored && (stored === 'manager' || TEAM_ROLES[stored] || stored === 'ganny')) {
+        viewingAs = stored;
+      }
+    } catch (e) { /* ignore */ }
+    const isRoleActive = (roleId) => {
+      if (viewingAs === 'manager' || viewingAs === 'ganny') return roleId === 'manager';
+      return roleId === viewingAs;
+    };
+    let buttonsHtml = `<button class="role-btn${isRoleActive('manager') ? ' active' : ''}" data-role="manager">${adminName}</button>`;
 
     // Add default users
     // 'jaya' (default label "Free Hand") is deliberately left out of this
@@ -11236,13 +11247,13 @@ function applyDeskNames() {
     defaultUsers.forEach(u => {
       let name = (TEAM_ROLES[u.id]?.name || u.defaultName).replace(/\(Free Hand\)/g, "");
       if (u.id === 'shaheer') name = 'Sea Nomination';
-      buttonsHtml += `<button class="role-btn" data-role="${u.id}">${u.icon}${name}</button>`;
+      buttonsHtml += `<button class="role-btn${isRoleActive(u.id) ? ' active' : ''}" data-role="${u.id}">${u.icon}${name}</button>`;
     });
 
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (['ganny', 'shashank', 'shaheer', 'mahendra', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
       const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\(Free Hand\)/g, "");
-      buttonsHtml += `<button class="role-btn" data-role="${roleId}">${name}</button>`;
+      buttonsHtml += `<button class="role-btn${isRoleActive(roleId) ? ' active' : ''}" data-role="${roleId}">${name}</button>`;
     });
 
     switcher.innerHTML = buttonsHtml;
