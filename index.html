@@ -11,8 +11,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.28">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.28">
+  <link rel="stylesheet" href="index.css?v=129.29">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.29">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -483,13 +483,50 @@
 
             <div class="form-group">
               <label for="overview-report-period">Reporting Timeframe</label>
-              <select id="overview-report-period">
+              <select id="overview-report-period" onchange="syncPerformanceReportPeriodUI()">
                 <option value="daily">Daily (Today's performance)</option>
-                <option value="monthly">Monthly (Active month)</option>
-                <option value="quarterly">Quarterly (Active Q)</option>
-                <option value="halfyearly">Half-Yearly (H1/H2)</option>
-                <option value="annually" selected>Annually (2026 calendar)</option>
+                <option value="monthly" selected>Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="halfyearly">Half-Yearly (H1 / H2)</option>
+                <option value="annually">Annual (Calendar year)</option>
               </select>
+            </div>
+
+            <div class="form-group" id="overview-report-month-year-wrap">
+              <label for="overview-report-month">Calendar month</label>
+              <div class="perf-report-period-row">
+                <select id="overview-report-month" aria-label="Report month"></select>
+                <select id="overview-report-year" aria-label="Report year"></select>
+              </div>
+            </div>
+
+            <div class="form-group" id="overview-report-quarter-wrap" style="display:none;">
+              <label for="overview-report-quarter">Fiscal quarter</label>
+              <div class="perf-report-period-row">
+                <select id="overview-report-quarter" aria-label="Report quarter">
+                  <option value="1">Q1 — Jan to Mar</option>
+                  <option value="2">Q2 — Apr to Jun</option>
+                  <option value="3">Q3 — Jul to Sep</option>
+                  <option value="4">Q4 — Oct to Dec</option>
+                </select>
+                <select id="overview-report-quarter-year" aria-label="Quarter year"></select>
+              </div>
+            </div>
+
+            <div class="form-group" id="overview-report-half-wrap" style="display:none;">
+              <label for="overview-report-half">Half year</label>
+              <div class="perf-report-period-row">
+                <select id="overview-report-half" aria-label="Report half">
+                  <option value="1">H1 — Jan to Jun</option>
+                  <option value="2">H2 — Jul to Dec</option>
+                </select>
+                <select id="overview-report-half-year" aria-label="Half year"></select>
+              </div>
+            </div>
+
+            <div class="form-group" id="overview-report-annual-wrap" style="display:none;">
+              <label for="overview-report-annual-year">Calendar year</label>
+              <select id="overview-report-annual-year" aria-label="Annual year"></select>
             </div>
 
             <div class="form-group">
@@ -4664,12 +4701,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.28"></script>
-  <script src="ui-shell.js?v=129.28"></script>
-  <script src="atlas-enterprise.js?v=129.28"></script>
-  <script src="ai-assistant.js?v=129.28"></script>
-  <script src="ai-sell-band.js?v=129.28"></script>
-  <script src="sales-v129.js?v=129.28"></script>
+  <script src="app-v4.js?v=129.29"></script>
+  <script src="ui-shell.js?v=129.29"></script>
+  <script src="atlas-enterprise.js?v=129.29"></script>
+  <script src="ai-assistant.js?v=129.29"></script>
+  <script src="ai-sell-band.js?v=129.29"></script>
+  <script src="sales-v129.js?v=129.29"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4997,7 +5034,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.28">' +
+          '<link rel="stylesheet" href="index.css?v=129.29">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

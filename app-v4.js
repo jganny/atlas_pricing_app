@@ -501,6 +501,7 @@ document.addEventListener("DOMContentLoaded", () => {
   checkSession();
   updateExecutiveDashboardVisibility();
   fetchExchangeRates();
+  if (typeof initPerformanceReportControls === 'function') initPerformanceReportControls();
 
   // Modal handlers
   document.getElementById("close-modal")?.addEventListener("click", hideQuoteModal);
@@ -7494,74 +7495,244 @@ window.convertQuote = (id) => {
 };
 
 // REPORT GENERATOR & PDF LAYOUT
-function generatePerformanceReport() {
-  const period = document.getElementById("overview-report-period").value;
-  const officer = document.getElementById("overview-report-user").value;
+const PERF_REPORT_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const activeYear = '2026';
-
-  // Filter quotes based on officer
-  let filtered = appState.quotes;
-  if (officer !== 'all') {
-    filtered = appState.quotes.filter(q => q.creator === officer);
+function populatePerfReportYearSelect(selectEl, selectedYear) {
+  if (!selectEl) return;
+  const now = new Date();
+  const start = now.getFullYear() - 3;
+  const end = now.getFullYear() + 1;
+  let html = '';
+  for (let y = end; y >= start; y--) {
+    html += `<option value="${y}"${y === selectedYear ? ' selected' : ''}>${y}</option>`;
   }
+  selectEl.innerHTML = html;
+}
 
-  // Filter based on period
-  let titlePeriod = '';
+window.syncPerformanceReportPeriodUI = function syncPerformanceReportPeriodUI() {
+  const period = document.getElementById('overview-report-period')?.value || 'monthly';
+  const monthWrap = document.getElementById('overview-report-month-year-wrap');
+  const quarterWrap = document.getElementById('overview-report-quarter-wrap');
+  const halfWrap = document.getElementById('overview-report-half-wrap');
+  const annualWrap = document.getElementById('overview-report-annual-wrap');
+  if (monthWrap) monthWrap.style.display = period === 'monthly' ? '' : 'none';
+  if (quarterWrap) quarterWrap.style.display = period === 'quarterly' ? '' : 'none';
+  if (halfWrap) halfWrap.style.display = period === 'halfyearly' ? '' : 'none';
+  if (annualWrap) annualWrap.style.display = period === 'annually' ? '' : 'none';
+};
+
+window.initPerformanceReportControls = function initPerformanceReportControls() {
+  const monthSel = document.getElementById('overview-report-month');
+  const yearSel = document.getElementById('overview-report-year');
+  const quarterYearSel = document.getElementById('overview-report-quarter-year');
+  const halfYearSel = document.getElementById('overview-report-half-year');
+  const annualYearSel = document.getElementById('overview-report-annual-year');
+  if (!monthSel || monthSel.dataset.initialized === '1') return;
+
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+
+  monthSel.innerHTML = PERF_REPORT_MONTHS.map((name, i) =>
+    `<option value="${i + 1}"${i + 1 === curMonth ? ' selected' : ''}>${name}</option>`
+  ).join('');
+
+  populatePerfReportYearSelect(yearSel, curYear);
+  populatePerfReportYearSelect(quarterYearSel, curYear);
+  populatePerfReportYearSelect(halfYearSel, curYear);
+  populatePerfReportYearSelect(annualYearSel, curYear);
+
+  const qNow = Math.floor((curMonth - 1) / 3) + 1;
+  const qSel = document.getElementById('overview-report-quarter');
+  if (qSel) qSel.value = String(qNow);
+  const halfSel = document.getElementById('overview-report-half');
+  if (halfSel) halfSel.value = curMonth <= 6 ? '1' : '2';
+
+  monthSel.dataset.initialized = '1';
+  syncPerformanceReportPeriodUI();
+};
+
+function resolvePerformanceReportWindow(period) {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
   if (period === 'daily') {
-    filtered = filtered.filter(q => q.date === todayStr);
-    titlePeriod = `Daily Performance Report (${todayStr})`;
-  } else if (period === 'monthly') {
-    filtered = filtered.filter(q => q.date.startsWith('2026-07'));
-    titlePeriod = 'Monthly Performance Report (July 2026)';
-  } else if (period === 'quarterly') {
-    // Q3: July - Sept
-    filtered = filtered.filter(q => {
-      const month = parseInt(q.date.split('-')[1]);
-      return month >= 7 && month <= 9;
-    });
-    titlePeriod = 'Quarterly Performance Report (Q3 2026)';
-  } else if (period === 'halfyearly') {
-    // H2: July - Dec
-    filtered = filtered.filter(q => {
-      const month = parseInt(q.date.split('-')[1]);
-      return month >= 7 && month <= 12;
-    });
-    titlePeriod = 'Half-Yearly Performance Report (H2 2026)';
-  } else if (period === 'annually') {
-    filtered = filtered.filter(q => q.date.startsWith(activeYear));
-    titlePeriod = `Annual Performance Report (Calendar Year ${activeYear})`;
+    return {
+      filter: (q) => q.date === todayStr,
+      titlePeriod: `Daily Performance Report (${todayStr})`,
+      intervalLabel: `Single day — ${todayStr}`
+    };
   }
 
-  // Summarize details
+  if (period === 'monthly') {
+    const month = parseInt(document.getElementById('overview-report-month')?.value || String(now.getMonth() + 1), 10);
+    const year = parseInt(document.getElementById('overview-report-year')?.value || String(now.getFullYear()), 10);
+    const prefix = `${year}-${String(month).padStart(2, '0')}`;
+    return {
+      filter: (q) => (q.date || '').startsWith(prefix),
+      titlePeriod: `Monthly Performance Report (${PERF_REPORT_MONTHS[month - 1]} ${year})`,
+      intervalLabel: `${PERF_REPORT_MONTHS[month - 1]} ${year}`
+    };
+  }
+
+  if (period === 'quarterly') {
+    const quarter = parseInt(document.getElementById('overview-report-quarter')?.value || '1', 10);
+    const year = parseInt(document.getElementById('overview-report-quarter-year')?.value || String(now.getFullYear()), 10);
+    const startMonth = (quarter - 1) * 3 + 1;
+    const endMonth = startMonth + 2;
+    return {
+      filter: (q) => {
+        if (!q.date || !q.date.startsWith(String(year))) return false;
+        const m = parseInt(q.date.split('-')[1], 10);
+        return m >= startMonth && m <= endMonth;
+      },
+      titlePeriod: `Quarterly Performance Report (Q${quarter} ${year})`,
+      intervalLabel: `Q${quarter} ${year} (${PERF_REPORT_MONTHS[startMonth - 1].slice(0, 3)}–${PERF_REPORT_MONTHS[endMonth - 1].slice(0, 3)})`
+    };
+  }
+
+  if (period === 'halfyearly') {
+    const half = parseInt(document.getElementById('overview-report-half')?.value || '1', 10);
+    const year = parseInt(document.getElementById('overview-report-half-year')?.value || String(now.getFullYear()), 10);
+    return {
+      filter: (q) => {
+        if (!q.date || !q.date.startsWith(String(year))) return false;
+        const m = parseInt(q.date.split('-')[1], 10);
+        return half === 1 ? m >= 1 && m <= 6 : m >= 7 && m <= 12;
+      },
+      titlePeriod: `Half-Yearly Performance Report (H${half} ${year})`,
+      intervalLabel: half === 1 ? `H1 ${year} (Jan–Jun)` : `H2 ${year} (Jul–Dec)`
+    };
+  }
+
+  const year = parseInt(document.getElementById('overview-report-annual-year')?.value || String(now.getFullYear()), 10);
+  return {
+    filter: (q) => (q.date || '').startsWith(String(year)),
+    titlePeriod: `Annual Performance Report (Calendar Year ${year})`,
+    intervalLabel: `Full calendar year ${year}`
+  };
+}
+
+function buildCustomerPerformanceStats(quotes) {
+  const byCustomer = {};
+  quotes.forEach((q) => {
+    const key = (q.customer || 'Unknown').trim() || 'Unknown';
+    if (!byCustomer[key]) {
+      byCustomer[key] = {
+        customer: key,
+        shipments: 0,
+        won: 0,
+        gpInrSum: 0,
+        gpInrCount: 0,
+        gpPctSum: 0,
+        gpPctCount: 0,
+        modes: {}
+      };
+    }
+    const row = byCustomer[key];
+    row.shipments += 1;
+    if (q.status === 'converted') row.won += 1;
+    const mode = (q.type || 'other').toLowerCase();
+    row.modes[mode] = (row.modes[mode] || 0) + 1;
+    if (typeof q.grossProfitINR === 'number' && !isNaN(q.grossProfitINR)) {
+      row.gpInrSum += q.grossProfitINR;
+      row.gpInrCount += 1;
+    }
+    if (typeof q.grossProfit === 'number' && q.amount) {
+      row.gpPctSum += (q.grossProfit / q.amount) * 100;
+      row.gpPctCount += 1;
+    }
+  });
+
+  return Object.values(byCustomer)
+    .map((c) => ({
+      ...c,
+      avgGpInr: c.gpInrCount ? c.gpInrSum / c.gpInrCount : 0,
+      avgGpPct: c.gpPctCount ? c.gpPctSum / c.gpPctCount : 0,
+      winRate: c.shipments ? (c.won / c.shipments) * 100 : 0
+    }))
+    .sort((a, b) => b.shipments - a.shipments || b.gpInrSum - a.gpInrSum);
+}
+
+function renderPerfModeTags(modes) {
+  const order = ['air', 'sea', 'transport', 'warehouse'];
+  const labels = { air: 'Air', sea: 'Sea', transport: 'Transport', warehouse: 'Warehouse' };
+  return order
+    .filter((m) => modes[m])
+    .map((m) => `<span class="mode-tag ${m}">${labels[m] || m} ×${modes[m]}</span>`)
+    .join('');
+}
+
+function perfGpHealthClass(pct) {
+  if (pct >= 15) return 'good';
+  if (pct >= 8) return 'mid';
+  return 'low';
+}
+
+function buildModeMixSummary(quotes) {
+  const mix = {};
+  quotes.forEach((q) => {
+    const mode = (q.type || 'other').toLowerCase();
+    mix[mode] = (mix[mode] || 0) + 1;
+  });
+  const total = quotes.length || 1;
+  return Object.entries(mix)
+    .sort((a, b) => b[1] - a[1])
+    .map(([mode, count]) => {
+      const pct = ((count / total) * 100).toFixed(0);
+      const label = mode.charAt(0).toUpperCase() + mode.slice(1);
+      return `${label} ${pct}% (${count})`;
+    })
+    .join(' · ');
+}
+
+function generatePerformanceReport() {
+  initPerformanceReportControls();
+
+  const period = document.getElementById('overview-report-period')?.value || 'monthly';
+  const officer = document.getElementById('overview-report-user')?.value || 'all';
+  const windowSpec = resolvePerformanceReportWindow(period);
+
+  let filtered = (appState.quotes || []).slice();
+  if (officer !== 'all') {
+    filtered = filtered.filter((q) => q.creator === officer);
+  }
+  filtered = filtered.filter(windowSpec.filter);
+
   const totalQuotes = filtered.length;
-  const conversions = filtered.filter(q => q.status === 'converted').length;
+  const conversions = filtered.filter((q) => q.status === 'converted').length;
   const rate = totalQuotes > 0 ? (conversions / totalQuotes * 100) : 0;
-  const revenue = filtered.reduce((acc, q) => acc + q.amountINR, 0);
+  const revenue = filtered.reduce((acc, q) => acc + (q.amountINR || 0), 0);
   const totalGP = filtered.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
+  const avgGpPct = totalQuotes > 0
+    ? filtered.reduce((acc, q) => acc + (q.amount ? ((q.grossProfit || 0) / q.amount) * 100 : 0), 0) / totalQuotes
+    : 0;
 
-  // Group stats by member for summary grids
-  const membersSet = new Set(Object.keys(TEAM_ROLES));
-  if (appState.quotes && Array.isArray(appState.quotes)) {
-    appState.quotes.forEach(q => {
-      if (q.creator) membersSet.add(q.creator);
-    });
-  }
-  const members = Array.from(membersSet).filter(roleId => roleId !== 'ganny' && roleId !== 'manager' && roleId !== 'mahendra');
-  let breakdownRows = "";
+  const customerStats = buildCustomerPerformanceStats(filtered);
+  const topCustomer = customerStats[0];
+  const topCustomerGpShare = topCustomer && totalGP > 0
+    ? (topCustomer.gpInrSum / totalGP) * 100
+    : 0;
+  const uniqueCustomers = customerStats.length;
+  const modeMixLabel = buildModeMixSummary(filtered) || '—';
 
-  members.forEach(mId => {
-    // Skip if filter is set to specific officer and not this one
+  const membersSet = new Set(Object.keys(TEAM_ROLES || {}));
+  (appState.quotes || []).forEach((q) => { if (q.creator) membersSet.add(q.creator); });
+  const members = Array.from(membersSet).filter((roleId) => roleId !== 'ganny' && roleId !== 'manager' && roleId !== 'mahendra');
+
+  let breakdownRows = '';
+  members.forEach((mId) => {
     if (officer !== 'all' && officer !== mId) return;
-
-    const deskQuotes = filtered.filter(q => q.creator === mId);
+    const deskQuotes = filtered.filter((q) => q.creator === mId);
     const dCount = deskQuotes.length;
-    const dConv = deskQuotes.filter(q => q.status === 'converted').length;
+    if (dCount === 0) return;
+    const dConv = deskQuotes.filter((q) => q.status === 'converted').length;
     const dRate = dCount > 0 ? (dConv / dCount * 100) : 0;
-    const dRevenue = deskQuotes.reduce((acc, q) => acc + q.amountINR, 0);
+    const dRevenue = deskQuotes.reduce((acc, q) => acc + (q.amountINR || 0), 0);
     const dGP = deskQuotes.reduce((acc, q) => acc + (q.grossProfitINR || 0), 0);
-
     breakdownRows += `
       <tr>
         <td><strong>${TEAM_ROLES[mId]?.name || mId}</strong></td>
@@ -7569,126 +7740,184 @@ function generatePerformanceReport() {
         <td>${dConv}</td>
         <td><strong>${dRate.toFixed(1)}%</strong></td>
         <td>₹${dRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-        <td><strong style="color:var(--accent-success);">₹${dGP.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong></td>
-      </tr>
-    `;
+        <td><strong class="gp-health good">₹${dGP.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong></td>
+      </tr>`;
   });
-
-  // Detailed Quote logs for print
-  let detailRowsList = "";
-  if (filtered.length > 0) {
-    filtered.forEach(q => {
-      const curSym = q.currency === 'INR' ? '₹' : (q.currency === 'USD' ? '$' : (q.currency === 'EUR' ? '€' : '£'));
-      const gpValStr = q.grossProfit !== undefined ? `${q.grossProfitCurrency === 'INR' ? '₹' : (q.grossProfitCurrency === 'USD' ? '$' : (q.grossProfitCurrency === 'EUR' ? '€' : '£'))}${Math.abs(q.grossProfit).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '-';
-      detailRowsList += `
-        <tr>
-          <td>#${getQuoteRefId(q)}</td>
-          <td>${q.date}</td>
-          <td><span style="text-transform:uppercase; font-size:0.8rem; font-weight:700;">${q.type}</span></td>
-          <td>${q.customer}<br><span style="font-size:0.75rem; color:#666;">${q.route}</span></td>
-          <td>${TEAM_ROLES[q.creator]?.name || q.creator}</td>
-          <td>${q.status === 'converted' ? 'Won Converted' : 'Quoted'}</td>
-          <td>${curSym}${q.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-          <td style="font-weight:700; color:var(--accent-success);">${gpValStr}</td>
-        </tr>
-      `;
-    });
-  } else {
-    detailRowsList = `<tr><td colspan="8" style="text-align:center; color:#666; font-style:italic;">No quote transactions recorded in this timeframe</td></tr>`;
+  if (!breakdownRows) {
+    breakdownRows = `<tr><td colspan="6" style="text-align:center;color:#64748b;font-style:italic;">No officer activity in this period</td></tr>`;
   }
 
-  // Populate print modal
-  const printCard = document.getElementById("quote-print-card");
-  document.getElementById("modal-header-title").textContent = "Official Performance Report Extraction";
+  let customerRows = '';
+  if (customerStats.length > 0) {
+    customerStats.forEach((c) => {
+      const gpClass = perfGpHealthClass(c.avgGpPct);
+      customerRows += `
+        <tr>
+          <td><strong>${c.customer}</strong></td>
+          <td>${c.shipments}</td>
+          <td>${c.won}</td>
+          <td>${c.winRate.toFixed(0)}%</td>
+          <td>${renderPerfModeTags(c.modes)}</td>
+          <td class="gp-health ${gpClass}">${c.avgGpPct.toFixed(1)}%</td>
+          <td class="gp-health ${gpClass}">₹${Math.round(c.avgGpInr).toLocaleString('en-IN')}</td>
+          <td>₹${Math.round(c.gpInrSum).toLocaleString('en-IN')}</td>
+        </tr>`;
+    });
+  } else {
+    customerRows = `<tr><td colspan="8" style="text-align:center;color:#64748b;font-style:italic;">No customer activity in this period</td></tr>`;
+  }
 
+  let registerRows = '';
+  if (filtered.length > 0) {
+    filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((q) => {
+      const gpInr = q.grossProfitINR != null ? `₹${Math.round(q.grossProfitINR).toLocaleString('en-IN')}` : '—';
+      const gpPct = q.grossProfit != null && q.amount
+        ? `${((q.grossProfit / q.amount) * 100).toFixed(1)}%`
+        : '—';
+      const statusLabel = q.status === 'converted' ? 'Won' : (q.status === 'quoted' ? 'Quoted' : (q.status || '—'));
+      registerRows += `
+        <tr>
+          <td>#${getQuoteRefId(q)}</td>
+          <td>${q.date || '—'}</td>
+          <td>${q.customer || '—'}</td>
+          <td><span class="mode-tag ${q.type || ''}">${(q.type || '—').toUpperCase()}</span></td>
+          <td>${TEAM_ROLES[q.creator]?.name || q.creator || '—'}</td>
+          <td>${statusLabel}</td>
+          <td>${gpPct}</td>
+          <td>${gpInr}</td>
+        </tr>`;
+    });
+  } else {
+    registerRows = `<tr><td colspan="8" style="text-align:center;color:#64748b;font-style:italic;">No enquiries in this period</td></tr>`;
+  }
+
+  const scopeLabel = officer === 'all' ? 'All pricing desks (consolidated)' : (TEAM_ROLES[officer]?.name || officer);
+  const generatedOn = new Date().toISOString().split('T')[0];
+  const printCard = document.getElementById('quote-print-card');
+  document.getElementById('modal-header-title').textContent = 'Performance Report';
+
+  printCard.className = 'quote-print-card perf-report';
   printCard.innerHTML = `
     <div class="print-header">
-      <div class="print-logo">GL PERFORMANCE DESK</div>
+      <div class="print-logo">ATLAS PERFORMANCE</div>
       <div class="print-title">
-        <h2>PERFORMANCE REPORT</h2>
-        <div>Generated: ${new Date().toISOString().split('T')[0]}</div>
-        <div>Scope: ${officer === 'all' ? 'Consolidated Desks' : (TEAM_ROLES[officer]?.name || officer)}</div>
+        <h2>EXECUTIVE PERFORMANCE REPORT</h2>
+        <div>Generated ${generatedOn}</div>
+        <div>${scopeLabel}</div>
       </div>
     </div>
 
-    <div class="print-details" style="margin-bottom: 1.5rem;">
+    <div class="perf-report-meta">
       <div>
-        <strong>Report Parameters:</strong><br>
-        Interval: ${period.toUpperCase()}<br>
-        Year: ${activeYear}
+        <strong>Reporting interval</strong><br>
+        ${windowSpec.intervalLabel}<br>
+        Period type: ${period.charAt(0).toUpperCase() + period.slice(1)}
       </div>
-      <div style="text-align: right;">
-        <strong>Audit Officer:</strong><br>
-        Logistics Manager Desk (Admin)<br>
-        Verified: Automated Terminal
-      </div>
-    </div>
-
-    <h4 style="font-size:1rem; font-weight:700; margin-bottom: 0.5rem; color:#333; border-bottom: 1px solid #333; padding-bottom: 0.25rem;">
-      ${titlePeriod}
-    </h4>
-
-    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; margin-top: 1rem;">
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:0.75rem; border-radius:6px; text-align:center;">
-        <div style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Enquiries Quoted</div>
-        <div style="font-size:1.5rem; font-weight:800; color:#334155; margin-top:0.25rem;">${totalQuotes}</div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:0.75rem; border-radius:6px; text-align:center;">
-        <div style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Conversions Won</div>
-        <div style="font-size:1.5rem; font-weight:800; color:#10b981; margin-top:0.25rem;">${conversions}</div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:0.75rem; border-radius:6px; text-align:center;">
-        <div style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">Conversion Rate</div>
-        <div style="font-size:1.5rem; font-weight:800; color:#f59e0b; margin-top:0.25rem;">${rate.toFixed(1)}%</div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:0.75rem; border-radius:6px; text-align:center;">
-        <div style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">INR Revenue Value</div>
-        <div style="font-size:1.25rem; font-weight:800; color:#3b82f6; margin-top:0.4rem;">₹${revenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:0.75rem; border-radius:6px; text-align:center;">
-        <div style="font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">INR Gross Profit</div>
-        <div style="font-size:1.25rem; font-weight:800; color:#8b5cf6; margin-top:0.4rem;">₹${totalGP.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+      <div style="text-align:right;">
+        <strong>Document control</strong><br>
+        Atlas Pricing · Manager Desk<br>
+        Confidential — internal use
       </div>
     </div>
 
-    <div class="print-section-title">Pricing Officer Breakdown</div>
-    <table>
+    <h3 class="perf-report-title">${windowSpec.titlePeriod}</h3>
+
+    <div class="perf-report-kpi-grid">
+      <div class="perf-report-kpi">
+        <div class="perf-report-kpi-label">Enquiries</div>
+        <div class="perf-report-kpi-value">${totalQuotes}</div>
+      </div>
+      <div class="perf-report-kpi">
+        <div class="perf-report-kpi-label">Conversions</div>
+        <div class="perf-report-kpi-value is-success">${conversions}</div>
+      </div>
+      <div class="perf-report-kpi">
+        <div class="perf-report-kpi-label">Win rate</div>
+        <div class="perf-report-kpi-value is-warning">${rate.toFixed(1)}%</div>
+      </div>
+      <div class="perf-report-kpi">
+        <div class="perf-report-kpi-label">Quoted value (INR)</div>
+        <div class="perf-report-kpi-value is-brand">₹${revenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+      </div>
+      <div class="perf-report-kpi">
+        <div class="perf-report-kpi-label">Gross profit (INR)</div>
+        <div class="perf-report-kpi-value is-violet">₹${totalGP.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+      </div>
+    </div>
+
+    <div class="perf-report-insight">
+      <div class="perf-report-insight-card">
+        Active accounts
+        <strong>${uniqueCustomers}</strong>
+        Distinct customers quoted in period
+      </div>
+      <div class="perf-report-insight-card">
+        Portfolio avg GP
+        <strong>${avgGpPct.toFixed(1)}%</strong>
+        Mean margin across all enquiries
+      </div>
+      <div class="perf-report-insight-card">
+        Top account concentration
+        <strong>${topCustomer ? topCustomer.customer : '—'}</strong>
+        ${topCustomer ? `${topCustomerGpShare.toFixed(0)}% of period GP · ${topCustomer.shipments} shipments` : 'No data'}
+      </div>
+    </div>
+
+    <div class="print-section-title">Customer account performance</div>
+    <p style="font-size:0.65rem;color:#64748b;margin:0 0 0.4rem;">Shipments, mode mix, and margin health by customer — routes excluded for clarity.</p>
+    <table class="perf-table">
+      <thead>
+        <tr>
+          <th style="width:22%">Customer</th>
+          <th style="width:8%">Shipments</th>
+          <th style="width:7%">Won</th>
+          <th style="width:7%">Win %</th>
+          <th style="width:18%">Mode mix</th>
+          <th style="width:10%">Avg GP %</th>
+          <th style="width:12%">Avg GP (INR)</th>
+          <th style="width:16%">Total GP (INR)</th>
+        </tr>
+      </thead>
+      <tbody>${customerRows}</tbody>
+    </table>
+
+    <div class="print-section-title" style="margin-top:1.25rem;">Mode portfolio mix</div>
+    <p style="font-size:0.68rem;color:#334155;margin:0 0 0.75rem;">${modeMixLabel}</p>
+
+    <div class="print-section-title">Pricing officer breakdown</div>
+    <table class="perf-table">
       <thead>
         <tr>
           <th>Desk / Officer</th>
-          <th>Enquiries Quoted</th>
-          <th>Conversions</th>
-          <th>Conversion Rate</th>
-          <th>INR Quoted Value</th>
-          <th>INR Gross Profit</th>
+          <th>Enquiries</th>
+          <th>Won</th>
+          <th>Win rate</th>
+          <th>INR quoted</th>
+          <th>INR GP</th>
         </tr>
       </thead>
-      <tbody>
-        ${breakdownRows}
-      </tbody>
+      <tbody>${breakdownRows}</tbody>
     </table>
 
-    <div class="print-section-title" style="margin-top:2rem;">Detailed Enquiry Transaction Log</div>
-    <table style="font-size:0.75rem;">
+    <div class="print-section-title" style="margin-top:1.25rem;">Shipment register</div>
+    <table class="perf-table">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Date</th>
-          <th>Mode</th>
-          <th>Customer & Route</th>
-          <th>Officer</th>
-          <th>Status</th>
-          <th>Local Amount</th>
-          <th>Gross Profit</th>
+          <th style="width:10%">Ref</th>
+          <th style="width:11%">Date</th>
+          <th style="width:22%">Customer</th>
+          <th style="width:9%">Mode</th>
+          <th style="width:14%">Officer</th>
+          <th style="width:9%">Status</th>
+          <th style="width:10%">GP %</th>
+          <th style="width:15%">GP (INR)</th>
         </tr>
       </thead>
-      <tbody>
-        ${detailRowsList}
-      </tbody>
+      <tbody>${registerRows}</tbody>
     </table>
 
-    <div class="footer-note" style="margin-top:2rem;">
-      Global Logistics Co. Performance & Audit Records. Confidential document.
+    <div class="footer-note">
+      Atlas Pricing Performance Intelligence · ${windowSpec.intervalLabel} · Generated ${generatedOn}
     </div>
   `;
 
@@ -8978,6 +9207,7 @@ window.viewSavedQuote = async (id) => {
 
   const printCard = document.getElementById("quote-print-card");
   if (!printCard) return;
+  printCard.className = 'quote-print-card';
   document.getElementById("modal-header-title").textContent = "Quotation Official Preview";
 
   const isAir = quote.type === 'air';
@@ -21215,7 +21445,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.28"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.29"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {
