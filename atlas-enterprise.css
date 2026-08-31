@@ -1119,9 +1119,20 @@ body.atlas-enterprise-ui .sidebar-item:hover {
   box-shadow: 0 6px 16px rgba(0, 112, 210, 0.22) !important;
 }
 
-.login-card-premium .login-signup-btn {
+/* Must beat .login-btn solid fill — otherwise Sign up is blue-on-blue and looks blank */
+.login-card-premium .login-btn.login-signup-btn,
+#login-overlay .login-card .login-btn.login-signup-btn {
+  background: #ffffff !important;
   color: var(--atlas-brand) !important;
-  border-color: var(--atlas-brand) !important;
+  border: 1.5px solid var(--atlas-brand) !important;
+  box-shadow: none !important;
+}
+
+.login-card-premium .login-btn.login-signup-btn:hover,
+#login-overlay .login-card .login-btn.login-signup-btn:hover {
+  background: var(--atlas-brand-soft) !important;
+  color: var(--atlas-brand-hover) !important;
+  border-color: var(--atlas-brand-hover) !important;
 }
 
 #login-overlay .login-password-toggle:hover {

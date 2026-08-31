@@ -4679,16 +4679,20 @@ input::placeholder, textarea::placeholder {
   font-size: 0.94rem !important;
 }
 
-/* Sign Up — ghost / outline variant */
-.login-card-premium .login-signup-btn {
-  background: transparent !important;
-  color: var(--atlas-brand-hover) !important;
+/* Sign Up — outline variant (higher specificity than .login-btn so text stays visible) */
+.login-card-premium .login-btn.login-signup-btn,
+#login-overlay .login-card .login-btn.login-signup-btn {
+  background: #ffffff !important;
+  color: var(--atlas-brand) !important;
   border: 1.5px solid var(--atlas-brand) !important;
   box-shadow: none !important;
   margin-top: 0.6rem !important;
 }
-.login-card-premium .login-signup-btn:hover {
-  background: rgba(90, 122, 154, 0.06) !important;
+.login-card-premium .login-btn.login-signup-btn:hover,
+#login-overlay .login-card .login-btn.login-signup-btn:hover {
+  background: rgba(0, 112, 210, 0.06) !important;
+  color: var(--atlas-brand-hover) !important;
+  border-color: var(--atlas-brand-hover) !important;
   box-shadow: none !important;
   transform: translateY(-1px) !important;
 }
