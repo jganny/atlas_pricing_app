@@ -704,77 +704,131 @@ body.atlas-admin-session #db-connection-badge {
   display: block !important;
 }
 
-/* ── AI command bar — single row below record context (not a 3rd column) ── */
+/* ── Quick fill bar — paste enquiry → fill desk fields ── */
 .atlas-ai-command-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.75rem 0.6rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.atlas-quickfill-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.45rem 0.6rem;
-  margin: 0 0 0.85rem;
-  padding: 0.45rem 0.65rem;
-  background: var(--bg-surface);
-  border: var(--enterprise-border);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-sm);
+  gap: 0.4rem 0.65rem;
 }
 
 .atlas-ai-command-label {
   font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--indigo);
-  padding: 0.15rem 0.45rem;
-  border-radius: var(--r-pill);
-  background: var(--indigo-g);
+  color: #fff;
+  padding: 0.18rem 0.5rem;
+  border-radius: 4px;
+  background: var(--atlas-brand, #0070D2);
   flex-shrink: 0;
+}
+
+.atlas-quickfill-purpose {
+  font-size: 0.7rem;
+  color: var(--t2);
+  font-weight: 500;
+}
+
+.atlas-quickfill-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .atlas-ai-command-input {
-  flex: 1 1 200px;
+  flex: 1 1 auto;
   min-width: 0;
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 0.7rem;
   border-radius: var(--r-sm);
   border: 1px solid var(--border-1);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-family: inherit;
   color: var(--t1);
-  background: var(--bg-input);
+  background: #fff;
+}
+
+.atlas-ai-command-input:focus {
+  outline: none;
+  border-color: var(--atlas-brand, #0070D2);
+  box-shadow: 0 0 0 3px rgba(0, 112, 210, 0.12);
 }
 
 .atlas-ai-command-parse {
-  padding: 0.38rem 0.75rem;
+  padding: 0.48rem 0.9rem;
   border-radius: var(--r-sm);
   border: none;
-  background: var(--indigo);
+  background: var(--atlas-brand, #0070D2);
   color: #fff;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.atlas-ai-command-copilot {
-  padding: 0.38rem 0.65rem;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border-1);
-  background: transparent;
-  color: var(--sky);
-  font-size: 0.68rem;
-  font-weight: 700;
+.atlas-ai-command-parse:hover {
+  filter: brightness(1.06);
+}
+
+.atlas-quickfill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.atlas-quickfill-chip {
+  border: 1px dashed var(--border-2);
+  background: #fff;
+  color: var(--t2);
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
   cursor: pointer;
-  flex-shrink: 0;
+  font-family: inherit;
 }
 
-.atlas-ai-command-copilot:hover {
-  background: var(--sky-g);
+.atlas-quickfill-chip:hover {
+  border-color: var(--atlas-brand, #0070D2);
+  color: var(--atlas-brand, #0070D2);
+  background: rgba(0, 112, 210, 0.04);
 }
 
 .atlas-ai-command-hint {
-  flex: 1 1 100%;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   color: var(--t3);
   min-height: 0;
+  line-height: 1.35;
+}
+
+.atlas-ai-command-hint:not(:empty) {
+  margin-top: 0.1rem;
+}
+
+.atlas-ai-command-hint.is-success {
+  color: #047857;
+}
+
+.atlas-ai-command-hint.is-error {
+  color: #b45309;
+}
+
+/* legacy Copilot button styles unused on desks — keep harmless if referenced */
+.atlas-ai-command-copilot {
+  display: none;
 }
 
 .atlas-ai-command-hint:not(:empty) {

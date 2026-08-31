@@ -260,28 +260,52 @@
     });
   }
 
-  /* ── Compact AI command bar (below record context — Dynamics command-bar pattern) ── */
+  /* ── Quick fill bar — paste enquiry text → fill desk fields (time-saver) ── */
   function buildAiCommandBar(mode) {
     var panelId = DESK_PANELS[mode];
     if (!panelId) return;
     var panel = $(panelId);
     if (!panel) return;
     var barId = mode + '-ai-command-bar';
-    if ($(barId)) return;
+    var existing = $(barId);
+    if (existing) existing.remove();
 
     var anchor = panel.querySelector('.enterprise-record-context') ||
       panel.querySelector('.desk-highlights-bar');
     if (!anchor) return;
 
+    var examples = mode === 'sea'
+      ? [
+          { label: 'LCL lane', text: '2 pkgs 120x80x100 cm, 1.8 CBM, INNSA to SGSIN FOB general' },
+          { label: 'Weight only', text: '5000 kg Nhava Sheva to Jebel Ali CIF' }
+        ]
+      : [
+          { label: 'With dims', text: '2 pkgs 120x80x100 cm 500 kg AMD to SVO EXW general' },
+          { label: 'Lane + wt', text: '500kg BLR to DXB general EXW' }
+        ];
+
     var bar = document.createElement('div');
     bar.className = 'atlas-ai-command-bar';
     bar.id = barId;
     bar.innerHTML =
-      '<span class="atlas-ai-command-label" aria-hidden="true">AI</span>' +
-      '<input type="text" class="atlas-ai-command-input" id="' + mode + '-ai-intake" ' +
-        'placeholder="Describe shipment — e.g. 500kg BLR to DXB general EXW" aria-label="AI shipment intake" />' +
-      '<button type="button" class="atlas-ai-command-parse" data-ai-desk="' + mode + '">Parse</button>' +
-      '<button type="button" class="atlas-ai-command-copilot" onclick="toggleAtlasCopilot(true)">Copilot</button>' +
+      '<div class="atlas-quickfill-head">' +
+        '<span class="atlas-ai-command-label">Quick fill</span>' +
+        '<span class="atlas-quickfill-purpose">Paste an enquiry line — fills route, cargo &amp; terms in one go</span>' +
+      '</div>' +
+      '<div class="atlas-quickfill-row">' +
+        '<input type="text" class="atlas-ai-command-input" id="' + mode + '-ai-intake" ' +
+          'placeholder="' + (mode === 'sea'
+            ? 'e.g. 2 pkgs 120x80x100 cm INNSA to SGSIN FOB'
+            : 'e.g. 2 pkgs 120x80x100 cm 500 kg AMD to SVO EXW') + '" ' +
+          'aria-label="Paste enquiry text to quick-fill the desk" />' +
+        '<button type="button" class="atlas-ai-command-parse" data-ai-desk="' + mode + '">Fill form</button>' +
+      '</div>' +
+      '<div class="atlas-quickfill-chips" role="group" aria-label="Example enquiry lines">' +
+        examples.map(function (ex) {
+          return '<button type="button" class="atlas-quickfill-chip" data-example="' +
+            String(ex.text).replace(/"/g, '&quot;') + '">' + ex.label + '</button>';
+        }).join('') +
+      '</div>' +
       '<span class="atlas-ai-command-hint" id="' + mode + '-ai-tip"></span>';
 
     anchor.insertAdjacentElement('afterend', bar);
@@ -296,34 +320,158 @@
         if (e.key === 'Enter') { e.preventDefault(); parseAiIntake(mode); }
       });
     }
+    bar.querySelectorAll('.atlas-quickfill-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        if (!input) return;
+        input.value = chip.getAttribute('data-example') || '';
+        input.focus();
+        parseAiIntake(mode);
+      });
+    });
+  }
+
+  function setFieldValue(id, value) {
+    var el = $(id);
+    if (!el || value == null || value === '') return false;
+    el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function fillAirCargoRow(dims, qty, weightKg) {
+    var body = $('air-cargo-body');
+    if (!body) return false;
+    var row = body.querySelector('.cargo-item-row');
+    if (!row) {
+      var addBtn = $('air-add-cargo');
+      if (addBtn) addBtn.click();
+      row = body.querySelector('.cargo-item-row');
+    }
+    if (!row) return false;
+    var filled = false;
+    if (dims) {
+      var len = row.querySelector('.cargo-len');
+      var wid = row.querySelector('.cargo-wid');
+      var hei = row.querySelector('.cargo-hei');
+      if (len) { len.value = dims.l; filled = true; }
+      if (wid) { wid.value = dims.w; filled = true; }
+      if (hei) { hei.value = dims.h; filled = true; }
+    }
+    if (qty) {
+      var qtyEl = row.querySelector('.cargo-qty');
+      if (qtyEl) { qtyEl.value = qty; filled = true; }
+    }
+    if (weightKg) {
+      var gw = row.querySelector('.cargo-gw');
+      if (gw) { gw.value = weightKg; filled = true; }
+    }
+    row.querySelectorAll('input').forEach(function (inp) {
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    return filled;
+  }
+
+  function fillSeaCargoRow(dims, qty) {
+    var body = $('sea-cargo-body');
+    if (!body) return false;
+    var row = body.querySelector('.sea-cargo-item-row');
+    if (!row) {
+      var addBtn = $('sea-add-cargo-row');
+      if (addBtn) addBtn.click();
+      row = body.querySelector('.sea-cargo-item-row');
+    }
+    if (!row) return false;
+    var filled = false;
+    if (dims) {
+      var len = row.querySelector('.sea-cargo-len');
+      var wid = row.querySelector('.sea-cargo-wid');
+      var hei = row.querySelector('.sea-cargo-hei');
+      if (len) { len.value = dims.l; filled = true; }
+      if (wid) { wid.value = dims.w; filled = true; }
+      if (hei) { hei.value = dims.h; filled = true; }
+    }
+    if (qty) {
+      var qtyEl = row.querySelector('.sea-cargo-qty');
+      if (qtyEl) { qtyEl.value = qty; filled = true; }
+    }
+    row.querySelectorAll('input').forEach(function (inp) {
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    if (typeof window.calculateSeaVolumeFromDimensions === 'function') {
+      window.calculateSeaVolumeFromDimensions();
+    }
+    return filled;
   }
 
   function parseAiIntake(mode) {
     var input = $(mode + '-ai-intake');
     var tip = $(mode + '-ai-tip');
-    if (!input || !input.value.trim()) return;
+    if (!input || !input.value.trim()) {
+      if (tip) tip.textContent = 'Paste an enquiry line first, or tap an example chip.';
+      return;
+    }
     var text = input.value.trim();
     var applied = [];
 
-    var weightMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilos?)/i);
-    var routeMatch = text.match(/([A-Za-z]{3})\s*(?:to|→|-)\s*([A-Za-z]{3})/i);
-    var incotermMatch = text.match(/\b(EXW|FCA|FOB|CIF|DAP|DDU|DDP|FAS)\b/i);
+    var weightMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilos?)\b/i);
+    var routeMatch = text.match(/\b([A-Za-z]{3,5})\s*(?:to|→|->|-|\/)\s*([A-Za-z]{3,5})\b/i);
+    var incotermMatch = text.match(/\b(EXW|FCA|FOB|CIF|CFR|CPT|CIP|DAP|DPU|DDU|DDP|FAS)\b/i);
+    var dimMatch = text.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(cm|mm|m)?/i);
+    var qtyMatch = text.match(/\b(\d+)\s*(?:pkgs?|packages?|ctns?|cartons?|pcs?|pieces?|boxes?)\b/i);
+    var commodityMatch = text.match(/\b(general|garments?|pharma|perishable|electronics?|machinery|dangerous|dg|haz|hazardous|temperature|temp)\b/i);
 
     if (mode === 'air' || mode === 'sea') {
       if (routeMatch) {
-        var oField = $(mode === 'air' ? 'air-origin' : 'sea-origin');
-        var dField = $(mode === 'air' ? 'air-dest' : 'sea-dest');
-        if (oField) { oField.value = routeMatch[1].toUpperCase(); applied.push('origin'); }
-        if (dField) { dField.value = routeMatch[2].toUpperCase(); applied.push('destination'); }
+        var originId = mode === 'air' ? 'air-origin' : 'sea-origin';
+        var destId = mode === 'air' ? 'air-dest' : 'sea-dest';
+        if (setFieldValue(originId, routeMatch[1].toUpperCase())) applied.push('origin ' + routeMatch[1].toUpperCase());
+        if (setFieldValue(destId, routeMatch[2].toUpperCase())) applied.push('destination ' + routeMatch[2].toUpperCase());
       }
       if (incotermMatch) {
-        var inc = $(mode === 'air' ? 'air-incoterm' : 'sea-incoterm');
-        if (inc) { inc.value = incotermMatch[1].toUpperCase(); applied.push('incoterm'); }
+        var incId = mode === 'air' ? 'air-incoterm' : 'sea-incoterm';
+        if (setFieldValue(incId, incotermMatch[1].toUpperCase())) applied.push('incoterm');
       }
-      if (weightMatch && mode === 'air') {
-        var gw = $('air-gross-weight');
-        if (gw) { gw.value = weightMatch[1]; applied.push('weight'); }
+      if (commodityMatch && mode === 'air') {
+        var raw = commodityMatch[1].toLowerCase();
+        var commodity = /garment/.test(raw) ? 'GARMENTS'
+          : /pharma/.test(raw) ? 'PHARMA'
+          : /perish/.test(raw) ? 'PERISHABLE'
+          : /electron/.test(raw) ? 'ELECTRONICS'
+          : /machin/.test(raw) ? 'MACHINERY'
+          : /(dangerous|dg|haz)/.test(raw) ? 'DANGEROUS GOODS'
+          : /temp/.test(raw) ? 'TEMPERATURE'
+          : 'GENERAL';
+        if (setFieldValue('air-commodity', commodity)) applied.push('commodity');
       }
+
+      var dims = null;
+      if (dimMatch) {
+        var unit = (dimMatch[4] || 'cm').toLowerCase();
+        var l = parseFloat(dimMatch[1]);
+        var w = parseFloat(dimMatch[2]);
+        var h = parseFloat(dimMatch[3]);
+        if (unit === 'mm') { l /= 10; w /= 10; h /= 10; }
+        if (unit === 'm') { l *= 100; w *= 100; h *= 100; }
+        dims = { l: Math.round(l * 100) / 100, w: Math.round(w * 100) / 100, h: Math.round(h * 100) / 100 };
+      }
+      var qty = qtyMatch ? parseInt(qtyMatch[1], 10) : (dims ? 1 : null);
+      var weightKg = weightMatch ? weightMatch[1] : null;
+
+      if (mode === 'air' && (dims || qty || weightKg)) {
+        if (fillAirCargoRow(dims, qty, weightKg)) {
+          if (dims) applied.push('dimensions');
+          if (qty) applied.push('qty ' + qty);
+          if (weightKg) applied.push(weightKg + ' kg');
+        }
+      }
+      if (mode === 'sea' && (dims || qty)) {
+        if (fillSeaCargoRow(dims, qty)) {
+          if (dims) applied.push('dimensions');
+          if (qty) applied.push('qty ' + qty);
+        }
+      }
+
       if (typeof window.calculateAirFreight === 'function' && mode === 'air') window.calculateAirFreight();
       if (typeof window.calculateSeaFreight === 'function' && mode === 'sea') window.calculateSeaFreight();
     }
@@ -334,8 +482,10 @@
 
     if (tip) {
       tip.textContent = applied.length
-        ? 'Applied: ' + applied.join(', ') + ' — verify autocomplete matches.'
-        : '';
+        ? 'Filled: ' + applied.join(' · ') + '. Check autocomplete suggestions if needed.'
+        : 'Could not read route / weight / dimensions from that text. Try: 2 pkgs 120x80x100 cm 500 kg AMD to SVO EXW';
+      tip.classList.toggle('is-error', !applied.length);
+      tip.classList.toggle('is-success', !!applied.length);
     }
   }
 
