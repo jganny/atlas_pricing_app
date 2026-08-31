@@ -7459,6 +7459,21 @@ body.logged-out-blur .atlas-command-palette {
 ══════════════════════════════════════════════════ */
 .enquiry-db-shell {
   padding: 0.25rem 0 1rem;
+  width: 100%;
+  min-width: 0;
+}
+.enquiry-db-shell .edb-command-search {
+  display: block !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+.enquiry-db-workspace {
+  width: 100%;
+  min-width: 0;
+}
+.enquiry-db-primary {
+  min-width: 0;
+  width: 100%;
 }
 #admin-tracking-control-center:empty {
   display: none !important;
