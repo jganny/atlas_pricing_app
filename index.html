@@ -6,14 +6,14 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.38">
+  <meta name="app-version" content="129.39">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.38">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.38">
+  <link rel="stylesheet" href="index.css?v=129.39">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.39">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -858,8 +858,31 @@
               </div>
             </div>
 
-            <!-- GP display toggle + Sort By: not data filters, always visible, small -->
-            <div class="hdr-filter-dropdown hdr-filter-dropdown-small" id="dropdown-hdr-gp">
+            <!-- Display modes + Sort: always visible (not buried in Add filter) -->
+            <div class="edb-metric-modes" aria-label="Rate and GP display modes">
+              <div class="edb-metric-group">
+                <span class="edb-metric-label">Buy</span>
+                <div class="edb-seg" role="group" aria-label="Buy rate mode">
+                  <button type="button" class="edb-seg-btn is-active" data-metric="buyrate" data-value="total" onclick="setEdbMetricMode('buyrate','total','Total')">Total</button>
+                  <button type="button" class="edb-seg-btn" data-metric="buyrate" data-value="perkg" onclick="setEdbMetricMode('buyrate','perkg','Per kg')">Per kg</button>
+                </div>
+              </div>
+              <div class="edb-metric-group">
+                <span class="edb-metric-label">Sell</span>
+                <div class="edb-seg" role="group" aria-label="Sell rate mode">
+                  <button type="button" class="edb-seg-btn is-active" data-metric="sellrate" data-value="total" onclick="setEdbMetricMode('sellrate','total','Total')">Total</button>
+                  <button type="button" class="edb-seg-btn" data-metric="sellrate" data-value="perkg" onclick="setEdbMetricMode('sellrate','perkg','Per kg')">Per kg</button>
+                </div>
+              </div>
+              <div class="edb-metric-group">
+                <span class="edb-metric-label">GP</span>
+                <div class="edb-seg" role="group" aria-label="GP display mode">
+                  <button type="button" class="edb-seg-btn is-active" data-metric="gp" data-value="all" onclick="setEdbMetricMode('gp','all','Amount')">Amount</button>
+                  <button type="button" class="edb-seg-btn" data-metric="gp" data-value="percent" onclick="setEdbMetricMode('gp','percent','%')">%</button>
+                </div>
+              </div>
+            </div>
+            <div class="hdr-filter-dropdown hdr-filter-dropdown-small" id="dropdown-hdr-gp" hidden aria-hidden="true">
               <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'gp')">
                 <span id="hdr-label-gp">GP Profit</span> <span class="hdr-filter-arrow">▼</span>
               </button>
@@ -871,18 +894,18 @@
               </div>
             </div>
             <div class="hdr-filter-dropdown hdr-filter-dropdown-small" id="dropdown-hdr-actions">
-              <button type="button" class="hdr-filter-btn" style="background: rgba(79, 70, 229, 0.1); color: var(--indigo);" onclick="toggleHdrFilterMenu(event, 'actions')" aria-haspopup="listbox" aria-expanded="false">
-                <span id="hdr-label-sort">Sort By: Date (Newest)</span> <span class="hdr-filter-arrow">▼</span>
+              <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'actions')" aria-haspopup="listbox" aria-expanded="false">
+                <span id="hdr-label-sort">Sort: Newest</span> <span class="hdr-filter-arrow">▼</span>
               </button>
               <div class="hdr-filter-menu" id="hdr-menu-actions" role="listbox" aria-label="Sort options" onclick="event.stopPropagation()">
                 <div class="hdr-toolbar-panel-title">Sort By</div>
                 <div class="hdr-filter-options-list" id="hdr-options-actions">
-                  <div class="hdr-filter-opt active" role="option" onclick="selectHdrSort('date-desc', 'Sort By: Date (Newest)')">Date (Newest First)</div>
-                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('date-asc', 'Sort By: Date (Oldest)')">Date (Oldest First)</div>
-                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('customer-asc', 'Sort By: Customer (A-Z)')">Customer (A-Z)</div>
-                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('customer-desc', 'Sort By: Customer (Z-A)')">Customer (Z-A)</div>
-                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('amount-desc', 'Sort By: Amount (Highest)')">Amount (Highest First)</div>
-                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('amount-asc', 'Sort By: Amount (Lowest)')">Amount (Lowest First)</div>
+                  <div class="hdr-filter-opt active" role="option" onclick="selectHdrSort('date-desc', 'Sort: Newest')">Date (Newest First)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('date-asc', 'Sort: Oldest')">Date (Oldest First)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('customer-asc', 'Sort: Customer A-Z')">Customer (A-Z)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('customer-desc', 'Sort: Customer Z-A')">Customer (Z-A)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('amount-desc', 'Sort: Amount High')">Amount (Highest First)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('amount-asc', 'Sort: Amount Low')">Amount (Lowest First)</div>
                 </div>
                 <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); text-align: center;">
                   <button type="button" style="background: var(--accent-error); color: #fff; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: 600; padding: 4px 8px; cursor: pointer; width: 100%;" onclick="resetAllHdrFilters()">Reset All Filters</button>
@@ -923,17 +946,57 @@
             <table class="quotes-table edb-denselist" id="admin-quotes-table">
               <thead>
                 <tr class="table-header-titles">
-                  <th>Ref ID</th>
-                  <th>Date</th>
-                  <th>Mode</th>
-                  <th>Agent Details</th>
-                  <th>Priced By Desk</th>
-                  <th>Carrier</th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="openEdbColumnFilter(event,'refid')" title="Filter Ref ID">
+                      Ref ID <span class="edb-th-chevron">▾</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="openEdbColumnFilter(event,'date')" title="Filter Date">
+                      Date <span class="edb-th-chevron">▾</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="openEdbColumnFilter(event,'mode')" title="Filter Mode">
+                      Mode <span class="edb-th-chevron">▾</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="openEdbColumnFilter(event,'agentroute')" title="Filter Agent">
+                      Agent Details <span class="edb-th-chevron">▾</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="openEdbColumnFilter(event,'desk')" title="Filter Desk">
+                      Priced By Desk <span class="edb-th-chevron">▾</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="openEdbColumnFilter(event,'carrier')" title="Filter Carrier">
+                      Carrier <span class="edb-th-chevron">▾</span>
+                    </button>
+                  </th>
                   <th>Tonnage</th>
-                  <th>Buy Rate</th>
-                  <th>Sell Rate</th>
-                  <th>GP</th>
-                  <th>Status</th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="setEdbMetricMode('buyrate', (window.hdrFilterState&&window.hdrFilterState.buyrate)==='perkg'?'total':'perkg')" title="Toggle Buy Total / Per kg">
+                      Buy Rate <span class="edb-th-mode" id="edb-th-buy-mode">Total</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="setEdbMetricMode('sellrate', (window.hdrFilterState&&window.hdrFilterState.sellrate)==='perkg'?'total':'perkg')" title="Toggle Sell Total / Per kg">
+                      Sell Rate <span class="edb-th-mode" id="edb-th-sell-mode">Total</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="setEdbMetricMode('gp', (window.hdrFilterState&&window.hdrFilterState.gp)==='percent'?'all':'percent')" title="Toggle GP Amount / %">
+                      GP <span class="edb-th-mode" id="edb-th-gp-mode">Amt</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="edb-th-filter" onclick="openEdbColumnFilter(event,'status')" title="Filter Status">
+                      Status <span class="edb-th-chevron">▾</span>
+                    </button>
+                  </th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -4675,12 +4738,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.38"></script>
-  <script src="ui-shell.js?v=129.38"></script>
-  <script src="atlas-enterprise.js?v=129.38"></script>
-  <script src="ai-assistant.js?v=129.38"></script>
-  <script src="ai-sell-band.js?v=129.38"></script>
-  <script src="sales-v129.js?v=129.38"></script>
+  <script src="app-v4.js?v=129.39"></script>
+  <script src="ui-shell.js?v=129.39"></script>
+  <script src="atlas-enterprise.js?v=129.39"></script>
+  <script src="ai-assistant.js?v=129.39"></script>
+  <script src="ai-sell-band.js?v=129.39"></script>
+  <script src="sales-v129.js?v=129.39"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -5008,7 +5071,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.38">' +
+          '<link rel="stylesheet" href="index.css?v=129.39">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

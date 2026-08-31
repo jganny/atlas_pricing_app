@@ -9958,25 +9958,49 @@ function printQuote() {
 
 // --- Quote log display helpers (read-only; does not change saved quote data) ---
 window.getQuoteBillingWeight = (q) => {
+  const meta = window.getQuoteBillingWeightMeta(q);
+  return meta.text;
+};
+
+/** Billing weight with basis label — Air = max(GWT, CWT/VWT, PWT); Sea LCL = max(CBM, tons) as RT. */
+window.getQuoteBillingWeightMeta = (q) => {
   const d = q?.details || {};
   if (q?.type === 'air') {
     const cw = parseFloat(d.chargeableWeight) || 0;
     const pw = parseFloat(d.pivotWeight) || 0;
     const gw = parseFloat(d.grossWeight) || 0;
     const billing = Math.max(cw, pw, gw);
-    return billing > 0
-      ? `${billing.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`
-      : '-';
+    if (billing <= 0) return { text: '-', basis: '', html: '-' };
+    let basis = 'CWT';
+    if (billing === gw && gw >= cw && gw >= pw) basis = 'GWT';
+    else if (billing === pw && pw > cw) basis = 'PWT';
+    else basis = 'CWT';
+    const text = `${billing.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
+    return {
+      text,
+      basis,
+      html: `<span class="edb-tonnage">${text}</span><span class="edb-tonnage-basis">${basis}</span>`
+    };
   }
   if (q?.type === 'sea') {
     const rt = parseFloat(d.lclChargeable) || parseFloat(d.chargeableCbm) || 0;
     const gw = parseFloat(d.grossWeight) || 0;
-    if (rt > 0) return `${rt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RT`;
-    if (gw > 0) return `${gw.toLocaleString()} kg`;
-    return '-';
+    if (rt > 0) {
+      const text = `${rt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RT`;
+      return { text, basis: 'RT', html: `<span class="edb-tonnage">${text}</span><span class="edb-tonnage-basis">max(CBM,t)</span>` };
+    }
+    if (gw > 0) {
+      const text = `${gw.toLocaleString()} kg`;
+      return { text, basis: 'GWT', html: `<span class="edb-tonnage">${text}</span><span class="edb-tonnage-basis">GWT</span>` };
+    }
+    return { text: '-', basis: '', html: '-' };
   }
   const gw = parseFloat(d.grossWeight) || 0;
-  return gw > 0 ? `${gw.toLocaleString()} kg` : '-';
+  if (gw > 0) {
+    const text = `${gw.toLocaleString()} kg`;
+    return { text, basis: 'GWT', html: `<span class="edb-tonnage">${text}</span>` };
+  }
+  return { text: '-', basis: '', html: '-' };
 };
 
 window.formatQuoteBuyRateCell = (quote, viewMode) => {
@@ -10280,6 +10304,9 @@ window.selectHdrFilter = (key, value, label) => {
   if (key === 'status' && typeof window.syncEdbPipelineChips === 'function') {
     window.syncEdbPipelineChips(value || 'all');
   }
+  if ((key === 'buyrate' || key === 'sellrate' || key === 'gp') && typeof window.syncEdbMetricModes === 'function') {
+    window.syncEdbMetricModes();
+  }
   applyDbFiltersAndSort();
 };
 
@@ -10324,7 +10351,7 @@ window.buildEnquiryActionsHtml = (quote, opts) => {
 
   return `<td class="actions-cell edb-actions-cell"><div class="edb-actions" onclick="event.stopPropagation()">
     <button type="button" class="edb-act edb-act-view" title="View / Print" onclick="viewSavedQuote('${id}')">View</button>
-    <button type="button" class="edb-act edb-act-amend" title="${amendTitle}" onclick="amendQuote('${id}')" style="background:${editBg};color:${editFg}">Amend</button>
+    <button type="button" class="edb-act edb-act-amend${editOk ? ' is-ready' : ''}" title="${amendTitle}" onclick="amendQuote('${id}')">Amend</button>
     ${primaryConvert}
     <div class="edb-more">
       <button type="button" class="edb-act edb-act-more" title="More actions" aria-haspopup="true" onclick="toggleEdbMoreMenu(event, this)">⋯</button>
@@ -10379,6 +10406,50 @@ window.setEdbPipeline = (status) => {
   }
   window.syncEdbPipelineChips(pipe);
   applyDbFiltersAndSort();
+};
+
+/** Buy / Sell / GP display modes — always-visible segmented controls + column header sync. */
+window.syncEdbMetricModes = () => {
+  const st = window.hdrFilterState || {};
+  const buy = st.buyrate || 'total';
+  const sell = st.sellrate || 'total';
+  const gp = st.gp || 'all';
+  document.querySelectorAll('.edb-seg-btn[data-metric]').forEach((btn) => {
+    const metric = btn.getAttribute('data-metric');
+    const value = btn.getAttribute('data-value');
+    const current = metric === 'buyrate' ? buy : (metric === 'sellrate' ? sell : gp);
+    btn.classList.toggle('is-active', value === current);
+  });
+  const buyTh = document.getElementById('edb-th-buy-mode');
+  const sellTh = document.getElementById('edb-th-sell-mode');
+  const gpTh = document.getElementById('edb-th-gp-mode');
+  if (buyTh) buyTh.textContent = buy === 'perkg' ? '/kg' : 'Total';
+  if (sellTh) sellTh.textContent = sell === 'perkg' ? '/kg' : 'Total';
+  if (gpTh) gpTh.textContent = gp === 'percent' ? '%' : 'Amt';
+};
+
+window.setEdbMetricMode = (key, value, label) => {
+  if (!key) return;
+  const labels = {
+    buyrate: { total: 'Total', perkg: 'Per kg' },
+    sellrate: { total: 'Total', perkg: 'Per kg' },
+    gp: { all: 'Amount', percent: '%' }
+  };
+  const resolvedLabel = label || (labels[key] && labels[key][value]) || value;
+  if (typeof window.selectHdrFilter === 'function') {
+    window.selectHdrFilter(key, value, resolvedLabel);
+  } else {
+    window.hdrFilterState = window.hdrFilterState || {};
+    window.hdrFilterState[key] = value;
+    applyDbFiltersAndSort();
+  }
+  window.syncEdbMetricModes();
+};
+
+window.openEdbColumnFilter = (event, key) => {
+  if (event) event.stopPropagation();
+  if (typeof window.openDbFilterField === 'function') window.openDbFilterField(key);
+  if (typeof window.toggleHdrFilterMenu === 'function') window.toggleHdrFilterMenu(event, key);
 };
 
 window.updateEdbPipelineCounts = (quotes) => {
@@ -10933,7 +11004,7 @@ window.applyUserDbFiltersAndSort = () => {
         <div style="font-weight: 600;">${quote.customer}</div>
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${window.getQuoteBillingWeight(quote)}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${(window.getQuoteBillingWeightMeta(quote).html)}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${window.formatQuoteBuyRateCell(quote, st.buyrate || 'total')}</span></td>
       <td><div>${window.formatQuoteSellRateCell(quote, st.sellrate || 'total')}</div></td>
       <td>
@@ -11206,6 +11277,9 @@ window.applyDbFiltersAndSort = () => {
   if (typeof window.syncEdbPipelineChips === 'function') {
     window.syncEdbPipelineChips((st.status || 'all'));
   }
+  if (typeof window.syncEdbMetricModes === 'function') {
+    window.syncEdbMetricModes();
+  }
   const resultsCount = document.getElementById('edb-match-count');
   if (resultsCount) {
     resultsCount.textContent = totalMatched === 0
@@ -11252,7 +11326,7 @@ window.applyDbFiltersAndSort = () => {
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t1);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${carrierName}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${window.getQuoteBillingWeight(quote)}</span></td>
+      <td>${(window.getQuoteBillingWeightMeta(quote).html)}</td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${window.formatQuoteBuyRateCell(quote, st.buyrate || 'total')}</span></td>
       <td>
         <div>${window.formatQuoteSellRateCell(quote, st.sellrate || 'total')}</div>

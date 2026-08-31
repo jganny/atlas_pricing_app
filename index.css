@@ -7775,7 +7775,7 @@ body.logged-out-blur .atlas-command-palette {
   appearance: none;
   border: 1px solid var(--border-1);
   background: #fff;
-  color: var(--t1);
+  color: var(--t2);
   font-size: 0.65rem;
   font-weight: 700;
   font-family: 'Outfit', sans-serif;
@@ -7790,31 +7790,165 @@ body.logged-out-blur .atlas-command-palette {
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 .edb-act:hover {
-  border-color: rgba(15, 23, 42, 0.25);
+  border-color: rgba(2, 132, 199, 0.35);
   background: #f8fafc;
+  color: var(--t1);
 }
 .edb-act-view {
-  background: #0f172a;
-  border-color: #0f172a;
-  color: #fff;
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.28);
+  color: #0369a1;
 }
 .edb-act-view:hover {
-  background: #1e293b;
-  color: #fff;
+  background: rgba(2, 132, 199, 0.14);
+  color: #0c4a6e;
+}
+.edb-act-amend {
+  background: #fff;
+  border-color: var(--border-1);
+  color: var(--t2);
+}
+.edb-act-amend.is-ready {
+  background: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.28);
+  color: #b45309;
 }
 .edb-act-convert {
-  background: rgba(22, 163, 74, 0.1);
-  border-color: rgba(22, 163, 74, 0.35);
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.28);
   color: #15803d;
 }
 .edb-act-convert:hover {
-  background: rgba(22, 163, 74, 0.16);
+  background: rgba(22, 163, 74, 0.14);
+}
+.edb-act-revert {
+  background: rgba(100, 116, 139, 0.08);
+  border-color: rgba(100, 116, 139, 0.28);
+  color: #475569;
 }
 .edb-act-more {
   padding: 0.28rem 0.4rem;
   font-size: 0.85rem;
   line-height: 1;
+  color: var(--t3);
+  background: transparent;
+  border-color: transparent;
+}
+.edb-act-more:hover {
+  background: #f1f5f9;
+  border-color: var(--border-1);
+  color: var(--t1);
+}
+
+.edb-metric-modes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
+  margin-right: 0.35rem;
+}
+.edb-metric-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.edb-metric-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-family: 'Outfit', sans-serif;
+}
+.edb-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-1);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.edb-seg-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
   color: var(--t2);
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  padding: 0.32rem 0.55rem;
+  cursor: pointer;
+  line-height: 1.2;
+  min-height: 0 !important;
+}
+.edb-seg-btn + .edb-seg-btn {
+  border-left: 1px solid var(--border-1);
+}
+.edb-seg-btn.is-active {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0369a1;
+}
+.edb-seg-btn:hover:not(.is-active) {
+  background: #f8fafc;
+}
+
+.edb-th-filter {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  max-width: 100%;
+}
+.edb-th-filter:hover {
+  color: var(--sky);
+}
+.edb-th-chevron {
+  font-size: 0.55rem;
+  opacity: 0.55;
+}
+.edb-th-mode {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0369a1;
+  background: rgba(2, 132, 199, 0.1);
+  border-radius: 999px;
+  padding: 0.08rem 0.35rem;
+}
+.edb-tonnage {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--t1);
+  font-variant-numeric: tabular-nums;
+}
+.edb-tonnage-basis {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--t3);
+  margin-top: 1px;
+}
+
+.eri-cta-primary {
+  background: rgba(2, 132, 199, 0.1) !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+  color: #0369a1 !important;
+}
+.eri-cta-primary:hover {
+  background: rgba(2, 132, 199, 0.16) !important;
+  color: #0c4a6e !important;
 }
 .edb-more {
   position: relative;
