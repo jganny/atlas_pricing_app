@@ -10317,9 +10317,6 @@ window.buildEnquiryActionsHtml = (quote, opts) => {
   const isQuoted = quote.status === 'quoted';
   const editOk = typeof isEditUnlocked === 'function' ? isEditUnlocked(quote) : false;
   const delOk = typeof isDeleteUnlocked === 'function' ? isDeleteUnlocked(quote) : false;
-  const editBg = editOk ? 'rgba(245, 158, 11, 0.18)' : 'transparent';
-  const editFg = editOk ? 'var(--accent-warning)' : 'var(--text-dim)';
-  const delBg = delOk ? 'rgba(239, 68, 68, 0.18)' : 'transparent';
   const delFg = delOk ? 'var(--accent-error)' : 'var(--text-dim)';
   const cancelTitle = opts.admin
     ? 'Mark as Cancelled'
@@ -10545,6 +10542,7 @@ window.resetAllHdrFilters = () => {
 
   document.querySelectorAll('.hdr-filter-menu').forEach(m => m.classList.remove('open'));
   if (typeof window.syncEdbPipelineChips === 'function') window.syncEdbPipelineChips('all');
+  if (typeof window.syncEdbMetricModes === 'function') window.syncEdbMetricModes();
   applyDbFiltersAndSort();
 };
 
