@@ -9501,3 +9501,182 @@ body.logged-out-blur .atlas-command-palette {
   .oa-workspace { grid-template-columns: 1fr; }
   .oa-country-rail { max-height: 180px; }
 }
+
+/* ══════════════════════════════════════════════════
+   Atlas Platform — Ops + roadmap modules (v129.40)
+══════════════════════════════════════════════════ */
+.sidebar-group-spaced {
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border-2);
+}
+.sidebar-item-soon span::after {
+  content: '';
+}
+.atlas-platform-shell {
+  padding: 0.25rem 0 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+.platform-ops-card,
+.platform-roadmap-card {
+  border-top: 3px solid var(--sky);
+  padding: 1.15rem 1.25rem !important;
+}
+.platform-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.platform-eyebrow {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-family: 'Outfit', sans-serif;
+}
+.platform-title {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--sky);
+  font-family: 'Outfit', sans-serif;
+}
+.platform-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--t3);
+}
+.platform-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.ops-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+.ops-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-1);
+  background: #fff;
+  color: var(--t2);
+}
+.ops-chip.is-active {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: rgba(2, 132, 199, 0.35);
+  color: #0369a1;
+}
+.ops-chip b {
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.2rem;
+}
+.ops-stage {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.45rem;
+  border-radius: 999px;
+}
+.ops-stage-warn {
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+.ops-stage-ok {
+  background: rgba(22, 163, 74, 0.08);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.22);
+}
+.ops-actions {
+  display: inline-flex;
+  gap: 0.28rem;
+  flex-wrap: nowrap;
+}
+.ops-empty {
+  text-align: center;
+  color: var(--t3);
+  padding: 2rem 1rem !important;
+  font-size: 0.82rem;
+}
+.platform-footnote {
+  margin: 1rem 0 0;
+  font-size: 0.68rem;
+  color: var(--t3);
+  line-height: 1.45;
+}
+.platform-roadmap-card {
+  border-top-color: var(--platform-accent, var(--indigo));
+  max-width: 880px;
+}
+.platform-phase {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--platform-accent, var(--indigo));
+  background: color-mix(in srgb, var(--platform-accent, var(--indigo)) 12%, white);
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  margin-bottom: 0.5rem;
+}
+.platform-roadmap-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--t1);
+  font-family: 'Outfit', sans-serif;
+}
+.platform-roadmap-sub {
+  margin: 0.4rem 0 1.1rem;
+  font-size: 0.85rem;
+  color: var(--t2);
+  line-height: 1.5;
+}
+.platform-roadmap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+@media (max-width: 640px) {
+  .platform-roadmap-grid { grid-template-columns: 1fr; }
+}
+.platform-roadmap-col h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--t3);
+  font-family: 'Outfit', sans-serif;
+}
+.platform-roadmap-col ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--t1);
+  line-height: 1.55;
+}
+.platform-roadmap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-2);
+}

@@ -397,7 +397,12 @@
     warehouse: 'warehouse',
     directory: 'directory',
     circulars: 'circulars',
-    sales: 'sales'
+    sales: 'sales',
+    operations: 'ops',
+    ops: 'ops',
+    documentation: 'documentation',
+    finance: 'finance',
+    hr: 'hr'
   };
   var MODULE_TO_HASH = {
     dashboard: '',
@@ -407,7 +412,11 @@
     warehouse: 'warehouse',
     directory: 'directory',
     circulars: 'circulars',
-    sales: 'sales'
+    sales: 'sales',
+    ops: 'operations',
+    documentation: 'documentation',
+    finance: 'finance',
+    hr: 'hr'
   };
 
   function setNavHash(module) {

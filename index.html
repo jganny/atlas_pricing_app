@@ -306,6 +306,23 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"></path></svg>
           <span>Sales</span>
         </button>
+        <div class="sidebar-group-title sidebar-group-spaced">Operations</div>
+        <button class="sidebar-item" data-sidebar-module="ops" onclick="openActiveCalculator('ops')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span>Operations</span>
+        </button>
+        <button class="sidebar-item sidebar-item-soon" data-sidebar-module="documentation" onclick="openActiveCalculator('documentation')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          <span>Documentation</span>
+        </button>
+        <button class="sidebar-item sidebar-item-soon" data-sidebar-module="finance" onclick="openActiveCalculator('finance')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          <span>Finance</span>
+        </button>
+        <button class="sidebar-item sidebar-item-soon" data-sidebar-module="hr" onclick="openActiveCalculator('hr')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>HR</span>
+        </button>
       </nav>
       <button type="button" class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" onclick="toggleDesktopSidebar()" aria-label="Collapse navigation" title="Collapse sidebar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
@@ -3610,6 +3627,49 @@
           <div id="sales-view-kanban" class="sales-view-kanban" style="display:none;"></div>
         </div>
       </div>
+
+      <!-- ==================== OPERATIONS (Won shipments) ==================== -->
+      <div id="ops-panel" class="view-panel atlas-platform-shell">
+        <div class="glass-card platform-ops-card">
+          <div class="platform-header">
+            <div>
+              <span class="platform-eyebrow">Atlas Platform · Phase 1</span>
+              <h2 class="platform-title">Operations Command Center</h2>
+              <p class="platform-subtitle" id="ops-shipment-meta">Won shipments from converted quotes</p>
+            </div>
+            <div class="platform-header-actions">
+              <button type="button" class="btn-secondary" onclick="refreshOpsBoard()">Refresh</button>
+              <button type="button" class="btn-secondary" onclick="goHome()">Home</button>
+            </div>
+          </div>
+          <div class="ops-pipeline" id="ops-pipeline-chips"></div>
+          <div class="quotes-table-container edb-table-scroll">
+            <table class="quotes-table edb-denselist">
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Won date</th>
+                  <th>Customer</th>
+                  <th>Route</th>
+                  <th>Mode / Carrier</th>
+                  <th>Tonnage</th>
+                  <th>Stage</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ops-shipments-body">
+                <tr><td colspan="8" class="ops-empty">Loading won shipments…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="platform-footnote">Documentation, invoicing, and HR plug into this shipment record in later phases — same auth, same customer/carrier master data.</p>
+        </div>
+      </div>
+
+      <!-- ==================== PLATFORM ROADMAP (Docs / Finance / HR) ==================== -->
+      <div id="platform-roadmap-panel" class="view-panel atlas-platform-shell">
+        <div id="platform-roadmap-root"></div>
+      </div>
     </main>
 
   <!-- ==================== ADD / EDIT LEAD MODAL ==================== -->
@@ -4738,12 +4798,13 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.39"></script>
-  <script src="ui-shell.js?v=129.39"></script>
-  <script src="atlas-enterprise.js?v=129.39"></script>
-  <script src="ai-assistant.js?v=129.39"></script>
-  <script src="ai-sell-band.js?v=129.39"></script>
-  <script src="sales-v129.js?v=129.39"></script>
+  <script src="app-v4.js?v=129.40"></script>
+  <script src="ui-shell.js?v=129.40"></script>
+  <script src="atlas-platform.js?v=129.40"></script>
+  <script src="atlas-enterprise.js?v=129.40"></script>
+  <script src="ai-assistant.js?v=129.40"></script>
+  <script src="ai-sell-band.js?v=129.40"></script>
+  <script src="sales-v129.js?v=129.40"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {

@@ -1560,6 +1560,10 @@ function openActiveCalculator(type) {
       else if (type === 'directory') workspaceNameEl.textContent = "Directory";
       else if (type === 'circulars') workspaceNameEl.textContent = "Circulars & Documents";
       else if (type === 'sales') workspaceNameEl.textContent = "Sales Pipeline";
+      else if (type === 'ops') workspaceNameEl.textContent = "Operations";
+      else if (type === 'documentation') workspaceNameEl.textContent = "Documentation";
+      else if (type === 'finance') workspaceNameEl.textContent = "Finance";
+      else if (type === 'hr') workspaceNameEl.textContent = "Human Resources";
     }
 
     const memberPanel = document.getElementById("member-dashboard-panel");
@@ -1577,6 +1581,8 @@ function openActiveCalculator(type) {
     const directoryPanel = document.getElementById("directory-panel");
     const circularsPanel = document.getElementById("circulars-panel");
     const salesPanel = document.getElementById("sales-panel");
+    const opsPanel = document.getElementById("ops-panel");
+    const platformRoadmapPanel = document.getElementById("platform-roadmap-panel");
 
     if (airPanel) airPanel.classList.remove("active");
     if (seaPanel) seaPanel.classList.remove("active");
@@ -1585,6 +1591,8 @@ function openActiveCalculator(type) {
     if (directoryPanel) directoryPanel.classList.remove("active");
     if (circularsPanel) circularsPanel.classList.remove("active");
     if (salesPanel) salesPanel.classList.remove("active");
+    if (opsPanel) opsPanel.classList.remove("active");
+    if (platformRoadmapPanel) platformRoadmapPanel.classList.remove("active");
 
     const root = document.documentElement;
 
@@ -1623,6 +1631,16 @@ function openActiveCalculator(type) {
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
       try { renderSalesPanel(); } catch (e) { console.error("renderSalesPanel error:", e); }
+    } else if (type === 'ops') {
+      if (opsPanel) opsPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--sky)');
+      root.style.setProperty('--accent-current-glow', 'rgba(2, 132, 199, 0.18)');
+      try { if (typeof refreshOpsBoard === 'function') refreshOpsBoard(); else if (typeof renderOpsCommandCenter === 'function') renderOpsCommandCenter(); } catch (e) { console.error("renderOpsCommandCenter error:", e); }
+    } else if (type === 'documentation' || type === 'finance' || type === 'hr') {
+      if (platformRoadmapPanel) platformRoadmapPanel.classList.add("active");
+      root.style.setProperty('--accent-current', 'var(--indigo)');
+      root.style.setProperty('--accent-current-glow', 'rgba(55, 48, 163, 0.15)');
+      try { if (typeof renderPlatformRoadmap === 'function') renderPlatformRoadmap(type); } catch (e) { console.error("renderPlatformRoadmap error:", e); }
     }
     updateModuleTabs(type);
     resetPageScroll();
