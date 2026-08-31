@@ -20943,6 +20943,13 @@ window.advanceDeskStep = advanceDeskStep;
 function switchSequenceStep(shellId, stepName) {
   const shell = document.getElementById(shellId);
   if (!shell) return;
+  // Enquiry DB uses a unified single-page layout — keep all panes visible.
+  if (shell.classList.contains('enquiry-db-unified')) {
+    shell.querySelectorAll('.atlas-seq-pane').forEach((pane) => {
+      pane.style.display = 'block';
+    });
+    return;
+  }
   shell.querySelectorAll('.atlas-seq-pane').forEach((pane) => {
     pane.style.display = (pane.getAttribute('data-seq-pane') === stepName) ? '' : 'none';
   });
@@ -20987,7 +20994,16 @@ function switchHomeHubTab(tabName, cardEl) {
     collapseAllDirNodes();
   }
   if (tabName === 'enquiry-database') {
-    switchSequenceStep('enquiry-db-sequence-shell', 'find');
+    // Unified layout shows Find + Browse + Reports together — no wizard step gating.
+    if (typeof switchSequenceStep === 'function') {
+      switchSequenceStep('enquiry-db-sequence-shell', 'browse');
+    }
+    const shell = document.getElementById('enquiry-db-sequence-shell');
+    if (shell) {
+      shell.querySelectorAll('.atlas-seq-pane').forEach((pane) => {
+        pane.style.display = 'block';
+      });
+    }
     if (typeof applyDbFiltersAndSort === 'function') applyDbFiltersAndSort();
   }
   if (tabName === 'analytics') {

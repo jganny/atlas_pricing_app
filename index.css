@@ -6392,21 +6392,55 @@ textarea:focus {
   margin-bottom: 0.85rem;
 }
 
-/* Enquiry DB sequenced layout */
+/* Enquiry DB sequenced layout — flattened into one workspace (no Find/Browse/Reports wizard) */
+#enquiry-db-sequence-shell.enquiry-db-unified .desk-flow-rail,
+#enquiry-db-sequence-shell.enquiry-db-unified .desk-flow-footer,
+#enquiry-db-sequence-shell.enquiry-db-unified > .atlas-seq-pane > .desk-flow-hint {
+  display: none !important;
+}
+#enquiry-db-sequence-shell.enquiry-db-unified .atlas-seq-pane {
+  display: block !important;
+}
+#enquiry-db-sequence-shell.enquiry-db-unified .enquiry-seq-find {
+  margin-bottom: 0.75rem;
+}
+#enquiry-db-sequence-shell.enquiry-db-unified .enquiry-seq-browse {
+  margin-bottom: 1rem;
+}
+#enquiry-db-sequence-shell.enquiry-db-unified .enquiry-seq-reports {
+  margin-top: 0.25rem;
+}
+#enquiry-db-sequence-shell.enquiry-db-unified .enquiry-seq-reports .edb-reports-card {
+  max-width: none;
+  margin: 0;
+}
 #enquiry-db-sequence-shell .enquiry-seq-find .enquiry-db-main-card {
   border-top: 3px solid var(--sky);
 }
 #enquiry-db-sequence-shell .enquiry-seq-browse .enquiry-db-workspace {
   margin-top: 0;
 }
-.enquiry-seq-reports .edb-reports-card {
-  max-width: 720px;
-  margin: 0 auto;
-}
 @media (min-width: 1200px) {
   #enquiry-db-sequence-shell .enquiry-seq-browse .enquiry-db-workspace {
     grid-template-columns: minmax(0, 1.6fr) minmax(280px, 360px);
   }
+}
+
+/* Filter toolbar: clearer grouping — chips left, tools right */
+.enquiry-db-shell .db-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+.enquiry-db-shell .db-filter-chips {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.enquiry-db-shell .hdr-filter-dropdown-small,
+.enquiry-db-shell .hdr-toolbar-wrap {
+  flex: 0 0 auto;
 }
 
 /* ══════════════════════════════════════════════════
@@ -7434,6 +7468,39 @@ body.logged-out-blur .atlas-command-palette {
 .enquiry-db-main-card {
   border-top: 3px solid var(--sky);
   padding: 1rem 1.15rem !important;
+  /* Dropdowns (Sort By / filters) are position:absolute — overflow:hidden on
+     .glass-card was clipping the option list so only the "SORT BY:" header showed. */
+  overflow: visible !important;
+}
+.enquiry-db-shell .glass-card {
+  overflow: visible !important;
+}
+.enquiry-db-shell .db-filter-bar,
+.enquiry-db-shell .db-filter-chips,
+.enquiry-db-shell .hdr-filter-dropdown {
+  overflow: visible;
+}
+.enquiry-db-shell .hdr-filter-menu {
+  z-index: 10060;
+  min-width: 200px;
+  max-height: min(320px, 70vh);
+  overflow-y: auto;
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+.enquiry-db-shell .hdr-filter-menu .hdr-filter-opt {
+  color: #1e293b !important;
+  font-size: 0.78rem !important;
+  line-height: 1.35 !important;
+  padding: 0.45rem 0.75rem !important;
+}
+.enquiry-db-shell .hdr-filter-menu .hdr-filter-opt:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+.enquiry-db-shell .hdr-filter-menu .hdr-filter-opt.active {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
 }
 .enquiry-db-toolbar {
   flex-direction: column;

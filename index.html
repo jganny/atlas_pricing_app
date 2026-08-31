@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.34">
+  <meta name="app-version" content="129.35">
   <script>
     (function () {
       try {
@@ -21,8 +21,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.34">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.34">
+  <link rel="stylesheet" href="index.css?v=129.35">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.35">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -651,8 +651,8 @@
 
         <div id="admin-tracking-control-center" style="margin-bottom: 1rem;"></div>
 
-        <div id="enquiry-db-sequence-shell" class="atlas-sequence-shell">
-          <nav class="desk-flow-rail" aria-label="Enquiry database steps">
+        <div id="enquiry-db-sequence-shell" class="atlas-sequence-shell enquiry-db-unified">
+          <nav class="desk-flow-rail" aria-label="Enquiry database steps" hidden>
             <div class="desk-flow-step is-active" data-flow-step="find">
               <span class="desk-flow-num">1</span>
               <span class="desk-flow-label">Find</span>
@@ -670,7 +670,7 @@
           </nav>
 
           <div class="atlas-seq-pane enquiry-seq-find" data-seq-pane="find">
-            <p class="desk-flow-hint">Search live enquiries and add filters — then continue to browse matching quotes.</p>
+            <p class="desk-flow-hint">Search and filter live enquiries. Matching quotes appear below.</p>
         <div class="glass-card enquiry-db-main-card">
           <div class="enquiry-db-toolbar table-header-row">
             <div class="enquiry-db-title-row">
@@ -870,18 +870,18 @@
               </div>
             </div>
             <div class="hdr-filter-dropdown hdr-filter-dropdown-small" id="dropdown-hdr-actions">
-              <button type="button" class="hdr-filter-btn" style="background: rgba(79, 70, 229, 0.1); color: var(--indigo);" onclick="toggleHdrFilterMenu(event, 'actions')">
+              <button type="button" class="hdr-filter-btn" style="background: rgba(79, 70, 229, 0.1); color: var(--indigo);" onclick="toggleHdrFilterMenu(event, 'actions')" aria-haspopup="listbox" aria-expanded="false">
                 <span id="hdr-label-sort">Sort By: Date (Newest)</span> <span class="hdr-filter-arrow">▼</span>
               </button>
-              <div class="hdr-filter-menu" id="hdr-menu-actions" onclick="event.stopPropagation()">
-                <div style="padding: 4px 8px; font-size: 0.65rem; font-weight: 700; color: var(--t2); text-transform: uppercase;">Sort By:</div>
+              <div class="hdr-filter-menu" id="hdr-menu-actions" role="listbox" aria-label="Sort options" onclick="event.stopPropagation()">
+                <div class="hdr-toolbar-panel-title">Sort By</div>
                 <div class="hdr-filter-options-list" id="hdr-options-actions">
-                  <div class="hdr-filter-opt active" onclick="selectHdrSort('date-desc', 'Sort: Date (Newest)')">Date (Newest First)</div>
-                  <div class="hdr-filter-opt" onclick="selectHdrSort('date-asc', 'Sort: Date (Oldest)')">Date (Oldest First)</div>
-                  <div class="hdr-filter-opt" onclick="selectHdrSort('customer-asc', 'Sort: Customer (A-Z)')">Customer (A-Z)</div>
-                  <div class="hdr-filter-opt" onclick="selectHdrSort('customer-desc', 'Sort: Customer (Z-A)')">Customer (Z-A)</div>
-                  <div class="hdr-filter-opt" onclick="selectHdrSort('amount-desc', 'Sort: Amount (Highest)')">Amount (Highest First)</div>
-                  <div class="hdr-filter-opt" onclick="selectHdrSort('amount-asc', 'Sort: Amount (Lowest)')">Amount (Lowest First)</div>
+                  <div class="hdr-filter-opt active" role="option" onclick="selectHdrSort('date-desc', 'Sort By: Date (Newest)')">Date (Newest First)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('date-asc', 'Sort By: Date (Oldest)')">Date (Oldest First)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('customer-asc', 'Sort By: Customer (A-Z)')">Customer (A-Z)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('customer-desc', 'Sort By: Customer (Z-A)')">Customer (Z-A)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('amount-desc', 'Sort By: Amount (Highest)')">Amount (Highest First)</div>
+                  <div class="hdr-filter-opt" role="option" onclick="selectHdrSort('amount-asc', 'Sort By: Amount (Lowest)')">Amount (Lowest First)</div>
                 </div>
                 <div style="padding: 6px 8px; border-top: 1px solid var(--border-2); text-align: center;">
                   <button type="button" style="background: var(--accent-error); color: #fff; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: 600; padding: 4px 8px; cursor: pointer; width: 100%;" onclick="resetAllHdrFilters()">Reset All Filters</button>
@@ -902,12 +902,10 @@
             </div>
           </div>
         </div>
-            <div class="desk-flow-footer">
-              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceSequenceStep('enquiry-db-sequence-shell','browse')">Continue to Browse →</button>
-            </div>
+            <!-- Find + Browse are one continuous workspace (wizard footers removed). -->
           </div><!-- /find -->
 
-          <div class="atlas-seq-pane enquiry-seq-browse" data-seq-pane="browse" style="display:none;">
+          <div class="atlas-seq-pane enquiry-seq-browse" data-seq-pane="browse">
             <p class="desk-flow-hint">Tap a row to inspect details on the right. Use row actions to view, amend, or convert.</p>
         <div class="enquiry-db-workspace">
         <div class="enquiry-db-primary">
@@ -983,13 +981,9 @@
         </div>
         </aside>
         </div><!-- /enquiry-db-workspace -->
-            <div class="desk-flow-footer desk-flow-footer-split">
-              <button type="button" class="btn-secondary desk-flow-back" onclick="retreatSequenceStep('enquiry-db-sequence-shell')">← Back to Find</button>
-              <button type="button" class="btn-primary desk-flow-continue" onclick="advanceSequenceStep('enquiry-db-sequence-shell','reports')">Continue to Reports →</button>
-            </div>
           </div><!-- /browse -->
 
-          <div class="atlas-seq-pane enquiry-seq-reports" data-seq-pane="reports" style="display:none;">
+          <div class="atlas-seq-pane enquiry-seq-reports" data-seq-pane="reports">
             <p class="desk-flow-hint">Generate financial summaries, export CSV, or retrieve archived quotes older than 90 days.</p>
         <!-- Financial Reports & Archive Query Panel -->
         <div class="glass-card enquiry-db-inspector-card edb-reports-card">
@@ -1065,10 +1059,8 @@
               <div class="report-card-val" id="rep-stat-gp">₹0</div>
             </div>
           </div>
-        </div>
-            <div class="desk-flow-footer">
-              <button type="button" class="btn-secondary desk-flow-back" onclick="retreatSequenceStep('enquiry-db-sequence-shell')">← Back to Browse</button>
-            </div>
+          </div>
+            <!-- Reports stay on the same page under the enquiry list. -->
           </div><!-- /reports -->
         </div><!-- /enquiry-db-sequence-shell -->
 
@@ -4713,12 +4705,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.34"></script>
-  <script src="ui-shell.js?v=129.34"></script>
-  <script src="atlas-enterprise.js?v=129.34"></script>
-  <script src="ai-assistant.js?v=129.34"></script>
-  <script src="ai-sell-band.js?v=129.34"></script>
-  <script src="sales-v129.js?v=129.34"></script>
+  <script src="app-v4.js?v=129.35"></script>
+  <script src="ui-shell.js?v=129.35"></script>
+  <script src="atlas-enterprise.js?v=129.35"></script>
+  <script src="ai-assistant.js?v=129.35"></script>
+  <script src="ai-sell-band.js?v=129.35"></script>
+  <script src="sales-v129.js?v=129.35"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -5046,7 +5038,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.34">' +
+          '<link rel="stylesheet" href="index.css?v=129.35">' +
           '<style>' +
             '@page {' +
               'size: A4;' +
