@@ -7703,9 +7703,9 @@ body.logged-out-blur .atlas-command-palette {
   color: var(--t1);
 }
 .edb-pipe.is-active {
-  background: #0f172a;
-  border-color: #0f172a;
-  color: #fff;
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.35);
+  color: #0369a1;
 }
 .edb-pipe-count {
   font-variant-numeric: tabular-nums;
@@ -7717,7 +7717,8 @@ body.logged-out-blur .atlas-command-palette {
   border-radius: 999px;
 }
 .edb-pipe.is-active .edb-pipe-count {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(14, 165, 233, 0.14);
+  color: #0369a1;
   opacity: 1;
 }
 .edb-results-head {
@@ -7795,13 +7796,14 @@ body.logged-out-blur .atlas-command-palette {
   color: var(--t1);
 }
 .edb-act-view {
-  background: rgba(2, 132, 199, 0.08);
-  border-color: rgba(2, 132, 199, 0.28);
-  color: #0369a1;
+  background: #fff;
+  border-color: var(--border-1);
+  color: var(--t2);
 }
 .edb-act-view:hover {
-  background: rgba(2, 132, 199, 0.14);
-  color: #0c4a6e;
+  background: #f8fafc;
+  border-color: rgba(14, 165, 233, 0.3);
+  color: var(--t1);
 }
 .edb-act-amend {
   background: #fff;
@@ -7809,14 +7811,14 @@ body.logged-out-blur .atlas-command-palette {
   color: var(--t2);
 }
 .edb-act-amend.is-ready {
-  background: rgba(217, 119, 6, 0.08);
-  border-color: rgba(217, 119, 6, 0.28);
-  color: #b45309;
+  background: rgba(217, 119, 6, 0.06);
+  border-color: rgba(217, 119, 6, 0.2);
+  color: #92400e;
 }
 .edb-act-convert {
-  background: rgba(22, 163, 74, 0.08);
-  border-color: rgba(22, 163, 74, 0.28);
-  color: #15803d;
+  background: rgba(22, 163, 74, 0.06);
+  border-color: rgba(22, 163, 74, 0.2);
+  color: #166534;
 }
 .edb-act-convert:hover {
   background: rgba(22, 163, 74, 0.14);
@@ -7884,8 +7886,8 @@ body.logged-out-blur .atlas-command-palette {
   border-left: 1px solid var(--border-1);
 }
 .edb-seg-btn.is-active {
-  background: rgba(2, 132, 199, 0.1);
-  color: #0369a1;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--t1);
 }
 .edb-seg-btn:hover:not(.is-active) {
   background: #f8fafc;
@@ -8063,13 +8065,13 @@ body.logged-out-blur .atlas-command-palette {
   background: #f8fafc;
 }
 .eri-cta-primary {
-  background: #0f172a;
-  border-color: #0f172a;
-  color: #fff;
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.35);
+  color: #0369a1;
 }
 .eri-cta-primary:hover {
-  background: #1e293b;
-  color: #fff;
+  background: rgba(14, 165, 233, 0.16);
+  color: #0c4a6e;
 }
 .eri-cta-win {
   background: rgba(22, 163, 74, 0.1);
@@ -8087,6 +8089,23 @@ body.logged-out-blur .atlas-command-palette {
   .eri-cta {
     min-height: 36px !important;
   }
+}
+
+.enquiry-db-shell .status-badge.quoted {
+  background: rgba(217, 119, 6, 0.06) !important;
+  color: #92400e !important;
+  border-color: rgba(217, 119, 6, 0.18) !important;
+}
+.enquiry-db-shell .status-badge.converted {
+  background: rgba(22, 163, 74, 0.06) !important;
+  color: #166534 !important;
+  border-color: rgba(22, 163, 74, 0.18) !important;
+}
+.enquiry-db-shell .status-badge.cancelled,
+.enquiry-db-shell .status-badge.lost {
+  background: rgba(148, 163, 184, 0.1) !important;
+  color: #64748b !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
 }
 
 .enquiry-row-inspector-card {
@@ -8340,33 +8359,27 @@ body.logged-out-blur .atlas-command-palette {
   gap: 0.4rem;
   padding: 0.48rem 0.85rem 0.48rem 0.7rem;
   border-radius: 0 999px 999px 0;
-  border: 1px solid rgba(1, 118, 211, 0.35);
-  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(239,246,255,0.92));
-  box-shadow: 0 8px 24px rgba(1, 118, 211, 0.16), inset 0 1px 0 rgba(255,255,255,0.9);
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   cursor: pointer;
   overflow: hidden;
 }
 .vqaf-glow {
-  position: absolute;
-  inset: -40% auto auto -20%;
-  width: 70%;
-  height: 140%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.35), transparent 70%);
-  pointer-events: none;
-  animation: vqafPulse 3s ease-in-out infinite;
+  display: none;
 }
 @keyframes vqafPulse {
   0%, 100% { opacity: 0.45; transform: scale(1); }
   50% { opacity: 0.85; transform: scale(1.08); }
 }
 .vertex-quick-assist-fab.open .vqaf-bubble-core {
-  border-color: #0176d3;
-  box-shadow: 0 10px 28px rgba(1, 118, 211, 0.22);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 .vqaf-icon {
-  color: #0176d3;
+  color: #64748b;
   font-size: 0.82rem;
   position: relative;
   z-index: 1;
@@ -8383,8 +8396,8 @@ body.logged-out-blur .atlas-command-palette {
   height: 1.15rem;
   padding: 0 0.28rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, #0176d3, #6366f1);
-  color: #fff;
+  background: #e2e8f0;
+  color: #475569;
   font-size: 0.62rem;
   font-weight: 700;
   display: inline-flex;

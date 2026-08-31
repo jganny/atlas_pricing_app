@@ -21680,11 +21680,20 @@ window.updateLinerRateSummary = updateLinerRateSummary;
   let updateReminderTimer = null;
 
   function getLoadedAppVersion() {
+    const versions = [];
     const meta = document.querySelector('meta[name="app-version"]');
-    if (meta && meta.content) return meta.content.trim();
-    const script = document.querySelector('script[src*="app-v4.js"]');
-    const match = script && script.src && script.src.match(/[?&]v=([^&]+)/);
-    return match ? decodeURIComponent(match[1]).trim() : "";
+    if (meta && meta.content) versions.push(meta.content.trim());
+    document.querySelectorAll('script[src*="?v="], link[href*="?v="]').forEach((el) => {
+      const src = el.src || el.href || "";
+      const match = src.match(/[?&]v=([^&]+)/);
+      if (match) versions.push(decodeURIComponent(match[1]).trim());
+    });
+    const unique = [...new Set(versions.filter(Boolean))];
+    if (unique.length === 1) return unique[0];
+    const appScript = document.querySelector('script[src*="app-v4.js"]');
+    const appMatch = appScript && appScript.src && appScript.src.match(/[?&]v=([^&]+)/);
+    if (appMatch) return decodeURIComponent(appMatch[1]).trim();
+    return meta && meta.content ? meta.content.trim() : "";
   }
 
   function hideUpdateBanner() {
@@ -21701,18 +21710,12 @@ window.updateLinerRateSummary = updateLinerRateSummary;
     if (!banner) {
       banner = document.createElement("div");
       banner.id = "app-update-banner";
-      banner.style.cssText = "position: fixed; top: 80px; right: 20px; z-index: 999999; background: #ffffff; color: #5a7a9a; padding: 0.9rem 1.1rem; border-radius: 12px; border: 1px solid #dde0f0; box-shadow: 0 12px 32px rgba(90,122,154,0.22); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.82rem; display: flex; align-items: center; gap: 0.75rem; max-width: 340px; animation: appUpdatePulse 2.2s ease-in-out infinite;";
+      banner.style.cssText = "position: fixed; top: 80px; right: 20px; z-index: 999999; background: #ffffff; color: #64748b; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 8px 24px rgba(15,23,42,0.08); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.8rem; display: flex; align-items: center; gap: 0.65rem; max-width: 340px;";
       banner.innerHTML = `
-        <span id="app-update-banner-text" style="flex: 1; font-weight: 600; color: #5a7a9a !important;">🚀 A new version (${latestVersion || "latest"}) is ready. Click Refresh to load it.</span>
-        <button id="app-update-refresh-btn" style="background: #5a7a9a; color: #ffffff !important; border: none; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Refresh</button>
+        <span id="app-update-banner-text" style="flex: 1; font-weight: 600; color: #64748b !important;">🚀 A new version (${latestVersion || "latest"}) is ready. Click Refresh to load it.</span>
+        <button id="app-update-refresh-btn" style="background: #f8fafc; color: #475569 !important; border: 1px solid #cbd5e1; padding: 0.35rem 0.7rem; border-radius: 7px; font-weight: 600; font-size: 0.72rem; cursor: pointer; white-space: nowrap;">Refresh</button>
       `;
       document.body.appendChild(banner);
-      if (!document.getElementById("app-update-pulse-style")) {
-        const style = document.createElement("style");
-        style.id = "app-update-pulse-style";
-        style.textContent = "@keyframes appUpdatePulse { 0%, 100% { box-shadow: 0 12px 32px rgba(90,122,154,0.22); transform: scale(1); } 50% { box-shadow: 0 16px 40px rgba(90,122,154,0.35); transform: scale(1.02); } }";
-        document.head.appendChild(style);
-      }
       document.getElementById("app-update-refresh-btn").addEventListener("click", () => {
         const url = new URL(window.location.href);
         url.searchParams.set("_v", Date.now().toString());
@@ -21723,9 +21726,6 @@ window.updateLinerRateSummary = updateLinerRateSummary;
           const el = document.getElementById("app-update-banner-text");
           if (el) {
             el.textContent = "🚀 Still on an older version — click Refresh to get the latest update.";
-            banner.style.animation = "none";
-            void banner.offsetWidth;
-            banner.style.animation = "appUpdatePulse 2.2s ease-in-out infinite";
           }
         }, 45000);
       }
