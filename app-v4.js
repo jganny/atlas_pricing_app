@@ -9195,6 +9195,46 @@ async function resolveQuoteByRefOrId(refOrId) {
 }
 window.resolveQuoteByRefOrId = resolveQuoteByRefOrId;
 
+function buildQuoteCargoDimensionsHtml(cargoItems) {
+  if (!Array.isArray(cargoItems) || cargoItems.length === 0) return '';
+  const rows = cargoItems.map((item, idx) => {
+    const l = Number(item.l ?? item.length) || 0;
+    const w = Number(item.w ?? item.width) || 0;
+    const h = Number(item.h ?? item.height) || 0;
+    const qty = Number(item.qty ?? item.quantity) || 0;
+    const gwRaw = item.gw ?? item.grossWeight;
+    const hasGw = gwRaw !== undefined && gwRaw !== null && gwRaw !== '';
+    if (!l && !w && !h && !qty && !hasGw) return '';
+    const cell = 'border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.72rem;';
+    return `<tr>
+      <td style="${cell}">${idx + 1}</td>
+      <td style="${cell}">${l || '-'}</td>
+      <td style="${cell}">${w || '-'}</td>
+      <td style="${cell}">${h || '-'}</td>
+      <td style="${cell}">${qty || '-'}</td>
+      <td style="${cell}">${hasGw ? `${Number(gwRaw).toFixed(2)} kg` : '-'}</td>
+    </tr>`;
+  }).filter(Boolean);
+  if (!rows.length) return '';
+  const th = 'border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 0.68rem; text-transform: uppercase; font-weight: 700; color: #374151; text-align: left;';
+  return `
+    <div class="print-section-title" style="margin-top: 1.5rem;">Package Dimensions</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; border: 1px solid #e2e8f0;">
+      <thead>
+        <tr style="background: #f8fafc;">
+          <th style="${th}">#</th>
+          <th style="${th}">Length (cm)</th>
+          <th style="${th}">Width (cm)</th>
+          <th style="${th}">Height (cm)</th>
+          <th style="${th}">Qty</th>
+          <th style="${th}">Gross Wt</th>
+        </tr>
+      </thead>
+      <tbody>${rows.join('')}</tbody>
+    </table>
+  `;
+}
+
 window.viewSavedQuote = async (id) => {
   let quote = appState.quotes.find(q => q.id === id);
   if (!quote) {
@@ -9227,8 +9267,7 @@ window.viewSavedQuote = async (id) => {
       return `
         <tr style="${alt.selected ? 'background: #f0fdf4; font-weight: bold; border-left: 3px solid var(--accent-success);' : ''}">
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #5a7a9a; font-size: 0.7rem; font-weight: 700;">
-            ${alt.name}
-            ${(alt.origin || alt.destination) ? `<div style="font-size: 0.62rem; font-weight: 600; color: #64748b; margin-top: 2px;">${alt.origin || '?'} → ${alt.destination || '?'}</div>` : ''}
+            ${alt.name || alt.airline || 'Airline'}
           </td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.routing || '-'}</td>
           <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 0.7rem;">${alt.tt || '-'}</td>
@@ -9596,6 +9635,8 @@ window.viewSavedQuote = async (id) => {
       </div>
     `;
 
+  const cargoDimensionsHtml = buildQuoteCargoDimensionsHtml(quote.details?.cargoItems);
+
   printCard.innerHTML = `
       <div class="print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -9670,6 +9711,8 @@ window.viewSavedQuote = async (id) => {
           ${detailsRows}
         </tbody>
       </table>
+
+      ${cargoDimensionsHtml}
       
       ${alternativesHtml}
       ${routeCombinationsHtml}
