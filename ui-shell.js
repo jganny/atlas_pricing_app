@@ -256,10 +256,20 @@
     if (empty) empty.style.display = '';
     if (content) content.style.display = 'none';
     panel.classList.remove('eri-has-selection');
+    panel._selectedQuoteId = null;
     var tbody = document.getElementById('admin-quotes-body');
     if (tbody) {
       tbody.querySelectorAll('tr.eri-selected').forEach(function (r) { r.classList.remove('eri-selected'); });
     }
+  }
+
+  function wireInspectorAction(btnId, fn) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.onclick = function (e) {
+      if (e) e.stopPropagation();
+      if (typeof fn === 'function') fn();
+    };
   }
 
   function populateEnquiryInspector(quote) {
@@ -276,7 +286,8 @@
       if (el) el.textContent = val != null && val !== '' ? val : '—';
     };
 
-    set('eri-ref', '#' + refFn(quote));
+    var refText = '#' + refFn(quote);
+    set('eri-ref', refText);
     set('eri-date', quote.date || '—');
     set('eri-mode', (quote.type || '—').toUpperCase());
     set('eri-customer', quote.customer || '—');
@@ -287,13 +298,50 @@
       ? window.getQuoteBillingWeight(quote)
       : '—');
     set('eri-sell', formatMoney(quote));
-    set('eri-status', quote.status ? quote.status.charAt(0).toUpperCase() + quote.status.slice(1) : '—');
+    var statusLabel = quote.status ? quote.status.charAt(0).toUpperCase() + quote.status.slice(1) : '—';
+    if (quote.status === 'converted') statusLabel = 'Won';
+    set('eri-status', statusLabel);
+
+    var pill = document.getElementById('eri-status-pill');
+    if (pill) {
+      pill.textContent = statusLabel;
+      pill.className = 'eri-status-pill status-' + (quote.status || 'quoted');
+    }
 
     var gpEl = document.getElementById('eri-gp');
     if (gpEl) {
       gpEl.textContent = (quote.grossProfit != null && quote.amount)
         ? ((quote.grossProfit / quote.amount) * 100).toFixed(2) + '%' : '—';
     }
+
+    var qid = quote.id;
+    wireInspectorAction('eri-btn-view', function () {
+      if (typeof window.viewSavedQuote === 'function') window.viewSavedQuote(qid);
+    });
+    wireInspectorAction('eri-btn-amend', function () {
+      if (typeof window.amendQuote === 'function') window.amendQuote(qid);
+    });
+    var convertBtn = document.getElementById('eri-btn-convert');
+    if (convertBtn) {
+      if (quote.status === 'quoted') {
+        convertBtn.style.display = '';
+        convertBtn.textContent = 'Won';
+        convertBtn.className = 'eri-cta eri-cta-win';
+        convertBtn.onclick = function (e) {
+          if (e) e.stopPropagation();
+          if (typeof window.convertQuote === 'function') window.convertQuote(qid);
+        };
+      } else {
+        convertBtn.style.display = '';
+        convertBtn.textContent = 'Revert';
+        convertBtn.className = 'eri-cta eri-cta-revert';
+        convertBtn.onclick = function (e) {
+          if (e) e.stopPropagation();
+          if (typeof window.revertQuoteToOriginal === 'function') window.revertQuoteToOriginal(qid);
+        };
+      }
+    }
+
     panel.classList.add('eri-has-selection');
     panel._selectedQuoteId = quote.id;
   }

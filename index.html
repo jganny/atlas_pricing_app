@@ -6,14 +6,14 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.37">
+  <meta name="app-version" content="129.38">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.37">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.37">
+  <link rel="stylesheet" href="index.css?v=129.38">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.38">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -661,23 +661,34 @@
 
           <div class="atlas-seq-pane enquiry-seq-find" data-seq-pane="find">
             <p class="desk-flow-hint">Search and filter live enquiries. Matching quotes appear below.</p>
-        <div class="glass-card enquiry-db-main-card">
+        <div class="glass-card enquiry-db-main-card edb-command-card">
           <div class="enquiry-db-toolbar table-header-row">
             <div class="enquiry-db-title-row">
               <div class="enquiry-db-title-block">
-                <span class="enquiry-db-eyebrow">Operations</span>
+                <span class="enquiry-db-eyebrow">Operations · Command center</span>
                 <h3 class="enquiry-db-title">Global Enquiry Database</h3>
+                <p class="edb-subtitle" id="edb-results-meta">Search, triage, and act on live quotes</p>
               </div>
               <button type="button" onclick="restoreCachedQuotes()" class="btn-text enquiry-db-restore-link" title="Emergency only: re-uploads quotes stored in this browser if they never synced to the cloud. Normal users do not need this.">
                 Recover browser backup
               </button>
               <button type="button" class="atlas-context-help-btn" data-atlas-help="How do I filter enquiries and generate financial reports in the Enquiry Database?" aria-label="Help for Enquiry Database">?</button>
             </div>
-            <div class="search-box-container enquiry-db-search">
-              <label for="db-search-input" class="enquiry-db-search-label">Search live enquiries</label>
-              <input type="text" id="db-search-input" placeholder="Ref ID, customer, route, carrier..."
-                oninput="applyDbFiltersAndSort()">
-              <p class="enquiry-db-search-hint">Quotes older than 90 days may be archived — use <strong>Find old quote</strong> in the Reports panel on the right.</p>
+            <div class="search-box-container enquiry-db-search edb-command-search">
+              <label for="db-search-input" class="enquiry-db-search-label">Command search</label>
+              <div class="edb-search-shell">
+                <span class="edb-search-icon" aria-hidden="true">⌕</span>
+                <input type="text" id="db-search-input" placeholder="Ref ID, customer, route, carrier, desk…"
+                  oninput="applyDbFiltersAndSort()" autocomplete="off">
+              </div>
+              <p class="enquiry-db-search-hint">Quotes older than 90 days may be archived — use <strong>Find old quote</strong> in Reports below.</p>
+            </div>
+            <div class="edb-pipeline" id="edb-pipeline" role="tablist" aria-label="Enquiry pipeline">
+              <button type="button" class="edb-pipe is-active" data-pipe="all" role="tab" aria-selected="true" onclick="setEdbPipeline('all')">All <span class="edb-pipe-count" id="edb-count-all">0</span></button>
+              <button type="button" class="edb-pipe" data-pipe="quoted" role="tab" aria-selected="false" onclick="setEdbPipeline('quoted')">Quoted <span class="edb-pipe-count" id="edb-count-quoted">0</span></button>
+              <button type="button" class="edb-pipe" data-pipe="converted" role="tab" aria-selected="false" onclick="setEdbPipeline('converted')">Won <span class="edb-pipe-count" id="edb-count-converted">0</span></button>
+              <button type="button" class="edb-pipe" data-pipe="lost" role="tab" aria-selected="false" onclick="setEdbPipeline('lost')">Lost <span class="edb-pipe-count" id="edb-count-lost">0</span></button>
+              <button type="button" class="edb-pipe" data-pipe="cancelled" role="tab" aria-selected="false" onclick="setEdbPipeline('cancelled')">Cancelled <span class="edb-pipe-count" id="edb-count-cancelled">0</span></button>
             </div>
           </div>
 
@@ -899,16 +910,17 @@
             <p class="desk-flow-hint">Tap a row to inspect details on the right. Use row actions to view, amend, or convert.</p>
         <div class="enquiry-db-workspace">
         <div class="enquiry-db-primary">
-        <div class="glass-card enquiry-db-main-card enquiry-db-table-card">
-          <div class="enquiry-db-title-row" style="margin-bottom:0.75rem;">
+        <div class="glass-card enquiry-db-main-card enquiry-db-table-card edb-denselist-card">
+          <div class="enquiry-db-title-row edb-results-head">
             <div class="enquiry-db-title-block">
-              <span class="enquiry-db-eyebrow">Results</span>
-              <h3 class="enquiry-db-title" style="font-size:1rem;">Matching Enquiries</h3>
+              <span class="enquiry-db-eyebrow">Live denselist</span>
+              <h3 class="enquiry-db-title edb-results-title">Matching Enquiries</h3>
             </div>
+            <span class="edb-match-count" id="edb-match-count">—</span>
           </div>
 
-          <div class="quotes-table-container">
-            <table class="quotes-table" id="admin-quotes-table">
+          <div class="quotes-table-container edb-table-scroll">
+            <table class="quotes-table edb-denselist" id="admin-quotes-table">
               <thead>
                 <tr class="table-header-titles">
                   <th>Ref ID</th>
@@ -948,13 +960,24 @@
         <aside class="enquiry-db-inspector" aria-label="Enquiry inspector">
         <div id="enquiry-row-inspector" class="glass-card enquiry-row-inspector-card" aria-live="polite">
           <div class="eri-header">
-            <span class="eri-eyebrow">Quick Inspector</span>
-            <h4 class="eri-title">Enquiry Details</h4>
+            <span class="eri-eyebrow">Work surface</span>
+            <h4 class="eri-title">Enquiry Inspector</h4>
           </div>
-          <div class="eri-empty">Select a row in the enquiry table to inspect details here.</div>
+          <div class="eri-empty">
+            <p class="eri-empty-lead">Select a row to open the work surface.</p>
+            <p class="eri-empty-sub">View, amend, win, or triage without leaving the denselist.</p>
+          </div>
           <div class="eri-content" style="display: none;">
+            <div class="eri-hero">
+              <div class="eri-hero-ref" id="eri-ref">—</div>
+              <span class="eri-status-pill" id="eri-status-pill">—</span>
+            </div>
+            <div class="eri-actions" id="eri-actions">
+              <button type="button" class="eri-cta eri-cta-primary" id="eri-btn-view">View</button>
+              <button type="button" class="eri-cta" id="eri-btn-amend">Amend</button>
+              <button type="button" class="eri-cta eri-cta-win" id="eri-btn-convert">Won</button>
+            </div>
             <div class="eri-grid">
-              <div class="eri-field"><span class="eri-label">Ref ID</span><span class="eri-value" id="eri-ref">—</span></div>
               <div class="eri-field"><span class="eri-label">Date</span><span class="eri-value" id="eri-date">—</span></div>
               <div class="eri-field"><span class="eri-label">Mode</span><span class="eri-value" id="eri-mode">—</span></div>
               <div class="eri-field"><span class="eri-label">Status</span><span class="eri-value" id="eri-status">—</span></div>
@@ -966,7 +989,7 @@
               <div class="eri-field"><span class="eri-label">Sell Rate</span><span class="eri-value" id="eri-sell">—</span></div>
               <div class="eri-field"><span class="eri-label">GP %</span><span class="eri-value" id="eri-gp">—</span></div>
             </div>
-            <p class="eri-hint">Use row action buttons to view, amend, or convert quotes.</p>
+            <p class="eri-hint">Secondary actions (duplicate, cancel, lost, delete) live in the row ⋯ menu.</p>
           </div>
         </div>
         </aside>
@@ -4652,12 +4675,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.37"></script>
-  <script src="ui-shell.js?v=129.37"></script>
-  <script src="atlas-enterprise.js?v=129.37"></script>
-  <script src="ai-assistant.js?v=129.37"></script>
-  <script src="ai-sell-band.js?v=129.37"></script>
-  <script src="sales-v129.js?v=129.37"></script>
+  <script src="app-v4.js?v=129.38"></script>
+  <script src="ui-shell.js?v=129.38"></script>
+  <script src="atlas-enterprise.js?v=129.38"></script>
+  <script src="ai-assistant.js?v=129.38"></script>
+  <script src="ai-sell-band.js?v=129.38"></script>
+  <script src="sales-v129.js?v=129.38"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -4985,7 +5008,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.37">' +
+          '<link rel="stylesheet" href="index.css?v=129.38">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

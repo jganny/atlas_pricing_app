@@ -10277,7 +10277,127 @@ window.selectHdrFilter = (key, value, label) => {
   }
 
   document.getElementById(`hdr-menu-${key}`)?.classList.remove('open');
+  if (key === 'status' && typeof window.syncEdbPipelineChips === 'function') {
+    window.syncEdbPipelineChips(value || 'all');
+  }
   applyDbFiltersAndSort();
+};
+
+/** Compact horizontal row actions + overflow menu (Enquiry DB denselist). UI only. */
+window.buildEnquiryActionsHtml = (quote, opts) => {
+  opts = opts || {};
+  const id = quote.id;
+  const isQuoted = quote.status === 'quoted';
+  const editOk = typeof isEditUnlocked === 'function' ? isEditUnlocked(quote) : false;
+  const delOk = typeof isDeleteUnlocked === 'function' ? isDeleteUnlocked(quote) : false;
+  const editBg = editOk ? 'rgba(245, 158, 11, 0.18)' : 'transparent';
+  const editFg = editOk ? 'var(--accent-warning)' : 'var(--text-dim)';
+  const delBg = delOk ? 'rgba(239, 68, 68, 0.18)' : 'transparent';
+  const delFg = delOk ? 'var(--accent-error)' : 'var(--text-dim)';
+  const cancelTitle = opts.admin
+    ? 'Mark as Cancelled'
+    : (editOk ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel');
+  const lostTitle = opts.admin
+    ? 'Mark as Lost'
+    : (editOk ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost');
+  const revertTitle = opts.admin
+    ? 'Revert Quote status to Quoted'
+    : (editOk ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert');
+  const amendTitle = opts.admin
+    ? 'Correct / Amend Quote (Admin Override)'
+    : (editOk ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend');
+  const deleteTitle = opts.admin
+    ? 'Delete Quote (Admin Override)'
+    : (delOk ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete');
+  const recreateTitle = opts.admin
+    ? 'Recreate as new quote'
+    : 'Recreate as new quote (copy customer, carriers, surcharges — change route/weight/date)';
+
+  const primaryConvert = isQuoted
+    ? `<button type="button" class="edb-act edb-act-convert" title="Convert to Won" onclick="event.stopPropagation(); convertQuote('${id}')">Won</button>`
+    : `<button type="button" class="edb-act edb-act-revert" title="${revertTitle}" onclick="event.stopPropagation(); revertQuoteToOriginal('${id}')" style="opacity:${editOk ? 1 : 0.45}">Revert</button>`;
+
+  const moreQuoted = isQuoted
+    ? `<button type="button" class="edb-more-item" onclick="event.stopPropagation(); markQuoteCancelled('${id}')">${cancelTitle.split('(')[0].trim()}</button>
+       <button type="button" class="edb-more-item" onclick="event.stopPropagation(); markQuoteLost('${id}')">${lostTitle.split('(')[0].trim()}</button>`
+    : '';
+
+  return `<td class="actions-cell edb-actions-cell"><div class="edb-actions" onclick="event.stopPropagation()">
+    <button type="button" class="edb-act edb-act-view" title="View / Print" onclick="viewSavedQuote('${id}')">View</button>
+    <button type="button" class="edb-act edb-act-amend" title="${amendTitle}" onclick="amendQuote('${id}')" style="background:${editBg};color:${editFg}">Amend</button>
+    ${primaryConvert}
+    <div class="edb-more">
+      <button type="button" class="edb-act edb-act-more" title="More actions" aria-haspopup="true" onclick="toggleEdbMoreMenu(event, this)">⋯</button>
+      <div class="edb-more-menu" role="menu">
+        <button type="button" class="edb-more-item" title="${recreateTitle}" onclick="event.stopPropagation(); recreateQuoteFromExisting('${id}')">Duplicate</button>
+        ${moreQuoted}
+        <button type="button" class="edb-more-item edb-more-danger" onclick="event.stopPropagation(); deleteQuote('${id}')" style="color:${delFg}">${deleteTitle.split('(')[0].trim()}</button>
+      </div>
+    </div>
+  </div></td>`;
+};
+
+window.toggleEdbMoreMenu = (e, btn) => {
+  if (e) e.stopPropagation();
+  const wrap = btn && btn.closest ? btn.closest('.edb-more') : null;
+  if (!wrap) return;
+  const open = wrap.classList.contains('is-open');
+  document.querySelectorAll('.edb-more.is-open').forEach((el) => el.classList.remove('is-open'));
+  if (!open) wrap.classList.add('is-open');
+};
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.edb-more.is-open').forEach((el) => el.classList.remove('is-open'));
+});
+
+window.syncEdbPipelineChips = (status) => {
+  const pipe = status || 'all';
+  document.querySelectorAll('#edb-pipeline .edb-pipe').forEach((btn) => {
+    const active = (btn.getAttribute('data-pipe') || '') === pipe;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+};
+
+window.setEdbPipeline = (status) => {
+  const pipe = status || 'all';
+  const labels = {
+    all: 'All Statuses',
+    quoted: 'Quoted',
+    converted: 'Converted (Won)',
+    cancelled: 'Cancelled',
+    lost: 'Lost'
+  };
+  window.hdrFilterState = window.hdrFilterState || {};
+  window.hdrFilterState.status = pipe;
+  const btnLabel = document.getElementById('hdr-label-status');
+  if (btnLabel) btnLabel.textContent = labels[pipe] || 'All Statuses';
+  const dropdownBtn = document.querySelector('#dropdown-hdr-status .hdr-filter-btn');
+  if (dropdownBtn) {
+    if (pipe === 'all') dropdownBtn.classList.remove('active-filter');
+    else dropdownBtn.classList.add('active-filter');
+  }
+  window.syncEdbPipelineChips(pipe);
+  applyDbFiltersAndSort();
+};
+
+window.updateEdbPipelineCounts = (quotes) => {
+  const list = (quotes || []).filter((q) => !(q.creator && String(q.creator).toLowerCase() === 'mahendra'));
+  const counts = { all: list.length, quoted: 0, converted: 0, cancelled: 0, lost: 0 };
+  list.forEach((q) => {
+    const s = (q.status || '').toLowerCase();
+    if (counts[s] != null) counts[s] += 1;
+  });
+  Object.keys(counts).forEach((key) => {
+    const el = document.getElementById(`edb-count-${key}`);
+    if (el) el.textContent = String(counts[key]);
+  });
+  const meta = document.getElementById('edb-results-meta');
+  if (meta) {
+    const st = (window.hdrFilterState && window.hdrFilterState.status) || 'all';
+    const shown = st === 'all' ? counts.all : (counts[st] || 0);
+    meta.textContent = `${shown.toLocaleString()} live · pipeline view`;
+  }
 };
 
 window.selectHdrSort = (sortField, label) => {
@@ -10353,6 +10473,7 @@ window.resetAllHdrFilters = () => {
   if (topSearch) topSearch.value = '';
 
   document.querySelectorAll('.hdr-filter-menu').forEach(m => m.classList.remove('open'));
+  if (typeof window.syncEdbPipelineChips === 'function') window.syncEdbPipelineChips('all');
   applyDbFiltersAndSort();
 };
 
@@ -10826,35 +10947,7 @@ window.applyUserDbFiltersAndSort = () => {
         ` : '-'}
       </td>
       <td><span class="status-badge ${quote.status}">${statusLabel}</span></td>
-      <td class="actions-cell"><div class="actions-cell-inner">
-        <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Correct / Amend Quote (Unlocked)' : 'Request Admin Permission to Correct/Amend'}" onclick="amendQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button class="action-icon-btn view" title="Recreate as new quote (copy customer, carriers, surcharges — change route/weight/date)" onclick="recreateQuoteFromExisting('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
-        <button class="action-icon-btn view" title="View/Print Quote" onclick="viewSavedQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-        ${isQuoted ? `
-        <button class="action-icon-btn convert" style="background: rgba(74, 222, 128, 0.2); color: var(--accent-success);" title="Convert Quote to Won" onclick="convertQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        </button>
-        <button class="action-icon-btn delete" style="background: ${isEditUnlocked(quote) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Mark as Cancelled (Unlocked)' : 'Request Admin Permission to Cancel'}" onclick="markQuoteCancelled('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-        </button>
-        <button class="action-icon-btn view" style="background: ${isEditUnlocked(quote) ? 'rgba(156, 163, 175, 0.15)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--t1)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Mark as Lost (Unlocked)' : 'Request Admin Permission to Mark as Lost'}" onclick="markQuoteLost('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </button>
-        ` : `
-        <button class="action-icon-btn convert" style="background: ${isEditUnlocked(quote) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-success)' : 'var(--text-dim)'};" title="${isEditUnlocked(quote) ? 'Revert to Original (Unlocked)' : 'Request Admin Permission to Revert'}" onclick="revertQuoteToOriginal('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-        </button>
-        `}
-        <button class="action-icon-btn delete" style="background: ${isDeleteUnlocked(quote) ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isDeleteUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="${isDeleteUnlocked(quote) ? 'Delete Quote (Unlocked)' : 'Request Admin Permission to Delete'}" onclick="deleteQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-        </button>
-      </div></td>
+      ${window.buildEnquiryActionsHtml(quote, { admin: false })}
     `;
     tbody.appendChild(tr);
   });
@@ -11107,6 +11200,18 @@ window.applyDbFiltersAndSort = () => {
     const showEnd = Math.min(endIdx, totalMatched);
     pagInfo.textContent = `Page ${window.dbCurrentPage} of ${totalPages} (Showing ${showStart}-${showEnd} of ${totalMatched} entries)`;
   }
+  if (typeof window.updateEdbPipelineCounts === 'function') {
+    window.updateEdbPipelineCounts(appState.quotes || []);
+  }
+  if (typeof window.syncEdbPipelineChips === 'function') {
+    window.syncEdbPipelineChips((st.status || 'all'));
+  }
+  const resultsCount = document.getElementById('edb-match-count');
+  if (resultsCount) {
+    resultsCount.textContent = totalMatched === 0
+      ? 'No matches'
+      : `${totalMatched.toLocaleString()} matching`;
+  }
 
   tbody.innerHTML = "";
   if (pageFiltered.length === 0) {
@@ -11126,9 +11231,9 @@ window.applyDbFiltersAndSort = () => {
     const carrierName = quote.details?.airline || quote.details?.shippingLine || quote.details?.carrier || '-';
 
     tr.innerHTML = `
-      <td><strong>#${getQuoteRefId(quote)}</strong></td>
+      <td><strong class="edb-ref">#${getQuoteRefId(quote)}</strong></td>
       <td>
-        <div>${quote.date}</div>
+        <div class="edb-date-main">${quote.date}</div>
         <div class="edit-timeline-indicator" data-timestamp="${quote.timestamp || ''}" data-quote-id="${quote.id}" style="font-size: 0.68rem; margin-top: 2px;"></div>
       </td>
       <td><span class="quote-type-badge ${quote.type}">
@@ -11164,35 +11269,7 @@ window.applyDbFiltersAndSort = () => {
         ` : '-'}
       </td>
       <td><span class="status-badge ${quote.status}">${quote.status === 'quoted' ? 'Quoted' : (quote.status === 'converted' ? 'Converted' : (quote.status === 'cancelled' ? 'Cancelled' : 'Lost'))}</span></td>
-      <td class="actions-cell"><div class="actions-cell-inner">
-        <button class="action-icon-btn amend" style="background: ${isEditUnlocked(quote) ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-warning)' : 'var(--text-dim)'};" title="Correct / Amend Quote (Admin Override)" onclick="amendQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button class="action-icon-btn view" title="Recreate as new quote" onclick="recreateQuoteFromExisting('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
-        <button class="action-icon-btn view" title="View Quote" onclick="viewSavedQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-        ${quote.status === 'quoted' ? `
-        <button class="action-icon-btn convert" title="Convert Quote" onclick="convertQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        </button>
-        <button class="action-icon-btn delete" style="background: ${isEditUnlocked(quote) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="Mark as Cancelled" onclick="markQuoteCancelled('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-        </button>
-        <button class="action-icon-btn view" style="background: ${isEditUnlocked(quote) ? 'rgba(156, 163, 175, 0.1)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--text-dim)' : 'var(--text-dim)'};" title="Mark as Lost" onclick="markQuoteLost('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </button>
-        ` : `
-        <button class="action-icon-btn convert" style="background: ${isEditUnlocked(quote) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${isEditUnlocked(quote) ? 'var(--accent-success)' : 'var(--text-dim)'};" title="Revert Quote status to Quoted" onclick="revertQuoteToOriginal('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-        </button>
-        `}
-        <button class="action-icon-btn delete" style="background: ${isDeleteUnlocked(quote) ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}; color: ${isDeleteUnlocked(quote) ? 'var(--accent-error)' : 'var(--text-dim)'};" title="Delete Quote (Admin Override)" onclick="deleteQuote('${quote.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-        </button>
-      </div></td>
+      ${window.buildEnquiryActionsHtml(quote, { admin: true })}
     `;
     tbody.appendChild(tr);
   });
