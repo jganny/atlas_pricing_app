@@ -11,8 +11,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.27">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.27">
+  <link rel="stylesheet" href="index.css?v=129.28">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.28">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -764,32 +764,28 @@
                 </div>
               </div>
 
-              <!-- BUY RATE Filter -->
+              <!-- BUY RATE display toggle -->
               <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-buyrate" data-filter-key="buyrate" data-filter-label="Buy Rate">
                 <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'buyrate')">
-                  <span id="hdr-label-buyrate">Buy Rate</span> <span class="hdr-filter-arrow">▼</span>
+                  <span id="hdr-label-buyrate">Total</span> <span class="hdr-filter-arrow">▼</span>
                 </button>
                 <div class="hdr-filter-menu" id="hdr-menu-buyrate" onclick="event.stopPropagation()">
-                  <div class="hdr-filter-search-wrap">
-                    <input type="text" class="hdr-filter-search-input" id="hdr-search-buyrate" placeholder="Filter Buy Rate..." oninput="onHdrSearchInput('buyrate', this.value)">
-                  </div>
                   <div class="hdr-filter-options-list" id="hdr-options-buyrate">
-                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('buyrate', 'all', 'All Rates')">All Rates</div>
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('buyrate', 'total', 'Total')">Total</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('buyrate', 'perkg', 'Per kg')">Per kg</div>
                   </div>
                 </div>
               </div>
 
-              <!-- SELL RATE Filter -->
+              <!-- SELL RATE display toggle -->
               <div class="hdr-filter-dropdown hdr-filter-dropdown-hidden" id="dropdown-hdr-sellrate" data-filter-key="sellrate" data-filter-label="Sell Rate">
                 <button type="button" class="hdr-filter-btn" onclick="toggleHdrFilterMenu(event, 'sellrate')">
-                  <span id="hdr-label-sellrate">Sell Rate</span> <span class="hdr-filter-arrow">▼</span>
+                  <span id="hdr-label-sellrate">Total</span> <span class="hdr-filter-arrow">▼</span>
                 </button>
                 <div class="hdr-filter-menu" id="hdr-menu-sellrate" onclick="event.stopPropagation()">
-                  <div class="hdr-filter-search-wrap">
-                    <input type="text" class="hdr-filter-search-input" id="hdr-search-sellrate" placeholder="Filter Sell Rate..." oninput="onHdrSearchInput('sellrate', this.value)">
-                  </div>
                   <div class="hdr-filter-options-list" id="hdr-options-sellrate">
-                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('sellrate', 'all', 'All Rates')">All Rates</div>
+                    <div class="hdr-filter-opt active" onclick="selectHdrFilter('sellrate', 'total', 'Total')">Total</div>
+                    <div class="hdr-filter-opt" onclick="selectHdrFilter('sellrate', 'perkg', 'Per kg')">Per kg</div>
                   </div>
                 </div>
               </div>
@@ -1442,35 +1438,31 @@
                     </div>
                   </th>
 
-                  <!-- BUY RATE Filter -->
+                  <!-- BUY RATE display toggle -->
                   <th>
                     <div class="hdr-filter-dropdown" id="dropdown-user-hdr-buyrate">
                       <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'buyrate')">
-                        <span id="user-hdr-label-buyrate">Buy Rate</span> <span class="hdr-filter-arrow">▼</span>
+                        <span id="user-hdr-label-buyrate">Total</span> <span class="hdr-filter-arrow">▼</span>
                       </button>
                       <div class="hdr-filter-menu" id="user-hdr-menu-buyrate" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-buyrate" placeholder="Filter Buy Rate..." oninput="onUserHdrSearchInput('buyrate', this.value)">
-                        </div>
                         <div class="hdr-filter-options-list" id="user-hdr-options-buyrate">
-                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('buyrate', 'all', 'All Rates')">All Rates</div>
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('buyrate', 'total', 'Total')">Total</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('buyrate', 'perkg', 'Per kg')">Per kg</div>
                         </div>
                       </div>
                     </div>
                   </th>
 
-                  <!-- SELL RATE Filter -->
+                  <!-- SELL RATE display toggle -->
                   <th>
                     <div class="hdr-filter-dropdown" id="dropdown-user-hdr-sellrate">
                       <button type="button" class="hdr-filter-btn" onclick="toggleUserHdrFilterMenu(event, 'sellrate')">
-                        <span id="user-hdr-label-sellrate">Sell Rate</span> <span class="hdr-filter-arrow">▼</span>
+                        <span id="user-hdr-label-sellrate">Total</span> <span class="hdr-filter-arrow">▼</span>
                       </button>
                       <div class="hdr-filter-menu" id="user-hdr-menu-sellrate" onclick="event.stopPropagation()">
-                        <div class="hdr-filter-search-wrap">
-                          <input type="text" class="hdr-filter-search-input" id="user-hdr-search-sellrate" placeholder="Filter Sell Rate..." oninput="onUserHdrSearchInput('sellrate', this.value)">
-                        </div>
                         <div class="hdr-filter-options-list" id="user-hdr-options-sellrate">
-                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('sellrate', 'all', 'All Rates')">All Rates</div>
+                          <div class="hdr-filter-opt active" onclick="selectUserHdrFilter('sellrate', 'total', 'Total')">Total</div>
+                          <div class="hdr-filter-opt" onclick="selectUserHdrFilter('sellrate', 'perkg', 'Per kg')">Per kg</div>
                         </div>
                       </div>
                     </div>
@@ -4672,12 +4664,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.27"></script>
-  <script src="ui-shell.js?v=129.27"></script>
-  <script src="atlas-enterprise.js?v=129.27"></script>
-  <script src="ai-assistant.js?v=129.27"></script>
-  <script src="ai-sell-band.js?v=129.27"></script>
-  <script src="sales-v129.js?v=129.27"></script>
+  <script src="app-v4.js?v=129.28"></script>
+  <script src="ui-shell.js?v=129.28"></script>
+  <script src="atlas-enterprise.js?v=129.28"></script>
+  <script src="ai-assistant.js?v=129.28"></script>
+  <script src="ai-sell-band.js?v=129.28"></script>
+  <script src="sales-v129.js?v=129.28"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
@@ -5005,7 +4997,7 @@
           '<link rel="preconnect" href="https://fonts.googleapis.com">' +
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">' +
-          '<link rel="stylesheet" href="index.css?v=129.27">' +
+          '<link rel="stylesheet" href="index.css?v=129.28">' +
           '<style>' +
             '@page {' +
               'size: A4;' +

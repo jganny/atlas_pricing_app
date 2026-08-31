@@ -9683,6 +9683,67 @@ function printQuote() {
   printWindow.document.close();
 }
 
+// --- Quote log display helpers (read-only; does not change saved quote data) ---
+window.getQuoteBillingWeight = (q) => {
+  const d = q?.details || {};
+  if (q?.type === 'air') {
+    const cw = parseFloat(d.chargeableWeight) || 0;
+    const pw = parseFloat(d.pivotWeight) || 0;
+    const gw = parseFloat(d.grossWeight) || 0;
+    const billing = Math.max(cw, pw, gw);
+    return billing > 0
+      ? `${billing.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`
+      : '-';
+  }
+  if (q?.type === 'sea') {
+    const rt = parseFloat(d.lclChargeable) || parseFloat(d.chargeableCbm) || 0;
+    const gw = parseFloat(d.grossWeight) || 0;
+    if (rt > 0) return `${rt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RT`;
+    if (gw > 0) return `${gw.toLocaleString()} kg`;
+    return '-';
+  }
+  const gw = parseFloat(d.grossWeight) || 0;
+  return gw > 0 ? `${gw.toLocaleString()} kg` : '-';
+};
+
+window.formatQuoteBuyRateCell = (quote, viewMode) => {
+  const actualBuyRateCurrency = quote.buyRateCurrency || quote.currency || 'INR';
+  const sym = actualBuyRateCurrency === 'INR' ? '₹' : (actualBuyRateCurrency === 'USD' ? '$' : (actualBuyRateCurrency === 'EUR' ? '€' : '£'));
+  if (viewMode === 'perkg') {
+    const d = quote.details || {};
+    if (quote.type === 'air') {
+      const rate = d.appliedBuyRate;
+      if (rate == null || rate === '' || isNaN(Number(rate))) return '-';
+      if (d.usedBreak === 'min') return `${sym}${Number(rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Min)`;
+      return `${sym}${Number(rate).toFixed(2)}/kg`;
+    }
+    if (quote.type === 'sea' && d.appliedBuyRate != null && !isNaN(Number(d.appliedBuyRate))) {
+      return `${sym}${Number(d.appliedBuyRate).toFixed(2)}/RT`;
+    }
+    return '-';
+  }
+  const computedBuy = window.computeHistoricalBuyRate(quote);
+  return computedBuy ? `${sym}${computedBuy.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
+};
+
+window.formatQuoteSellRateCell = (quote, viewMode) => {
+  const sym = quote.currency === 'INR' ? '₹' : (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '£'));
+  if (viewMode === 'perkg') {
+    const d = quote.details || {};
+    if (quote.type === 'air') {
+      const rate = d.appliedRate;
+      if (rate == null || rate === '' || isNaN(Number(rate))) return '-';
+      if (d.usedBreak === 'min') return `${sym}${Number(rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Min)`;
+      return `${sym}${Number(rate).toFixed(2)}/kg`;
+    }
+    if (quote.type === 'sea' && d.appliedRate != null && !isNaN(Number(d.appliedRate))) {
+      return `${sym}${Number(d.appliedRate).toFixed(2)}/RT`;
+    }
+    return '-';
+  }
+  return `${sym}${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 // --- Column Header Filter State & Handlers ---
 window.hdrFilterState = {
   refid: 'all', search_refid: '',
@@ -9691,8 +9752,8 @@ window.hdrFilterState = {
   agentroute: 'all', search_agentroute: '',
   desk: 'all', search_desk: '',
   carrier: 'all', search_carrier: '',
-  buyrate: 'all', search_buyrate: '',
-  sellrate: 'all', search_sellrate: '',
+  buyrate: 'total',
+  sellrate: 'total',
   gp: 'all', search_gp: '',
   status: 'all', search_status: '',
   actions: 'date-desc', search_actions: '',
@@ -9705,7 +9766,7 @@ window.hdrFilterState = {
 // and, for Date only, adds real multi-month selection logic.
 const DB_FILTER_KEYS = ['refid', 'date', 'mode', 'agentroute', 'desk', 'carrier', 'tonnage', 'buyrate', 'sellrate', 'status'];
 const DB_FILTER_LABELS = { refid: 'Ref ID', date: 'Date', mode: 'Mode', agentroute: 'Agent', desk: 'Priced By Desk', carrier: 'Carrier', tonnage: 'Tonnage', buyrate: 'Buy Rate', sellrate: 'Sell Rate', status: 'Status' };
-const DB_FILTER_DEFAULT_LABELS = { refid: 'Ref ID', date: 'All Dates', mode: 'All Modes', agentroute: 'Agent', desk: 'All Desks', carrier: 'All Carriers', tonnage: 'All', buyrate: 'Buy Rate', sellrate: 'Sell Rate', status: 'All Statuses' };
+const DB_FILTER_DEFAULT_LABELS = { refid: 'Ref ID', date: 'All Dates', mode: 'All Modes', agentroute: 'Agent', desk: 'All Desks', carrier: 'All Carriers', tonnage: 'All', buyrate: 'Total', sellrate: 'Total', status: 'All Statuses' };
 window._dbDateViewYear = new Date().getFullYear();
 
 function dbFilterIsHidden(key) {
@@ -9737,6 +9798,8 @@ window.closeDbFilterField = (key) => {
     if (startDate) startDate.value = '';
     if (endDate) endDate.value = '';
     updateDbDateSummary();
+  } else if (key === 'buyrate' || key === 'sellrate') {
+    window.selectHdrFilter(key, 'total', 'Total');
   } else {
     window.selectHdrFilter(key, 'all', DB_FILTER_DEFAULT_LABELS[key] || 'All');
   }
@@ -9917,7 +9980,12 @@ window.selectHdrFilter = (key, value, label) => {
 
   if (btnLabel) btnLabel.textContent = label;
   if (dropdownBtn) {
-    if (value !== 'all') {
+    const isNeutralDisplay =
+      value === 'all' ||
+      (key === 'buyrate' && value === 'total') ||
+      (key === 'sellrate' && value === 'total') ||
+      (key === 'gp' && value === 'all');
+    if (!isNeutralDisplay) {
       dropdownBtn.classList.add('active-filter');
     } else {
       dropdownBtn.classList.remove('active-filter');
@@ -9967,8 +10035,8 @@ window.resetAllHdrFilters = () => {
     agentroute: 'all', search_agentroute: '',
     desk: 'all', search_desk: '',
     carrier: 'all', search_carrier: '',
-    buyrate: 'all', search_buyrate: '',
-    sellrate: 'all', search_sellrate: '',
+    buyrate: 'total',
+    sellrate: 'total',
     gp: 'all', search_gp: '',
     status: 'all', search_status: '',
     actions: 'date-desc', search_actions: '',
@@ -9997,8 +10065,8 @@ window.resetAllHdrFilters = () => {
   if (document.getElementById('hdr-label-agentroute')) document.getElementById('hdr-label-agentroute').textContent = 'Agent';
   if (document.getElementById('hdr-label-desk')) document.getElementById('hdr-label-desk').textContent = 'All Desks';
   if (document.getElementById('hdr-label-carrier')) document.getElementById('hdr-label-carrier').textContent = 'All Carriers';
-  if (document.getElementById('hdr-label-buyrate')) document.getElementById('hdr-label-buyrate').textContent = 'Buy Rate';
-  if (document.getElementById('hdr-label-sellrate')) document.getElementById('hdr-label-sellrate').textContent = 'Sell Rate';
+  if (document.getElementById('hdr-label-buyrate')) document.getElementById('hdr-label-buyrate').textContent = 'Total';
+  if (document.getElementById('hdr-label-sellrate')) document.getElementById('hdr-label-sellrate').textContent = 'Total';
   if (document.getElementById('hdr-label-gp')) document.getElementById('hdr-label-gp').textContent = 'GP Profit';
   if (document.getElementById('hdr-label-status')) document.getElementById('hdr-label-status').textContent = 'All Statuses';
   if (document.getElementById('hdr-label-sort')) document.getElementById('hdr-label-sort').textContent = 'Sort By: Date (Newest)';
@@ -10098,8 +10166,8 @@ window.userHdrFilterState = {
   mode: 'all', search_mode: '',
   agentroute: 'all', search_agentroute: '',
   carrier: 'all', search_carrier: '',
-  buyrate: 'all', search_buyrate: '',
-  sellrate: 'all', search_sellrate: '',
+  buyrate: 'total',
+  sellrate: 'total',
   gp: 'all', search_gp: '',
   status: 'all', search_status: '',
   actions: 'date-desc', search_actions: '',
@@ -10149,7 +10217,12 @@ window.selectUserHdrFilter = (key, value, label) => {
 
   if (btnLabel) btnLabel.textContent = label;
   if (dropdownBtn) {
-    if (value !== 'all') {
+    const isNeutralDisplay =
+      value === 'all' ||
+      (key === 'buyrate' && value === 'total') ||
+      (key === 'sellrate' && value === 'total') ||
+      (key === 'gp' && value === 'all');
+    if (!isNeutralDisplay) {
       dropdownBtn.classList.add('active-filter');
     } else {
       dropdownBtn.classList.remove('active-filter');
@@ -10199,8 +10272,8 @@ window.resetAllUserHdrFilters = () => {
     mode: 'all', search_mode: '',
     agentroute: 'all', search_agentroute: '',
     carrier: 'all', search_carrier: '',
-    buyrate: 'all', search_buyrate: '',
-    sellrate: 'all', search_sellrate: '',
+    buyrate: 'total',
+    sellrate: 'total',
     gp: 'all', search_gp: '',
     status: 'all', search_status: '',
     actions: 'date-desc', search_actions: '',
@@ -10220,8 +10293,8 @@ window.resetAllUserHdrFilters = () => {
   if (document.getElementById('user-hdr-label-mode')) document.getElementById('user-hdr-label-mode').textContent = 'All Modes';
   if (document.getElementById('user-hdr-label-agentroute')) document.getElementById('user-hdr-label-agentroute').textContent = 'Agent';
   if (document.getElementById('user-hdr-label-carrier')) document.getElementById('user-hdr-label-carrier').textContent = 'All Carriers';
-  if (document.getElementById('user-hdr-label-buyrate')) document.getElementById('user-hdr-label-buyrate').textContent = 'Buy Rate';
-  if (document.getElementById('user-hdr-label-sellrate')) document.getElementById('user-hdr-label-sellrate').textContent = 'Sell Rate';
+  if (document.getElementById('user-hdr-label-buyrate')) document.getElementById('user-hdr-label-buyrate').textContent = 'Total';
+  if (document.getElementById('user-hdr-label-sellrate')) document.getElementById('user-hdr-label-sellrate').textContent = 'Total';
   if (document.getElementById('user-hdr-label-gp')) document.getElementById('user-hdr-label-gp').textContent = 'GP Profit';
   if (document.getElementById('user-hdr-label-status')) document.getElementById('user-hdr-label-status').textContent = 'All Statuses';
   if (document.getElementById('user-hdr-label-sort')) document.getElementById('user-hdr-label-sort').textContent = 'Sort By: Date (Newest)';
@@ -10323,10 +10396,6 @@ window.applyUserDbFiltersAndSort = () => {
     const destStr = (q.details?.destination || "").toLowerCase();
     const carrierStr = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "").toLowerCase();
     const statusStr = (q.status || "").toLowerCase();
-    const computedBuy = window.computeHistoricalBuyRate(q);
-    const buyRateStr = (computedBuy || "").toString().toLowerCase();
-    const sellRateStr = (q.amount || "").toString().toLowerCase();
-
     const gpStr = st.gp === 'percent' ?
       (q.grossProfit !== undefined && q.amount ? `${((q.grossProfit / q.amount) * 100).toFixed(2)}%` : '0.00%').toLowerCase() :
       (q.grossProfit || "").toString().toLowerCase();
@@ -10371,8 +10440,6 @@ window.applyUserDbFiltersAndSort = () => {
     if (st.search_mode && !typeStr.includes(st.search_mode)) return false;
     if (st.search_agentroute && !customerStr.includes(st.search_agentroute)) return false;
     if (st.search_carrier && !carrierStr.includes(st.search_carrier)) return false;
-    if (st.search_buyrate && !buyRateStr.includes(st.search_buyrate)) return false;
-    if (st.search_sellrate && !sellRateStr.includes(st.search_sellrate)) return false;
     if (st.search_gp && !gpStr.includes(st.search_gp)) return false;
     if (st.search_status && !statusStr.includes(st.search_status)) return false;
 
@@ -10472,9 +10539,9 @@ window.applyUserDbFiltersAndSort = () => {
         <div style="font-weight: 600;">${quote.customer}</div>
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${carrierName}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0) > 0 ? `${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0).toLocaleString()} kg` : '-'}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${computedBuy ? `${buyRateSym}${computedBuy.toLocaleString()}` : '-'}</span></td>
-      <td><div>${quoteAmount}</div></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${window.getQuoteBillingWeight(quote)}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--text-dim);">${window.formatQuoteBuyRateCell(quote, st.buyrate || 'total')}</span></td>
+      <td><div>${window.formatQuoteSellRateCell(quote, st.sellrate || 'total')}</div></td>
       <td>
         ${quote.grossProfit !== undefined ? `
           <div style="font-size:0.8rem; color:var(--accent-success); font-weight:700;" title="Gross Profit">
@@ -10644,9 +10711,6 @@ window.applyDbFiltersAndSort = () => {
     const destStr = (q.details?.destination || "").toLowerCase();
     const carrierStr = (q.details?.airline || q.details?.shippingLine || q.details?.carrier || "").toLowerCase();
     const statusStr = (q.status || "").toLowerCase();
-    const computedBuy = window.computeHistoricalBuyRate(q);
-    const buyRateStr = (computedBuy || "").toString().toLowerCase();
-    const sellRateStr = (q.amount || "").toString().toLowerCase();
     const gpStr = st.gp === 'percent' ?
       (q.grossProfit !== undefined && q.amount ? `${((q.grossProfit / q.amount) * 100).toFixed(2)}%` : '0.00%').toLowerCase() :
       (q.grossProfit || "").toString().toLowerCase();
@@ -10711,8 +10775,6 @@ window.applyDbFiltersAndSort = () => {
     if (st.search_agentroute && !customerStr.includes(st.search_agentroute)) return false;
     if (st.search_desk && !creatorName.includes(st.search_desk) && !creatorStr.includes(st.search_desk)) return false;
     if (st.search_carrier && !carrierStr.includes(st.search_carrier)) return false;
-    if (st.search_buyrate && !buyRateStr.includes(st.search_buyrate)) return false;
-    if (st.search_sellrate && !sellRateStr.includes(st.search_sellrate)) return false;
     if (st.search_gp && !gpStr.includes(st.search_gp)) return false;
     if (st.search_status && !statusStr.includes(st.search_status)) return false;
 
@@ -10812,11 +10874,11 @@ window.applyDbFiltersAndSort = () => {
       </td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t1);">${TEAM_ROLES[quote.creator]?.name || quote.creator}</span></td>
       <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${carrierName}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0) > 0 ? `${(quote.details?.chargeableWeight || quote.details?.grossWeight || 0).toLocaleString()} kg` : '-'}</span></td>
-      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${computedBuy ? `${buyRateSym}${computedBuy.toLocaleString()}` : '-'}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${window.getQuoteBillingWeight(quote)}</span></td>
+      <td><span style="font-size:0.8rem; font-weight:600; color:var(--t2);">${window.formatQuoteBuyRateCell(quote, st.buyrate || 'total')}</span></td>
       <td>
-        <div>${amountStr}</div>
-        ${quote.currency !== 'INR' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
+        <div>${window.formatQuoteSellRateCell(quote, st.sellrate || 'total')}</div>
+        ${quote.currency !== 'INR' && (st.sellrate || 'total') === 'total' ? `<div style="font-size:0.75rem; color:var(--text-dim);">${amountINRStr}</div>` : ''}
       </td>
       <td>
         ${quote.grossProfit !== undefined ? `
@@ -21153,7 +21215,7 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // touches no existing DOM, function, or state — it only injects its own
 // banner element if a mismatch is found.
 (function () {
-  const APP_VERSION = "129.27"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
+  const APP_VERSION = "129.28"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
 
   function showUpdateBanner(latestVersion) {

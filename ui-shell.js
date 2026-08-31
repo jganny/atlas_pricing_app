@@ -283,8 +283,9 @@
     set('eri-desk', (window.TEAM_ROLES && window.TEAM_ROLES[quote.creator] && window.TEAM_ROLES[quote.creator].name) || quote.creator || '—');
     set('eri-carrier', (quote.details && (quote.details.airline || quote.details.shippingLine || quote.details.carrier)) || '—');
     set('eri-route', quote.route || ((quote.details && quote.details.origin) ? quote.details.origin + ' → ' + (quote.details.destination || '') : '—'));
-    set('eri-tonnage', (quote.details && (quote.details.chargeableWeight || quote.details.grossWeight))
-      ? Number(quote.details.chargeableWeight || quote.details.grossWeight).toLocaleString() + ' kg' : '—');
+    set('eri-tonnage', (typeof window.getQuoteBillingWeight === 'function')
+      ? window.getQuoteBillingWeight(quote)
+      : '—');
     set('eri-sell', formatMoney(quote));
     set('eri-status', quote.status ? quote.status.charAt(0).toUpperCase() + quote.status.slice(1) : '—');
 
