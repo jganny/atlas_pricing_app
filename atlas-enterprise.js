@@ -340,16 +340,29 @@
   }
 
   /* ── Density toggle (Phase 5) ── */
+  function applyDensityMode(mode) {
+    var compact = mode === 'compact';
+    document.documentElement.classList.remove('atlas-density-compact-pending');
+    document.body.classList.toggle('atlas-density-compact', compact);
+    document.body.classList.toggle('atlas-density-comfortable', !compact);
+    var btn = $('header-density-btn');
+    if (btn) {
+      btn.textContent = compact ? 'Comfortable' : 'Compact';
+      btn.title = compact ? 'Switch to comfortable spacing' : 'Switch to compact spacing';
+      btn.setAttribute('aria-pressed', compact ? 'true' : 'false');
+    }
+  }
+
   function initDensityToggle() {
     var btn = $('header-density-btn');
     if (!btn) return;
+    btn.setAttribute('aria-pressed', 'false');
     var stored = localStorage.getItem('gl_ui_density');
-    if (stored === 'compact') document.body.classList.add('atlas-density-compact');
-    btn.textContent = stored === 'compact' ? 'Comfortable' : 'Compact';
+    applyDensityMode(stored === 'compact' ? 'compact' : 'comfortable');
     btn.addEventListener('click', function () {
-      var compact = document.body.classList.toggle('atlas-density-compact');
+      var compact = !document.body.classList.contains('atlas-density-compact');
       localStorage.setItem('gl_ui_density', compact ? 'compact' : 'comfortable');
-      btn.textContent = compact ? 'Comfortable' : 'Compact';
+      applyDensityMode(compact ? 'compact' : 'comfortable');
     });
   }
 

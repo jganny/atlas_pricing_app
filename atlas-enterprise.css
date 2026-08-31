@@ -196,15 +196,154 @@ body.atlas-enterprise-ui {
   font-size: 0.65rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
-body.atlas-density-compact .desk-form-card,
-body.atlas-density-compact .glass-card {
+.header-density-btn:hover {
+  border-color: var(--sky);
+  color: var(--sky);
+}
+
+.header-density-btn[aria-pressed="true"] {
+  background: var(--sky-g);
+  border-color: var(--sky);
+  color: var(--sky);
+  box-shadow: 0 0 0 2px rgba(90, 122, 154, 0.15);
+}
+
+/* Early density apply (inline head script) — prevents flash before JS boot */
+html.atlas-density-compact-pending {
+  --space-xs: 0.35rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1.15rem;
+  --space-xl: 1.75rem;
+  --space-2xl: 2.5rem;
+  --bento-gap: 0.75rem;
+  --bento-pad: 0.95rem;
+}
+
+/* ── Density modes — override spacing tokens app-wide ── */
+body.atlas-density-compact,
+html.atlas-density-compact-pending body {
+  --space-xs: 0.35rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1.15rem;
+  --space-xl: 1.75rem;
+  --space-2xl: 2.5rem;
+  --bento-gap: 0.75rem;
+  --bento-pad: 0.95rem;
+  line-height: 1.45;
+}
+
+body.atlas-density-compact main {
+  padding: var(--space-md) !important;
+}
+
+body.atlas-density-compact .glass-card,
+body.atlas-density-compact .bento-cell,
+body.atlas-density-compact .desk-form-card {
+  padding: var(--bento-pad) !important;
+}
+
+body.atlas-density-compact .form-group,
+body.atlas-density-compact .desk-tab-pane .form-group {
+  margin-bottom: var(--space-sm) !important;
+}
+
+body.atlas-density-compact .form-row,
+body.atlas-density-compact .form-grid-3,
+body.atlas-density-compact .desk-tab-pane .desk-entry-grid,
+body.atlas-density-compact .desk-tab-pane .form-grid-2,
+body.atlas-density-compact .desk-tab-pane .form-grid-3 {
+  gap: var(--space-sm) !important;
+}
+
+body.atlas-density-compact input,
+body.atlas-density-compact select,
+body.atlas-density-compact textarea {
+  padding: 0.45rem 0.65rem !important;
+  font-size: 0.78rem !important;
+}
+
+body.atlas-density-compact label {
+  font-size: 0.62rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+body.atlas-density-compact .stats-grid {
+  gap: var(--space-sm) !important;
+  margin-bottom: var(--space-md) !important;
+}
+
+body.atlas-density-compact .stat-card {
+  min-height: 88px !important;
+}
+
+body.atlas-density-compact .stat-value {
+  font-size: 1.55rem !important;
+}
+
+body.atlas-density-compact .stat-title {
+  font-size: 0.6rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+body.atlas-density-compact .quotes-table th {
+  padding: 0.4rem 0.45rem !important;
+  font-size: 0.58rem !important;
+}
+
+body.atlas-density-compact .quotes-table td {
+  padding: 0.5rem 0.65rem !important;
+  font-size: 0.74rem !important;
+}
+
+body.atlas-density-compact .home-hub-card {
   padding: 0.75rem 0.9rem !important;
 }
 
-body.atlas-density-compact .form-group {
-  margin-bottom: 0.65rem !important;
+body.atlas-density-compact .home-hub-grid {
+  gap: var(--space-sm) !important;
+}
+
+body.atlas-density-compact .desk-tab-btn {
+  padding: 0.45rem 0.75rem !important;
+  font-size: 0.72rem !important;
+}
+
+body.atlas-density-compact .sidebar-item {
+  padding: 0.45rem var(--space-sm) !important;
+  font-size: 0.78rem !important;
+}
+
+body.atlas-density-compact .subheader-bar {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+body.atlas-density-compact .module-tab {
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.72rem !important;
+}
+
+body.atlas-density-compact .workspace {
+  gap: var(--bento-gap) !important;
+}
+
+body.atlas-density-compact .enterprise-module-header {
+  padding: var(--space-sm) 0 var(--space-xs) !important;
+  margin-bottom: var(--space-sm) !important;
+}
+
+body.atlas-density-compact .table-header-row {
+  margin-bottom: var(--space-sm) !important;
+}
+
+body.atlas-density-compact .quote-routes-section {
+  margin: var(--space-sm) 0 !important;
+  padding: var(--space-sm) !important;
 }
 
 /* Admin-only sync badge restored (Phase 5) */
