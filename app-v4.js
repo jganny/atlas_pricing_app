@@ -21447,17 +21447,29 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 // ==========================================
 // UPDATE-AVAILABLE NOTIFICATION
 // ==========================================
-// There is no active service worker in this app (one gets unregistered on
-// every load — see the cleanup script at the top of index.html — and
-// nothing ever re-registers one), so this can't use the usual
-// "controllerchange" pattern. Instead it polls a small version.txt file
-// (already deployed alongside the app, previously unused) and compares it
-// to the version this tab already has loaded. Entirely self-contained:
-// touches no existing DOM, function, or state — it only injects its own
-// banner element if a mismatch is found.
+// Polls version.txt and compares to the version declared in index.html
+// (<meta name="app-version">). No hardcoded constant in this file — that
+// prevented false "update available" banners when version.txt was bumped
+// but app-v4.js was not redeployed in sync.
 (function () {
-  const APP_VERSION = "129.30"; // keep in sync with the ?v= used on app-v4.js/index.css at each deploy, and with version.txt
   let updateReminderTimer = null;
+
+  function getLoadedAppVersion() {
+    const meta = document.querySelector('meta[name="app-version"]');
+    if (meta && meta.content) return meta.content.trim();
+    const script = document.querySelector('script[src*="app-v4.js"]');
+    const match = script && script.src && script.src.match(/[?&]v=([^&]+)/);
+    return match ? decodeURIComponent(match[1]).trim() : "";
+  }
+
+  function hideUpdateBanner() {
+    const banner = document.getElementById("app-update-banner");
+    if (banner) banner.remove();
+    if (updateReminderTimer) {
+      clearInterval(updateReminderTimer);
+      updateReminderTimer = null;
+    }
+  }
 
   function showUpdateBanner(latestVersion) {
     let banner = document.getElementById("app-update-banner");
@@ -21477,7 +21489,9 @@ window.updateLinerRateSummary = updateLinerRateSummary;
         document.head.appendChild(style);
       }
       document.getElementById("app-update-refresh-btn").addEventListener("click", () => {
-        window.location.reload();
+        const url = new URL(window.location.href);
+        url.searchParams.set("_v", Date.now().toString());
+        window.location.replace(url.toString());
       });
       if (!updateReminderTimer) {
         updateReminderTimer = setInterval(() => {
@@ -21498,11 +21512,14 @@ window.updateLinerRateSummary = updateLinerRateSummary;
 
   async function checkForAppUpdate() {
     try {
+      const loaded = getLoadedAppVersion();
       const res = await fetch("version.txt?_=" + Date.now(), { cache: "no-store" });
       if (!res.ok) return;
       const latest = (await res.text()).trim();
-      if (latest && latest !== APP_VERSION) {
+      if (latest && loaded && latest !== loaded) {
         showUpdateBanner(latest);
+      } else {
+        hideUpdateBanner();
       }
     } catch (e) {
       // Silent — a failed check just means we try again on the next interval.
