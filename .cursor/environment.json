@@ -1,4 +1,7 @@
 {
   "name": "Atlas Pricing (Vertex)",
-  "install": "npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts"
+  "install": "npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts",
+  "repositoryDependencies": [
+    "https://github.com/jganny/atlas_pricing_app"
+  ]
 }
