@@ -1,16 +1,18 @@
 /**
- * Atlas Smart Quote — single orchestrator for minimal-touch air quoting.
- * Paste enquiry → auto POL/POD/cargo/carrier → tariff apply → draft ready.
+ * Atlas Smart Quote — orchestrator: ingest enquiry → fill desk → Circulars tariffs.
  */
 (function () {
   'use strict';
 
-  var AIRLINE_HINTS = {
-    EK: 'EK - Emirates', QR: 'QR - Qatar Airways', GF: 'GF - Gulf Air',
-    AI: 'AI - Air India', '6E': '6E - IndiGo', BA: 'BA - British Airways',
-    LH: 'LH - Lufthansa', SQ: 'SQ - Singapore Airlines', CX: 'CX - Cathay Pacific',
-    TK: 'TK - Turkish Airlines', EY: 'EY - Etihad Airways', KL: 'KL - KLM',
-    AF: 'AF - Air France', UA: 'UA - United Airlines', FX: 'FX - FedEx (air)'
+  var SOURCE_LABELS = {
+    'email-text': 'Email text',
+    'email-file': 'Email file',
+    'excel-cargo': 'Excel cargo sheet',
+    'excel-text-fallback': 'Excel (text scan)',
+    'pdf-cargo': 'PDF cargo details',
+    'word-cargo': 'Word document',
+    'word-legacy': 'Word (.doc)',
+    'desk-manual': 'Desk fields'
   };
 
   function $(id) { return document.getElementById(id); }
@@ -19,71 +21,8 @@
     var el = $('atlas-smart-quote-status');
     if (!el) return;
     el.className = 'atlas-smart-quote-status atlas-sq-' + (level || 'info');
-    el.textContent = msg;
+    el.innerHTML = msg;
     el.style.display = msg ? 'block' : 'none';
-  }
-
-  function parseEnquiryText(text) {
-    var t = (text || '').replace(/\r/g, '');
-    var result = { customer: '', origin: '', destination: '', airline: '', airlineLabel: '', packages: [], pivotWeight: 0, raw: t };
-
-    var custMatch = t.match(/(?:customer|client|shipper|consignee|for)[:\s]+([^\n,;]+)/i);
-    if (custMatch) result.customer = custMatch[1].trim();
-    else {
-      var firstLine = t.split('\n').map(function (l) { return l.trim(); }).find(function (l) {
-        return l.length > 3 && !/^(hi|dear|hello|thanks|regards)/i.test(l);
-      });
-      if (firstLine && /(ltd|pvt|inc|llc|corp|trading|logistics)/i.test(firstLine)) result.customer = firstLine;
-    }
-
-    var routePatterns = [
-      /([A-Z]{3})\s*(?:to|→|->|-|–)\s*([A-Z]{3})/i,
-      /(?:pol|origin|from)[:\s]+([A-Z]{3}).*?(?:pod|dest|destination|to)[:\s]+([A-Z]{3})/is,
-      /\b([A-Z]{3})\b[^A-Z]{0,40}\b([A-Z]{3})\b/
-    ];
-    for (var i = 0; i < routePatterns.length; i++) {
-      var m = t.match(routePatterns[i]);
-      if (m) { result.origin = m[1].toUpperCase(); result.destination = m[2].toUpperCase(); break; }
-    }
-
-    var gwMatch = t.match(/(?:gross|actual|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/i) ||
-      t.match(/(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilos?)\s*(?:gross|actual)?/i);
-    var gw = gwMatch ? parseFloat(gwMatch[1]) : 0;
-
-    var dimMatch = t.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
-    var qtyMatch = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|packages|cartons)/i);
-    var qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
-
-    if (dimMatch || gw) {
-      result.packages.push({
-        qty: qty,
-        gw: gw || 0,
-        l: dimMatch ? parseFloat(dimMatch[1]) : 0,
-        w: dimMatch ? parseFloat(dimMatch[2]) : 0,
-        h: dimMatch ? parseFloat(dimMatch[3]) : 0
-      });
-    }
-
-    var pivotM = t.match(/pivot[:\s]*(\d+(?:\.\d+)?)/i);
-    if (pivotM) result.pivotWeight = parseFloat(pivotM[1]);
-
-    var codeM = t.match(/\b([A-Z0-9]{2})\s*[-–]\s*([A-Za-z][A-Za-z\s]{2,30})/);
-    if (codeM) {
-      result.airline = codeM[1].toUpperCase();
-      result.airlineLabel = codeM[1].toUpperCase() + ' - ' + codeM[2].trim();
-    } else {
-      Object.keys(AIRLINE_HINTS).forEach(function (code) {
-        if (result.airline) return;
-        var re = new RegExp('\\b' + code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b|'
-          + AIRLINE_HINTS[code].split(' - ')[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-        if (re.test(t)) {
-          result.airline = code;
-          result.airlineLabel = AIRLINE_HINTS[code];
-        }
-      });
-    }
-
-    return result;
   }
 
   function setAirportField(id, code) {
@@ -94,20 +33,23 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function fillCargoRow(pkg) {
+  function fillCargoRows(packages) {
     var tbody = $('air-cargo-body');
-    if (!tbody) return;
-    if (!tbody.querySelector('.cargo-item-row')) {
-      var addBtn = $('air-add-cargo');
+    var addBtn = $('air-add-cargo');
+    if (!tbody || !packages || !packages.length) return;
+
+    tbody.innerHTML = '';
+    packages.forEach(function (pkg, idx) {
       if (addBtn) addBtn.click();
-    }
-    var row = tbody.querySelector('.cargo-item-row');
-    if (!row) return;
-    if (pkg.l) row.querySelector('.cargo-len').value = pkg.l;
-    if (pkg.w) row.querySelector('.cargo-wid').value = pkg.w;
-    if (pkg.h) row.querySelector('.cargo-hei').value = pkg.h;
-    if (pkg.qty) row.querySelector('.cargo-qty').value = pkg.qty;
-    if (pkg.gw) row.querySelector('.cargo-gw').value = pkg.gw;
+      var rows = tbody.querySelectorAll('.cargo-item-row');
+      var row = rows[rows.length - 1];
+      if (!row) return;
+      if (pkg.l) row.querySelector('.cargo-len').value = pkg.l;
+      if (pkg.w) row.querySelector('.cargo-wid').value = pkg.w;
+      if (pkg.h) row.querySelector('.cargo-hei').value = pkg.h;
+      if (pkg.qty) row.querySelector('.cargo-qty').value = pkg.qty;
+      if (pkg.gw) row.querySelector('.cargo-gw').value = pkg.gw;
+    });
   }
 
   function suggestCarrier(origin, dest) {
@@ -120,51 +62,9 @@
     return null;
   }
 
-  async function runAtlasSmartQuote() {
-    setStatus('Analysing enquiry…', 'info');
-    var text = ($('atlas-enquiry-paste') && $('atlas-enquiry-paste').value) || '';
-
-    if (!text.trim()) {
-      setStatus('Paste the customer enquiry above — tariffs are loaded from Circulars (no re-upload needed).', 'warn');
-      return;
-    }
-
-    var parsed = parseEnquiryText(text);
-    await applySmartQuoteParsed(parsed);
-  }
-
-  /** Manual desk path: user typed POL/POD/carrier — still auto CWT, history, circulars tariff. */
-  async function runAtlasSmartQuoteFromForm() {
-    setStatus('Applying automation from desk fields…', 'info');
-    var origin = ($('air-origin') && $('air-origin').value) || '';
-    var dest = ($('air-dest') && $('air-dest').value) || '';
-    var oCode = (origin.match(/\b([A-Z]{3})\b/) || [])[1] || origin.trim().toUpperCase().slice(0, 3);
-    var dCode = (dest.match(/\b([A-Z]{3})\b/) || [])[1] || dest.trim().toUpperCase().slice(0, 3);
-    if (!oCode || !dCode || oCode.length !== 3 || dCode.length !== 3) {
-      setStatus('Enter valid POL and POD on the desk first, then click Apply automation.', 'warn');
-      return;
-    }
-    var parsed = {
-      customer: ($('air-cust-name') && $('air-cust-name').value) || '',
-      origin: oCode,
-      destination: dCode,
-      airline: '',
-      airlineLabel: '',
-      packages: [],
-      pivotWeight: 0
-    };
-    var card = document.querySelector('#air-airlines-list-container .airline-card .air-name');
-    if (card && card.value) {
-      var m = card.value.match(/^([A-Z0-9]{2,3})/);
-      parsed.airline = m ? m[1] : '';
-      parsed.airlineLabel = card.value;
-    }
-    await applySmartQuoteParsed(parsed, true);
-  }
-
   async function applySmartQuoteParsed(parsed, fromForm) {
     if (!parsed.origin || !parsed.destination) {
-      setStatus('Could not detect POL/POD. Include airport codes (e.g. BLR, LHR) in the enquiry or type them on the desk.', 'warn');
+      setStatus('Could not detect POL/POD. Include airport codes (BLR, LHR…) in the paste or file, or type them on the desk.', 'warn');
       return;
     }
 
@@ -174,14 +74,18 @@
     if (!fromForm) {
       setAirportField('air-origin', parsed.origin);
       setAirportField('air-dest', parsed.destination);
-      if (parsed.packages.length) fillCargoRow(parsed.packages[0]);
+      if (parsed.packages && parsed.packages.length) fillCargoRows(parsed.packages);
     }
 
-    var carrier = parsed.airline ? { code: parsed.airline, label: parsed.airlineLabel, source: 'enquiry' } : suggestCarrier(parsed.origin, parsed.destination);
+    var carrier = parsed.airline
+      ? { code: parsed.airline, label: parsed.airlineLabel, source: 'enquiry' }
+      : suggestCarrier(parsed.origin, parsed.destination);
     if (!carrier && parsed.airlineLabel) carrier = { label: parsed.airlineLabel, source: 'enquiry' };
 
     if (window.AtlasTariffEngine) await window.AtlasTariffEngine.loadTariffs();
-    var tariff = window.AtlasTariffEngine ? window.AtlasTariffEngine.lookupTariff(parsed.origin, parsed.destination, carrier && carrier.code) : null;
+    var tariff = window.AtlasTariffEngine
+      ? window.AtlasTariffEngine.lookupTariff(parsed.origin, parsed.destination, carrier && carrier.code)
+      : null;
 
     if (!fromForm) {
       var container = $('air-airlines-list-container');
@@ -205,11 +109,71 @@
     var nextStep = tariff ? 'terms' : 'carrier';
     if (typeof window.advanceDeskStep === 'function') window.advanceDeskStep('air-freight-panel', nextStep);
 
-    var parts = ['✓ Draft ready', parsed.origin + ' → ' + parsed.destination];
+    var srcLabel = SOURCE_LABELS[parsed.source] || parsed.source || 'Enquiry';
+    var parts = [
+      '<strong>✓ Draft ready</strong>',
+      parsed.origin + ' → ' + parsed.destination,
+      'via <em>' + srcLabel + '</em>',
+      (parsed.confidence || 0) + '% match'
+    ];
+    if (parsed.packages && parsed.packages.length > 1) parts.push(parsed.packages.length + ' cargo lines');
     if (carrier) parts.push(carrier.label + ' (' + carrier.source + ')');
-    if (tariff) parts.push('tariff from Circulars library');
-    else parts.push('no Circulars tariff — enter rates manually on Carriers tab; CWT & totals still auto-calculate');
+    if (tariff) parts.push('rates from <strong>Circulars</strong>');
+    else parts.push('no Circulars tariff — enter rates on Carriers tab (CWT still auto)');
     setStatus(parts.join(' · '), tariff ? 'ok' : 'warn');
+  }
+
+  async function runAtlasSmartQuote() {
+    setStatus('Extracting enquiry data…', 'info');
+    var text = ($('atlas-enquiry-paste') && $('atlas-enquiry-paste').value) || '';
+    var fileInput = $('atlas-enquiry-upload');
+    var file = fileInput && fileInput.files && fileInput.files[0];
+
+    if (!text.trim() && !file) {
+      setStatus('Paste the email body <strong>or</strong> upload cargo file (PDF, Excel, Word). Tariffs come from Circulars.', 'warn');
+      return;
+    }
+
+    if (!window.AtlasEnquiryIngest) {
+      setStatus('Enquiry engine not loaded — refresh the page.', 'warn');
+      return;
+    }
+
+    try {
+      var parsed = await window.AtlasEnquiryIngest.ingest({ text: text, file: file });
+      if (parsed.source === 'word-legacy' && parsed.raw) {
+        setStatus(parsed.raw, 'warn');
+        return;
+      }
+      await applySmartQuoteParsed(parsed);
+    } catch (err) {
+      setStatus('Extraction failed: ' + (err.message || err) + ' — try pasting email text.', 'warn');
+    }
+  }
+
+  async function runAtlasSmartQuoteFromForm() {
+    setStatus('Applying automation from desk fields…', 'info');
+    var origin = ($('air-origin') && $('air-origin').value) || '';
+    var dest = ($('air-dest') && $('air-dest').value) || '';
+    var oCode = (origin.match(/\b([A-Z]{3})\b/) || [])[1] || origin.trim().toUpperCase().slice(0, 3);
+    var dCode = (dest.match(/\b([A-Z]{3})\b/) || [])[1] || dest.trim().toUpperCase().slice(0, 3);
+    if (!oCode || !dCode || oCode.length !== 3 || dCode.length !== 3) {
+      setStatus('Enter valid POL and POD first.', 'warn');
+      return;
+    }
+    var parsed = {
+      customer: ($('air-cust-name') && $('air-cust-name').value) || '',
+      origin: oCode, destination: dCode,
+      airline: '', airlineLabel: '', packages: [], pivotWeight: 0,
+      source: 'desk-manual', confidence: 60
+    };
+    var card = document.querySelector('#air-airlines-list-container .airline-card .air-name');
+    if (card && card.value) {
+      var m = card.value.match(/^([A-Z0-9]{2,3})/);
+      parsed.airline = m ? m[1] : '';
+      parsed.airlineLabel = card.value;
+    }
+    await applySmartQuoteParsed(parsed, true);
   }
 
   async function applyTariffFromCirculars() {
@@ -217,16 +181,36 @@
   }
 
   function initSmartQuoteShell() {
-    var terms = $('atlas-enquiry-paste');
-    if (terms && !terms.dataset.bound) {
-      terms.dataset.bound = '1';
-      terms.addEventListener('keydown', function (e) {
+    var ta = $('atlas-enquiry-paste');
+    if (ta && !ta.dataset.bound) {
+      ta.dataset.bound = '1';
+      ta.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runAtlasSmartQuote();
+      });
+    }
+    var drop = $('atlas-enquiry-dropzone');
+    var fileIn = $('atlas-enquiry-upload');
+    if (drop && fileIn && !drop.dataset.bound) {
+      drop.dataset.bound = '1';
+      drop.addEventListener('click', function () { fileIn.click(); });
+      drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('is-drag'); });
+      drop.addEventListener('dragleave', function () { drop.classList.remove('is-drag'); });
+      drop.addEventListener('drop', function (e) {
+        e.preventDefault();
+        drop.classList.remove('is-drag');
+        if (e.dataTransfer.files.length) {
+          fileIn.files = e.dataTransfer.files;
+          var nameEl = $('atlas-enquiry-filename');
+          if (nameEl) nameEl.textContent = e.dataTransfer.files[0].name;
+        }
+      });
+      fileIn.addEventListener('change', function () {
+        var nameEl = $('atlas-enquiry-filename');
+        if (nameEl && fileIn.files[0]) nameEl.textContent = fileIn.files[0].name;
       });
     }
   }
 
-  window.parseEnquiryText = parseEnquiryText;
   window.runAtlasSmartQuote = runAtlasSmartQuote;
   window.runAtlasSmartQuoteFromForm = runAtlasSmartQuoteFromForm;
   window.applyTariffFromCirculars = applyTariffFromCirculars;

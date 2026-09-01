@@ -6,14 +6,14 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.43">
+  <meta name="app-version" content="129.45">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.43">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.43">
+  <link rel="stylesheet" href="index.css?v=129.45">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.45">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -22,6 +22,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-functions-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1782,12 +1783,19 @@
             <div class="atlas-smart-quote-shell" id="atlas-smart-quote-shell">
               <div class="atlas-sq-header">
                 <span class="atlas-sq-eyebrow">⚡ Atlas Smart Quote</span>
-                <span class="atlas-sq-sub">Paste enquiry → auto-fill · Tariffs load from <strong>Circulars</strong> (upload rate sheets there once) · No tariff? Enter rates manually — CWT &amp; totals still automate</span>
+                <span class="atlas-sq-sub">Paste email text <strong>or</strong> upload cargo file (PDF · Excel · Word) · Rates from <strong>Circulars</strong> · Review &amp; send</span>
               </div>
-              <textarea id="atlas-enquiry-paste" class="atlas-sq-textarea" rows="4" placeholder="Paste customer enquiry email or WhatsApp here… e.g.&#10;Need quote BLR to LHR, 120 kg, dims 120x80x60 cm, 2 pcs, EK preferred, Zenith Electronics Pvt Ltd"></textarea>
+              <textarea id="atlas-enquiry-paste" class="atlas-sq-textarea" rows="4" placeholder="Paste full customer email / WhatsApp enquiry here (any format)…"></textarea>
+              <div id="atlas-enquiry-dropzone" class="atlas-sq-dropzone" role="button" tabindex="0" aria-label="Upload cargo file">
+                <input type="file" id="atlas-enquiry-upload" accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.eml" hidden />
+                <span class="atlas-sq-drop-icon">📎</span>
+                <span class="atlas-sq-drop-label">Drop cargo attachment or click to upload</span>
+                <span class="atlas-sq-drop-hint">PDF · Excel · Word (.docx) · .eml</span>
+                <span id="atlas-enquiry-filename" class="atlas-sq-filename"></span>
+              </div>
               <div class="atlas-sq-actions">
-                <button type="button" class="btn-primary atlas-sq-run-btn" onclick="runAtlasSmartQuote()">Generate Smart Quote</button>
-                <button type="button" class="btn-secondary atlas-sq-run-btn" onclick="runAtlasSmartQuoteFromForm()" title="Use when you typed POL/POD manually">Apply automation from desk</button>
+                <button type="button" class="btn-primary atlas-sq-run-btn" onclick="runAtlasSmartQuote()">Run automation</button>
+                <button type="button" class="btn-secondary atlas-sq-run-btn" onclick="runAtlasSmartQuoteFromForm()">Apply from desk fields</button>
               </div>
               <div id="atlas-smart-quote-status" class="atlas-smart-quote-status" style="display:none"></div>
             </div>
@@ -2079,6 +2087,7 @@
                   </svg>
                   Add Airline
                 </button>
+                <button type="button" class="btn-secondary" onclick="applyTariffFromCirculars()" style="margin-top:0.5rem;margin-left:0.5rem;font-size:0.72rem;">Apply tariff from Circulars library</button>
               </div>
             </div>
 
@@ -4981,17 +4990,18 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.43"></script>
-  <script src="ui-shell.js?v=129.43"></script>
-  <script src="atlas-platform.js?v=129.43"></script>
-  <script src="atlas-enterprise.js?v=129.43"></script>
-  <script src="atlas-tariff-engine.js?v=129.43"></script>
-  <script src="atlas-smart-quote.js?v=129.43"></script>
-  <script src="courier-desk.js?v=129.43"></script>
-  <script src="atlas-sla.js?v=129.43"></script>
-  <script src="ai-assistant.js?v=129.43"></script>
-  <script src="ai-sell-band.js?v=129.43"></script>
-  <script src="sales-v129.js?v=129.43"></script>
+  <script src="app-v4.js?v=129.45"></script>
+  <script src="ui-shell.js?v=129.45"></script>
+  <script src="atlas-platform.js?v=129.45"></script>
+  <script src="atlas-enterprise.js?v=129.45"></script>
+  <script src="atlas-tariff-engine.js?v=129.45"></script>
+  <script src="atlas-enquiry-ingest.js?v=129.45"></script>
+  <script src="atlas-smart-quote.js?v=129.45"></script>
+  <script src="courier-desk.js?v=129.45"></script>
+  <script src="atlas-sla.js?v=129.45"></script>
+  <script src="ai-assistant.js?v=129.45"></script>
+  <script src="ai-sell-band.js?v=129.45"></script>
+  <script src="sales-v129.js?v=129.45"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {

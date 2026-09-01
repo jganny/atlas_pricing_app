@@ -9952,3 +9952,23 @@ body:has(#courier-panel.active) .grid-overlay { display: none; }
 .atlas-sq-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
 .atlas-sq-warn { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
 .atlas-sq-info { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+
+.atlas-sq-dropzone {
+  margin-top: 0.65rem;
+  padding: 0.85rem 1rem;
+  border: 1px dashed rgba(14, 165, 233, 0.45);
+  border-radius: 10px;
+  background: #fff;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.atlas-sq-dropzone:hover,
+.atlas-sq-dropzone.is-drag {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.04);
+}
+.atlas-sq-drop-icon { font-size: 1.1rem; display: block; margin-bottom: 0.25rem; }
+.atlas-sq-drop-label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--t1); }
+.atlas-sq-drop-hint { display: block; font-size: 0.65rem; color: var(--t3); margin-top: 0.15rem; }
+.atlas-sq-filename { display: block; font-size: 0.68rem; font-weight: 700; color: #0369a1; margin-top: 0.35rem; }
