@@ -1605,7 +1605,8 @@ function openActiveCalculator(type) {
       if (airPanel) airPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--accent-air)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-air-glow)');
-      // Preserve in-progress quotes when switching modules; reset only via Reset or after Save.
+      try { calculateAirFreight(); } catch (e) { console.error("calculateAirFreight error:", e); }
+      try { if (typeof initAtlasSmartQuote === 'function') initAtlasSmartQuote(); } catch (e) { /* */ }
     } else if (type === 'sea') {
       if (seaPanel) seaPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--accent-sea)');
@@ -20044,7 +20045,24 @@ async function handleCircularFileClassify(event) {
     return;
   }
 
-  if (hintEl) hintEl.textContent = 'Scanning document to suggest a category...';
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (hintEl) {
+    if (ext === 'xlsx' || ext === 'xls') {
+      hintEl.textContent = 'Excel detected — rows will auto-publish as tariffs when saved.';
+    } else if (ext === 'pdf') {
+      hintEl.textContent = 'Scanning PDF to suggest category...';
+    } else if (ext === 'doc' || ext === 'docx') {
+      hintEl.textContent = 'Word document — stored for reference; use Excel for auto-tariff publish.';
+    } else {
+      hintEl.textContent = 'File attached.';
+    }
+  }
+
+  if (ext !== 'pdf') {
+    const categorySelect = document.getElementById("circular-form-category");
+    if (categorySelect && (ext === 'xlsx' || ext === 'xls')) categorySelect.value = 'airline_tariff';
+    return;
+  }
 
   const text = await extractPdfText(file);
   const guess = classifyCircularText(text);
@@ -20275,11 +20293,19 @@ async function saveCircular(event) {
   const existingUrl = document.getElementById("circular-form-existing-url").value;
 
   if (!id && !file) {
-    alert("Please select a PDF file to upload.");
+    alert("Please select a file to upload (PDF, Excel, or Word).");
     return;
   }
-  if (file && file.type !== "application/pdf") {
-    alert("Only PDF files are supported.");
+  const allowedTypes = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ];
+  const allowedExt = /\.(pdf|xlsx|xls|doc|docx)$/i;
+  if (file && !allowedTypes.includes(file.type) && !allowedExt.test(file.name)) {
+    alert("Supported formats: PDF, Excel (.xlsx/.xls), Word (.doc/.docx).");
     return;
   }
   const maxSizeMB = 25;
@@ -20329,13 +20355,34 @@ async function saveCircular(event) {
       updatedBy: appState.currentUser || "Pricing Team"
     };
     if (fileName) docData.fileName = fileName;
+    if (file) {
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      docData.fileFormat = ext;
+    }
 
+    let circularId = id;
     if (id) {
       await db.collection("circularsLibrary").doc(id).update(docData);
     } else {
       docData.fileName = fileName;
       docData.createdAt = new Date();
-      await db.collection("circularsLibrary").add(docData);
+      const ref = await db.collection("circularsLibrary").add(docData);
+      circularId = ref.id;
+    }
+
+    if (file && window.AtlasTariffEngine && /\.(xlsx|xls|csv)$/i.test(file.name)) {
+      try {
+        const imp = await window.AtlasTariffEngine.importTariffFile(file, {
+          sourceCircularId: circularId,
+          validFrom: effectiveDate,
+          validTo: expiryDate
+        });
+        if (imp.count > 0) {
+          console.log("Atlas tariff auto-publish:", imp.message);
+        }
+      } catch (tarErr) {
+        console.warn("Tariff auto-import:", tarErr);
+      }
     }
 
     closeCircularModal();

@@ -22,7 +22,7 @@
 
   var CONTEXT_TIPS = {
     dashboard: 'Tip: Press ⌘K (Ctrl+K) to jump anywhere. Admin tabs — Overview, Enquiry Database, Analytics — are along the top of the dashboard.',
-    air: 'Air desk: fill Shipment Details, then Carrier & Tariffs. Totals update in the sticky bar. Save Quote when finished.',
+    air: 'Air desk: paste enquiry in Atlas Smart Quote → Generate Smart Quote for auto POL/POD/cargo/carrier/tariff. Review totals, then Save Quote.',
     sea: 'Sea desk: enter cargo and containers, then configure liner tariffs. Save Quote preserves your work for the team.',
     transport: 'Transport desk: enter legs and charges, then Save Quote. Currency syncs from the header dropdown.',
     warehouse: 'Warehouse desk: enter storage parameters and charges, then Save Quote.',

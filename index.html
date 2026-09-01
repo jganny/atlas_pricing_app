@@ -6,14 +6,14 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.42">
+  <meta name="app-version" content="129.43">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.42">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.42">
+  <link rel="stylesheet" href="index.css?v=129.43">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.43">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -1777,6 +1777,23 @@
 
             <div class="desk-tab-pane" data-tab-pane="details">
             <p class="desk-flow-hint">Start with the shipment basics — customer, route, and cargo. Use <strong>Continue</strong> when ready to add carriers.</p>
+
+            <!-- Atlas Smart Quote — one-click automation -->
+            <div class="atlas-smart-quote-shell" id="atlas-smart-quote-shell">
+              <div class="atlas-sq-header">
+                <span class="atlas-sq-eyebrow">⚡ Atlas Smart Quote</span>
+                <span class="atlas-sq-sub">Paste enquiry · auto POL/POD/cargo/carrier/tariff · review &amp; send</span>
+              </div>
+              <textarea id="atlas-enquiry-paste" class="atlas-sq-textarea" rows="4" placeholder="Paste customer enquiry email or WhatsApp here… e.g.&#10;Need quote BLR to LHR, 120 kg, dims 120x80x60 cm, 2 pcs, EK preferred, Zenith Electronics Pvt Ltd"></textarea>
+              <div class="atlas-sq-actions">
+                <label class="atlas-sq-file-btn">
+                  <input type="file" id="atlas-enquiry-file" accept=".txt,.eml,.xlsx,.xls,.csv,.pdf,.doc,.docx" hidden />
+                  Attach rate sheet / enquiry
+                </label>
+                <button type="button" class="btn-primary atlas-sq-run-btn" onclick="runAtlasSmartQuote()">Generate Smart Quote</button>
+              </div>
+              <div id="atlas-smart-quote-status" class="atlas-smart-quote-status" style="display:none"></div>
+            </div>
 
             <!-- Export/Import Toggle Tabs -->
             <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
@@ -4182,8 +4199,9 @@
           <textarea id="circular-form-notes" placeholder="Effective date, validity, special notes..." style="width:100%; height: 60px; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-family: inherit; font-size: 0.85rem; resize: none;"></textarea>
         </div>
         <div class="form-group" style="margin-bottom: 1rem;">
-          <label for="circular-form-file" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">PDF File <span id="circular-form-file-hint" style="font-weight: 400; color: var(--t3);"></span></label>
-          <input type="file" id="circular-form-file" accept="application/pdf" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-size: 0.8rem;" onchange="handleCircularFileClassify(event)">
+          <label for="circular-form-file" style="font-weight: 700; font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">Rate sheet / Circular <span id="circular-form-file-hint" style="font-weight: 400; color: var(--t3);"></span></label>
+          <input type="file" id="circular-form-file" accept=".pdf,.xlsx,.xls,.doc,.docx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1.5px solid var(--border-2); background: var(--bg-input); color: var(--t1); font-size: 0.8rem;" onchange="handleCircularFileClassify(event)">
+          <p style="font-size:0.68rem;color:var(--t3);margin:0.35rem 0 0;">PDF, Excel (.xlsx), or Word (.doc) — Excel tariffs auto-publish to Smart Quote when imported.</p>
           <div id="circular-form-classify-hint" style="font-size: 0.72rem; color: var(--sky); margin-top: 0.35rem; min-height: 1em;"></div>
         </div>
         <button type="submit" class="btn-primary" id="circular-form-submit-btn" style="width: 100%; border-radius: 8px; background: var(--accent-success); color: #ffffff; font-weight: 700;">
@@ -4966,15 +4984,17 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.42"></script>
-  <script src="ui-shell.js?v=129.42"></script>
-  <script src="atlas-platform.js?v=129.42"></script>
-  <script src="atlas-enterprise.js?v=129.42"></script>
-  <script src="courier-desk.js?v=129.42"></script>
-  <script src="atlas-sla.js?v=129.42"></script>
-  <script src="ai-assistant.js?v=129.42"></script>
-  <script src="ai-sell-band.js?v=129.42"></script>
-  <script src="sales-v129.js?v=129.42"></script>
+  <script src="app-v4.js?v=129.43"></script>
+  <script src="ui-shell.js?v=129.43"></script>
+  <script src="atlas-platform.js?v=129.43"></script>
+  <script src="atlas-enterprise.js?v=129.43"></script>
+  <script src="atlas-tariff-engine.js?v=129.43"></script>
+  <script src="atlas-smart-quote.js?v=129.43"></script>
+  <script src="courier-desk.js?v=129.43"></script>
+  <script src="atlas-sla.js?v=129.43"></script>
+  <script src="ai-assistant.js?v=129.43"></script>
+  <script src="ai-sell-band.js?v=129.43"></script>
+  <script src="sales-v129.js?v=129.43"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
