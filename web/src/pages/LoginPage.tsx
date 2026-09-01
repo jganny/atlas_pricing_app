@@ -1,0 +1,68 @@
+import type { FormEvent } from 'react'
+import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { Button, Card } from '../components/ui'
+import { useAuthStore } from '../store/auth'
+
+export function LoginPage() {
+  const user = useAuthStore((s) => s.user)
+  const login = useAuthStore((s) => s.login)
+  const loading = useAuthStore((s) => s.loading)
+  const error = useAuthStore((s) => s.error)
+  const [username, setUsername] = useState('ganny')
+  const [password, setPassword] = useState('demo')
+
+  if (user) return <Navigate to="/" replace />
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    try {
+      await login(username, password)
+    } catch {
+      /* store holds error */
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-white to-sky-50 p-4">
+      <Card className="w-full max-w-md">
+        <div className="mb-6 text-center">
+          <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-atlas-sky)]">
+            Atlas Pricing
+          </div>
+          <h1 className="mt-2 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
+            React preview login
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+            Mock environment — use <strong>ganny</strong> / <strong>demo</strong>
+          </p>
+        </div>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <label className="block text-sm font-semibold">
+            Username
+            <input
+              className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-3 py-2"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+            />
+          </label>
+          <label className="block text-sm font-semibold">
+            Password
+            <input
+              type="password"
+              className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-3 py-2"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
+          {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Signing in…' : 'Enter workspace'}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  )
+}

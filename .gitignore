@@ -13,6 +13,9 @@ node_modules/
 functions/node_modules/
 functions/package-lock.json
 npm-debug.log*
+web/node_modules/
+web/dist/
+app/
 
 # Firebase
 .firebase/

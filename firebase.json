@@ -17,6 +17,8 @@
       ".firebase/**",
       "**/node_modules/**",
       "node_modules/**",
+      "web/node_modules/**",
+      "web/dist/**",
       "functions",
       "functions/**",
       "*.bak",
@@ -47,6 +49,14 @@
       }
     ],
     "rewrites": [
+      {
+        "source": "/app",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/app/**",
+        "destination": "/app/index.html"
+      },
       {
         "source": "**",
         "destination": "/index.html"
