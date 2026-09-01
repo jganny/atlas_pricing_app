@@ -22,18 +22,32 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
   const custMatch = t.match(/(?:customer|client|shipper|for)[:\s]+([^\n,;]+)/i)
   if (custMatch) result.customer = custMatch[1].trim()
 
-  const routePatterns = [
-    /([A-Z]{3})\s*(?:to|→|->|-|–)\s*([A-Z]{3})/i,
-    /(?:pol|origin|from)[:\s]*([A-Z]{3}).*?(?:pod|dest|destination|to)[:\s]*([A-Z]{3})/is,
-  ]
-  for (const pattern of routePatterns) {
-    const match = t.match(pattern)
-    if (match) {
-      result.origin = match[1].toUpperCase()
-      result.destination = match[2].toUpperCase()
-      break
+  const polPod = t.match(/\bpol\b[:\s]*([A-Z]{3})[\s\S]*?\bpod\b[:\s]*([A-Z]{3})/i)
+  if (polPod) {
+    result.origin = polPod[1].toUpperCase()
+    result.destination = polPod[2].toUpperCase()
+  } else {
+    const routePatterns = [
+      /(?:origin|from|ex)\s+([A-Z]{3})[\s\S]*?(?:to|→|->)\s+([A-Z]{3})/i,
+      /([A-Z]{3})\s*(?:to|→|->|-|–)\s*([A-Z]{3})/i,
+    ]
+    for (const pattern of routePatterns) {
+      const match = t.match(pattern)
+      if (match) {
+        result.origin = match[1].toUpperCase()
+        result.destination = match[2].toUpperCase()
+        break
+      }
     }
   }
+
+  Object.entries(AIRLINE_HINTS).forEach(([code, label]) => {
+    if (result.airline) return
+    if (new RegExp(`\\b${code}\\b`, 'i').test(t)) {
+      result.airline = code
+      result.airlineLabel = label
+    }
+  })
 
   const gwMatches: number[] = []
   const gwRe = /(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/gi
@@ -58,14 +72,6 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
   if (!result.packages.length && gwMatches.length) {
     result.packages.push({ qty: qtyDefault, gw: gwMatches[0] })
   }
-
-  Object.entries(AIRLINE_HINTS).forEach(([code, label]) => {
-    if (result.airline) return
-    if (new RegExp(`\\b${code}\\b`, 'i').test(t)) {
-      result.airline = code
-      result.airlineLabel = label
-    }
-  })
 
   result.confidence = scoreAir(result)
   return result
@@ -100,13 +106,18 @@ export function parseSeaEnquiry(text: string): ParsedEnquiry {
     source: 'email-text',
   }
 
-  const custMatch = t.match(/(?:customer|client|shipper)[:\s]+([^\n,;]+)/i)
   if (custMatch) result.customer = custMatch[1].trim()
 
-  const polM = t.match(/(?:pol|port of loading|origin)[:\s]+([^\n,;(]+)/i)
-  const podM = t.match(/(?:pod|port of discharge|destination)[:\s]+([^\n,;(]+)/i)
-  if (polM) result.origin = extractPortCode(polM[1])
-  if (podM) result.destination = extractPortCode(podM[1])
+  const polPodSea = t.match(/\bpol\b[:\s]*([^\n,;(]+)[\s\S]*?\bpod\b[:\s]*([^\n,;(]+)/i)
+  if (polPodSea) {
+    result.origin = extractPortCode(polPodSea[1])
+    result.destination = extractPortCode(polPodSea[2])
+  } else {
+    const polM = t.match(/(?:pol|port of loading|origin)[:\s]+([^\n,;(]+)/i)
+    const podM = t.match(/(?:pod|port of discharge|destination)[:\s]+([^\n,;(]+)/i)
+    if (polM) result.origin = extractPortCode(polM[1])
+    if (podM) result.destination = extractPortCode(podM[1])
+  }
 
   const codes = t.match(/\b([A-Z]{2}[A-Z0-9]{3})\b/g)
   if (codes) {
