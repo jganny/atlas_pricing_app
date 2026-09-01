@@ -238,6 +238,8 @@ function getQuoteRefId(quote) {
     moduleCode = "TR";
   } else if (type === "warehouse") {
     moduleCode = "WH";
+  } else if (type === "courier") {
+    moduleCode = "CR";
   } else {
     moduleCode = (module === "import") ? "SI" : "SE";
   }
@@ -1557,6 +1559,7 @@ function openActiveCalculator(type) {
       else if (type === 'sea') workspaceNameEl.textContent = "Sea Freight Pricing";
       else if (type === 'transport') workspaceNameEl.textContent = "Transportation";
       else if (type === 'warehouse') workspaceNameEl.textContent = "Warehousing";
+      else if (type === 'courier') workspaceNameEl.textContent = "Courier Express";
       else if (type === 'directory') workspaceNameEl.textContent = "Directory";
       else if (type === 'circulars') workspaceNameEl.textContent = "Circulars & Documents";
       else if (type === 'sales') workspaceNameEl.textContent = "Sales Pipeline";
@@ -1578,6 +1581,7 @@ function openActiveCalculator(type) {
     const seaPanel = document.getElementById("sea-freight-panel");
     const transportPanel = document.getElementById("transportation-panel");
     const warehousePanel = document.getElementById("warehousing-panel");
+    const courierPanel = document.getElementById("courier-panel");
     const directoryPanel = document.getElementById("directory-panel");
     const circularsPanel = document.getElementById("circulars-panel");
     const salesPanel = document.getElementById("sales-panel");
@@ -1588,6 +1592,7 @@ function openActiveCalculator(type) {
     if (seaPanel) seaPanel.classList.remove("active");
     if (transportPanel) transportPanel.classList.remove("active");
     if (warehousePanel) warehousePanel.classList.remove("active");
+    if (courierPanel) courierPanel.classList.remove("active");
     if (directoryPanel) directoryPanel.classList.remove("active");
     if (circularsPanel) circularsPanel.classList.remove("active");
     if (salesPanel) salesPanel.classList.remove("active");
@@ -1616,6 +1621,11 @@ function openActiveCalculator(type) {
       root.style.setProperty('--accent-current', 'var(--sky)');
       root.style.setProperty('--accent-current-glow', 'rgba(56, 189, 248, 0.2)');
       try { calculateWarehousing(); } catch (e) { console.error("calculateWarehousing error:", e); }
+    } else if (type === 'courier') {
+      if (courierPanel) courierPanel.classList.add("active");
+      root.style.setProperty('--accent-current', '#0d9488');
+      root.style.setProperty('--accent-current-glow', 'rgba(13, 148, 136, 0.2)');
+      try { if (typeof initCourierDesk === 'function') initCourierDesk(); } catch (e) { console.error("initCourierDesk error:", e); }
     } else if (type === 'directory') {
       if (directoryPanel) directoryPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--sky)');
@@ -7407,7 +7417,7 @@ window.convertQuote = (id) => {
         </div>
       </div>
     `;
-  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+  } else if (quote.type === 'transport' || quote.type === 'warehouse' || quote.type === 'courier') {
     html += `
       <input type="hidden" id="won-confirmed-sell-rate" value="0">
       <input type="hidden" id="won-confirmed-buy-rate" value="0">
@@ -9381,7 +9391,7 @@ window.viewSavedQuote = async (id) => {
       <tr><td>Chargeable Weight</td><td>${(quote.details?.chargeableWeight || 0).toFixed(2)} kg</td></tr>
       ${quote.details?.pivotWeight ? `<tr><td>Pivot Weight</td><td>${quote.details.pivotWeight.toFixed(2)} kg</td></tr>` : ''}
     `;
-  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+  } else if (quote.type === 'transport' || quote.type === 'warehouse' || quote.type === 'courier') {
     const isTrans = quote.type === 'transport';
     detailsRows = `
       <tr><td>Service Module</td><td><strong>${isTrans ? 'Transportation' : 'Warehouse'} Standalone</strong></td></tr>
@@ -9533,7 +9543,7 @@ window.viewSavedQuote = async (id) => {
     `;
   }).join('') : '';
 
-  const standaloneBreakupHtml = (quote.type === 'transport' || quote.type === 'warehouse') ? (() => {
+  const standaloneBreakupHtml = (quote.type === 'transport' || quote.type === 'warehouse' || quote.type === 'courier') ? (() => {
     const standaloneItems = quote.details?.items || [];
     const itemRows = standaloneItems.map((item) => {
       const billedAmount = item.rate > 0 ? item.rate : item.buyRate;
@@ -11125,7 +11135,7 @@ window.computeHistoricalBuyRate = (q) => {
     if (q.details && q.details.destSurcharges) {
       q.details.destSurcharges.forEach(s => totalBuy += parseFloat(s.cost || s.buyRate || 0));
     }
-  } else if (q.type === 'transport' || q.type === 'warehouse') {
+  } else if (q.type === 'transport' || q.type === 'warehouse' || q.type === 'courier') {
     if (q.details && q.details.items) {
       q.details.items.forEach(i => totalBuy += parseFloat(i.buyRate || i.cost || 0));
     }
@@ -12091,6 +12101,13 @@ function amendQuote(id, options) {
     alert(recreate
       ? `Copied from quote #${getQuoteRefId(quote)}. Update details, then Save Quote to create a new quote.`
       : `Editing Warehousing Quote #${getQuoteRefId(quote)} in progress. Click "Save Quote" to confirm your amendments.`);
+
+  } else if (quote.type === 'courier') {
+    document.getElementById("courier-panel").classList.add("active");
+    if (typeof loadCourierFromQuote === 'function') loadCourierFromQuote(quote);
+    alert(recreate
+      ? `Copied from courier quote #${getQuoteRefId(quote)}. Update details, then Save Quote.`
+      : `Editing Courier Quote #${getQuoteRefId(quote)}. Click Save Quote to confirm.`);
 
   } else {
     // Show the panel first so the browser can paint the skeleton immediately
@@ -14063,7 +14080,7 @@ function recomputeQuoteFinancials(quote) {
 
     quote.amount = sellBaseFreight + surchargeSell;
     grossProfit = (sellBaseFreight - buyBaseFreight) + (surchargeSell - surchargeBuy);
-  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+  } else if (quote.type === 'transport' || quote.type === 'warehouse' || quote.type === 'courier') {
     subtotalSell = 0;
     subtotalBuy = 0;
     (quote.details.items || []).forEach(item => {
@@ -14092,7 +14109,7 @@ function recomputeQuoteFinancials(quote) {
 
   if (quote.type === 'air' || quote.type === 'sea') {
     quote.buyRate = buyBaseFreight + surchargeBuy;
-  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+  } else if (quote.type === 'transport' || quote.type === 'warehouse' || quote.type === 'courier') {
     quote.buyRate = subtotalBuy;
   }
   quote.buyRateCurrency = quote.currency;
@@ -14374,7 +14391,7 @@ async function submitWonBookingDetails(e) {
         quote.details.containerItems[idx].buy = buyVal;
       }
     }
-  } else if (quote.type === 'transport' || quote.type === 'warehouse') {
+  } else if (quote.type === 'transport' || quote.type === 'warehouse' || quote.type === 'courier') {
     const standaloneSellInputs = document.querySelectorAll(".won-standalone-sell-input");
     for (let i = 0; i < standaloneSellInputs.length; i++) {
       const idx = parseInt(standaloneSellInputs[i].getAttribute("data-index"));

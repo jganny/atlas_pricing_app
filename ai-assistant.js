@@ -28,6 +28,7 @@
     warehouse: 'Warehouse desk: enter storage parameters and charges, then Save Quote.',
     directory: 'Directory: search agents, expand regions, use Add Contact for new entries. Import/export stays in the toolbar.',
     circulars: 'Circulars: browse tariff PDFs by category. Upload adds new documents for the team.',
+    courier: 'Courier desk: enter origin/destination, packages, and compare DHL/FedEx/UPS-style rates. Save Quote when ready.',
     sales: 'Sales pipeline: track leads and statuses. This view is read/update only — pricing still happens on the desks.',
     enquiry: 'Enquiry Database: click + Add filter, then click any row to inspect. Reports panel on the right — filters do not delete data.'
   };
@@ -44,6 +45,7 @@
     if (id.indexOf('sea-freight') !== -1) return 'sea';
     if (id.indexOf('transport') !== -1) return 'transport';
     if (id.indexOf('warehousing') !== -1) return 'warehouse';
+    if (id.indexOf('courier') !== -1) return 'courier';
     if (id.indexOf('directory') !== -1) return 'directory';
     if (id.indexOf('circulars') !== -1) return 'circulars';
     if (id.indexOf('sales') !== -1) return 'sales';

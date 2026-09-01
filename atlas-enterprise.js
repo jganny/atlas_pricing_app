@@ -15,6 +15,7 @@
     sea: 'Sea Freight',
     transport: 'Transportation',
     warehouse: 'Warehousing',
+    courier: 'Courier',
     directory: 'Directory',
     circulars: 'Circulars',
     sales: 'Sales'
@@ -24,7 +25,8 @@
     air: 'air-freight-panel',
     sea: 'sea-freight-panel',
     transport: 'transportation-panel',
-    warehouse: 'warehousing-panel'
+    warehouse: 'warehousing-panel',
+    courier: 'courier-panel'
   };
 
   function $(id) { return document.getElementById(id); }

@@ -6,14 +6,14 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.41">
+  <meta name="app-version" content="129.42">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.41">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.41">
+  <link rel="stylesheet" href="index.css?v=129.42">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.42">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -247,6 +247,7 @@
           <button class="module-tab" data-module="sea" onclick="openActiveCalculator('sea')">Sea Freight</button>
           <button class="module-tab" data-module="transport" onclick="openActiveCalculator('transport')">Transportation</button>
           <button class="module-tab" data-module="warehouse" onclick="openActiveCalculator('warehouse')">Warehousing</button>
+          <button class="module-tab" data-module="courier" onclick="openActiveCalculator('courier')">Courier</button>
           <button class="module-tab" data-module="directory" onclick="openActiveCalculator('directory')">Directory</button>
           <button class="module-tab" data-module="circulars" onclick="openActiveCalculator('circulars')">Circulars</button>
           <button class="module-tab" data-module="sales" onclick="openActiveCalculator('sales')">Sales</button>
@@ -293,6 +294,10 @@
         <button class="sidebar-item" data-sidebar-module="warehouse" onclick="openActiveCalculator('warehouse')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path><path d="M9 7h6"></path><path d="M9 11h6"></path><path d="M9 15h6"></path></svg>
           <span>Warehouse</span>
+        </button>
+        <button class="sidebar-item" data-sidebar-module="courier" onclick="openActiveCalculator('courier')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          <span>Courier</span>
         </button>
         <button class="sidebar-item" data-sidebar-module="directory" onclick="openActiveCalculator('directory')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -657,6 +662,7 @@
         <div class="desk-tab-pane enquiry-db-shell" data-tab-pane="enquiry-database" style="display:none;">
 
         <div id="admin-tracking-control-center" style="margin-bottom: 1rem;"></div>
+        <div id="atlas-sla-banner" aria-label="Response SLA summary"></div>
 
         <div id="enquiry-db-sequence-shell" class="atlas-sequence-shell enquiry-db-unified">
           <nav class="desk-flow-rail" aria-label="Enquiry database steps" hidden>
@@ -3373,6 +3379,168 @@
         </div>
       </div>
 
+      <!-- ==================== COURIER PANEL ==================== -->
+      <div id="courier-panel" class="view-panel desk-shell" data-desk="courier">
+        <div class="calculator-header desk-shell-header" style="border-color: #0d9488;">
+          <div>
+            <div class="desk-shell-eyebrow" style="color: #0d9488;">Express Parcel Desk</div>
+            <h2 class="desk-shell-title" style="color: #0d9488;">COURIER DESK</h2>
+          </div>
+          <button class="btn-back-dashboard" onclick="returnToWorkspace()">← Back to Dashboard</button>
+        </div>
+
+        <div class="desk-highlights-bar" style="border-color: #0d9488;">
+          <div class="dhb-stats">
+            <div class="dhb-stat"><span class="dhb-label">Chargeable</span><span class="dhb-value" data-mirror-of="res-courier-chw">0 kg</span></div>
+            <div class="dhb-stat"><span class="dhb-label">Grand Total</span><span class="dhb-value dhb-value-strong" data-mirror-of="res-courier-total">₹0.00</span></div>
+          </div>
+          <div class="dhb-actions">
+            <button type="button" class="btn-primary dhb-btn-save" onclick="saveCourierQuote()">Save Quote</button>
+          </div>
+        </div>
+
+        <div class="calculator-grid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 1.5rem;">
+          <div class="glass-card desk-form-card">
+            <nav class="desk-flow-rail" aria-label="Courier quote steps">
+              <div class="desk-flow-step is-active" data-flow-step="details" onclick="advanceDeskStep('courier-panel','details')"><span class="desk-flow-num">1</span><span class="desk-flow-label">Shipment</span></div>
+              <div class="desk-flow-connector"></div>
+              <div class="desk-flow-step" data-flow-step="packages" onclick="advanceDeskStep('courier-panel','packages')"><span class="desk-flow-num">2</span><span class="desk-flow-label">Packages</span></div>
+              <div class="desk-flow-connector"></div>
+              <div class="desk-flow-step" data-flow-step="rates" onclick="advanceDeskStep('courier-panel','rates')"><span class="desk-flow-num">3</span><span class="desk-flow-label">Rates</span></div>
+              <div class="desk-flow-connector"></div>
+              <div class="desk-flow-step" data-flow-step="terms" onclick="advanceDeskStep('courier-panel','terms')"><span class="desk-flow-num">4</span><span class="desk-flow-label">Terms</span></div>
+            </nav>
+            <div class="desk-tab-strip desk-tab-strip-flush">
+              <button type="button" class="desk-tab-btn active" data-desk-tab="details" onclick="switchDeskTab('courier-panel','details',this)">1. Shipment</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="packages" onclick="switchDeskTab('courier-panel','packages',this)">2. Packages</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="rates" onclick="switchDeskTab('courier-panel','rates',this)">3. Rates &amp; Surcharges</button>
+              <button type="button" class="desk-tab-btn" data-desk-tab="terms" onclick="switchDeskTab('courier-panel','terms',this)">4. Terms</button>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="details">
+              <p class="desk-flow-hint">Express parcel quoting — DHL / FedEx / UPS style lane, service level, and origin–destination.</p>
+              <div class="courier-form-grid">
+                <div class="autocomplete-container">
+                  <label class="courier-label">Customer</label>
+                  <input type="text" id="courier-customer-name" placeholder="Customer / company name" class="courier-input" />
+                </div>
+                <div>
+                  <label class="courier-label">Currency</label>
+                  <select id="courier-header-currency" onchange="syncCourierCurrency()" class="courier-input">
+                    <option value="INR" selected>INR</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="AED">AED</option><option value="SGD">SGD</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="courier-label">Scope</label>
+                  <select id="courier-scope" onchange="calculateCourier()" class="courier-input">
+                    <option value="domestic">Domestic</option><option value="export">Export</option><option value="import">Import</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="courier-label">Shipment type</label>
+                  <select id="courier-shipment-type" onchange="calculateCourier()" class="courier-input">
+                    <option value="parcel">Parcel / Non-document</option><option value="document">Documents only</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="courier-label">Service level</label>
+                  <select id="courier-service" onchange="calculateCourier()" class="courier-input">
+                    <option value="express">Express (T+1–2)</option><option value="economy" selected>Economy (T+3–5)</option><option value="same_day">Same day (domestic)</option><option value="document">Document express</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="courier-label">Margin %</label>
+                  <input type="number" id="courier-margin-pct" value="12" min="0" step="0.5" class="courier-input" oninput="calculateCourier()" />
+                </div>
+              </div>
+              <div class="courier-route-grid">
+                <fieldset class="courier-route-fieldset">
+                  <legend>Origin</legend>
+                  <input type="text" id="courier-origin-city" placeholder="City" class="courier-input" oninput="calculateCourier()" />
+                  <input type="text" id="courier-origin-pin" placeholder="Postcode / PIN" class="courier-input" />
+                  <select id="courier-origin-country" onchange="calculateCourier()" class="courier-input">
+                    <option value="IN" selected>India</option><option value="AE">UAE</option><option value="US">USA</option><option value="GB">UK</option><option value="DE">Germany</option><option value="SG">Singapore</option><option value="AU">Australia</option><option value="CN">China</option>
+                  </select>
+                </fieldset>
+                <fieldset class="courier-route-fieldset">
+                  <legend>Destination</legend>
+                  <input type="text" id="courier-dest-city" placeholder="City" class="courier-input" oninput="calculateCourier()" />
+                  <input type="text" id="courier-dest-pin" placeholder="Postcode / PIN" class="courier-input" />
+                  <select id="courier-dest-country" onchange="calculateCourier()" class="courier-input">
+                    <option value="IN" selected>India</option><option value="AE">UAE</option><option value="US">USA</option><option value="GB">UK</option><option value="DE">Germany</option><option value="SG">Singapore</option><option value="AU">Australia</option><option value="CN">China</option>
+                  </select>
+                </fieldset>
+              </div>
+              <div class="desk-flow-footer"><button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('courier-panel','packages')">Continue to Packages →</button></div>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="packages" style="display:none;">
+              <p class="desk-flow-hint">Multi-piece shipment. Chargeable weight = max(actual, L×W×H÷5000) per piece × qty, rounded to 0.5 kg.</p>
+              <div class="courier-dim-row">
+                <label class="courier-label">Dim unit</label>
+                <select id="courier-dim-unit" onchange="calculateCourier()" class="courier-input" style="max-width:8rem">
+                  <option value="cm" selected>cm (÷5000)</option><option value="in">inches (÷139)</option>
+                </select>
+                <button type="button" class="btn-secondary" onclick="addCourierPackageRow()" style="margin-left:auto">+ Add piece</button>
+              </div>
+              <table class="cargo-table courier-packages-table">
+                <thead><tr><th>Qty</th><th>Weight kg</th><th>L</th><th>W</th><th>H</th><th>CHW</th><th></th></tr></thead>
+                <tbody id="courier-packages-body"></tbody>
+              </table>
+              <div id="courier-oversized-warn" class="courier-warn" style="display:none">⚠ Oversized piece detected (any side &gt;120 cm or L+W+H &gt;300 cm) — oversized surcharge may apply.</div>
+              <input type="hidden" id="courier-oversized-flag" value="0" />
+              <div class="desk-flow-footer"><button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('courier-panel','rates')">Continue to Rates →</button></div>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="rates" style="display:none;">
+              <p class="desk-flow-hint">Compare carriers — rates auto-calculate from zone, chargeable weight, and service level. Select a carrier card to quote.</p>
+              <input type="hidden" id="courier-selected-carrier" value="dhl" />
+              <input type="hidden" id="courier-currency" value="INR" />
+              <div id="courier-carrier-grid" class="courier-carrier-grid"></div>
+              <div class="courier-surcharges-panel">
+                <h4 class="courier-section-title">Surcharges &amp; options</h4>
+                <div class="courier-surcharge-grid">
+                  <label>Fuel surcharge % <input type="number" id="courier-fuel-pct" value="18" min="0" step="0.5" oninput="calculateCourier()" class="courier-input-sm" /></label>
+                  <label>Declared value <input type="number" id="courier-declared-value" value="0" min="0" step="1" oninput="calculateCourier()" class="courier-input-sm" /></label>
+                  <label>Insurance % <input type="number" id="courier-insurance-pct" value="1.5" min="0" step="0.1" oninput="calculateCourier()" class="courier-input-sm" /></label>
+                  <label class="courier-check"><input type="checkbox" id="courier-insurance" onchange="calculateCourier()" /> Cargo insurance</label>
+                  <label class="courier-check"><input type="checkbox" id="courier-remote" onchange="calculateCourier()" /> Remote area <input type="number" id="courier-remote-amt" value="450" class="courier-input-sm" oninput="calculateCourier()" /></label>
+                  <label class="courier-check"><input type="checkbox" id="courier-residential" onchange="calculateCourier()" /> Residential <input type="number" id="courier-residential-amt" value="350" class="courier-input-sm" oninput="calculateCourier()" /></label>
+                  <label class="courier-check"><input type="checkbox" id="courier-saturday" onchange="calculateCourier()" /> Saturday delivery <input type="number" id="courier-saturday-amt" value="500" class="courier-input-sm" oninput="calculateCourier()" /></label>
+                  <label class="courier-check"><input type="checkbox" id="courier-dg" onchange="calculateCourier()" /> Dangerous goods <input type="number" id="courier-dg-amt" value="1200" class="courier-input-sm" oninput="calculateCourier()" /></label>
+                  <label class="courier-check"><input type="checkbox" id="courier-oversized-amt-check" onchange="document.getElementById('courier-oversized-amt').disabled=!this.checked;calculateCourier()" /> Oversized handling <input type="number" id="courier-oversized-amt" value="800" disabled class="courier-input-sm" oninput="calculateCourier()" /></label>
+                  <label class="courier-check"><input type="checkbox" id="courier-gst-enabled" checked onchange="calculateCourier()" /> Apply GST (18%)</label>
+                </div>
+              </div>
+              <div class="desk-flow-footer"><button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('courier-panel','terms')">Continue to Terms →</button></div>
+            </div>
+
+            <div class="desk-tab-pane" data-tab-pane="terms" style="display:none;">
+              <div class="atlas-terms-shell">
+                <div class="atlas-terms-toolbar">
+                  <label for="courier-terms" class="atlas-terms-label">Courier Terms &amp; Conditions</label>
+                </div>
+                <textarea id="courier-terms" rows="10" class="atlas-terms-field"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card results-panel desk-pip-panel courier-summary-panel">
+            <h3 class="courier-summary-title">Courier Summary</h3>
+            <div class="result-row"><span class="result-label">Pieces</span><span class="result-value" id="res-courier-pieces">0</span></div>
+            <div class="result-row"><span class="result-label">Chargeable weight</span><span class="result-value" id="res-courier-chw">0 kg</span></div>
+            <div class="result-row"><span class="result-label">Zone</span><span class="result-value" id="res-courier-zone">—</span></div>
+            <div class="result-row"><span class="result-label">Carrier</span><span class="result-value" id="res-courier-carrier">—</span></div>
+            <div class="result-row"><span class="result-label">Transit</span><span class="result-value" id="res-courier-transit">—</span></div>
+            <div class="result-row"><span class="result-label">Base freight</span><span class="result-value" id="res-courier-base">₹0.00</span></div>
+            <div class="result-row"><span class="result-label">Surcharges</span><span class="result-value" id="res-courier-surcharges">₹0.00</span></div>
+            <div class="result-row"><span class="result-label">Subtotal</span><span class="result-value" id="res-courier-subtotal">₹0.00</span></div>
+            <div class="result-row"><span class="result-label">GST (18%)</span><span class="result-value" id="res-courier-tax">₹0.00</span></div>
+            <div class="result-row courier-total-row"><span class="result-label">Grand Total</span><span class="result-value-highlight" id="res-courier-total">₹0.00</span></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ==================== CONTACT & AGENCY DIRECTORY PANEL ==================== -->
       <div id="directory-panel" class="view-panel">
         <div class="glass-card dir-shell-card" style="margin-bottom: 2rem; padding: 1.25rem 1.35rem; overflow: visible;">
@@ -4798,13 +4966,15 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.41"></script>
-  <script src="ui-shell.js?v=129.41"></script>
-  <script src="atlas-platform.js?v=129.41"></script>
-  <script src="atlas-enterprise.js?v=129.41"></script>
-  <script src="ai-assistant.js?v=129.41"></script>
-  <script src="ai-sell-band.js?v=129.41"></script>
-  <script src="sales-v129.js?v=129.41"></script>
+  <script src="app-v4.js?v=129.42"></script>
+  <script src="ui-shell.js?v=129.42"></script>
+  <script src="atlas-platform.js?v=129.42"></script>
+  <script src="atlas-enterprise.js?v=129.42"></script>
+  <script src="courier-desk.js?v=129.42"></script>
+  <script src="atlas-sla.js?v=129.42"></script>
+  <script src="ai-assistant.js?v=129.42"></script>
+  <script src="ai-sell-band.js?v=129.42"></script>
+  <script src="sales-v129.js?v=129.42"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
