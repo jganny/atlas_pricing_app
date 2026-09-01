@@ -123,74 +123,97 @@
   async function runAtlasSmartQuote() {
     setStatus('Analysing enquiry…', 'info');
     var text = ($('atlas-enquiry-paste') && $('atlas-enquiry-paste').value) || '';
-    var fileInput = $('atlas-enquiry-file');
-    var file = fileInput && fileInput.files[0];
-
-    if (file && window.AtlasTariffEngine) {
-      try {
-        var imp = await window.AtlasTariffEngine.importTariffFile(file, {});
-        if (imp.count > 0) setStatus(imp.message, 'ok');
-      } catch (e) { /* continue with quote */ }
-    }
-
-    if (!text.trim() && file && file.name.match(/\.(txt|eml)$/i)) {
-      text = await file.text();
-    }
 
     if (!text.trim()) {
-      setStatus('Paste a customer enquiry above, or attach a rate sheet (.xlsx) with the enquiry.', 'warn');
+      setStatus('Paste the customer enquiry above — tariffs are loaded from Circulars (no re-upload needed).', 'warn');
       return;
     }
 
     var parsed = parseEnquiryText(text);
+    await applySmartQuoteParsed(parsed);
+  }
+
+  /** Manual desk path: user typed POL/POD/carrier — still auto CWT, history, circulars tariff. */
+  async function runAtlasSmartQuoteFromForm() {
+    setStatus('Applying automation from desk fields…', 'info');
+    var origin = ($('air-origin') && $('air-origin').value) || '';
+    var dest = ($('air-dest') && $('air-dest').value) || '';
+    var oCode = (origin.match(/\b([A-Z]{3})\b/) || [])[1] || origin.trim().toUpperCase().slice(0, 3);
+    var dCode = (dest.match(/\b([A-Z]{3})\b/) || [])[1] || dest.trim().toUpperCase().slice(0, 3);
+    if (!oCode || !dCode || oCode.length !== 3 || dCode.length !== 3) {
+      setStatus('Enter valid POL and POD on the desk first, then click Apply automation.', 'warn');
+      return;
+    }
+    var parsed = {
+      customer: ($('air-cust-name') && $('air-cust-name').value) || '',
+      origin: oCode,
+      destination: dCode,
+      airline: '',
+      airlineLabel: '',
+      packages: [],
+      pivotWeight: 0
+    };
+    var card = document.querySelector('#air-airlines-list-container .airline-card .air-name');
+    if (card && card.value) {
+      var m = card.value.match(/^([A-Z0-9]{2,3})/);
+      parsed.airline = m ? m[1] : '';
+      parsed.airlineLabel = card.value;
+    }
+    await applySmartQuoteParsed(parsed, true);
+  }
+
+  async function applySmartQuoteParsed(parsed, fromForm) {
     if (!parsed.origin || !parsed.destination) {
-      setStatus('Could not detect POL/POD airport codes. Add BLR, LHR etc. in the enquiry text.', 'warn');
+      setStatus('Could not detect POL/POD. Include airport codes (e.g. BLR, LHR) in the enquiry or type them on the desk.', 'warn');
       return;
     }
 
-    if (typeof window.openActiveCalculator === 'function') window.openActiveCalculator('air');
+    if (!fromForm && typeof window.openActiveCalculator === 'function') window.openActiveCalculator('air');
 
     if (parsed.customer && $('air-cust-name')) $('air-cust-name').value = parsed.customer;
-    setAirportField('air-origin', parsed.origin);
-    setAirportField('air-dest', parsed.destination);
-
-    if (parsed.packages.length) fillCargoRow(parsed.packages[0]);
+    if (!fromForm) {
+      setAirportField('air-origin', parsed.origin);
+      setAirportField('air-dest', parsed.destination);
+      if (parsed.packages.length) fillCargoRow(parsed.packages[0]);
+    }
 
     var carrier = parsed.airline ? { code: parsed.airline, label: parsed.airlineLabel, source: 'enquiry' } : suggestCarrier(parsed.origin, parsed.destination);
     if (!carrier && parsed.airlineLabel) carrier = { label: parsed.airlineLabel, source: 'enquiry' };
 
-    await window.AtlasTariffEngine.loadTariffs();
-    var tariff = window.AtlasTariffEngine.lookupTariff(parsed.origin, parsed.destination, carrier && carrier.code);
+    if (window.AtlasTariffEngine) await window.AtlasTariffEngine.loadTariffs();
+    var tariff = window.AtlasTariffEngine ? window.AtlasTariffEngine.lookupTariff(parsed.origin, parsed.destination, carrier && carrier.code) : null;
 
-    var container = $('air-airlines-list-container');
-    if (container) container.innerHTML = '';
-
-    if (typeof window.addAirlineCard === 'function') {
-      window.addAirlineCard({
-        name: carrier ? carrier.label : '',
-        pivotWeight: parsed.pivotWeight || '',
-        breaks: tariff ? tariff.breaks : {},
-        selected: true
-      });
+    if (!fromForm) {
+      var container = $('air-airlines-list-container');
+      if (container) container.innerHTML = '';
+      if (typeof window.addAirlineCard === 'function') {
+        window.addAirlineCard({
+          name: carrier ? carrier.label : '',
+          pivotWeight: parsed.pivotWeight || '',
+          breaks: tariff ? tariff.breaks : {},
+          selected: true
+        });
+      }
     }
 
-    if (tariff) {
+    if (tariff && window.AtlasTariffEngine) {
       window.AtlasTariffEngine.applyTariffToAirDesk(tariff, carrier ? carrier.label : tariff.carrier);
     }
 
     if (typeof window.calculateAirFreight === 'function') window.calculateAirFreight();
 
-    if (typeof window.advanceDeskStep === 'function') window.advanceDeskStep('air-freight-panel', tariff ? 'terms' : 'carrier');
+    var nextStep = tariff ? 'terms' : 'carrier';
+    if (typeof window.advanceDeskStep === 'function') window.advanceDeskStep('air-freight-panel', nextStep);
 
-    var parts = [
-      '✓ Smart draft ready',
-      parsed.origin + ' → ' + parsed.destination
-    ];
-    if (parsed.packages[0] && parsed.packages[0].gw) parts.push(parsed.packages[0].gw + ' kg');
+    var parts = ['✓ Draft ready', parsed.origin + ' → ' + parsed.destination];
     if (carrier) parts.push(carrier.label + ' (' + carrier.source + ')');
-    if (tariff) parts.push('tariff applied');
-    else parts.push('no published tariff — add rates or upload .xlsx sheet');
+    if (tariff) parts.push('tariff from Circulars library');
+    else parts.push('no Circulars tariff — enter rates manually on Carriers tab; CWT & totals still auto-calculate');
     setStatus(parts.join(' · '), tariff ? 'ok' : 'warn');
+  }
+
+  async function applyTariffFromCirculars() {
+    await runAtlasSmartQuoteFromForm();
   }
 
   function initSmartQuoteShell() {
@@ -205,6 +228,8 @@
 
   window.parseEnquiryText = parseEnquiryText;
   window.runAtlasSmartQuote = runAtlasSmartQuote;
+  window.runAtlasSmartQuoteFromForm = runAtlasSmartQuoteFromForm;
+  window.applyTariffFromCirculars = applyTariffFromCirculars;
   window.initAtlasSmartQuote = initSmartQuoteShell;
 
   document.addEventListener('DOMContentLoaded', initSmartQuoteShell);

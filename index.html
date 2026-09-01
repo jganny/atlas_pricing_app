@@ -1782,15 +1782,12 @@
             <div class="atlas-smart-quote-shell" id="atlas-smart-quote-shell">
               <div class="atlas-sq-header">
                 <span class="atlas-sq-eyebrow">⚡ Atlas Smart Quote</span>
-                <span class="atlas-sq-sub">Paste enquiry · auto POL/POD/cargo/carrier/tariff · review &amp; send</span>
+                <span class="atlas-sq-sub">Paste enquiry → auto-fill · Tariffs load from <strong>Circulars</strong> (upload rate sheets there once) · No tariff? Enter rates manually — CWT &amp; totals still automate</span>
               </div>
               <textarea id="atlas-enquiry-paste" class="atlas-sq-textarea" rows="4" placeholder="Paste customer enquiry email or WhatsApp here… e.g.&#10;Need quote BLR to LHR, 120 kg, dims 120x80x60 cm, 2 pcs, EK preferred, Zenith Electronics Pvt Ltd"></textarea>
               <div class="atlas-sq-actions">
-                <label class="atlas-sq-file-btn">
-                  <input type="file" id="atlas-enquiry-file" accept=".txt,.eml,.xlsx,.xls,.csv,.pdf,.doc,.docx" hidden />
-                  Attach rate sheet / enquiry
-                </label>
                 <button type="button" class="btn-primary atlas-sq-run-btn" onclick="runAtlasSmartQuote()">Generate Smart Quote</button>
+                <button type="button" class="btn-secondary atlas-sq-run-btn" onclick="runAtlasSmartQuoteFromForm()" title="Use when you typed POL/POD manually">Apply automation from desk</button>
               </div>
               <div id="atlas-smart-quote-status" class="atlas-smart-quote-status" style="display:none"></div>
             </div>
