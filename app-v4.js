@@ -1611,6 +1611,7 @@ function openActiveCalculator(type) {
       if (seaPanel) seaPanel.classList.add("active");
       root.style.setProperty('--accent-current', 'var(--accent-sea)');
       root.style.setProperty('--accent-current-glow', 'var(--accent-sea-glow)');
+      try { if (typeof initAtlasSeaSmartQuote === 'function') initAtlasSeaSmartQuote(); } catch (e) { /* */ }
       // Preserve in-progress quotes when switching modules; reset only via Reset or after Save.
     } else if (type === 'transport') {
       if (transportPanel) transportPanel.classList.add("active");
@@ -20372,11 +20373,16 @@ async function saveCircular(event) {
 
     if (file && window.AtlasTariffEngine && /\.(xlsx|xls|csv)$/i.test(file.name)) {
       try {
-        const imp = await window.AtlasTariffEngine.importTariffFile(file, {
+        const tariffMeta = {
           sourceCircularId: circularId,
           validFrom: effectiveDate,
           validTo: expiryDate
-        });
+        };
+        const isSeaCircular = category === 'fuel_circular_shipping' ||
+          /shipping|sea|liner|ocean|fcl|lcl/i.test(title + ' ' + carrier);
+        const imp = isSeaCircular && typeof window.AtlasTariffEngine.importSeaTariffFile === 'function'
+          ? await window.AtlasTariffEngine.importSeaTariffFile(file, tariffMeta)
+          : await window.AtlasTariffEngine.importTariffFile(file, tariffMeta);
         if (imp.count > 0) {
           console.log("Atlas tariff auto-publish:", imp.message);
         }

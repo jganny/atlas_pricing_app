@@ -9892,6 +9892,13 @@ body:has(#courier-panel.active) .grid-overlay { display: none; }
   border: 1px solid rgba(14, 165, 233, 0.28);
   background: linear-gradient(135deg, rgba(14, 165, 233, 0.06), rgba(255, 255, 255, 0.95));
 }
+.atlas-smart-quote-shell--sea {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(255, 255, 255, 0.95));
+}
+.atlas-smart-quote-shell--sea .atlas-sq-eyebrow {
+  color: #0284c7;
+}
 .atlas-sq-header { margin-bottom: 0.65rem; }
 .atlas-sq-eyebrow {
   display: block;

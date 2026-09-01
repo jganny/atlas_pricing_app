@@ -6,14 +6,14 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Vertex — Atlas Pricing</title>
-  <meta name="app-version" content="129.45">
+  <meta name="app-version" content="129.46">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="index.css?v=129.45">
-  <link rel="stylesheet" href="atlas-enterprise.css?v=129.45">
+  <link rel="stylesheet" href="index.css?v=129.46">
+  <link rel="stylesheet" href="atlas-enterprise.css?v=129.46">
   <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -2324,6 +2324,27 @@
             <div class="desk-tab-pane" data-tab-pane="details">
             <p class="desk-flow-hint">Enter shipment basics first — customer, ports, and cargo. Continue when ready to configure liners.</p>
 
+            <!-- Atlas Smart Quote — Sea one-click automation -->
+            <div class="atlas-smart-quote-shell atlas-smart-quote-shell--sea" id="atlas-sea-smart-quote-shell">
+              <div class="atlas-sq-header">
+                <span class="atlas-sq-eyebrow">⚡ Atlas Smart Quote · Sea</span>
+                <span class="atlas-sq-sub">Paste email text <strong>or</strong> upload cargo file (PDF · Excel · Word) · FCL/LCL from enquiry · Rates from <strong>Circulars</strong></span>
+              </div>
+              <textarea id="atlas-sea-enquiry-paste" class="atlas-sq-textarea" rows="4" placeholder="Paste full customer email / WhatsApp sea enquiry here (POL, POD, CBM, containers…)…"></textarea>
+              <div id="atlas-sea-enquiry-dropzone" class="atlas-sq-dropzone" role="button" tabindex="0" aria-label="Upload cargo file">
+                <input type="file" id="atlas-sea-enquiry-upload" accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.eml" hidden />
+                <span class="atlas-sq-drop-icon">📎</span>
+                <span class="atlas-sq-drop-label">Drop cargo attachment or click to upload</span>
+                <span class="atlas-sq-drop-hint">PDF · Excel · Word (.docx) · .eml</span>
+                <span id="atlas-sea-enquiry-filename" class="atlas-sq-filename"></span>
+              </div>
+              <div class="atlas-sq-actions">
+                <button type="button" class="btn-primary atlas-sq-run-btn" onclick="runAtlasSeaSmartQuote()">Run automation</button>
+                <button type="button" class="btn-secondary atlas-sq-run-btn" onclick="runAtlasSeaSmartQuoteFromForm()">Apply from desk fields</button>
+              </div>
+              <div id="atlas-sea-smart-quote-status" class="atlas-smart-quote-status" style="display:none"></div>
+            </div>
+
             <!-- Sea Export/Import Toggle Tabs -->
             <div class="toggle-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
               <div class="toggle-option active" id="sea-tab-export">Sea Export</div>
@@ -2971,13 +2992,14 @@
             </div>
 
             <!-- Button to Add Additional Liner / Coloader / BreakBulk -->
-            <button type="button" class="add-row-btn" id="sea-add-liner-btn" onclick="addNewLinerCard()" style="margin-top: 1rem; margin-bottom: 1.5rem; background: rgba(56, 189, 248, 0.12); border: 1px dashed var(--sky); color: var(--sky); font-weight: 700; width: 100%; justify-content: center; padding: 0.85rem; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+            <button type="button" class="add-row-btn" id="sea-add-liner-btn" onclick="addNewLinerCard()" style="margin-top: 1rem; margin-bottom: 0.5rem; background: rgba(56, 189, 248, 0.12); border: 1px dashed var(--sky); color: var(--sky); font-weight: 700; width: 100%; justify-content: center; padding: 0.85rem; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
               Add Additional Shipping Line / Coloader / BreakBulk Rate Option
             </button>
+            <button type="button" class="btn-secondary" onclick="applySeaTariffFromCirculars()" style="margin-bottom:1.5rem;font-size:0.72rem;">Apply tariff from Circulars library</button>
 
             <div class="desk-flow-footer">
               <button type="button" class="btn-primary desk-flow-continue" onclick="advanceDeskStep('sea-freight-panel','terms')">Continue to Terms →</button>
@@ -4990,18 +5012,19 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="app-v4.js?v=129.45"></script>
-  <script src="ui-shell.js?v=129.45"></script>
-  <script src="atlas-platform.js?v=129.45"></script>
-  <script src="atlas-enterprise.js?v=129.45"></script>
-  <script src="atlas-tariff-engine.js?v=129.45"></script>
-  <script src="atlas-enquiry-ingest.js?v=129.45"></script>
-  <script src="atlas-smart-quote.js?v=129.45"></script>
-  <script src="courier-desk.js?v=129.45"></script>
-  <script src="atlas-sla.js?v=129.45"></script>
-  <script src="ai-assistant.js?v=129.45"></script>
-  <script src="ai-sell-band.js?v=129.45"></script>
-  <script src="sales-v129.js?v=129.45"></script>
+  <script src="app-v4.js?v=129.46"></script>
+  <script src="ui-shell.js?v=129.46"></script>
+  <script src="atlas-platform.js?v=129.46"></script>
+  <script src="atlas-enterprise.js?v=129.46"></script>
+  <script src="atlas-tariff-engine.js?v=129.46"></script>
+  <script src="atlas-enquiry-ingest.js?v=129.46"></script>
+  <script src="atlas-smart-quote.js?v=129.46"></script>
+  <script src="atlas-smart-quote-sea.js?v=129.46"></script>
+  <script src="courier-desk.js?v=129.46"></script>
+  <script src="atlas-sla.js?v=129.46"></script>
+  <script src="ai-assistant.js?v=129.46"></script>
+  <script src="ai-sell-band.js?v=129.46"></script>
+  <script src="sales-v129.js?v=129.46"></script>
 
   <script>
     window.handleForgotPassword = async function(e) {
