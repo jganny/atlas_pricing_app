@@ -41,7 +41,9 @@ Login: `ganny` / `demo` (or `manager` / `demo`). Amber banner = mock data, no Fi
 | Smart Quote · Air / Sea | ✅ live + mock tariffs |
 | Enquiry database table | ✅ live quotes (read-only) |
 | Circulars library + tariffs | ✅ live read |
-| Quote writes / full desks | ❌ legacy only |
+| Courier desk (React) | ✅ Phase 4 — calculate + save |
+| Enquiry DB search/filter | ✅ Phase 4 |
+| Air / Sea full desks | ❌ legacy only |
 | Firebase deploy | ❌ awaiting your approval |
 
 ## Environment variables
@@ -97,10 +99,10 @@ Copies static export to `app/` for Firebase route `/app/**`.
 | 1 | Next.js foundation | ✅ |
 | 2 | Firebase v9 + TanStack Query + live reads | ✅ |
 | 3 | Pure TS `pricing-core` packages | ✅ |
-| 4 | Migrate desks: Courier → Air → Sea | planned |
-| 5 | Retire legacy; deploy on approval | planned |
+| 4 | Courier desk + Enquiry DB filters | ✅ |
+| 5 | Air/Sea desks, retire legacy, deploy on approval | planned |
 
-## Stack
+See **MIGRATION_STATUS.md** for what each phase does and when deployment happens.
 
 - Next.js 16 + React 19 + TypeScript
 - Firebase v11 modular SDK (Auth + Firestore)

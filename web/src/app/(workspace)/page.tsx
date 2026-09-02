@@ -86,6 +86,12 @@ export default function DashboardPage() {
             >
               Sea Smart Quote <ArrowRight className="h-4 w-4" />
             </Link>
+            <Link
+              href="/courier"
+              className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-3 py-2 text-sm font-semibold text-violet-800"
+            >
+              Courier desk <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </Card>
 

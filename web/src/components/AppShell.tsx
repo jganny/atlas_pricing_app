@@ -8,6 +8,7 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  Package,
   Plane,
   Sparkles,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/smart-quote/air", label: "Smart Quote · Air", icon: Plane },
   { href: "/smart-quote/sea", label: "Smart Quote · Sea", icon: Anchor },
+  { href: "/courier", label: "Courier desk", icon: Package },
   { href: "/enquiries", label: "Enquiry DB", icon: Database },
   { href: "/circulars", label: "Circulars", icon: FileText },
 ];
