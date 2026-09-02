@@ -1,0 +1,296 @@
+/**
+ * Feature parity tracker — legacy (index.html / app-v4.js) vs React (/app).
+ * Migration stays ON HOLD until every item is "done" and user-tested.
+ * Update statuses as features ship.
+ */
+
+export type ParityStatus = "done" | "partial" | "missing";
+
+export interface ParityFeature {
+  id: string;
+  name: string;
+  legacy: string;
+  react?: string;
+  status: ParityStatus;
+  testHint?: string;
+}
+
+export interface ParityGroup {
+  id: string;
+  title: string;
+  description: string;
+  plannedPhase: number;
+  features: ParityFeature[];
+}
+
+export const MIGRATION_POLICY = {
+  headline: "Migration on hold until full feature parity",
+  summary:
+    "Legacy remains the production app. React is built until every legacy capability exists in /app, " +
+    "you have tested each one, and you approve cutover only when React is equal or better.",
+  legacyUrl: "/index.html",
+  reactUrl: "/app/",
+};
+
+export const parityGroups: ParityGroup[] = [
+  {
+    id: "auth-admin",
+    title: "Auth & admin",
+    description: "Login, user management, desk roles, credit control",
+    plannedPhase: 12,
+    features: [
+      { id: "auth-login", name: "Desk login (Firebase email/password)", legacy: "Login screen", react: "/login", status: "done", testHint: "Sign in with Atlas username/password" },
+      { id: "auth-logout", name: "Sign out", legacy: "Header", react: "Sidebar", status: "done" },
+      { id: "auth-signup", name: "Self-service sign up", legacy: "Login page", status: "missing" },
+      { id: "auth-forgot", name: "Forgot / change password", legacy: "Login + admin", status: "missing" },
+      { id: "auth-admin-register", name: "Admin register new user", legacy: "Admin console", status: "missing" },
+      { id: "auth-admin-reset", name: "Force password reset", legacy: "Admin console", status: "missing" },
+      { id: "auth-roles", name: "Desk role switcher (Air/Sea/NRS/Sales)", legacy: "Sidebar", status: "missing" },
+      { id: "auth-credit", name: "Customer credit control & block", legacy: "Admin console", status: "missing" },
+      { id: "auth-firebase-config", name: "Firebase config paste / reconnect", legacy: "Admin console", status: "missing" },
+    ],
+  },
+  {
+    id: "home-manager",
+    title: "Home & manager panel",
+    description: "Admin overview, analytics, performance reports",
+    plannedPhase: 13,
+    features: [
+      { id: "home-hub", name: "Home hub cards (Overview, Agents, EDB, Analytics)", legacy: "Home", status: "missing" },
+      { id: "home-kpi", name: "Admin KPI rings (revenue, conversions, rate)", legacy: "Overview", status: "missing" },
+      { id: "home-leaderboard", name: "Staff performance leaderboard", legacy: "Overview", status: "missing" },
+      { id: "home-reports", name: "Performance report generator (daily→annual)", legacy: "Overview", status: "missing" },
+      { id: "home-amendments", name: "Pending amendment approval queue", legacy: "Overview", status: "missing" },
+      { id: "home-agents", name: "Quoting agents registry", legacy: "Quoting Agents tab", status: "missing" },
+      { id: "home-analytics", name: "Analytics (pipeline, GP charts, route performance)", legacy: "Analytics tab", status: "missing" },
+      { id: "home-news", name: "Control tower / logistics news", legacy: "Overview", status: "missing" },
+      { id: "dash-basic", name: "Basic SLA dashboard", legacy: "Member/admin home", react: "/", status: "partial", testHint: "Open counts only — not full manager panel" },
+    ],
+  },
+  {
+    id: "member-desk",
+    title: "Member / desk user dashboard",
+    description: "Personal KPIs, NRS, sticky notes, quote logs",
+    plannedPhase: 13,
+    features: [
+      { id: "member-kpi", name: "Personal KPI rings", legacy: "Member dashboard", status: "missing" },
+      { id: "member-logs", name: "My quotation logs table", legacy: "Member dashboard", status: "missing" },
+      { id: "member-nrs-alerts", name: "NRS confirmation intimation alerts", legacy: "Member dashboard", status: "missing" },
+      { id: "member-nrs-registry", name: "NRS shippers & consignees registry", legacy: "Member dashboard", status: "missing" },
+      { id: "member-sticky", name: "Connected desk sticky notes", legacy: "Member dashboard", status: "missing" },
+      { id: "member-sms", name: "Instant SMS gateway", legacy: "Member dashboard", status: "missing" },
+      { id: "member-restore", name: "Restore cached quotes (browser backup)", legacy: "Member dashboard", status: "missing" },
+      { id: "member-recreate", name: "Recreate / quick assist from prior quote", legacy: "Member dashboard", status: "missing" },
+    ],
+  },
+  {
+    id: "air-desk",
+    title: "Air freight desk",
+    description: "Full export/import air quoting",
+    plannedPhase: 7,
+    features: [
+      { id: "air-cargo", name: "Cargo dimensions matrix", legacy: "Air desk", react: "/air", status: "done" },
+      { id: "air-breaks", name: "Weight breaks (sell/buy per bracket)", legacy: "Air desk", react: "/air", status: "done" },
+      { id: "air-calc", name: "Chargeable weight & base freight calc", legacy: "Air desk", react: "/air", status: "done" },
+      { id: "air-save", name: "Save new air quote to Firestore", legacy: "Air desk", react: "/air", status: "done" },
+      { id: "air-tariff", name: "Load Circulars tariff", legacy: "Air desk", react: "/air", status: "done" },
+      { id: "air-multi-carrier", name: "Multi-airline option cards + select quoted", legacy: "Air desk", status: "missing" },
+      { id: "air-origin-dest-fees", name: "Origin & destination surcharge tables", legacy: "Air desk", status: "missing" },
+      { id: "air-export-import", name: "Export / Import module toggle (AE/AI)", legacy: "Air desk", status: "missing" },
+      { id: "air-3step", name: "3-step flow (Shipment · Carrier · Terms)", legacy: "Air desk", status: "missing" },
+      { id: "air-agreement", name: "Agency agreement upload & compliance", legacy: "Air desk", status: "missing" },
+      { id: "air-role-defaults", name: "Role-based currency, terms, surcharge visibility", legacy: "Air desk", status: "missing" },
+      { id: "air-smart-embed", name: "Embedded Smart Quote + file upload in desk", legacy: "Air desk", status: "missing" },
+      { id: "air-preview", name: "Official quote preview / print / PDF", legacy: "Air desk", status: "missing" },
+      { id: "air-maps", name: "Google Maps airport embed", legacy: "Air desk", status: "missing" },
+      { id: "air-fx", name: "Custom USD→INR exchange override", legacy: "Air desk", status: "missing" },
+    ],
+  },
+  {
+    id: "sea-desk",
+    title: "Sea freight desk",
+    description: "Full FCL/LCL/BB ocean quoting",
+    plannedPhase: 7,
+    features: [
+      { id: "sea-fcl-lcl", name: "FCL / LCL / break bulk modes", legacy: "Sea desk", react: "/sea", status: "done" },
+      { id: "sea-containers", name: "Container matrix + LCL rates", legacy: "Sea desk", react: "/sea", status: "done" },
+      { id: "sea-calc", name: "Chargeable RT & base freight calc", legacy: "Sea desk", react: "/sea", status: "done" },
+      { id: "sea-save", name: "Save new sea quote to Firestore", legacy: "Sea desk", react: "/sea", status: "done" },
+      { id: "sea-tariff", name: "Load Circulars tariff", legacy: "Sea desk", react: "/sea", status: "done" },
+      { id: "sea-multi-liner", name: "Multi-liner option cards", legacy: "Sea desk", status: "missing" },
+      { id: "sea-surcharges", name: "Origin/destination local surcharges", legacy: "Sea desk", status: "missing" },
+      { id: "sea-alternatives", name: "Sea alternatives comparison table", legacy: "Sea desk", status: "missing" },
+      { id: "sea-export-import", name: "Export / Import toggle (SE/SI)", legacy: "Sea desk", status: "missing" },
+      { id: "sea-smart-embed", name: "Embedded Smart Quote + file upload", legacy: "Sea desk", status: "missing" },
+      { id: "sea-preview", name: "Official quote preview / print / PDF", legacy: "Sea desk", status: "missing" },
+      { id: "sea-warnings", name: "Heavy-weight / multi-axle trailer warnings", legacy: "Sea desk", status: "missing" },
+    ],
+  },
+  {
+    id: "courier-desk",
+    title: "Courier desk",
+    description: "Express parcel quoting",
+    plannedPhase: 6,
+    features: [
+      { id: "courier-packages", name: "Package matrix + chargeable weight", legacy: "Courier desk", react: "/courier", status: "done" },
+      { id: "courier-carriers", name: "Multi-carrier comparison + selection", legacy: "Courier desk", react: "/courier", status: "done" },
+      { id: "courier-save", name: "Save courier quote", legacy: "Courier desk", react: "/courier", status: "done" },
+      { id: "courier-surcharges", name: "Full surcharge grid (remote, DG, oversized…)", legacy: "Courier desk", react: "/courier", status: "partial", testHint: "Fuel + insurance only in React UI today" },
+      { id: "courier-terms", name: "Terms tab + default T&C", legacy: "Courier desk", status: "missing" },
+      { id: "courier-preview", name: "Quote preview / print", legacy: "Courier desk", status: "missing" },
+      { id: "courier-reset", name: "Reset desk with confirmation", legacy: "Courier desk", status: "missing" },
+    ],
+  },
+  {
+    id: "other-desks",
+    title: "Transport & warehouse desks",
+    description: "Road and storage quoting modules",
+    plannedPhase: 10,
+    features: [
+      { id: "transport-desk", name: "Transportation desk (charges, surcharges, save)", legacy: "Transport tab", status: "missing" },
+      { id: "warehouse-desk", name: "Warehousing desk (rates, fees, save)", legacy: "Warehouse tab", status: "missing" },
+    ],
+  },
+  {
+    id: "smart-quote",
+    title: "Smart Quote automation",
+    description: "Enquiry parsing and desk prefill",
+    plannedPhase: 8,
+    features: [
+      { id: "sq-air-text", name: "Air — paste enquiry text", legacy: "Smart Quote", react: "/smart-quote/air", status: "done" },
+      { id: "sq-sea-text", name: "Sea — paste enquiry text", legacy: "Smart Quote", react: "/smart-quote/sea", status: "done" },
+      { id: "sq-file-upload", name: "File upload (PDF, Excel, Word, email)", legacy: "Air/Sea desk", status: "missing" },
+      { id: "sq-apply-desk", name: "Apply parsed enquiry to full desk form", legacy: "Air/Sea desk", status: "missing" },
+      { id: "sq-excel-publish", name: "Excel tariff import → Circulars publish", legacy: "Circulars", status: "missing" },
+      { id: "sq-save", name: "Save Smart Quote draft as quote", legacy: "Smart Quote", status: "missing" },
+    ],
+  },
+  {
+    id: "enquiry-db",
+    title: "Enquiry database",
+    description: "Pipeline, filters, reports, quote actions",
+    plannedPhase: 9,
+    features: [
+      { id: "edb-list", name: "Searchable quote list", legacy: "Enquiry DB", react: "/enquiries", status: "done" },
+      { id: "edb-sla", name: "SLA badges (due soon / overdue)", legacy: "Enquiry DB", react: "/enquiries", status: "done" },
+      { id: "edb-pipeline", name: "Pipeline chips (Quoted / Won / Lost / Cancelled)", legacy: "Enquiry DB", status: "missing" },
+      { id: "edb-advanced-filters", name: "Advanced filters + column picker", legacy: "Enquiry DB", status: "missing" },
+      { id: "edb-gp-modes", name: "Buy / sell / GP display modes", legacy: "Enquiry DB", status: "missing" },
+      { id: "edb-inspector", name: "Enquiry inspector (view / amend / won)", legacy: "Enquiry DB", status: "missing" },
+      { id: "edb-actions", name: "Duplicate, cancel, lost, delete row actions", legacy: "Enquiry DB", status: "missing" },
+      { id: "edb-reports", name: "Financial reports + CSV export", legacy: "Enquiry DB", status: "missing" },
+      { id: "edb-archive", name: "90-day archive + find old quote", legacy: "Enquiry DB", status: "missing" },
+      { id: "edb-ownership", name: "Per-desk quote ownership filter", legacy: "Enquiry DB", status: "missing" },
+    ],
+  },
+  {
+    id: "quote-lifecycle",
+    title: "Quote lifecycle",
+    description: "View, amend, convert, print — after create",
+    plannedPhase: 6,
+    features: [
+      { id: "ql-view", name: "View saved quote (official layout)", legacy: "Enquiry DB / desk", status: "missing" },
+      { id: "ql-print", name: "Print / PDF export", legacy: "All desks", status: "missing" },
+      { id: "ql-amend", name: "Amend quote", legacy: "Enquiry DB", status: "missing" },
+      { id: "ql-amend-approve", name: "Admin amendment approval", legacy: "Manager panel", status: "missing" },
+      { id: "ql-won", name: "Convert to Won", legacy: "Enquiry DB", status: "missing" },
+      { id: "ql-lost", name: "Mark Lost / Cancelled", legacy: "Enquiry DB", status: "missing" },
+      { id: "ql-delete", name: "Delete quote", legacy: "Enquiry DB", status: "missing" },
+      { id: "ql-duplicate", name: "Duplicate / recreate onto desk", legacy: "Enquiry DB", status: "missing" },
+      { id: "ql-refid", name: "Structured ref IDs (AE/AI/SE/SI/TR/WH/CR)", legacy: "Save flow", status: "partial", testHint: "React saves Q-prefixed ids; legacy uses mode codes" },
+      { id: "ql-offline", name: "LocalStorage cache + offline recovery", legacy: "Global", status: "missing" },
+    ],
+  },
+  {
+    id: "circulars",
+    title: "Circulars & tariffs",
+    description: "Document library and tariff management",
+    plannedPhase: 11,
+    features: [
+      { id: "circ-browse-air", name: "Browse published air tariffs", legacy: "Circulars", react: "/circulars", status: "done" },
+      { id: "circ-browse-sea", name: "Browse published sea tariffs", legacy: "Circulars", react: "/circulars", status: "done" },
+      { id: "circ-docs", name: "Circular documents list", legacy: "Circulars", react: "/circulars", status: "partial" },
+      { id: "circ-upload", name: "Upload documents (PDF/Excel/Word)", legacy: "Circulars", status: "missing" },
+      { id: "circ-delete", name: "Delete circulars", legacy: "Circulars", status: "missing" },
+      { id: "circ-categories", name: "Category tabs (tariffs, fuel, line circulars)", legacy: "Circulars", status: "missing" },
+      { id: "circ-import", name: "Excel import → publish tariffs", legacy: "Circulars", status: "missing" },
+    ],
+  },
+  {
+    id: "directory-sales",
+    title: "Directory & sales pipeline",
+    description: "CRM and leads",
+    plannedPhase: 11,
+    features: [
+      { id: "dir-contacts", name: "Global contacts grid", legacy: "Directory", status: "missing" },
+      { id: "dir-crud", name: "Add / edit / delete contacts", legacy: "Directory", status: "missing" },
+      { id: "dir-excel", name: "Excel import / export", legacy: "Directory", status: "missing" },
+      { id: "dir-agency", name: "Agent agreement file per contact", legacy: "Directory", status: "missing" },
+      { id: "dir-weekly", name: "Weekly agency list email", legacy: "Directory", status: "missing" },
+      { id: "sales-kanban", name: "Sales pipeline kanban + leads", legacy: "Sales tab", status: "missing" },
+      { id: "sales-activity", name: "Lead activity log", legacy: "Sales tab", status: "missing" },
+    ],
+  },
+  {
+    id: "platform",
+    title: "Platform modules (Ops / Docs / Finance / HR)",
+    description: "Operations and roadmap shells",
+    plannedPhase: 13,
+    features: [
+      { id: "ops-board", name: "Operations command center (won shipments)", legacy: "Operations", status: "missing" },
+      { id: "docs-module", name: "Documentation module shell", legacy: "Documentation", status: "missing" },
+      { id: "finance-module", name: "Finance module + financial reports link", legacy: "Finance", status: "missing" },
+      { id: "hr-module", name: "HR module shell", legacy: "HR", status: "missing" },
+    ],
+  },
+  {
+    id: "nrs-roles",
+    title: "NRS & desk roles",
+    description: "Nomination desk workflows",
+    plannedPhase: 12,
+    features: [
+      { id: "nrs-convert", name: "NRS convert flow (shipper/consignee capture)", legacy: "NRS desk", status: "missing" },
+      { id: "nrs-rules", name: "Role-specific quoting rules per desk category", legacy: "TEAM_ROLES", status: "missing" },
+      { id: "nrs-agreement-hide", name: "Hide agency agreement for NRS / Free Hand", legacy: "Air/Sea desk", status: "missing" },
+    ],
+  },
+  {
+    id: "shell-ux",
+    title: "App shell & cross-cutting UX",
+    description: "Navigation, assistant, FX, offline",
+    plannedPhase: 14,
+    features: [
+      { id: "nav-modules", name: "Full module navigation (12+ areas)", legacy: "Sidebar + tabs", react: "Sidebar", status: "partial" },
+      { id: "nav-cmdk", name: "Command palette (Ctrl/Cmd+K)", legacy: "Global", status: "missing" },
+      { id: "nav-assistant", name: "Atlas Help / AI copilot FAB", legacy: "Global", status: "missing" },
+      { id: "nav-fx", name: "Live FX ticker + converter", legacy: "Header", status: "missing" },
+      { id: "nav-offline", name: "Offline / sync status badge", legacy: "Header", status: "missing" },
+      { id: "nav-legacy-link", name: "Link to legacy app", legacy: "—", react: "Header", status: "done" },
+      { id: "nav-mobile", name: "Mobile drawer navigation", legacy: "Sidebar", status: "missing" },
+      { id: "pwa", name: "PWA manifest + service worker", legacy: "Global", status: "missing" },
+    ],
+  },
+];
+
+export function parityStats(groups: ParityGroup[] = parityGroups) {
+  const all = groups.flatMap((g) => g.features);
+  return {
+    total: all.length,
+    done: all.filter((f) => f.status === "done").length,
+    partial: all.filter((f) => f.status === "partial").length,
+    missing: all.filter((f) => f.status === "missing").length,
+    percent: Math.round((all.filter((f) => f.status === "done").length / all.length) * 100),
+  };
+}
+
+export const plannedPhases = [
+  { phase: 6, title: "Quote lifecycle + courier polish", items: "View/print/amend/won/lost, full courier surcharges" },
+  { phase: 7, title: "Air & Sea full parity", items: "Multi-carrier, surcharges, 3-step flow, preview/PDF" },
+  { phase: 8, title: "Smart Quote full parity", items: "File upload, apply to desk, save draft" },
+  { phase: 9, title: "Enquiry DB full parity", items: "Inspector, actions, reports, archive, GP modes" },
+  { phase: 10, title: "Transport & Warehouse desks", items: "Full desks with save" },
+  { phase: 11, title: "Circulars manage + Directory + Sales", items: "Upload, CRM, pipeline" },
+  { phase: 12, title: "Admin, roles & NRS", items: "User mgmt, credit control, NRS convert" },
+  { phase: 13, title: "Manager panel & platform modules", items: "Analytics, ops board, member dashboard" },
+  { phase: 14, title: "Shell UX polish + your cutover approval", items: "Cmd+K, FX, offline, mobile — then switch default" },
+];

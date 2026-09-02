@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Anchor,
+  ClipboardCheck,
   Database,
   FileText,
   LayoutDashboard,
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/courier", label: "Courier desk", icon: Package },
   { href: "/enquiries", label: "Enquiry DB", icon: Database },
   { href: "/circulars", label: "Circulars", icon: FileText },
+  { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

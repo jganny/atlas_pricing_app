@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Clock, Loader2, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, ClipboardCheck, Clock, Loader2, Sparkles } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useLiveData } from "@/lib/api";
@@ -34,6 +34,27 @@ export default function DashboardPage() {
           </p>
         </Card>
       ) : null}
+
+      <Card className="border-violet-200 bg-violet-50/60">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-violet-700">
+              <ClipboardCheck className="h-4 w-4" />
+              <span className="text-sm font-bold">Migration on hold until full parity</span>
+            </div>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+              Legacy stays production. Track every missing feature and test before cutover.
+            </p>
+          </div>
+          <Link
+            href="/feature-parity"
+            className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#14154a]"
+          >
+            Feature parity tracker
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

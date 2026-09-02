@@ -43,8 +43,11 @@ Login: `ganny` / `demo` (or `manager` / `demo`). Amber banner = mock data, no Fi
 | Circulars library + tariffs | ✅ live read |
 | Courier desk (React) | ✅ Phase 4 — calculate + save |
 | Enquiry DB search/filter | ✅ Phase 4 |
-| Air / Sea full desks | ❌ legacy only |
-| Firebase deploy | ❌ awaiting your approval |
+| Air / Sea full desks | ✅ Phase 5 (simplified — multi-carrier, PDF, fees still legacy) |
+| Feature parity tracker | ✅ `/app/feature-parity` |
+| Full legacy parity | ❌ Phases 6–14 — migration **on hold** until done |
+| Firebase deploy | ✅ Level A (`/app/` alongside legacy) when you deploy |
+| Cutover to React default | ❌ only after you approve full parity |
 
 ## Environment variables
 
@@ -100,9 +103,12 @@ Copies static export to `app/` for Firebase route `/app/**`.
 | 2 | Firebase v9 + TanStack Query + live reads | ✅ |
 | 3 | Pure TS `pricing-core` packages | ✅ |
 | 4 | Courier desk + Enquiry DB filters | ✅ |
-| 5 | Air/Sea desks, retire legacy, deploy on approval | planned |
+| 5 | Air/Sea desks (simplified) + save | ✅ |
+| 6–14 | Full legacy parity (see FEATURE_PARITY.md) | planned — **migration on hold** |
 
-See **MIGRATION_STATUS.md** for what each phase does and when deployment happens.
+**Policy:** Do not switch default route to `/app/` until every legacy feature is in React and you approve cutover.
+
+See **FEATURE_PARITY.md** and **/app/feature-parity** for the live checklist.
 
 - Next.js 16 + React 19 + TypeScript
 - Firebase v11 modular SDK (Auth + Firestore)

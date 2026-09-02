@@ -4,109 +4,91 @@ Plain English — no jargon.
 
 ---
 
+## Migration policy (updated)
+
+**Legacy → React cutover is ON HOLD.**
+
+We will keep building React until it has **all** legacy features. You test each feature in React vs legacy. When React is **equal or better**, you approve migration. Until then:
+
+- **Production:** https://vertex-35d95.web.app/index.html (legacy — unchanged)
+- **Preview:** https://vertex-35d95.web.app/app/ (React — growing toward parity)
+
+Track progress: **Feature parity** page in the React sidebar, or `FEATURE_PARITY.md` in the repo.
+
+---
+
 ## The short answer on deployment
 
-**Nothing goes live on https://vertex-35d95.web.app automatically when you approve a phase.**
+Deploying to Firebase **does not** switch your team to React. It only publishes whatever is in `/app/` alongside legacy.
 
-Every time you say "go ahead", the agent:
-
-1. **Writes code** on a development branch (`cursor/react-migration-116f`)
-2. **Tests it** in a cloud preview (the Preview button in Cursor)
-3. **Saves to Cursor's git** (backup you see in the agent view)
-
-Your **live Firebase site stays exactly as it is** until **you** run deploy commands on your computer (or explicitly ask the agent to deploy, which you have not done yet).
+Every time you say "start phase X", the agent builds that slice, you test it, and legacy keeps running for everything not yet migrated.
 
 ---
 
-## What each phase has done (so far)
+## Phases completed (0–5) — foundation only
 
-| Phase | What was built | Live site changed? |
-|-------|----------------|-------------------|
-| **0** | First React mock screens (demo data) | No |
-| **1** | Proper Next.js app at `/app` path | No |
-| **2** | Real Firebase login + live enquiries/tariffs (read-only) | No |
-| **3** | Tested pricing math package (air/sea) | No |
-| **4** | Courier desk in React + better Enquiry DB | No (until you deploy) |
-| **5** | Retire legacy, switch default route | Only when you approve |
+| Phase | What was built | Full legacy parity? |
+|-------|----------------|---------------------|
+| **0** | First React mock screens | No |
+| **1** | Next.js at `/app` | No |
+| **2** | Firebase login + live reads | No |
+| **3** | Pricing math package | No |
+| **4** | Courier desk + Enquiry filters | Partial |
+| **5** | Air/Sea desks (simplified) + save | Partial |
 
-Think of it like **renovating a new wing of a building while the old wing stays open**. Customers still use the old wing (`/index.html`) until you open the new door (`/app/`).
-
----
-
-## When does it become the "live app"?
-
-There are **two levels** of "live":
-
-### Level A — New app visible alongside legacy (you can do this anytime)
-
-After `./scripts/build-react.sh` and `firebase deploy --only hosting`:
-
-- **Legacy (unchanged):** https://vertex-35d95.web.app/index.html  
-- **New React app:** https://vertex-35d95.web.app/app/
-
-Your team opens `/app/` manually. Legacy keeps working for everything not migrated yet.
-
-### Level B — New app becomes the default (Phase 5, your explicit approval)
-
-Change Firebase so `/` serves the new app instead of `index.html`. Only after Air/Sea desks and save flows are fully migrated and you sign off.
-
-**We have not done Level A or B yet** — by your earlier instruction ("no Firebase deploy until I approve").
+**~21% of legacy features are in React today.** See `/app/feature-parity` for the full list.
 
 ---
 
-## What to say when you want it live
+## Phases 6–14 — remaining work before migration
+
+| Phase | What gets built |
+|-------|-----------------|
+| **6** | Quote view/print/amend/won/lost + courier surcharges |
+| **7** | Full Air & Sea desks (multi-carrier, fees, PDF) |
+| **8** | Smart Quote files + apply to desk |
+| **9** | Full Enquiry DB (actions, reports, archive) |
+| **10** | Transport + Warehouse desks |
+| **11** | Circulars upload + Directory + Sales |
+| **12** | Admin + roles + NRS |
+| **13** | Manager analytics + Ops/Docs/Finance/HR |
+| **14** | UX polish + **your cutover approval** |
+
+---
+
+## When does migration actually happen?
+
+Only after:
+
+1. Every item on the **Feature parity** tracker is **Done**
+2. You have tested workflows you care about in both apps
+3. You explicitly say **“Approve migration”**
+
+Then we change Firebase so `/` opens React instead of `index.html`.
+
+---
+
+## What to say
 
 | You want… | Say this |
 |-----------|----------|
-| Deploy new `/app/` alongside legacy | **"Deploy to Firebase now"** |
-| Push code to GitHub | **"Push to GitHub"** (needs your token) or push from your Mac |
-| Make `/app/` the default homepage | **"Switch default to new app"** (Phase 5) |
-| Keep building, don't deploy | **"Continue next phase"** (what you've been doing) |
+| See what's missing | Open `/app/feature-parity` or read `FEATURE_PARITY.md` |
+| Build the next chunk | **"Start Phase 6"** (or 7, 8, …) |
+| Deploy preview to Firebase | **"Deploy to Firebase now"** |
+| Switch team to React as default | **"Approve migration"** (only when parity is done) |
+| Keep legacy, keep building | **"Continue next phase"** |
 
 ---
 
-## What happens behind each "start phase" instruction
-
-```
-You say "start phase X"
-        ↓
-Agent reads the migration plan
-        ↓
-Builds that slice of the new app (code only)
-        ↓
-Runs tests / build
-        ↓
-Commits + pushes to Cursor git
-        ↓
-Dev server runs in cloud → Preview card (if you're in Cursor)
-        ↓
-Live Firebase site: UNCHANGED unless you deploy
-```
-
----
-
-## Recommended moment to deploy
-
-| Milestone | Good time to deploy `/app/`? |
-|-----------|------------------------------|
-| After Phase 2 | Yes — team can preview dashboard + Smart Quote with live data |
-| After Phase 4 | Better — Courier desk + enquiries usable |
-| After Phase 5 | Deploy + switch default when legacy can be retired |
-
-**Practical suggestion:** Deploy **Level A** after Phase 4 so your team can try `/app/` on the real site while legacy handles full Air/Sea quoting.
-
----
-
-## One-command deploy (when you're ready)
-
-From repo root on your machine:
+## Deploy `/app/` preview (does not replace legacy)
 
 ```bash
 ./scripts/build-react.sh
-firebase deploy --only firestore:rules --project vertex-35d95
 firebase deploy --only hosting --project vertex-35d95
 ```
 
-Then open: **https://vertex-35d95.web.app/app/**
+- Legacy: https://vertex-35d95.web.app/index.html  
+- React: https://vertex-35d95.web.app/app/  
+- Parity tracker: https://vertex-35d95.web.app/app/feature-parity  
 
-See also: `DEPLOY_AND_PREVIEW.md` for GitHub push and Preview instructions.
+See also: `DEPLOY_AND_PREVIEW.md`, `FEATURE_PARITY.md`

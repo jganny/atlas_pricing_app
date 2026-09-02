@@ -20,7 +20,7 @@ export function MockBanner() {
     return (
       <div className="flex items-center justify-center gap-2 bg-emerald-600 px-3 py-1.5 text-center text-xs font-bold text-white">
         <Wifi className="h-3.5 w-3.5" />
-        {label} — Air, Sea & Courier desks can save quotes · enquiries & tariffs from Firestore
+        {label} — Air, Sea & Courier can save · migration on hold until full parity
       </div>
     );
   }
