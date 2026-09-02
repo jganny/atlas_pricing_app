@@ -10,6 +10,8 @@ import {
   LogOut,
   Package,
   Plane,
+  PlaneTakeoff,
+  Ship,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,8 @@ import { MockBanner } from "./MockBanner";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/air", label: "Air desk", icon: PlaneTakeoff },
+  { href: "/sea", label: "Sea desk", icon: Ship },
   { href: "/smart-quote/air", label: "Smart Quote · Air", icon: Plane },
   { href: "/smart-quote/sea", label: "Smart Quote · Sea", icon: Anchor },
   { href: "/courier", label: "Courier desk", icon: Package },

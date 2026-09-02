@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Package, Plus, Save, Trash2 } from "lucide-react";
 import {
   calculateCourierFreight,
@@ -12,6 +13,7 @@ import { Badge, Button, Card } from "@/components/ui";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { saveCourierQuote } from "@/lib/firebase/save-quote";
+import { queryKeys } from "@/hooks/query-keys";
 import { formatCurrency } from "@/lib/utils";
 
 const COUNTRIES = ["IN", "AE", "US", "GB", "DE", "SG", "AU", "CN", "HK", "CA", "FR"];
@@ -35,6 +37,7 @@ const defaultSurcharges = {
 
 export default function CourierDeskPage() {
   const user = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
   const [customer, setCustomer] = useState("");
   const [originCity, setOriginCity] = useState("");
   const [destCity, setDestCity] = useState("");
@@ -82,7 +85,7 @@ export default function CourierDeskPage() {
     setSaveMsg(null);
     try {
       if (useLiveData && user) {
-        await saveCourierQuote({
+        const id = await saveCourierQuote({
           customer: customer.trim(),
           creator: user.username,
           originCity,
@@ -97,7 +100,8 @@ export default function CourierDeskPage() {
           packages: result.packages,
           calc: result,
         });
-        setSaveMsg("Saved to Firestore quotes collection.");
+        await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+        setSaveMsg(`Saved to Firestore · quote ${id}`);
       } else {
         setSaveMsg("Mock mode — save disabled. Switch to live Firebase or use legacy app.");
       }

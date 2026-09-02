@@ -87,3 +87,156 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
   await setDoc(doc(db, "quotes", id), quoteData);
   return id;
 }
+
+export interface SaveAirInput {
+  customer: string;
+  creator: string;
+  origin: string;
+  destination: string;
+  currency: string;
+  incoterm: string;
+  commodity: string;
+  airline: string;
+  routing: string;
+  tt: string;
+  validity: string;
+  cargo: Array<{ l: number; w: number; h: number; qty: number; gw: number }>;
+  calc: ReturnType<typeof import("@atlas/pricing-core").calculateAirFreight>;
+  breaks: Record<string, { sell: number; buy: number }>;
+}
+
+export async function saveAirQuote(input: SaveAirInput): Promise<string> {
+  const id = `Q${Math.random().toString(36).slice(2, 11)}`;
+  const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
+  const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
+  const route = `${originCode} → ${destCode} via ${input.airline || "Any"}`;
+  const now = new Date();
+  const amount = input.calc.baseFreightSell;
+  const amountINR = input.currency === "INR" ? amount : amount * 83;
+  const gp = input.calc.baseFreightSell - input.calc.baseFreightBuy;
+
+  const quoteData = {
+    id,
+    date: now.toISOString().split("T")[0],
+    timestamp: Date.now(),
+    customer: input.customer,
+    creator: input.creator,
+    status: "quoted",
+    quoteNumber: Math.floor(now.getTime() / 1000) % 100000,
+    type: "air",
+    route,
+    amount,
+    amountINR,
+    currency: input.currency,
+    grossProfit: gp,
+    grossProfitCurrency: input.currency,
+    grossProfitINR: input.currency === "INR" ? gp : gp * 83,
+    details: {
+      origin: input.origin,
+      destination: input.destination,
+      airline: input.airline,
+      incoterm: input.incoterm,
+      module: "export",
+      commodity: input.commodity,
+      chargeableWeight: input.calc.chargeableWeightKg,
+      grossWeight: input.calc.cargo.grossWeightKg,
+      volumeWeight: input.calc.cargo.volumeWeightKg,
+      cbm: input.calc.cargo.volumeCbm,
+      quantity: input.calc.cargo.packageQty,
+      appliedRate: input.calc.activeRate,
+      appliedBuyRate: input.calc.activeBuyRate,
+      baseFreight: input.calc.baseFreightSell,
+      baseBuyFreight: input.calc.baseFreightBuy,
+      usedBreak: input.calc.usedBreak,
+      usingBuyFallback: input.calc.usingBuyFallback,
+      tariffsEnabled: true,
+      originFeesEnabled: false,
+      destFeesEnabled: false,
+      routing: input.routing,
+      tt: input.tt,
+      validity: input.validity,
+      cargoItems: input.cargo,
+      breaks: input.breaks,
+      type: "air",
+      mode: "Air",
+    },
+    notes: `Air quote (React). CHW: ${input.calc.chargeableWeightKg} kg · ${input.calc.usedBreak}`,
+  };
+
+  const db = getFirebaseDb();
+  await setDoc(doc(db, "quotes", id), quoteData);
+  return id;
+}
+
+export interface SaveSeaInput {
+  customer: string;
+  creator: string;
+  origin: string;
+  destination: string;
+  currency: string;
+  incoterm: string;
+  liner: string;
+  routing: string;
+  tt: string;
+  validity: string;
+  mode: string;
+  grossWeightKg: number;
+  volumeCbm: number;
+  containers: Array<{ type: string; qty: number; sellRate: number; buyRate: number }>;
+  calc: ReturnType<typeof import("@atlas/pricing-core").calculateSeaFreight>;
+}
+
+export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
+  const id = `Q${Math.random().toString(36).slice(2, 11)}`;
+  const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
+  const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
+  const route = `${originCode} → ${destCode} via ${input.liner || "Any"}`;
+  const now = new Date();
+  const amount = input.calc.baseFreightSell;
+  const amountINR = input.currency === "INR" ? amount : amount * 83;
+  const gp = input.calc.baseFreightSell - input.calc.baseFreightBuy;
+
+  const quoteData = {
+    id,
+    date: now.toISOString().split("T")[0],
+    timestamp: Date.now(),
+    customer: input.customer,
+    creator: input.creator,
+    status: "quoted",
+    quoteNumber: Math.floor(now.getTime() / 1000) % 100000,
+    type: "sea",
+    route,
+    amount,
+    amountINR,
+    currency: input.currency,
+    grossProfit: gp,
+    grossProfitCurrency: input.currency,
+    grossProfitINR: input.currency === "INR" ? gp : gp * 83,
+    details: {
+      origin: input.origin,
+      destination: input.destination,
+      module: input.mode,
+      type: input.mode,
+      incoterm: input.incoterm,
+      liner: input.liner,
+      routing: input.routing,
+      tt: input.tt,
+      validity: input.validity,
+      grossWeight: input.grossWeightKg,
+      volume: input.volumeCbm,
+      volumeCbm: input.volumeCbm,
+      chargeableRt: input.calc.chargeableRt,
+      baseFreight: input.calc.baseFreightSell,
+      baseBuyFreight: input.calc.baseFreightBuy,
+      containerSummary: input.calc.containerSummary,
+      containers: input.containers,
+      usingBuyFallback: input.calc.usingBuyFallback,
+      tariffsEnabled: true,
+    },
+    notes: `Sea quote (React). ${input.mode.toUpperCase()} · RT ${input.calc.chargeableRt}`,
+  };
+
+  const db = getFirebaseDb();
+  await setDoc(doc(db, "quotes", id), quoteData);
+  return id;
+}
