@@ -19,15 +19,37 @@ function AuthSync() {
       return;
     }
 
-    setAuthReady(false);
+    // Optimistic: cached session from localStorage — don't block the UI on Firebase.
+    const cachedUser = useAuthStore.getState().user;
+    if (cachedUser) {
+      setAuthReady(true);
+    } else {
+      setAuthReady(false);
+    }
+
+    let ready = Boolean(cachedUser);
+    const markReady = () => {
+      if (!ready) {
+        ready = true;
+        setAuthReady(true);
+      }
+    };
+
+    // Firebase can hang in preview sandboxes — never block longer than 3s.
+    const timeout = window.setTimeout(markReady, 3000);
+
     const unsubscribe = subscribeToAuthChanges(
       (user) => {
         setUser(user);
-        setAuthReady(true);
+        markReady();
       },
-      () => setAuthReady(true),
+      () => markReady(),
     );
-    return unsubscribe;
+
+    return () => {
+      window.clearTimeout(timeout);
+      unsubscribe();
+    };
   }, [setAuthReady, setUser]);
 
   return null;
