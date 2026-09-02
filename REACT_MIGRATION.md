@@ -96,7 +96,7 @@ Copies static export to `app/` for Firebase route `/app/**`.
 | 0 | Vite React mock shell | ✅ |
 | 1 | Next.js foundation | ✅ |
 | 2 | Firebase v9 + TanStack Query + live reads | ✅ |
-| 3 | Pure TS `pricing-core` packages | planned |
+| 3 | Pure TS `pricing-core` packages | ✅ |
 | 4 | Migrate desks: Courier → Air → Sea | planned |
 | 5 | Retire legacy; deploy on approval | planned |
 

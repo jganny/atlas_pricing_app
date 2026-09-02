@@ -10,10 +10,13 @@ import {
   lookupSeaTariff as lookupLiveSeaTariff,
 } from "@/lib/firebase/tariffs";
 import {
-  estimateAirTotal,
   parseAirEnquiry,
   parseSeaEnquiry,
 } from "@/lib/pricing/parse-enquiry";
+import {
+  estimateAirFreightFromTariff,
+  estimateSeaFreightFromTariff,
+} from "@/lib/pricing/estimate";
 import type {
   AirTariff,
   AuthUser,
@@ -102,7 +105,7 @@ async function runAirSmartQuote(text: string, airTariffs?: AirTariff[]): Promise
   let estimatedTotal: number | undefined;
 
   if (tariff) {
-    estimatedTotal = estimateAirTotal(parsed.packages, tariff.breaks).freight;
+    estimatedTotal = estimateAirFreightFromTariff(parsed, tariff);
   }
 
   return {
@@ -139,14 +142,8 @@ async function runSeaSmartQuote(text: string, seaTariffs?: SeaTariff[]): Promise
   const carrierLabel = parsed.linerLabel || tariff?.carrier || "From route history";
   let estimatedTotal: number | undefined;
 
-  if (tariff?.mode === "fcl" && parsed.containers.length) {
-    estimatedTotal = parsed.containers.reduce((sum, c) => {
-      const rate = tariff.fclRates[c.type]?.sell || 0;
-      return sum + rate * c.qty;
-    }, 0);
-  } else if (tariff?.mode === "lcl") {
-    const rt = Math.max((parsed.grossWeight || 0) / 1000, parsed.volume || 0, 1);
-    estimatedTotal = rt * tariff.lclRate.sell;
+  if (tariff) {
+    estimatedTotal = estimateSeaFreightFromTariff(parsed, tariff);
   }
 
   return {

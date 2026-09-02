@@ -1,4 +1,5 @@
 import type { ParsedEnquiry } from '../types'
+import { calculateAirFreight, chargeableWeightKg, summarizeCargo } from '@atlas/pricing-core'
 
 const AIRLINE_HINTS: Record<string, string> = {
   EK: 'EK - Emirates',
@@ -169,25 +170,32 @@ function scoreSea(r: ParsedEnquiry) {
 }
 
 export function estimateChargeableWeightKg(packages: ParsedEnquiry['packages']) {
-  const gross = packages.reduce((sum, p) => sum + (p.gw || 0), 0)
-  const volumetric = packages.reduce((sum, p) => {
-    if (!p.l || !p.w || !p.h || !p.qty) return sum
-    return sum + (p.l * p.w * p.h * p.qty) / 6000
-  }, 0)
-  return Math.max(gross, volumetric)
+  const cargo = packages.map((p) => ({
+    length: p.l ?? 0,
+    width: p.w ?? 0,
+    height: p.h ?? 0,
+    qty: p.qty,
+    grossWeightKg: p.gw ?? 0,
+  }))
+  return chargeableWeightKg(summarizeCargo(cargo))
 }
 
+/** @deprecated Use estimateAirFreightFromTariff from ./estimate.ts */
 export function estimateAirTotal(
   packages: ParsedEnquiry['packages'],
   breaks: Record<string, { sell: number; buy: number }>,
 ) {
-  const cwt = estimateChargeableWeightKg(packages)
-  const chargeable = Math.max(cwt, 45)
-  let rate = breaks.plus45?.sell || breaks.plus100?.sell || breaks.min?.sell || 0
-  if (chargeable >= 1000 && breaks.plus1000) rate = breaks.plus1000.sell
-  else if (chargeable >= 500 && breaks.plus500) rate = breaks.plus500.sell
-  else if (chargeable >= 300 && breaks.plus300) rate = breaks.plus300.sell
-  else if (chargeable >= 100 && breaks.plus100) rate = breaks.plus100.sell
-  const freight = Math.max(breaks.min?.sell || 0, rate * chargeable)
-  return { chargeable, freight, cwt }
+  const cargo = packages.map((p) => ({
+    length: p.l ?? 0,
+    width: p.w ?? 0,
+    height: p.h ?? 0,
+    qty: p.qty,
+    grossWeightKg: p.gw ?? 0,
+  }))
+  const result = calculateAirFreight({ cargo, breaks })
+  return {
+    chargeable: result.chargeableWeightKg,
+    freight: result.baseFreightSell,
+    cwt: result.chargeableWeightKg,
+  }
 }

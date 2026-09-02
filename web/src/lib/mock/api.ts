@@ -8,10 +8,13 @@ import {
   MOCK_USERS,
 } from './data'
 import {
-  estimateAirTotal,
   parseAirEnquiry,
   parseSeaEnquiry,
 } from '../pricing/parse-enquiry'
+import {
+  estimateAirFreightFromTariff,
+  estimateSeaFreightFromTariff,
+} from '../pricing/estimate'
 
 const isMock = isMockMode
 
@@ -79,8 +82,7 @@ export async function runAirSmartQuote(text: string): Promise<SmartQuoteDraft> {
   let estimatedTotal: number | undefined
 
   if (tariff) {
-    const est = estimateAirTotal(parsed.packages, tariff.breaks)
-    estimatedTotal = est.freight
+    estimatedTotal = estimateAirFreightFromTariff(parsed, tariff)
   }
 
   return {
@@ -110,14 +112,8 @@ export async function runSeaSmartQuote(text: string): Promise<SmartQuoteDraft> {
   const carrierLabel = parsed.linerLabel || tariff?.carrier || 'From route history'
   let estimatedTotal: number | undefined
 
-  if (tariff?.mode === 'fcl' && parsed.containers.length) {
-    estimatedTotal = parsed.containers.reduce((sum, c) => {
-      const rate = tariff.fclRates[c.type]?.sell || 0
-      return sum + rate * c.qty
-    }, 0)
-  } else if (tariff?.mode === 'lcl') {
-    const rt = Math.max((parsed.grossWeight || 0) / 1000, parsed.volume || 0, 1)
-    estimatedTotal = rt * tariff.lclRate.sell
+  if (tariff) {
+    estimatedTotal = estimateSeaFreightFromTariff(parsed, tariff)
   }
 
   return {
