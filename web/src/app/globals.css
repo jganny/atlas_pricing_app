@@ -34,3 +34,19 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .quote-print-root,
+  .quote-print-root * {
+    visibility: visible;
+  }
+  .quote-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

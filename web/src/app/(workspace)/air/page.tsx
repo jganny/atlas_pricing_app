@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PlaneTakeoff, Plus, Save, Trash2, Zap } from "lucide-react";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
@@ -16,8 +16,10 @@ import {
   validateAirDesk,
   type AirCargoRow,
 } from "@/lib/pricing/air-desk";
+import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
+import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { formatCurrency } from "@/lib/utils";
 
 const BREAK_LABELS: Record<WeightBreakName, string> = {
@@ -33,9 +35,18 @@ const BREAK_LABELS: Record<WeightBreakName, string> = {
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 
 export default function AirDeskPage() {
+  return (
+    <Suspense fallback={<Card className="p-6 text-sm text-[var(--color-text-muted)]">Loading air desk…</Card>}>
+      <AirDeskInner />
+    </Suspense>
+  );
+}
+
+function AirDeskInner() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useAirTariffs();
+  const loader = useQuoteDeskLoader();
 
   const [customer, setCustomer] = useState("");
   const [origin, setOrigin] = useState("");
@@ -97,6 +108,24 @@ export default function AirDeskPage() {
 
   const calc = useMemo(() => computeAirDesk(deskInput), [deskInput]);
 
+  useEffect(() => {
+    if (!loader.sourceQuote) return;
+    const loaded = loadAirDeskFromQuote(loader.sourceQuote);
+    setCustomer(loaded.customer);
+    setOrigin(loaded.origin);
+    setDestination(loaded.destination);
+    setCurrency(loaded.currency);
+    setIncoterm(loaded.incoterm);
+    setCommodity(loaded.commodity);
+    setAirline(loaded.airline);
+    setRouting(loaded.routing);
+    setTt(loaded.tt);
+    setValidity(loaded.validity);
+    setPivotWeightKg(loaded.pivotWeightKg);
+    setCargo(loaded.cargo);
+    if (Object.keys(loaded.breaks).length) setBreaks({ ...EMPTY_AIR_BREAKS, ...loaded.breaks });
+  }, [loader.sourceQuote]);
+
   function updateCargo(index: number, patch: Partial<AirCargoRow>) {
     setCargo((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
@@ -152,9 +181,12 @@ export default function AirDeskPage() {
           cargo,
           calc,
           breaks: breaks as Record<string, { sell: number; buy: number }>,
+          quoteId: loader.editingQuoteId ?? undefined,
+          quoteNumber: loader.editingQuoteNumber,
+          status: loader.editingStatus,
         });
         await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-        setSaveMsg(`Saved to Firestore · quote ${id}`);
+        setSaveMsg(loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`);
       } else {
         setSaveMsg("Mock mode — save disabled. Use live Firebase or the legacy app.");
       }
@@ -167,6 +199,16 @@ export default function AirDeskPage() {
 
   return (
     <div className="space-y-6">
+      {loader.banner ? (
+        <Card className="border-sky-200 bg-sky-50">
+          <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
+        </Card>
+      ) : null}
+      {loader.loadError ? (
+        <Card className="border-amber-200 bg-amber-50">
+          <p className="text-sm font-semibold text-amber-900">{loader.loadError}</p>
+        </Card>
+      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[var(--color-atlas-air)]">

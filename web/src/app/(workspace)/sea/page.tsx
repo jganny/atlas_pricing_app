@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, Ship, Trash2, Zap } from "lucide-react";
 import type { SeaMode } from "@atlas/pricing-core";
@@ -14,17 +14,28 @@ import {
   validateSeaDesk,
   type SeaContainerRow,
 } from "@/lib/pricing/sea-desk";
+import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
+import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { formatCurrency } from "@/lib/utils";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
 
 export default function SeaDeskPage() {
+  return (
+    <Suspense fallback={<Card className="p-6 text-sm text-[var(--color-text-muted)]">Loading sea desk…</Card>}>
+      <SeaDeskInner />
+    </Suspense>
+  );
+}
+
+function SeaDeskInner() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useSeaTariffs();
+  const loader = useQuoteDeskLoader();
 
   const [customer, setCustomer] = useState("");
   const [origin, setOrigin] = useState("");
@@ -89,6 +100,27 @@ export default function SeaDeskPage() {
 
   const calc = useMemo(() => computeSeaDesk(deskInput), [deskInput]);
 
+  useEffect(() => {
+    if (!loader.sourceQuote) return;
+    const loaded = loadSeaDeskFromQuote(loader.sourceQuote);
+    setCustomer(loaded.customer);
+    setOrigin(loaded.origin);
+    setDestination(loaded.destination);
+    setCurrency(loaded.currency);
+    setIncoterm(loaded.incoterm);
+    setLiner(loaded.liner);
+    setRouting(loaded.routing);
+    setTt(loaded.tt);
+    setValidity(loaded.validity);
+    setMode(loaded.mode);
+    setGrossWeightKg(loaded.grossWeightKg);
+    setVolumeCbm(loaded.volumeCbm);
+    setChargeableCbmOverride(loaded.chargeableCbmOverride);
+    setContainers(loaded.containers);
+    setLclSell(loaded.lclSell);
+    setLclBuy(loaded.lclBuy);
+  }, [loader.sourceQuote]);
+
   function updateContainer(index: number, patch: Partial<SeaContainerRow>) {
     setContainers((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
@@ -149,9 +181,12 @@ export default function SeaDeskPage() {
           volumeCbm,
           containers,
           calc,
+          quoteId: loader.editingQuoteId ?? undefined,
+          quoteNumber: loader.editingQuoteNumber,
+          status: loader.editingStatus,
         });
         await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-        setSaveMsg(`Saved to Firestore · quote ${id}`);
+        setSaveMsg(loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`);
       } else {
         setSaveMsg("Mock mode — save disabled. Use live Firebase or the legacy app.");
       }
@@ -164,6 +199,16 @@ export default function SeaDeskPage() {
 
   return (
     <div className="space-y-6">
+      {loader.banner ? (
+        <Card className="border-sky-200 bg-sky-50">
+          <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
+        </Card>
+      ) : null}
+      {loader.loadError ? (
+        <Card className="border-amber-200 bg-amber-50">
+          <p className="text-sm font-semibold text-amber-900">{loader.loadError}</p>
+        </Card>
+      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[var(--color-atlas-sea)]">

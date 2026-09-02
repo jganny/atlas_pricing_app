@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enquiry DB v129.38 preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css?v=129.38">
+  <style>
+    /* Preview shell — do NOT use #app-workspace (that id is an app grid: 240px sidebar + main). */
+    html, body { margin: 0; background: #f1f5f9; font-family: 'Outfit', system-ui, sans-serif; }
+    .edb-preview-frame {
+      padding: 1rem 1.25rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .edb-preview-frame .enquiry-db-shell { display: block !important; width: 100%; }
+    .edb-preview-frame .enquiry-db-workspace {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) !important;
+      gap: 1.25rem;
+      align-items: start;
+      width: 100%;
+    }
+    .edb-preview-frame .enquiry-db-primary { min-width: 0; width: 100%; }
+    .edb-preview-frame .edb-denselist-card { min-height: 280px; }
+    .edb-preview-frame .edb-command-search {
+      display: block !important;
+      max-width: none !important;
+      width: 100% !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="edb-preview-frame">
+    <div class="desk-tab-pane enquiry-db-shell" data-tab-pane="enquiry-database" style="display:block;">
+      <div id="enquiry-db-sequence-shell" class="atlas-sequence-shell enquiry-db-unified">
+        <div class="atlas-seq-pane enquiry-seq-find" data-seq-pane="find" style="display:block;">
+          <div class="glass-card enquiry-db-main-card edb-command-card">
+            <div class="enquiry-db-toolbar table-header-row">
+              <div class="enquiry-db-title-row">
+                <div class="enquiry-db-title-block">
+                  <span class="enquiry-db-eyebrow">Operations · Command center</span>
+                  <h3 class="enquiry-db-title">Global Enquiry Database</h3>
+                  <p class="edb-subtitle" id="edb-results-meta">772 live · pipeline view</p>
+                </div>
+              </div>
+              <div class="search-box-container enquiry-db-search edb-command-search">
+                <label class="enquiry-db-search-label">Command search</label>
+                <div class="edb-search-shell">
+                  <span class="edb-search-icon" aria-hidden="true">⌕</span>
+                  <input type="text" placeholder="Ref ID, customer, route, carrier, desk…" value="">
+                </div>
+              </div>
+              <div class="edb-pipeline" id="edb-pipeline" role="tablist">
+                <button type="button" class="edb-pipe is-active" data-pipe="all">All <span class="edb-pipe-count">772</span></button>
+                <button type="button" class="edb-pipe" data-pipe="quoted">Quoted <span class="edb-pipe-count">418</span></button>
+                <button type="button" class="edb-pipe" data-pipe="converted">Won <span class="edb-pipe-count">211</span></button>
+                <button type="button" class="edb-pipe" data-pipe="lost">Lost <span class="edb-pipe-count">89</span></button>
+                <button type="button" class="edb-pipe" data-pipe="cancelled">Cancelled <span class="edb-pipe-count">54</span></button>
+              </div>
+            </div>
+            <div class="db-filter-bar">
+              <div class="hdr-toolbar-wrap">
+                <button type="button" class="hdr-toolbar-trigger"><i>+</i> Add filter</button>
+              </div>
+              <div class="hdr-filter-dropdown hdr-filter-dropdown-small">
+                <button type="button" class="hdr-filter-btn" style="background: rgba(79, 70, 229, 0.1); color: var(--indigo);">
+                  <span>Sort By: Date (Newest)</span> <span class="hdr-filter-arrow">▼</span>
+                </button>
+              </div>
+              <div class="hdr-toolbar-wrap">
+                <button type="button" class="hdr-toolbar-trigger">Columns</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="atlas-seq-pane enquiry-seq-browse" data-seq-pane="browse" style="display:block; margin-top:1rem;">
+          <div class="enquiry-db-workspace">
+            <div class="enquiry-db-primary">
+              <div class="glass-card enquiry-db-main-card enquiry-db-table-card edb-denselist-card">
+                <div class="enquiry-db-title-row edb-results-head">
+                  <div class="enquiry-db-title-block">
+                    <span class="enquiry-db-eyebrow">Live denselist</span>
+                    <h3 class="enquiry-db-title edb-results-title">Matching Enquiries</h3>
+                  </div>
+                  <span class="edb-match-count">772 matching</span>
+                </div>
+                <div class="quotes-table-container edb-table-scroll">
+                  <table class="quotes-table edb-denselist" id="admin-quotes-table">
+                    <thead>
+                      <tr class="table-header-titles">
+                        <th>Ref ID</th><th>Date</th><th>Carrier</th><th>Tonnage</th><th>Sell Rate</th><th>GP</th><th>Status</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="eri-selected" data-quote-id="1">
+                        <td><strong class="edb-ref">#SIAPS0826IN00621</strong></td>
+                        <td><div class="edb-date-main">2026-08-31</div><div style="font-size:0.68rem;color:var(--t3);">1h 23m left</div></td>
+                        <td>K - Emirates</td>
+                        <td>2.76 RT</td>
+                        <td>₹1,84,200</td>
+                        <td style="color:var(--accent-success);font-weight:700;">18.4%</td>
+                        <td><span class="status-badge quoted">Quoted</span></td>
+                        <td class="actions-cell edb-actions-cell"><div class="edb-actions">
+                          <button type="button" class="edb-act edb-act-view">View</button>
+                          <button type="button" class="edb-act edb-act-amend">Amend</button>
+                          <button type="button" class="edb-act edb-act-convert">Won</button>
+                          <div class="edb-more is-open"><button type="button" class="edb-act edb-act-more">⋯</button>
+                            <div class="edb-more-menu" role="menu" style="display:flex;flex-direction:column;">
+                              <button type="button" class="edb-more-item">Duplicate</button>
+                              <button type="button" class="edb-more-item">Mark as Cancelled</button>
+                              <button type="button" class="edb-more-item">Mark as Lost</button>
+                              <button type="button" class="edb-more-item edb-more-danger">Delete Quote</button>
+                            </div>
+                          </div>
+                        </div></td>
+                      </tr>
+                      <tr>
+                        <td><strong class="edb-ref">#AEIMP0826IN00618</strong></td>
+                        <td><div class="edb-date-main">2026-08-30</div><div style="font-size:0.68rem;color:var(--t3);">Locked</div></td>
+                        <td>QR - Qatar</td>
+                        <td>387.9 kg</td>
+                        <td>$2,410.00</td>
+                        <td style="color:var(--accent-success);font-weight:700;">12.1%</td>
+                        <td><span class="status-badge quoted">Quoted</span></td>
+                        <td class="actions-cell edb-actions-cell"><div class="edb-actions">
+                          <button type="button" class="edb-act edb-act-view">View</button>
+                          <button type="button" class="edb-act edb-act-amend">Amend</button>
+                          <button type="button" class="edb-act edb-act-convert">Won</button>
+                          <div class="edb-more"><button type="button" class="edb-act edb-act-more">⋯</button></div>
+                        </div></td>
+                      </tr>
+                      <tr>
+                        <td><strong class="edb-ref">#SINOM0826IN00610</strong></td>
+                        <td><div class="edb-date-main">2026-08-29</div></td>
+                        <td>MSC</td>
+                        <td>14.2 CBM</td>
+                        <td>₹96,400</td>
+                        <td style="color:var(--accent-success);font-weight:700;">9.8%</td>
+                        <td><span class="status-badge converted">Converted</span></td>
+                        <td class="actions-cell edb-actions-cell"><div class="edb-actions">
+                          <button type="button" class="edb-act edb-act-view">View</button>
+                          <button type="button" class="edb-act edb-act-amend">Amend</button>
+                          <button type="button" class="edb-act edb-act-revert">Revert</button>
+                          <div class="edb-more"><button type="button" class="edb-act edb-act-more">⋯</button></div>
+                        </div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <aside class="enquiry-db-inspector">
+              <div id="enquiry-row-inspector" class="glass-card enquiry-row-inspector-card eri-has-selection">
+                <div class="eri-header">
+                  <span class="eri-eyebrow">Work surface</span>
+                  <h4 class="eri-title">Enquiry Inspector</h4>
+                </div>
+                <div class="eri-content" style="display:block;">
+                  <div class="eri-hero">
+                    <div class="eri-hero-ref">#SIAPS0826IN00621</div>
+                    <span class="eri-status-pill status-quoted">Quoted</span>
+                  </div>
+                  <div class="eri-actions">
+                    <button type="button" class="eri-cta eri-cta-primary">View</button>
+                    <button type="button" class="eri-cta">Amend</button>
+                    <button type="button" class="eri-cta eri-cta-win">Won</button>
+                  </div>
+                  <div class="eri-grid">
+                    <div class="eri-field"><span class="eri-label">Date</span><span class="eri-value">2026-08-31</span></div>
+                    <div class="eri-field"><span class="eri-label">Mode</span><span class="eri-value">AIR</span></div>
+                    <div class="eri-field"><span class="eri-label">Status</span><span class="eri-value">Quoted</span></div>
+                    <div class="eri-field eri-field-wide"><span class="eri-label">Customer / Agent</span><span class="eri-value">Vertex Freight LLC</span></div>
+                    <div class="eri-field"><span class="eri-label">Priced By</span><span class="eri-value">Shashank</span></div>
+                    <div class="eri-field"><span class="eri-label">Carrier</span><span class="eri-value">K - Emirates</span></div>
+                    <div class="eri-field eri-field-wide"><span class="eri-label">Route</span><span class="eri-value">SIN → AMS</span></div>
+                    <div class="eri-field"><span class="eri-label">Tonnage</span><span class="eri-value">2.76 RT</span></div>
+                    <div class="eri-field"><span class="eri-label">Sell Rate</span><span class="eri-value">₹1,84,200</span></div>
+                    <div class="eri-field"><span class="eri-label">GP %</span><span class="eri-value">18.40%</span></div>
+                  </div>
+                  <p class="eri-hint">Secondary actions (duplicate, cancel, lost, delete) live in the row ⋯ menu.</p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

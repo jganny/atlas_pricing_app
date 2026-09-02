@@ -1,28 +1,10 @@
 "use client";
 
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
-import type { EnquiryRecord } from "@/lib/types";
+import type { EnquiryRecord, SavedQuote } from "@/lib/types";
+import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
 import { getFirebaseDb } from "./client";
-
-type QuoteDoc = {
-  id?: string;
-  quoteNumber?: string;
-  customer?: string;
-  type?: string;
-  status?: string;
-  date?: string;
-  timestamp?: string;
-  creator?: string;
-  amount?: number;
-  currency?: string;
-  route?: string;
-  details?: {
-    origin?: string;
-    destination?: string;
-    module?: string;
-  };
-};
 
 function mapMode(type: string | undefined, module: string | undefined): EnquiryRecord["mode"] {
   const value = (type || module || "air").toLowerCase();
@@ -36,28 +18,29 @@ function mapMode(type: string | undefined, module: string | undefined): EnquiryR
 function mapStatus(status: string | undefined): EnquiryRecord["status"] {
   const s = (status || "quoted").toLowerCase();
   if (s === "converted") return "won";
-  if (s === "lost" || s === "cancelled") return "lost";
+  if (s === "cancelled") return "cancelled";
+  if (s === "lost") return "lost";
   if (s === "quoted") return "quoted";
   return "open";
 }
 
-function mapQuote(id: string, data: QuoteDoc): EnquiryRecord {
-  const createdAt = data.date || data.timestamp || "";
+function mapQuote(id: string, data: SavedQuote): EnquiryRecord {
+  const createdAt = data.date || String(data.timestamp ?? "");
   const open = isOpenQuoteStatus(data.status);
   const origin =
-    data.details?.origin ||
-    (data.route?.includes("-") ? data.route.split("-")[0]?.trim() : data.route) ||
+    (data.details?.origin as string) ||
+    (data.route?.includes("→") ? data.route.split("→")[0]?.trim() : data.route) ||
     "";
   const destination =
-    data.details?.destination ||
-    (data.route?.includes("-") ? data.route.split("-").slice(1).join("-").trim() : "") ||
+    (data.details?.destination as string) ||
+    (data.route?.includes("→") ? data.route.split("→").slice(1).join("→").trim() : "") ||
     "";
 
   return {
     id,
-    ref: data.quoteNumber || data.id || id,
+    ref: getQuoteRefId(data),
     customer: data.customer || "—",
-    mode: mapMode(data.type, data.details?.module),
+    mode: mapMode(data.type, data.details?.module as string),
     origin,
     destination,
     status: mapStatus(data.status),
@@ -73,5 +56,5 @@ export async function fetchLiveEnquiries(max = 200): Promise<EnquiryRecord[]> {
   const db = getFirebaseDb();
   const q = query(collection(db, "quotes"), orderBy("timestamp", "desc"), limit(max));
   const snap = await getDocs(q);
-  return snap.docs.map((docSnap) => mapQuote(docSnap.id, docSnap.data() as QuoteDoc));
+  return snap.docs.map((docSnap) => mapQuote(docSnap.id, docSnap.data() as SavedQuote));
 }

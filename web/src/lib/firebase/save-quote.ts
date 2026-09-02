@@ -2,9 +2,10 @@
 
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult } from "@atlas/pricing-core";
+import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { getFirebaseDb } from "./client";
 
-const DEFAULT_COURIER_TERMS =
+export const DEFAULT_COURIER_TERMS =
   "1. Rates are based on chargeable weight (max of actual vs volumetric per piece).\n" +
   "2. Volumetric weight (cm): L × W × H ÷ 5000 × quantity per piece.\n" +
   "3. Fuel surcharge, remote area, residential, oversized and insurance are additional unless stated.\n" +
@@ -13,7 +14,13 @@ const DEFAULT_COURIER_TERMS =
   "6. Dangerous goods, lithium batteries and restricted commodities require prior approval.\n" +
   "7. Claims subject to carrier terms; insurance as declared value basis only.";
 
-export interface SaveCourierInput {
+interface SaveMeta {
+  quoteId?: string;
+  quoteNumber?: string | number;
+  status?: string;
+}
+
+export interface SaveCourierInput extends SaveMeta {
   customer: string;
   creator: string;
   originCity: string;
@@ -27,10 +34,11 @@ export interface SaveCourierInput {
   gstEnabled: boolean;
   packages: CourierFreightResult["packages"];
   calc: CourierFreightResult;
+  termsAndConditions?: string;
 }
 
 export async function saveCourierQuote(input: SaveCourierInput): Promise<string> {
-  const id = `Q${Math.random().toString(36).slice(2, 11)}`;
+  const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
   const route = `${input.originCity || input.originCountry} → ${input.destCity || input.destCountry}`;
   const now = new Date();
   const quoteData = {
@@ -39,8 +47,8 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
-    status: "quoted",
-    quoteNumber: Math.floor(now.getTime() / 1000) % 100000,
+    status: input.status ?? "quoted",
+    quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     mode: "Courier",
     type: "courier",
     amount: input.calc.total,
@@ -78,7 +86,7 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
       gstAmount: input.calc.tax,
       marginPct: input.marginPct,
       declaredValue: input.calc.surcharges.declaredValue,
-      termsAndConditions: DEFAULT_COURIER_TERMS,
+      termsAndConditions: input.termsAndConditions ?? DEFAULT_COURIER_TERMS,
     },
     notes: `Courier quote. CHW: ${input.calc.chargeableKg} kg, Zone ${input.calc.zone}, ${input.calc.chosen?.name ?? ""}`,
   };
@@ -88,7 +96,7 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
   return id;
 }
 
-export interface SaveAirInput {
+export interface SaveAirInput extends SaveMeta {
   customer: string;
   creator: string;
   origin: string;
@@ -106,7 +114,7 @@ export interface SaveAirInput {
 }
 
 export async function saveAirQuote(input: SaveAirInput): Promise<string> {
-  const id = `Q${Math.random().toString(36).slice(2, 11)}`;
+  const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
   const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
   const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
   const route = `${originCode} → ${destCode} via ${input.airline || "Any"}`;
@@ -121,8 +129,8 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
-    status: "quoted",
-    quoteNumber: Math.floor(now.getTime() / 1000) % 100000,
+    status: input.status ?? "quoted",
+    quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     type: "air",
     route,
     amount,
@@ -168,7 +176,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   return id;
 }
 
-export interface SaveSeaInput {
+export interface SaveSeaInput extends SaveMeta {
   customer: string;
   creator: string;
   origin: string;
@@ -187,7 +195,7 @@ export interface SaveSeaInput {
 }
 
 export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
-  const id = `Q${Math.random().toString(36).slice(2, 11)}`;
+  const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
   const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
   const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
   const route = `${originCode} → ${destCode} via ${input.liner || "Any"}`;
@@ -202,8 +210,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
-    status: "quoted",
-    quoteNumber: Math.floor(now.getTime() / 1000) % 100000,
+    status: input.status ?? "quoted",
+    quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     type: "sea",
     route,
     amount,

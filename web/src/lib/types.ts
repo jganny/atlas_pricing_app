@@ -15,13 +15,48 @@ export interface EnquiryRecord {
   mode: 'air' | 'sea' | 'courier' | 'transport' | 'warehouse'
   origin: string
   destination: string
-  status: 'open' | 'quoted' | 'won' | 'lost'
+  status: 'open' | 'quoted' | 'won' | 'lost' | 'cancelled'
   slaHoursOpen: number
   assignee: string
   createdAt: string
   grandTotal?: number
   currency?: string
 }
+
+/** Full Firestore quote document (legacy-compatible shape) */
+export interface SavedQuote {
+  id: string
+  quoteNumber?: string | number
+  customer: string
+  creator: string
+  status: string
+  type: string
+  date?: string
+  timestamp?: number
+  amount?: number
+  amountINR?: number
+  currency?: string
+  route?: string
+  routingDetails?: string
+  grossProfit?: number
+  grossProfitCurrency?: string
+  grossProfitINR?: number
+  notes?: string
+  mode?: string
+  details?: Record<string, unknown>
+  shipperName?: string
+  shipperPhone?: string
+  shipperEmail?: string
+  shipperAddress?: string
+  consigneeName?: string
+  consigneePhone?: string
+  consigneeEmail?: string
+  consigneeAddress?: string
+  commodity?: string
+  conversionDate?: string
+}
+
+export type QuoteFirestoreStatus = 'quoted' | 'converted' | 'lost' | 'cancelled'
 
 export interface AirTariff {
   id: string
