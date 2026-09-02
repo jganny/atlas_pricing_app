@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
+import { TableSkeleton } from "@/components/Skeleton";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useLiveData } from "@/lib/api";
@@ -132,12 +133,9 @@ export default function EnquiryDatabasePage() {
           </Card>
 
           <Card className="overflow-x-auto p-0">
-            {isLoading ? (
-              <div className="flex items-center gap-2 p-6 text-sm text-[var(--color-text-muted)]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading enquiries…
-              </div>
-            ) : filtered.length === 0 ? (
+        {isLoading ? (
+          <TableSkeleton rows={8} />
+        ) : filtered.length === 0 ? (
               <p className="p-6 text-sm text-[var(--color-text-muted)]">No enquiries match your filters.</p>
             ) : (
               <table className="min-w-full text-left text-sm">

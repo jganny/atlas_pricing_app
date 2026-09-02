@@ -24,6 +24,7 @@ import {
 import { deskPathForQuote } from "@/lib/quotes/desk-loader";
 import { useLiveData } from "@/lib/api";
 import { queryKeys } from "@/hooks/query-keys";
+import { toast } from "@/components/Toast";
 import { formatCurrency } from "@/lib/utils";
 
 export function EnquiryInspector({
@@ -47,14 +48,20 @@ export function EnquiryInspector({
   async function loadFullQuote(): Promise<SavedQuote | null> {
     if (quote) return quote;
     if (!useLiveData) {
-      setMsg("Mock mode — open legacy app for full quote actions.");
+      const msg = "Mock mode — open legacy app for full quote actions.";
+      setMsg(msg);
+      toast(msg, "info");
       return null;
     }
     setLoading(true);
     try {
       const q = await fetchQuoteById(row.id);
       if (q) setQuote(q);
-      else setMsg("Quote not found in Firestore.");
+      else {
+        const msg = "Quote not found in Firestore.";
+        setMsg(msg);
+        toast(msg, "error");
+      }
       return q;
     } finally {
       setLoading(false);
@@ -71,7 +78,9 @@ export function EnquiryInspector({
     if (!q) return;
     const path = deskPathForQuote(q);
     if (!path) {
-      setMsg(`Desk not available in React for ${q.type} — use legacy app.`);
+      const msg = `Desk not available in React for ${q.type} — use legacy app.`;
+      setMsg(msg);
+      toast(msg, "info");
       return;
     }
     const param = mode === "edit" ? "edit" : "duplicate";
@@ -83,7 +92,9 @@ export function EnquiryInspector({
     action: "won" | "lost" | "cancelled" | "delete",
   ) {
     if (!useLiveData) {
-      setMsg("Mock mode — status changes disabled.");
+      const msg = "Mock mode — status changes disabled.";
+      setMsg(msg);
+      toast(msg, "info");
       return;
     }
     if (action === "won") {
@@ -102,15 +113,17 @@ export function EnquiryInspector({
     try {
       if (action === "delete") {
         await deleteQuoteById(row.id);
-        setMsg("Quote deleted.");
+        toast("Quote deleted.", "success");
       } else {
         await setQuoteStatus(row.id, action);
-        setMsg(`Status updated to ${action}.`);
+        toast(`Status updated to ${action}.`, "success");
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       onClose();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Action failed");
+      const msg = e instanceof Error ? e.message : "Action failed";
+      setMsg(msg);
+      toast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -127,10 +140,12 @@ export function EnquiryInspector({
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       setShowWon(false);
-      setMsg("Converted to Won.");
+      toast("Converted to Won.", "success");
       onClose();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Conversion failed");
+      const msg = e instanceof Error ? e.message : "Conversion failed";
+      setMsg(msg);
+      toast(msg, "error");
     } finally {
       setLoading(false);
     }

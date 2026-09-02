@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Package, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import {
@@ -17,7 +17,9 @@ import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { DEFAULT_COURIER_TERMS, saveCourierQuote } from "@/lib/firebase/save-quote";
 import { loadCourierDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { queryKeys } from "@/hooks/query-keys";
+import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { toast } from "@/components/Toast";
 import type { SavedQuote } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -158,49 +160,81 @@ function CourierDeskInner() {
     setSaveMsg(null);
   }
 
-  async function handleSave(openPreview = false) {
-    if (!customer.trim()) {
-      setSaveMsg("Enter customer name before saving.");
-      return;
-    }
-    setSaving(true);
-    setSaveMsg(null);
-    try {
-      if (useLiveData && user) {
-        const id = await saveCourierQuote({
-          customer: customer.trim(),
-          creator: user.username,
-          originCity,
-          destCity,
-          originCountry,
-          destCountry,
-          scope,
-          service,
-          currency,
-          marginPct,
-          gstEnabled,
-          packages: result.packages,
-          calc: result,
-          termsAndConditions: terms,
-          quoteId: loader.editingQuoteId ?? undefined,
-          quoteNumber: loader.editingQuoteNumber,
-          status: loader.editingStatus,
-        });
-        await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-        setSaveMsg(loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`);
-        if (openPreview) {
-          const q = await fetchQuoteById(id);
-          if (q) setPreviewQuote(q);
-        }
-      } else {
-        setSaveMsg("Mock mode — save disabled. Switch to live Firebase or use legacy app.");
+  const handleSave = useCallback(
+    async (openPreview = false) => {
+      if (!customer.trim()) {
+        const msg = "Enter customer name before saving.";
+        setSaveMsg(msg);
+        toast(msg, "error");
+        return;
       }
-    } catch (err) {
-      setSaveMsg(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  }
+      setSaving(true);
+      setSaveMsg(null);
+      try {
+        if (useLiveData && user) {
+          const id = await saveCourierQuote({
+            customer: customer.trim(),
+            creator: user.username,
+            originCity,
+            destCity,
+            originCountry,
+            destCountry,
+            scope,
+            service,
+            currency,
+            marginPct,
+            gstEnabled,
+            packages: result.packages,
+            calc: result,
+            termsAndConditions: terms,
+            quoteId: loader.editingQuoteId ?? undefined,
+            quoteNumber: loader.editingQuoteNumber,
+            status: loader.editingStatus,
+          });
+          await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+          const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
+          setSaveMsg(msg);
+          toast(msg, "success");
+          if (openPreview) {
+            const q = await fetchQuoteById(id);
+            if (q) setPreviewQuote(q);
+          }
+        } else {
+          const msg = "Mock mode — save disabled. Switch to live Firebase or use legacy app.";
+          setSaveMsg(msg);
+          toast(msg, "info");
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Save failed";
+        setSaveMsg(msg);
+        toast(msg, "error");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [
+      customer,
+      user,
+      originCity,
+      destCity,
+      originCountry,
+      destCountry,
+      scope,
+      service,
+      currency,
+      marginPct,
+      gstEnabled,
+      result,
+      terms,
+      loader.editingQuoteId,
+      loader.editingQuoteNumber,
+      loader.editingStatus,
+      loader.isEditing,
+      queryClient,
+    ],
+  );
+
+  useDeskSaveShortcut(() => void handleSave(), !saving);
 
   const tabs: Array<{ id: Tab; label: string }> = [
     { id: "shipment", label: "Shipment" },
@@ -229,7 +263,7 @@ function CourierDeskInner() {
             <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Courier desk</h1>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            4-tab flow — shipment, packages, surcharges, terms. Same math as legacy.
+            4-tab flow — shipment, packages, surcharges, terms. Same math as legacy. Press ⌘S to save.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CommandPalette } from "@/components/CommandPalette";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ToastContainer } from "@/components/Toast";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
 import { useLiveData } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
+import { useEffect } from "react";
 
 function AuthSync() {
   const setUser = useAuthStore((s) => s.setUser);
@@ -43,9 +45,12 @@ const queryClient = new QueryClient({
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthSync />
-      <CommandPalette />
-      {children}
+      <ErrorBoundary>
+        <AuthSync />
+        <CommandPalette />
+        <ToastContainer />
+        {children}
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

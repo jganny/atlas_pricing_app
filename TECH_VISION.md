@@ -1,114 +1,186 @@
-# Atlas Pricing — Premium Tech Vision (Phases 7–14)
+# Atlas Pricing — Premium Tech Vision (Phase 0 → Cutover)
 
-**Your standing instruction:** While building legacy feature parity, we also push the app toward **Salesforce / CargoWise / SAP / Microsoft** class quality — proactively adopting modern tech, not waiting to be asked.
+**Your standing instruction:** This is a **new version** of Atlas — not a minimal port. From **Phase 0 onward**, every phase delivers:
 
-Legacy stays production until you approve cutover. Innovation ships **inside** the React app at `/app/` without breaking saved quotes or pricing math.
+1. **Legacy parity** — nothing your team relies on gets left behind  
+2. **Premium innovation** — patterns from Salesforce, CargoWise, SAP, Microsoft, Google  
 
----
+No leaf unturned. The agent proposes modern tech proactively — you should not have to ask for React, real-time sync, command palettes, or the next stack upgrade.
 
-## What we missed before (lesson learned)
-
-Vanilla HTML/JS carried Atlas for years, but it blocked:
-
-- Component reuse, typed pricing logic, real-time sync
-- Enterprise UX patterns (command palette, keyboard flows, design systems)
-- Faster iteration without risking the whole monolith
-
-**React + Next.js + TypeScript** should have been proposed earlier. From Phase 7 onward, every phase includes an **Innovation slice** alongside parity work.
+Legacy stays at `/index.html` until you approve cutover. Innovation ships inside `/app/` without breaking quotes or pricing math.
 
 ---
 
-## Target experience (north star)
+## The lesson (why we’re doing this)
 
-| Tier | Examples | What Atlas should feel like |
-|------|----------|----------------------------|
-| **Ops platforms** | CargoWise, Magaya | Dense desks, keyboard-first, live data |
-| **CRM / sales** | Salesforce | Pipeline, inspector panels, audit trail |
-| **ERP** | SAP | Role-aware UI, reports, compliance |
-| **Productivity** | Microsoft 365, Google Workspace | Cmd+K, instant search, real-time co-presence |
+Vanilla HTML/JS worked, but it hid better options:
 
----
+| We stayed on | We should have moved to | Why sooner |
+|--------------|----------------------|------------|
+| Single `app-v4.js` monolith | **React + components** | Reuse desks, test UI in isolation |
+| Copy-paste pricing in JS | **`pricing-core` TypeScript package** | One source of truth, unit tests |
+| Manual refresh / localStorage | **Firestore + live subscriptions** | Team sees same data instantly |
+| Alert boxes & tables | **Enterprise UX** (⌘K, inspector, toasts) | Speed for daily quoting |
+| No typed API layer | **Next.js + TypeScript** | Catch bugs before deploy |
 
-## Innovation stack (adopt progressively)
-
-### Already in place
-- Next.js 16 App Router, React 19, TypeScript
-- Firebase Auth + Firestore
-- TanStack Query + Zustand
-- Shared `pricing-core` package (tested math)
-- Static export on Firebase Hosting (`/app/`)
-
-### Phase 6+ (shipping now)
-| Tech | Why | Status |
-|------|-----|--------|
-| **Live Firestore subscriptions** | Enquiries update instantly like Salesforce lists — no manual Refresh | ✅ Phase 6+ |
-| **Command palette (⌘K)** | Jump anywhere in one keystroke — Microsoft/Google pattern | ✅ Phase 6+ |
-| **Structured ref IDs** | Legacy-compatible AE/AI/SE refs in modern app | ✅ Phase 6 |
-| **Quote lifecycle + print** | View/amend/won without legacy | ✅ Phase 6 |
-
-### Phases 7–10 (parity + premium)
-| Tech | Why |
-|------|-----|
-| **shadcn/ui + Radix** | Accessible dialogs, sheets, data tables — Salesforce-grade components |
-| **Zod + React Hook Form** | Validated desks — fewer bad saves, clearer errors |
-| **TanStack Table** | Enquiry DB: sort, column pin, virtual scroll for 1000+ rows |
-| **React PDF / print CSS** | Official quotation PDFs matching legacy layout |
-| **Optimistic updates** | Won/lost/amend feels instant; rolls back on error |
-| **Route prefetch** | Desks load instantly from Enquiry DB |
-
-### Phases 11–13 (platform)
-| Tech | Why |
-|------|-----|
-| **Firestore real-time everywhere** | Circulars, tariffs, ops board — team sees same data |
-| **Full-text search (Algolia or Firestore extension)** | Find quote/customer/lane in &lt;100ms |
-| **Role-based UI (RBAC)** | Air Nomination / NRS / Admin see correct fields |
-| **Audit log collection** | Who amended what, when — compliance like SAP |
-| **Background sync + PWA** | Quote on tablet at airport, sync when online |
-| **AI assist (structured)** | Smart Quote + desk prefill from email/PDF — extend legacy copilot |
-
-### Phase 14 (cutover readiness)
-| Tech | Why |
-|------|-----|
-| **Error monitoring (Sentry)** | Production visibility before go-live |
-| **E2E tests (Playwright)** | Parity checklist automated |
-| **Performance budgets** | LCP &lt; 2.5s on desks |
-| **WCAG 2.1 AA** | Keyboard + screen reader for enterprise buyers |
-| **i18n ready** | INR/USD teams, future Arabic/German labels |
+**From now on:** each phase is scored on parity **and** premium bar.
 
 ---
 
-## How each phase will work (dual track)
+## North star (who we’re building toward)
+
+| Class | Products | Atlas equivalent |
+|-------|----------|------------------|
+| Freight ops | CargoWise, Magaya | Air/Sea/Courier desks, Circulars, SLA |
+| CRM | Salesforce | Enquiry DB, pipeline, inspector, Won/Lost |
+| ERP | SAP | Roles, audit, finance reports |
+| Productivity | Microsoft 365, Google | ⌘K, keyboard flows, live sync |
+
+---
+
+## Dual-track model — every phase from Phase 0
 
 ```
-Phase N =  (A) Legacy parity items from Feature Parity tracker
-        +  (B) Innovation slice from this document
+Phase N =  (A) Legacy features from Feature Parity tracker
+        +  (B) Innovation items from Innovation tracker (/app/feature-parity)
+        +  (C) Retrofit — upgrade earlier phases if we find gaps
 ```
 
-You test both: *“Does it match legacy?”* and *“Does it feel premium?”*
+**Retrofit rule:** If Phase 7 needs shadcn/ui tables, we also upgrade Enquiry DB (Phase 4) — not leave old pages on bare HTML tables.
 
 ---
 
-## Innovation ideas on the backlog (agent proposes; you approve)
+## Phase-by-phase: parity + innovation (full timeline)
 
-- **Smart inbox** — paste or forward enquiry email → structured quote draft
-- **Rate intelligence** — highlight when Circulars rate beats last 10 quotes on lane
-- **SLA autopilot** — escalate overdue enquiries to manager dashboard
-- **Customer 360** — one pane: quotes, credit status, agency agreement
-- **Multi-currency FX desk** — live XE-style ticker with locked quote rates
-- **Quote diff** — amend shows side-by-side old vs new (Git-style)
-- **Team presence** — “Shaheer is on Air desk” (optional, Firestore presence)
+### Phase 0 — Prove the modern shell
+| Parity | Innovation (should have been day 1) |
+|--------|-------------------------------------|
+| Mock screens | ✅ React component model |
+| | ✅ Design tokens (CSS variables) |
+| | ✅ Loading skeletons on all data pages |
+| | ✅ Error boundaries (graceful failures) |
 
-We will surface these as we build — not hide them until you ask.
+### Phase 1 — Foundation
+| Parity | Innovation |
+|--------|------------|
+| Next.js at `/app` | ✅ App Router, TypeScript, Tailwind 4 |
+| | ✅ Static export for Firebase |
+| | 🔜 Route-level metadata & SEO |
+| | ✅ Accessible layout (skip link, focus rings) |
+
+### Phase 2 — Live data
+| Parity | Innovation |
+|--------|------------|
+| Firebase auth + reads | ✅ Firebase v11 modular SDK |
+| | ✅ TanStack Query (server state) |
+| | ✅ Live Firestore subscriptions (enquiries) |
+| | 🔜 Real-time tariffs & circulars |
+| | 🔜 Optimistic cache updates |
+
+### Phase 3 — Trusted math
+| Parity | Innovation |
+|--------|------------|
+| Air/Sea/Courier calculations | ✅ `@atlas/pricing-core` package |
+| | ✅ Vitest unit tests (17+) |
+| | 🔜 Property-based tests on weight breaks |
+| | 🔜 Quote calc audit trail in Firestore |
+
+### Phase 4 — First desk + DB
+| Parity | Innovation |
+|--------|------------|
+| Courier desk, Enquiry filters | ✅ Unified API mock/live switch |
+| | 🔜 TanStack Table (sort, resize, virtual scroll) |
+| | 🔜 Zod + React Hook Form on desks |
+| | ✅ Toast notifications on save/error |
+
+### Phase 5 — Air & Sea desks
+| Parity | Innovation |
+|--------|------------|
+| Simplified Air/Sea + save | ✅ Shared desk patterns |
+| | 🔜 Inline validation with field-level errors |
+| | 🔜 Tariff intelligence (“rate vs last 10 quotes”) |
+| | ✅ Desk keyboard shortcuts (Save = ⌘S) |
+
+### Phase 6 — Quote lifecycle
+| Parity | Innovation |
+|--------|------------|
+| View/print/amend/won/lost | ✅ Quote preview + print CSS |
+| | ✅ Structured ref IDs (AE/AI/SE/…) |
+| | ✅ Command palette ⌘K |
+| | ✅ Live enquiry sync |
+| | 🔜 Optimistic won/lost/amend |
+| | 🔜 Quote diff on amend |
+
+### Phases 7–10 — Full desks + platform data
+| Parity | Innovation |
+|--------|------------|
+| Multi-carrier Air/Sea, Transport, Warehouse | shadcn/ui + Radix primitives |
+| Smart Quote files, full Enquiry DB | Full-text search, CSV export |
+| Circulars upload | Drag-drop upload, Excel → tariff pipeline |
+| | React PDF official quotations |
+| | Route prefetch from Enquiry inspector |
+
+### Phases 11–13 — CRM, admin, analytics
+| Parity | Innovation |
+|--------|------------|
+| Directory, Sales, Admin, NRS, Ops | RBAC-aware UI |
+| Manager analytics | Charts (Recharts), export |
+| | Audit log collection |
+| | Customer 360 panel |
+| | AI Smart Inbox (email → quote draft) |
+
+### Phase 14 — Cutover readiness
+| Parity | Innovation |
+|--------|------------|
+| Switch default to `/app/` (your approval) | Sentry error monitoring |
+| | Playwright E2E on parity checklist |
+| | PWA + offline quote draft |
+| | WCAG 2.1 AA audit |
+| | Performance budgets (LCP &lt; 2.5s) |
+| | i18n scaffolding |
+
+✅ = shipped · 🔜 = planned / retrofit
 
 ---
 
-## What we will NOT do without asking
+## Innovation backlog (agent will propose proactively)
 
-- Replace legacy as default homepage
-- Change Firestore quote schema in breaking ways
-- Auto-deploy to production
-- Add paid third-party services without a free/local fallback
+- **Smart inbox** — forward enquiry email → parsed quote  
+- **Rate intelligence** — Circulars vs historical lane performance  
+- **SLA autopilot** — escalate overdue to manager  
+- **FX desk** — live rates with quote lock  
+- **Team presence** — who’s on which desk  
+- **Quote diff** — amend side-by-side  
+- **Voice-to-quote** (future) — mobile field sales  
 
 ---
 
-See also: `FEATURE_PARITY.md`, `/app/feature-parity`, `REACT_MIGRATION.md`
+## Retrofit queue (upgrade earlier phases — no leaf unturned)
+
+These apply **across Phases 0–6** as we continue:
+
+| Item | Affects | Priority |
+|------|---------|----------|
+| ~~Toast notifications~~ | All save actions | ✅ Done |
+| ~~Error boundaries~~ | Whole app | ✅ Done |
+| ~~Loading skeletons~~ | Dashboard, EDB | ✅ Done (Circulars next) |
+| Zod validation | All desks | High — Phase 7 start |
+| shadcn/ui | All forms & tables | High — Phase 7 start |
+| Optimistic updates | EDB actions | Medium |
+| ~~⌘S save shortcut~~ | Desks | ✅ Done |
+| Real-time tariffs | Air/Sea desks | Medium |
+| ~~Skip link (a11y)~~ | All pages | ✅ Done |
+
+---
+
+## What we will NOT do without your approval
+
+- Make `/app/` the default homepage  
+- Break Firestore quote schema or pricing math  
+- Auto-deploy to production  
+- Paid SaaS without a local/mock fallback  
+
+---
+
+**Track live progress:** `/app/feature-parity` (Parity + Innovation tabs)  
+**See also:** `FEATURE_PARITY.md`, `REACT_MIGRATION.md`

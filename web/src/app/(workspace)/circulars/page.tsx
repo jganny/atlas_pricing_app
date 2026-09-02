@@ -1,7 +1,7 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui";
+import { TableSkeleton } from "@/components/Skeleton";
 import { useAirTariffs, useCirculars, useSeaTariffs } from "@/hooks/use-atlas-data";
 import { useLiveData } from "@/lib/api";
 
@@ -43,10 +43,7 @@ export default function CircularsPage() {
         <Card>
           <h2 className="mb-3 font-bold">Air tariffs</h2>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading…
-            </div>
+            <TableSkeleton rows={5} />
           ) : (
             <ul className="space-y-2 text-sm">
               {air.length === 0 ? (
@@ -67,10 +64,7 @@ export default function CircularsPage() {
         <Card>
           <h2 className="mb-3 font-bold">Sea tariffs</h2>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading…
-            </div>
+            <TableSkeleton rows={5} />
           ) : (
             <ul className="space-y-2 text-sm">
               {sea.length === 0 ? (

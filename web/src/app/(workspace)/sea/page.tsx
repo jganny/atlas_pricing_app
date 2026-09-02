@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, Ship, Trash2, Zap } from "lucide-react";
 import type { SeaMode } from "@atlas/pricing-core";
@@ -17,7 +17,9 @@ import {
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
+import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { toast } from "@/components/Toast";
 import { formatCurrency } from "@/lib/utils";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
@@ -152,13 +154,16 @@ function SeaDeskInner() {
       setLclSell(tariff.lclRate.sell);
       setLclBuy(tariff.lclRate.buy);
     }
-    setTariffMsg(`Loaded ${tariff.carrier} ${mode.toUpperCase()} rates from Circulars.`);
+    const msg = `Loaded ${tariff.carrier} ${mode.toUpperCase()} rates from Circulars.`;
+    setTariffMsg(msg);
+    toast(msg, "success");
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     const err = validateSeaDesk(deskInput);
     if (err) {
       setSaveMsg(err);
+      toast(err, "error");
       return;
     }
     setSaving(true);
@@ -186,16 +191,46 @@ function SeaDeskInner() {
           status: loader.editingStatus,
         });
         await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-        setSaveMsg(loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`);
+        const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
+        setSaveMsg(msg);
+        toast(msg, "success");
       } else {
-        setSaveMsg("Mock mode — save disabled. Use live Firebase or the legacy app.");
+        const msg = "Mock mode — save disabled. Use live Firebase or the legacy app.";
+        setSaveMsg(msg);
+        toast(msg, "info");
       }
     } catch (e) {
-      setSaveMsg(e instanceof Error ? e.message : "Save failed");
+      const msg = e instanceof Error ? e.message : "Save failed";
+      setSaveMsg(msg);
+      toast(msg, "error");
     } finally {
       setSaving(false);
     }
-  }
+  }, [
+    deskInput,
+    user,
+    customer,
+    origin,
+    destination,
+    currency,
+    incoterm,
+    liner,
+    routing,
+    tt,
+    validity,
+    mode,
+    grossWeightKg,
+    volumeCbm,
+    containers,
+    calc,
+    loader.editingQuoteId,
+    loader.editingQuoteNumber,
+    loader.editingStatus,
+    loader.isEditing,
+    queryClient,
+  ]);
+
+  useDeskSaveShortcut(() => void handleSave(), !saving);
 
   return (
     <div className="space-y-6">
@@ -217,7 +252,8 @@ function SeaDeskInner() {
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             FCL and LCL ocean freight quoting — containers, chargeable RT, liner rates. Same core math
-            as legacy. {useLiveData ? "Save writes to the quotes collection." : "Mock mode — preview only."}
+            as legacy. {useLiveData ? "Save writes to the quotes collection." : "Mock mode — preview only."}{" "}
+            Press ⌘S to save.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
