@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react'
-import { Card } from '../components/ui'
-import { mockApi } from '../lib/mock/api'
-import type { AirTariff, SeaTariff } from '../lib/types'
+"use client";
 
-export function CircularsPage() {
-  const [air, setAir] = useState<AirTariff[]>([])
-  const [sea, setSea] = useState<SeaTariff[]>([])
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui";
+import { mockApi } from "@/lib/mock/api";
+import type { AirTariff, SeaTariff } from "@/lib/types";
+
+export default function CircularsPage() {
+  const [air, setAir] = useState<AirTariff[]>([]);
+  const [sea, setSea] = useState<SeaTariff[]>([]);
 
   useEffect(() => {
-    mockApi.fetchAirTariffs().then(setAir)
-    mockApi.fetchSeaTariffs().then(setSea)
-  }, [])
+    mockApi.fetchAirTariffs().then(setAir);
+    mockApi.fetchSeaTariffs().then(setSea);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -50,5 +52,5 @@ export function CircularsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

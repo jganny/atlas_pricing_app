@@ -1,21 +1,23 @@
-import { useEffect, useState } from 'react'
-import { Badge, Card } from '../components/ui'
-import { mockApi } from '../lib/mock/api'
-import type { EnquiryRecord } from '../lib/types'
-import { formatCurrency } from '../lib/utils'
+"use client";
+
+import { useEffect, useState } from "react";
+import { Badge, Card } from "@/components/ui";
+import { mockApi } from "@/lib/mock/api";
+import type { EnquiryRecord } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 function slaTone(hours: number) {
-  if (hours > 8) return 'error' as const
-  if (hours > 4) return 'warn' as const
-  return 'success' as const
+  if (hours > 8) return "error" as const;
+  if (hours > 4) return "warn" as const;
+  return "success" as const;
 }
 
-export function EnquiryDatabasePage() {
-  const [rows, setRows] = useState<EnquiryRecord[]>([])
+export default function EnquiryDatabasePage() {
+  const [rows, setRows] = useState<EnquiryRecord[]>([]);
 
   useEffect(() => {
-    mockApi.fetchEnquiries().then(setRows)
-  }, [])
+    mockApi.fetchEnquiries().then(setRows);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -49,19 +51,27 @@ export function EnquiryDatabasePage() {
                   {row.origin} → {row.destination}
                 </td>
                 <td className="px-4 py-3">
-                  <Badge tone={row.status === 'open' ? 'warn' : row.status === 'won' ? 'success' : 'neutral'}>
+                  <Badge
+                    tone={
+                      row.status === "open"
+                        ? "warn"
+                        : row.status === "won"
+                          ? "success"
+                          : "neutral"
+                    }
+                  >
                     {row.status}
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
-                  {row.status === 'open' ? (
+                  {row.status === "open" ? (
                     <Badge tone={slaTone(row.slaHoursOpen)}>{row.slaHoursOpen}h open</Badge>
                   ) : (
-                    '—'
+                    "—"
                   )}
                 </td>
                 <td className="px-4 py-3 font-semibold">
-                  {row.grandTotal ? formatCurrency(row.grandTotal) : '—'}
+                  {row.grandTotal ? formatCurrency(row.grandTotal) : "—"}
                 </td>
               </tr>
             ))}
@@ -69,5 +79,5 @@ export function EnquiryDatabasePage() {
         </table>
       </Card>
     </div>
-  )
+  );
 }

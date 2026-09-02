@@ -1,27 +1,34 @@
-import type { FormEvent } from 'react'
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
-import { Button, Card } from '../components/ui'
-import { useAuthStore } from '../store/auth'
+"use client";
 
-export function LoginPage() {
-  const user = useAuthStore((s) => s.user)
-  const login = useAuthStore((s) => s.login)
-  const loading = useAuthStore((s) => s.loading)
-  const error = useAuthStore((s) => s.error)
-  const [username, setUsername] = useState('ganny')
-  const [password, setPassword] = useState('demo')
+import type { FormEvent } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button, Card } from "@/components/ui";
+import { useAuthStore } from "@/store/auth";
 
-  if (user) return <Navigate to="/" replace />
+export default function LoginPage() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const login = useAuthStore((s) => s.login);
+  const loading = useAuthStore((s) => s.loading);
+  const error = useAuthStore((s) => s.error);
+  const [username, setUsername] = useState("ganny");
+  const [password, setPassword] = useState("demo");
+
+  useEffect(() => {
+    if (user) router.replace("/");
+  }, [user, router]);
 
   async function onSubmit(e: FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await login(username, password)
+      await login(username, password);
     } catch {
       /* store holds error */
     }
   }
+
+  if (user) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-white to-sky-50 p-4">
@@ -31,7 +38,7 @@ export function LoginPage() {
             Atlas Pricing
           </div>
           <h1 className="mt-2 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
-            React preview login
+            Next.js preview login
           </h1>
           <p className="mt-2 text-sm text-[var(--color-text-muted)]">
             Mock environment — use <strong>ganny</strong> / <strong>demo</strong>
@@ -59,10 +66,10 @@ export function LoginPage() {
           </label>
           {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in…' : 'Enter workspace'}
+            {loading ? "Signing in…" : "Enter workspace"}
           </Button>
         </form>
       </Card>
     </div>
-  )
+  );
 }

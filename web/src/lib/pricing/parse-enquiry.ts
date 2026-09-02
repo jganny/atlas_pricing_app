@@ -106,6 +106,7 @@ export function parseSeaEnquiry(text: string): ParsedEnquiry {
     source: 'email-text',
   }
 
+  const custMatch = t.match(/(?:customer|client|shipper|for)[:\s]+([^\n,;]+)/i)
   if (custMatch) result.customer = custMatch[1].trim()
 
   const polPodSea = t.match(/\bpol\b[:\s]*([^\n,;(]+)[\s\S]*?\bpod\b[:\s]*([^\n,;(]+)/i)

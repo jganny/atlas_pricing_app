@@ -1,4 +1,7 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Anchor,
   Database,
@@ -7,22 +10,26 @@ import {
   LogOut,
   Plane,
   Sparkles,
-} from 'lucide-react'
-import { cn } from '../lib/utils'
-import { useAuthStore } from '../store/auth'
-import { MockBanner } from './MockBanner'
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { appVersion } from "@/lib/env";
+import { useAuthStore } from "@/store/auth";
+import { MockBanner } from "./MockBanner";
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/smart-quote/air', label: 'Smart Quote · Air', icon: Plane },
-  { to: '/smart-quote/sea', label: 'Smart Quote · Sea', icon: Anchor },
-  { to: '/enquiries', label: 'Enquiry DB', icon: Database },
-  { to: '/circulars', label: 'Circulars', icon: FileText },
-]
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/smart-quote/air", label: "Smart Quote · Air", icon: Plane },
+  { href: "/smart-quote/sea", label: "Smart Quote · Sea", icon: Anchor },
+  { href: "/enquiries", label: "Enquiry DB", icon: Database },
+  { href: "/circulars", label: "Circulars", icon: FileText },
+];
 
-export function AppShell() {
-  const user = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() ?? "/";
+  const normalizedPath =
+    pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
@@ -34,27 +41,29 @@ export function AppShell() {
               <Sparkles className="h-4 w-4 text-[var(--color-atlas-sky)]" />
               ATLAS PRICING
             </div>
-            <div className="mt-1 text-xs text-white/60">React preview · v{import.meta.env.VITE_APP_VERSION}</div>
+            <div className="mt-1 text-xs text-white/60">Next.js preview · v{appVersion}</div>
           </div>
           <nav className="flex flex-1 flex-col gap-1 p-3">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors',
+            {navItems.map((item) => {
+              const isActive = item.exact
+                ? normalizedPath === item.href
+                : normalizedPath.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
                     isActive
-                      ? 'bg-white/15 text-white'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white',
-                  )
-                }
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </NavLink>
-            ))}
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
           <div className="border-t border-white/10 p-4">
             <div className="text-xs text-white/50">Signed in as</div>
@@ -73,12 +82,12 @@ export function AppShell() {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white px-4 py-3 md:px-6">
             <div className="md:hidden">
-              <Link to="/" className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
+              <Link href="/" className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
                 Atlas Pricing
               </Link>
             </div>
             <div className="hidden text-sm text-[var(--color-text-muted)] md:block">
-              Operational pricing workspace — React migration preview
+              Operational pricing workspace — Next.js migration preview
             </div>
             <a
               href="/index.html"
@@ -88,11 +97,9 @@ export function AppShell() {
             </a>
           </header>
 
-          <main className="flex-1 p-4 md:p-6">
-            <Outlet />
-          </main>
+          <main className="flex-1 p-4 md:p-6">{children}</main>
         </div>
       </div>
     </div>
-  )
+  );
 }

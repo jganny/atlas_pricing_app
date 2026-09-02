@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { AuthUser } from '../lib/types'
-import { mockApi } from '../lib/mock/api'
+import type { AuthUser } from '@/lib/types'
+import { mockApi } from '@/lib/mock/api'
 
 interface AuthState {
   user: AuthUser | null

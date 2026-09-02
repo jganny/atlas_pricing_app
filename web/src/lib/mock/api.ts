@@ -1,5 +1,6 @@
-import { delay } from '../utils'
-import type { AirTariff, AuthUser, EnquiryRecord, SeaTariff, SmartQuoteDraft } from '../types'
+import { isMockMode } from '@/lib/env'
+import { delay } from '@/lib/utils'
+import type { AirTariff, AuthUser, EnquiryRecord, SeaTariff, SmartQuoteDraft } from '@/lib/types'
 import {
   MOCK_AIR_TARIFFS,
   MOCK_ENQUIRIES,
@@ -12,7 +13,7 @@ import {
   parseSeaEnquiry,
 } from '../pricing/parse-enquiry'
 
-const isMock = import.meta.env.VITE_MOCK_MODE !== 'false'
+const isMock = isMockMode
 
 function stripPassword(user: (typeof MOCK_USERS)[number]): AuthUser {
   const { password: _password, ...safe } = user

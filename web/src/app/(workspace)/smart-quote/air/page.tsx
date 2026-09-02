@@ -1,28 +1,30 @@
-import { useState } from 'react'
-import { Loader2, Plane, Zap } from 'lucide-react'
-import { Button, Card } from '../components/ui'
-import { SmartQuoteResult } from '../components/SmartQuoteResult'
-import { SAMPLE_AIR_ENQUIRY } from '../lib/mock/data'
-import { mockApi } from '../lib/mock/api'
-import type { SmartQuoteDraft } from '../lib/types'
+"use client";
 
-export function SmartQuoteAirPage() {
-  const [text, setText] = useState(SAMPLE_AIR_ENQUIRY)
-  const [loading, setLoading] = useState(false)
-  const [draft, setDraft] = useState<SmartQuoteDraft | null>(null)
-  const [error, setError] = useState<string | null>(null)
+import { useState } from "react";
+import { Loader2, Plane, Zap } from "lucide-react";
+import { Button, Card } from "@/components/ui";
+import { SmartQuoteResult } from "@/components/SmartQuoteResult";
+import { SAMPLE_AIR_ENQUIRY } from "@/lib/mock/data";
+import { mockApi } from "@/lib/mock/api";
+import type { SmartQuoteDraft } from "@/lib/types";
+
+export default function SmartQuoteAirPage() {
+  const [text, setText] = useState(SAMPLE_AIR_ENQUIRY);
+  const [loading, setLoading] = useState(false);
+  const [draft, setDraft] = useState<SmartQuoteDraft | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function runAutomation() {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      const result = await mockApi.runAirSmartQuote(text)
-      setDraft(result)
+      const result = await mockApi.runAirSmartQuote(text);
+      setDraft(result);
     } catch (err) {
-      setDraft(null)
-      setError(err instanceof Error ? err.message : 'Automation failed')
+      setDraft(null);
+      setError(err instanceof Error ? err.message : "Automation failed");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -31,7 +33,9 @@ export function SmartQuoteAirPage() {
       <div>
         <div className="flex items-center gap-2 text-[var(--color-atlas-air)]">
           <Plane className="h-5 w-5" />
-          <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Smart Quote · Air</h1>
+          <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">
+            Smart Quote · Air
+          </h1>
         </div>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           Paste enquiry or upload later — rates resolve from mock Circulars tariffs.
@@ -49,7 +53,11 @@ export function SmartQuoteAirPage() {
         </label>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button type="button" onClick={runAutomation} disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="mr-2 h-4 w-4" />
+            )}
             Run automation
           </Button>
           <Button type="button" variant="secondary" onClick={() => setText(SAMPLE_AIR_ENQUIRY)}>
@@ -60,5 +68,5 @@ export function SmartQuoteAirPage() {
 
       <SmartQuoteResult draft={draft} error={error} mode="air" />
     </div>
-  )
+  );
 }

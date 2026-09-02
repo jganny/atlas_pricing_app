@@ -1,34 +1,38 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, Clock, Sparkles } from 'lucide-react'
-import { Badge, Card } from '../components/ui'
-import { mockApi } from '../lib/mock/api'
-import type { EnquiryRecord } from '../lib/types'
-import { formatCurrency } from '../lib/utils'
+"use client";
 
-export function DashboardPage() {
-  const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([])
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { AlertTriangle, ArrowRight, Clock, Sparkles } from "lucide-react";
+import { Badge, Card } from "@/components/ui";
+import { mockApi } from "@/lib/mock/api";
+import type { EnquiryRecord } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
+
+export default function DashboardPage() {
+  const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
 
   useEffect(() => {
-    mockApi.fetchEnquiries().then(setEnquiries)
-  }, [])
+    mockApi.fetchEnquiries().then(setEnquiries);
+  }, []);
 
-  const open = enquiries.filter((e) => e.status === 'open').length
-  const overdue = enquiries.filter((e) => e.slaHoursOpen > 8).length
-  const dueSoon = enquiries.filter((e) => e.slaHoursOpen > 4 && e.slaHoursOpen <= 8).length
+  const open = enquiries.filter((e) => e.status === "open").length;
+  const overdue = enquiries.filter((e) => e.slaHoursOpen > 8).length;
+  const dueSoon = enquiries.filter((e) => e.slaHoursOpen > 4 && e.slaHoursOpen <= 8).length;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Dashboard</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          React shell with mock data — mirrors Enquiry DB SLA and Smart Quote entry points.
+          Next.js shell with mock data — mirrors Enquiry DB SLA and Smart Quote entry points.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Open enquiries</div>
+          <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+            Open enquiries
+          </div>
           <div className="mt-2 text-3xl font-extrabold text-[var(--color-atlas-navy)]">{open}</div>
         </Card>
         <Card>
@@ -58,13 +62,13 @@ export function DashboardPage() {
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              to="/smart-quote/air"
+              href="/smart-quote/air"
               className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-air)]/15 px-3 py-2 text-sm font-semibold text-amber-800"
             >
               Air Smart Quote <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              to="/smart-quote/sea"
+              href="/smart-quote/sea"
               className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-sea)]/15 px-3 py-2 text-sm font-semibold text-sky-800"
             >
               Sea Smart Quote <ArrowRight className="h-4 w-4" />
@@ -76,7 +80,10 @@ export function DashboardPage() {
           <h2 className="mb-4 font-bold text-[var(--color-atlas-navy)]">Recent enquiries</h2>
           <div className="space-y-3">
             {enquiries.slice(0, 4).map((e) => (
-              <div key={e.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
+              <div
+                key={e.id}
+                className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"
+              >
                 <div>
                   <div className="text-sm font-semibold">{e.ref}</div>
                   <div className="text-xs text-[var(--color-text-muted)]">
@@ -84,7 +91,11 @@ export function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <Badge tone={e.status === 'open' ? 'warn' : e.status === 'won' ? 'success' : 'neutral'}>
+                  <Badge
+                    tone={
+                      e.status === "open" ? "warn" : e.status === "won" ? "success" : "neutral"
+                    }
+                  >
                     {e.status}
                   </Badge>
                   {e.grandTotal ? (
@@ -97,5 +108,5 @@ export function DashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
