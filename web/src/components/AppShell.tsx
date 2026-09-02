@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="text-sm font-semibold">{user?.displayName}</div>
             <button
               type="button"
-              onClick={logout}
+              onClick={() => void logout()}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10"
             >
               <LogOut className="h-3.5 w-3.5" />

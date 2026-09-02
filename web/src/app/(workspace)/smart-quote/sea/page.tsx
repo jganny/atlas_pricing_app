@@ -4,29 +4,13 @@ import { useState } from "react";
 import { Anchor, Loader2, Zap } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { SmartQuoteResult } from "@/components/SmartQuoteResult";
+import { useSeaSmartQuote } from "@/hooks/use-smart-quote";
 import { SAMPLE_SEA_ENQUIRY } from "@/lib/mock/data";
-import { mockApi } from "@/lib/mock/api";
-import type { SmartQuoteDraft } from "@/lib/types";
+import { useLiveData } from "@/lib/api";
 
 export default function SmartQuoteSeaPage() {
   const [text, setText] = useState(SAMPLE_SEA_ENQUIRY);
-  const [loading, setLoading] = useState(false);
-  const [draft, setDraft] = useState<SmartQuoteDraft | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function runAutomation() {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await mockApi.runSeaSmartQuote(text);
-      setDraft(result);
-    } catch (err) {
-      setDraft(null);
-      setError(err instanceof Error ? err.message : "Automation failed");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const mutation = useSeaSmartQuote();
 
   return (
     <div className="space-y-6">
@@ -38,7 +22,9 @@ export default function SmartQuoteSeaPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          FCL/LCL detection, container lines, and Circulars sea tariffs (mock).
+          {useLiveData
+            ? "FCL/LCL detection and live Circulars sea tariffs."
+            : "FCL/LCL detection and mock Circulars sea tariffs."}
         </p>
       </div>
 
@@ -52,8 +38,12 @@ export default function SmartQuoteSeaPage() {
           />
         </label>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" onClick={runAutomation} disabled={loading}>
-            {loading ? (
+          <Button
+            type="button"
+            onClick={() => mutation.mutate(text)}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Zap className="mr-2 h-4 w-4" />
@@ -66,7 +56,11 @@ export default function SmartQuoteSeaPage() {
         </div>
       </Card>
 
-      <SmartQuoteResult draft={draft} error={error} mode="sea" />
+      <SmartQuoteResult
+        draft={mutation.data ?? null}
+        error={mutation.error instanceof Error ? mutation.error.message : null}
+        mode="sea"
+      />
     </div>
   );
 }

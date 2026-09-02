@@ -68,3 +68,14 @@ export interface SmartQuoteDraft {
   estimatedTotal?: number
   message: string
 }
+
+export interface CircularRecord {
+  id: string
+  title?: string
+  carrier?: string
+  category?: string
+  notes?: string
+  createdAt?: string
+  validTo?: string
+  fileName?: string
+}

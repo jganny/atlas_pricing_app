@@ -35,6 +35,8 @@ service cloud.firestore {
     match /leads/{leadId} { allow read, write: if isSignedIn(); }
     match /activities/{activityId} { allow read, write: if isSignedIn(); }
     match /circularsLibrary/{circularId} { allow read, write: if isSignedIn(); }
+    match /air_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
+    match /sea_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
 
     // Weekly Agency List — recipient list stays client-writable like every
     // other settings-style collection above (the real AIR-NOM/SEA-NOM/admin

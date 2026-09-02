@@ -6,19 +6,22 @@ import { useAuthStore } from "@/store/auth";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
+  const authReady = useAuthStore((s) => s.authReady);
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) router.replace("/login");
-  }, [user, router]);
+    if (authReady && !user) router.replace("/login");
+  }, [authReady, user, router]);
 
-  if (!user) {
+  if (!authReady) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-[var(--color-text-muted)]">
-        Checking session…
+        Restoring session…
       </div>
     );
   }
+
+  if (!user) return null;
 
   return children;
 }
