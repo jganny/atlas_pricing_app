@@ -1,7 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { atlasApi, useLiveData } from "@/lib/api";
+import { subscribeLiveEnquiries } from "@/lib/firebase/quotes";
 import { useAuthStore } from "@/store/auth";
 import { queryKeys } from "./query-keys";
 
@@ -12,10 +14,21 @@ function useQueryEnabled() {
 
 export function useEnquiries() {
   const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeLiveEnquiries(
+      (rows) => queryClient.setQueryData(queryKeys.enquiries, rows),
+      (err) => console.warn("Live enquiries sync:", err.message),
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
   return useQuery({
     queryKey: queryKeys.enquiries,
     queryFn: () => atlasApi.fetchEnquiries(),
-    staleTime: 60_000,
+    staleTime: useLiveData ? Infinity : 60_000,
     enabled,
   });
 }

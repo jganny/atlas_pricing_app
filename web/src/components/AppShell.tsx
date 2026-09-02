@@ -95,7 +95,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
             <div className="hidden text-sm text-[var(--color-text-muted)] md:block">
-              Operational pricing workspace — Next.js migration preview
+              Operational pricing workspace — press{" "}
+              <kbd className="rounded border border-[var(--color-border)] bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold">
+                ⌘K
+              </kbd>{" "}
+              to jump anywhere
             </div>
             <a
               href="/index.html"

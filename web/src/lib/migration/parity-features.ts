@@ -261,7 +261,8 @@ export const parityGroups: ParityGroup[] = [
     plannedPhase: 14,
     features: [
       { id: "nav-modules", name: "Full module navigation (12+ areas)", legacy: "Sidebar + tabs", react: "Sidebar", status: "partial" },
-      { id: "nav-cmdk", name: "Command palette (Ctrl/Cmd+K)", legacy: "Global", status: "missing" },
+      { id: "nav-cmdk", name: "Command palette (Ctrl/Cmd+K)", legacy: "Global", react: "Global", status: "done", testHint: "Press ⌘K or Ctrl+K anywhere in /app" },
+      { id: "nav-live-sync", name: "Live Firestore sync (enquiries)", legacy: "Global", react: "Enquiry DB", status: "done", testHint: "Save a quote in another tab — list updates automatically" },
       { id: "nav-assistant", name: "Atlas Help / AI copilot FAB", legacy: "Global", status: "missing" },
       { id: "nav-fx", name: "Live FX ticker + converter", legacy: "Header", status: "missing" },
       { id: "nav-offline", name: "Offline / sync status badge", legacy: "Header", status: "missing" },

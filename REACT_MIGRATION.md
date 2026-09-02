@@ -108,7 +108,9 @@ Copies static export to `app/` for Firebase route `/app/**`.
 
 **Policy:** Do not switch default route to `/app/` until every legacy feature is in React and you approve cutover.
 
-See **FEATURE_PARITY.md** and **/app/feature-parity** for the live checklist.
+**Innovation:** Each phase also ships premium tech from `TECH_VISION.md` (command palette, live sync, etc.) — not just parity clones.
+
+See **FEATURE_PARITY.md**, **/app/feature-parity**, and **TECH_VISION.md**.
 
 - Next.js 16 + React 19 + TypeScript
 - Firebase v11 modular SDK (Auth + Firestore)

@@ -205,8 +205,22 @@ export default function FeatureParityPage() {
         })}
       </div>
 
+      <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-white">
+        <h2 className="font-bold text-[var(--color-atlas-navy)]">Premium tech vision (Phases 7–14)</h2>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Every phase ships <strong>legacy parity</strong> plus an <strong>innovation slice</strong> — modern patterns
+          from Salesforce, CargoWise, SAP, Microsoft. See <code className="rounded bg-slate-100 px-1">TECH_VISION.md</code> in
+          the repo for the full roadmap.
+        </p>
+        <ul className="mt-3 space-y-1.5 text-sm text-[var(--color-text-muted)]">
+          <li>✅ Live Firestore sync — enquiries update without Refresh</li>
+          <li>✅ Command palette — ⌘K / Ctrl+K jump anywhere</li>
+          <li>🔜 shadcn/ui data tables, Zod validation, optimistic updates (Phase 7+)</li>
+          <li>🔜 AI smart inbox, rate intelligence, audit log (Phase 11+)</li>
+        </ul>
+      </Card>
+
       <Card>
-        <h2 className="font-bold text-[var(--color-atlas-navy)]">Planned build order (Phases 6–14)</h2>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           Original Phases 0–5 covered the foundation. Remaining legacy features are grouped below.
           Say <strong>“Start Phase 6”</strong> (or any phase) when you want work to begin.

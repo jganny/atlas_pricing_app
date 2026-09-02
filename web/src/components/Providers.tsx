@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CommandPalette } from "@/components/CommandPalette";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
 import { useLiveData } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
@@ -43,6 +44,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthSync />
+      <CommandPalette />
       {children}
     </QueryClientProvider>
   );

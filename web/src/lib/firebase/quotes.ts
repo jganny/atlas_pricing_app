@@ -1,6 +1,14 @@
 "use client";
 
-import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  type Query,
+} from "firebase/firestore";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
@@ -52,9 +60,28 @@ function mapQuote(id: string, data: SavedQuote): EnquiryRecord {
   };
 }
 
-export async function fetchLiveEnquiries(max = 200): Promise<EnquiryRecord[]> {
+function enquiriesQuery(max: number): Query {
   const db = getFirebaseDb();
-  const q = query(collection(db, "quotes"), orderBy("timestamp", "desc"), limit(max));
-  const snap = await getDocs(q);
+  return query(collection(db, "quotes"), orderBy("timestamp", "desc"), limit(max));
+}
+
+export async function fetchLiveEnquiries(max = 200): Promise<EnquiryRecord[]> {
+  const snap = await getDocs(enquiriesQuery(max));
   return snap.docs.map((docSnap) => mapQuote(docSnap.id, docSnap.data() as SavedQuote));
+}
+
+/** Real-time subscription — live enquiry list without manual refresh. */
+export function subscribeLiveEnquiries(
+  onData: (rows: EnquiryRecord[]) => void,
+  onError?: (err: Error) => void,
+  max = 200,
+): () => void {
+  return onSnapshot(
+    enquiriesQuery(max),
+    (snap) => {
+      const rows = snap.docs.map((docSnap) => mapQuote(docSnap.id, docSnap.data() as SavedQuote));
+      onData(rows);
+    },
+    (err) => onError?.(err),
+  );
 }
