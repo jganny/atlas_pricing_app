@@ -69,6 +69,7 @@ export const innovationItems: InnovationItem[] = [
   { id: "i9-search", name: "Full-text quote find in ⌘K", phase: 9, status: "done", why: "Ranked ref/customer/carrier → Enquiry DB inspector", react: "Command palette + /enquiries" },
   { id: "i9-gp-modes", name: "Buy/Sell/GP metric modes", phase: 9, status: "done", why: "Finance view without leaving the list", react: "/enquiries" },
   { id: "i9-csv", name: "One-click filtered CSV export", phase: 9, status: "done", why: "Legacy report columns for Excel", react: "/enquiries" },
+  { id: "i10-imap-inbox", name: "IMAP AI enquiry inbox", phase: 10, status: "partial", why: "Shared pricing mailboxes → parse → Apply to desk; rates stay on desk", react: "/inbox" },
 
   // Phase 11–14
   { id: "i11-rbac", name: "Role-based UI (RBAC)", phase: 11, status: "planned", why: "Air/Sea/NRS/Admin views", react: "Global" },

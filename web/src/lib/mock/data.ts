@@ -1,4 +1,4 @@
-import type { AirTariff, AuthUser, EnquiryRecord, SeaTariff } from '../types'
+import type { AirTariff, AuthUser, EnquiryRecord, InboxEnquiry, SeaTariff } from '../types'
 
 export const MOCK_USERS: Array<AuthUser & { password: string }> = [
   {
@@ -210,3 +210,83 @@ Gross weight 18 MT
 Commodity: industrial machinery
 
 Please advise Maersk rates from Circulars.`
+
+export const MOCK_INBOX: InboxEnquiry[] = [
+  {
+    id: 'in1',
+    mailbox: 'pricing',
+    mailboxEmail: 'pricing@atlaslogistics.co.in',
+    from: 'sarah@zenith.example',
+    subject: 'Air export quote — BLR to LHR',
+    receivedAt: '2026-09-03T08:12:00Z',
+    bodyPreview: 'Please quote air export for Zenith Electronics Ltd. POL BLR to POD LHR…',
+    body: SAMPLE_AIR_ENQUIRY,
+    mode: 'air',
+    confidence: 82,
+    assignedUsers: ['shashank'],
+    suggestedUser: 'shashank',
+    status: 'new',
+    parsed: {
+      customer: 'Zenith Electronics Ltd',
+      origin: 'BLR',
+      destination: 'LHR',
+      airline: 'QR',
+      airlineLabel: 'QR - Qatar Airways',
+      packages: [{ qty: 4, gw: 420, l: 120, w: 80, h: 90 }],
+      containers: [],
+      confidence: 82,
+      source: 'email-imap',
+    },
+  },
+  {
+    id: 'in2',
+    mailbox: 'pricing',
+    mailboxEmail: 'pricing@atlaslogistics.co.in',
+    from: 'ops@adani.example',
+    subject: 'FCL Nhava Sheva → Rotterdam',
+    receivedAt: '2026-09-03T07:40:00Z',
+    bodyPreview: 'Customer: Adani Enterprises — 2x40HC INNSA to NLRTM',
+    body: SAMPLE_SEA_ENQUIRY,
+    mode: 'sea',
+    confidence: 78,
+    assignedUsers: ['shaheer'],
+    suggestedUser: 'shaheer',
+    status: 'new',
+    parsed: {
+      customer: 'Adani Enterprises',
+      origin: 'INNSA',
+      destination: 'NLRTM',
+      mode: 'fcl',
+      linerLabel: 'Maersk',
+      packages: [],
+      containers: [{ type: "40'HC", qty: 2 }],
+      confidence: 78,
+      source: 'email-imap',
+    },
+  },
+  {
+    id: 'in3',
+    mailbox: 'pricingsales',
+    mailboxEmail: 'pricingsales@atlaslogistics.co.in',
+    from: 'buyer@local.example',
+    subject: 'Need air rate — direct sales',
+    receivedAt: '2026-09-03T06:05:00Z',
+    bodyPreview: 'Please quote BOM–DXB for our own cargo (free hand).',
+    body: 'Customer: Local Traders\nPOL BOM POD DXB\nWeight 180 kg',
+    mode: 'air',
+    confidence: 60,
+    assignedUsers: ['kavya', 'cathrina'],
+    suggestedUser: null,
+    status: 'new',
+    parsed: {
+      customer: 'Local Traders',
+      origin: 'BOM',
+      destination: 'DXB',
+      packages: [{ qty: 1, gw: 180 }],
+      containers: [],
+      confidence: 60,
+      source: 'email-imap',
+    },
+  },
+]
+

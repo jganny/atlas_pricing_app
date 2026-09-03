@@ -4,6 +4,7 @@ import type { AirTariff, AuthUser, EnquiryRecord, SeaTariff, SmartQuoteDraft } f
 import {
   MOCK_AIR_TARIFFS,
   MOCK_ENQUIRIES,
+  MOCK_INBOX,
   MOCK_SEA_TARIFFS,
   MOCK_USERS,
 } from './data'
@@ -35,6 +36,11 @@ export async function mockLogin(username: string, password: string): Promise<Aut
 export async function fetchEnquiries(): Promise<EnquiryRecord[]> {
   await delay(300)
   return [...MOCK_ENQUIRIES]
+}
+
+export async function fetchInbox(): Promise<import('@/lib/types').InboxEnquiry[]> {
+  await delay(200)
+  return [...MOCK_INBOX]
 }
 
 export async function fetchAirTariffs(): Promise<AirTariff[]> {
@@ -146,6 +152,7 @@ export function getEnvironmentLabel() {
 export const mockApi = {
   login: mockLogin,
   fetchEnquiries,
+  fetchInbox,
   fetchAirTariffs,
   fetchSeaTariffs,
   runAirSmartQuote,

@@ -17,11 +17,13 @@ import {
   estimateAirFreightFromTariff,
   estimateSeaFreightFromTariff,
 } from "@/lib/pricing/estimate";
+import { fetchInboxEnquiries } from "@/lib/firebase/inbox";
 import type {
   AirTariff,
   AuthUser,
   CircularRecord,
   EnquiryRecord,
+  InboxEnquiry,
   SeaTariff,
   SmartQuoteDraft,
 } from "@/lib/types";
@@ -67,6 +69,17 @@ async function fetchEnquiries(): Promise<EnquiryRecord[]> {
     }
   }
   return mockApi.fetchEnquiries();
+}
+
+async function fetchInbox(): Promise<InboxEnquiry[]> {
+  if (useLiveData) {
+    try {
+      return await withTimeout(fetchInboxEnquiries(), 8_000, []);
+    } catch {
+      return [];
+    }
+  }
+  return mockApi.fetchInbox();
 }
 
 async function fetchAirTariffs(): Promise<AirTariff[]> {
@@ -210,6 +223,7 @@ export const atlasApi = {
   login,
   logout,
   fetchEnquiries,
+  fetchInbox,
   fetchAirTariffs,
   fetchSeaTariffs,
   fetchCirculars,

@@ -743,3 +743,6 @@ exports.atlasCopilot = functions
       throw new functions.https.HttpsError("unavailable", "Atlas Copilot is temporarily unavailable.");
     }
   });
+
+const inboxPoll = require("./inbox-poll");
+exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;

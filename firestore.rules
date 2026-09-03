@@ -29,6 +29,7 @@ service cloud.firestore {
     match /customer_control/{customerId} { allow read, write: if isSignedIn(); }
     match /nrs_registry/{entryId} { allow read, write: if isSignedIn(); }
     match /archive_quotes/{quoteId} { allow read, write: if isSignedIn(); }
+    match /inbox_enquiries/{itemId} { allow read, write: if isSignedIn(); }
     match /contactsDirectory/{contactId} { allow read, write: if isSignedIn(); }
     match /password_resets/{requestId} { allow read, write: if isSignedIn(); }
     match /resetRequests/{userId} { allow read, write: if isSignedIn(); }

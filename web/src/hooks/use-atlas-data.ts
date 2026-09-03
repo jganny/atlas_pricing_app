@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { atlasApi, useLiveData } from "@/lib/api";
 import { subscribeLiveEnquiries } from "@/lib/firebase/quotes";
+import { subscribeInboxEnquiries } from "@/lib/firebase/inbox";
 import { mockApi } from "@/lib/mock/api";
 import { useAuthStore } from "@/store/auth";
 import { queryKeys } from "./query-keys";
@@ -57,6 +58,49 @@ export function useEnquiries() {
       }
     },
     staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useInbox() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeInboxEnquiries(
+      (rows) => queryClient.setQueryData(queryKeys.inbox, rows),
+      (err) => {
+        console.warn("Inbox sync:", err.message);
+        if (process.env.NODE_ENV === "development") {
+          void mockApi.fetchInbox().then((rows) => {
+            const current = queryClient.getQueryData(queryKeys.inbox);
+            if (!current || (Array.isArray(current) && current.length === 0)) {
+              queryClient.setQueryData(queryKeys.inbox, rows);
+            }
+          });
+        }
+      },
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.inbox,
+    queryFn: async () => {
+      try {
+        const rows = await atlasApi.fetchInbox();
+        if (useLiveData && process.env.NODE_ENV === "development" && rows.length === 0) {
+          return mockApi.fetchInbox();
+        }
+        return rows;
+      } catch {
+        if (process.env.NODE_ENV === "development") return mockApi.fetchInbox();
+        return [];
+      }
+    },
+    staleTime: useLiveData ? 30_000 : 60_000,
     retry: 1,
     enabled,
   });

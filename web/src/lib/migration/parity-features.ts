@@ -163,6 +163,7 @@ export const parityGroups: ParityGroup[] = [
       { id: "sq-apply-desk", name: "Apply parsed enquiry to full desk form", legacy: "Air/Sea desk", react: "/smart-quote/air", status: "done", testHint: "After parse → Apply to Air/Sea desk" },
       { id: "sq-excel-publish", name: "Excel tariff import → Circulars publish", legacy: "Circulars", status: "missing" },
       { id: "sq-save", name: "Save Smart Quote draft as quote", legacy: "Smart Quote", react: "/smart-quote/air", status: "done", testHint: "Save draft quote from Smart Quote result" },
+      { id: "sq-imap-inbox", name: "IMAP enquiry inbox (pricing + pricingsales)", legacy: "Email", react: "/inbox", status: "partial", testHint: "Needs IMAP password secrets + functions deploy; UI + poller shipped" },
     ],
   },
   {

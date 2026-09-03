@@ -20,23 +20,35 @@ export const TEAM_ROLES: Record<string, TeamRole> = {
 };
 
 /** Shared company mailboxes → who works that inbox (login ids). */
+export const ATLAS_IMAP = {
+  host: "csipop.logix.in",
+  port: 993,
+  secure: true,
+  folder: "INBOX",
+} as const;
+
 export const MAILBOX_TEAMS = {
   pricing: {
+    key: "pricing" as const,
     email: "pricing@atlaslogistics.co.in",
     users: ["shashank", "shaheer"] as const,
     desks: ["AIR - NOMINATION", "SEA - NOMINATION"] as const,
   },
   pricingsales: {
+    key: "pricingsales" as const,
     email: "pricingsales@atlaslogistics.co.in",
     users: ["kavya", "cathrina"] as const,
     desks: ["FREE HAND SALES (AIR/SEA)", "NRS (AIR/SEA)"] as const,
   },
   monitor: {
+    key: "monitor" as const,
     email: "ganesh@blr.atlaslogistics.co.in",
     users: ["ganny"] as const,
     desks: ["ADMIN MONITOR"] as const,
   },
 } as const;
+
+export type MailboxKey = keyof typeof MAILBOX_TEAMS;
 
 const ADMIN_USERNAMES = new Set(["ganny", "manager", "admin"]);
 
@@ -60,6 +72,7 @@ export function listDeskFilterOptions(creatorsFromData: string[] = []): Array<{ 
     ...creatorsFromData.map((c) => c.toLowerCase()).filter(Boolean),
   ]);
   ids.delete("mahendra");
+  ids.delete("jaya"); // retired login — Kavya holds Free Hand now
   return Array.from(ids)
     .sort((a, b) => deskDisplayName(a).localeCompare(deskDisplayName(b)))
     .map((id) => ({ id, label: deskDisplayName(id) }));

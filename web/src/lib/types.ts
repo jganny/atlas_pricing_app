@@ -137,3 +137,25 @@ export interface CircularRecord {
   validTo?: string
   fileName?: string
 }
+
+export type InboxMailboxKey = 'pricing' | 'pricingsales'
+export type InboxStatus = 'new' | 'claimed' | 'applied' | 'ignored'
+
+export interface InboxEnquiry {
+  id: string
+  mailbox: InboxMailboxKey
+  mailboxEmail: string
+  messageId?: string
+  from: string
+  subject: string
+  receivedAt: string
+  bodyPreview: string
+  body: string
+  mode: 'air' | 'sea' | 'unknown'
+  confidence: number
+  assignedUsers: string[]
+  suggestedUser?: string | null
+  claimedBy?: string | null
+  status: InboxStatus
+  parsed: ParsedEnquiry
+}
