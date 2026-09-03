@@ -26,6 +26,8 @@ import { formatCurrency } from "@/lib/utils";
 
 const COUNTRIES = ["IN", "AE", "US", "GB", "DE", "SG", "AU", "CN", "HK", "CA", "FR"];
 
+const EMPTY_PACKAGE: CourierPackageLine = { qty: 1, gw: 0, l: 0, w: 0, h: 0 };
+
 const defaultSurcharges = {
   fuelPct: 18,
   remote: false,
@@ -95,9 +97,7 @@ function CourierDeskInner() {
   const [marginPct, setMarginPct] = useState(12);
   const [selectedCarrier, setSelectedCarrier] = useState("dhl");
   const [gstEnabled, setGstEnabled] = useState(true);
-  const [packages, setPackages] = useState<CourierPackageLine[]>([
-    { qty: 1, gw: 5, l: 30, w: 20, h: 15 },
-  ]);
+  const [packages, setPackages] = useState<CourierPackageLine[]>([{ ...EMPTY_PACKAGE }]);
   const [surcharges, setSurcharges] = useState(() => ({ ...defaultSurcharges }));
   const [terms, setTerms] = useState(DEFAULT_COURIER_TERMS);
   const [saving, setSaving] = useState(false);
@@ -156,17 +156,18 @@ function CourierDeskInner() {
     setMarginPct(12);
     setSelectedCarrier("dhl");
     setGstEnabled(true);
-    setPackages([{ qty: 1, gw: 5, l: 30, w: 20, h: 15 }]);
+    setPackages([{ ...EMPTY_PACKAGE }]);
     setSurcharges({ ...defaultSurcharges });
     setTerms(DEFAULT_COURIER_TERMS);
     setSaveMsg(null);
     setPreviewQuote(null);
-    setTab("shipment");
     setConfirmReset(false);
     loader.clearLoadedQuote();
-    // Drop ?edit= / ?duplicate= so amend data cannot reload over the cleared form.
-    router.replace("/courier/");
-    toast("Courier desk reset to defaults", "success");
+    // Only strip load params — replacing a clean /courier/ remounts and looked like reset failed.
+    if (typeof window !== "undefined" && /[?&](edit|duplicate|smart)=/.test(window.location.search)) {
+      router.replace("/courier/");
+    }
+    toast("Courier form cleared", "success");
   }
 
   const handleSave = useCallback(
@@ -295,7 +296,7 @@ function CourierDeskInner() {
       {confirmReset ? (
         <Card className="border-amber-300 bg-amber-50">
           <p className="text-sm font-semibold text-amber-950">
-            Reset courier desk to defaults? Unsaved changes will be lost.
+            Clear this courier form? Customer, packages, and surcharges will be wiped.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button type="button" onClick={applyReset}>
