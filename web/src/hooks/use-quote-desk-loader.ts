@@ -76,6 +76,15 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
     editingQuoteId,
     editingQuoteNumber,
     editingStatus,
+    clearLoadedQuote() {
+      setSourceQuote(null);
+      setSmartPrefill(null);
+      setEditingQuoteId(null);
+      setEditingQuoteNumber(undefined);
+      setEditingStatus(undefined);
+      setLoadError(null);
+      setReady(true);
+    },
     banner: editId
       ? `Amending quote ${editId}`
       : duplicateId

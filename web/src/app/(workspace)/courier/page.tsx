@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Package, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import {
@@ -78,6 +79,7 @@ function SurchargeToggle({
 }
 
 function CourierDeskInner() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const loader = useQuoteDeskLoader();
@@ -96,11 +98,12 @@ function CourierDeskInner() {
   const [packages, setPackages] = useState<CourierPackageLine[]>([
     { qty: 1, gw: 5, l: 30, w: 20, h: 15 },
   ]);
-  const [surcharges, setSurcharges] = useState(defaultSurcharges);
+  const [surcharges, setSurcharges] = useState(() => ({ ...defaultSurcharges }));
   const [terms, setTerms] = useState(DEFAULT_COURIER_TERMS);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
@@ -117,7 +120,7 @@ function CourierDeskInner() {
     setSelectedCarrier(loaded.selectedCarrier);
     setGstEnabled(loaded.gstEnabled);
     setPackages(loaded.packages);
-    setSurcharges(loaded.surcharges);
+    setSurcharges({ ...defaultSurcharges, ...loaded.surcharges });
     if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
 
@@ -141,8 +144,7 @@ function CourierDeskInner() {
     setPackages((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
   }
 
-  function resetDesk() {
-    if (!window.confirm("Reset courier desk to defaults? Unsaved changes will be lost.")) return;
+  function applyReset() {
     setCustomer("");
     setOriginCity("");
     setDestCity("");
@@ -155,9 +157,16 @@ function CourierDeskInner() {
     setSelectedCarrier("dhl");
     setGstEnabled(true);
     setPackages([{ qty: 1, gw: 5, l: 30, w: 20, h: 15 }]);
-    setSurcharges(defaultSurcharges);
+    setSurcharges({ ...defaultSurcharges });
     setTerms(DEFAULT_COURIER_TERMS);
     setSaveMsg(null);
+    setPreviewQuote(null);
+    setTab("shipment");
+    setConfirmReset(false);
+    loader.clearLoadedQuote();
+    // Drop ?edit= / ?duplicate= so amend data cannot reload over the cleared form.
+    router.replace("/courier/");
+    toast("Courier desk reset to defaults", "success");
   }
 
   const handleSave = useCallback(
@@ -267,7 +276,7 @@ function CourierDeskInner() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={resetDesk}>
+          <Button type="button" variant="secondary" onClick={() => setConfirmReset(true)}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Reset
           </Button>
@@ -281,6 +290,23 @@ function CourierDeskInner() {
           </Button>
         </div>
       </div>
+
+
+      {confirmReset ? (
+        <Card className="border-amber-300 bg-amber-50">
+          <p className="text-sm font-semibold text-amber-950">
+            Reset courier desk to defaults? Unsaved changes will be lost.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" onClick={applyReset}>
+              Yes, reset
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setConfirmReset(false)}>
+              Cancel
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       {saveMsg ? (
         <Card className={saveMsg.includes("Saved") || saveMsg.includes("Amended") ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}>

@@ -59,7 +59,13 @@ async function logout(): Promise<void> {
 }
 
 async function fetchEnquiries(): Promise<EnquiryRecord[]> {
-  if (useLiveData) return fetchLiveEnquiries();
+  if (useLiveData) {
+    try {
+      return await withTimeout(fetchLiveEnquiries(), 8_000, []);
+    } catch {
+      return [];
+    }
+  }
   return mockApi.fetchEnquiries();
 }
 
