@@ -59,13 +59,16 @@ function AuthSync() {
         unsubscribe = subscribeToAuthChanges(
           (user) => {
             window.clearTimeout(timeout);
-            // Prefer real Firebase session; don't keep preview user if Firebase says logged out
-            // unless we're still waiting — mark ready either way.
-            if (user) finish(user);
-            else if (process.env.NODE_ENV === "development" && !useAuthStore.getState().user) {
-              finish(DEV_PREVIEW_USER);
-            } else {
+            if (user) {
               finish(user);
+              return;
+            }
+            // Firebase: no session
+            if (process.env.NODE_ENV === "development") {
+              if (!useAuthStore.getState().user) finish(DEV_PREVIEW_USER);
+              else finish();
+            } else {
+              finish(null);
             }
           },
           () => {

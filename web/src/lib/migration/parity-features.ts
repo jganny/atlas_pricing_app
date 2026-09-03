@@ -159,10 +159,10 @@ export const parityGroups: ParityGroup[] = [
     features: [
       { id: "sq-air-text", name: "Air — paste enquiry text", legacy: "Smart Quote", react: "/smart-quote/air", status: "done" },
       { id: "sq-sea-text", name: "Sea — paste enquiry text", legacy: "Smart Quote", react: "/smart-quote/sea", status: "done" },
-      { id: "sq-file-upload", name: "File upload (PDF, Excel, Word, email)", legacy: "Air/Sea desk", status: "missing" },
-      { id: "sq-apply-desk", name: "Apply parsed enquiry to full desk form", legacy: "Air/Sea desk", status: "missing" },
+      { id: "sq-file-upload", name: "File upload (PDF, Excel, Word, email)", legacy: "Air/Sea desk", react: "/smart-quote/air", status: "done", testHint: "Drop PDF/Excel/DOCX/TXT/EML on Smart Quote" },
+      { id: "sq-apply-desk", name: "Apply parsed enquiry to full desk form", legacy: "Air/Sea desk", react: "/smart-quote/air", status: "done", testHint: "After parse → Apply to Air/Sea desk" },
       { id: "sq-excel-publish", name: "Excel tariff import → Circulars publish", legacy: "Circulars", status: "missing" },
-      { id: "sq-save", name: "Save Smart Quote draft as quote", legacy: "Smart Quote", status: "missing" },
+      { id: "sq-save", name: "Save Smart Quote draft as quote", legacy: "Smart Quote", react: "/smart-quote/air", status: "done", testHint: "Save draft quote from Smart Quote result" },
     ],
   },
   {

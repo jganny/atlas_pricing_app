@@ -47,7 +47,7 @@ function SeaDeskInner() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useSeaTariffs();
-  const loader = useQuoteDeskLoader();
+  const loader = useQuoteDeskLoader("sea");
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -100,6 +100,44 @@ function SeaDeskInner() {
     setLiners(loaded.liners);
     if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
+
+  useEffect(() => {
+    if (!loader.smartPrefill) return;
+    const p = loader.smartPrefill.parsed;
+    const st = loader.smartPrefill.seaTariff;
+    setCustomer(p.customer || "");
+    setOrigin(p.origin || "");
+    setDestination(p.destination || "");
+    if (p.mode) setMode(p.mode);
+    else if (st?.mode) setMode(st.mode);
+    if (loader.smartPrefill.currency || st?.currency) {
+      setCurrency(loader.smartPrefill.currency || st?.currency || "USD");
+    }
+    if (p.grossWeight) setGrossWeightKg(p.grossWeight);
+    if (p.volume) setVolumeCbm(p.volume);
+    setLiners([
+      createLinerOption(
+        {
+          name: p.linerLabel || loader.smartPrefill.carrierLabel || "",
+          routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
+          tt: "TBA",
+          validity: "15 days",
+          containers: p.containers.length
+            ? p.containers.map((c) => ({
+                type: c.type,
+                qty: c.qty,
+                sellRate: st?.fclRates?.[c.type]?.sell ?? 0,
+                buyRate: st?.fclRates?.[c.type]?.buy ?? 0,
+              }))
+            : undefined,
+          lclSell: st?.lclRate.sell,
+          lclBuy: st?.lclRate.buy,
+        },
+        true,
+      ),
+    ]);
+    setStep("carrier");
+  }, [loader.smartPrefill]);
 
   function updateLiner(id: string, patch: Partial<LinerOption>) {
     setLiners((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));

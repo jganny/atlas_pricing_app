@@ -113,6 +113,8 @@ async function runAirSmartQuote(text: string, airTariffs?: AirTariff[]): Promise
     tariffFound: Boolean(tariff),
     carrierLabel,
     estimatedTotal,
+    currency: tariff?.currency,
+    airBreaks: tariff?.breaks,
     message: tariff
       ? `Draft ready · ${parsed.origin} → ${parsed.destination} · rates from Circulars`
       : `Draft ready · no Circulars tariff — enter rates manually (CWT still auto)`,
@@ -151,6 +153,16 @@ async function runSeaSmartQuote(text: string, seaTariffs?: SeaTariff[]): Promise
     tariffFound: Boolean(tariff),
     carrierLabel,
     estimatedTotal,
+    currency: tariff?.currency,
+    seaTariff: tariff
+      ? {
+          mode: tariff.mode,
+          lclRate: tariff.lclRate,
+          fclRates: tariff.fclRates,
+          currency: tariff.currency,
+          carrier: tariff.carrier,
+        }
+      : undefined,
     message: tariff
       ? `Sea draft ready · ${parsed.origin} → ${parsed.destination} · ${tariff.mode.toUpperCase()} from Circulars`
       : `Sea draft ready · no Circulars tariff — enter rates on Carriers tab`,

@@ -63,7 +63,9 @@ export const innovationItems: InnovationItem[] = [
   { id: "i7-pdf", name: "React PDF quotations", phase: 7, status: "planned", why: "Match legacy print layout", react: "Quote export" },
   { id: "i7-multi-carrier", name: "Multi-carrier desk architecture", phase: 7, status: "done", why: "Compare airline/liner options like CargoWise", react: "/air /sea" },
   { id: "i7-fees", name: "Origin/dest surcharge engine", phase: 7, status: "done", why: "True grand totals with local fees", react: "pricing/surcharges" },
-  { id: "i8-smart-file", name: "Smart Quote file upload", phase: 8, status: "planned", why: "PDF/Excel/email parse", react: "Smart Quote" },
+  { id: "i8-smart-file", name: "Smart Quote file upload", phase: 8, status: "done", why: "PDF/Excel/email parse", react: "/smart-quote/air" },
+  { id: "i8-confidence", name: "Field-level confidence review", phase: 8, status: "done", why: "Edit before apply — better than legacy status string", react: "Smart Quote" },
+  { id: "i8-apply-desk", name: "One-click apply to desk", phase: 8, status: "done", why: "Prefill Air/Sea from Smart Quote", react: "/air /sea" },
   { id: "i9-search", name: "Full-text search", phase: 9, status: "planned", why: "Sub-100ms quote find", react: "Global search" },
 
   // Phase 11–14

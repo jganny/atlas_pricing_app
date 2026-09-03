@@ -64,7 +64,7 @@ function AirDeskInner() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useAirTariffs();
-  const loader = useQuoteDeskLoader();
+  const loader = useQuoteDeskLoader("air");
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -107,6 +107,41 @@ function AirDeskInner() {
     setAirlines(loaded.airlines);
     if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
+
+  useEffect(() => {
+    if (!loader.smartPrefill) return;
+    const p = loader.smartPrefill.parsed;
+    setCustomer(p.customer || "");
+    setOrigin(p.origin || "");
+    setDestination(p.destination || "");
+    if (loader.smartPrefill.currency) setCurrency(loader.smartPrefill.currency);
+    if (p.packages.length) {
+      setCargo(
+        p.packages.map((pkg) => ({
+          l: pkg.l ?? 0,
+          w: pkg.w ?? 0,
+          h: pkg.h ?? 0,
+          qty: pkg.qty || 1,
+          gw: pkg.gw ?? 0,
+        })),
+      );
+    }
+    setAirlines([
+      createAirlineOption(
+        {
+          name: p.airlineLabel || loader.smartPrefill.carrierLabel || "",
+          routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
+          tt: "TBA",
+          validity: "15 days",
+          breaks: loader.smartPrefill.airBreaks
+            ? { ...EMPTY_AIR_BREAKS, ...loader.smartPrefill.airBreaks }
+            : undefined,
+        },
+        true,
+      ),
+    ]);
+    setStep("carrier");
+  }, [loader.smartPrefill]);
 
   function updateCargo(index: number, patch: Partial<AirCargoRow>) {
     setCargo((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));

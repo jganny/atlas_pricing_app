@@ -102,6 +102,10 @@ export interface SmartQuoteDraft {
   carrierLabel: string
   estimatedTotal?: number
   message: string
+  currency?: string
+  /** Snapshot for Apply-to-desk */
+  airBreaks?: AirTariff['breaks']
+  seaTariff?: Pick<SeaTariff, 'mode' | 'lclRate' | 'fclRates' | 'currency' | 'carrier'>
 }
 
 export interface CircularRecord {
