@@ -52,7 +52,8 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
   const airMutation = useAirSmartQuote();
   const seaMutation = useSeaSmartQuote();
   const mutation = mode === "air" ? airMutation : seaMutation;
-  const pending = mutation.isPending || fileBusy;
+  const [running, setRunning] = useState(false);
+  const pending = running || fileBusy;
 
   const applyDraft = useCallback((d: SmartQuoteDraft) => {
     const withSource: SmartQuoteDraft = {
@@ -66,12 +67,26 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
   async function runText() {
     setIngestWarning(null);
     setSourceLabel("email-text");
+    setRunning(true);
+    let abandoned = false;
+    const safety = window.setTimeout(() => {
+      abandoned = true;
+      setRunning(false);
+      toast(
+        "Smart Quote timed out waiting for Circulars. Paste again and click Run — parse will still work without live rates.",
+        "error",
+      );
+    }, 8000);
     try {
       const d = await mutation.mutateAsync(text);
+      if (abandoned) return;
       applyDraft(d);
       toast("Enquiry parsed", "success");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Parse failed", "error");
+      if (!abandoned) toast(e instanceof Error ? e.message : "Parse failed", "error");
+    } finally {
+      window.clearTimeout(safety);
+      setRunning(false);
     }
   }
 
@@ -79,12 +94,20 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
     if (!file) return;
     setFileBusy(true);
     setIngestWarning(null);
+    let abandoned = false;
+    const safety = window.setTimeout(() => {
+      abandoned = true;
+      setFileBusy(false);
+      toast("File parse timed out — try a TXT/EML paste instead.", "error");
+    }, 15000);
     try {
       const ingested = await ingestEnquiryFile(file);
+      if (abandoned) return;
       setText(ingested.text);
       setSourceLabel(ingested.source);
       if (ingested.warning) setIngestWarning(ingested.warning);
       const d = await mutation.mutateAsync(ingested.text);
+      if (abandoned) return;
       applyDraft({
         ...d,
         parsed: { ...d.parsed, source: ingested.source },
@@ -92,8 +115,9 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
       });
       toast(`Parsed ${ingested.fileName}`, "success");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "File ingest failed", "error");
+      if (!abandoned) toast(e instanceof Error ? e.message : "File ingest failed", "error");
     } finally {
+      window.clearTimeout(safety);
       setFileBusy(false);
       if (fileRef.current) fileRef.current.value = "";
     }

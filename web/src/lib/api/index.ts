@@ -28,6 +28,21 @@ import type {
 
 export const useLiveData = !isMockMode && hasFirebaseConfig;
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        resolve(fallback);
+      });
+  });
+}
+
 export function getEnvironmentLabel(): string {
   if (isMockMode) return "Mock environment";
   if (!hasFirebaseConfig) return "Live mode (Firebase config missing)";
@@ -50,40 +65,40 @@ async function fetchEnquiries(): Promise<EnquiryRecord[]> {
 
 async function fetchAirTariffs(): Promise<AirTariff[]> {
   if (useLiveData) {
-    try {
-      return await fetchLiveAirTariffs();
-    } catch {
-      return [];
-    }
+    return withTimeout(fetchLiveAirTariffs(), 6000, []);
   }
   return mockApi.fetchAirTariffs();
 }
 
 async function fetchSeaTariffs(): Promise<SeaTariff[]> {
   if (useLiveData) {
-    try {
-      return await fetchLiveSeaTariffs();
-    } catch {
-      return [];
-    }
+    return withTimeout(fetchLiveSeaTariffs(), 6000, []);
   }
   return mockApi.fetchSeaTariffs();
 }
 
 async function fetchCirculars(): Promise<CircularRecord[]> {
   if (useLiveData) {
-    try {
-      return await fetchLiveCirculars();
-    } catch {
-      return [];
-    }
+    return withTimeout(fetchLiveCirculars(), 6000, []);
   }
   return [];
+}
+
+async function resolveAirTariffs(cached?: AirTariff[]): Promise<AirTariff[]> {
+  // Undefined = not loaded yet. Empty array = already fetched (do not wait again).
+  if (cached !== undefined) return cached;
+  return withTimeout(fetchLiveAirTariffs(), 2500, []);
+}
+
+async function resolveSeaTariffs(cached?: SeaTariff[]): Promise<SeaTariff[]> {
+  if (cached !== undefined) return cached;
+  return withTimeout(fetchLiveSeaTariffs(), 2500, []);
 }
 
 async function runAirSmartQuote(text: string, airTariffs?: AirTariff[]): Promise<SmartQuoteDraft> {
   if (!useLiveData) return mockApi.runAirSmartQuote(text);
 
+  // Parse first — never block the UI on Firebase.
   const parsed = parseAirEnquiry(text);
   if (!parsed.origin || !parsed.destination) {
     return {
@@ -94,7 +109,8 @@ async function runAirSmartQuote(text: string, airTariffs?: AirTariff[]): Promise
     };
   }
 
-  const tariffs = airTariffs ?? (await fetchAirTariffs());
+  const tariffs = await resolveAirTariffs(airTariffs);
+
   const tariff = lookupLiveAirTariff(
     tariffs,
     parsed.origin,
@@ -103,9 +119,16 @@ async function runAirSmartQuote(text: string, airTariffs?: AirTariff[]): Promise
   );
   const carrierLabel = parsed.airlineLabel || tariff?.carrier || "From route history";
   let estimatedTotal: number | undefined;
+  let tariffNote = "";
 
   if (tariff) {
-    estimatedTotal = estimateAirFreightFromTariff(parsed, tariff);
+    try {
+      estimatedTotal = estimateAirFreightFromTariff(parsed, tariff);
+    } catch {
+      tariffNote = " · estimate skipped";
+    }
+  } else if (!tariffs.length) {
+    tariffNote = " · Circulars timed out or empty — enter rates on desk";
   }
 
   return {
@@ -116,8 +139,8 @@ async function runAirSmartQuote(text: string, airTariffs?: AirTariff[]): Promise
     currency: tariff?.currency,
     airBreaks: tariff?.breaks,
     message: tariff
-      ? `Draft ready · ${parsed.origin} → ${parsed.destination} · rates from Circulars`
-      : `Draft ready · no Circulars tariff — enter rates manually (CWT still auto)`,
+      ? `Draft ready · ${parsed.origin} → ${parsed.destination} · rates from Circulars${tariffNote}`
+      : `Draft ready · ${parsed.origin} → ${parsed.destination} · no Circulars match — enter rates manually${tariffNote}`,
   };
 }
 
@@ -134,7 +157,8 @@ async function runSeaSmartQuote(text: string, seaTariffs?: SeaTariff[]): Promise
     };
   }
 
-  const tariffs = seaTariffs ?? (await fetchSeaTariffs());
+  const tariffs = await resolveSeaTariffs(seaTariffs);
+
   const tariff = lookupLiveSeaTariff(
     tariffs,
     parsed.origin,
@@ -143,9 +167,16 @@ async function runSeaSmartQuote(text: string, seaTariffs?: SeaTariff[]): Promise
   );
   const carrierLabel = parsed.linerLabel || tariff?.carrier || "From route history";
   let estimatedTotal: number | undefined;
+  let tariffNote = "";
 
   if (tariff) {
-    estimatedTotal = estimateSeaFreightFromTariff(parsed, tariff);
+    try {
+      estimatedTotal = estimateSeaFreightFromTariff(parsed, tariff);
+    } catch {
+      tariffNote = " · estimate skipped";
+    }
+  } else if (!tariffs.length) {
+    tariffNote = " · Circulars timed out or empty — enter rates on desk";
   }
 
   return {
@@ -164,8 +195,8 @@ async function runSeaSmartQuote(text: string, seaTariffs?: SeaTariff[]): Promise
         }
       : undefined,
     message: tariff
-      ? `Sea draft ready · ${parsed.origin} → ${parsed.destination} · ${tariff.mode.toUpperCase()} from Circulars`
-      : `Sea draft ready · no Circulars tariff — enter rates on Carriers tab`,
+      ? `Sea draft ready · ${parsed.origin} → ${parsed.destination} · ${tariff.mode.toUpperCase()} from Circulars${tariffNote}`
+      : `Sea draft ready · ${parsed.origin} → ${parsed.destination} · no Circulars match — enter rates on Carriers tab${tariffNote}`,
   };
 }
 

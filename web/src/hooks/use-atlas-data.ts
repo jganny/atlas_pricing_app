@@ -39,6 +39,7 @@ export function useAirTariffs() {
     queryKey: queryKeys.airTariffs,
     queryFn: () => atlasApi.fetchAirTariffs(),
     staleTime: 5 * 60_000,
+    retry: 1,
     enabled,
   });
 }
@@ -49,6 +50,7 @@ export function useSeaTariffs() {
     queryKey: queryKeys.seaTariffs,
     queryFn: () => atlasApi.fetchSeaTariffs(),
     staleTime: 5 * 60_000,
+    retry: 1,
     enabled,
   });
 }
@@ -59,6 +61,7 @@ export function useCirculars() {
     queryKey: queryKeys.circulars,
     queryFn: () => atlasApi.fetchCirculars(),
     staleTime: 5 * 60_000,
+    retry: 1,
     enabled,
   });
 }
