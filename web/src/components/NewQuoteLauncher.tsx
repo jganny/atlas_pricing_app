@@ -182,11 +182,13 @@ function NewQuoteLauncherModal({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="New quote from enquiry"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !pending) onClose();
+      }}
     >
       <div
         className="w-full max-w-2xl overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -243,7 +245,11 @@ function NewQuoteLauncherModal({ onClose }: { onClose: () => void }) {
               type="button"
               className="h-8 px-3 text-xs"
               disabled={pending || !text.trim()}
-              onClick={() => void runParse(text, selectedMode ?? undefined)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void runParse(text, selectedMode ?? undefined);
+              }}
             >
               {pending ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -330,21 +336,43 @@ function NewQuoteLauncherModal({ onClose }: { onClose: () => void }) {
                 <Button
                   type="button"
                   className="h-9"
-                  disabled={mode !== "air"}
-                  onClick={() => openDesk("air")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDesk(mode === "air" ? "air" : "sea");
+                  }}
                 >
-                  <PlaneTakeoff className="mr-1.5 h-4 w-4" />
-                  Open Air desk
+                  {mode === "air" ? (
+                    <PlaneTakeoff className="mr-1.5 h-4 w-4" />
+                  ) : (
+                    <Ship className="mr-1.5 h-4 w-4" />
+                  )}
+                  Open {mode === "air" ? "Air" : "Sea"} desk
                 </Button>
-                <Button
-                  type="button"
-                  className="h-9"
-                  disabled={mode !== "sea"}
-                  onClick={() => openDesk("sea")}
-                >
-                  <Ship className="mr-1.5 h-4 w-4" />
-                  Open Sea desk
-                </Button>
+                {mode === "air" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-9"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void switchMode("sea");
+                    }}
+                  >
+                    Switch to Sea & re-parse
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-9"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void switchMode("air");
+                    }}
+                  >
+                    Switch to Air & re-parse
+                  </Button>
+                )}
               </div>
             </div>
           ) : null}
