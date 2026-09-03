@@ -5,11 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
 
 /** Dev-only routes that render without login (preview / migration tracker). */
-const PUBLIC_DEV_ROUTES = ["/feature-parity"];
+const PUBLIC_DEV_ROUTES = ["/feature-parity", "/login"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const authReady = useAuthStore((s) => s.authReady);
+  const setAuthReady = useAuthStore((s) => s.setAuthReady);
   const router = useRouter();
   const pathname = usePathname() ?? "/";
   const normalizedPath =
@@ -18,6 +19,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const isPublicDevRoute =
     process.env.NODE_ENV === "development" &&
     PUBLIC_DEV_ROUTES.some((route) => normalizedPath === route || normalizedPath.startsWith(`${route}/`));
+
+  // Safety net: if AuthSync never completes (broken hydrate / Firebase hang), unblock UI.
+  useEffect(() => {
+    if (authReady) return;
+    const t = window.setTimeout(() => {
+      if (!useAuthStore.getState().authReady) setAuthReady(true);
+    }, 2500);
+    return () => window.clearTimeout(t);
+  }, [authReady, setAuthReady]);
 
   useEffect(() => {
     if (authReady && !user && !isPublicDevRoute) router.replace("/login");

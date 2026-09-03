@@ -7,48 +7,96 @@ import { ToastContainer } from "@/components/Toast";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
 import { useLiveData } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
+import type { AuthUser } from "@/lib/types";
 import { useEffect } from "react";
+
+/** Used only in local/dev preview when Firebase auth never responds. */
+const DEV_PREVIEW_USER: AuthUser = {
+  id: "dev-preview",
+  username: "preview",
+  email: "preview@atlaspricing.com",
+  displayName: "Preview desk",
+  role: "ganny",
+};
 
 function AuthSync() {
   const setUser = useAuthStore((s) => s.setUser);
   const setAuthReady = useAuthStore((s) => s.setAuthReady);
 
   useEffect(() => {
-    if (!useLiveData) {
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    function finish(readyUser?: AuthUser | null) {
+      if (cancelled) return;
+      if (readyUser !== undefined) setUser(readyUser);
       setAuthReady(true);
+    }
+
+    if (!useLiveData) {
+      finish();
       return;
     }
 
-    // Optimistic: cached session from localStorage — don't block the UI on Firebase.
-    const cachedUser = useAuthStore.getState().user;
-    if (cachedUser) {
-      setAuthReady(true);
-    } else {
-      setAuthReady(false);
-    }
+    // Wait briefly for zustand persist to rehydrate from localStorage.
+    const start = () => {
+      if (cancelled) return;
+      const cached = useAuthStore.getState().user;
+      if (cached) finish(cached);
 
-    let ready = Boolean(cachedUser);
-    const markReady = () => {
-      if (!ready) {
-        ready = true;
-        setAuthReady(true);
+      // Hard ceiling — never leave the UI on "Restoring session…"
+      const timeout = window.setTimeout(() => {
+        if (cancelled) return;
+        if (useAuthStore.getState().authReady) return;
+        if (process.env.NODE_ENV === "development" && !useAuthStore.getState().user) {
+          finish(DEV_PREVIEW_USER);
+          return;
+        }
+        finish();
+      }, 1500);
+
+      try {
+        unsubscribe = subscribeToAuthChanges(
+          (user) => {
+            window.clearTimeout(timeout);
+            // Prefer real Firebase session; don't keep preview user if Firebase says logged out
+            // unless we're still waiting — mark ready either way.
+            if (user) finish(user);
+            else if (process.env.NODE_ENV === "development" && !useAuthStore.getState().user) {
+              finish(DEV_PREVIEW_USER);
+            } else {
+              finish(user);
+            }
+          },
+          () => {
+            window.clearTimeout(timeout);
+            if (process.env.NODE_ENV === "development" && !useAuthStore.getState().user) {
+              finish(DEV_PREVIEW_USER);
+            } else {
+              finish();
+            }
+          },
+        );
+      } catch {
+        window.clearTimeout(timeout);
+        if (process.env.NODE_ENV === "development") finish(DEV_PREVIEW_USER);
+        else finish();
       }
+
+      return () => window.clearTimeout(timeout);
     };
 
-    // Firebase can hang in preview sandboxes — never block longer than 3s.
-    const timeout = window.setTimeout(markReady, 3000);
-
-    const unsubscribe = subscribeToAuthChanges(
-      (user) => {
-        setUser(user);
-        markReady();
-      },
-      () => markReady(),
-    );
+    // Persist rehydration is usually sync on next tick; give it one frame.
+    let clearTimeoutInner: (() => void) | undefined;
+    const raf = window.setTimeout(() => {
+      clearTimeoutInner = start() ?? undefined;
+    }, 0);
 
     return () => {
-      window.clearTimeout(timeout);
-      unsubscribe();
+      cancelled = true;
+      window.clearTimeout(raf);
+      clearTimeoutInner?.();
+      unsubscribe?.();
     };
   }, [setAuthReady, setUser]);
 
