@@ -21,7 +21,7 @@ export const TEAM_ROLES: Record<string, TeamRole> = {
 
 /** Shared company mailboxes → who works that inbox (login ids). */
 export const ATLAS_IMAP = {
-  host: "csipop.logix.in",
+  host: "czipop.logix.in",
   port: 993,
   secure: true,
   folder: "INBOX",

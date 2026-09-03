@@ -1,5 +1,5 @@
 /**
- * Poll Atlas shared mailboxes over IMAP (Logix / csipop.logix.in:993).
+ * Poll Atlas shared mailboxes over IMAP (Logix / czipop.logix.in:993).
  * Passwords are Firebase secrets — never committed.
  *
  * Set once:
@@ -16,7 +16,7 @@ const pricingPassword = defineSecret("IMAP_PRICING_PASSWORD");
 const salesPassword = defineSecret("IMAP_PRICINGSALES_PASSWORD");
 
 const IMAP = {
-  host: "csipop.logix.in",
+  host: "czipop.logix.in",
   port: 993,
   secure: true,
   folder: "INBOX",
