@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Plus, Save, Ship, Trash2, Zap } from "lucide-react";
 import type { SeaMode } from "@atlas/pricing-core";
 import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
+import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
@@ -28,7 +29,7 @@ import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
-import type { SavedQuote } from "@/lib/types";
+import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
@@ -103,22 +104,33 @@ function SeaDeskInner() {
 
   useEffect(() => {
     if (!loader.smartPrefill) return;
-    const p = loader.smartPrefill.parsed;
-    const st = loader.smartPrefill.seaTariff;
+    applySmartDraft({
+      parsed: loader.smartPrefill.parsed,
+      tariffFound: loader.smartPrefill.tariffFound,
+      carrierLabel: loader.smartPrefill.carrierLabel,
+      currency: loader.smartPrefill.currency,
+      seaTariff: loader.smartPrefill.seaTariff,
+      message: "Prefill from Smart Quote / Inbox",
+    });
+  }, [loader.smartPrefill]);
+
+  function applySmartDraft(draft: SmartQuoteDraft) {
+    const p = draft.parsed;
+    const st = draft.seaTariff;
     setCustomer(p.customer || "");
     setOrigin(p.origin || "");
     setDestination(p.destination || "");
     if (p.mode) setMode(p.mode);
     else if (st?.mode) setMode(st.mode);
-    if (loader.smartPrefill.currency || st?.currency) {
-      setCurrency(loader.smartPrefill.currency || st?.currency || "USD");
+    if (draft.currency || st?.currency) {
+      setCurrency(draft.currency || st?.currency || "USD");
     }
     if (p.grossWeight) setGrossWeightKg(p.grossWeight);
     if (p.volume) setVolumeCbm(p.volume);
     setLiners([
       createLinerOption(
         {
-          name: p.linerLabel || loader.smartPrefill.carrierLabel || "",
+          name: p.linerLabel || draft.carrierLabel || "",
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
           validity: "15 days",
@@ -137,7 +149,7 @@ function SeaDeskInner() {
       ),
     ]);
     setStep("carrier");
-  }, [loader.smartPrefill]);
+  }
 
   function updateLiner(id: string, patch: Partial<LinerOption>) {
     setLiners((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
@@ -305,6 +317,8 @@ function SeaDeskInner() {
         </Card>
       ) : null}
 
+      <DeskSmartQuoteStrip mode="sea" onApply={applySmartDraft} />
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[var(--color-atlas-sea)]">
@@ -313,7 +327,7 @@ function SeaDeskInner() {
             <Badge tone="info">Phase 7</Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Multi-liner options, local surcharges, alternatives compare — ⌘S to save.
+            Paste enquiry above or fill manually — multi-liner, surcharges, ⌘S to save.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

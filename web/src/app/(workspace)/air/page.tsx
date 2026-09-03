@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
+import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
@@ -36,7 +37,7 @@ import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
-import type { SavedQuote } from "@/lib/types";
+import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 const BREAK_LABELS: Record<WeightBreakName, string> = {
@@ -110,11 +111,22 @@ function AirDeskInner() {
 
   useEffect(() => {
     if (!loader.smartPrefill) return;
-    const p = loader.smartPrefill.parsed;
+    applySmartDraft({
+      parsed: loader.smartPrefill.parsed,
+      tariffFound: loader.smartPrefill.tariffFound,
+      carrierLabel: loader.smartPrefill.carrierLabel,
+      currency: loader.smartPrefill.currency,
+      airBreaks: loader.smartPrefill.airBreaks,
+      message: "Prefill from Smart Quote / Inbox",
+    });
+  }, [loader.smartPrefill]);
+
+  function applySmartDraft(draft: SmartQuoteDraft) {
+    const p = draft.parsed;
     setCustomer(p.customer || "");
     setOrigin(p.origin || "");
     setDestination(p.destination || "");
-    if (loader.smartPrefill.currency) setCurrency(loader.smartPrefill.currency);
+    if (draft.currency) setCurrency(draft.currency);
     if (p.packages.length) {
       setCargo(
         p.packages.map((pkg) => ({
@@ -129,19 +141,17 @@ function AirDeskInner() {
     setAirlines([
       createAirlineOption(
         {
-          name: p.airlineLabel || loader.smartPrefill.carrierLabel || "",
+          name: p.airlineLabel || draft.carrierLabel || "",
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
           validity: "15 days",
-          breaks: loader.smartPrefill.airBreaks
-            ? { ...EMPTY_AIR_BREAKS, ...loader.smartPrefill.airBreaks }
-            : undefined,
+          breaks: draft.airBreaks ? { ...EMPTY_AIR_BREAKS, ...draft.airBreaks } : undefined,
         },
         true,
       ),
     ]);
     setStep("carrier");
-  }, [loader.smartPrefill]);
+  }
 
   function updateCargo(index: number, patch: Partial<AirCargoRow>) {
     setCargo((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -307,6 +317,8 @@ function AirDeskInner() {
         </Card>
       ) : null}
 
+      <DeskSmartQuoteStrip mode="air" onApply={applySmartDraft} />
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[var(--color-atlas-air)]">
@@ -315,7 +327,7 @@ function AirDeskInner() {
             <Badge tone="info">Phase 7</Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Multi-airline options, local surcharges, export/import — ⌘S to save.
+            Paste enquiry above or fill manually — multi-airline, surcharges, ⌘S to save.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
