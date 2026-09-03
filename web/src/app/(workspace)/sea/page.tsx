@@ -2,8 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, Plus, Save, Ship, Trash2, Zap } from "lucide-react";
+import { Eye, Plus, RotateCcw, Save, Ship, Trash2, Zap } from "lucide-react";
 import type { SeaMode } from "@atlas/pricing-core";
+import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
@@ -45,6 +46,7 @@ export default function SeaDeskPage() {
 }
 
 function SeaDeskInner() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useSeaTariffs();
@@ -58,8 +60,8 @@ function SeaDeskInner() {
   const [incoterm, setIncoterm] = useState("FOB");
   const [module, setModule] = useState<"export" | "import">("export");
   const [mode, setMode] = useState<SeaMode>("fcl");
-  const [grossWeightKg, setGrossWeightKg] = useState(8500);
-  const [volumeCbm, setVolumeCbm] = useState(28);
+  const [grossWeightKg, setGrossWeightKg] = useState(0);
+  const [volumeCbm, setVolumeCbm] = useState(0);
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
   const [liners, setLiners] = useState<LinerOption[]>([createLinerOption({}, true)]);
@@ -67,6 +69,7 @@ function SeaDeskInner() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const selected = liners.find((l) => l.selected) ?? liners[0];
 
@@ -149,6 +152,31 @@ function SeaDeskInner() {
       ),
     ]);
     setStep("carrier");
+  }
+
+  function applyReset() {
+    setCustomer("");
+    setOrigin("");
+    setDestination("");
+    setCurrency("USD");
+    setIncoterm("FOB");
+    setModule("export");
+    setMode("fcl");
+    setGrossWeightKg(0);
+    setVolumeCbm(0);
+    setChargeableCbmOverride(0);
+    setCustomFx(0);
+    setLiners([createLinerOption({}, true)]);
+    setTerms(getDefaultFreightTerms("sea"));
+    setSaveMsg(null);
+    setPreviewQuote(null);
+    setStep("shipment");
+    setConfirmReset(false);
+    loader.clearLoadedQuote();
+    if (typeof window !== "undefined" && /[?&](edit|duplicate|smart)=/.test(window.location.search)) {
+      router.replace("/sea/");
+    }
+    toast("Sea desk cleared", "success");
   }
 
   function updateLiner(id: string, patch: Partial<LinerOption>) {
@@ -310,41 +338,54 @@ function SeaDeskInner() {
   useDeskSaveShortcut(() => void handleSave(), !saving);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {loader.banner ? (
-        <Card className="border-sky-200 bg-sky-50">
+        <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
         </Card>
       ) : null}
 
       <DeskSmartQuoteStrip mode="sea" onApply={applySmartDraft} />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[var(--color-atlas-sea)]">
-            <Ship className="h-5 w-5" />
-            <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Sea desk</h1>
-            <Badge tone="info">Phase 7</Badge>
-          </div>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Paste enquiry above or fill manually — multi-liner, surcharges, ⌘S to save.
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[var(--color-atlas-sea)]">
+          <Ship className="h-5 w-5" />
+          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Sea desk</h1>
+          <Badge tone="info">Phase 7</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={applyTariffToSelected}>
-            <Zap className="mr-2 h-4 w-4" />
-            Load Circulars tariff
+          <Button type="button" variant="secondary" className="h-9" onClick={() => setConfirmReset(true)}>
+            <RotateCcw className="mr-1.5 h-4 w-4" />
+            Reset
           </Button>
-          <Button type="button" variant="secondary" onClick={() => void handleSave(true)} disabled={saving}>
-            <Eye className="mr-2 h-4 w-4" />
-            Save & preview
+          <Button type="button" variant="secondary" className="h-9" onClick={applyTariffToSelected}>
+            <Zap className="mr-1.5 h-4 w-4" />
+            Circulars
           </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving…" : "Save quote"}
+          <Button type="button" variant="secondary" className="h-9" onClick={() => void handleSave(true)} disabled={saving}>
+            <Eye className="mr-1.5 h-4 w-4" />
+            Preview
+          </Button>
+          <Button type="button" className="h-9" onClick={() => void handleSave()} disabled={saving}>
+            <Save className="mr-1.5 h-4 w-4" />
+            {saving ? "Saving…" : "Save"}
           </Button>
         </div>
       </div>
+
+      {confirmReset ? (
+        <Card className="border-amber-300 bg-amber-50 py-3">
+          <p className="text-sm font-semibold text-amber-950">Clear this sea form?</p>
+          <div className="mt-2 flex gap-2">
+            <Button type="button" className="h-8 text-xs" onClick={applyReset}>
+              Yes, reset
+            </Button>
+            <Button type="button" variant="secondary" className="h-8 text-xs" onClick={() => setConfirmReset(false)}>
+              Cancel
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -368,7 +409,7 @@ function SeaDeskInner() {
       </div>
 
       {heavyWarn ? (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card className="border-amber-300 bg-amber-50 py-2">
           <p className="text-sm font-semibold text-amber-900">{heavyWarn}</p>
         </Card>
       ) : null}
@@ -395,26 +436,26 @@ function SeaDeskInner() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="space-y-3 lg:col-span-2">
           {step === "shipment" ? (
-            <Card className="space-y-4">
+            <Card className="space-y-3 py-3">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer
-                  <Input value={customer} onChange={(e) => setCustomer(e.target.value)} />
+                  <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Customer name" />
                 </Label>
                 <Label>
-                  Port of loading
-                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="INNSA - Nhava Sheva" />
+                  POL
+                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="" />
                 </Label>
                 <Label>
-                  Port of discharge
+                  POD
                   <Input
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    placeholder="NLRTM - Rotterdam"
+                    placeholder=""
                   />
                 </Label>
                 <Label>
@@ -449,8 +490,9 @@ function SeaDeskInner() {
                   Gross weight (kg)
                   <Input
                     type="number"
-                    value={grossWeightKg}
+                    value={grossWeightKg || ""}
                     onChange={(e) => setGrossWeightKg(Number(e.target.value))}
+                    placeholder="0"
                   />
                 </Label>
                 <Label>
@@ -458,8 +500,9 @@ function SeaDeskInner() {
                   <Input
                     type="number"
                     step="0.01"
-                    value={volumeCbm}
+                    value={volumeCbm || ""}
                     onChange={(e) => setVolumeCbm(Number(e.target.value))}
+                    placeholder="0"
                   />
                 </Label>
                 {mode !== "fcl" ? (
@@ -485,7 +528,7 @@ function SeaDeskInner() {
                 </Label>
               </div>
               <div className="flex justify-end">
-                <Button type="button" onClick={() => setStep("carrier")}>
+                <Button type="button" className="h-9" onClick={() => setStep("carrier")}>
                   Next · Liners
                 </Button>
               </div>

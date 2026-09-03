@@ -20,11 +20,9 @@ import {
 } from "@/lib/pricing/enquiry-ingest";
 import { fieldConfidence } from "@/lib/pricing/smart-quote-prefill";
 import type { ParsedEnquiry, SmartQuoteDraft } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
 
 /**
- * Option A — paste / drop enquiry on the desk itself.
- * Parse → review → Apply fills this desk (no redirect).
+ * Option A — compact paste/parse on the desk (collapsed by default).
  */
 export function DeskSmartQuoteStrip({
   mode,
@@ -34,7 +32,7 @@ export function DeskSmartQuoteStrip({
   onApply: (draft: SmartQuoteDraft) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [running, setRunning] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
@@ -60,7 +58,7 @@ export function DeskSmartQuoteStrip({
     const safety = window.setTimeout(() => {
       abandoned = true;
       setRunning(false);
-      toast("Parse timed out — try again or paste shorter text.", "error");
+      toast("Parse timed out — try again.", "error");
     }, 8000);
     try {
       const d = await mutation.mutateAsync(body);
@@ -71,7 +69,8 @@ export function DeskSmartQuoteStrip({
       };
       setDraft(withSource);
       setEditable({ ...withSource.parsed });
-      toast("Enquiry parsed — review then Apply to this desk", "success");
+      setOpen(true);
+      toast("Parsed — review then Apply", "success");
     } catch (e) {
       if (!abandoned) toast(e instanceof Error ? e.message : "Parse failed", "error");
     } finally {
@@ -84,6 +83,7 @@ export function DeskSmartQuoteStrip({
     if (!file) return;
     setFileBusy(true);
     setWarning(null);
+    setOpen(true);
     try {
       const ingested = await ingestEnquiryFile(file);
       setText(ingested.text);
@@ -104,121 +104,122 @@ export function DeskSmartQuoteStrip({
       return;
     }
     onApply({ ...draft, parsed: editable });
-    toast("Fields applied to this desk — check carriers and rates", "success");
+    toast("Applied to this desk", "success");
     setOpen(false);
   }
 
   return (
-    <Card className="border-sky-200/80 bg-gradient-to-br from-sky-50/90 to-white p-0 overflow-hidden">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-sky-700" />
-          <span className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
-            Paste enquiry here
+    <Card className="border-sky-200/70 bg-sky-50/50 p-0 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <Sparkles className="h-3.5 w-3.5 shrink-0 text-sky-700" />
+          <span className="truncate text-sm font-bold text-[var(--color-atlas-navy)]">
+            Paste enquiry
           </span>
-          <Badge tone="info">Option A</Badge>
-          <span className="hidden text-xs text-[var(--color-text-muted)] sm:inline">
-            Parse fills this {mode === "air" ? "Air" : "Sea"} desk — no separate Smart Quote page
-          </span>
-        </div>
-        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </button>
+          <Badge tone="info">AI</Badge>
+          {!open ? (
+            <span className="hidden truncate text-xs text-[var(--color-text-muted)] sm:inline">
+              — click to paste or drop a file
+            </span>
+          ) : null}
+          {open ? (
+            <ChevronUp className="ml-auto h-4 w-4 shrink-0" />
+          ) : (
+            <ChevronDown className="ml-auto h-4 w-4 shrink-0" />
+          )}
+        </button>
+        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[var(--color-border)] bg-white px-2 py-1 text-xs font-semibold hover:bg-slate-50">
+          <FileUp className="h-3.5 w-3.5" />
+          File
+          <input
+            ref={fileRef}
+            type="file"
+            accept={SMART_QUOTE_ACCEPT}
+            className="sr-only"
+            onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
+          />
+        </label>
+      </div>
 
       {open ? (
-        <div className="space-y-3 border-t border-sky-100 px-4 py-4">
+        <div
+          className="space-y-2 border-t border-sky-100 px-3 py-2"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            void onFile(e.dataTransfer.files?.[0] ?? null);
+          }}
+        >
           <Textarea
-            className="min-h-28"
-            placeholder="Paste customer email / enquiry text…"
+            className="min-h-[4.5rem] text-sm"
+            placeholder="Paste enquiry email…"
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-
-          <div
-            className="rounded-xl border-2 border-dashed border-[var(--color-border)] bg-white/80 p-3 text-center text-sm"
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              void onFile(e.dataTransfer.files?.[0] ?? null);
-            }}
-          >
-            <FileUp className="mx-auto h-6 w-6 text-[var(--color-text-muted)]" />
-            <p className="mt-1 font-semibold text-[var(--color-atlas-navy)]">
-              Drop PDF, Excel, Word, TXT, or EML
-            </p>
-            <input
-              ref={fileRef}
-              type="file"
-              accept={SMART_QUOTE_ACCEPT}
-              className="mt-2 block w-full text-xs"
-              onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
-
           {warning ? <p className="text-xs font-semibold text-amber-800">{warning}</p> : null}
-
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
+              className="h-8 px-3 text-xs"
               disabled={pending || !text.trim()}
               onClick={() => void runParse(text)}
             >
               {pending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Zap className="mr-2 h-4 w-4" />
+                <Zap className="mr-1.5 h-3.5 w-3.5" />
               )}
               Parse
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setText("")}>
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-8 px-3 text-xs"
+              onClick={() => {
+                setText("");
+                setDraft(null);
+                setEditable(null);
+              }}
+            >
               Clear
             </Button>
           </div>
 
           {draft && editable ? (
-            <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-white p-3">
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-2 rounded-lg border border-[var(--color-border)] bg-white p-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={draft.tariffFound ? "success" : "warn"}>
-                  {draft.tariffFound ? "Circulars match" : "Enter rates on desk"}
+                  {draft.tariffFound ? "Circulars" : "Enter rates"}
                 </Badge>
-                <Badge tone="info">{editable.confidence}% match</Badge>
+                <Badge tone="info">{editable.confidence}%</Badge>
+                <span className="truncate text-xs font-semibold text-[var(--color-atlas-navy)]">
+                  {editable.origin || "—"} → {editable.destination || "—"} ·{" "}
+                  {editable.customer || "no customer"}
+                </span>
               </div>
-              <p className="text-sm font-semibold text-[var(--color-atlas-navy)]">{draft.message}</p>
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 {fields.map((f) => (
                   <li
                     key={f.key}
-                    className="flex items-start gap-2 rounded-lg border border-[var(--color-border)] bg-slate-50 px-3 py-2 text-sm"
+                    className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-slate-50 px-2 py-1 text-xs"
                   >
                     {f.ok ? (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                      <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600" />
                     ) : (
-                      <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <XCircle className="h-3 w-3 shrink-0 text-amber-600" />
                     )}
-                    <div>
-                      <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
-                        {f.label}
-                      </div>
-                      <div className="font-semibold">{f.value}</div>
-                    </div>
+                    <span className="truncate font-semibold">{f.value}</span>
                   </li>
                 ))}
               </ul>
-              {draft.estimatedTotal ? (
-                <p className="text-sm">
-                  Est. freight:{" "}
-                  <span className="font-extrabold text-emerald-700">
-                    {formatCurrency(draft.estimatedTotal, draft.currency || "USD")}
-                  </span>
-                </p>
-              ) : null}
-              <Button type="button" onClick={handleApply}>
+              <Button type="button" className="h-8 px-3 text-xs" onClick={handleApply}>
                 Apply to this desk
               </Button>
             </div>

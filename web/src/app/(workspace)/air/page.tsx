@@ -6,11 +6,13 @@ import {
   Eye,
   PlaneTakeoff,
   Plus,
+  RotateCcw,
   Save,
   Trash2,
   Zap,
 } from "lucide-react";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
+import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
@@ -62,6 +64,7 @@ export default function AirDeskPage() {
 }
 
 function AirDeskInner() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useAirTariffs();
@@ -76,12 +79,13 @@ function AirDeskInner() {
   const [commodity, setCommodity] = useState("GENERAL");
   const [module, setModule] = useState<"export" | "import">("export");
   const [customFx, setCustomFx] = useState(0);
-  const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 120, w: 80, h: 90, qty: 1, gw: 150 }]);
+  const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
   const [terms, setTerms] = useState(getDefaultFreightTerms("air"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const selected = airlines.find((a) => a.selected) ?? airlines[0];
 
@@ -151,6 +155,29 @@ function AirDeskInner() {
       ),
     ]);
     setStep("carrier");
+  }
+
+  function applyReset() {
+    setCustomer("");
+    setOrigin("");
+    setDestination("");
+    setCurrency("USD");
+    setIncoterm("FOB");
+    setCommodity("GENERAL");
+    setModule("export");
+    setCustomFx(0);
+    setCargo([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
+    setAirlines([createAirlineOption({}, true)]);
+    setTerms(getDefaultFreightTerms("air"));
+    setSaveMsg(null);
+    setPreviewQuote(null);
+    setStep("shipment");
+    setConfirmReset(false);
+    loader.clearLoadedQuote();
+    if (typeof window !== "undefined" && /[?&](edit|duplicate|smart)=/.test(window.location.search)) {
+      router.replace("/air/");
+    }
+    toast("Air desk cleared", "success");
   }
 
   function updateCargo(index: number, patch: Partial<AirCargoRow>) {
@@ -305,46 +332,59 @@ function AirDeskInner() {
   useDeskSaveShortcut(() => void handleSave(), !saving);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {loader.banner ? (
-        <Card className="border-sky-200 bg-sky-50">
+        <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
         </Card>
       ) : null}
       {loader.loadError ? (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-200 bg-amber-50 py-2">
           <p className="text-sm font-semibold text-amber-900">{loader.loadError}</p>
         </Card>
       ) : null}
 
       <DeskSmartQuoteStrip mode="air" onApply={applySmartDraft} />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[var(--color-atlas-air)]">
-            <PlaneTakeoff className="h-5 w-5" />
-            <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Air desk</h1>
-            <Badge tone="info">Phase 7</Badge>
-          </div>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Paste enquiry above or fill manually — multi-airline, surcharges, ⌘S to save.
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[var(--color-atlas-air)]">
+          <PlaneTakeoff className="h-5 w-5" />
+          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Air desk</h1>
+          <Badge tone="info">Phase 7</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={applyTariffToSelected}>
-            <Zap className="mr-2 h-4 w-4" />
-            Load Circulars tariff
+          <Button type="button" variant="secondary" className="h-9" onClick={() => setConfirmReset(true)}>
+            <RotateCcw className="mr-1.5 h-4 w-4" />
+            Reset
           </Button>
-          <Button type="button" variant="secondary" onClick={() => void handleSave(true)} disabled={saving}>
-            <Eye className="mr-2 h-4 w-4" />
-            Save & preview
+          <Button type="button" variant="secondary" className="h-9" onClick={applyTariffToSelected}>
+            <Zap className="mr-1.5 h-4 w-4" />
+            Circulars
           </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving…" : "Save quote"}
+          <Button type="button" variant="secondary" className="h-9" onClick={() => void handleSave(true)} disabled={saving}>
+            <Eye className="mr-1.5 h-4 w-4" />
+            Preview
+          </Button>
+          <Button type="button" className="h-9" onClick={() => void handleSave()} disabled={saving}>
+            <Save className="mr-1.5 h-4 w-4" />
+            {saving ? "Saving…" : "Save"}
           </Button>
         </div>
       </div>
+
+      {confirmReset ? (
+        <Card className="border-amber-300 bg-amber-50 py-3">
+          <p className="text-sm font-semibold text-amber-950">Clear this air form?</p>
+          <div className="mt-2 flex gap-2">
+            <Button type="button" className="h-8 text-xs" onClick={applyReset}>
+              Yes, reset
+            </Button>
+            <Button type="button" variant="secondary" className="h-8 text-xs" onClick={() => setConfirmReset(false)}>
+              Cancel
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -393,26 +433,26 @@ function AirDeskInner() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="space-y-3 lg:col-span-2">
           {step === "shipment" ? (
-            <Card className="space-y-4">
+            <Card className="space-y-3 py-3">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer
                   <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Customer name" />
                 </Label>
                 <Label>
-                  Origin airport
-                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="BLR - Bengaluru" />
+                  POL
+                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="" />
                 </Label>
                 <Label>
-                  Destination airport
+                  POD
                   <Input
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    placeholder="LHR - London Heathrow"
+                    placeholder=""
                   />
                 </Label>
                 <Label>
