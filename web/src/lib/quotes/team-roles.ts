@@ -10,11 +10,33 @@ export const TEAM_ROLES: Record<string, TeamRole> = {
   ganny: { name: "Pricing Team", type: "admin" },
   shashank: { name: "Air Nom", type: "member", category: "AIR - NOMINATION" },
   shaheer: { name: "Sea Nomination", type: "member", category: "SEA - NOMINATION" },
+  /** Current Free Hand desk holder. */
+  kavya: { name: "Free Hand", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  /** Historical creator id — old quotes still resolve to Free Hand. */
   jaya: { name: "Free Hand", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
   cathrina: { name: "NRS", type: "member", category: "NRS (AIR/SEA)" },
   manager: { name: "Manager", type: "admin" },
   pricing: { name: "Pricing Agent", type: "member" },
 };
+
+/** Shared company mailboxes → who works that inbox (login ids). */
+export const MAILBOX_TEAMS = {
+  pricing: {
+    email: "pricing@atlaslogistics.co.in",
+    users: ["shashank", "shaheer"] as const,
+    desks: ["AIR - NOMINATION", "SEA - NOMINATION"] as const,
+  },
+  pricingsales: {
+    email: "pricingsales@atlaslogistics.co.in",
+    users: ["kavya", "cathrina"] as const,
+    desks: ["FREE HAND SALES (AIR/SEA)", "NRS (AIR/SEA)"] as const,
+  },
+  monitor: {
+    email: "ganesh@blr.atlaslogistics.co.in",
+    users: ["ganny"] as const,
+    desks: ["ADMIN MONITOR"] as const,
+  },
+} as const;
 
 const ADMIN_USERNAMES = new Set(["ganny", "manager", "admin"]);
 
