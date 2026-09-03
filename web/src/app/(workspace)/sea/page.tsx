@@ -7,6 +7,7 @@ import type { SeaMode } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
+import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
@@ -71,6 +72,7 @@ function SeaDeskInner() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [stripKey, setStripKey] = useState(0);
 
   const selected = liners.find((l) => l.selected) ?? liners[0];
 
@@ -174,6 +176,7 @@ function SeaDeskInner() {
     setPreviewQuote(null);
     setStep("shipment");
     setConfirmReset(false);
+    setStripKey((k) => k + 1);
     loader.clearLoadedQuote();
     if (typeof window !== "undefined" && /[?&](edit|duplicate|smart)=/.test(window.location.search)) {
       router.replace("/sea/");
@@ -347,7 +350,14 @@ function SeaDeskInner() {
         </Card>
       ) : null}
 
-      <DeskSmartQuoteStrip mode="sea" onApply={applySmartDraft} />
+      <DeskSmartQuoteStrip key={stripKey} mode="sea" onApply={applySmartDraft} />
+
+      <DeskResetDialog
+        open={confirmReset}
+        deskLabel="sea"
+        onConfirm={applyReset}
+        onCancel={() => setConfirmReset(false)}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[var(--color-atlas-sea)]">
@@ -356,7 +366,15 @@ function SeaDeskInner() {
           <Badge tone="info">Phase 7</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" className="h-9" onClick={() => setConfirmReset(true)}>
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-9"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirmReset(true);
+            }}
+          >
             <RotateCcw className="mr-1.5 h-4 w-4" />
             Reset
           </Button>
@@ -374,20 +392,6 @@ function SeaDeskInner() {
           </Button>
         </div>
       </div>
-
-      {confirmReset ? (
-        <Card className="border-amber-300 bg-amber-50 py-3">
-          <p className="text-sm font-semibold text-amber-950">Clear this sea form?</p>
-          <div className="mt-2 flex gap-2">
-            <Button type="button" className="h-8 text-xs" onClick={applyReset}>
-              Yes, reset
-            </Button>
-            <Button type="button" variant="secondary" className="h-8 text-xs" onClick={() => setConfirmReset(false)}>
-              Cancel
-            </Button>
-          </div>
-        </Card>
-      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button
