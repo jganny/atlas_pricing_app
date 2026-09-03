@@ -114,10 +114,11 @@ Phase N =  (A) Legacy features from Feature Parity tracker
 ### Phases 7–10 — Full desks + platform data
 | Parity | Innovation |
 |--------|------------|
-| Multi-carrier Air/Sea, Transport, Warehouse | shadcn/ui + Radix primitives |
+| Multi-carrier Air/Sea, Transport, Warehouse | ✅ shadcn-style Input/Label/Tabs + TanStack Table |
+| ✅ Air/Sea multi-carrier + fees + 3-step + export/import | ✅ Zod shipment validation |
 | Smart Quote files, full Enquiry DB | Full-text search, CSV export |
 | Circulars upload | Drag-drop upload, Excel → tariff pipeline |
-| | React PDF official quotations |
+| | 🔜 React PDF official quotations |
 | | Route prefetch from Enquiry inspector |
 
 ### Phases 11–13 — CRM, admin, analytics

@@ -63,3 +63,97 @@ export function Badge({
     </span>
   );
 }
+
+/** shadcn-style input primitive */
+export function Input({
+  className,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      className={cn(
+        "mt-1 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-atlas-sky)] focus:ring-2 focus:ring-[var(--color-atlas-sky)]/20",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function Label({
+  className,
+  children,
+  ...props
+}: React.LabelHTMLAttributes<HTMLLabelElement>) {
+  return (
+    <label className={cn("block text-sm font-semibold", className)} {...props}>
+      {children}
+    </label>
+  );
+}
+
+export function Textarea({
+  className,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        "mt-1 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-atlas-sky)] focus:ring-2 focus:ring-[var(--color-atlas-sky)]/20",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function Select({
+  className,
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      className={cn(
+        "mt-1 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-atlas-sky)] focus:ring-2 focus:ring-[var(--color-atlas-sky)]/20",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </select>
+  );
+}
+
+/** Simple tabs bar — shadcn-compatible API without Radix dependency yet */
+export function Tabs({
+  value,
+  onValueChange,
+  items,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  items: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-2" role="tablist">
+      {items.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          role="tab"
+          aria-selected={value === item.value}
+          onClick={() => onValueChange(item.value)}
+          className={cn(
+            "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+            value === item.value
+              ? "bg-[var(--color-atlas-navy)] text-white"
+              : "text-[var(--color-text-muted)] hover:bg-slate-100",
+          )}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}

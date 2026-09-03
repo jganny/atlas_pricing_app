@@ -2,26 +2,41 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { PlaneTakeoff, Plus, Save, Trash2, Zap } from "lucide-react";
+import {
+  Eye,
+  PlaneTakeoff,
+  Plus,
+  Save,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
+import { SurchargeTable } from "@/components/desks/SurchargeTable";
+import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
+import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
 import { lookupAirTariff } from "@/lib/firebase/tariffs";
 import {
   AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
-  computeAirDesk,
-  validateAirDesk,
+  computeAirlineTotals,
+  validateAirCargo,
+  validateSelectedAirline,
   type AirCargoRow,
 } from "@/lib/pricing/air-desk";
+import { createAirlineOption, type AirlineOption } from "@/lib/pricing/carrier-options";
+import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
+import { getDefaultFreightTerms } from "@/lib/pricing/terms";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
-import { toast } from "@/components/Toast";
+import type { SavedQuote } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 const BREAK_LABELS: Record<WeightBreakName, string> = {
@@ -35,6 +50,7 @@ const BREAK_LABELS: Record<WeightBreakName, string> = {
 };
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
+type Step = "shipment" | "carrier" | "terms";
 
 export default function AirDeskPage() {
   return (
@@ -50,65 +66,31 @@ function AirDeskInner() {
   const { data: tariffs = [] } = useAirTariffs();
   const loader = useQuoteDeskLoader();
 
+  const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [incoterm, setIncoterm] = useState("FOB");
   const [commodity, setCommodity] = useState("GENERAL");
-  const [airline, setAirline] = useState("");
-  const [routing, setRouting] = useState("");
-  const [tt, setTt] = useState("");
-  const [validity, setValidity] = useState("");
-  const [pivotWeightKg, setPivotWeightKg] = useState(0);
-  const [cargo, setCargo] = useState<AirCargoRow[]>([
-    { l: 120, w: 80, h: 90, qty: 1, gw: 150 },
-  ]);
-  const [breaks, setBreaks] = useState<WeightBreaks>({
-    ...EMPTY_AIR_BREAKS,
-    minus45: { sell: 2.8, buy: 2.4 },
-    plus45: { sell: 2.5, buy: 2.1 },
-    plus100: { sell: 2.2, buy: 1.9 },
-    min: { sell: 150, buy: 120 },
-  });
+  const [module, setModule] = useState<"export" | "import">("export");
+  const [customFx, setCustomFx] = useState(0);
+  const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 120, w: 80, h: 90, qty: 1, gw: 150 }]);
+  const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
+  const [terms, setTerms] = useState(getDefaultFreightTerms("air"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [tariffMsg, setTariffMsg] = useState<string | null>(null);
+  const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
 
-  const deskInput = useMemo(
-    () => ({
-      customer,
-      origin,
-      destination,
-      currency,
-      incoterm,
-      commodity,
-      airline,
-      routing,
-      tt,
-      validity,
-      pivotWeightKg,
-      cargo,
-      breaks,
-    }),
-    [
-      customer,
-      origin,
-      destination,
-      currency,
-      incoterm,
-      commodity,
-      airline,
-      routing,
-      tt,
-      validity,
-      pivotWeightKg,
-      cargo,
-      breaks,
-    ],
-  );
+  const selected = airlines.find((a) => a.selected) ?? airlines[0];
 
-  const calc = useMemo(() => computeAirDesk(deskInput), [deskInput]);
+  const totalsById = useMemo(() => {
+    const map: Record<string, ReturnType<typeof computeAirlineTotals>> = {};
+    for (const a of airlines) map[a.id] = computeAirlineTotals(cargo, a);
+    return map;
+  }, [airlines, cargo]);
+
+  const selectedTotals = selected ? totalsById[selected.id] : null;
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
@@ -119,115 +101,161 @@ function AirDeskInner() {
     setCurrency(loaded.currency);
     setIncoterm(loaded.incoterm);
     setCommodity(loaded.commodity);
-    setAirline(loaded.airline);
-    setRouting(loaded.routing);
-    setTt(loaded.tt);
-    setValidity(loaded.validity);
-    setPivotWeightKg(loaded.pivotWeightKg);
+    setModule(loaded.module);
+    setCustomFx(loaded.customExchangeRate);
     setCargo(loaded.cargo);
-    if (Object.keys(loaded.breaks).length) setBreaks({ ...EMPTY_AIR_BREAKS, ...loaded.breaks });
+    setAirlines(loaded.airlines);
+    if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
 
   function updateCargo(index: number, patch: Partial<AirCargoRow>) {
     setCargo((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
-  function updateBreak(name: WeightBreakName, field: "sell" | "buy", value: number) {
-    setBreaks((prev) => ({
-      ...prev,
-      [name]: { ...prev[name], sell: prev[name]?.sell ?? 0, buy: prev[name]?.buy ?? 0, [field]: value },
-    }));
+  function updateAirline(id: string, patch: Partial<AirlineOption>) {
+    setAirlines((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   }
 
-  function applyTariff() {
+  function selectAirline(id: string) {
+    setAirlines((prev) => prev.map((a) => ({ ...a, selected: a.id === id })));
+  }
+
+  function updateBreak(id: string, name: WeightBreakName, field: "sell" | "buy", value: number) {
+    setAirlines((prev) =>
+      prev.map((a) => {
+        if (a.id !== id) return a;
+        const breaks: WeightBreaks = {
+          ...a.breaks,
+          [name]: {
+            sell: a.breaks[name]?.sell ?? 0,
+            buy: a.breaks[name]?.buy ?? 0,
+            [field]: value,
+          },
+        };
+        return { ...a, breaks };
+      }),
+    );
+  }
+
+  function applyTariffToSelected() {
+    if (!selected) return;
     const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
     const destCode =
       destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
     if (!originCode || !destCode) {
-      setTariffMsg("Enter origin and destination airport codes first.");
+      toast("Enter origin and destination airport codes first.", "error");
       return;
     }
     const tariff = lookupAirTariff(tariffs, originCode, destCode);
     if (!tariff) {
-      setTariffMsg(`No Circulars tariff for ${originCode} → ${destCode}. Enter rates manually.`);
+      toast(`No Circulars tariff for ${originCode} → ${destCode}.`, "info");
       return;
     }
-    setBreaks({ ...EMPTY_AIR_BREAKS, ...tariff.breaks });
+    updateAirline(selected.id, {
+      breaks: { ...EMPTY_AIR_BREAKS, ...tariff.breaks },
+      name: selected.name || tariff.carrier,
+    });
     setCurrency(tariff.currency);
-    setAirline(tariff.carrier);
-    const msg = `Loaded ${tariff.carrier} rates from Circulars.`;
-    setTariffMsg(msg);
-    toast(msg, "success");
+    toast(`Loaded ${tariff.carrier} rates onto selected airline.`, "success");
   }
 
-  const handleSave = useCallback(async () => {
-    const err = validateAirDesk(deskInput);
-    if (err) {
-      setSaveMsg(err);
-      toast(err, "error");
-      return;
-    }
-    setSaving(true);
-    setSaveMsg(null);
-    try {
-      if (useLiveData && user) {
-        const id = await saveAirQuote({
-          customer: customer.trim(),
-          creator: user.username,
-          origin,
-          destination,
-          currency,
-          incoterm,
-          commodity,
-          airline,
-          routing,
-          tt,
-          validity,
-          cargo,
-          calc,
-          breaks: breaks as Record<string, { sell: number; buy: number }>,
-          quoteId: loader.editingQuoteId ?? undefined,
-          quoteNumber: loader.editingQuoteNumber,
-          status: loader.editingStatus,
-        });
-        await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-        const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
+  const handleSave = useCallback(
+    async (openPreview = false) => {
+      const shipment = airShipmentSchema.safeParse({
+        customer,
+        origin,
+        destination,
+        currency,
+        incoterm,
+        commodity,
+        module,
+      });
+      if (!shipment.success) {
+        const msg = shipment.error.issues[0]?.message ?? "Check shipment fields.";
         setSaveMsg(msg);
-        toast(msg, "success");
-      } else {
-        const msg = "Mock mode — save disabled. Use live Firebase or the legacy app.";
-        setSaveMsg(msg);
-        toast(msg, "info");
+        toast(msg, "error");
+        setStep("shipment");
+        return;
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Save failed";
-      setSaveMsg(msg);
-      toast(msg, "error");
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    deskInput,
-    user,
-    customer,
-    origin,
-    destination,
-    currency,
-    incoterm,
-    commodity,
-    airline,
-    routing,
-    tt,
-    validity,
-    cargo,
-    calc,
-    breaks,
-    loader.editingQuoteId,
-    loader.editingQuoteNumber,
-    loader.editingStatus,
-    loader.isEditing,
-    queryClient,
-  ]);
+      const cargoErr = validateAirCargo(cargo);
+      if (cargoErr) {
+        setSaveMsg(cargoErr);
+        toast(cargoErr, "error");
+        setStep("shipment");
+        return;
+      }
+      const airlineErr = validateSelectedAirline(selected);
+      if (airlineErr) {
+        setSaveMsg(airlineErr);
+        toast(airlineErr, "error");
+        setStep("carrier");
+        return;
+      }
+      if (!selected || !selectedTotals) return;
+
+      setSaving(true);
+      setSaveMsg(null);
+      try {
+        if (useLiveData && user) {
+          const id = await saveAirQuote({
+            customer: customer.trim(),
+            creator: user.username,
+            origin,
+            destination,
+            currency,
+            incoterm,
+            commodity,
+            module,
+            cargo,
+            selected,
+            totals: selectedTotals,
+            airlines,
+            termsAndConditions: terms,
+            customExchangeRate: customFx || undefined,
+            quoteId: loader.editingQuoteId ?? undefined,
+            quoteNumber: loader.editingQuoteNumber,
+            status: loader.editingStatus,
+          });
+          await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+          const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
+          setSaveMsg(msg);
+          toast(msg, "success");
+          if (openPreview) {
+            const q = await fetchQuoteById(id);
+            if (q) setPreviewQuote(q);
+          }
+        } else {
+          const msg = "Mock mode — save disabled. Use live Firebase or the legacy app.";
+          setSaveMsg(msg);
+          toast(msg, "info");
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Save failed";
+        setSaveMsg(msg);
+        toast(msg, "error");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [
+      customer,
+      origin,
+      destination,
+      currency,
+      incoterm,
+      commodity,
+      module,
+      cargo,
+      selected,
+      selectedTotals,
+      airlines,
+      terms,
+      customFx,
+      user,
+      loader,
+      queryClient,
+    ],
+  );
 
   useDeskSaveShortcut(() => void handleSave(), !saving);
 
@@ -243,22 +271,26 @@ function AirDeskInner() {
           <p className="text-sm font-semibold text-amber-900">{loader.loadError}</p>
         </Card>
       ) : null}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[var(--color-atlas-air)]">
             <PlaneTakeoff className="h-5 w-5" />
             <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Air desk</h1>
+            <Badge tone="info">Phase 7</Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Full air freight quoting — cargo matrix, weight breaks, and carrier rates. Same core math
-            as legacy. {useLiveData ? "Save writes to the quotes collection." : "Mock mode — preview only."}{" "}
-            Press ⌘S to save.
+            Multi-airline options, local surcharges, export/import — ⌘S to save.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={applyTariff}>
+          <Button type="button" variant="secondary" onClick={applyTariffToSelected}>
             <Zap className="mr-2 h-4 w-4" />
             Load Circulars tariff
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => void handleSave(true)} disabled={saving}>
+            <Eye className="mr-2 h-4 w-4" />
+            Save & preview
           </Button>
           <Button type="button" onClick={() => void handleSave()} disabled={saving}>
             <Save className="mr-2 h-4 w-4" />
@@ -267,330 +299,542 @@ function AirDeskInner() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setModule("export")}
+          className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+            module === "export"
+              ? "bg-amber-500 text-white"
+              : "border border-[var(--color-border)] bg-white text-[var(--color-text-muted)]"
+          }`}
+        >
+          Export (AE)
+        </button>
+        <button
+          type="button"
+          onClick={() => setModule("import")}
+          className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+            module === "import"
+              ? "bg-sky-600 text-white"
+              : "border border-[var(--color-border)] bg-white text-[var(--color-text-muted)]"
+          }`}
+        >
+          Import (AI)
+        </button>
+      </div>
+
+      <Tabs
+        value={step}
+        onValueChange={(v) => setStep(v as Step)}
+        items={[
+          { value: "shipment", label: "1 · Shipment" },
+          { value: "carrier", label: "2 · Carriers" },
+          { value: "terms", label: "3 · Terms" },
+        ]}
+      />
+
       {saveMsg ? (
         <Card
           className={
-            saveMsg.includes("Saved") ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
+            saveMsg.includes("Saved") || saveMsg.includes("Amended")
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
           }
         >
           <p className="text-sm font-semibold">{saveMsg}</p>
         </Card>
       ) : null}
 
-      {tariffMsg ? (
-        <Card className="border-sky-200 bg-sky-50">
-          <p className="text-sm font-semibold text-sky-900">{tariffMsg}</p>
-        </Card>
-      ) : null}
-
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="space-y-4 lg:col-span-2">
-          <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="text-sm font-semibold md:col-span-2">
-              Customer
-              <input
-                className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-3 py-2"
-                value={customer}
-                onChange={(e) => setCustomer(e.target.value)}
-                placeholder="Customer name"
-              />
-            </label>
-            <label className="text-sm font-semibold">
-              Origin airport
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                placeholder="BLR - Bengaluru"
-              />
-            </label>
-            <label className="text-sm font-semibold">
-              Destination airport
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="LHR - London Heathrow"
-              />
-            </label>
-            <label className="text-sm font-semibold">
-              Currency
-              <select
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-              >
-                {["USD", "INR", "EUR", "GBP", "AED", "SGD"].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-semibold">
-              Incoterm
-              <select
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={incoterm}
-                onChange={(e) => setIncoterm(e.target.value)}
-              >
-                {INCOTERMS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-semibold md:col-span-2">
-              Commodity
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={commodity}
-                onChange={(e) => setCommodity(e.target.value)}
-              />
-            </label>
-          </div>
+        <div className="space-y-4 lg:col-span-2">
+          {step === "shipment" ? (
+            <Card className="space-y-4">
+              <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Label className="md:col-span-2">
+                  Customer
+                  <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Customer name" />
+                </Label>
+                <Label>
+                  Origin airport
+                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="BLR - Bengaluru" />
+                </Label>
+                <Label>
+                  Destination airport
+                  <Input
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="LHR - London Heathrow"
+                  />
+                </Label>
+                <Label>
+                  Currency
+                  <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                    {["USD", "INR", "EUR", "GBP", "AED", "SGD"].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </Select>
+                </Label>
+                <Label>
+                  Incoterm
+                  <Select value={incoterm} onChange={(e) => setIncoterm(e.target.value)}>
+                    {INCOTERMS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </Select>
+                </Label>
+                <Label className="md:col-span-2">
+                  Commodity
+                  <Input value={commodity} onChange={(e) => setCommodity(e.target.value)} />
+                </Label>
+                <Label>
+                  Custom USD→INR override (optional)
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={customFx || ""}
+                    onChange={(e) => setCustomFx(Number(e.target.value))}
+                    placeholder="Leave blank for 83.5"
+                  />
+                </Label>
+              </div>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="font-bold">Cargo dimensions (cm)</h3>
-              <Button
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="font-bold">Cargo dimensions (cm)</h3>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setCargo((rows) => [...rows, { l: 0, w: 0, h: 0, qty: 1, gw: 0 }])}
+                  >
+                    <Plus className="mr-1 h-4 w-4" /> Add row
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
+                      <tr>
+                        <th className="px-2 py-2">L</th>
+                        <th className="px-2 py-2">W</th>
+                        <th className="px-2 py-2">H</th>
+                        <th className="px-2 py-2">Qty</th>
+                        <th className="px-2 py-2">GW kg</th>
+                        <th className="px-2 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cargo.map((row, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="p-1">
+                            <input
+                              type="number"
+                              className="w-16 rounded border px-1 py-1"
+                              value={row.l || ""}
+                              onChange={(e) => updateCargo(i, { l: Number(e.target.value) })}
+                            />
+                          </td>
+                          <td className="p-1">
+                            <input
+                              type="number"
+                              className="w-16 rounded border px-1 py-1"
+                              value={row.w || ""}
+                              onChange={(e) => updateCargo(i, { w: Number(e.target.value) })}
+                            />
+                          </td>
+                          <td className="p-1">
+                            <input
+                              type="number"
+                              className="w-16 rounded border px-1 py-1"
+                              value={row.h || ""}
+                              onChange={(e) => updateCargo(i, { h: Number(e.target.value) })}
+                            />
+                          </td>
+                          <td className="p-1">
+                            <input
+                              type="number"
+                              className="w-14 rounded border px-1 py-1"
+                              value={row.qty}
+                              onChange={(e) => updateCargo(i, { qty: Number(e.target.value) })}
+                            />
+                          </td>
+                          <td className="p-1">
+                            <input
+                              type="number"
+                              className="w-16 rounded border px-1 py-1"
+                              value={row.gw || ""}
+                              onChange={(e) => updateCargo(i, { gw: Number(e.target.value) })}
+                            />
+                          </td>
+                          <td className="p-1">
+                            <button
+                              type="button"
+                              className="text-red-600"
+                              onClick={() => setCargo((rows) => rows.filter((_, j) => j !== i))}
+                              disabled={cargo.length <= 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button type="button" onClick={() => setStep("carrier")}>
+                  Next · Carriers
+                </Button>
+              </div>
+            </Card>
+          ) : null}
+
+          {step === "carrier" ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold text-[var(--color-atlas-navy)]">
+                  Airline options ({airlines.length})
+                </h2>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    setAirlines((prev) => [...prev, createAirlineOption({}, prev.length === 0)])
+                  }
+                >
+                  <Plus className="mr-1 h-4 w-4" /> Add airline
+                </Button>
+              </div>
+
+              {airlines.map((opt, idx) => {
+                const tot = totalsById[opt.id];
+                return (
+                  <Card
+                    key={opt.id}
+                    className={`space-y-3 ${opt.selected ? "ring-2 ring-[var(--color-atlas-navy)]/30" : ""}`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-[var(--color-text-muted)]">
+                          Airline #{idx + 1}
+                        </span>
+                        <label className="flex items-center gap-2 text-sm font-semibold">
+                          <input
+                            type="radio"
+                            name="selected-airline"
+                            checked={opt.selected}
+                            onChange={() => selectAirline(opt.id)}
+                          />
+                          Select as quoted
+                        </label>
+                        {opt.selected ? <Badge tone="success">Quoted</Badge> : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-red-600 disabled:opacity-40"
+                        disabled={airlines.length <= 1}
+                        onClick={() => {
+                          setAirlines((prev) => {
+                            const next = prev.filter((a) => a.id !== opt.id);
+                            if (!next.some((a) => a.selected) && next[0]) {
+                              next[0] = { ...next[0], selected: true };
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Label className="md:col-span-2">
+                        Carrier / Airline
+                        <Input
+                          value={opt.name}
+                          onChange={(e) => updateAirline(opt.id, { name: e.target.value })}
+                          placeholder="EK - Emirates"
+                        />
+                      </Label>
+                      <Label>
+                        Routing
+                        <Input
+                          value={opt.routing}
+                          onChange={(e) => updateAirline(opt.id, { routing: e.target.value })}
+                          placeholder="BLR-DXB-LHR"
+                        />
+                      </Label>
+                      <Label>
+                        Transit time
+                        <Input
+                          value={opt.tt}
+                          onChange={(e) => updateAirline(opt.id, { tt: e.target.value })}
+                          placeholder="3-4 days"
+                        />
+                      </Label>
+                      <Label>
+                        Validity
+                        <Input
+                          value={opt.validity}
+                          onChange={(e) => updateAirline(opt.id, { validity: e.target.value })}
+                          placeholder="15 days"
+                        />
+                      </Label>
+                      <Label>
+                        Pivot weight (kg)
+                        <Input
+                          type="number"
+                          value={opt.pivotWeightKg || ""}
+                          onChange={(e) =>
+                            updateAirline(opt.id, { pivotWeightKg: Number(e.target.value) })
+                          }
+                        />
+                      </Label>
+                      <Label>
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={opt.amsFeeEnabled}
+                            onChange={(e) =>
+                              updateAirline(opt.id, { amsFeeEnabled: e.target.checked })
+                            }
+                          />
+                          AMS fee
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          disabled={!opt.amsFeeEnabled}
+                          value={opt.amsFee}
+                          onChange={(e) => updateAirline(opt.id, { amsFee: Number(e.target.value) })}
+                        />
+                      </Label>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-sm font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={opt.wbEnabled}
+                        onChange={(e) => updateAirline(opt.id, { wbEnabled: e.target.checked })}
+                      />
+                      Weight-break tariffs included
+                    </label>
+
+                    {opt.wbEnabled ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
+                            <tr>
+                              <th className="px-3 py-2 text-left">Break</th>
+                              <th className="px-3 py-2">Sell</th>
+                              <th className="px-3 py-2">Buy</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {AIR_WEIGHT_BREAKS.map((name) => (
+                              <tr
+                                key={name}
+                                className={`border-t ${
+                                  tot?.freight.usedBreak === name ? "bg-amber-50" : ""
+                                }`}
+                              >
+                                <td className="px-3 py-2 font-semibold">
+                                  {BREAK_LABELS[name]}
+                                  {tot?.freight.usedBreak === name ? (
+                                    <Badge tone="warn">Active</Badge>
+                                  ) : null}
+                                </td>
+                                <td className="p-1">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    className="w-24 rounded border px-2 py-1"
+                                    value={opt.breaks[name]?.sell ?? ""}
+                                    onChange={(e) =>
+                                      updateBreak(opt.id, name, "sell", Number(e.target.value))
+                                    }
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    className="w-24 rounded border px-2 py-1"
+                                    value={opt.breaks[name]?.buy ?? ""}
+                                    onChange={(e) =>
+                                      updateBreak(opt.id, name, "buy", Number(e.target.value))
+                                    }
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+
+                    <SurchargeTable
+                      title="Origin local fees & surcharges"
+                      enabled={opt.originFeesEnabled}
+                      onEnabledChange={(v) => updateAirline(opt.id, { originFeesEnabled: v })}
+                      rows={opt.originSurcharges}
+                      onChange={(rows) => updateAirline(opt.id, { originSurcharges: rows })}
+                      units={["kg", "flat"]}
+                    />
+                    <SurchargeTable
+                      title="Destination local fees & surcharges"
+                      enabled={opt.destFeesEnabled}
+                      onEnabledChange={(v) => updateAirline(opt.id, { destFeesEnabled: v })}
+                      rows={opt.destSurcharges}
+                      onChange={(rows) => updateAirline(opt.id, { destSurcharges: rows })}
+                      units={["kg", "flat"]}
+                    />
+
+                    {tot ? (
+                      <div className="flex flex-wrap gap-3 border-t pt-3 text-sm">
+                        <span>
+                          Freight:{" "}
+                          <strong>{formatCurrency(tot.freight.baseFreightSell, currency)}</strong>
+                        </span>
+                        <span>
+                          Origin: <strong>{formatCurrency(tot.originTotal, currency)}</strong>
+                        </span>
+                        <span>
+                          Dest: <strong>{formatCurrency(tot.destTotal, currency)}</strong>
+                        </span>
+                        <span>
+                          Total:{" "}
+                          <strong className="text-emerald-700">
+                            {formatCurrency(tot.grandSell, currency)}
+                          </strong>
+                        </span>
+                      </div>
+                    ) : null}
+                  </Card>
+                );
+              })}
+
+              <div className="flex justify-between">
+                <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
+                  Back
+                </Button>
+                <Button type="button" onClick={() => setStep("terms")}>
+                  Next · Terms
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {step === "terms" ? (
+            <Card className="space-y-4">
+              <h2 className="font-bold text-[var(--color-atlas-navy)]">Terms & conditions</h2>
+              <Textarea
+                className="min-h-56"
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+              />
+              <button
                 type="button"
-                variant="secondary"
-                onClick={() => setCargo((rows) => [...rows, { l: 0, w: 0, h: 0, qty: 1, gw: 0 }])}
+                className="text-xs font-semibold text-sky-700 hover:underline"
+                onClick={() => setTerms(getDefaultFreightTerms("air"))}
               >
-                <Plus className="mr-1 h-4 w-4" /> Add row
-              </Button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-2 py-2">L</th>
-                    <th className="px-2 py-2">W</th>
-                    <th className="px-2 py-2">H</th>
-                    <th className="px-2 py-2">Qty</th>
-                    <th className="px-2 py-2">GW kg</th>
-                    <th className="px-2 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {cargo.map((row, i) => (
-                    <tr key={i} className="border-t">
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          className="w-16 rounded border px-1 py-1"
-                          value={row.l || ""}
-                          onChange={(e) => updateCargo(i, { l: Number(e.target.value) })}
-                        />
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          className="w-16 rounded border px-1 py-1"
-                          value={row.w || ""}
-                          onChange={(e) => updateCargo(i, { w: Number(e.target.value) })}
-                        />
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          className="w-16 rounded border px-1 py-1"
-                          value={row.h || ""}
-                          onChange={(e) => updateCargo(i, { h: Number(e.target.value) })}
-                        />
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          className="w-14 rounded border px-1 py-1"
-                          value={row.qty}
-                          onChange={(e) => updateCargo(i, { qty: Number(e.target.value) })}
-                        />
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          className="w-16 rounded border px-1 py-1"
-                          value={row.gw || ""}
-                          onChange={(e) => updateCargo(i, { gw: Number(e.target.value) })}
-                        />
-                      </td>
-                      <td className="p-1">
-                        <button
-                          type="button"
-                          className="text-red-600"
-                          onClick={() => setCargo((rows) => rows.filter((_, j) => j !== i))}
-                          disabled={cargo.length <= 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="mb-2 font-bold">Weight breaks (sell / buy per kg)</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Break</th>
-                    <th className="px-3 py-2">Sell</th>
-                    <th className="px-3 py-2">Buy</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {AIR_WEIGHT_BREAKS.map((name) => (
-                    <tr
-                      key={name}
-                      className={`border-t ${calc.usedBreak === name ? "bg-amber-50" : ""}`}
-                    >
-                      <td className="px-3 py-2 font-semibold">
-                        {BREAK_LABELS[name]}
-                        {calc.usedBreak === name ? (
-                          <Badge tone="warn">Active</Badge>
-                        ) : null}
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="w-24 rounded border px-2 py-1"
-                          value={breaks[name]?.sell ?? ""}
-                          onChange={(e) => updateBreak(name, "sell", Number(e.target.value))}
-                        />
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="w-24 rounded border px-2 py-1"
-                          value={breaks[name]?.buy ?? ""}
-                          onChange={(e) => updateBreak(name, "buy", Number(e.target.value))}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </Card>
+                Restore default air terms
+              </button>
+              <div className="flex justify-between">
+                <Button type="button" variant="secondary" onClick={() => setStep("carrier")}>
+                  Back
+                </Button>
+                <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving…" : "Save quote"}
+                </Button>
+              </div>
+            </Card>
+          ) : null}
+        </div>
 
         <div className="space-y-4">
           <Card className="space-y-3">
-            <h2 className="font-bold text-[var(--color-atlas-navy)]">Carrier</h2>
-            <label className="block text-sm font-semibold">
-              Airline
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={airline}
-                onChange={(e) => setAirline(e.target.value)}
-                placeholder="EK - Emirates"
-              />
-            </label>
-            <label className="block text-sm font-semibold">
-              Routing
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={routing}
-                onChange={(e) => setRouting(e.target.value)}
-                placeholder="BLR-DXB-LHR"
-              />
-            </label>
-            <label className="block text-sm font-semibold">
-              Transit time
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={tt}
-                onChange={(e) => setTt(e.target.value)}
-                placeholder="3-4 days"
-              />
-            </label>
-            <label className="block text-sm font-semibold">
-              Validity
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={validity}
-                onChange={(e) => setValidity(e.target.value)}
-                placeholder="15 days"
-              />
-            </label>
-            <label className="block text-sm font-semibold">
-              Pivot weight (kg, optional)
-              <input
-                type="number"
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={pivotWeightKg || ""}
-                onChange={(e) => setPivotWeightKg(Number(e.target.value))}
-              />
-            </label>
+            <h2 className="font-bold text-[var(--color-atlas-navy)]">Quoted summary</h2>
+            {selected && selectedTotals ? (
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Module</dt>
+                  <dd className="font-bold uppercase">{module}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Airline</dt>
+                  <dd className="text-right font-bold">{selected.name || "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Chargeable</dt>
+                  <dd className="font-bold">
+                    {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Base freight</dt>
+                  <dd>{formatCurrency(selectedTotals.freight.baseFreightSell, currency)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Origin fees</dt>
+                  <dd>{formatCurrency(selectedTotals.originTotal, currency)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Dest fees</dt>
+                  <dd>{formatCurrency(selectedTotals.destTotal, currency)}</dd>
+                </div>
+                {selectedTotals.ams > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">AMS</dt>
+                    <dd>{formatCurrency(selectedTotals.ams, currency)}</dd>
+                  </div>
+                ) : null}
+                <div className="flex justify-between border-t pt-2">
+                  <dt className="font-bold">Grand total</dt>
+                  <dd className="font-extrabold text-emerald-700">
+                    {formatCurrency(selectedTotals.grandSell, currency)}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
+                  <dd className="font-bold">{formatCurrency(selectedTotals.gp, currency)}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)]">Select an airline option.</p>
+            )}
           </Card>
 
-          <Card className="space-y-3">
-            <h2 className="font-bold text-[var(--color-atlas-navy)]">Summary</h2>
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Gross weight</dt>
-                <dd className="font-bold">{calc.cargo.grossWeightKg.toFixed(2)} kg</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Volume weight</dt>
-                <dd className="font-bold">{calc.cargo.volumeWeightKg.toFixed(2)} kg</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Chargeable</dt>
-                <dd className="font-bold">{calc.chargeableWeightKg.toFixed(2)} kg</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Volume</dt>
-                <dd>{calc.cargo.volumeCbm.toFixed(3)} CBM</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Packages</dt>
-                <dd>{calc.cargo.packageQty}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Active break</dt>
-                <dd className="font-bold">{BREAK_LABELS[calc.usedBreak]}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Sell rate</dt>
-                <dd>
-                  {formatCurrency(calc.activeRate, currency)}/kg
-                  {calc.usingBuyFallback ? " (buy fallback)" : ""}
-                </dd>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <dt className="font-bold">Base freight (sell)</dt>
-                <dd className="font-extrabold text-emerald-700">
-                  {formatCurrency(calc.baseFreightSell, currency)}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Base freight (buy)</dt>
-                <dd>{formatCurrency(calc.baseFreightBuy, currency)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
-                <dd className="font-bold">
-                  {formatCurrency(calc.baseFreightSell - calc.baseFreightBuy, currency)}
-                </dd>
-              </div>
-            </dl>
-            {calc.isMinActive ? (
-              <p className="text-xs font-semibold text-amber-800">Minimum charge applied.</p>
-            ) : null}
-          </Card>
+          {airlines.length > 1 ? (
+            <Card>
+              <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Compare options</h2>
+              <ul className="space-y-2 text-sm">
+                {airlines.map((a) => (
+                  <li key={a.id} className="flex justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                    <span className={a.selected ? "font-bold" : ""}>
+                      {a.name || "Untitled"}
+                      {a.selected ? " ★" : ""}
+                    </span>
+                    <span className="font-semibold">
+                      {formatCurrency(totalsById[a.id]?.grandSell ?? 0, currency)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
         </div>
       </div>
+
+      {previewQuote ? (
+        <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />
+      ) : null}
     </div>
   );
 }

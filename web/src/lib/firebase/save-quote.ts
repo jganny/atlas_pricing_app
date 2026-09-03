@@ -2,6 +2,9 @@
 
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult } from "@atlas/pricing-core";
+import type { AirlineOption, LinerOption } from "@/lib/pricing/carrier-options";
+import type { AirlineTotals } from "@/lib/pricing/air-desk";
+import type { LinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { getFirebaseDb } from "./client";
 
@@ -104,24 +107,43 @@ export interface SaveAirInput extends SaveMeta {
   currency: string;
   incoterm: string;
   commodity: string;
-  airline: string;
-  routing: string;
-  tt: string;
-  validity: string;
+  module: "export" | "import";
   cargo: Array<{ l: number; w: number; h: number; qty: number; gw: number }>;
-  calc: ReturnType<typeof import("@atlas/pricing-core").calculateAirFreight>;
-  breaks: Record<string, { sell: number; buy: number }>;
+  selected: AirlineOption;
+  totals: AirlineTotals;
+  airlines: AirlineOption[];
+  termsAndConditions: string;
+  customExchangeRate?: number;
 }
 
 export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
   const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
   const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
-  const route = `${originCode} → ${destCode} via ${input.airline || "Any"}`;
+  const airline = input.selected.name;
+  const route = `${originCode} → ${destCode} via ${airline || "Any"}`;
   const now = new Date();
-  const amount = input.calc.baseFreightSell;
-  const amountINR = input.currency === "INR" ? amount : amount * 83;
-  const gp = input.calc.baseFreightSell - input.calc.baseFreightBuy;
+  const amount = input.totals.grandSell;
+  const fx = input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : 83.5;
+  const amountINR = input.currency === "INR" ? amount : amount * fx;
+  const gp = input.totals.gp;
+
+  const alternatives = input.airlines
+    .filter((a) => a.id !== input.selected.id)
+    .map((a) => ({
+      name: a.name,
+      routing: a.routing,
+      tt: a.tt,
+      validity: a.validity,
+      breaks: a.breaks,
+      originFeesEnabled: a.originFeesEnabled,
+      destFeesEnabled: a.destFeesEnabled,
+      originSurcharges: a.originSurcharges,
+      destSurcharges: a.destSurcharges,
+      amsFee: a.amsFee,
+      amsFeeEnabled: a.amsFeeEnabled,
+      selected: false,
+    }));
 
   const quoteData = {
     id,
@@ -138,37 +160,46 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     currency: input.currency,
     grossProfit: gp,
     grossProfitCurrency: input.currency,
-    grossProfitINR: input.currency === "INR" ? gp : gp * 83,
+    grossProfitINR: input.currency === "INR" ? gp : gp * fx,
     details: {
       origin: input.origin,
       destination: input.destination,
-      airline: input.airline,
+      airline,
       incoterm: input.incoterm,
-      module: "export",
+      module: input.module,
       commodity: input.commodity,
-      chargeableWeight: input.calc.chargeableWeightKg,
-      grossWeight: input.calc.cargo.grossWeightKg,
-      volumeWeight: input.calc.cargo.volumeWeightKg,
-      cbm: input.calc.cargo.volumeCbm,
-      quantity: input.calc.cargo.packageQty,
-      appliedRate: input.calc.activeRate,
-      appliedBuyRate: input.calc.activeBuyRate,
-      baseFreight: input.calc.baseFreightSell,
-      baseBuyFreight: input.calc.baseFreightBuy,
-      usedBreak: input.calc.usedBreak,
-      usingBuyFallback: input.calc.usingBuyFallback,
-      tariffsEnabled: true,
-      originFeesEnabled: false,
-      destFeesEnabled: false,
-      routing: input.routing,
-      tt: input.tt,
-      validity: input.validity,
+      chargeableWeight: input.totals.freight.chargeableWeightKg,
+      grossWeight: input.totals.freight.cargo.grossWeightKg,
+      volumeWeight: input.totals.freight.cargo.volumeWeightKg,
+      cbm: input.totals.freight.cargo.volumeCbm,
+      quantity: input.totals.freight.cargo.packageQty,
+      appliedRate: input.totals.freight.activeRate,
+      appliedBuyRate: input.totals.freight.activeBuyRate,
+      baseFreight: input.totals.freight.baseFreightSell,
+      baseBuyFreight: input.totals.freight.baseFreightBuy,
+      usedBreak: input.totals.freight.usedBreak,
+      usingBuyFallback: input.totals.freight.usingBuyFallback,
+      tariffsEnabled: input.selected.wbEnabled,
+      originFeesEnabled: input.selected.originFeesEnabled,
+      destFeesEnabled: input.selected.destFeesEnabled,
+      originSurcharges: input.totals.origin,
+      destSurcharges: input.totals.dest,
+      surchargeTotal: input.totals.originTotal + input.totals.destTotal + input.totals.ams,
+      amsFee: input.totals.ams,
+      routing: input.selected.routing,
+      tt: input.selected.tt,
+      validity: input.selected.validity,
+      pivotWeight: input.selected.pivotWeightKg,
       cargoItems: input.cargo,
-      breaks: input.breaks,
+      breaks: input.selected.breaks,
+      airlines: input.airlines,
+      alternatives,
+      termsAndConditions: input.termsAndConditions,
+      customExchangeRate: input.customExchangeRate ?? null,
       type: "air",
       mode: "Air",
     },
-    notes: `Air quote (React). CHW: ${input.calc.chargeableWeightKg} kg · ${input.calc.usedBreak}`,
+    notes: `Air quote (React Phase 7). CHW: ${input.totals.freight.chargeableWeightKg} kg · ${input.totals.freight.usedBreak} · ${input.airlines.length} options`,
   };
 
   const db = getFirebaseDb();
@@ -183,26 +214,45 @@ export interface SaveSeaInput extends SaveMeta {
   destination: string;
   currency: string;
   incoterm: string;
-  liner: string;
-  routing: string;
-  tt: string;
-  validity: string;
+  module: "export" | "import";
   mode: string;
   grossWeightKg: number;
   volumeCbm: number;
-  containers: Array<{ type: string; qty: number; sellRate: number; buyRate: number }>;
-  calc: ReturnType<typeof import("@atlas/pricing-core").calculateSeaFreight>;
+  selected: LinerOption;
+  totals: LinerTotals;
+  liners: LinerOption[];
+  termsAndConditions: string;
+  customExchangeRate?: number;
 }
 
 export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
   const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
   const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
-  const route = `${originCode} → ${destCode} via ${input.liner || "Any"}`;
+  const liner = input.selected.name;
+  const route = `${originCode} → ${destCode} via ${liner || "Any"}`;
   const now = new Date();
-  const amount = input.calc.baseFreightSell;
-  const amountINR = input.currency === "INR" ? amount : amount * 83;
-  const gp = input.calc.baseFreightSell - input.calc.baseFreightBuy;
+  const amount = input.totals.grandSell;
+  const fx = input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : 83.5;
+  const amountINR = input.currency === "INR" ? amount : amount * fx;
+  const gp = input.totals.gp;
+
+  const alternatives = input.liners
+    .filter((l) => l.id !== input.selected.id)
+    .map((l) => ({
+      name: l.name,
+      routing: l.routing,
+      tt: l.tt,
+      validity: l.validity,
+      containers: l.containers,
+      lclSell: l.lclSell,
+      lclBuy: l.lclBuy,
+      originFeesEnabled: l.originFeesEnabled,
+      destFeesEnabled: l.destFeesEnabled,
+      originSurcharges: l.originSurcharges,
+      destSurcharges: l.destSurcharges,
+      selected: false,
+    }));
 
   const quoteData = {
     id,
@@ -219,29 +269,39 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     currency: input.currency,
     grossProfit: gp,
     grossProfitCurrency: input.currency,
-    grossProfitINR: input.currency === "INR" ? gp : gp * 83,
+    grossProfitINR: input.currency === "INR" ? gp : gp * fx,
     details: {
       origin: input.origin,
       destination: input.destination,
-      module: input.mode,
+      module: input.module,
       type: input.mode,
+      shippingMode: input.mode,
       incoterm: input.incoterm,
-      liner: input.liner,
-      routing: input.routing,
-      tt: input.tt,
-      validity: input.validity,
+      liner,
+      routing: input.selected.routing,
+      tt: input.selected.tt,
+      validity: input.selected.validity,
       grossWeight: input.grossWeightKg,
       volume: input.volumeCbm,
       volumeCbm: input.volumeCbm,
-      chargeableRt: input.calc.chargeableRt,
-      baseFreight: input.calc.baseFreightSell,
-      baseBuyFreight: input.calc.baseFreightBuy,
-      containerSummary: input.calc.containerSummary,
-      containers: input.containers,
-      usingBuyFallback: input.calc.usingBuyFallback,
+      chargeableRt: input.totals.freight.chargeableRt,
+      baseFreight: input.totals.freight.baseFreightSell,
+      baseBuyFreight: input.totals.freight.baseFreightBuy,
+      containerSummary: input.totals.freight.containerSummary,
+      containers: input.selected.containers,
+      usingBuyFallback: input.totals.freight.usingBuyFallback,
       tariffsEnabled: true,
+      originFeesEnabled: input.selected.originFeesEnabled,
+      destFeesEnabled: input.selected.destFeesEnabled,
+      originSurcharges: input.totals.origin,
+      destSurcharges: input.totals.dest,
+      surchargeTotal: input.totals.originTotal + input.totals.destTotal,
+      liners: input.liners,
+      alternatives,
+      termsAndConditions: input.termsAndConditions,
+      customExchangeRate: input.customExchangeRate ?? null,
     },
-    notes: `Sea quote (React). ${input.mode.toUpperCase()} · RT ${input.calc.chargeableRt}`,
+    notes: `Sea quote (React Phase 7). ${input.mode.toUpperCase()} · RT ${input.totals.freight.chargeableRt} · ${input.liners.length} options`,
   };
 
   const db = getFirebaseDb();

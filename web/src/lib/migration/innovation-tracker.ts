@@ -43,8 +43,8 @@ export const innovationItems: InnovationItem[] = [
 
   // Phase 4
   { id: "i4-api", name: "Unified mock/live API layer", phase: 4, status: "done", why: "Dev without Firebase", react: "lib/api" },
-  { id: "i4-table", name: "TanStack Table (sort/virtual)", phase: 4, status: "planned", why: "1000+ enquiry rows", react: "Enquiry DB" },
-  { id: "i4-zod", name: "Zod + React Hook Form", phase: 4, status: "planned", why: "Field-level validation", react: "Desks" },
+  { id: "i4-table", name: "TanStack Table (sort/virtual)", phase: 4, status: "done", why: "1000+ enquiry rows", react: "/enquiries" },
+  { id: "i4-zod", name: "Zod + React Hook Form", phase: 4, status: "partial", why: "Field-level validation", react: "Desks (Zod schemas)" },
   { id: "i4-toast", name: "Toast notifications", phase: 4, status: "done", why: "Save/error feedback like SaaS", react: "Global" },
 
   // Phase 5
@@ -59,8 +59,10 @@ export const innovationItems: InnovationItem[] = [
   { id: "i6-optimistic", name: "Optimistic status updates", phase: 6, status: "planned", why: "Instant won/lost feel", react: "Inspector" },
 
   // Phase 7–10
-  { id: "i7-shadcn", name: "shadcn/ui + Radix", phase: 7, status: "planned", why: "Accessible enterprise components", react: "All UI" },
+  { id: "i7-shadcn", name: "shadcn/ui + Radix", phase: 7, status: "partial", why: "Accessible enterprise components", react: "Input/Label/Tabs/Table primitives" },
   { id: "i7-pdf", name: "React PDF quotations", phase: 7, status: "planned", why: "Match legacy print layout", react: "Quote export" },
+  { id: "i7-multi-carrier", name: "Multi-carrier desk architecture", phase: 7, status: "done", why: "Compare airline/liner options like CargoWise", react: "/air /sea" },
+  { id: "i7-fees", name: "Origin/dest surcharge engine", phase: 7, status: "done", why: "True grand totals with local fees", react: "pricing/surcharges" },
   { id: "i8-smart-file", name: "Smart Quote file upload", phase: 8, status: "planned", why: "PDF/Excel/email parse", react: "Smart Quote" },
   { id: "i9-search", name: "Full-text search", phase: 9, status: "planned", why: "Sub-100ms quote find", react: "Global search" },
 

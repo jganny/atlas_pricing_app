@@ -1,20 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
+import { EnquiryTable } from "@/components/EnquiryTable";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useLiveData } from "@/lib/api";
 import type { EnquiryRecord } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
-
-function slaTone(hours: number) {
-  if (hours > 8) return "error" as const;
-  if (hours > 4) return "warn" as const;
-  return "success" as const;
-}
 
 const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryRecord) => boolean }> = [
   { key: "all", label: "All", match: () => true },
@@ -66,7 +60,7 @@ export default function EnquiryDatabasePage() {
           <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Enquiry database</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             {useLiveData
-              ? "View, amend, print, and update quote status — Phase 6 lifecycle."
+              ? "Live pipeline — sortable TanStack Table · click a row for lifecycle actions."
               : "Mock pipeline view with SLA tracking."}
           </p>
         </div>
@@ -133,65 +127,14 @@ export default function EnquiryDatabasePage() {
           </Card>
 
           <Card className="overflow-x-auto p-0">
-        {isLoading ? (
-          <TableSkeleton rows={8} />
-        ) : filtered.length === 0 ? (
-              <p className="p-6 text-sm text-[var(--color-text-muted)]">No enquiries match your filters.</p>
+            {isLoading ? (
+              <TableSkeleton rows={8} />
             ) : (
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-[var(--color-border)] bg-slate-50 text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-4 py-3">Ref</th>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Mode</th>
-                    <th className="px-4 py-3">Lane</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">SLA</th>
-                    <th className="px-4 py-3">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((row: EnquiryRecord) => (
-                    <tr
-                      key={row.id}
-                      onClick={() => setSelectedId(row.id)}
-                      className={`cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50/80 ${
-                        selectedId === row.id ? "bg-sky-50" : ""
-                      }`}
-                    >
-                      <td className="px-4 py-3 font-semibold">{row.ref}</td>
-                      <td className="px-4 py-3">{row.customer}</td>
-                      <td className="px-4 py-3 uppercase">{row.mode}</td>
-                      <td className="px-4 py-3">
-                        {row.origin} → {row.destination}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          tone={
-                            row.status === "open" || row.status === "quoted"
-                              ? "warn"
-                              : row.status === "won"
-                                ? "success"
-                                : "neutral"
-                          }
-                        >
-                          {row.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        {row.status === "open" || row.status === "quoted" ? (
-                          <Badge tone={slaTone(row.slaHoursOpen)}>{row.slaHoursOpen}h open</Badge>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-semibold">
-                        {row.grandTotal ? formatCurrency(row.grandTotal, row.currency) : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <EnquiryTable
+                rows={filtered}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+              />
             )}
           </Card>
         </div>
