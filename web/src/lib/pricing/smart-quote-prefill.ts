@@ -18,19 +18,31 @@ export function storeSmartQuotePrefill(prefill: SmartQuotePrefill) {
   sessionStorage.setItem(SMART_QUOTE_PREFILL_KEY, JSON.stringify(prefill));
 }
 
-export function consumeSmartQuotePrefill(expectedMode?: "air" | "sea"): SmartQuotePrefill | null {
+/** Read without removing — safe under React Strict Mode double-effects. */
+export function peekSmartQuotePrefill(expectedMode?: "air" | "sea"): SmartQuotePrefill | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem(SMART_QUOTE_PREFILL_KEY);
   if (!raw) return null;
   try {
     const data = JSON.parse(raw) as SmartQuotePrefill;
     if (expectedMode && data.mode !== expectedMode) return null;
-    sessionStorage.removeItem(SMART_QUOTE_PREFILL_KEY);
     return data;
   } catch {
     sessionStorage.removeItem(SMART_QUOTE_PREFILL_KEY);
     return null;
   }
+}
+
+export function clearSmartQuotePrefill() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(SMART_QUOTE_PREFILL_KEY);
+}
+
+/** @deprecated Prefer peek + clear after apply; kept for callers that still consume once. */
+export function consumeSmartQuotePrefill(expectedMode?: "air" | "sea"): SmartQuotePrefill | null {
+  const data = peekSmartQuotePrefill(expectedMode);
+  if (data) clearSmartQuotePrefill();
+  return data;
 }
 
 export function draftToPrefill(

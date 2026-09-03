@@ -26,6 +26,7 @@ import {
 } from "@/lib/pricing/sea-desk";
 import { getDefaultFreightTerms } from "@/lib/pricing/terms";
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
@@ -115,6 +116,7 @@ function SeaDeskInner() {
       seaTariff: loader.smartPrefill.seaTariff,
       message: "Prefill from Smart Quote / Inbox",
     });
+    clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
   function applySmartDraft(draft: SmartQuoteDraft) {

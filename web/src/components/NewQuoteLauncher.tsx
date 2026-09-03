@@ -22,6 +22,7 @@ import {
   ingestEnquiryFile,
 } from "@/lib/pricing/enquiry-ingest";
 import {
+  clearSmartQuotePrefill,
   draftToPrefill,
   fieldConfidence,
   storeSmartQuotePrefill,
@@ -162,9 +163,13 @@ function NewQuoteLauncherModal({ onClose }: { onClose: () => void }) {
     }
     const finalDraft: SmartQuoteDraft = { ...draft, parsed: editable };
     storeSmartQuotePrefill(draftToPrefill(target, finalDraft));
-    onClose();
     toast(`Opening ${target === "air" ? "Air" : "Sea"} desk`, "success");
-    router.push(target === "sea" ? "/sea/?smart=1" : "/air/?smart=1");
+    const href = target === "sea" ? "/sea/?smart=1" : "/air/?smart=1";
+    // Prefer hard navigation so sessionStorage prefill is read on a fresh mount.
+    onClose();
+    window.setTimeout(() => {
+      router.push(href);
+    }, 0);
   }
 
   const chipLabel =

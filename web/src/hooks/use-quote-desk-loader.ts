@@ -6,7 +6,8 @@ import type { SavedQuote } from "@/lib/types";
 import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { useLiveData } from "@/lib/api";
 import {
-  consumeSmartQuotePrefill,
+  clearSmartQuotePrefill,
+  peekSmartQuotePrefill,
   type SmartQuotePrefill,
 } from "@/lib/pricing/smart-quote-prefill";
 
@@ -28,9 +29,10 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
 
   useEffect(() => {
     if (smart && deskMode) {
-      const prefill = consumeSmartQuotePrefill(deskMode);
+      const prefill = peekSmartQuotePrefill(deskMode);
       if (prefill) {
         setSmartPrefill(prefill);
+        setLoadError(null);
         setReady(true);
         return;
       }
@@ -84,6 +86,7 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
       setEditingStatus(undefined);
       setLoadError(null);
       setReady(true);
+      clearSmartQuotePrefill();
     },
     banner: editId
       ? `Amending quote ${editId}`

@@ -35,6 +35,7 @@ import { createAirlineOption, type AirlineOption } from "@/lib/pricing/carrier-o
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
 import { getDefaultFreightTerms } from "@/lib/pricing/terms";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
@@ -123,6 +124,7 @@ function AirDeskInner() {
       airBreaks: loader.smartPrefill.airBreaks,
       message: "Prefill from Smart Quote / Inbox",
     });
+    clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
   function applySmartDraft(draft: SmartQuoteDraft) {
