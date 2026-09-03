@@ -12,7 +12,12 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui";
 import type { EnquiryRecord } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import {
+  formatBuyCell,
+  formatGpCell,
+  formatSellCell,
+  type EdbMetricModes,
+} from "@/lib/quotes/edb-metrics";
 
 function slaTone(hours: number) {
   if (hours > 8) return "error" as const;
@@ -24,10 +29,12 @@ export function EnquiryTable({
   rows,
   selectedId,
   onSelect,
+  metricModes,
 }: {
   rows: EnquiryRecord[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  metricModes: EdbMetricModes;
 }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "ref", desc: true }]);
 
@@ -53,6 +60,15 @@ export function EnquiryTable({
         id: "lane",
         header: "Lane",
         accessorFn: (r) => `${r.origin} → ${r.destination}`,
+      },
+      {
+        accessorKey: "assignee",
+        header: "Desk",
+      },
+      {
+        accessorKey: "carrier",
+        header: "Carrier",
+        cell: ({ row }) => row.original.carrier || "—",
       },
       {
         accessorKey: "status",
@@ -84,15 +100,33 @@ export function EnquiryTable({
         },
       },
       {
-        accessorKey: "grandTotal",
-        header: "Total",
-        cell: ({ row }) =>
-          row.original.grandTotal
-            ? formatCurrency(row.original.grandTotal, row.original.currency)
-            : "—",
+        id: "buy",
+        header: metricModes.buy === "perkg" ? "Buy /kg" : "Buy",
+        accessorFn: (r) => r.buyTotal ?? r.grandTotal ?? 0,
+        cell: ({ row }) => (
+          <span className="tabular-nums">{formatBuyCell(row.original, metricModes.buy)}</span>
+        ),
+      },
+      {
+        id: "sell",
+        header: metricModes.sell === "perkg" ? "Sell /kg" : "Sell",
+        accessorFn: (r) => r.grandTotal ?? 0,
+        cell: ({ row }) => (
+          <span className="tabular-nums">{formatSellCell(row.original, metricModes.sell)}</span>
+        ),
+      },
+      {
+        id: "gp",
+        header: metricModes.gp === "percent" ? "GP %" : "GP",
+        accessorFn: (r) => r.grossProfit ?? 0,
+        cell: ({ row }) => (
+          <span className="tabular-nums font-semibold text-emerald-700">
+            {formatGpCell(row.original, metricModes.gp)}
+          </span>
+        ),
       },
     ],
-    [],
+    [metricModes],
   );
 
   const table = useReactTable({
@@ -119,7 +153,7 @@ export function EnquiryTable({
               {hg.headers.map((header) => {
                 const sorted = header.column.getIsSorted();
                 return (
-                  <th key={header.id} className="px-4 py-3">
+                  <th key={header.id} className="whitespace-nowrap px-3 py-3">
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
@@ -152,7 +186,7 @@ export function EnquiryTable({
               }`}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3">
+                <td key={cell.id} className="whitespace-nowrap px-3 py-3">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}

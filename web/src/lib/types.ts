@@ -17,10 +17,26 @@ export interface EnquiryRecord {
   destination: string
   status: 'open' | 'quoted' | 'won' | 'lost' | 'cancelled'
   slaHoursOpen: number
+  /** Display name for desk (from TEAM_ROLES). */
   assignee: string
+  /** Raw Firestore creator / desk id. */
+  creator: string
   createdAt: string
   grandTotal?: number
   currency?: string
+  amountINR?: number
+  grossProfit?: number
+  grossProfitCurrency?: string
+  /** Precomputed buy total when available (amount − GP or stored). */
+  buyTotal?: number
+  buyRate?: number
+  confirmedBuyRate?: number
+  carrier?: string
+  appliedRate?: number
+  appliedBuyRate?: number
+  usedBreak?: string
+  billingWeight?: number
+  billingUnit?: 'kg' | 'rt' | 'gw'
 }
 
 /** Full Firestore quote document (legacy-compatible shape) */
@@ -41,9 +57,12 @@ export interface SavedQuote {
   grossProfit?: number
   grossProfitCurrency?: string
   grossProfitINR?: number
+  buyRate?: number
+  confirmedBuyRate?: number
   notes?: string
   mode?: string
   details?: Record<string, unknown>
+  quoteRefNo?: string
   shipperName?: string
   shipperPhone?: string
   shipperEmail?: string

@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
+import { deskDisplayName } from "@/lib/quotes/team-roles";
 import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
 import { getFirebaseDb } from "./client";
 
@@ -32,7 +33,35 @@ function mapStatus(status: string | undefined): EnquiryRecord["status"] {
   return "open";
 }
 
-function mapQuote(id: string, data: SavedQuote): EnquiryRecord {
+function num(v: unknown): number | undefined {
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = parseFloat(v);
+    return Number.isNaN(n) ? undefined : n;
+  }
+  return undefined;
+}
+
+function billingMeta(data: SavedQuote): Pick<EnquiryRecord, "billingWeight" | "billingUnit"> {
+  const d = data.details || {};
+  const type = (data.type || "").toLowerCase();
+  if (type.includes("air")) {
+    const cw = num(d.chargeableWeight) || 0;
+    const pw = num(d.pivotWeight) || 0;
+    const gw = num(d.grossWeight) || 0;
+    return { billingWeight: Math.max(cw, pw, gw) || undefined, billingUnit: "kg" };
+  }
+  if (type.includes("sea")) {
+    const rt = num(d.lclChargeable) || num(d.chargeableCbm) || 0;
+    if (rt > 0) return { billingWeight: rt, billingUnit: "rt" };
+    const gw = num(d.grossWeight) || 0;
+    return { billingWeight: gw || undefined, billingUnit: gw ? "gw" : undefined };
+  }
+  const gw = num(d.grossWeight) || 0;
+  return { billingWeight: gw || undefined, billingUnit: gw ? "gw" : undefined };
+}
+
+export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
   const createdAt = data.date || String(data.timestamp ?? "");
   const open = isOpenQuoteStatus(data.status);
   const origin =
@@ -44,6 +73,16 @@ function mapQuote(id: string, data: SavedQuote): EnquiryRecord {
     (data.route?.includes("→") ? data.route.split("→").slice(1).join("→").trim() : "") ||
     "";
 
+  const amount = num(data.amount);
+  const gp = num(data.grossProfit);
+  const buyFromGp =
+    amount != null && gp != null ? amount - gp : undefined;
+  const buyRate = num(data.buyRate) ?? num(data.details?.buyRate);
+  const confirmedBuyRate = num(data.confirmedBuyRate);
+  const carrier = String(
+    data.details?.airline ?? data.details?.shippingLine ?? data.details?.carrier ?? "",
+  ).trim();
+
   return {
     id,
     ref: getQuoteRefId(data),
@@ -53,11 +92,28 @@ function mapQuote(id: string, data: SavedQuote): EnquiryRecord {
     destination,
     status: mapStatus(data.status),
     slaHoursOpen: open ? Math.round(hoursSince(createdAt)) : 0,
-    assignee: data.creator || "—",
+    assignee: deskDisplayName(data.creator),
+    creator: (data.creator || "").toLowerCase(),
     createdAt,
-    grandTotal: data.amount,
+    grandTotal: amount,
     currency: data.currency,
+    amountINR: num(data.amountINR),
+    grossProfit: gp,
+    grossProfitCurrency: data.grossProfitCurrency,
+    buyTotal: buyFromGp ?? buyRate ?? confirmedBuyRate,
+    buyRate,
+    confirmedBuyRate,
+    carrier: carrier || undefined,
+    appliedRate: num(data.details?.appliedRate),
+    appliedBuyRate: num(data.details?.appliedBuyRate),
+    usedBreak: data.details?.usedBreak ? String(data.details.usedBreak) : undefined,
+    ...billingMeta(data),
   };
+}
+
+/** @deprecated use mapQuoteFromSaved */
+function mapQuote(id: string, data: SavedQuote): EnquiryRecord {
+  return mapQuoteFromSaved(id, data);
 }
 
 function enquiriesQuery(max: number): Query {

@@ -188,11 +188,25 @@ export function EnquiryInspector({
             <dd>{row.assignee}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-[var(--color-text-muted)]">Total</dt>
+            <dt className="text-[var(--color-text-muted)]">Sell</dt>
             <dd className="font-bold">
               {row.grandTotal ? formatCurrency(row.grandTotal, row.currency) : "—"}
             </dd>
           </div>
+          <div className="flex justify-between">
+            <dt className="text-[var(--color-text-muted)]">GP</dt>
+            <dd className="font-bold text-emerald-700">
+              {row.grossProfit != null
+                ? formatCurrency(row.grossProfit, row.grossProfitCurrency || row.currency)
+                : "—"}
+            </dd>
+          </div>
+          {row.carrier ? (
+            <div className="flex justify-between">
+              <dt className="text-[var(--color-text-muted)]">Carrier</dt>
+              <dd>{row.carrier}</dd>
+            </div>
+          ) : null}
         </dl>
 
         {msg ? (

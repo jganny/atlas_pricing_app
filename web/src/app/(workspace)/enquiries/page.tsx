@@ -1,14 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Archive, Download, Loader2, Search } from "lucide-react";
+import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
 import { EnquiryTable } from "@/components/EnquiryTable";
+import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
+import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
+import { lookupQuoteByRef } from "@/lib/firebase/archive-lookup";
+import {
+  downloadEnquiryCsv,
+  summarizeEnquiryFinancials,
+} from "@/lib/quotes/edb-csv";
+import {
+  DEFAULT_EDB_METRIC_MODES,
+  type EdbMetricModes,
+} from "@/lib/quotes/edb-metrics";
+import {
+  isAdminUser,
+  listDeskFilterOptions,
+  matchesDeskFilter,
+} from "@/lib/quotes/team-roles";
 import type { EnquiryRecord } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryRecord) => boolean }> = [
   { key: "all", label: "All", match: () => true },
@@ -18,12 +36,72 @@ const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryReco
   { key: "cancelled", label: "Cancelled", match: (e) => e.status === "cancelled" },
 ];
 
-export default function EnquiryDatabasePage() {
+function MetricToggle<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs">
+      <span className="font-bold uppercase tracking-wide text-[var(--color-text-muted)]">{label}</span>
+      <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-0.5">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`rounded-md px-2 py-1 font-semibold ${
+              value === opt.value
+                ? "bg-[var(--color-atlas-navy)] text-white"
+                : "text-[var(--color-text-muted)] hover:bg-slate-50"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EnquiryDatabaseInner() {
+  const searchParams = useSearchParams();
   const { data: rows = [], isLoading, error, refetch } = useEnquiries();
-  const [search, setSearch] = useState("");
+  const user = useAuthStore((s) => s.user);
+  const admin = isAdminUser(user?.username, user?.role);
+
+  const [search, setSearch] = useState(searchParams?.get("q") || "");
   const [pipeline, setPipeline] = useState("all");
   const [modeFilter, setModeFilter] = useState<string>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deskFilter, setDeskFilter] = useState<string>(admin ? "all" : "mine");
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
+  const [metricModes, setMetricModes] = useState<EdbMetricModes>(DEFAULT_EDB_METRIC_MODES);
+  const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
+  const [archiveRef, setArchiveRef] = useState("");
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveNote, setArchiveNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = searchParams?.get("q");
+    const sel = searchParams?.get("select");
+    if (q) setSearch(q);
+    if (sel) setSelectedId(sel);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!admin && deskFilter === "all") setDeskFilter("mine");
+  }, [admin, deskFilter]);
+
+  const deskOptions = useMemo(
+    () => listDeskFilterOptions(rows.map((r) => r.creator).filter(Boolean)),
+    [rows],
+  );
 
   const pipelineCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -36,43 +114,128 @@ export default function EnquiryDatabasePage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     const chip = PIPELINE_CHIPS.find((c) => c.key === pipeline) ?? PIPELINE_CHIPS[0];
+    const username = (user?.username || "").toLowerCase();
     return rows.filter((row) => {
+      if (row.creator === "mahendra") return false;
       if (!chip.match(row)) return false;
       if (modeFilter !== "all" && row.mode !== modeFilter) return false;
+      if (deskFilter === "mine") {
+        if (row.creator !== username && row.assignee.toLowerCase() !== username) return false;
+      } else if (!matchesDeskFilter(row.creator, deskFilter)) {
+        return false;
+      }
       if (!q) return true;
-      const hay = `${row.ref} ${row.customer} ${row.origin} ${row.destination} ${row.assignee}`.toLowerCase();
+      const hay =
+        `${row.ref} ${row.customer} ${row.origin} ${row.destination} ${row.assignee} ${row.creator} ${row.carrier || ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, search, pipeline, modeFilter]);
+  }, [rows, search, pipeline, modeFilter, deskFilter, user?.username]);
 
-  const selected = filtered.find((r) => r.id === selectedId) ?? rows.find((r) => r.id === selectedId) ?? null;
+  const selected =
+    filtered.find((r) => r.id === selectedId) ??
+    rows.find((r) => r.id === selectedId) ??
+    (archiveHit && archiveHit.id === selectedId ? archiveHit : null);
 
   const stats = useMemo(() => {
     const open = filtered.filter((e) => e.status === "open" || e.status === "quoted").length;
     const overdue = filtered.filter((e) => e.slaHoursOpen > 8).length;
-    return { open, overdue, total: filtered.length };
+    const fin = summarizeEnquiryFinancials(filtered);
+    return { open, overdue, total: filtered.length, ...fin };
   }, [filtered]);
+
+  async function findArchived() {
+    const ref = archiveRef.trim();
+    if (!ref) {
+      toast("Enter a quote ref or ID", "error");
+      return;
+    }
+    if (!useLiveData) {
+      const hit = rows.find(
+        (r) =>
+          r.ref.toLowerCase().includes(ref.toLowerCase()) ||
+          r.id.toLowerCase() === ref.toLowerCase(),
+      );
+      if (hit) {
+        setSelectedId(hit.id);
+        setSearch(hit.ref);
+        setArchiveNote("Found in mock list");
+        toast(`Found ${hit.ref}`, "success");
+      } else {
+        setArchiveNote("Not found in mock data");
+        toast("Not found", "error");
+      }
+      return;
+    }
+    setArchiveBusy(true);
+    setArchiveNote(null);
+    try {
+      const hit = await lookupQuoteByRef(ref);
+      if (!hit) {
+        setArchiveNote("No live or archived quote matched that ref.");
+        toast("Quote not found in live or archive", "error");
+        return;
+      }
+      setSelectedId(hit.row.id);
+      setSearch(hit.row.ref);
+      setArchiveHit(hit.row);
+      setArchiveNote(
+        hit.source === "archive"
+          ? `Found in archive_quotes · ${hit.row.ref}`
+          : `Found in live quotes · ${hit.row.ref}`,
+      );
+      toast(
+        hit.source === "archive" ? `Archived quote ${hit.row.ref}` : `Live quote ${hit.row.ref}`,
+        "success",
+      );
+      // Ensure row is visible even if not in current page of live list
+      if (!rows.some((r) => r.id === hit.row.id)) {
+        setPipeline("all");
+        setModeFilter("all");
+        setDeskFilter(admin ? "all" : "mine");
+      }
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Lookup failed", "error");
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Enquiry database</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Enquiry database</h1>
+            <Badge tone="info">Phase 9</Badge>
+          </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            {useLiveData
-              ? "Live pipeline — sortable TanStack Table · click a row for lifecycle actions."
-              : "Mock pipeline view with SLA tracking."}
+            Buy / Sell / GP modes · desk ownership · CSV · find archived quotes.
+            {useLiveData ? " Live Firestore sync." : " Mock data."}
           </p>
         </div>
-        {useLiveData ? (
-          <button
+        <div className="flex flex-wrap gap-2">
+          <Button
             type="button"
-            onClick={() => void refetch()}
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold hover:bg-slate-50"
+            variant="secondary"
+            disabled={!filtered.length}
+            onClick={() => {
+              downloadEnquiryCsv(filtered);
+              toast(`Exported ${filtered.length} rows`, "success");
+            }}
           >
-            Refresh
-          </button>
-        ) : null}
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          {useLiveData ? (
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold hover:bg-slate-50"
+            >
+              Refresh
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -92,10 +255,31 @@ export default function EnquiryDatabasePage() {
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card><div className="text-xs text-[var(--color-text-muted)]">Showing</div><div className="text-2xl font-bold">{stats.total}</div></Card>
-        <Card><div className="text-xs text-[var(--color-text-muted)]">Open in view</div><div className="text-2xl font-bold text-amber-600">{stats.open}</div></Card>
-        <Card><div className="text-xs text-[var(--color-text-muted)]">Overdue in view</div><div className="text-2xl font-bold text-red-600">{stats.overdue}</div></Card>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <div className="text-xs text-[var(--color-text-muted)]">Showing</div>
+          <div className="text-2xl font-bold">{stats.total}</div>
+        </Card>
+        <Card>
+          <div className="text-xs text-[var(--color-text-muted)]">Open in view</div>
+          <div className="text-2xl font-bold text-amber-600">{stats.open}</div>
+        </Card>
+        <Card>
+          <div className="text-xs text-[var(--color-text-muted)]">Overdue</div>
+          <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
+        </Card>
+        <Card>
+          <div className="text-xs text-[var(--color-text-muted)]">Sell (view)</div>
+          <div className="text-lg font-bold tabular-nums">
+            {formatCurrency(stats.revenue, "USD")}
+          </div>
+        </Card>
+        <Card>
+          <div className="text-xs text-[var(--color-text-muted)]">GP (view)</div>
+          <div className="text-lg font-bold tabular-nums text-emerald-700">
+            {formatCurrency(stats.gp, "USD")}
+          </div>
+        </Card>
       </div>
 
       {error ? (
@@ -104,6 +288,65 @@ export default function EnquiryDatabasePage() {
         </Card>
       ) : null}
 
+      <Card className="flex flex-wrap items-center gap-4 p-4">
+        <MetricToggle
+          label="Buy"
+          value={metricModes.buy}
+          options={[
+            { value: "total", label: "Total" },
+            { value: "perkg", label: "Per kg" },
+          ]}
+          onChange={(buy) => setMetricModes((m) => ({ ...m, buy }))}
+        />
+        <MetricToggle
+          label="Sell"
+          value={metricModes.sell}
+          options={[
+            { value: "total", label: "Total" },
+            { value: "perkg", label: "Per kg" },
+          ]}
+          onChange={(sell) => setMetricModes((m) => ({ ...m, sell }))}
+        />
+        <MetricToggle
+          label="GP"
+          value={metricModes.gp}
+          options={[
+            { value: "amount", label: "Amount" },
+            { value: "percent", label: "%" },
+          ]}
+          onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
+        />
+      </Card>
+
+      <Card className="space-y-3 p-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-[var(--color-atlas-navy)]">
+          <Archive className="h-4 w-4" />
+          Find old / archived quote
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="min-w-[220px] flex-1 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+            placeholder="Paste ref ID or quote number…"
+            value={archiveRef}
+            onChange={(e) => setArchiveRef(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void findArchived();
+            }}
+          />
+          <Button type="button" disabled={archiveBusy} onClick={() => void findArchived()}>
+            {archiveBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Look up
+          </Button>
+        </div>
+        {archiveNote ? (
+          <p className="text-xs font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
+        ) : (
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Searches live quotes, then archive_quotes (90-day archive storage).
+          </p>
+        )}
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card className="flex flex-wrap gap-3 p-4">
@@ -111,18 +354,35 @@ export default function EnquiryDatabasePage() {
               <Search className="h-4 w-4 text-[var(--color-text-muted)]" />
               <input
                 className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2"
-                placeholder="Search ref, customer, lane…"
+                placeholder="Search ref, customer, lane, carrier…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </label>
-            <select className="rounded-lg border px-3 py-2 text-sm" value={modeFilter} onChange={(e) => setModeFilter(e.target.value)}>
+            <select
+              className="rounded-lg border px-3 py-2 text-sm"
+              value={modeFilter}
+              onChange={(e) => setModeFilter(e.target.value)}
+            >
               <option value="all">All modes</option>
               <option value="air">Air</option>
               <option value="sea">Sea</option>
               <option value="courier">Courier</option>
               <option value="transport">Transport</option>
               <option value="warehouse">Warehouse</option>
+            </select>
+            <select
+              className="rounded-lg border px-3 py-2 text-sm"
+              value={deskFilter}
+              onChange={(e) => setDeskFilter(e.target.value)}
+            >
+              {admin ? <option value="all">All desks</option> : null}
+              <option value="mine">My desk</option>
+              {deskOptions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
             </select>
           </Card>
 
@@ -134,6 +394,7 @@ export default function EnquiryDatabasePage() {
                 rows={filtered}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
+                metricModes={metricModes}
               />
             )}
           </Card>
@@ -144,11 +405,24 @@ export default function EnquiryDatabasePage() {
             <EnquiryInspector row={selected} onClose={() => setSelectedId(null)} />
           ) : (
             <Card className="text-sm text-[var(--color-text-muted)]">
-              Select a row to view details, print, amend, or update status.
+              Select a row to view details, print, amend, or update status. Press ⌘K to find quotes by
+              ref or customer.
             </Card>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EnquiryDatabasePage() {
+  return (
+    <Suspense
+      fallback={
+        <Card className="p-6 text-sm text-[var(--color-text-muted)]">Loading enquiry database…</Card>
+      }
+    >
+      <EnquiryDatabaseInner />
+    </Suspense>
   );
 }

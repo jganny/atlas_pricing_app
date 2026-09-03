@@ -15,7 +15,9 @@ import {
   Ship,
   Sparkles,
 } from "lucide-react";
+import { useEnquiries } from "@/hooks/use-atlas-data";
 import { cn } from "@/lib/utils";
+import type { EnquiryRecord } from "@/lib/types";
 
 export interface CommandItem {
   id: string;
@@ -24,7 +26,7 @@ export interface CommandItem {
   href?: string;
   action?: () => void;
   icon: React.ComponentType<{ className?: string }>;
-  group: "Navigate" | "Desks" | "Tools" | "System";
+  group: "Quotes" | "Navigate" | "Desks" | "Tools" | "System";
 }
 
 const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
@@ -39,15 +41,32 @@ const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
   { id: "parity", label: "Feature parity tracker", href: "/feature-parity", icon: ClipboardCheck, group: "System" },
 ];
 
+function rankQuote(row: EnquiryRecord, q: string): number {
+  const ref = row.ref.toLowerCase();
+  const customer = row.customer.toLowerCase();
+  const lane = `${row.origin} ${row.destination}`.toLowerCase();
+  const carrier = (row.carrier || "").toLowerCase();
+  if (ref === q) return 100;
+  if (ref.startsWith(q)) return 90;
+  if (ref.includes(q)) return 80;
+  if (customer.startsWith(q)) return 70;
+  if (customer.includes(q)) return 60;
+  if (carrier.includes(q)) return 50;
+  if (lane.includes(q)) return 40;
+  if (row.assignee.toLowerCase().includes(q) || row.creator.includes(q)) return 30;
+  return 0;
+}
+
 export function CommandPalette() {
   const router = useRouter();
+  const { data: enquiries = [] } = useEnquiries();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
   const items = useMemo(() => {
     const q = query.toLowerCase().trim();
-    const all: CommandItem[] = [
+    const nav: CommandItem[] = [
       ...NAV_COMMANDS.map((c) => ({
         ...c,
         action: c.href ? () => router.push(c.href!) : undefined,
@@ -63,14 +82,39 @@ export function CommandPalette() {
         group: "System" as const,
       },
     ];
-    if (!q) return all;
+
+    const quoteHits: CommandItem[] = [];
+    if (q.length >= 2) {
+      const ranked = enquiries
+        .map((row) => ({ row, score: rankQuote(row, q) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8);
+      for (const { row } of ranked) {
+        quoteHits.push({
+          id: `quote-${row.id}`,
+          label: row.ref,
+          hint: `${row.customer} · ${row.origin}→${row.destination}`,
+          icon: Database,
+          group: "Quotes",
+          action: () =>
+            router.push(
+              `/enquiries/?q=${encodeURIComponent(row.ref)}&select=${encodeURIComponent(row.id)}`,
+            ),
+        });
+      }
+    }
+
+    const all = [...quoteHits, ...nav];
+    if (!q) return nav;
     return all.filter(
       (item) =>
+        item.group === "Quotes" ||
         item.label.toLowerCase().includes(q) ||
         item.hint?.toLowerCase().includes(q) ||
         item.group.toLowerCase().includes(q),
     );
-  }, [query, router]);
+  }, [query, router, enquiries]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -112,7 +156,7 @@ export function CommandPalette() {
     }
   }
 
-  const groups = ["Navigate", "Desks", "Tools", "System"] as const;
+  const groups = ["Quotes", "Navigate", "Desks", "Tools", "System"] as const;
 
   return (
     <div
@@ -131,7 +175,7 @@ export function CommandPalette() {
           <input
             autoFocus
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-muted)]"
-            placeholder="Search desks, tools, actions…"
+            placeholder="Find quote by ref, customer, carrier… or jump to a desk"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
@@ -169,7 +213,12 @@ export function CommandPalette() {
                         <Icon className="h-4 w-4 shrink-0 opacity-80" />
                         <span className="flex-1 font-semibold">{item.label}</span>
                         {item.hint ? (
-                          <span className={cn("text-xs", idx === activeIndex ? "text-white/70" : "text-[var(--color-text-muted)]")}>
+                          <span
+                            className={cn(
+                              "max-w-[45%] truncate text-xs",
+                              idx === activeIndex ? "text-white/70" : "text-[var(--color-text-muted)]",
+                            )}
+                          >
                             {item.hint}
                           </span>
                         ) : null}
@@ -182,7 +231,7 @@ export function CommandPalette() {
           )}
         </ul>
         <div className="border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-text-muted)]">
-          ↑↓ navigate · Enter open · ⌘K toggle — premium navigation like Salesforce & Microsoft 365
+          ↑↓ navigate · Enter open · ⌘K toggle — type a ref to jump straight into Enquiry DB
         </div>
       </div>
     </div>

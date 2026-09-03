@@ -66,7 +66,9 @@ export const innovationItems: InnovationItem[] = [
   { id: "i8-smart-file", name: "Smart Quote file upload", phase: 8, status: "done", why: "PDF/Excel/email parse", react: "/smart-quote/air" },
   { id: "i8-confidence", name: "Field-level confidence review", phase: 8, status: "done", why: "Edit before apply — better than legacy status string", react: "Smart Quote" },
   { id: "i8-apply-desk", name: "One-click apply to desk", phase: 8, status: "done", why: "Prefill Air/Sea from Smart Quote", react: "/air /sea" },
-  { id: "i9-search", name: "Full-text search", phase: 9, status: "planned", why: "Sub-100ms quote find", react: "Global search" },
+  { id: "i9-search", name: "Full-text quote find in ⌘K", phase: 9, status: "done", why: "Ranked ref/customer/carrier → Enquiry DB inspector", react: "Command palette + /enquiries" },
+  { id: "i9-gp-modes", name: "Buy/Sell/GP metric modes", phase: 9, status: "done", why: "Finance view without leaving the list", react: "/enquiries" },
+  { id: "i9-csv", name: "One-click filtered CSV export", phase: 9, status: "done", why: "Legacy report columns for Excel", react: "/enquiries" },
 
   // Phase 11–14
   { id: "i11-rbac", name: "Role-based UI (RBAC)", phase: 11, status: "planned", why: "Air/Sea/NRS/Admin views", react: "Global" },
