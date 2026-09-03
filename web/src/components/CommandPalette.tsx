@@ -16,6 +16,7 @@ import {
   Ship,
   Sparkles,
 } from "lucide-react";
+import { openNewQuoteLauncher } from "@/components/NewQuoteLauncher";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { cn } from "@/lib/utils";
 import type { EnquiryRecord } from "@/lib/types";
@@ -69,6 +70,14 @@ export function CommandPalette() {
   const items = useMemo(() => {
     const q = query.toLowerCase().trim();
     const nav: CommandItem[] = [
+      {
+        id: "new-quote",
+        label: "New quote from enquiry",
+        hint: "detect Air/Sea · Option B",
+        action: () => openNewQuoteLauncher(),
+        icon: Sparkles,
+        group: "Tools" as const,
+      },
       ...NAV_COMMANDS.map((c) => ({
         ...c,
         action: c.href ? () => router.push(c.href!) : undefined,

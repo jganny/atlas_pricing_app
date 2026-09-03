@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, ClipboardCheck, Clock, Sparkles } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
-import { Badge, Card } from "@/components/ui";
+import { openNewQuoteLauncher } from "@/components/NewQuoteLauncher";
+import { Badge, Button, Card } from "@/components/ui";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useLiveData } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -18,25 +19,31 @@ export default function DashboardPage() {
   ).length;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          {useLiveData
-            ? "Live enquiries — updates automatically. Press ⌘K to jump anywhere."
-            : "Mock data — mirrors Enquiry DB SLA and Smart Quote entry points."}
-        </p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Dashboard</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            {useLiveData
+              ? "Live enquiries — updates automatically. Press ⌘K to jump anywhere."
+              : "Mock data — mirrors Enquiry DB SLA and Smart Quote entry points."}
+          </p>
+        </div>
+        <Button type="button" className="h-9" onClick={openNewQuoteLauncher}>
+          <Sparkles className="mr-1.5 h-4 w-4" />
+          New quote from enquiry
+        </Button>
       </div>
 
       {error ? (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50 py-3">
           <p className="text-sm font-semibold text-red-800">
             Could not load enquiries. Sign in with your Atlas desk credentials.
           </p>
         </Card>
       ) : null}
 
-      <Card className="border-violet-200 bg-violet-50/60">
+      <Card className="border-violet-200 bg-violet-50/60 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-violet-700">
@@ -61,21 +68,21 @@ export default function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Card className="py-3">
               <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
                 Open enquiries
               </div>
               <div className="mt-2 text-3xl font-extrabold text-[var(--color-atlas-navy)]">{open}</div>
             </Card>
-            <Card>
+            <Card className="py-3">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-amber-700">
                 <Clock className="h-3.5 w-3.5" />
                 Due soon (&gt;4h)
               </div>
               <div className="mt-2 text-3xl font-extrabold text-amber-600">{dueSoon}</div>
             </Card>
-            <Card>
+            <Card className="py-3">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-red-700">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Overdue (&gt;8h)
@@ -84,40 +91,52 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <div className="mb-4 flex items-center gap-2">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Card className="border-sky-200 bg-sky-50/40 py-3">
+              <div className="mb-2 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--color-atlas-sky)]" />
-                <h2 className="font-bold text-[var(--color-atlas-navy)]">Smart Quote automation</h2>
+                <h2 className="font-bold text-[var(--color-atlas-navy)]">Start a quote</h2>
+                <Badge tone="info">Option B</Badge>
               </div>
               <p className="text-sm text-[var(--color-text-muted)]">
-                Paste enquiry → parse → Circulars tariffs → draft quote.
+                Paste an enquiry once — AI detects Air vs Sea and opens the desk prefilled. Or jump
+                straight to a desk / inbox.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" className="h-9" onClick={openNewQuoteLauncher}>
+                  <Sparkles className="mr-1.5 h-4 w-4" />
+                  New quote from enquiry
+                </Button>
                 <Link
-                  href="/smart-quote/air"
-                  className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-air)]/15 px-3 py-2 text-sm font-semibold text-amber-800"
+                  href="/air"
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-amber-800"
                 >
-                  Air Smart Quote <ArrowRight className="h-4 w-4" />
+                  Air desk
                 </Link>
                 <Link
-                  href="/smart-quote/sea"
-                  className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-sea)]/15 px-3 py-2 text-sm font-semibold text-sky-800"
+                  href="/sea"
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-sky-800"
                 >
-                  Sea Smart Quote <ArrowRight className="h-4 w-4" />
+                  Sea desk
+                </Link>
+                <Link
+                  href="/inbox"
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-violet-800"
+                >
+                  Inbox
                 </Link>
                 <Link
                   href="/courier"
-                  className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-3 py-2 text-sm font-semibold text-violet-800"
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-slate-700"
                 >
-                  Courier desk <ArrowRight className="h-4 w-4" />
+                  Courier
                 </Link>
               </div>
             </Card>
 
-            <Card>
-              <h2 className="mb-4 font-bold text-[var(--color-atlas-navy)]">Recent enquiries</h2>
-              <div className="space-y-3">
+            <Card className="py-3">
+              <h2 className="mb-3 font-bold text-[var(--color-atlas-navy)]">Recent enquiries</h2>
+              <div className="space-y-2">
                 {enquiries.slice(0, 4).map((e) => (
                   <div
                     key={e.id}
