@@ -153,7 +153,7 @@ function SeaDeskInner() {
         true,
       ),
     ]);
-    setStep("carrier");
+    setStep("shipment");
   }
 
   function applyReset() {

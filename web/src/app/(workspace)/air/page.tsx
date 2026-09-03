@@ -156,7 +156,7 @@ function AirDeskInner() {
         true,
       ),
     ]);
-    setStep("carrier");
+    setStep("shipment");
   }
 
   function applyReset() {

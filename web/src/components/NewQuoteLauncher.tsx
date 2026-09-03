@@ -92,14 +92,10 @@ function NewQuoteLauncherModal({ onClose }: { onClose: () => void }) {
     }
     const guess = detectEnquiryMode(body);
     setDetected(guess);
-    const nextMode: DeskMode = forcedMode ?? (guess === "sea" ? "sea" : guess === "air" ? "air" : selectedMode ?? "air");
-    if (!forcedMode && guess === "unknown" && !selectedMode) {
-      setSelectedMode(null);
-      setDraft(null);
-      setEditable(null);
-      toast("Could not tell Air vs Sea — pick a desk below, then Parse again", "info");
-      return;
-    }
+    const nextMode: DeskMode =
+      forcedMode ??
+      (guess === "sea" ? "sea" : guess === "air" ? "air" : selectedMode ?? "air");
+    // Always parse with a concrete mode (default Air when unclear).
     setSelectedMode(nextMode);
     setRunning(true);
     setWarning(null);
