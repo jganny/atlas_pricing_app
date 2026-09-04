@@ -1,7 +1,7 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button } from "@/components/ui";
 
 /** In-page reset confirm — fixed overlay so it cannot be confused with the paste strip. */
 export function DeskResetDialog({
@@ -27,8 +27,8 @@ export function DeskResetDialog({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <Card
-        className="w-full max-w-md border-amber-300 bg-amber-50 shadow-2xl"
+      <div
+        className="w-full max-w-md rounded-xl border border-amber-300 bg-amber-50 p-5 shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
@@ -48,7 +48,7 @@ export function DeskResetDialog({
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
