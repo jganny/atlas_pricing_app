@@ -5,11 +5,15 @@ import { AlertTriangle, ArrowRight, ClipboardCheck, Clock, Inbox, PlaneTakeoff, 
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { Badge, Card } from "@/components/ui";
 import { useEnquiries } from "@/hooks/use-atlas-data";
+import { useAuthStore } from "@/store/auth";
+import { canAccessRoute, deskFocusLabel } from "@/lib/auth/rbac";
 import { useLiveData } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const user = useAuthStore((s) => s.user);
   const { data: enquiries = [], isLoading, error } = useEnquiries();
+  const focus = deskFocusLabel(user?.username);
 
   const open = enquiries.filter((e) => e.status === "open" || e.status === "quoted").length;
   const overdue = enquiries.filter((e) => e.slaHoursOpen > 8).length;
@@ -17,13 +21,19 @@ export default function DashboardPage() {
     (e) => e.slaHoursOpen > 4 && e.slaHoursOpen <= 8,
   ).length;
 
+  const showAir = canAccessRoute(user?.username, user?.role, "air");
+  const showSea = canAccessRoute(user?.username, user?.role, "sea");
+  const showInbox = canAccessRoute(user?.username, user?.role, "inbox");
+  const showParity = canAccessRoute(user?.username, user?.role, "feature-parity");
+
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Dashboard</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          {focus} ·{" "}
           {useLiveData
-            ? "Live enquiries — updates automatically. Press ⌘K to jump anywhere."
+            ? "Live enquiries — updates automatically. Press ⌘K to jump."
             : "Mock data — mirrors Enquiry DB SLA."}
         </p>
       </div>
@@ -36,26 +46,28 @@ export default function DashboardPage() {
         </Card>
       ) : null}
 
-      <Card className="border-violet-200 bg-violet-50/60 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-violet-700">
-              <ClipboardCheck className="h-4 w-4" />
-              <span className="text-sm font-bold">New version — parity + premium tech from Phase 0</span>
+      {showParity ? (
+        <Card className="border-violet-200 bg-violet-50/60 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-violet-700">
+                <ClipboardCheck className="h-4 w-4" />
+                <span className="text-sm font-bold">Phase 11 — role-based desks</span>
+              </div>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                Sidebar shows only the desks for your login. Paste on Air/Sea; inbox for mailbox mail.
+              </p>
             </div>
-            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              Paste on the Air/Sea desk, or open Enquiry inbox for mailbox mail. Legacy stays until you approve.
-            </p>
+            <Link
+              href="/feature-parity"
+              className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#14154a]"
+            >
+              Trackers
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-          <Link
-            href="/feature-parity"
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#14154a]"
-          >
-            Trackers
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </Card>
+        </Card>
+      ) : null}
 
       {isLoading ? (
         <DashboardSkeleton />
@@ -88,27 +100,33 @@ export default function DashboardPage() {
             <Card className="py-3">
               <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Quick open</h2>
               <p className="mb-3 text-sm text-[var(--color-text-muted)]">
-                One paste strip lives on each desk. Inbox brings mail from shared mailboxes.
+                Only desks for your role appear here.
               </p>
               <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/air"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 text-sm font-semibold text-amber-900"
-                >
-                  <PlaneTakeoff className="h-4 w-4" /> Air desk
-                </Link>
-                <Link
-                  href="/sea"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-sky-500/15 px-3 text-sm font-semibold text-sky-900"
-                >
-                  <Ship className="h-4 w-4" /> Sea desk
-                </Link>
-                <Link
-                  href="/inbox"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-violet-500/15 px-3 text-sm font-semibold text-violet-900"
-                >
-                  <Inbox className="h-4 w-4" /> Enquiry inbox
-                </Link>
+                {showAir ? (
+                  <Link
+                    href="/air"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 text-sm font-semibold text-amber-900"
+                  >
+                    <PlaneTakeoff className="h-4 w-4" /> Air desk
+                  </Link>
+                ) : null}
+                {showSea ? (
+                  <Link
+                    href="/sea"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-sky-500/15 px-3 text-sm font-semibold text-sky-900"
+                  >
+                    <Ship className="h-4 w-4" /> Sea desk
+                  </Link>
+                ) : null}
+                {showInbox ? (
+                  <Link
+                    href="/inbox"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-violet-500/15 px-3 text-sm font-semibold text-violet-900"
+                  >
+                    <Inbox className="h-4 w-4" /> Enquiry inbox
+                  </Link>
+                ) : null}
               </div>
             </Card>
 

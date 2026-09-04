@@ -45,7 +45,7 @@ export const parityGroups: ParityGroup[] = [
       { id: "auth-forgot", name: "Forgot / change password", legacy: "Login + admin", status: "missing" },
       { id: "auth-admin-register", name: "Admin register new user", legacy: "Admin console", status: "missing" },
       { id: "auth-admin-reset", name: "Force password reset", legacy: "Admin console", status: "missing" },
-      { id: "auth-roles", name: "Desk role switcher (Air/Sea/NRS/Sales)", legacy: "Sidebar", status: "missing" },
+      { id: "auth-roles", name: "Desk role switcher (Air/Sea/NRS/Sales)", legacy: "Sidebar", react: "AppShell RBAC", status: "partial", testHint: "Nav filtered by login; soft route guard" },
       { id: "auth-credit", name: "Customer credit control & block", legacy: "Admin console", status: "missing" },
       { id: "auth-firebase-config", name: "Firebase config paste / reconnect", legacy: "Admin console", status: "missing" },
     ],

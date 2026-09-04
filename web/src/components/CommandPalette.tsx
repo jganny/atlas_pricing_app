@@ -17,6 +17,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useEnquiries } from "@/hooks/use-atlas-data";
+import { useAuthStore } from "@/store/auth";
+import { canAccessRoute, type AppRouteId } from "@/lib/auth/rbac";
 import { cn } from "@/lib/utils";
 import type { EnquiryRecord } from "@/lib/types";
 
@@ -28,19 +30,20 @@ export interface CommandItem {
   action?: () => void;
   icon: React.ComponentType<{ className?: string }>;
   group: "Quotes" | "Navigate" | "Desks" | "Tools" | "System";
+  route?: AppRouteId;
 }
 
 const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
-  { id: "home", label: "Dashboard", href: "/", icon: LayoutDashboard, group: "Navigate" },
-  { id: "air", label: "Air desk", href: "/air", icon: PlaneTakeoff, group: "Desks" },
-  { id: "sea", label: "Sea desk", href: "/sea", icon: Ship, group: "Desks" },
-  { id: "courier", label: "Courier desk", href: "/courier", icon: Package, group: "Desks" },
-  { id: "sq-air", label: "Smart Quote · Air (standalone)", hint: "optional", href: "/smart-quote/air", icon: Plane, group: "Tools" },
-  { id: "sq-sea", label: "Smart Quote · Sea (standalone)", hint: "optional", href: "/smart-quote/sea", icon: Anchor, group: "Tools" },
-  { id: "inbox", label: "Enquiry inbox", href: "/inbox", icon: Inbox, group: "Tools" },
-  { id: "edb", label: "Enquiry database", href: "/enquiries", icon: Database, group: "Tools" },
-  { id: "circulars", label: "Circulars library", href: "/circulars", icon: FileText, group: "Tools" },
-  { id: "parity", label: "Feature parity tracker", href: "/feature-parity", icon: ClipboardCheck, group: "System" },
+  { id: "home", label: "Dashboard", href: "/", icon: LayoutDashboard, group: "Navigate", route: "dashboard" },
+  { id: "air", label: "Air desk", href: "/air", icon: PlaneTakeoff, group: "Desks", route: "air" },
+  { id: "sea", label: "Sea desk", href: "/sea", icon: Ship, group: "Desks", route: "sea" },
+  { id: "courier", label: "Courier desk", href: "/courier", icon: Package, group: "Desks", route: "courier" },
+  { id: "sq-air", label: "Smart Quote · Air (standalone)", hint: "optional", href: "/smart-quote/air", icon: Plane, group: "Tools", route: "smart-quote" },
+  { id: "sq-sea", label: "Smart Quote · Sea (standalone)", hint: "optional", href: "/smart-quote/sea", icon: Anchor, group: "Tools", route: "smart-quote" },
+  { id: "inbox", label: "Enquiry inbox", href: "/inbox", icon: Inbox, group: "Tools", route: "inbox" },
+  { id: "edb", label: "Enquiry database", href: "/enquiries", icon: Database, group: "Tools", route: "enquiries" },
+  { id: "circulars", label: "Circulars library", href: "/circulars", icon: FileText, group: "Tools", route: "circulars" },
+  { id: "parity", label: "Feature parity tracker", href: "/feature-parity", icon: ClipboardCheck, group: "System", route: "feature-parity" },
 ];
 
 function rankQuote(row: EnquiryRecord, q: string): number {
@@ -61,6 +64,7 @@ function rankQuote(row: EnquiryRecord, q: string): number {
 
 export function CommandPalette() {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const { data: enquiries = [] } = useEnquiries();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -68,8 +72,11 @@ export function CommandPalette() {
 
   const items = useMemo(() => {
     const q = query.toLowerCase().trim();
+    const allowedNav = NAV_COMMANDS.filter(
+      (c) => !c.route || canAccessRoute(user?.username, user?.role, c.route),
+    );
     const nav: CommandItem[] = [
-      ...NAV_COMMANDS.map((c) => ({
+      ...allowedNav.map((c) => ({
         ...c,
         action: c.href ? () => router.push(c.href!) : undefined,
       })),
@@ -86,7 +93,7 @@ export function CommandPalette() {
     ];
 
     const quoteHits: CommandItem[] = [];
-    if (q.length >= 2) {
+    if (q.length >= 2 && canAccessRoute(user?.username, user?.role, "enquiries")) {
       const ranked = enquiries
         .map((row) => ({ row, score: rankQuote(row, q) }))
         .filter((x) => x.score > 0)
@@ -116,7 +123,7 @@ export function CommandPalette() {
         item.hint?.toLowerCase().includes(q) ||
         item.group.toLowerCase().includes(q),
     );
-  }, [query, router, enquiries]);
+  }, [query, router, enquiries, user?.username, user?.role]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

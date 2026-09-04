@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import {
   ClipboardCheck,
   Database,
@@ -17,17 +18,30 @@ import {
 import { cn } from "@/lib/utils";
 import { appVersion } from "@/lib/env";
 import { useAuthStore } from "@/store/auth";
+import {
+  canAccessRoute,
+  deskFocusLabel,
+  preferredHomePath,
+  type AppRouteId,
+} from "@/lib/auth/rbac";
 import { MockBanner } from "./MockBanner";
+import { RouteGuard } from "./RouteGuard";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/air", label: "Air desk", icon: PlaneTakeoff },
-  { href: "/sea", label: "Sea desk", icon: Ship },
-  { href: "/courier", label: "Courier desk", icon: Package },
-  { href: "/inbox", label: "Enquiry inbox", icon: Inbox },
-  { href: "/enquiries", label: "Enquiry DB", icon: Database },
-  { href: "/circulars", label: "Circulars", icon: FileText },
-  { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck },
+const navItems: Array<{
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+  route: AppRouteId;
+}> = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true, route: "dashboard" },
+  { href: "/air", label: "Air desk", icon: PlaneTakeoff, route: "air" },
+  { href: "/sea", label: "Sea desk", icon: Ship, route: "sea" },
+  { href: "/courier", label: "Courier desk", icon: Package, route: "courier" },
+  { href: "/inbox", label: "Enquiry inbox", icon: Inbox, route: "inbox" },
+  { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
+  { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
+  { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -36,6 +50,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+
+  const visibleNav = useMemo(
+    () =>
+      navItems.filter((item) => canAccessRoute(user?.username, user?.role, item.route)),
+    [user?.username, user?.role],
+  );
+
+  const focus = deskFocusLabel(user?.username);
+  const home = preferredHomePath(user?.username, user?.role);
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
@@ -48,9 +71,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ATLAS PRICING
             </div>
             <div className="mt-1 text-xs text-white/60">Next.js preview · v{appVersion}</div>
+            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-200">
+              {focus}
+            </div>
           </div>
           <nav className="flex flex-1 flex-col gap-1 p-3">
-            {navItems.map((item) => {
+            {visibleNav.map((item) => {
               const isActive = item.exact
                 ? normalizedPath === item.href
                 : normalizedPath.startsWith(item.href);
@@ -88,16 +114,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white px-4 py-3 md:px-6">
             <div className="md:hidden">
-              <Link href="/" className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
+              <Link href={home} className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
                 Atlas Pricing
               </Link>
             </div>
             <div className="hidden text-sm text-[var(--color-text-muted)] md:block">
-              Operational pricing workspace — press{" "}
+              {focus} workspace — press{" "}
               <kbd className="rounded border border-[var(--color-border)] bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold">
                 ⌘K
               </kbd>{" "}
-              to jump anywhere
+              to jump
             </div>
             <a
               href="/index.html"
@@ -107,7 +133,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </a>
           </header>
 
-          <main className="flex-1 p-3 md:p-4">{children}</main>
+          <main className="flex-1 p-3 md:p-4">
+            <RouteGuard>{children}</RouteGuard>
+          </main>
         </div>
       </div>
     </div>

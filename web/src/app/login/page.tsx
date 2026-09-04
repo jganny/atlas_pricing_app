@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
 import { useAuthStore } from "@/store/auth";
+import { preferredHomePath } from "@/lib/auth/rbac";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function LoginPage() {
   );
 
   useEffect(() => {
-    if (user) router.replace("/");
+    if (user) router.replace(preferredHomePath(user.username, user.role));
   }, [user, router]);
 
   async function onSubmit(e: FormEvent) {

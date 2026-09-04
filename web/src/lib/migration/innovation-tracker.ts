@@ -74,8 +74,8 @@ export const innovationItems: InnovationItem[] = [
   { id: "i10-imap-inbox", name: "IMAP AI enquiry inbox", phase: 10, status: "partial", why: "Full re-parse on Apply + richer poller; live mail needs secrets + functions deploy", react: "/inbox" },
 
   // Phase 11–14
-  { id: "i11-rbac", name: "Role-based UI (RBAC)", phase: 11, status: "planned", why: "Air/Sea/NRS/Admin views", react: "Global" },
-  { id: "i11-ai", name: "AI Smart Inbox", phase: 11, status: "planned", why: "Email → quote draft", react: "Smart Quote" },
+  { id: "i11-rbac", name: "Role-based UI (RBAC)", phase: 11, status: "done", why: "Nav + soft route guard by desk login (Air Nom / Sea Nom / Free Hand / NRS / Admin)", react: "AppShell + RouteGuard" },
+  { id: "i11-ai", name: "AI Smart Inbox", phase: 11, status: "partial", why: "Inbox re-parse on Apply shipped in Phase 10; live IMAP + smarter routing still open", react: "/inbox" },
   { id: "i14-sentry", name: "Sentry monitoring", phase: 14, status: "planned", why: "Pre-cutover observability", react: "Production" },
   { id: "i14-e2e", name: "Playwright E2E", phase: 14, status: "planned", why: "Automated parity tests", react: "CI" },
   { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "planned", why: "Quote at airport", react: "Mobile" },
