@@ -127,6 +127,17 @@ export function EnquiryInspector({
     if (!window.confirm(`${labels[action]} quote for "${row.customer}"?`)) return;
     setLoading(true);
     setMsg(null);
+    const previous = queryClient.getQueryData(queryKeys.enquiries);
+    // Optimistic UI — flip status / drop row immediately
+    queryClient.setQueryData(queryKeys.enquiries, (old: EnquiryRecord[] | undefined) => {
+      if (!old) return old;
+      if (action === "delete") return old.filter((e) => e.id !== row.id);
+      return old.map((e) =>
+        e.id === row.id
+          ? { ...e, status: action === "lost" ? "lost" : "cancelled" }
+          : e,
+      );
+    });
     try {
       if (action === "delete") {
         await deleteQuoteById(row.id);
@@ -138,6 +149,7 @@ export function EnquiryInspector({
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       onClose();
     } catch (e) {
+      queryClient.setQueryData(queryKeys.enquiries, previous);
       const msg = e instanceof Error ? e.message : "Action failed";
       setMsg(msg);
       toast(msg, "error");

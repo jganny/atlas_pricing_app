@@ -19,10 +19,12 @@ import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { PortMapEmbed } from "@/components/PortMapEmbed";
+import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm, shouldHideAgencyAgreement } from "@/lib/auth/desk-rules";
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
+import { appendCalcAudit } from "@/lib/quotes/calc-audit";
 import { useLiveData } from "@/lib/api";
 import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
@@ -330,6 +332,18 @@ function AirDeskInner() {
             customer: customer.trim(),
             payload: { origin, destination, currency, amount: selectedTotals.grandSell },
           });
+          appendCalcAudit({
+            quoteId: id,
+            type: "air",
+            steps: [
+              { label: "Chargeable kg", value: selectedTotals.freight.chargeableWeightKg },
+              { label: "Base freight", value: selectedTotals.freight.baseFreightSell },
+              { label: "Origin fees", value: selectedTotals.originTotal },
+              { label: "Dest fees", value: selectedTotals.destTotal },
+              { label: "Grand sell", value: selectedTotals.grandSell },
+              { label: "Currency", value: currency },
+            ],
+          });
           const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
           setSaveMsg(msg);
           toast(msg, "success");
@@ -483,6 +497,12 @@ function AirDeskInner() {
           {step === "shipment" ? (
             <Card className="space-y-3 py-3">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
+              <TariffIntelHint
+                mode="air"
+                origin={origin}
+                destination={destination}
+                tariffCount={tariffs.length}
+              />
               <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer

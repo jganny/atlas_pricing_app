@@ -18,11 +18,11 @@ function fyStart(d = new Date()): Date {
   return new Date(y, 3, 1);
 }
 
-function inRange(row: EnquiryRecord, from: Date, to: Date): boolean {
+function inRange(row: EnquiryRecord, from: Date, to: Date, includeUndated = false): boolean {
   const raw = row.createdAt || "";
-  if (!raw) return true;
+  if (!raw) return includeUndated;
   const t = new Date(raw).getTime();
-  if (Number.isNaN(t)) return true;
+  if (Number.isNaN(t)) return includeUndated;
   return t >= from.getTime() && t <= to.getTime();
 }
 
@@ -39,7 +39,7 @@ export function buildFyReportCards(rows: EnquiryRecord[], now = new Date()): FyB
   buckets.push({ id: "ytd", label: "FY YTD", from: start, to: ytdTo });
 
   return buckets.map((b) => {
-    const slice = rows.filter((r) => inRange(r, b.from, b.to));
+    const slice = rows.filter((r) => inRange(r, b.from, b.to, b.id === "ytd"));
     const fin = summarizeEnquiryFinancials(slice);
     return {
       ...b,

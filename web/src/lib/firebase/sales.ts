@@ -31,7 +31,11 @@ function mapLead(id: string, data: Record<string, unknown>): SalesLead {
     status: (String(data.status || "new") as LeadStatus) || "new",
     mode: data.mode as SalesLead["mode"],
     lane: data.lane ? String(data.lane) : "",
-    dealValue: typeof data.dealValue === "number" ? data.dealValue : Number(data.dealValue) || undefined,
+    dealValue:
+      typeof data.dealValue === "number"
+        ? data.dealValue
+        : Number(data.dealValue ?? data.value ?? data.amount ?? data.expectedValue ?? 0) ||
+          undefined,
     nextAction: data.nextAction ? String(data.nextAction) : "",
     nextDueDate: data.nextDueDate ? String(data.nextDueDate) : "",
     winLossReason: data.winLossReason ? String(data.winLossReason) : "",

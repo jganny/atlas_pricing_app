@@ -23,9 +23,13 @@ export default function AnalyticsPage() {
     enquiries.forEach((e) => {
       byDesk[e.assignee || e.creator] = (byDesk[e.assignee || e.creator] || 0) + 1;
     });
-    const pipeline = leads
-      .filter((l) => l.status !== "won" && l.status !== "lost")
-      .reduce((s, l) => s + (l.dealValue || 0), 0);
+  const salesPipeline = leads
+    .filter((l) => l.status !== "won" && l.status !== "lost")
+    .reduce((s, l) => s + (l.dealValue || 0), 0);
+  const enquiryPipeline = enquiries
+    .filter((e) => e.status === "open" || e.status === "quoted")
+    .reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
+  const pipeline = salesPipeline > 0 ? salesPipeline : enquiryPipeline;
     return { won: won.length, quoted: quoted.length, revenue, gp, byMode, byDesk, pipeline };
   }, [enquiries, leads]);
 

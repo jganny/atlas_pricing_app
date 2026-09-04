@@ -105,7 +105,7 @@ export function QuotePreviewModal({
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={handlePrint}>
               <Printer className="mr-2 h-4 w-4" />
-              Print
+              Print / Save PDF
             </Button>
             <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100" aria-label="Close">
               <X className="h-5 w-5" />

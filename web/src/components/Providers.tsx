@@ -6,6 +6,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastContainer } from "@/components/Toast";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
+import { initMonitoring } from "@/lib/monitoring/sentry";
 import { useLiveData } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import type { AuthUser } from "@/lib/types";
@@ -118,6 +119,7 @@ const queryClient = new QueryClient({
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    initMonitoring();
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "/app";
     void navigator.serviceWorker.register(`${base}/sw.js`).catch(() => {

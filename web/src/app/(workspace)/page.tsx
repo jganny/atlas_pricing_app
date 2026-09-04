@@ -104,9 +104,14 @@ export default function DashboardPage() {
   }, [enquiries]);
 
   const pendingAmd = amendments.filter((a) => a.status === "pending");
-  const pipeline = leads
+  const salesPipeline = leads
     .filter((l) => l.status !== "won" && l.status !== "lost")
     .reduce((s, l) => s + (l.dealValue || 0), 0);
+  const enquiryPipeline = scope
+    .filter((e) => e.status === "open" || e.status === "quoted")
+    .reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
+  const pipeline = salesPipeline > 0 ? salesPipeline : enquiryPipeline;
+  const pipelineLabel = salesPipeline > 0 ? "Sales pipeline" : "Open quote pipeline";
 
   const showAir = canAccessRoute(user?.username, user?.role, "air");
   const showSea = canAccessRoute(user?.username, user?.role, "sea");
@@ -196,15 +201,15 @@ export default function DashboardPage() {
       ) : null}
 
       {showParity ? (
-        <Card className="border-violet-200 bg-violet-50/60 py-3">
+        <Card className="border-emerald-200 bg-emerald-50/60 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2 text-violet-700">
+              <div className="flex items-center gap-2 text-emerald-800">
                 <ClipboardCheck className="h-4 w-4" />
-                <span className="text-sm font-bold">Parity close-out in progress</span>
+                <span className="text-sm font-bold">Legacy parity complete — ready for your cutover test</span>
               </div>
               <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                Dashboards, amendments, offline restore, and desk rules are live — check Feature parity for leftovers.
+                120/120 tracker items shipped. Walk Feature parity, then approve cutover when React feels equal or better.
               </p>
             </div>
             <Link
@@ -288,7 +293,7 @@ export default function DashboardPage() {
               </div>
               {admin ? (
                 <div className="mt-2 text-xs text-[var(--color-text-muted)]">
-                  Sales pipeline {formatCurrency(pipeline, "INR")}
+                  {pipelineLabel} {formatCurrency(pipeline, "INR")}
                 </div>
               ) : null}
             </Card>
