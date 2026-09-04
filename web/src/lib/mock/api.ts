@@ -3,9 +3,13 @@ import { delay } from '@/lib/utils'
 import type { AirTariff, AuthUser, EnquiryRecord, SeaTariff, SmartQuoteDraft } from '@/lib/types'
 import {
   MOCK_AIR_TARIFFS,
+  MOCK_CIRCULARS,
+  MOCK_CREDIT,
   MOCK_DIRECTORY,
+  MOCK_ACTIVITIES,
   MOCK_ENQUIRIES,
   MOCK_INBOX,
+  MOCK_LEADS,
   MOCK_SEA_TARIFFS,
   MOCK_USERS,
 } from './data'
@@ -47,6 +51,28 @@ export async function fetchInbox(): Promise<import('@/lib/types').InboxEnquiry[]
 export async function fetchDirectory(): Promise<import('@/lib/types').DirectoryContact[]> {
   await delay(200)
   return [...MOCK_DIRECTORY]
+}
+
+export async function fetchCirculars(): Promise<import('@/lib/types').CircularRecord[]> {
+  await delay(200)
+  return [...MOCK_CIRCULARS]
+}
+
+export async function fetchLeads(): Promise<import('@/lib/types').SalesLead[]> {
+  await delay(200)
+  return [...MOCK_LEADS]
+}
+
+export async function fetchLeadActivities(
+  leadId: string,
+): Promise<import('@/lib/types').LeadActivity[]> {
+  await delay(150)
+  return MOCK_ACTIVITIES.filter((a) => a.leadId === leadId)
+}
+
+export async function fetchCreditControls(): Promise<import('@/lib/types').CreditControl[]> {
+  await delay(150)
+  return [...MOCK_CREDIT]
 }
 
 export async function fetchAirTariffs(): Promise<AirTariff[]> {
@@ -160,6 +186,10 @@ export const mockApi = {
   fetchEnquiries,
   fetchInbox,
   fetchDirectory,
+  fetchCirculars,
+  fetchLeads,
+  fetchLeadActivities,
+  fetchCreditControls,
   fetchAirTariffs,
   fetchSeaTariffs,
   runAirSmartQuote,

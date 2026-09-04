@@ -19,13 +19,17 @@ import {
 } from "@/lib/pricing/estimate";
 import { fetchInboxEnquiries } from "@/lib/firebase/inbox";
 import { fetchDirectoryContacts } from "@/lib/firebase/directory";
+import { fetchLeads as fetchLiveLeads } from "@/lib/firebase/sales";
+import { fetchCreditControls as fetchLiveCredit } from "@/lib/firebase/admin-data";
 import type {
   AirTariff,
   AuthUser,
   CircularRecord,
+  CreditControl,
   DirectoryContact,
   EnquiryRecord,
   InboxEnquiry,
+  SalesLead,
   SeaTariff,
   SmartQuoteDraft,
 } from "@/lib/types";
@@ -111,9 +115,47 @@ async function fetchSeaTariffs(): Promise<SeaTariff[]> {
 
 async function fetchCirculars(): Promise<CircularRecord[]> {
   if (useLiveData) {
-    return withTimeout(fetchLiveCirculars(), 6000, []);
+    try {
+      const rows = await withTimeout(fetchLiveCirculars(), 5000, []);
+      if (process.env.NODE_ENV === "development" && rows.length === 0) {
+        return mockApi.fetchCirculars();
+      }
+      return rows;
+    } catch {
+      return mockApi.fetchCirculars();
+    }
   }
-  return [];
+  return mockApi.fetchCirculars();
+}
+
+async function fetchLeads(): Promise<SalesLead[]> {
+  if (useLiveData) {
+    try {
+      const rows = await withTimeout(fetchLiveLeads(), 5000, []);
+      if (process.env.NODE_ENV === "development" && rows.length === 0) {
+        return mockApi.fetchLeads();
+      }
+      return rows;
+    } catch {
+      return mockApi.fetchLeads();
+    }
+  }
+  return mockApi.fetchLeads();
+}
+
+async function fetchCreditControls(): Promise<CreditControl[]> {
+  if (useLiveData) {
+    try {
+      const rows = await withTimeout(fetchLiveCredit(), 5000, []);
+      if (process.env.NODE_ENV === "development" && rows.length === 0) {
+        return mockApi.fetchCreditControls();
+      }
+      return rows;
+    } catch {
+      return mockApi.fetchCreditControls();
+    }
+  }
+  return mockApi.fetchCreditControls();
 }
 
 async function resolveAirTariffs(cached?: AirTariff[]): Promise<AirTariff[]> {
@@ -241,6 +283,8 @@ export const atlasApi = {
   fetchAirTariffs,
   fetchSeaTariffs,
   fetchCirculars,
+  fetchLeads,
+  fetchCreditControls,
   runAirSmartQuote,
   runSeaSmartQuote,
   getEnvironmentLabel,

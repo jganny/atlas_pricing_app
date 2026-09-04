@@ -10,9 +10,11 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
   Users,
   X,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useDirectory } from "@/hooks/use-atlas-data";
@@ -24,6 +26,10 @@ import {
   saveDirectoryContact,
   type DirectoryContactInput,
 } from "@/lib/firebase/directory";
+import {
+  fetchAgencyListRecipients,
+  saveAgencyListRecipients,
+} from "@/lib/firebase/admin-data";
 import {
   canAccessVendorsDirectory,
   canEditAgentsDirectory,
@@ -44,6 +50,8 @@ const EMPTY_FORM: DirectoryContactInput = {
   notes: "",
   sheetGroup: "agency",
   agreement: "",
+  agreementUrl: "",
+  agreementFileName: "",
   suspended: false,
 };
 
@@ -122,6 +130,8 @@ export default function DirectoryPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DirectoryContactInput>(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
+  const [weeklyOpen, setWeeklyOpen] = useState(false);
+  const [weeklyEmails, setWeeklyEmails] = useState("");
 
   useEffect(() => {
     if (!editorOpen) return;
@@ -132,6 +142,25 @@ export default function DirectoryPage() {
     }, 50);
     return () => window.clearTimeout(t);
   }, [editorOpen]);
+
+  useEffect(() => {
+    if (!weeklyOpen) return;
+    void (async () => {
+      try {
+        if (useLiveData) {
+          const emails = await Promise.race([
+            fetchAgencyListRecipients(),
+            new Promise<string[]>((r) => setTimeout(() => r([]), 3000)),
+          ]);
+          setWeeklyEmails(emails.join(", "));
+        } else {
+          setWeeklyEmails(localStorage.getItem("atlas_agency_list_emails") || "");
+        }
+      } catch {
+        setWeeklyEmails(localStorage.getItem("atlas_agency_list_emails") || "");
+      }
+    })();
+  }, [weeklyOpen]);
 
   const effectiveParent: ParentTab =
     parent === "vendors" && !canVendors ? "agents" : parent;
@@ -225,9 +254,72 @@ export default function DirectoryPage() {
       notes: c.notes || "",
       sheetGroup: c.sheetGroup || "",
       agreement: c.agreement || "",
+      agreementUrl: c.agreementUrl || "",
+      agreementFileName: c.agreementFileName || "",
       suspended: Boolean(c.suspended),
     });
     setEditorOpen(true);
+  }
+
+  async function importDirectoryExcel(file: File) {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+    const mapped: DirectoryContact[] = raw.map((r, i) => {
+      const get = (...names: string[]) => {
+        const keys = Object.keys(r);
+        for (const n of names) {
+          const k = keys.find((x) => x.toLowerCase().replace(/\s/g, "") === n.toLowerCase());
+          if (k != null) return String(r[k] ?? "").trim();
+        }
+        return "";
+      };
+      return {
+        id: `dir-import-${Date.now()}-${i}`,
+        name: get("name", "company", "agent"),
+        category: get("category") || (effectiveParent === "agents" ? "agency" : "vendor"),
+        contactPerson: get("contactperson", "contact"),
+        email: get("email"),
+        phone: get("phone"),
+        location: get("location", "city", "country"),
+        notes: get("notes"),
+        sheetGroup: get("sheetgroup", "group") || get("category") || "agency",
+        agreement: get("agreement"),
+        suspended: /^y|true|1/i.test(get("suspended")),
+        updatedAt: new Date().toISOString(),
+      };
+    }).filter((c) => c.name);
+    if (!mapped.length) {
+      toast("No contacts found in file", "error");
+      return;
+    }
+    queryClient.setQueryData(queryKeys.directory, [...mapped, ...rows]);
+    toast(`Imported ${mapped.length} contacts (session)`, "success");
+  }
+
+  async function saveWeekly() {
+    const emails = weeklyEmails
+      .split(/[,;\n]/)
+      .map((e) => e.trim())
+      .filter(Boolean);
+    try {
+      if (useLiveData) {
+        try {
+          await Promise.race([
+            saveAgencyListRecipients(emails),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000)),
+          ]);
+        } catch {
+          localStorage.setItem("atlas_agency_list_emails", emails.join(", "));
+        }
+      } else {
+        localStorage.setItem("atlas_agency_list_emails", emails.join(", "));
+      }
+      toast(`Saved ${emails.length} recipients`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Save failed", "error");
+    }
   }
 
   async function persist(next: DirectoryContact[]) {
@@ -336,6 +428,20 @@ export default function DirectoryPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold">
+            <Upload className="h-4 w-4" />
+            Import Excel
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importDirectoryExcel(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
           <Button
             variant="secondary"
             className="gap-1.5"
@@ -345,6 +451,11 @@ export default function DirectoryPage() {
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
+          {canEdit && effectiveParent === "agents" ? (
+            <Button type="button" variant="secondary" onClick={() => setWeeklyOpen((v) => !v)}>
+              Weekly agency list
+            </Button>
+          ) : null}
           {canEdit ? (
             <Button
               type="button"
@@ -364,6 +475,25 @@ export default function DirectoryPage() {
           ) : null}
         </div>
       </div>
+
+      {weeklyOpen ? (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <h2 className="font-bold">Weekly agency list recipients</h2>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            Saved to app_settings/agencyListRecipients — Cloud Function sends the weekly mail.
+          </p>
+          <Textarea
+            className="mt-2"
+            rows={3}
+            placeholder="one@branch.in, two@branch.in"
+            value={weeklyEmails}
+            onChange={(e) => setWeeklyEmails(e.target.value)}
+          />
+          <Button type="button" className="mt-2" onClick={() => void saveWeekly()}>
+            Save recipients
+          </Button>
+        </Card>
+      ) : null}
 
       {editorOpen ? (
         <Card
@@ -478,6 +608,17 @@ export default function DirectoryPage() {
                 <option value="Yes">Yes</option>
                 <option value="No">No</option>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="dir-agree-url">Agreement file URL</Label>
+              <Input
+                id="dir-agree-url"
+                placeholder="https://… or storage link"
+                value={form.agreementUrl || ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, agreementUrl: e.target.value }))
+                }
+              />
             </div>
             <div className="flex items-end pb-2">
               <label className="flex items-center gap-2 text-sm font-semibold">

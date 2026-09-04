@@ -4,18 +4,26 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Anchor,
+  BarChart3,
+  Briefcase,
   ClipboardCheck,
   Database,
   FileText,
   Inbox,
   LayoutDashboard,
   Package,
+  PackageCheck,
   Plane,
   PlaneTakeoff,
+  BookOpen,
   Search,
+  Shield,
   Ship,
   Sparkles,
+  Truck,
   Users,
+  Warehouse,
+  Landmark,
 } from "lucide-react";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
@@ -39,12 +47,20 @@ const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
   { id: "air", label: "Air desk", href: "/air", icon: PlaneTakeoff, group: "Desks", route: "air" },
   { id: "sea", label: "Sea desk", href: "/sea", icon: Ship, group: "Desks", route: "sea" },
   { id: "courier", label: "Courier desk", href: "/courier", icon: Package, group: "Desks", route: "courier" },
+  { id: "transport", label: "Transport desk", href: "/transport", icon: Truck, group: "Desks", route: "transport" },
+  { id: "warehouse", label: "Warehouse desk", href: "/warehouse", icon: Warehouse, group: "Desks", route: "warehouse" },
   { id: "sq-air", label: "Smart Quote · Air (standalone)", hint: "optional", href: "/smart-quote/air", icon: Plane, group: "Tools", route: "smart-quote" },
   { id: "sq-sea", label: "Smart Quote · Sea (standalone)", hint: "optional", href: "/smart-quote/sea", icon: Anchor, group: "Tools", route: "smart-quote" },
   { id: "inbox", label: "Enquiry inbox", href: "/inbox", icon: Inbox, group: "Tools", route: "inbox" },
   { id: "edb", label: "Enquiry database", href: "/enquiries", icon: Database, group: "Tools", route: "enquiries" },
   { id: "circulars", label: "Circulars library", href: "/circulars", icon: FileText, group: "Tools", route: "circulars" },
   { id: "directory", label: "Directory CRM", href: "/directory", icon: Users, group: "Tools", route: "directory" },
+  { id: "sales", label: "Sales pipeline", href: "/sales", icon: Briefcase, group: "Tools", route: "sales" },
+  { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3, group: "Navigate", route: "analytics" },
+  { id: "ops", label: "Operations board", href: "/ops", icon: PackageCheck, group: "Navigate", route: "ops" },
+  { id: "finance", label: "Finance", href: "/finance", icon: Landmark, group: "Navigate", route: "finance" },
+  { id: "admin", label: "Admin console", href: "/admin", icon: Shield, group: "System", route: "admin" },
+  { id: "docs", label: "Documentation", href: "/docs", icon: BookOpen, group: "System", route: "docs" },
   { id: "parity", label: "Feature parity tracker", href: "/feature-parity", icon: ClipboardCheck, group: "System", route: "feature-parity" },
 ];
 

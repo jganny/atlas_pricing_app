@@ -1,6 +1,5 @@
 /**
- * Phase 11 — Role-based access for Atlas desks.
- * Soft UI RBAC: hide nav + soft-block routes. Admins see everything.
+ * Phase 10–14 route access. Admins see everything.
  */
 
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
@@ -10,10 +9,19 @@ export type AppRouteId =
   | "air"
   | "sea"
   | "courier"
+  | "transport"
+  | "warehouse"
   | "inbox"
   | "enquiries"
   | "circulars"
   | "directory"
+  | "sales"
+  | "admin"
+  | "analytics"
+  | "ops"
+  | "docs"
+  | "finance"
+  | "hr"
   | "feature-parity"
   | "smart-quote";
 
@@ -22,22 +30,77 @@ const ALL: AppRouteId[] = [
   "air",
   "sea",
   "courier",
+  "transport",
+  "warehouse",
   "inbox",
   "enquiries",
   "circulars",
   "directory",
+  "sales",
+  "admin",
+  "analytics",
+  "ops",
+  "docs",
+  "finance",
+  "hr",
   "feature-parity",
   "smart-quote",
 ];
 
+const CORE: AppRouteId[] = [
+  "dashboard",
+  "air",
+  "sea",
+  "courier",
+  "transport",
+  "warehouse",
+  "inbox",
+  "enquiries",
+  "circulars",
+  "directory",
+  "sales",
+  "docs",
+];
+
 /** Per-login allowed surfaces (admins bypass). */
 const ROLE_ROUTES: Record<string, AppRouteId[]> = {
-  shashank: ["dashboard", "air", "inbox", "enquiries", "circulars", "directory"],
-  shaheer: ["dashboard", "sea", "inbox", "enquiries", "circulars", "directory"],
-  kavya: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars", "directory"],
-  jaya: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars", "directory"],
-  cathrina: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars", "directory"],
-  pricing: ["dashboard", "air", "sea", "inbox", "enquiries", "circulars", "directory"],
+  shashank: [
+    "dashboard",
+    "air",
+    "transport",
+    "warehouse",
+    "inbox",
+    "enquiries",
+    "circulars",
+    "directory",
+    "sales",
+    "docs",
+  ],
+  shaheer: [
+    "dashboard",
+    "sea",
+    "transport",
+    "warehouse",
+    "inbox",
+    "enquiries",
+    "circulars",
+    "directory",
+    "sales",
+    "docs",
+  ],
+  kavya: [...CORE],
+  jaya: [...CORE],
+  cathrina: [...CORE, "admin"],
+  pricing: [
+    "dashboard",
+    "air",
+    "sea",
+    "inbox",
+    "enquiries",
+    "circulars",
+    "directory",
+    "docs",
+  ],
   preview: ALL,
 };
 
@@ -52,10 +115,7 @@ export function allowedRoutesForUser(
   if (isAdminUser(username, role)) return ALL;
   const u = normalizeUsername(username);
   if (ROLE_ROUTES[u]) return ROLE_ROUTES[u];
-  // Unknown member — give core desks so they are not locked out
-  if (TEAM_ROLES[u]?.type === "member") {
-    return ["dashboard", "air", "sea", "inbox", "enquiries", "circulars", "directory"];
-  }
+  if (TEAM_ROLES[u]?.type === "member") return CORE;
   return ALL;
 }
 
@@ -67,7 +127,6 @@ export function canAccessRoute(
   return allowedRoutesForUser(username, role).includes(route);
 }
 
-/** Map pathname → route id for guards. */
 export function routeIdFromPath(pathname: string): AppRouteId | null {
   const p =
     pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
@@ -75,16 +134,24 @@ export function routeIdFromPath(pathname: string): AppRouteId | null {
   if (p.startsWith("/air")) return "air";
   if (p.startsWith("/sea")) return "sea";
   if (p.startsWith("/courier")) return "courier";
+  if (p.startsWith("/transport")) return "transport";
+  if (p.startsWith("/warehouse")) return "warehouse";
   if (p.startsWith("/inbox")) return "inbox";
   if (p.startsWith("/enquiries")) return "enquiries";
   if (p.startsWith("/circulars")) return "circulars";
   if (p.startsWith("/directory")) return "directory";
+  if (p.startsWith("/sales")) return "sales";
+  if (p.startsWith("/admin")) return "admin";
+  if (p.startsWith("/analytics")) return "analytics";
+  if (p.startsWith("/ops")) return "ops";
+  if (p.startsWith("/docs")) return "docs";
+  if (p.startsWith("/finance")) return "finance";
+  if (p.startsWith("/hr")) return "hr";
   if (p.startsWith("/feature-parity")) return "feature-parity";
   if (p.startsWith("/smart-quote")) return "smart-quote";
   return null;
 }
 
-/** Best landing page after login for this person. */
 export function preferredHomePath(
   username: string | undefined | null,
   role?: string,

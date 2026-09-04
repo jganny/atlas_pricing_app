@@ -11,6 +11,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Atlas Pricing",
   description: "Vertex freight pricing workspace — Next.js migration preview",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({

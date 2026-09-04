@@ -52,10 +52,10 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center gap-2 text-violet-700">
                 <ClipboardCheck className="h-4 w-4" />
-                <span className="text-sm font-bold">Phase 11 — role-based desks</span>
+                <span className="text-sm font-bold">Phases 10–14 shipped</span>
               </div>
               <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                Sidebar shows only the desks for your login. Paste on Air/Sea; inbox for mailbox mail.
+                Transport/Warehouse, Circulars manage, Sales, Admin, Analytics, shell polish — track remaining polish in Feature parity.
               </p>
             </div>
             <Link

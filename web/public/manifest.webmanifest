@@ -1,0 +1,17 @@
+{
+  "name": "Atlas Pricing",
+  "short_name": "Atlas",
+  "description": "Atlas Logistics pricing desks — React preview",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#0b1b3a",
+  "theme_color": "#0b1b3a",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

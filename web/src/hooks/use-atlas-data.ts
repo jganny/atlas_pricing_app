@@ -6,6 +6,7 @@ import { atlasApi, useLiveData } from "@/lib/api";
 import { subscribeLiveEnquiries } from "@/lib/firebase/quotes";
 import { subscribeInboxEnquiries } from "@/lib/firebase/inbox";
 import { subscribeDirectoryContacts } from "@/lib/firebase/directory";
+import { subscribeLeads } from "@/lib/firebase/sales";
 import { mockApi } from "@/lib/mock/api";
 import { useAuthStore } from "@/store/auth";
 import { queryKeys } from "./query-keys";
@@ -135,6 +136,59 @@ export function useCirculars() {
     queryKey: queryKeys.circulars,
     queryFn: () => atlasApi.fetchCirculars(),
     staleTime: 5 * 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useLeads() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeLeads(
+      (rows) => {
+        if (rows.length > 0) queryClient.setQueryData(queryKeys.leads, rows);
+        else if (process.env.NODE_ENV === "development") {
+          void mockApi.fetchLeads().then((mockRows) => {
+            const current = queryClient.getQueryData(queryKeys.leads);
+            if (!current || (Array.isArray(current) && current.length === 0)) {
+              queryClient.setQueryData(queryKeys.leads, mockRows);
+            }
+          });
+        }
+      },
+      (err) => {
+        console.warn("Leads sync:", err.message);
+        if (process.env.NODE_ENV === "development") {
+          void mockApi.fetchLeads().then((rows) => {
+            const current = queryClient.getQueryData(queryKeys.leads);
+            if (!current || (Array.isArray(current) && current.length === 0)) {
+              queryClient.setQueryData(queryKeys.leads, rows);
+            }
+          });
+        }
+      },
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.leads,
+    queryFn: () => atlasApi.fetchLeads(),
+    staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useCreditControls() {
+  const enabled = useQueryEnabled();
+  return useQuery({
+    queryKey: queryKeys.credit,
+    queryFn: () => atlasApi.fetchCreditControls(),
+    staleTime: 60_000,
     retry: 1,
     enabled,
   });

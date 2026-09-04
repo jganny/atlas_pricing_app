@@ -137,6 +137,11 @@ export interface CircularRecord {
   createdAt?: string
   validTo?: string
   fileName?: string
+  downloadURL?: string
+  storagePath?: string
+  effectiveDate?: string
+  expiryDate?: string
+  uploadedBy?: string
 }
 
 /** Agent / vendor contact from Firestore `contactsDirectory`. */
@@ -151,8 +156,52 @@ export interface DirectoryContact {
   notes?: string
   sheetGroup?: string
   agreement?: string
+  agreementUrl?: string
+  agreementFileName?: string
   suspended?: boolean
   updatedBy?: string
+  updatedAt?: string
+}
+
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'quoted' | 'won' | 'lost'
+
+export interface SalesLead {
+  id: string
+  company: string
+  contactName?: string
+  email?: string
+  phone?: string
+  status: LeadStatus
+  mode?: 'air' | 'sea' | 'transport' | 'warehouse' | 'courier'
+  lane?: string
+  dealValue?: number
+  nextAction?: string
+  nextDueDate?: string
+  winLossReason?: string
+  owner?: string
+  notes?: string
+  updatedAt?: string
+  createdAt?: string
+}
+
+export interface LeadActivity {
+  id: string
+  leadId: string
+  type: 'note' | 'call' | 'email' | 'meeting' | 'status'
+  body: string
+  createdBy?: string
+  createdAt: string
+}
+
+export interface CreditControl {
+  id: string
+  customer: string
+  creditDays: number
+  creditLimit: number
+  hasAgreement: boolean
+  waiveAgreement?: boolean
+  blocked?: boolean
+  notes?: string
   updatedAt?: string
 }
 

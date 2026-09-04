@@ -34,7 +34,7 @@ export const innovationItems: InnovationItem[] = [
   { id: "i2-firebase", name: "Firebase v11 modular SDK", phase: 2, status: "done", why: "Tree-shakeable, maintained", react: "lib/firebase" },
   { id: "i2-query", name: "TanStack Query", phase: 2, status: "done", why: "Server state cache — Salesforce lists", react: "hooks/" },
   { id: "i2-live", name: "Live Firestore subscriptions", phase: 2, status: "done", why: "No manual refresh", react: "Enquiry DB" },
-  { id: "i2-live-tariffs", name: "Live tariff/circular sync", phase: 2, status: "planned", why: "Team sees rate updates instantly", react: "Circulars" },
+  { id: "i2-live-tariffs", name: "Live tariff/circular sync", phase: 2, status: "partial", why: "Circulars + tariffs load live; publish path shipped", react: "/circulars" },
 
   // Phase 3
   { id: "i3-core", name: "pricing-core package", phase: 3, status: "done", why: "Shared tested math — air/sea/courier", react: "packages/" },
@@ -77,9 +77,15 @@ export const innovationItems: InnovationItem[] = [
   { id: "i11-rbac", name: "Role-based UI (RBAC)", phase: 11, status: "done", why: "Nav + soft route guard by desk login (Air Nom / Sea Nom / Free Hand / NRS / Admin)", react: "AppShell + RouteGuard" },
   { id: "i11-directory", name: "Directory CRM", phase: 11, status: "done", why: "Agents/Vendors grid + search + CRUD + CSV; live Firestore contactsDirectory", react: "/directory" },
   { id: "i11-ai", name: "AI Smart Inbox", phase: 11, status: "partial", why: "Inbox re-parse on Apply shipped in Phase 10; live IMAP + smarter routing still open", react: "/inbox" },
+  { id: "i11-circulars", name: "Circulars manage + Excel publish", phase: 11, status: "done", why: "Upload/delete/categories + Excel→air_tariffs", react: "/circulars" },
+  { id: "i11-sales", name: "Sales kanban + activity", phase: 11, status: "done", why: "Drag-drop pipeline + lead activity log", react: "/sales" },
+  { id: "i10-transport", name: "Transport & warehouse desks", phase: 10, status: "done", why: "Charge desks with save + ⌘S", react: "/transport /warehouse" },
+  { id: "i12-admin", name: "Admin credit + NRS capture", phase: 12, status: "done", why: "Credit control + NRS parties + user queue", react: "/admin" },
+  { id: "i13-analytics", name: "Analytics + ops + modules", phase: 13, status: "done", why: "KPI/leaderboard, ops board, finance/docs/HR shells", react: "/analytics /ops" },
+  { id: "i14-shell", name: "Mobile nav + FX + offline badge", phase: 14, status: "done", why: "Shell polish for cutover readiness", react: "AppShell" },
   { id: "i14-sentry", name: "Sentry monitoring", phase: 14, status: "planned", why: "Pre-cutover observability", react: "Production" },
   { id: "i14-e2e", name: "Playwright E2E", phase: 14, status: "planned", why: "Automated parity tests", react: "CI" },
-  { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "planned", why: "Quote at airport", react: "Mobile" },
+  { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "partial", why: "Manifest + offline badge; SW deferred", react: "public/manifest" },
 ];
 
 export function innovationStats(items: InnovationItem[] = innovationItems) {

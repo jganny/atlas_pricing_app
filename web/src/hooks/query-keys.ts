@@ -5,4 +5,6 @@ export const queryKeys = {
   airTariffs: ["airTariffs"] as const,
   seaTariffs: ["seaTariffs"] as const,
   circulars: ["circulars"] as const,
+  leads: ["leads"] as const,
+  credit: ["credit"] as const,
 };
