@@ -152,10 +152,15 @@ export function useDirectory() {
           queryClient.setQueryData(queryKeys.directory, rows);
           return;
         }
+        const current = queryClient.getQueryData(queryKeys.directory);
+        if (Array.isArray(current) && current.length > 0) return;
         // Empty live collection in preview — seed mock so the CRM UI is usable.
         if (process.env.NODE_ENV === "development") {
           void mockApi.fetchDirectory().then((mockRows) => {
-            queryClient.setQueryData(queryKeys.directory, mockRows);
+            const still = queryClient.getQueryData(queryKeys.directory);
+            if (!still || (Array.isArray(still) && still.length === 0)) {
+              queryClient.setQueryData(queryKeys.directory, mockRows);
+            }
           });
         } else {
           queryClient.setQueryData(queryKeys.directory, rows);

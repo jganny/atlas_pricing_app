@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
@@ -11,6 +11,7 @@ import {
   Search,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
@@ -122,6 +123,16 @@ export default function DirectoryPage() {
   const [form, setForm] = useState<DirectoryContactInput>(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (!editorOpen) return;
+    const panel = document.getElementById("directory-contact-editor");
+    panel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const t = window.setTimeout(() => {
+      document.getElementById("dir-name")?.focus();
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [editorOpen]);
+
   const effectiveParent: ParentTab =
     parent === "vendors" && !canVendors ? "agents" : parent;
 
@@ -223,6 +234,30 @@ export default function DirectoryPage() {
     queryClient.setQueryData(queryKeys.directory, next);
   }
 
+  function applyLocalSave() {
+    const now = new Date().toISOString();
+    const by = user?.username || "demo";
+    if (editingId) {
+      void persist(
+        rows.map((r) =>
+          r.id === editingId
+            ? { ...r, ...form, updatedAt: now, updatedBy: by }
+            : r,
+        ),
+      );
+    } else {
+      void persist([
+        {
+          id: `dir-local-${Date.now()}`,
+          ...form,
+          updatedAt: now,
+          updatedBy: by,
+        },
+        ...rows,
+      ]);
+    }
+  }
+
   async function handleSave() {
     if (!form.name.trim()) {
       toast("Name is required", "error");
@@ -231,42 +266,26 @@ export default function DirectoryPage() {
     setBusy(true);
     try {
       if (useLiveData) {
-        const id = await saveDirectoryContact(
-          { ...form, id: editingId || undefined },
-          user?.username || "unknown",
-        );
-        toast(editingId ? "Contact updated" : "Contact added", "success");
-        await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
-        void id;
-      } else {
-        const now = new Date().toISOString();
-        if (editingId) {
-          await persist(
-            rows.map((r) =>
-              r.id === editingId
-                ? {
-                    ...r,
-                    ...form,
-                    updatedAt: now,
-                    updatedBy: user?.username || "demo",
-                  }
-                : r,
-            ),
+        try {
+          await saveDirectoryContact(
+            { ...form, id: editingId || undefined },
+            user?.username || "unknown",
           );
-          toast("Contact updated (mock)", "success");
-        } else {
-          const id = `dir-mock-${Date.now()}`;
-          await persist([
-            {
-              id,
-              ...form,
-              updatedAt: now,
-              updatedBy: user?.username || "demo",
-            },
-            ...rows,
-          ]);
-          toast("Contact added (mock)", "success");
+          toast(editingId ? "Contact updated" : "Contact added", "success");
+          await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
+        } catch (liveErr) {
+          // Preview / rules: keep CRM usable with a local row.
+          applyLocalSave();
+          toast(
+            liveErr instanceof Error
+              ? `Saved locally (${liveErr.message})`
+              : "Saved locally — live write failed",
+            "info",
+          );
         }
+      } else {
+        applyLocalSave();
+        toast(editingId ? "Contact updated" : "Contact added", "success");
       }
       setEditorOpen(false);
     } catch (e) {
@@ -322,13 +341,172 @@ export default function DirectoryPage() {
             Export CSV
           </Button>
           {canEdit ? (
-            <Button className="gap-1.5" onClick={openCreate}>
+            <Button
+              type="button"
+              className="gap-1.5"
+              aria-expanded={editorOpen}
+              onClick={() => {
+                if (editorOpen && !editingId) {
+                  setEditorOpen(false);
+                  return;
+                }
+                openCreate();
+              }}
+            >
               <Plus className="h-4 w-4" />
               Add contact
             </Button>
           ) : null}
         </div>
       </div>
+
+      {editorOpen ? (
+        <Card
+          className="border-[var(--color-atlas-sky)]/40 bg-sky-50/40"
+          id="directory-contact-editor"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">
+              {editingId ? "Edit contact" : "Add contact"}
+            </h2>
+            <Button
+              type="button"
+              variant="ghost"
+              className="px-2 py-1"
+              aria-label="Close editor"
+              onClick={() => setEditorOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label htmlFor="dir-name">Name *</Label>
+              <Input
+                id="dir-name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="dir-cat">Category</Label>
+              <Select
+                id="dir-cat"
+                value={form.category}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    category: e.target.value,
+                    sheetGroup:
+                      e.target.value === "agency"
+                        ? "agency"
+                        : f.sheetGroup === "agency"
+                          ? e.target.value
+                          : f.sheetGroup,
+                  }))
+                }
+              >
+                <option value="agency">agency (Overseas Agent)</option>
+                <option value="airline">airline</option>
+                <option value="liner">liner</option>
+                <option value="vendor">vendor</option>
+                <option value="other">other</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="dir-group-field">Sheet group</Label>
+              <Input
+                id="dir-group-field"
+                value={form.sheetGroup || ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, sheetGroup: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="dir-person">Contact person</Label>
+              <Input
+                id="dir-person"
+                value={form.contactPerson || ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, contactPerson: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="dir-loc">Location</Label>
+              <Input
+                id="dir-loc"
+                value={form.location || ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, location: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="dir-email">Email</Label>
+              <Input
+                id="dir-email"
+                type="email"
+                value={form.email || ""}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="dir-phone">Phone</Label>
+              <Input
+                id="dir-phone"
+                value={form.phone || ""}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="dir-agree">Agreement on file</Label>
+              <Select
+                id="dir-agree"
+                value={form.agreement || ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, agreement: e.target.value }))
+                }
+              >
+                <option value="">—</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </Select>
+            </div>
+            <div className="flex items-end pb-2">
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.suspended)}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, suspended: e.target.checked }))
+                  }
+                />
+                Suspended
+              </label>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="dir-notes">Notes</Label>
+              <Textarea
+                id="dir-notes"
+                rows={3}
+                value={form.notes || ""}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setEditorOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={busy} onClick={() => void handleSave()}>
+              {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+              {editingId ? "Save changes" : "Add contact"}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-2">
         <button
@@ -388,12 +566,17 @@ export default function DirectoryPage() {
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Label htmlFor="directory-search" className="sr-only">
+            Search contacts
+          </Label>
+          <Search className="pointer-events-none absolute left-3 top-[calc(50%+2px)] h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
-            className="pl-9"
+            id="directory-search"
+            className="mt-0 pl-9"
             placeholder="Search name, email, location…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            autoComplete="off"
           />
         </div>
         {groups.length > 0 ? (
@@ -413,6 +596,10 @@ export default function DirectoryPage() {
             </Select>
           </div>
         ) : null}
+        <div className="pb-2 text-xs font-semibold text-[var(--color-text-muted)]">
+          Showing {sectionRows.length} contact{sectionRows.length === 1 ? "" : "s"}
+          {search.trim() ? " (filtered)" : ""}
+        </div>
       </div>
 
       {isLoading ? (
@@ -500,147 +687,6 @@ export default function DirectoryPage() {
           </table>
         </div>
       )}
-
-      {editorOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setEditorOpen(false);
-          }}
-        >
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">
-              {editingId ? "Edit contact" : "Add contact"}
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Label htmlFor="dir-name">Name *</Label>
-                <Input
-                  id="dir-name"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="dir-cat">Category</Label>
-                <Select
-                  id="dir-cat"
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      category: e.target.value,
-                      sheetGroup:
-                        e.target.value === "agency"
-                          ? "agency"
-                          : f.sheetGroup === "agency"
-                            ? e.target.value
-                            : f.sheetGroup,
-                    }))
-                  }
-                >
-                  <option value="agency">agency (Overseas Agent)</option>
-                  <option value="airline">airline</option>
-                  <option value="liner">liner</option>
-                  <option value="vendor">vendor</option>
-                  <option value="other">other</option>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="dir-group-field">Sheet group</Label>
-                <Input
-                  id="dir-group-field"
-                  value={form.sheetGroup || ""}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, sheetGroup: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="dir-person">Contact person</Label>
-                <Input
-                  id="dir-person"
-                  value={form.contactPerson || ""}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, contactPerson: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="dir-loc">Location</Label>
-                <Input
-                  id="dir-loc"
-                  value={form.location || ""}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, location: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="dir-email">Email</Label>
-                <Input
-                  id="dir-email"
-                  type="email"
-                  value={form.email || ""}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="dir-phone">Phone</Label>
-                <Input
-                  id="dir-phone"
-                  value={form.phone || ""}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="dir-agree">Agreement on file</Label>
-                <Select
-                  id="dir-agree"
-                  value={form.agreement || ""}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, agreement: e.target.value }))
-                  }
-                >
-                  <option value="">—</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </Select>
-              </div>
-              <div className="flex items-end pb-2">
-                <label className="flex items-center gap-2 text-sm font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(form.suspended)}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, suspended: e.target.checked }))
-                    }
-                  />
-                  Suspended
-                </label>
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="dir-notes">Notes</Label>
-                <Textarea
-                  id="dir-notes"
-                  rows={3}
-                  value={form.notes || ""}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setEditorOpen(false)}>
-                Cancel
-              </Button>
-              <Button disabled={busy} onClick={() => void handleSave()}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {editingId ? "Save changes" : "Add contact"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
