@@ -14,6 +14,7 @@ import {
   PlaneTakeoff,
   Ship,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { appVersion } from "@/lib/env";
@@ -41,6 +42,7 @@ const navItems: Array<{
   { href: "/inbox", label: "Enquiry inbox", icon: Inbox, route: "inbox" },
   { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
   { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
+  { href: "/directory", label: "Directory", icon: Users, route: "directory" },
   { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
 ];
 

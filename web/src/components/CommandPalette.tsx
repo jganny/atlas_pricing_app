@@ -15,6 +15,7 @@ import {
   Search,
   Ship,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
@@ -43,6 +44,7 @@ const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
   { id: "inbox", label: "Enquiry inbox", href: "/inbox", icon: Inbox, group: "Tools", route: "inbox" },
   { id: "edb", label: "Enquiry database", href: "/enquiries", icon: Database, group: "Tools", route: "enquiries" },
   { id: "circulars", label: "Circulars library", href: "/circulars", icon: FileText, group: "Tools", route: "circulars" },
+  { id: "directory", label: "Directory CRM", href: "/directory", icon: Users, group: "Tools", route: "directory" },
   { id: "parity", label: "Feature parity tracker", href: "/feature-parity", icon: ClipboardCheck, group: "System", route: "feature-parity" },
 ];
 

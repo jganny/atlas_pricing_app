@@ -18,10 +18,12 @@ import {
   estimateSeaFreightFromTariff,
 } from "@/lib/pricing/estimate";
 import { fetchInboxEnquiries } from "@/lib/firebase/inbox";
+import { fetchDirectoryContacts } from "@/lib/firebase/directory";
 import type {
   AirTariff,
   AuthUser,
   CircularRecord,
+  DirectoryContact,
   EnquiryRecord,
   InboxEnquiry,
   SeaTariff,
@@ -80,6 +82,17 @@ async function fetchInbox(): Promise<InboxEnquiry[]> {
     }
   }
   return mockApi.fetchInbox();
+}
+
+async function fetchDirectory(): Promise<DirectoryContact[]> {
+  if (useLiveData) {
+    try {
+      return await withTimeout(fetchDirectoryContacts(), 8_000, []);
+    } catch {
+      return [];
+    }
+  }
+  return mockApi.fetchDirectory();
 }
 
 async function fetchAirTariffs(): Promise<AirTariff[]> {
@@ -224,6 +237,7 @@ export const atlasApi = {
   logout,
   fetchEnquiries,
   fetchInbox,
+  fetchDirectory,
   fetchAirTariffs,
   fetchSeaTariffs,
   fetchCirculars,

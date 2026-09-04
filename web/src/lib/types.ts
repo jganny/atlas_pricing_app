@@ -139,6 +139,23 @@ export interface CircularRecord {
   fileName?: string
 }
 
+/** Agent / vendor contact from Firestore `contactsDirectory`. */
+export interface DirectoryContact {
+  id: string
+  name: string
+  category: string
+  contactPerson?: string
+  email?: string
+  phone?: string
+  location?: string
+  notes?: string
+  sheetGroup?: string
+  agreement?: string
+  suspended?: boolean
+  updatedBy?: string
+  updatedAt?: string
+}
+
 export type InboxMailboxKey = 'pricing' | 'pricingsales'
 export type InboxStatus = 'new' | 'claimed' | 'applied' | 'ignored'
 

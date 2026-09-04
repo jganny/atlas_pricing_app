@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { atlasApi, useLiveData } from "@/lib/api";
 import { subscribeLiveEnquiries } from "@/lib/firebase/quotes";
 import { subscribeInboxEnquiries } from "@/lib/firebase/inbox";
+import { subscribeDirectoryContacts } from "@/lib/firebase/directory";
 import { mockApi } from "@/lib/mock/api";
 import { useAuthStore } from "@/store/auth";
 import { queryKeys } from "./query-keys";
@@ -134,6 +135,49 @@ export function useCirculars() {
     queryKey: queryKeys.circulars,
     queryFn: () => atlasApi.fetchCirculars(),
     staleTime: 5 * 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useDirectory() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeDirectoryContacts(
+      (rows) => queryClient.setQueryData(queryKeys.directory, rows),
+      (err) => {
+        console.warn("Directory sync:", err.message);
+        if (process.env.NODE_ENV === "development") {
+          void mockApi.fetchDirectory().then((rows) => {
+            const current = queryClient.getQueryData(queryKeys.directory);
+            if (!current || (Array.isArray(current) && current.length === 0)) {
+              queryClient.setQueryData(queryKeys.directory, rows);
+            }
+          });
+        }
+      },
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.directory,
+    queryFn: async () => {
+      try {
+        const rows = await atlasApi.fetchDirectory();
+        if (useLiveData && process.env.NODE_ENV === "development" && rows.length === 0) {
+          return mockApi.fetchDirectory();
+        }
+        return rows;
+      } catch {
+        if (process.env.NODE_ENV === "development") return mockApi.fetchDirectory();
+        return [];
+      }
+    },
+    staleTime: useLiveData ? Infinity : 60_000,
     retry: 1,
     enabled,
   });

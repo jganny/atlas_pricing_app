@@ -75,6 +75,7 @@ export const innovationItems: InnovationItem[] = [
 
   // Phase 11–14
   { id: "i11-rbac", name: "Role-based UI (RBAC)", phase: 11, status: "done", why: "Nav + soft route guard by desk login (Air Nom / Sea Nom / Free Hand / NRS / Admin)", react: "AppShell + RouteGuard" },
+  { id: "i11-directory", name: "Directory CRM", phase: 11, status: "done", why: "Agents/Vendors grid + search + CRUD + CSV; live Firestore contactsDirectory", react: "/directory" },
   { id: "i11-ai", name: "AI Smart Inbox", phase: 11, status: "partial", why: "Inbox re-parse on Apply shipped in Phase 10; live IMAP + smarter routing still open", react: "/inbox" },
   { id: "i14-sentry", name: "Sentry monitoring", phase: 14, status: "planned", why: "Pre-cutover observability", react: "Production" },
   { id: "i14-e2e", name: "Playwright E2E", phase: 14, status: "planned", why: "Automated parity tests", react: "CI" },

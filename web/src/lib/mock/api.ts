@@ -3,6 +3,7 @@ import { delay } from '@/lib/utils'
 import type { AirTariff, AuthUser, EnquiryRecord, SeaTariff, SmartQuoteDraft } from '@/lib/types'
 import {
   MOCK_AIR_TARIFFS,
+  MOCK_DIRECTORY,
   MOCK_ENQUIRIES,
   MOCK_INBOX,
   MOCK_SEA_TARIFFS,
@@ -41,6 +42,11 @@ export async function fetchEnquiries(): Promise<EnquiryRecord[]> {
 export async function fetchInbox(): Promise<import('@/lib/types').InboxEnquiry[]> {
   await delay(200)
   return [...MOCK_INBOX]
+}
+
+export async function fetchDirectory(): Promise<import('@/lib/types').DirectoryContact[]> {
+  await delay(200)
+  return [...MOCK_DIRECTORY]
 }
 
 export async function fetchAirTariffs(): Promise<AirTariff[]> {
@@ -153,6 +159,7 @@ export const mockApi = {
   login: mockLogin,
   fetchEnquiries,
   fetchInbox,
+  fetchDirectory,
   fetchAirTariffs,
   fetchSeaTariffs,
   runAirSmartQuote,

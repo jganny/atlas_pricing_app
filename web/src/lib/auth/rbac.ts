@@ -13,6 +13,7 @@ export type AppRouteId =
   | "inbox"
   | "enquiries"
   | "circulars"
+  | "directory"
   | "feature-parity"
   | "smart-quote";
 
@@ -24,18 +25,19 @@ const ALL: AppRouteId[] = [
   "inbox",
   "enquiries",
   "circulars",
+  "directory",
   "feature-parity",
   "smart-quote",
 ];
 
 /** Per-login allowed surfaces (admins bypass). */
 const ROLE_ROUTES: Record<string, AppRouteId[]> = {
-  shashank: ["dashboard", "air", "inbox", "enquiries", "circulars"],
-  shaheer: ["dashboard", "sea", "inbox", "enquiries", "circulars"],
-  kavya: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars"],
-  jaya: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars"],
-  cathrina: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars"],
-  pricing: ["dashboard", "air", "sea", "inbox", "enquiries", "circulars"],
+  shashank: ["dashboard", "air", "inbox", "enquiries", "circulars", "directory"],
+  shaheer: ["dashboard", "sea", "inbox", "enquiries", "circulars", "directory"],
+  kavya: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars", "directory"],
+  jaya: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars", "directory"],
+  cathrina: ["dashboard", "air", "sea", "courier", "inbox", "enquiries", "circulars", "directory"],
+  pricing: ["dashboard", "air", "sea", "inbox", "enquiries", "circulars", "directory"],
   preview: ALL,
 };
 
@@ -52,7 +54,7 @@ export function allowedRoutesForUser(
   if (ROLE_ROUTES[u]) return ROLE_ROUTES[u];
   // Unknown member — give core desks so they are not locked out
   if (TEAM_ROLES[u]?.type === "member") {
-    return ["dashboard", "air", "sea", "inbox", "enquiries", "circulars"];
+    return ["dashboard", "air", "sea", "inbox", "enquiries", "circulars", "directory"];
   }
   return ALL;
 }
@@ -76,6 +78,7 @@ export function routeIdFromPath(pathname: string): AppRouteId | null {
   if (p.startsWith("/inbox")) return "inbox";
   if (p.startsWith("/enquiries")) return "enquiries";
   if (p.startsWith("/circulars")) return "circulars";
+  if (p.startsWith("/directory")) return "directory";
   if (p.startsWith("/feature-parity")) return "feature-parity";
   if (p.startsWith("/smart-quote")) return "smart-quote";
   return null;
