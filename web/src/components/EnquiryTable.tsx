@@ -25,52 +25,79 @@ function slaTone(hours: number) {
   return "success" as const;
 }
 
+export type EdbColumnVisibility = {
+  lane: boolean;
+  desk: boolean;
+  carrier: boolean;
+  amount: boolean;
+  gp: boolean;
+  sla: boolean;
+};
+
 export function EnquiryTable({
   rows,
   selectedId,
   onSelect,
   metricModes,
+  visibleColumns,
 }: {
   rows: EnquiryRecord[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   metricModes: EdbMetricModes;
+  visibleColumns?: EdbColumnVisibility;
 }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "ref", desc: true }]);
+  const vis = visibleColumns ?? {
+    lane: true,
+    desk: true,
+    carrier: true,
+    amount: true,
+    gp: true,
+    sla: true,
+  };
 
   const columns = useMemo<ColumnDef<EnquiryRecord>[]>(
-    () => [
-      {
-        accessorKey: "ref",
-        header: "Ref",
-        cell: ({ row }) => <span className="font-semibold">{row.original.ref}</span>,
-      },
-      {
-        accessorKey: "customer",
-        header: "Customer",
-      },
-      {
-        accessorKey: "mode",
-        header: "Mode",
-        cell: ({ getValue }) => (
-          <span className="uppercase">{String(getValue())}</span>
-        ),
-      },
-      {
-        id: "lane",
-        header: "Lane",
-        accessorFn: (r) => `${r.origin} → ${r.destination}`,
-      },
-      {
-        accessorKey: "assignee",
-        header: "Desk",
-      },
-      {
-        accessorKey: "carrier",
-        header: "Carrier",
-        cell: ({ row }) => row.original.carrier || "—",
-      },
-      {
+    () => {
+      const defs: ColumnDef<EnquiryRecord>[] = [
+        {
+          accessorKey: "ref",
+          header: "Ref",
+          cell: ({ row }) => <span className="font-semibold">{row.original.ref}</span>,
+        },
+        {
+          accessorKey: "customer",
+          header: "Customer",
+        },
+        {
+          accessorKey: "mode",
+          header: "Mode",
+          cell: ({ getValue }) => (
+            <span className="uppercase">{String(getValue())}</span>
+          ),
+        },
+      ];
+      if (vis.lane) {
+        defs.push({
+          id: "lane",
+          header: "Lane",
+          accessorFn: (r) => `${r.origin} → ${r.destination}`,
+        });
+      }
+      if (vis.desk) {
+        defs.push({
+          accessorKey: "assignee",
+          header: "Desk",
+        });
+      }
+      if (vis.carrier) {
+        defs.push({
+          accessorKey: "carrier",
+          header: "Carrier",
+          cell: ({ row }) => row.original.carrier || "—",
+        });
+      }
+      defs.push({
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
@@ -89,44 +116,53 @@ export function EnquiryTable({
             </Badge>
           );
         },
-      },
-      {
-        accessorKey: "slaHoursOpen",
-        header: "SLA",
-        cell: ({ row }) => {
-          const r = row.original;
-          if (r.status !== "open" && r.status !== "quoted") return "—";
-          return <Badge tone={slaTone(r.slaHoursOpen)}>{r.slaHoursOpen}h open</Badge>;
-        },
-      },
-      {
-        id: "buy",
-        header: metricModes.buy === "perkg" ? "Buy /kg" : "Buy",
-        accessorFn: (r) => r.buyTotal ?? r.grandTotal ?? 0,
-        cell: ({ row }) => (
-          <span className="tabular-nums">{formatBuyCell(row.original, metricModes.buy)}</span>
-        ),
-      },
-      {
-        id: "sell",
-        header: metricModes.sell === "perkg" ? "Sell /kg" : "Sell",
-        accessorFn: (r) => r.grandTotal ?? 0,
-        cell: ({ row }) => (
-          <span className="tabular-nums">{formatSellCell(row.original, metricModes.sell)}</span>
-        ),
-      },
-      {
-        id: "gp",
-        header: metricModes.gp === "percent" ? "GP %" : "GP",
-        accessorFn: (r) => r.grossProfit ?? 0,
-        cell: ({ row }) => (
-          <span className="tabular-nums font-semibold text-emerald-700">
-            {formatGpCell(row.original, metricModes.gp)}
-          </span>
-        ),
-      },
-    ],
-    [metricModes],
+      });
+      if (vis.sla) {
+        defs.push({
+          accessorKey: "slaHoursOpen",
+          header: "SLA",
+          cell: ({ row }) => {
+            const r = row.original;
+            if (r.status !== "open" && r.status !== "quoted") return "—";
+            return <Badge tone={slaTone(r.slaHoursOpen)}>{r.slaHoursOpen}h open</Badge>;
+          },
+        });
+      }
+      if (vis.amount) {
+        defs.push(
+          {
+            id: "buy",
+            header: metricModes.buy === "perkg" ? "Buy /kg" : "Buy",
+            accessorFn: (r) => r.buyTotal ?? r.grandTotal ?? 0,
+            cell: ({ row }) => (
+              <span className="tabular-nums">{formatBuyCell(row.original, metricModes.buy)}</span>
+            ),
+          },
+          {
+            id: "sell",
+            header: metricModes.sell === "perkg" ? "Sell /kg" : "Sell",
+            accessorFn: (r) => r.grandTotal ?? 0,
+            cell: ({ row }) => (
+              <span className="tabular-nums">{formatSellCell(row.original, metricModes.sell)}</span>
+            ),
+          },
+        );
+      }
+      if (vis.gp) {
+        defs.push({
+          id: "gp",
+          header: metricModes.gp === "percent" ? "GP %" : "GP",
+          accessorFn: (r) => r.grossProfit ?? 0,
+          cell: ({ row }) => (
+            <span className="tabular-nums font-semibold text-emerald-700">
+              {formatGpCell(row.original, metricModes.gp)}
+            </span>
+          ),
+        });
+      }
+      return defs;
+    },
+    [metricModes, vis.amount, vis.carrier, vis.desk, vis.gp, vis.lane, vis.sla],
   );
 
   const table = useReactTable({

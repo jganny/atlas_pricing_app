@@ -80,12 +80,14 @@ export const innovationItems: InnovationItem[] = [
   { id: "i11-circulars", name: "Circulars manage + Excel publish", phase: 11, status: "done", why: "Upload/delete/categories + Excel→air_tariffs", react: "/circulars" },
   { id: "i11-sales", name: "Sales kanban + activity", phase: 11, status: "done", why: "Drag-drop pipeline + lead activity log", react: "/sales" },
   { id: "i10-transport", name: "Transport & warehouse desks", phase: 10, status: "done", why: "Charge desks with save + ⌘S", react: "/transport /warehouse" },
-  { id: "i12-admin", name: "Admin credit + NRS capture", phase: 12, status: "done", why: "Credit control + NRS parties + user queue", react: "/admin" },
+  { id: "i12-admin", name: "Admin credit + NRS capture", phase: 12, status: "done", why: "Credit control + NRS parties + user/reset queues", react: "/admin" },
   { id: "i13-analytics", name: "Analytics + ops + modules", phase: 13, status: "done", why: "KPI/leaderboard, ops board, finance/docs/HR shells", react: "/analytics /ops" },
+  { id: "i13-member-home", name: "Member home + amendment queue", phase: 13, status: "done", why: "Sticky notes, SMS outbox, offline restore, admin amend approvals", react: "/" },
   { id: "i14-shell", name: "Mobile nav + FX + offline badge", phase: 14, status: "done", why: "Shell polish for cutover readiness", react: "AppShell" },
+  { id: "i14-help", name: "Help FAB + FAQ", phase: 14, status: "done", why: "In-app help without leaving desk", react: "HelpFab" },
   { id: "i14-sentry", name: "Sentry monitoring", phase: 14, status: "planned", why: "Pre-cutover observability", react: "Production" },
   { id: "i14-e2e", name: "Playwright E2E", phase: 14, status: "planned", why: "Automated parity tests", react: "CI" },
-  { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "partial", why: "Manifest + offline badge; SW deferred", react: "public/manifest" },
+  { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "partial", why: "Manifest + offline quote cache; SW deferred", react: "public/manifest + offline-cache" },
 ];
 
 export function innovationStats(items: InnovationItem[] = innovationItems) {

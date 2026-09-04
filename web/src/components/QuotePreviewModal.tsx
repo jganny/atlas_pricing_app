@@ -115,13 +115,25 @@ export function QuotePreviewModal({
 
         <div className="p-6 print:p-8">
           <div className="mb-6 border-b-2 border-[var(--color-atlas-navy)] pb-4">
-            <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-atlas-navy)]">
-              Atlas Pricing
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-atlas-navy)]">
+                  Atlas Logistics
+                </div>
+                <h1 className="mt-1 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
+                  Official Freight Quotation
+                </h1>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  This quotation is subject to carrier space and the terms below.
+                </p>
+              </div>
+              <div className="text-right text-xs text-[var(--color-text-muted)]">
+                <div>Ref #{ref}</div>
+                <div>{quote.date || "—"}</div>
+                <div>Prepared by {quote.creator || "—"}</div>
+              </div>
             </div>
-            <h1 className="mt-1 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
-              Freight Quotation
-            </h1>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <Badge tone="info">#{ref}</Badge>
               <Badge
                 tone={

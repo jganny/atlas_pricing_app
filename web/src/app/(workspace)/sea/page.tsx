@@ -12,6 +12,8 @@ import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
+import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
+import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { useLiveData } from "@/lib/api";
 import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
@@ -73,6 +75,12 @@ function SeaDeskInner() {
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [stripKey, setStripKey] = useState(0);
+
+  useEffect(() => {
+    if (loader.sourceQuote || loader.smartPrefill) return;
+    setCurrency(defaultDeskCurrency(user?.username));
+    setIncoterm(defaultIncoterm(user?.username));
+  }, [user?.username, loader.sourceQuote, loader.smartPrefill]);
 
   const selected = liners.find((l) => l.selected) ?? liners[0];
 
@@ -163,8 +171,8 @@ function SeaDeskInner() {
     setCustomer("");
     setOrigin("");
     setDestination("");
-    setCurrency("USD");
-    setIncoterm("FOB");
+    setCurrency(defaultDeskCurrency(user?.username));
+    setIncoterm(defaultIncoterm(user?.username));
     setModule("export");
     setMode("fcl");
     setGrossWeightKg(0);
@@ -300,6 +308,12 @@ function SeaDeskInner() {
             status: loader.editingStatus,
           });
           await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+          cacheOfflineQuote({
+            id,
+            type: "sea",
+            customer: customer.trim(),
+            payload: { origin, destination, currency, amount: selectedTotals.grandSell },
+          });
           const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
           setSaveMsg(msg);
           toast(msg, "success");
@@ -455,15 +469,35 @@ function SeaDeskInner() {
                 </Label>
                 <Label>
                   POL
-                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="" />
+                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="INNSA…" />
+                  {origin.trim() ? (
+                    <a
+                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${origin.trim()} port`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open port map
+                    </a>
+                  ) : null}
                 </Label>
                 <Label>
                   POD
                   <Input
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    placeholder=""
+                    placeholder="CNSHA…"
                   />
+                  {destination.trim() ? (
+                    <a
+                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${destination.trim()} port`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open port map
+                    </a>
+                  ) : null}
                 </Label>
                 <Label>
                   Mode

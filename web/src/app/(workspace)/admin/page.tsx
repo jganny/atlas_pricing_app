@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Shield, UserPlus } from "lucide-react";
+import { KeyRound, Shield, UserPlus } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useCreditControls } from "@/hooks/use-atlas-data";
@@ -12,6 +12,14 @@ import { useLiveData } from "@/lib/api";
 import { saveCreditControl } from "@/lib/firebase/admin-data";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 import type { CreditControl } from "@/lib/types";
+
+type ResetRequest = { username: string; at: number; status: string };
+type PendingUser = {
+  username: string;
+  displayName: string;
+  role: string;
+  at: number;
+};
 
 export default function AdminPage() {
   const user = useAuthStore((s) => s.user);
@@ -33,6 +41,17 @@ export default function AdminPage() {
     blocked: false,
     notes: "",
   });
+  const [resets, setResets] = useState<ResetRequest[]>([]);
+  const [queuedUsers, setQueuedUsers] = useState<PendingUser[]>([]);
+
+  useEffect(() => {
+    try {
+      setResets(JSON.parse(localStorage.getItem("atlas_password_reset_requests") || "[]"));
+      setQueuedUsers(JSON.parse(localStorage.getItem("atlas_pending_users") || "[]"));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   if (!admin) {
     return (
@@ -73,6 +92,20 @@ export default function AdminPage() {
     } catch (e) {
       toast(e instanceof Error ? e.message : "Save failed", "error");
     }
+  }
+
+  function markReset(username: string, status: "done" | "dismissed") {
+    const next = resets.map((r) =>
+      r.username === username && r.status === "pending" ? { ...r, status } : r,
+    );
+    setResets(next);
+    localStorage.setItem("atlas_password_reset_requests", JSON.stringify(next));
+    toast(
+      status === "done"
+        ? `Marked reset processed for ${username} — complete in Firebase Auth console`
+        : `Dismissed reset for ${username}`,
+      "success",
+    );
   }
 
   return (
@@ -131,8 +164,10 @@ export default function AdminPage() {
                 try {
                   const key = "atlas_pending_users";
                   const prev = JSON.parse(localStorage.getItem(key) || "[]");
-                  prev.push({ ...newUser, at: Date.now() });
+                  const entry = { ...newUser, at: Date.now() };
+                  prev.push(entry);
                   localStorage.setItem(key, JSON.stringify(prev));
+                  setQueuedUsers(prev);
                   toast(`Queued user ${newUser.username}`, "success");
                   setNewUser({ username: "", displayName: "", role: "pricing" });
                 } catch {
@@ -142,7 +177,70 @@ export default function AdminPage() {
             >
               Queue registration
             </Button>
+            {queuedUsers.length > 0 ? (
+              <ul className="mt-3 max-h-36 space-y-1 overflow-auto text-xs">
+                {queuedUsers
+                  .slice()
+                  .reverse()
+                  .slice(0, 8)
+                  .map((u, i) => (
+                    <li key={`${u.username}-${i}`} className="rounded bg-slate-50 px-2 py-1">
+                      {u.username} · {u.role}
+                      {u.displayName ? ` · ${u.displayName}` : ""}
+                    </li>
+                  ))}
+              </ul>
+            ) : null}
           </div>
+        </Card>
+
+        <Card>
+          <h2 className="mb-2 flex items-center gap-2 font-bold">
+            <KeyRound className="h-4 w-4" />
+            Password reset queue
+          </h2>
+          <p className="mb-3 text-xs text-[var(--color-text-muted)]">
+            Requests from the login “Forgot password” form. Process the actual password in Firebase
+            Auth, then mark done here.
+          </p>
+          {resets.filter((r) => r.status === "pending").length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No pending reset requests.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {resets
+                .filter((r) => r.status === "pending")
+                .map((r) => (
+                  <li
+                    key={`${r.username}-${r.at}`}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
+                  >
+                    <div>
+                      <div className="font-semibold">{r.username}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">
+                        {new Date(r.at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        className="px-3 py-1 text-xs"
+                        onClick={() => markReset(r.username, "done")}
+                      >
+                        Mark done
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="px-3 py-1 text-xs"
+                        onClick={() => markReset(r.username, "dismissed")}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          )}
         </Card>
 
         <Card>

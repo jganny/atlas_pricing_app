@@ -17,6 +17,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState(
     process.env.NEXT_PUBLIC_MOCK_MODE !== "false" ? "demo" : "",
   );
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotUser, setForgotUser] = useState("");
+  const [forgotMsg, setForgotMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) router.replace(preferredHomePath(user.username, user.role));
@@ -80,6 +83,51 @@ export default function LoginPage() {
             {loading ? "Signing in…" : "Enter workspace"}
           </Button>
         </form>
+        <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+          <button
+            type="button"
+            className="text-xs font-semibold text-sky-700 hover:underline"
+            onClick={() => setForgotOpen((v) => !v)}
+          >
+            Forgot / change password?
+          </button>
+          {forgotOpen ? (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Submits a reset request for admin review (same as legacy password_resets).
+              </p>
+              <input
+                className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+                placeholder="Your desk username"
+                value={forgotUser}
+                onChange={(e) => setForgotUser(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  const u = (forgotUser || username).trim();
+                  if (!u) return;
+                  try {
+                    const key = "atlas_password_reset_requests";
+                    const prev = JSON.parse(localStorage.getItem(key) || "[]");
+                    prev.unshift({ username: u, at: Date.now(), status: "pending" });
+                    localStorage.setItem(key, JSON.stringify(prev));
+                    setForgotMsg(`Reset requested for “${u}”. Ask an admin to process it.`);
+                  } catch {
+                    setForgotMsg("Could not save request locally.");
+                  }
+                }}
+              >
+                Request password reset
+              </Button>
+              {forgotMsg ? (
+                <p className="text-xs font-semibold text-emerald-700">{forgotMsg}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </Card>
     </div>
   );

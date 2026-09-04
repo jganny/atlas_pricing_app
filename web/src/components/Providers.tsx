@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HelpFab } from "@/components/HelpFab";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastContainer } from "@/components/Toast";
@@ -121,6 +122,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ErrorBoundary>
         <AuthSync />
         <CommandPalette />
+        <HelpFab />
         <ToastContainer />
         {children}
       </ErrorBoundary>

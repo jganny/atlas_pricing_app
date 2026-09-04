@@ -21,11 +21,14 @@ import {
   fetchQuoteById,
   setQuoteStatus,
 } from "@/lib/firebase/quote-lifecycle";
+import { isAmendmentGrantActive, requestAmendment } from "@/lib/firebase/amendments";
 import { deskPathForQuote } from "@/lib/quotes/desk-loader";
 import { useLiveData } from "@/lib/api";
 import { queryKeys } from "@/hooks/query-keys";
+import { useAuthStore } from "@/store/auth";
 import { toast } from "@/components/Toast";
 import { formatCurrency } from "@/lib/utils";
+import { isAdminUser } from "@/lib/quotes/team-roles";
 
 export function EnquiryInspector({
   row,
@@ -36,6 +39,7 @@ export function EnquiryInspector({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [quote, setQuote] = useState<SavedQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -44,6 +48,9 @@ export function EnquiryInspector({
   const [shipperName, setShipperName] = useState("");
   const [consigneeName, setConsigneeName] = useState("");
   const [commodity, setCommodity] = useState("");
+  const [amdReason, setAmdReason] = useState("");
+  const [showAmd, setShowAmd] = useState(false);
+  const admin = isAdminUser(user?.username, user?.role);
 
   async function loadFullQuote(): Promise<SavedQuote | null> {
     if (quote) return quote;
@@ -76,6 +83,14 @@ export function EnquiryInspector({
   async function goToDesk(mode: "edit" | "duplicate") {
     const q = await loadFullQuote();
     if (!q) return;
+    if (mode === "edit" && !admin) {
+      const unlocked = isAmendmentGrantActive(q.id, user?.username || "");
+      if (!unlocked && (q.status === "quoted" || q.status === "won" || row.status === "quoted" || row.status === "won")) {
+        toast("Request amendment unlock — an admin must approve before you can amend.", "info");
+        setShowAmd(true);
+        return;
+      }
+    }
     const path = deskPathForQuote(q);
     if (!path) {
       const msg = `Desk not available in React for ${q.type} — use legacy app.`;
@@ -226,6 +241,9 @@ export function EnquiryInspector({
                 <Pencil className="mr-2 h-4 w-4" />
                 Amend on desk
               </Button>
+              <Button type="button" variant="secondary" disabled={loading} onClick={() => setShowAmd(true)}>
+                Request amendment unlock
+              </Button>
               <Button type="button" variant="secondary" disabled={loading} onClick={() => void goToDesk("duplicate")}>
                 <Copy className="mr-2 h-4 w-4" />
                 Duplicate to desk
@@ -249,6 +267,50 @@ export function EnquiryInspector({
             <span className="text-red-600">Delete</span>
           </Button>
         </div>
+
+        {showAmd ? (
+          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+            <p className="text-sm font-bold text-amber-950">Request amendment unlock</p>
+            <input
+              className="w-full rounded border px-2 py-1.5 text-sm"
+              placeholder="Reason (optional)"
+              value={amdReason}
+              onChange={(e) => setAmdReason(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  void (async () => {
+                    setLoading(true);
+                    try {
+                      await requestAmendment({
+                        quoteId: row.id,
+                        quoteRef: row.ref,
+                        customer: row.customer,
+                        requestedBy: user?.username || "desk",
+                        reason: amdReason,
+                      });
+                      toast("Amendment request sent to admins", "success");
+                      setShowAmd(false);
+                      setAmdReason("");
+                    } catch (e) {
+                      toast(e instanceof Error ? e.message : "Request failed", "error");
+                    } finally {
+                      setLoading(false);
+                    }
+                  })();
+                }}
+              >
+                Submit request
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setShowAmd(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {showWon ? (
           <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">

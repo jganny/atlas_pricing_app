@@ -20,6 +20,8 @@ import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
+import { defaultDeskCurrency, defaultIncoterm, shouldHideAgencyAgreement } from "@/lib/auth/desk-rules";
+import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { useLiveData } from "@/lib/api";
 import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
@@ -89,6 +91,13 @@ function AirDeskInner() {
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [stripKey, setStripKey] = useState(0);
+  const hideAgreement = shouldHideAgencyAgreement(user?.username);
+
+  useEffect(() => {
+    if (loader.sourceQuote || loader.smartPrefill) return;
+    setCurrency(defaultDeskCurrency(user?.username));
+    setIncoterm(defaultIncoterm(user?.username));
+  }, [user?.username, loader.sourceQuote, loader.smartPrefill]);
 
   const selected = airlines.find((a) => a.selected) ?? airlines[0];
 
@@ -172,8 +181,8 @@ function AirDeskInner() {
     setCustomer("");
     setOrigin("");
     setDestination("");
-    setCurrency("USD");
-    setIncoterm("FOB");
+    setCurrency(defaultDeskCurrency(user?.username));
+    setIncoterm(defaultIncoterm(user?.username));
     setCommodity("GENERAL");
     setModule("export");
     setCustomFx(0);
@@ -301,9 +310,18 @@ function AirDeskInner() {
             status: loader.editingStatus,
           });
           await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+          cacheOfflineQuote({
+            id,
+            type: "air",
+            customer: customer.trim(),
+            payload: { origin, destination, currency, amount: selectedTotals.grandSell },
+          });
           const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
           setSaveMsg(msg);
           toast(msg, "success");
+          if (!hideAgreement) {
+            /* Nomination desks keep agreement compliance in Directory */
+          }
           if (openPreview) {
             const q = await fetchQuoteById(id);
             if (q) setPreviewQuote(q);
@@ -458,15 +476,35 @@ function AirDeskInner() {
                 </Label>
                 <Label>
                   POL
-                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="" />
+                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="BOM / DEL…" />
+                  {origin.trim() ? (
+                    <a
+                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${origin.trim()} airport`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open airport map
+                    </a>
+                  ) : null}
                 </Label>
                 <Label>
                   POD
                   <Input
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    placeholder=""
+                    placeholder="DXB / SIN…"
                   />
+                  {destination.trim() ? (
+                    <a
+                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${destination.trim()} airport`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open airport map
+                    </a>
+                  ) : null}
                 </Label>
                 <Label>
                   Currency
@@ -845,6 +883,15 @@ function AirDeskInner() {
               >
                 Restore default air terms
               </button>
+              {!hideAgreement ? (
+                <p className="rounded-lg border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                  Nomination desk: keep agency agreement files current in Directory (sidebar).
+                </p>
+              ) : (
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  NRS / Free Hand — agency agreement upload is hidden for this desk category.
+                </p>
+              )}
               <div className="flex justify-between">
                 <Button type="button" variant="secondary" onClick={() => setStep("carrier")}>
                   Back

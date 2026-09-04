@@ -80,6 +80,18 @@ function EnquiryDatabaseInner() {
   const [pipeline, setPipeline] = useState("all");
   const [modeFilter, setModeFilter] = useState<string>("all");
   const [deskFilter, setDeskFilter] = useState<string>(admin ? "all" : "mine");
+  const [originFilter, setOriginFilter] = useState("");
+  const [destFilter, setDestFilter] = useState("");
+  const [carrierFilter, setCarrierFilter] = useState("");
+  const [columns, setColumns] = useState({
+    lane: true,
+    desk: true,
+    carrier: true,
+    amount: true,
+    gp: true,
+    sla: true,
+  });
+  const [showColumns, setShowColumns] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
   const [metricModes, setMetricModes] = useState<EdbMetricModes>(DEFAULT_EDB_METRIC_MODES);
   const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
@@ -119,6 +131,14 @@ function EnquiryDatabaseInner() {
       if (row.creator === "mahendra") return false;
       if (!chip.match(row)) return false;
       if (modeFilter !== "all" && row.mode !== modeFilter) return false;
+      if (originFilter && !row.origin.toLowerCase().includes(originFilter.toLowerCase())) return false;
+      if (destFilter && !row.destination.toLowerCase().includes(destFilter.toLowerCase())) return false;
+      if (
+        carrierFilter &&
+        !(row.carrier || "").toLowerCase().includes(carrierFilter.toLowerCase())
+      ) {
+        return false;
+      }
       if (deskFilter === "mine") {
         if (row.creator !== username && row.assignee.toLowerCase() !== username) return false;
       } else if (!matchesDeskFilter(row.creator, deskFilter)) {
@@ -129,7 +149,7 @@ function EnquiryDatabaseInner() {
         `${row.ref} ${row.customer} ${row.origin} ${row.destination} ${row.assignee} ${row.creator} ${row.carrier || ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, search, pipeline, modeFilter, deskFilter, user?.username]);
+  }, [rows, search, pipeline, modeFilter, deskFilter, user?.username, originFilter, destFilter, carrierFilter]);
 
   const selected =
     filtered.find((r) => r.id === selectedId) ??
@@ -384,7 +404,57 @@ function EnquiryDatabaseInner() {
                 </option>
               ))}
             </select>
+            <input
+              className="w-24 rounded-lg border px-2 py-2 text-sm"
+              placeholder="POL"
+              value={originFilter}
+              onChange={(e) => setOriginFilter(e.target.value)}
+            />
+            <input
+              className="w-24 rounded-lg border px-2 py-2 text-sm"
+              placeholder="POD"
+              value={destFilter}
+              onChange={(e) => setDestFilter(e.target.value)}
+            />
+            <input
+              className="w-28 rounded-lg border px-2 py-2 text-sm"
+              placeholder="Carrier"
+              value={carrierFilter}
+              onChange={(e) => setCarrierFilter(e.target.value)}
+            />
+            <button
+              type="button"
+              className="rounded-lg border px-3 py-2 text-xs font-bold"
+              onClick={() => setShowColumns((v) => !v)}
+            >
+              Columns
+            </button>
           </Card>
+          {showColumns ? (
+            <Card className="flex flex-wrap gap-3 p-3 text-xs font-semibold">
+              {(
+                [
+                  ["lane", "Lane"],
+                  ["desk", "Desk"],
+                  ["carrier", "Carrier"],
+                  ["amount", "Amount"],
+                  ["gp", "GP"],
+                  ["sla", "SLA"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="inline-flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={columns[key]}
+                    onChange={(e) =>
+                      setColumns((c) => ({ ...c, [key]: e.target.checked }))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </Card>
+          ) : null}
 
           <Card className="overflow-x-auto p-0">
             {isLoading ? (
@@ -395,6 +465,7 @@ function EnquiryDatabaseInner() {
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 metricModes={metricModes}
+                visibleColumns={columns}
               />
             )}
           </Card>
