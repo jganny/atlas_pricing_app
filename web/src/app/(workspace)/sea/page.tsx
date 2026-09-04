@@ -10,6 +10,7 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { PortMapEmbed } from "@/components/PortMapEmbed";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
@@ -470,16 +471,7 @@ function SeaDeskInner() {
                 <Label>
                   POL
                   <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="INNSA…" />
-                  {origin.trim() ? (
-                    <a
-                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${origin.trim()} port`)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open port map
-                    </a>
-                  ) : null}
+                  <PortMapEmbed query={origin} kind="port" />
                 </Label>
                 <Label>
                   POD
@@ -488,16 +480,7 @@ function SeaDeskInner() {
                     onChange={(e) => setDestination(e.target.value)}
                     placeholder="CNSHA…"
                   />
-                  {destination.trim() ? (
-                    <a
-                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${destination.trim()} port`)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open port map
-                    </a>
-                  ) : null}
+                  <PortMapEmbed query={destination} kind="port" />
                 </Label>
                 <Label>
                   Mode

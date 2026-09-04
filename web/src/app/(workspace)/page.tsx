@@ -15,6 +15,8 @@ import {
   Users,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
+import { LogisticsNewsFeed } from "@/components/LogisticsNewsFeed";
+import { PerformanceReportPanel } from "@/components/PerformanceReportPanel";
 import { Badge, Button, Card, Input, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
@@ -27,6 +29,8 @@ import {
   type AmendmentRequest,
 } from "@/lib/firebase/amendments";
 import { listOfflineQuotes, removeOfflineQuote } from "@/lib/quotes/offline-cache";
+import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
+import { listSmsOutbox, sendSms } from "@/lib/sms/gateway";
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
 import { formatCurrency } from "@/lib/utils";
 
@@ -45,7 +49,8 @@ export default function DashboardPage() {
   const [offline, setOffline] = useState(listOfflineQuotes());
   const [smsTo, setSmsTo] = useState("");
   const [smsBody, setSmsBody] = useState("");
-  const [smsLog, setSmsLog] = useState<Array<{ to: string; body: string; at: number }>>([]);
+  const [smsLog, setSmsLog] = useState(listSmsOutbox());
+  const [nrsAlerts, setNrsAlerts] = useState<NrsAlert[]>([]);
 
   useEffect(() => {
     try {
@@ -54,7 +59,8 @@ export default function DashboardPage() {
         string
       >;
       setSticky(all[username] || "");
-      setSmsLog(JSON.parse(localStorage.getItem("atlas_sms_outbox") || "[]"));
+      setSmsLog(listSmsOutbox());
+      setNrsAlerts(listNrsAlerts().filter((a) => !a.dismissed));
     } catch {
       setSticky("");
     }
@@ -138,17 +144,27 @@ export default function DashboardPage() {
       toast("Phone and message required", "error");
       return;
     }
-    try {
-      const entry = { to: smsTo.trim(), body: smsBody.trim(), at: Date.now(), by: username };
-      const prev = JSON.parse(localStorage.getItem("atlas_sms_outbox") || "[]");
-      const next = [entry, ...prev].slice(0, 40);
-      localStorage.setItem("atlas_sms_outbox", JSON.stringify(next));
-      setSmsLog(next);
-      setSmsBody("");
-      toast("SMS queued locally — wire gateway credentials for live send", "success");
-    } catch {
-      toast("Could not queue SMS", "error");
-    }
+    void (async () => {
+      try {
+        const entry = await sendSms({
+          to: smsTo.trim(),
+          body: smsBody.trim(),
+          by: username,
+        });
+        setSmsLog(listSmsOutbox());
+        setSmsBody("");
+        toast(
+          entry.via === "device"
+            ? "Opened device SMS app"
+            : entry.via === "webhook"
+              ? "Sent via webhook"
+              : "SMS queued locally",
+          "success",
+        );
+      } catch {
+        toast("Could not send SMS", "error");
+      }
+    })();
   }
 
   async function onResolve(id: string, status: "approved" | "rejected") {
@@ -461,6 +477,43 @@ export default function DashboardPage() {
               )}
             </Card>
           ) : null}
+
+          {!admin && nrsAlerts.length > 0 ? (
+            <Card className="border-amber-200 bg-amber-50/50">
+              <h2 className="mb-2 font-bold text-amber-950">NRS confirmation alerts</h2>
+              <ul className="space-y-2 text-sm">
+                {nrsAlerts.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-start justify-between gap-2 rounded-md bg-white/80 px-3 py-2"
+                  >
+                    <div>
+                      <div className="font-semibold">{a.message}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">
+                        {new Date(a.date).toLocaleString()}
+                        {a.quoteRef ? ` · ${a.quoteRef}` : ""}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="text-xs"
+                      onClick={() => {
+                        dismissNrsAlert(a.id);
+                        setNrsAlerts(listNrsAlerts().filter((x) => !x.dismissed));
+                      }}
+                    >
+                      Dismiss
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
+          {admin ? <PerformanceReportPanel rows={enquiries} /> : null}
+
+          <LogisticsNewsFeed />
 
           <Card>
             <div className="mb-2 flex items-center justify-between">

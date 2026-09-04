@@ -10,6 +10,14 @@ import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { saveCreditControl } from "@/lib/firebase/admin-data";
+import {
+  clearRuntimeFirebaseConfig,
+  loadGmapsKey,
+  loadRuntimeFirebaseConfig,
+  parseFirebaseConfigPaste,
+  saveGmapsKey,
+  saveRuntimeFirebaseConfig,
+} from "@/lib/firebase/runtime-config";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 import type { CreditControl } from "@/lib/types";
 
@@ -43,11 +51,16 @@ export default function AdminPage() {
   });
   const [resets, setResets] = useState<ResetRequest[]>([]);
   const [queuedUsers, setQueuedUsers] = useState<PendingUser[]>([]);
+  const [fbPaste, setFbPaste] = useState("");
+  const [gmapsKey, setGmapsKey] = useState("");
 
   useEffect(() => {
     try {
       setResets(JSON.parse(localStorage.getItem("atlas_password_reset_requests") || "[]"));
       setQueuedUsers(JSON.parse(localStorage.getItem("atlas_pending_users") || "[]"));
+      const runtime = loadRuntimeFirebaseConfig();
+      if (runtime) setFbPaste(JSON.stringify(runtime, null, 2));
+      setGmapsKey(loadGmapsKey());
     } catch {
       /* ignore */
     }
@@ -367,6 +380,68 @@ export default function AdminPage() {
             </li>
           ))}
         </ul>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 font-bold">Firebase config / reconnect</h2>
+        <p className="mb-3 text-xs text-[var(--color-text-muted)]">
+          Paste a Firebase web config JSON to override env defaults (legacy gl_firebase_config).
+          Saving reloads the app so Auth/Firestore reconnect.
+        </p>
+        <textarea
+          className="min-h-32 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 font-mono text-xs"
+          placeholder='{"apiKey":"...","projectId":"vertex-35d95",...}'
+          value={fbPaste}
+          onChange={(e) => setFbPaste(e.target.value)}
+        />
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => {
+              try {
+                const cfg = parseFirebaseConfigPaste(fbPaste);
+                saveRuntimeFirebaseConfig(cfg);
+                toast("Firebase config saved — reloading…", "success");
+                window.setTimeout(() => window.location.reload(), 600);
+              } catch (e) {
+                toast(e instanceof Error ? e.message : "Invalid config", "error");
+              }
+            }}
+          >
+            Save & reconnect
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              clearRuntimeFirebaseConfig();
+              toast("Cleared override — using env defaults", "success");
+              window.setTimeout(() => window.location.reload(), 600);
+            }}
+          >
+            Clear override
+          </Button>
+        </div>
+        <div className="mt-4 border-t pt-3">
+          <Label>Google Maps embed API key (optional)</Label>
+          <Input
+            className="mt-1"
+            value={gmapsKey}
+            onChange={(e) => setGmapsKey(e.target.value)}
+            placeholder="AIza…"
+          />
+          <Button
+            type="button"
+            className="mt-2"
+            variant="secondary"
+            onClick={() => {
+              saveGmapsKey(gmapsKey);
+              toast(gmapsKey.trim() ? "Maps key saved" : "Maps key cleared", "success");
+            }}
+          >
+            Save Maps key
+          </Button>
+        </div>
       </Card>
     </div>
   );

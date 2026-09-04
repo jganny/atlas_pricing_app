@@ -67,11 +67,11 @@ export const innovationItems: InnovationItem[] = [
   { id: "i8-confidence", name: "Field-level confidence review", phase: 8, status: "done", why: "Edit before apply — better than legacy status string", react: "Smart Quote" },
   { id: "i8-apply-desk", name: "One-click apply to desk", phase: 8, status: "done", why: "Prefill Air/Sea from Smart Quote", react: "/air /sea" },
   { id: "i10-option-a", name: "Option A — paste on desk", phase: 10, status: "done", why: "Refined parse + editable review before Apply; rates blank until Circulars", react: "/air /sea" },
-  { id: "i10-option-b", name: "Option B — Home New quote launcher", phase: 10, status: "planned", why: "Ruled out — duplicated desk paste; removed from Dashboard", react: "removed" },
+  { id: "i10-option-b", name: "Option B — Home New quote launcher", phase: 10, status: "done", why: "Ruled out — Option A desk paste is the supported path", react: "removed" },
   { id: "i9-search", name: "Full-text quote find in ⌘K", phase: 9, status: "done", why: "Ranked ref/customer/carrier → Enquiry DB inspector", react: "Command palette + /enquiries" },
   { id: "i9-gp-modes", name: "Buy/Sell/GP metric modes", phase: 9, status: "done", why: "Finance view without leaving the list", react: "/enquiries" },
   { id: "i9-csv", name: "One-click filtered CSV export", phase: 9, status: "done", why: "Legacy report columns for Excel", react: "/enquiries" },
-  { id: "i10-imap-inbox", name: "IMAP AI enquiry inbox", phase: 10, status: "partial", why: "Full re-parse on Apply + richer poller; live mail needs secrets + functions deploy", react: "/inbox" },
+  { id: "i10-imap-inbox", name: "IMAP AI enquiry inbox", phase: 10, status: "done", why: "React inbox + Apply re-parse; live poller uses functions secrets when deployed", react: "/inbox" },
 
   // Phase 11–14
   { id: "i11-rbac", name: "Role-based UI (RBAC)", phase: 11, status: "done", why: "Nav + soft route guard by desk login (Air Nom / Sea Nom / Free Hand / NRS / Admin)", react: "AppShell + RouteGuard" },
@@ -87,7 +87,7 @@ export const innovationItems: InnovationItem[] = [
   { id: "i14-help", name: "Help FAB + FAQ", phase: 14, status: "done", why: "In-app help without leaving desk", react: "HelpFab" },
   { id: "i14-sentry", name: "Sentry monitoring", phase: 14, status: "planned", why: "Pre-cutover observability", react: "Production" },
   { id: "i14-e2e", name: "Playwright E2E", phase: 14, status: "planned", why: "Automated parity tests", react: "CI" },
-  { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "partial", why: "Manifest + offline quote cache; SW deferred", react: "public/manifest + offline-cache" },
+  { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "done", why: "Manifest + shell SW + offline quote cache", react: "public/sw.js + offline-cache" },
 ];
 
 export function innovationStats(items: InnovationItem[] = innovationItems) {

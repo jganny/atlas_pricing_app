@@ -3,9 +3,12 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { Button, Card } from "@/components/ui";
 import { useAuthStore } from "@/store/auth";
 import { preferredHomePath } from "@/lib/auth/rbac";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import { useLiveData } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,13 +16,17 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const loading = useAuthStore((s) => s.loading);
   const error = useAuthStore((s) => s.error);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [username, setUsername] = useState("ganny");
   const [password, setPassword] = useState(
     process.env.NEXT_PUBLIC_MOCK_MODE !== "false" ? "demo" : "",
   );
+  const [displayName, setDisplayName] = useState("");
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotUser, setForgotUser] = useState("");
   const [forgotMsg, setForgotMsg] = useState<string | null>(null);
+  const [signupMsg, setSignupMsg] = useState<string | null>(null);
+  const [signupBusy, setSignupBusy] = useState(false);
 
   useEffect(() => {
     if (user) router.replace(preferredHomePath(user.username, user.role));
@@ -27,10 +34,62 @@ export default function LoginPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (mode === "signup") {
+      await handleSignup();
+      return;
+    }
     try {
       await login(username, password);
     } catch {
       /* store holds error */
+    }
+  }
+
+  async function handleSignup() {
+    const u = username.trim().toLowerCase();
+    if (!u || password.length < 6) {
+      setSignupMsg("Username and password (min 6 chars) required.");
+      return;
+    }
+    setSignupBusy(true);
+    setSignupMsg(null);
+    try {
+      const entry = {
+        username: u,
+        displayName: displayName.trim() || u,
+        role: "pricing",
+        at: Date.now(),
+        status: "pending_role",
+      };
+      const prev = JSON.parse(localStorage.getItem("atlas_pending_users") || "[]");
+      prev.push(entry);
+      localStorage.setItem("atlas_pending_users", JSON.stringify(prev));
+
+      if (useLiveData) {
+        try {
+          const auth = getFirebaseAuth();
+          await createUserWithEmailAndPassword(auth, `${u}@atlaspricing.com`, password);
+          setSignupMsg(
+            `Account created for “${u}”. Sign in, then ask an admin to assign your desk role.`,
+          );
+        } catch (err) {
+          const code = (err as { code?: string }).code || "";
+          if (code === "auth/email-already-in-use") {
+            setSignupMsg("Username already registered — try Sign in or Forgot password.");
+          } else {
+            setSignupMsg(
+              `Queued for admin (${u}). Live Auth: ${err instanceof Error ? err.message : "failed"} — you can still sign in if the account exists.`,
+            );
+          }
+        }
+      } else {
+        setSignupMsg(`Queued signup for “${u}” (mock). Ask admin to approve the desk role.`);
+      }
+      setMode("signin");
+    } catch {
+      setSignupMsg("Could not complete signup.");
+    } finally {
+      setSignupBusy(false);
     }
   }
 
@@ -44,17 +103,23 @@ export default function LoginPage() {
             Atlas Pricing
           </div>
           <h1 className="mt-2 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
-            Sign in
+            {mode === "signin" ? "Sign in" : "Create desk account"}
           </h1>
           <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Use your Atlas desk username and password
-            {process.env.NEXT_PUBLIC_MOCK_MODE !== "false" ? (
+            {mode === "signin" ? (
               <>
-                {" "}
-                — mock mode: <strong>ganny</strong> / <strong>demo</strong>
+                Use your Atlas desk username and password
+                {process.env.NEXT_PUBLIC_MOCK_MODE !== "false" ? (
+                  <>
+                    {" "}
+                    — mock mode: <strong>ganny</strong> / <strong>demo</strong>
+                  </>
+                ) : (
+                  <> — same login as the legacy app</>
+                )}
               </>
             ) : (
-              <> — same login as the legacy app</>
+              <>Self-service signup queues your username for admin role assignment.</>
             )}
           </p>
         </div>
@@ -68,6 +133,16 @@ export default function LoginPage() {
               autoComplete="username"
             />
           </label>
+          {mode === "signup" ? (
+            <label className="block text-sm font-semibold">
+              Display name
+              <input
+                className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-3 py-2"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </label>
+          ) : null}
           <label className="block text-sm font-semibold">
             Password
             <input
@@ -75,14 +150,37 @@ export default function LoginPage() {
               className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-3 py-2"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
             />
           </label>
-          {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in…" : "Enter workspace"}
+          {error && mode === "signin" ? (
+            <p className="text-sm font-semibold text-red-600">{error}</p>
+          ) : null}
+          {signupMsg ? (
+            <p className="text-sm font-semibold text-emerald-700">{signupMsg}</p>
+          ) : null}
+          <Button type="submit" className="w-full" disabled={loading || signupBusy}>
+            {mode === "signin"
+              ? loading
+                ? "Signing in…"
+                : "Enter workspace"
+              : signupBusy
+                ? "Creating…"
+                : "Create account"}
           </Button>
         </form>
+        <div className="mt-3 text-center text-xs">
+          <button
+            type="button"
+            className="font-semibold text-sky-700 hover:underline"
+            onClick={() => {
+              setMode((m) => (m === "signin" ? "signup" : "signin"));
+              setSignupMsg(null);
+            }}
+          >
+            {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
+          </button>
+        </div>
         <div className="mt-4 border-t border-[var(--color-border)] pt-4">
           <button
             type="button"

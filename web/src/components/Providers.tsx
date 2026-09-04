@@ -117,6 +117,14 @@ const queryClient = new QueryClient({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "/app";
+    void navigator.serviceWorker.register(`${base}/sw.js`).catch(() => {
+      /* optional */
+    });
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>

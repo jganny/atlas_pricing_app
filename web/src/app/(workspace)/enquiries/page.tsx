@@ -17,6 +17,11 @@ import {
   summarizeEnquiryFinancials,
 } from "@/lib/quotes/edb-csv";
 import {
+  archiveOlderThan,
+  buildFyReportCards,
+  listLocalArchive,
+} from "@/lib/quotes/edb-reports";
+import {
   DEFAULT_EDB_METRIC_MODES,
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
@@ -163,6 +168,8 @@ function EnquiryDatabaseInner() {
     return { open, overdue, total: filtered.length, ...fin };
   }, [filtered]);
 
+  const fyCards = useMemo(() => buildFyReportCards(filtered), [filtered]);
+
   async function findArchived() {
     const ref = archiveRef.trim();
     if (!ref) {
@@ -170,15 +177,23 @@ function EnquiryDatabaseInner() {
       return;
     }
     if (!useLiveData) {
-      const hit = rows.find(
+      const local = listLocalArchive().find(
         (r) =>
           r.ref.toLowerCase().includes(ref.toLowerCase()) ||
           r.id.toLowerCase() === ref.toLowerCase(),
       );
+      const hit =
+        local ||
+        rows.find(
+          (r) =>
+            r.ref.toLowerCase().includes(ref.toLowerCase()) ||
+            r.id.toLowerCase() === ref.toLowerCase(),
+        );
       if (hit) {
         setSelectedId(hit.id);
         setSearch(hit.ref);
-        setArchiveNote("Found in mock list");
+        setArchiveHit(hit);
+        setArchiveNote(local ? "Found in local 90-day archive" : "Found in mock list");
         toast(`Found ${hit.ref}`, "success");
       } else {
         setArchiveNote("Not found in mock data");
@@ -189,6 +204,19 @@ function EnquiryDatabaseInner() {
     setArchiveBusy(true);
     setArchiveNote(null);
     try {
+      const local = listLocalArchive().find(
+        (r) =>
+          r.ref.toLowerCase().includes(ref.toLowerCase()) ||
+          r.id.toLowerCase() === ref.toLowerCase(),
+      );
+      if (local) {
+        setSelectedId(local.id);
+        setSearch(local.ref);
+        setArchiveHit(local);
+        setArchiveNote(`Found in local archive · ${local.ref}`);
+        toast(`Archived quote ${local.ref}`, "success");
+        return;
+      }
       const hit = await lookupQuoteByRef(ref);
       if (!hit) {
         setArchiveNote("No live or archived quote matched that ref.");
@@ -302,6 +330,22 @@ function EnquiryDatabaseInner() {
         </Card>
       </div>
 
+      <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {fyCards.map((b) => (
+          <Card key={b.id} className="py-3">
+            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+              {b.label}
+            </div>
+            <div className="mt-1 text-sm font-extrabold tabular-nums">
+              {formatCurrency(b.sell, "USD")}
+            </div>
+            <div className="text-xs text-emerald-700">
+              GP {formatCurrency(b.gp, "USD")} · {b.count} quotes
+            </div>
+          </Card>
+        ))}
+      </div>
+
       {error ? (
         <Card className="border-red-200 bg-red-50">
           <p className="text-sm font-semibold text-red-800">Could not load enquiries.</p>
@@ -357,12 +401,30 @@ function EnquiryDatabaseInner() {
             {archiveBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Look up
           </Button>
+          {admin ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const { archived } = archiveOlderThan(rows, 90);
+                toast(
+                  archived.length
+                    ? `Archived ${archived.length} quotes older than 90 days (local)`
+                    : "No quotes older than 90 days to archive",
+                  "success",
+                );
+              }}
+            >
+              Run 90-day archive
+            </Button>
+          ) : null}
         </div>
         {archiveNote ? (
           <p className="text-xs font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
         ) : (
           <p className="text-xs text-[var(--color-text-muted)]">
-            Searches live quotes, then archive_quotes (90-day archive storage).
+            Searches live quotes, local archive, then archive_quotes. Admins can run the 90-day
+            archive job into browser storage.
           </p>
         )}
       </Card>

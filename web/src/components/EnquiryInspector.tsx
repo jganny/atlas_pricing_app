@@ -22,6 +22,8 @@ import {
   setQuoteStatus,
 } from "@/lib/firebase/quote-lifecycle";
 import { isAmendmentGrantActive, requestAmendment } from "@/lib/firebase/amendments";
+import { pushNrsAlert } from "@/lib/quotes/nrs-alerts";
+import { deskCategory } from "@/lib/auth/desk-rules";
 import { deskPathForQuote } from "@/lib/quotes/desk-loader";
 import { useLiveData } from "@/lib/api";
 import { queryKeys } from "@/hooks/query-keys";
@@ -153,6 +155,15 @@ export function EnquiryInspector({
         consigneeName: consigneeName.trim() || undefined,
         commodity: commodity.trim() || undefined,
       });
+      const cat = deskCategory(row.creator || user?.username);
+      if (cat.includes("NOMINATION") || cat.includes("NRS")) {
+        pushNrsAlert(
+          `NRS confirmation needed for ${row.ref} · ${row.customer}` +
+            (shipperName ? ` · shipper ${shipperName}` : "") +
+            (consigneeName ? ` · consignee ${consigneeName}` : ""),
+          row.ref,
+        );
+      }
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       setShowWon(false);
       toast("Converted to Won.", "success");

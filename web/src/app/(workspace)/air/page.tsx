@@ -18,6 +18,7 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { PortMapEmbed } from "@/components/PortMapEmbed";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm, shouldHideAgencyAgreement } from "@/lib/auth/desk-rules";
@@ -92,12 +93,25 @@ function AirDeskInner() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [stripKey, setStripKey] = useState(0);
   const hideAgreement = shouldHideAgencyAgreement(user?.username);
+  const [agreementName, setAgreementName] = useState<string | null>(null);
 
   useEffect(() => {
     if (loader.sourceQuote || loader.smartPrefill) return;
     setCurrency(defaultDeskCurrency(user?.username));
     setIncoterm(defaultIncoterm(user?.username));
   }, [user?.username, loader.sourceQuote, loader.smartPrefill]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(`atlas_air_agreement_${customer || "draft"}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { name?: string };
+        setAgreementName(parsed.name || "Attached agreement");
+      } else setAgreementName(null);
+    } catch {
+      setAgreementName(null);
+    }
+  }, [customer]);
 
   const selected = airlines.find((a) => a.selected) ?? airlines[0];
 
@@ -477,16 +491,7 @@ function AirDeskInner() {
                 <Label>
                   POL
                   <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="BOM / DEL…" />
-                  {origin.trim() ? (
-                    <a
-                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${origin.trim()} airport`)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open airport map
-                    </a>
-                  ) : null}
+                  <PortMapEmbed query={origin} kind="airport" />
                 </Label>
                 <Label>
                   POD
@@ -495,16 +500,7 @@ function AirDeskInner() {
                     onChange={(e) => setDestination(e.target.value)}
                     placeholder="DXB / SIN…"
                   />
-                  {destination.trim() ? (
-                    <a
-                      className="mt-1 inline-block text-[10px] font-semibold text-sky-700 hover:underline"
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${destination.trim()} airport`)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open airport map
-                    </a>
-                  ) : null}
+                  <PortMapEmbed query={destination} kind="airport" />
                 </Label>
                 <Label>
                   Currency
@@ -884,9 +880,41 @@ function AirDeskInner() {
                 Restore default air terms
               </button>
               {!hideAgreement ? (
-                <p className="rounded-lg border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                  Nomination desk: keep agency agreement files current in Directory (sidebar).
-                </p>
+                <div className="space-y-2 rounded-lg border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                  <p>
+                    Nomination desk: attach agency agreement PDF for this customer (stored in-browser for
+                    the session; keep Directory files current too).
+                  </p>
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf,image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        try {
+                          sessionStorage.setItem(
+                            `atlas_air_agreement_${customer.trim() || "draft"}`,
+                            JSON.stringify({
+                              name: file.name,
+                              dataUrl: String(reader.result || ""),
+                              at: Date.now(),
+                            }),
+                          );
+                          setAgreementName(file.name);
+                          toast(`Agreement attached: ${file.name}`, "success");
+                        } catch {
+                          toast("Could not store agreement locally", "error");
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  {agreementName ? (
+                    <p className="font-semibold text-emerald-800">Attached: {agreementName}</p>
+                  ) : null}
+                </div>
               ) : (
                 <p className="text-xs text-[var(--color-text-muted)]">
                   NRS / Free Hand — agency agreement upload is hidden for this desk category.
