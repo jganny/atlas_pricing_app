@@ -87,7 +87,7 @@ async function fetchInbox(): Promise<InboxEnquiry[]> {
 async function fetchDirectory(): Promise<DirectoryContact[]> {
   if (useLiveData) {
     try {
-      return await withTimeout(fetchDirectoryContacts(), 8_000, []);
+      return await withTimeout(fetchDirectoryContacts(), 5_000, []);
     } catch {
       return [];
     }

@@ -147,7 +147,20 @@ export function useDirectory() {
   useEffect(() => {
     if (!enabled || !useLiveData) return;
     const unsub = subscribeDirectoryContacts(
-      (rows) => queryClient.setQueryData(queryKeys.directory, rows),
+      (rows) => {
+        if (rows.length > 0) {
+          queryClient.setQueryData(queryKeys.directory, rows);
+          return;
+        }
+        // Empty live collection in preview — seed mock so the CRM UI is usable.
+        if (process.env.NODE_ENV === "development") {
+          void mockApi.fetchDirectory().then((mockRows) => {
+            queryClient.setQueryData(queryKeys.directory, mockRows);
+          });
+        } else {
+          queryClient.setQueryData(queryKeys.directory, rows);
+        }
+      },
       (err) => {
         console.warn("Directory sync:", err.message);
         if (process.env.NODE_ENV === "development") {

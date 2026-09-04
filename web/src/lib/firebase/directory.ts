@@ -7,8 +7,6 @@ import {
   doc,
   getDocs,
   onSnapshot,
-  orderBy,
-  query,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
@@ -41,10 +39,17 @@ function mapContact(id: string, data: Record<string, unknown>): DirectoryContact
   };
 }
 
+function sortByName(rows: DirectoryContact[]): DirectoryContact[] {
+  return [...rows].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export async function fetchDirectoryContacts(): Promise<DirectoryContact[]> {
   const db = getFirebaseDb();
-  const snap = await getDocs(query(collection(db, "contactsDirectory"), orderBy("name")));
-  return snap.docs.map((d) => mapContact(d.id, d.data() as Record<string, unknown>));
+  // No orderBy — avoids index / missing-field failures; sort client-side.
+  const snap = await getDocs(collection(db, "contactsDirectory"));
+  return sortByName(
+    snap.docs.map((d) => mapContact(d.id, d.data() as Record<string, unknown>)),
+  );
 }
 
 export function subscribeDirectoryContacts(
@@ -52,11 +57,14 @@ export function subscribeDirectoryContacts(
   onError?: (err: Error) => void,
 ): () => void {
   const db = getFirebaseDb();
-  const q = query(collection(db, "contactsDirectory"), orderBy("name"));
   return onSnapshot(
-    q,
+    collection(db, "contactsDirectory"),
     (snap) => {
-      onData(snap.docs.map((d) => mapContact(d.id, d.data() as Record<string, unknown>)));
+      onData(
+        sortByName(
+          snap.docs.map((d) => mapContact(d.id, d.data() as Record<string, unknown>)),
+        ),
+      );
     },
     (err) => onError?.(err),
   );
