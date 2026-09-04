@@ -135,6 +135,7 @@ function AirDeskInner() {
     setOrigin(p.origin || "");
     setDestination(p.destination || "");
     if (draft.currency) setCurrency(draft.currency);
+    if (p.commodity) setCommodity(p.commodity);
     if (p.packages.length) {
       setCargo(
         p.packages.map((pkg) => ({
@@ -145,6 +146,8 @@ function AirDeskInner() {
           gw: pkg.gw ?? 0,
         })),
       );
+    } else {
+      setCargo([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
     }
     setAirlines([
       createAirlineOption(
@@ -153,11 +156,15 @@ function AirDeskInner() {
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
           validity: "15 days",
-          breaks: draft.airBreaks ? { ...EMPTY_AIR_BREAKS, ...draft.airBreaks } : undefined,
+          // Only Circulars (or explicit breaks) fill rates — never invent defaults
+          breaks: draft.airBreaks
+            ? { ...EMPTY_AIR_BREAKS, ...draft.airBreaks }
+            : { ...EMPTY_AIR_BREAKS },
         },
         true,
       ),
     ]);
+    // Stay on shipment so user verifies POL/POD/cargo; rates stay blank until Circulars
     setStep("shipment");
   }
 

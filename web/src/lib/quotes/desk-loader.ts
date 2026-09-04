@@ -135,9 +135,9 @@ export function loadSeaDeskFromQuote(quote: SavedQuote) {
           validity: String(d.validity ?? ""),
           containers: containers.length
             ? containers
-            : [{ type: "20'GP", qty: 1, sellRate: 800, buyRate: 700 }],
-          lclSell: Number((d.lclRate as { sell?: number })?.sell ?? 45),
-          lclBuy: Number((d.lclRate as { buy?: number })?.buy ?? 40),
+            : [{ type: "20'GP", qty: 1, sellRate: 0, buyRate: 0 }],
+          lclSell: Number((d.lclRate as { sell?: number })?.sell ?? 0),
+          lclBuy: Number((d.lclRate as { buy?: number })?.buy ?? 0),
           originFeesEnabled: d.originFeesEnabled !== false,
           destFeesEnabled: d.destFeesEnabled !== false,
           originSurcharges: mapSurcharges(d.originSurcharges),

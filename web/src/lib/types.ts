@@ -107,6 +107,7 @@ export interface ParsedEnquiry {
   airlineLabel?: string
   mode?: 'fcl' | 'lcl' | 'bb'
   linerLabel?: string
+  commodity?: string
   grossWeight?: number
   volume?: number
   packages: Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>

@@ -134,6 +134,14 @@ function SeaDeskInner() {
     }
     if (p.grossWeight) setGrossWeightKg(p.grossWeight);
     if (p.volume) setVolumeCbm(p.volume);
+    const containers = p.containers.length
+      ? p.containers.map((c) => ({
+          type: c.type,
+          qty: c.qty,
+          sellRate: st?.fclRates?.[c.type]?.sell ?? 0,
+          buyRate: st?.fclRates?.[c.type]?.buy ?? 0,
+        }))
+      : [{ type: "20'GP", qty: 1, sellRate: 0, buyRate: 0 }];
     setLiners([
       createLinerOption(
         {
@@ -141,16 +149,9 @@ function SeaDeskInner() {
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
           validity: "15 days",
-          containers: p.containers.length
-            ? p.containers.map((c) => ({
-                type: c.type,
-                qty: c.qty,
-                sellRate: st?.fclRates?.[c.type]?.sell ?? 0,
-                buyRate: st?.fclRates?.[c.type]?.buy ?? 0,
-              }))
-            : undefined,
-          lclSell: st?.lclRate.sell,
-          lclBuy: st?.lclRate.buy,
+          containers,
+          lclSell: st?.lclRate?.sell ?? 0,
+          lclBuy: st?.lclRate?.buy ?? 0,
         },
         true,
       ),

@@ -6,6 +6,89 @@ const AIRLINE_HINTS: Record<string, string> = {
   QR: 'QR - Qatar Airways',
   AI: 'AI - Air India',
   BA: 'BA - British Airways',
+  SQ: 'SQ - Singapore Airlines',
+  CX: 'CX - Cathay Pacific',
+  LH: 'LH - Lufthansa',
+  TK: 'TK - Turkish Airlines',
+  EY: 'EY - Etihad',
+  AF: 'AF - Air France',
+  KL: 'KL - KLM',
+  UA: 'UA - United',
+  AA: 'AA - American Airlines',
+  DL: 'DL - Delta',
+  MH: 'MH - Malaysia Airlines',
+  TG: 'TG - Thai Airways',
+  CZ: 'CZ - China Southern',
+  CA: 'CA - Air China',
+}
+
+const CITY_TO_IATA: Record<string, string> = {
+  bengaluru: 'BLR',
+  bangalore: 'BLR',
+  mumbai: 'BOM',
+  delhi: 'DEL',
+  chennai: 'MAA',
+  hyderabad: 'HYD',
+  london: 'LHR',
+  heathrow: 'LHR',
+  dubai: 'DXB',
+  singapore: 'SIN',
+  hongkong: 'HKG',
+  'hong kong': 'HKG',
+  frankfurt: 'FRA',
+  amsterdam: 'AMS',
+  paris: 'CDG',
+  newyork: 'JFK',
+  'new york': 'JFK',
+  chicago: 'ORD',
+  losangeles: 'LAX',
+  'los angeles': 'LAX',
+  shanghai: 'PVG',
+  tokyo: 'NRT',
+  sydney: 'SYD',
+}
+
+const CITY_TO_UNLOCODE: Record<string, string> = {
+  'nhava sheva': 'INNSA',
+  nhavasheva: 'INNSA',
+  jawaharlal: 'INNSA',
+  mundra: 'INMUN',
+  chennai: 'INMAA',
+  kolkata: 'INCCU',
+  rotterdam: 'NLRTM',
+  hamburg: 'DEHAM',
+  antwerp: 'BEANR',
+  shanghai: 'CNSHA',
+  singapore: 'SGSIN',
+  dubai: 'AEJEA',
+  jebelali: 'AEJEA',
+  'jebel ali': 'AEJEA',
+  losangeles: 'USLAX',
+  'los angeles': 'USLAX',
+  longbeach: 'USLGB',
+  'long beach': 'USLGB',
+  newyork: 'USNYC',
+  'new york': 'USNYC',
+}
+
+function normalizeCityKey(s: string) {
+  return s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+function resolveAirport(token: string): string {
+  const t = token.trim()
+  const code = t.match(/\b([A-Z]{3})\b/)
+  if (code) return code[1].toUpperCase()
+  const key = normalizeCityKey(t)
+  return CITY_TO_IATA[key] || CITY_TO_IATA[key.replace(/\s/g, '')] || t.toUpperCase().slice(0, 3)
+}
+
+function resolvePort(token: string): string {
+  const t = token.trim()
+  const code = t.match(/\b([A-Z]{2}[A-Z0-9]{3})\b/)
+  if (code) return code[1].toUpperCase()
+  const key = normalizeCityKey(t)
+  return CITY_TO_UNLOCODE[key] || CITY_TO_UNLOCODE[key.replace(/\s/g, '')] || extractPortCode(t)
 }
 
 export function parseAirEnquiry(text: string): ParsedEnquiry {
@@ -20,23 +103,25 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
     source: 'email-text',
   }
 
-  const custMatch = t.match(/(?:customer|client|shipper|for)[:\s]+([^\n,;]+)/i)
-  if (custMatch) result.customer = custMatch[1].trim()
+  const custMatch =
+    t.match(/(?:customer|client|shipper)\s*[:\-]\s*([^\n,;]+)/i) ||
+    t.match(/(?:quote\s+(?:air\s+)?(?:export|import)\s+for|for)\s+([A-Z][^\n,;.]{2,60})/i)
+  if (custMatch) result.customer = custMatch[1].replace(/\s+/g, ' ').trim()
 
-  const polPod = t.match(/\bpol\b[:\s]*([A-Z]{3})[\s\S]*?\bpod\b[:\s]*([A-Z]{3})/i)
+  const polPod = t.match(/\bpol\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})[\s\S]*?\bpod\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})/i)
   if (polPod) {
-    result.origin = polPod[1].toUpperCase()
-    result.destination = polPod[2].toUpperCase()
+    result.origin = resolveAirport(polPod[1])
+    result.destination = resolveAirport(polPod[2])
   } else {
     const routePatterns = [
-      /(?:origin|from|ex)\s+([A-Z]{3})[\s\S]*?(?:to|→|->)\s+([A-Z]{3})/i,
-      /([A-Z]{3})\s*(?:to|→|->|-|–)\s*([A-Z]{3})/i,
+      /(?:origin|from|ex)\s+([A-Za-z][A-Za-z0-9 \-]{1,30})[\s\S]{0,40}?(?:to|→|->)\s+([A-Za-z][A-Za-z0-9 \-]{1,30})/i,
+      /\b([A-Z]{3})\s*(?:to|→|->|-|–)\s*([A-Z]{3})\b/,
     ]
     for (const pattern of routePatterns) {
       const match = t.match(pattern)
       if (match) {
-        result.origin = match[1].toUpperCase()
-        result.destination = match[2].toUpperCase()
+        result.origin = resolveAirport(match[1])
+        result.destination = resolveAirport(match[2])
         break
       }
     }
@@ -49,30 +134,82 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
       result.airlineLabel = label
     }
   })
+  if (!result.airline) {
+    const named = t.match(/\b(emirates|qatar|etihad|lufthansa|turkish|singapore\s*airlines?)\b/i)
+    if (named) {
+      const n = named[1].toLowerCase()
+      if (n.startsWith('emirates')) {
+        result.airline = 'EK'
+        result.airlineLabel = AIRLINE_HINTS.EK
+      } else if (n.startsWith('qatar')) {
+        result.airline = 'QR'
+        result.airlineLabel = AIRLINE_HINTS.QR
+      } else if (n.startsWith('etihad')) {
+        result.airline = 'EY'
+        result.airlineLabel = AIRLINE_HINTS.EY
+      } else if (n.startsWith('lufthansa')) {
+        result.airline = 'LH'
+        result.airlineLabel = AIRLINE_HINTS.LH
+      } else if (n.startsWith('turkish')) {
+        result.airline = 'TK'
+        result.airlineLabel = AIRLINE_HINTS.TK
+      } else if (n.startsWith('singapore')) {
+        result.airline = 'SQ'
+        result.airlineLabel = AIRLINE_HINTS.SQ
+      }
+    }
+  }
 
   const gwMatches: number[] = []
   const gwRe = /(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/gi
   let gwm: RegExpExecArray | null
   while ((gwm = gwRe.exec(t)) !== null) gwMatches.push(parseFloat(gwm[1]))
 
-  const dimGlobal = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/gi
-  let dimMatch: RegExpExecArray | null
-  const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons)/i)
-  const qtyDefault = qtyM ? parseInt(qtyM[1], 10) : 1
-
-  while ((dimMatch = dimGlobal.exec(t)) !== null) {
+  // Prefer "dims … x N pcs" so qty is per dim line when present
+  const dimWithQty =
+    /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(?:cm)?\s*[x×*]?\s*(\d+)\s*(?:pcs|pieces|pkgs|cartons)?/gi
+  let dimQty: RegExpExecArray | null
+  while ((dimQty = dimWithQty.exec(t)) !== null) {
     result.packages.push({
-      qty: qtyDefault,
-      gw: gwMatches[0] || 0,
-      l: parseFloat(dimMatch[1]),
-      w: parseFloat(dimMatch[2]),
-      h: parseFloat(dimMatch[3]),
+      qty: parseInt(dimQty[4], 10) || 1,
+      gw: 0,
+      l: parseFloat(dimQty[1]),
+      w: parseFloat(dimQty[2]),
+      h: parseFloat(dimQty[3]),
     })
   }
 
-  if (!result.packages.length && gwMatches.length) {
-    result.packages.push({ qty: qtyDefault, gw: gwMatches[0] })
+  if (!result.packages.length) {
+    const dimGlobal = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/gi
+    let dimMatch: RegExpExecArray | null
+    const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons)/i)
+    const qtyDefault = qtyM ? parseInt(qtyM[1], 10) : 1
+    while ((dimMatch = dimGlobal.exec(t)) !== null) {
+      result.packages.push({
+        qty: qtyDefault,
+        gw: 0,
+        l: parseFloat(dimMatch[1]),
+        w: parseFloat(dimMatch[2]),
+        h: parseFloat(dimMatch[3]),
+      })
+    }
   }
+
+  // Distribute total GW across package lines by qty share
+  if (result.packages.length && gwMatches.length) {
+    const totalQty = result.packages.reduce((s, p) => s + (p.qty || 1), 0) || 1
+    const totalGw = gwMatches[0]
+    result.packages = result.packages.map((p) => ({
+      ...p,
+      gw: Math.round(((totalGw * (p.qty || 1)) / totalQty) * 100) / 100,
+    }))
+  } else if (!result.packages.length && gwMatches.length) {
+    const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons)/i)
+    result.packages.push({ qty: qtyM ? parseInt(qtyM[1], 10) : 1, gw: gwMatches[0] })
+  }
+
+  const commodity = t.match(/(?:commodity|goods|description)[:\s]+([^\n;]+)/i)
+  if (commodity) result.commodity = commodity[1].trim()
 
   result.confidence = scoreAir(result)
   return result
@@ -93,6 +230,9 @@ const CONTAINER_ALIASES: Record<string, string> = {
   '40GP': "40'GP",
   '40HC': "40'HC",
   '40HQ': "40'HC",
+  '45HC': "45'HC",
+  '20RF': "20'RF",
+  '40RF': "40'RF",
 }
 
 export function parseSeaEnquiry(text: string): ParsedEnquiry {
@@ -107,18 +247,20 @@ export function parseSeaEnquiry(text: string): ParsedEnquiry {
     source: 'email-text',
   }
 
-  const custMatch = t.match(/(?:customer|client|shipper|for)[:\s]+([^\n,;]+)/i)
-  if (custMatch) result.customer = custMatch[1].trim()
+  const custMatch =
+    t.match(/(?:customer|client|shipper)\s*[:\-]\s*([^\n,;]+)/i) ||
+    t.match(/(?:for)\s+([A-Z][^\n,;.]{2,60})/i)
+  if (custMatch) result.customer = custMatch[1].replace(/\s+/g, ' ').trim()
 
   const polPodSea = t.match(/\bpol\b[:\s]*([^\n,;(]+)[\s\S]*?\bpod\b[:\s]*([^\n,;(]+)/i)
   if (polPodSea) {
-    result.origin = extractPortCode(polPodSea[1])
-    result.destination = extractPortCode(polPodSea[2])
+    result.origin = resolvePort(polPodSea[1])
+    result.destination = resolvePort(polPodSea[2])
   } else {
     const polM = t.match(/(?:pol|port of loading|origin)[:\s]+([^\n,;(]+)/i)
     const podM = t.match(/(?:pod|port of discharge|destination)[:\s]+([^\n,;(]+)/i)
-    if (polM) result.origin = extractPortCode(polM[1])
-    if (podM) result.destination = extractPortCode(podM[1])
+    if (polM) result.origin = resolvePort(polM[1])
+    if (podM) result.destination = resolvePort(podM[1])
   }
 
   const codes = t.match(/\b([A-Z]{2}[A-Z0-9]{3})\b/g)
@@ -136,8 +278,12 @@ export function parseSeaEnquiry(text: string): ParsedEnquiry {
 
   const tonM = t.match(/(\d+(?:\.\d+)?)\s*(?:mt|metric\s*ton|tons?)\b/i)
   if (tonM) result.grossWeight = parseFloat(tonM[1]) * 1000
+  else {
+    const kgM = t.match(/(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)\b/i)
+    if (kgM) result.grossWeight = parseFloat(kgM[1])
+  }
 
-  const contRe = /(\d+)\s*[x×*]\s*(20|40|45)\s*['']?\s*(gp|hc|hq)/gi
+  const contRe = /(\d+)\s*[x×*]\s*(20|40|45)\s*['']?\s*(gp|hc|hq|rf)/gi
   let cm: RegExpExecArray | null
   while ((cm = contRe.exec(t)) !== null) {
     const key = `${cm[2]}${cm[3].toUpperCase()}`
@@ -147,7 +293,12 @@ export function parseSeaEnquiry(text: string): ParsedEnquiry {
   }
 
   if (/maersk/i.test(t)) result.linerLabel = 'Maersk Line'
-  if (/msc/i.test(t)) result.linerLabel = 'MSC (Mediterranean Shipping Company)'
+  else if (/msc/i.test(t)) result.linerLabel = 'MSC (Mediterranean Shipping Company)'
+  else if (/cma\s*cgm|cma-cgm/i.test(t)) result.linerLabel = 'CMA CGM'
+  else if (/hapag/i.test(t)) result.linerLabel = 'Hapag-Lloyd'
+  else if (/evergreen/i.test(t)) result.linerLabel = 'Evergreen'
+  else if (/cosco/i.test(t)) result.linerLabel = 'COSCO'
+  else if (/one\b|ocean\s*network/i.test(t)) result.linerLabel = 'ONE (Ocean Network Express)'
 
   result.confidence = scoreSea(result)
   return result

@@ -3,7 +3,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { NewQuoteLauncherHost } from "@/components/NewQuoteLauncher";
 import { ToastContainer } from "@/components/Toast";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
 import { useLiveData } from "@/lib/api";
@@ -122,7 +121,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ErrorBoundary>
         <AuthSync />
         <CommandPalette />
-        <NewQuoteLauncherHost />
         <ToastContainer />
         {children}
       </ErrorBoundary>

@@ -64,16 +64,67 @@ function parseLite(text, mode) {
     confidence: 40,
     source: "email-imap",
   };
-  const cust = text.match(/(?:customer|client|shipper|for)[:\s]+([^\n,;]+)/i);
+  const cust = text.match(/(?:customer|client|shipper)\s*[:\-]\s*([^\n,;]+)/i);
   if (cust) result.customer = cust[1].trim();
-  const polPod = text.match(/\bpol\b[:\s]*([A-Z]{3,5})[\s\S]*?\bpod\b[:\s]*([A-Z]{3,5})/i);
+
+  const polPod = text.match(/\bpol\b[:\s]*([^\n,;(]{2,40})[\s\S]*?\bpod\b[:\s]*([^\n,;(]{2,40})/i);
   if (polPod) {
-    result.origin = polPod[1].toUpperCase();
-    result.destination = polPod[2].toUpperCase();
+    result.origin = extractCode(polPod[1], mode);
+    result.destination = extractCode(polPod[2], mode);
     result.confidence = 70;
+  } else {
+    const codes3 = text.match(/\b([A-Z]{3})\b/g);
+    const codes5 = text.match(/\b([A-Z]{2}[A-Z0-9]{3})\b/g);
+    if (mode === "sea" && codes5 && codes5.length >= 2) {
+      result.origin = codes5[0];
+      result.destination = codes5[1];
+      result.confidence = 65;
+    } else if (codes3 && codes3.length >= 2) {
+      result.origin = codes3[0];
+      result.destination = codes3[1];
+      result.confidence = 60;
+    }
   }
-  if (mode === "sea") result.mode = /\blcl\b/i.test(text) ? "lcl" : "fcl";
+
+  if (mode === "sea") {
+    result.mode = /\blcl\b/i.test(text) ? "lcl" : /\bbb\b|break\s*bulk/i.test(text) ? "bb" : "fcl";
+    const cont = text.match(/(\d+)\s*[x×*]\s*(20|40|45)\s*['']?\s*(gp|hc|hq)/i);
+    if (cont) {
+      result.containers.push({
+        type: `${cont[2]}'${cont[3].toUpperCase() === "HQ" ? "HC" : cont[3].toUpperCase()}`,
+        qty: parseInt(cont[1], 10) || 1,
+      });
+      result.confidence = Math.min(100, result.confidence + 15);
+    }
+    const ton = text.match(/(\d+(?:\.\d+)?)\s*(?:mt|tons?)\b/i);
+    if (ton) result.grossWeight = parseFloat(ton[1]) * 1000;
+  } else {
+    const gw = text.match(/(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/i);
+    const dim = text.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
+    const qty = text.match(/(\d+)\s*(?:pcs|pieces|pkgs)/i);
+    if (gw || dim) {
+      result.packages.push({
+        qty: qty ? parseInt(qty[1], 10) : 1,
+        gw: gw ? parseFloat(gw[1]) : 0,
+        l: dim ? parseFloat(dim[1]) : undefined,
+        w: dim ? parseFloat(dim[2]) : undefined,
+        h: dim ? parseFloat(dim[3]) : undefined,
+      });
+      result.confidence = Math.min(100, result.confidence + 15);
+    }
+  }
+
   return result;
+}
+
+function extractCode(value, mode) {
+  const v = String(value || "").trim();
+  if (mode === "sea") {
+    const m5 = v.match(/\b([A-Z]{2}[A-Z0-9]{3})\b/);
+    if (m5) return m5[1];
+  }
+  const m3 = v.match(/\b([A-Z]{3})\b/);
+  return m3 ? m3[1] : v.slice(0, 40);
 }
 
 function stripHtml(html) {

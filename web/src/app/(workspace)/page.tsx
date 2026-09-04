@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, ClipboardCheck, Clock, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, ClipboardCheck, Clock, Inbox, PlaneTakeoff, Ship } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
-import { openNewQuoteLauncher } from "@/components/NewQuoteLauncher";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useLiveData } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -20,19 +19,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Dashboard</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            {useLiveData
-              ? "Live enquiries — updates automatically. Press ⌘K to jump anywhere."
-              : "Mock data — mirrors Enquiry DB SLA and Smart Quote entry points."}
-          </p>
-        </div>
-        <Button type="button" className="h-9" onClick={openNewQuoteLauncher}>
-          <Sparkles className="mr-1.5 h-4 w-4" />
-          New quote from enquiry
-        </Button>
+      <div>
+        <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Dashboard</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          {useLiveData
+            ? "Live enquiries — updates automatically. Press ⌘K to jump anywhere."
+            : "Mock data — mirrors Enquiry DB SLA."}
+        </p>
       </div>
 
       {error ? (
@@ -51,7 +44,7 @@ export default function DashboardPage() {
               <span className="text-sm font-bold">New version — parity + premium tech from Phase 0</span>
             </div>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              Legacy stays production until you approve. Track parity and innovation — no leaf unturned.
+              Paste on the Air/Sea desk, or open Enquiry inbox for mailbox mail. Legacy stays until you approve.
             </p>
           </div>
           <Link
@@ -92,44 +85,29 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <Card className="border-sky-200 bg-sky-50/40 py-3">
-              <div className="mb-2 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[var(--color-atlas-sky)]" />
-                <h2 className="font-bold text-[var(--color-atlas-navy)]">Start a quote</h2>
-                <Badge tone="info">Option B</Badge>
-              </div>
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Paste an enquiry once — AI detects Air vs Sea and opens the desk prefilled. Or jump
-                straight to a desk / inbox.
+            <Card className="py-3">
+              <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Quick open</h2>
+              <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+                One paste strip lives on each desk. Inbox brings mail from shared mailboxes.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" className="h-9" onClick={openNewQuoteLauncher}>
-                  <Sparkles className="mr-1.5 h-4 w-4" />
-                  New quote from enquiry
-                </Button>
+              <div className="flex flex-wrap gap-2">
                 <Link
                   href="/air"
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-amber-800"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 text-sm font-semibold text-amber-900"
                 >
-                  Air desk
+                  <PlaneTakeoff className="h-4 w-4" /> Air desk
                 </Link>
                 <Link
                   href="/sea"
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-sky-800"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-sky-500/15 px-3 text-sm font-semibold text-sky-900"
                 >
-                  Sea desk
+                  <Ship className="h-4 w-4" /> Sea desk
                 </Link>
                 <Link
                   href="/inbox"
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-violet-800"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-violet-500/15 px-3 text-sm font-semibold text-violet-900"
                 >
-                  Inbox
-                </Link>
-                <Link
-                  href="/courier"
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-slate-700"
-                >
-                  Courier
+                  <Inbox className="h-4 w-4" /> Enquiry inbox
                 </Link>
               </div>
             </Card>

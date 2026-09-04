@@ -11,7 +11,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { Badge, Button, Card, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Input, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useAirSmartQuote, useSeaSmartQuote } from "@/hooks/use-smart-quote";
 import {
@@ -23,6 +23,7 @@ import type { ParsedEnquiry, SmartQuoteDraft } from "@/lib/types";
 
 /**
  * Option A — compact paste/parse on the desk (collapsed by default).
+ * Review + edit extracted fields before Apply so the desk fills correctly.
  */
 export function DeskSmartQuoteStrip({
   mode,
@@ -70,7 +71,11 @@ export function DeskSmartQuoteStrip({
       setDraft(withSource);
       setEditable({ ...withSource.parsed });
       setOpen(true);
-      toast("Parsed — review then Apply", "success");
+      if (!withSource.parsed.origin || !withSource.parsed.destination) {
+        toast("Route incomplete — fix POL/POD below, then Apply", "info");
+      } else {
+        toast("Parsed — review fields, then Apply", "success");
+      }
     } catch (e) {
       if (!abandoned) toast(e instanceof Error ? e.message : "Parse failed", "error");
     } finally {
@@ -97,14 +102,18 @@ export function DeskSmartQuoteStrip({
     }
   }
 
+  function patchEditable(patch: Partial<ParsedEnquiry>) {
+    setEditable((prev) => (prev ? { ...prev, ...patch } : prev));
+  }
+
   function handleApply() {
     if (!draft || !editable) return;
-    if (!editable.origin || !editable.destination) {
+    if (!editable.origin?.trim() || !editable.destination?.trim()) {
       toast("Need origin and destination before applying.", "error");
       return;
     }
     onApply({ ...draft, parsed: editable });
-    toast("Applied to this desk", "success");
+    toast("Applied to this desk — add Circulars rates on Carriers", "success");
     setOpen(false);
   }
 
@@ -196,13 +205,51 @@ export function DeskSmartQuoteStrip({
             <div className="space-y-2 rounded-lg border border-[var(--color-border)] bg-white p-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={draft.tariffFound ? "success" : "warn"}>
-                  {draft.tariffFound ? "Circulars" : "Enter rates"}
+                  {draft.tariffFound ? "Circulars hit" : "Rates blank — use Circulars"}
                 </Badge>
                 <Badge tone="info">{editable.confidence}%</Badge>
-                <span className="truncate text-xs font-semibold text-[var(--color-atlas-navy)]">
-                  {editable.origin || "—"} → {editable.destination || "—"} ·{" "}
-                  {editable.customer || "no customer"}
-                </span>
+              </div>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                <label className="block text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+                  Customer
+                  <Input
+                    className="mt-0.5 h-8 text-xs"
+                    value={editable.customer}
+                    onChange={(e) => patchEditable({ customer: e.target.value })}
+                  />
+                </label>
+                <label className="block text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+                  {mode === "air" ? "Airline" : "Liner"}
+                  <Input
+                    className="mt-0.5 h-8 text-xs"
+                    value={
+                      mode === "air"
+                        ? editable.airlineLabel || editable.airline || ""
+                        : editable.linerLabel || ""
+                    }
+                    onChange={(e) =>
+                      mode === "air"
+                        ? patchEditable({ airlineLabel: e.target.value, airline: e.target.value })
+                        : patchEditable({ linerLabel: e.target.value })
+                    }
+                  />
+                </label>
+                <label className="block text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+                  POL
+                  <Input
+                    className="mt-0.5 h-8 text-xs"
+                    value={editable.origin}
+                    onChange={(e) => patchEditable({ origin: e.target.value.toUpperCase() })}
+                  />
+                </label>
+                <label className="block text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+                  POD
+                  <Input
+                    className="mt-0.5 h-8 text-xs"
+                    value={editable.destination}
+                    onChange={(e) => patchEditable({ destination: e.target.value.toUpperCase() })}
+                  />
+                </label>
               </div>
               <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 {fields.map((f) => (
