@@ -1,6 +1,6 @@
 /**
  * Feature parity tracker — legacy (index.html / app-v4.js) vs React (/app).
- * Migration stays ON HOLD until every item is "done" and user-tested.
+ * Tracker rows are complete; cutover waits on user approval after testing.
  * Update statuses as features ship.
  */
 
@@ -24,10 +24,10 @@ export interface ParityGroup {
 }
 
 export const MIGRATION_POLICY = {
-  headline: "Migration on hold until full feature parity",
+  headline: "Legacy feature parity complete — awaiting your cutover approval",
   summary:
-    "Legacy remains the production app. React is built until every legacy capability exists in /app, " +
-    "you have tested each one, and you approve cutover only when React is equal or better.",
+    "Every tracked legacy capability is marked Done in React. Keep legacy as production until you have tested " +
+    "React end-to-end and say “Approve migration.” Then we switch the default homepage to /app/.",
   legacyUrl: "/index.html",
   reactUrl: "/app/",
 };

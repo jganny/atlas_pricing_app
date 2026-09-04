@@ -76,6 +76,9 @@ export default function FeatureParityPage() {
     }));
   }, [filteredInnovation]);
 
+  const parityComplete = stats.done === stats.total && stats.partial === 0 && stats.missing === 0;
+  const innovationComplete = iStats.done === iStats.total;
+
   return (
     <div className="space-y-6">
       <div>
@@ -118,10 +121,20 @@ export default function FeatureParityPage() {
 
       {tab === "parity" ? (
         <>
-          <Card className="border-violet-200 bg-gradient-to-br from-violet-50/80 to-white">
+          <Card
+            className={
+              parityComplete
+                ? "border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white"
+                : "border-violet-200 bg-gradient-to-br from-violet-50/80 to-white"
+            }
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-700">
+                <p
+                  className={`text-xs font-bold uppercase tracking-wide ${
+                    parityComplete ? "text-emerald-700" : "text-violet-700"
+                  }`}
+                >
                   {MIGRATION_POLICY.headline}
                 </p>
                 <p className="mt-2 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
@@ -141,9 +154,15 @@ export default function FeatureParityPage() {
                   Open legacy (production)
                   <ExternalLink className="h-4 w-4" />
                 </a>
-                <Button type="button" variant="secondary" onClick={() => setFilter("missing")}>
-                  Show gaps only
-                </Button>
+                {!parityComplete ? (
+                  <Button type="button" variant="secondary" onClick={() => setFilter("missing")}>
+                    Show gaps only
+                  </Button>
+                ) : (
+                  <Button type="button" variant="secondary" onClick={() => setFilter("done")}>
+                    Browse done list
+                  </Button>
+                )}
               </div>
             </div>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-violet-100">
@@ -157,11 +176,10 @@ export default function FeatureParityPage() {
           <Card>
             <h2 className="font-bold text-[var(--color-atlas-navy)]">How you approve migration</h2>
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-[var(--color-text-muted)]">
-              <li>We build each missing feature in React (Phases 6–14 below).</li>
-              <li>You test the same workflow in legacy and in React — use the test hints on each row.</li>
+              <li>Legacy feature rows are all Done — walk the React desks against legacy workflows.</li>
+              <li>Use test hints on each Done row while you verify.</li>
               <li>
-                When every row is <strong className="text-emerald-700">Done</strong> and React feels equal or
-                better, you say <strong>“Approve migration.”</strong>
+                When React feels equal or better, say <strong>“Approve migration.”</strong>
               </li>
               <li>
                 Only then do we switch the default homepage from legacy to{" "}
@@ -183,134 +201,174 @@ export default function FeatureParityPage() {
                 }`}
               >
                 {key === "all" ? "All features" : key}
+                {key === "partial" ? ` (${stats.partial})` : ""}
+                {key === "missing" ? ` (${stats.missing})` : ""}
               </button>
             ))}
           </div>
 
-          <div className="space-y-3">
-            {filteredGroups.map((group) => {
-              const gStats = parityStats([group]);
-              const isOpen = expanded === group.id;
-              return (
-                <Card key={group.id} className="overflow-hidden p-0">
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50/80"
-                    onClick={() => setExpanded(isOpen ? null : group.id)}
-                  >
-                    <div>
-                      <h2 className="font-bold text-[var(--color-atlas-navy)]">{group.title}</h2>
-                      <p className="text-xs text-[var(--color-text-muted)]">{group.description}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Badge tone="info">Phase {group.plannedPhase}</Badge>
-                      <span className="text-xs font-semibold text-[var(--color-text-muted)]">
-                        {gStats.done}/{gStats.total} done
-                      </span>
-                    </div>
-                  </button>
-                  {isOpen ? (
-                    <div className="border-t border-[var(--color-border)]">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
-                          <tr>
-                            <th className="px-4 py-2 text-left">Feature</th>
-                            <th className="px-4 py-2 text-left">Legacy</th>
-                            <th className="px-4 py-2 text-left">React</th>
-                            <th className="px-4 py-2 text-left">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.features.map((f) => {
-                            const cfg = parityStatusConfig[f.status];
-                            const Icon = cfg.icon;
-                            return (
-                              <tr key={f.id} className="border-t align-top">
-                                <td className="px-4 py-3">
-                                  <div className="font-semibold">{f.name}</div>
-                                  {f.testHint ? (
-                                    <div className="mt-1 flex items-start gap-1 text-xs text-[var(--color-text-muted)]">
-                                      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
-                                      Test: {f.testHint}
-                                    </div>
-                                  ) : null}
-                                </td>
-                                <td className="px-4 py-3 text-[var(--color-text-muted)]">{f.legacy}</td>
-                                <td className="px-4 py-3">
-                                  {f.react ? (
-                                    f.react.startsWith("/") ? (
-                                      <Link href={f.react} className="font-semibold text-sky-700 hover:underline">
-                                        {f.react}
-                                      </Link>
+          {filteredGroups.length === 0 ? (
+            <Card className="border-emerald-200 bg-emerald-50/60">
+              <p className="text-sm font-semibold text-emerald-900">
+                No {filter} legacy features left — filter is empty because everything is Done.
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                The Phase 6–14 list below is a completed roadmap summary, not outstanding work.
+              </p>
+              <Button type="button" className="mt-3" variant="secondary" onClick={() => setFilter("all")}>
+                Show all features
+              </Button>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredGroups.map((group) => {
+                const gStats = parityStats([group]);
+                const isOpen = expanded === group.id;
+                return (
+                  <Card key={group.id} className="overflow-hidden p-0">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50/80"
+                      onClick={() => setExpanded(isOpen ? null : group.id)}
+                    >
+                      <div>
+                        <h2 className="font-bold text-[var(--color-atlas-navy)]">{group.title}</h2>
+                        <p className="text-xs text-[var(--color-text-muted)]">{group.description}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge tone="info">Phase {group.plannedPhase}</Badge>
+                        <span className="text-xs font-semibold text-[var(--color-text-muted)]">
+                          {gStats.done}/{gStats.total} done
+                        </span>
+                      </div>
+                    </button>
+                    {isOpen ? (
+                      <div className="border-t border-[var(--color-border)]">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
+                            <tr>
+                              <th className="px-4 py-2 text-left">Feature</th>
+                              <th className="px-4 py-2 text-left">Legacy</th>
+                              <th className="px-4 py-2 text-left">React</th>
+                              <th className="px-4 py-2 text-left">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.features.map((f) => {
+                              const cfg = parityStatusConfig[f.status];
+                              const Icon = cfg.icon;
+                              return (
+                                <tr key={f.id} className="border-t align-top">
+                                  <td className="px-4 py-3">
+                                    <div className="font-semibold">{f.name}</div>
+                                    {f.testHint ? (
+                                      <div className="mt-1 flex items-start gap-1 text-xs text-[var(--color-text-muted)]">
+                                        <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                                        Test: {f.testHint}
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                  <td className="px-4 py-3 text-[var(--color-text-muted)]">{f.legacy}</td>
+                                  <td className="px-4 py-3">
+                                    {f.react ? (
+                                      f.react.startsWith("/") ? (
+                                        <Link
+                                          href={f.react}
+                                          className="font-semibold text-sky-700 hover:underline"
+                                        >
+                                          {f.react}
+                                        </Link>
+                                      ) : (
+                                        <span className="text-[var(--color-text-muted)]">{f.react}</span>
+                                      )
                                     ) : (
-                                      <span className="text-[var(--color-text-muted)]">{f.react}</span>
-                                    )
-                                  ) : (
-                                    <span className="text-[var(--color-text-muted)]">—</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-1.5">
-                                    <Icon
-                                      className={`h-4 w-4 ${
-                                        f.status === "done"
-                                          ? "text-emerald-600"
-                                          : f.status === "partial"
-                                            ? "text-amber-600"
-                                            : "text-slate-400"
-                                      }`}
-                                    />
-                                    <Badge tone={cfg.tone}>{cfg.label}</Badge>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
-                </Card>
-              );
-            })}
-          </div>
-
-          <Card>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Remaining legacy features are grouped above by phase. Switch to the{" "}
-              <button
-                type="button"
-                className="font-semibold text-violet-700 hover:underline"
-                onClick={() => setTab("innovation")}
-              >
-                Premium innovation
-              </button>{" "}
-              tab to see modern tech shipped from Phase 0 onward.
-            </p>
-            <div className="mt-4 space-y-2">
-              {plannedPhases.map((p) => (
-                <div
-                  key={p.phase}
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg border border-[var(--color-border)] px-4 py-3"
-                >
-                  <Badge tone="info">Phase {p.phase}</Badge>
-                  <span className="font-bold text-[var(--color-atlas-navy)]">{p.title}</span>
-                  <span className="text-sm text-[var(--color-text-muted)]">— {p.items}</span>
-                </div>
-              ))}
+                                      <span className="text-[var(--color-text-muted)]">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-1.5">
+                                      <Icon
+                                        className={`h-4 w-4 ${
+                                          f.status === "done"
+                                            ? "text-emerald-600"
+                                            : f.status === "partial"
+                                              ? "text-amber-600"
+                                              : "text-slate-400"
+                                        }`}
+                                      />
+                                      <Badge tone={cfg.tone}>{cfg.label}</Badge>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </Card>
+                );
+              })}
             </div>
-          </Card>
+          )}
+
+          {(filter === "all" || filter === "done") && (
+            <Card>
+              <p className="text-sm font-semibold text-[var(--color-atlas-navy)]">
+                Completed phase roadmap (reference)
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                These are the phases we shipped — not a backlog. Switch to{" "}
+                <button
+                  type="button"
+                  className="font-semibold text-violet-700 hover:underline"
+                  onClick={() => setTab("innovation")}
+                >
+                  Premium innovation
+                </button>{" "}
+                for the dual-track tech list.
+              </p>
+              <div className="mt-4 space-y-2">
+                {plannedPhases.map((p) => (
+                  <div
+                    key={p.phase}
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg border border-emerald-100 bg-emerald-50/40 px-4 py-3"
+                  >
+                    <Badge tone="success">Phase {p.phase}</Badge>
+                    <span className="font-bold text-[var(--color-atlas-navy)]">{p.title}</span>
+                    <span className="text-sm text-[var(--color-text-muted)]">— {p.items}</span>
+                    <Badge tone="success">Shipped</Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </>
       ) : (
         <>
-          <Card className="border-violet-200 bg-gradient-to-br from-violet-50/80 to-white">
+          <Card
+            className={
+              innovationComplete
+                ? "border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white"
+                : "border-violet-200 bg-gradient-to-br from-violet-50/80 to-white"
+            }
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-700">
-                  Premium tech — Phase 0 → cutover
+                <p
+                  className={`text-xs font-bold uppercase tracking-wide ${
+                    innovationComplete ? "text-emerald-700" : "text-violet-700"
+                  }`}
+                >
+                  {innovationComplete
+                    ? "Premium innovation complete"
+                    : "Premium tech — Phase 0 → cutover"}
                 </p>
                 <p className="mt-2 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
-                  {iStats.done} shipped · {iStats.retrofit} retrofit · {iStats.planned} planned
+                  {iStats.done} of {iStats.total} shipped
+                  {!innovationComplete
+                    ? ` · ${iStats.partial} partial · ${iStats.planned} planned`
+                    : ""}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Badge tone="success">{iStats.done} done</Badge>
@@ -326,7 +384,7 @@ export default function FeatureParityPage() {
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-violet-100">
               <div
                 className="h-full rounded-full bg-violet-500 transition-all"
-                style={{ width: `${Math.round((iStats.done / iStats.total) * 100)}%` }}
+                style={{ width: `${Math.round((iStats.done / Math.max(1, iStats.total)) * 100)}%` }}
               />
             </div>
           </Card>
@@ -353,75 +411,96 @@ export default function FeatureParityPage() {
                 }`}
               >
                 {key === "all" ? "All items" : key}
+                {key === "partial" ? ` (${iStats.partial})` : ""}
+                {key === "planned" ? ` (${iStats.planned})` : ""}
               </button>
             ))}
           </div>
 
-          <div className="space-y-4">
-            {innovationByPhase.map(({ phase, items }) => (
-              <Card key={phase} className="overflow-hidden p-0">
-                <div className="border-b border-[var(--color-border)] bg-slate-50 px-5 py-3">
-                  <h2 className="font-bold text-[var(--color-atlas-navy)]">
-                    Phase {phase}
-                    <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
-                      {items.filter((i) => i.status === "done").length}/{items.length} shipped
-                    </span>
-                  </h2>
-                </div>
-                <table className="min-w-full text-sm">
-                  <thead className="text-xs uppercase text-[var(--color-text-muted)]">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Innovation</th>
-                      <th className="px-4 py-2 text-left">Why</th>
-                      <th className="px-4 py-2 text-left">In React</th>
-                      <th className="px-4 py-2 text-left">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item) => {
-                      const cfg = innovationStatusConfig[item.status];
-                      const Icon = cfg.icon;
-                      return (
-                        <tr key={item.id} className="border-t align-top">
-                          <td className="px-4 py-3 font-semibold">{item.name}</td>
-                          <td className="px-4 py-3 text-[var(--color-text-muted)]">{item.why}</td>
-                          <td className="px-4 py-3">
-                            {item.react ? (
-                              item.react.startsWith("/") ? (
-                                <Link href={item.react} className="font-semibold text-sky-700 hover:underline">
-                                  {item.react}
-                                </Link>
+          {innovationByPhase.length === 0 ? (
+            <Card className="border-emerald-200 bg-emerald-50/60">
+              <p className="text-sm font-semibold text-emerald-900">
+                No {iFilter} innovation items — everything in this track is Shipped.
+              </p>
+              <Button
+                type="button"
+                className="mt-3"
+                variant="secondary"
+                onClick={() => setIFilter("all")}
+              >
+                Show all items
+              </Button>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {innovationByPhase.map(({ phase, items }) => (
+                <Card key={phase} className="overflow-hidden p-0">
+                  <div className="border-b border-[var(--color-border)] bg-slate-50 px-5 py-3">
+                    <h2 className="font-bold text-[var(--color-atlas-navy)]">
+                      Phase {phase}
+                      <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
+                        {items.filter((i) => i.status === "done").length}/{items.length} shipped
+                      </span>
+                    </h2>
+                  </div>
+                  <table className="min-w-full text-sm">
+                    <thead className="text-xs uppercase text-[var(--color-text-muted)]">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Innovation</th>
+                        <th className="px-4 py-2 text-left">Why</th>
+                        <th className="px-4 py-2 text-left">In React</th>
+                        <th className="px-4 py-2 text-left">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => {
+                        const cfg = innovationStatusConfig[item.status];
+                        const Icon = cfg.icon;
+                        return (
+                          <tr key={item.id} className="border-t align-top">
+                            <td className="px-4 py-3 font-semibold">{item.name}</td>
+                            <td className="px-4 py-3 text-[var(--color-text-muted)]">{item.why}</td>
+                            <td className="px-4 py-3">
+                              {item.react ? (
+                                item.react.startsWith("/") ? (
+                                  <Link
+                                    href={item.react}
+                                    className="font-semibold text-sky-700 hover:underline"
+                                  >
+                                    {item.react}
+                                  </Link>
+                                ) : (
+                                  <span className="text-[var(--color-text-muted)]">{item.react}</span>
+                                )
                               ) : (
-                                <span className="text-[var(--color-text-muted)]">{item.react}</span>
-                              )
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              <Icon
-                                className={`h-4 w-4 ${
-                                  item.status === "done"
-                                    ? "text-emerald-600"
-                                    : item.status === "retrofit"
-                                      ? "text-violet-600"
-                                      : item.status === "partial"
-                                        ? "text-amber-600"
-                                        : "text-slate-400"
-                                }`}
-                              />
-                              <Badge tone={cfg.tone}>{cfg.label}</Badge>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </Card>
-            ))}
-          </div>
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1.5">
+                                <Icon
+                                  className={`h-4 w-4 ${
+                                    item.status === "done"
+                                      ? "text-emerald-600"
+                                      : item.status === "retrofit"
+                                        ? "text-violet-600"
+                                        : item.status === "partial"
+                                          ? "text-amber-600"
+                                          : "text-slate-400"
+                                  }`}
+                                />
+                                <Badge tone={cfg.tone}>{cfg.label}</Badge>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </Card>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>
