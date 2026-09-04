@@ -267,14 +267,19 @@ export default function DirectoryPage() {
     try {
       if (useLiveData) {
         try {
-          await saveDirectoryContact(
-            { ...form, id: editingId || undefined },
-            user?.username || "unknown",
-          );
+          await Promise.race([
+            saveDirectoryContact(
+              { ...form, id: editingId || undefined },
+              user?.username || "unknown",
+            ),
+            new Promise((_, reject) =>
+              window.setTimeout(() => reject(new Error("Live save timed out")), 5000),
+            ),
+          ]);
           toast(editingId ? "Contact updated" : "Contact added", "success");
           await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
         } catch (liveErr) {
-          // Preview / rules: keep CRM usable with a local row.
+          // Preview / rules / slow network: keep CRM usable with a local row.
           applyLocalSave();
           toast(
             liveErr instanceof Error
