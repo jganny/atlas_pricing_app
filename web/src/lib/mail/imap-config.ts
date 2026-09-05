@@ -2,13 +2,16 @@
  * IMAP mailbox status for the UI.
  *
  * Live polling is server-side (Firebase Functions `pollPricingInboxes`).
+ * Slim AI/heuristic intake: classify → store enquiry ticket only (no full body).
  * Passwords live ONLY as Firebase secrets:
  *   IMAP_PRICING_PASSWORD
  *   IMAP_PRICINGSALES_PASSWORD
+ * Optional AI:
+ *   ANTHROPIC_API_KEY
  *
- * On your Mac (one-time):
- *   ./scripts/set-imap-secrets.sh
- *   firebase deploy --only functions:pollPricingInboxes
+ * On your Mac:
+ *   cd functions && npm install && cd ..
+ *   firebase deploy --only functions:pollPricingInboxes --project vertex-35d95
  *
  * Never put mailbox passwords in NEXT_PUBLIC_* or commit them to git.
  */

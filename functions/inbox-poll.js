@@ -1,10 +1,16 @@
 /**
- * Poll Atlas shared mailboxes over IMAP (Logix / czipop.logix.in:993).
- * Passwords are Firebase secrets — never committed to git.
+ * Slim AI intake for pricing / pricingsales IMAP.
  *
- * Set once on your Mac (or via Firebase console):
- *   firebase functions:secrets:set IMAP_PRICING_PASSWORD
- *   firebase functions:secrets:set IMAP_PRICINGSALES_PASSWORD
+ * Design (storage-safe):
+ * - Read mail from Logix IMAP (source of truth stays on the mail server)
+ * - Classify: new_enquiry | follow_up | noise | needs_human
+ * - Persist ONLY actionable slim enquiry docs (no full MIME / long body)
+ * - Noise is counted and skipped (not written to Firestore)
+ *
+ * Secrets:
+ *   IMAP_PRICING_PASSWORD, IMAP_PRICINGSALES_PASSWORD
+ *   ANTHROPIC_API_KEY (optional — heuristic fallback if missing)
+ *
  *   firebase deploy --only functions:pollPricingInboxes
  */
 const functions = require("firebase-functions");
@@ -19,6 +25,7 @@ if (!admin.apps.length) {
 
 const pricingPassword = defineSecret("IMAP_PRICING_PASSWORD");
 const salesPassword = defineSecret("IMAP_PRICINGSALES_PASSWORD");
+const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 
 const IMAP = {
   host: "czipop.logix.in",
@@ -40,9 +47,20 @@ const MAILBOXES = [
   },
 ];
 
+const ACTIONABLE = new Set(["new_enquiry", "follow_up", "needs_human"]);
+
+function stripHtml(html) {
+  return String(html || "")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function detectMode(text) {
-  const sea = /\b(fcl|lcl|container|cbm|liner|maersk|innsa|nlrtm)\b/i.test(text);
-  const air = /\b(air|awb|airline|kg|kgs|emirates|qatar|blr|lhr)\b/i.test(text);
+  const sea = /\b(fcl|lcl|container|cbm|liner|maersk|msc|innsa|nlrtm|pol|pod)\b/i.test(text);
+  const air = /\b(air|awb|airline|kg|kgs|emirates|qatar|blr|lhr|dxb)\b/i.test(text);
   if (sea && !air) return "sea";
   if (air && !sea) return "air";
   if (sea) return "sea";
@@ -78,9 +96,8 @@ function parseLite(text, mode) {
     containers: [],
     confidence: 40,
     source: "email-imap",
-    mode: mode === "sea" ? "fcl" : "air",
   };
-  const cust = text.match(/(?:customer|client|shipper)\s*[:\-]\s*([^\n,;]+)/i);
+  const cust = text.match(/(?:customer|client|shipper|company)\s*[:\-]\s*([^\n,;]{2,80})/i);
   if (cust) result.customer = cust[1].trim();
 
   const polPod = text.match(/\bpol\b[:\s]*([^\n,;(]{2,40})[\s\S]*?\bpod\b[:\s]*([^\n,;(]{2,40})/i);
@@ -103,8 +120,7 @@ function parseLite(text, mode) {
   }
 
   if (mode === "sea") {
-    result.mode = /\blcl\b/i.test(text) ? "lcl" : /\bbb\b|break\s*bulk/i.test(text) ? "bb" : "fcl";
-    const cont = text.match(/(\d+)\s*[x×*]\s*(20|40|45)\s*['']?\s*(gp|hc|hq)/i);
+    const cont = text.match(/(\d+)\s*[x×*]\s*(20|40|45)\s*['']?\s*(gp|hc|hq|ot|rf)/i);
     if (cont) {
       result.containers.push({
         type: `${cont[2]}'${cont[3].toUpperCase() === "HQ" ? "HC" : cont[3].toUpperCase()}`,
@@ -115,7 +131,7 @@ function parseLite(text, mode) {
   } else {
     const gw = text.match(/(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/i);
     const dim = text.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
-    const qty = text.match(/(\d+)\s*(?:pcs|pieces|pkgs)/i);
+    const qty = text.match(/(\d+)\s*(?:pcs|pieces|pkgs|ctns)/i);
     if (gw || dim) {
       result.packages.push({
         qty: qty ? parseInt(qty[1], 10) : 1,
@@ -131,19 +147,178 @@ function parseLite(text, mode) {
   return result;
 }
 
-function stripHtml(html) {
-  return String(html || "")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+/** Fast rules when Anthropic is unavailable or fails. */
+function classifyHeuristic(subject, body) {
+  const text = `${subject}\n${body}`.toLowerCase();
+  const subj = subject.toLowerCase();
+
+  if (
+    /\b(unsubscribe|newsletter|marketing|out of office|automatic reply|delivery status|undeliverable)\b/i.test(
+      text,
+    )
+  ) {
+    return {
+      tag: "noise",
+      actionRequired: false,
+      reason: "Automated / marketing / bounce",
+      mode: "unknown",
+    };
+  }
+
+  const isReply = /^(re|fw|fwd)\s*:/i.test(subject.trim());
+  const quoteSignals =
+    /\b(please quote|kindly quote|rate request|rfq|need rates?|offer rates?|pricing request|quotation)\b/i.test(
+      text,
+    ) ||
+    (/\b(pol|pod|origin|destination)\b/i.test(text) &&
+      /\b(fcl|lcl|kg|kgs|cbm|container|awb)\b/i.test(text));
+
+  if (isReply && !quoteSignals) {
+    return {
+      tag: "follow_up",
+      actionRequired: /\b(urgent|pending|awaiting|still waiting|follow.?up|any update)\b/i.test(text),
+      reason: "Reply/forward without a clear new RFQ",
+      mode: detectMode(text),
+    };
+  }
+
+  if (quoteSignals) {
+    return {
+      tag: "new_enquiry",
+      actionRequired: true,
+      reason: "Looks like a rate / quote request",
+      mode: detectMode(text),
+    };
+  }
+
+  if (/\b(thank you|thanks|noted|received|fyi|for your information)\b/i.test(subj) && !quoteSignals) {
+    return {
+      tag: "noise",
+      actionRequired: false,
+      reason: "Acknowledgement / FYI",
+      mode: "unknown",
+    };
+  }
+
+  return {
+    tag: "needs_human",
+    actionRequired: true,
+    reason: "Ambiguous — desk should glance",
+    mode: detectMode(text),
+  };
 }
 
-async function pollOne(mailbox, password) {
+async function classifyWithAi(apiKey, subject, body) {
+  if (!apiKey) return null;
+  const excerpt = body.slice(0, 3500);
+  const prompt = `You classify freight pricing mailbox emails for Atlas Logistics (India forwarder).
+Return ONLY compact JSON (no markdown) with keys:
+tag: new_enquiry | follow_up | noise | needs_human
+actionRequired: boolean
+reason: short string
+mode: air | sea | unknown
+customer: string (or "")
+origin: airport/seaport code if clear else ""
+destination: code if clear else ""
+summary: one short sentence for the desk
+
+Rules:
+- new_enquiry = first ask for rates / RFQ with cargo or lane
+- follow_up = reply on an existing thread, chasing, clarifying (not a brand-new RFQ)
+- noise = OOOffice, marketing, bounce, pure thanks with no ask
+- needs_human = unclear but might need a person
+
+Subject: ${subject}
+Body: ${excerpt}`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    functions.logger.warn("AI classify HTTP error", {
+      status: response.status,
+      errText: errText.slice(0, 200),
+    });
+    return null;
+  }
+
+  const data = await response.json();
+  const text = (data.content || [])
+    .filter((p) => p.type === "text")
+    .map((p) => p.text)
+    .join("\n")
+    .trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    const tag = String(parsed.tag || "needs_human");
+    if (!ACTIONABLE.has(tag) && tag !== "noise") {
+      parsed.tag = "needs_human";
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function classifyAndExtract(apiKey, subject, body) {
+  const heuristic = classifyHeuristic(subject, body);
+  let ai = null;
+  try {
+    ai = await classifyWithAi(apiKey, subject, body);
+  } catch (err) {
+    functions.logger.warn("AI classify failed", {
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  const tag = ai?.tag || heuristic.tag;
+  const mode =
+    ai?.mode === "air" || ai?.mode === "sea" || ai?.mode === "unknown"
+      ? ai.mode
+      : heuristic.mode || detectMode(`${subject}\n${body}`);
+  const actionRequired =
+    typeof ai?.actionRequired === "boolean" ? ai.actionRequired : heuristic.actionRequired;
+  const reason = String(ai?.reason || heuristic.reason || "");
+  const summary = String(ai?.summary || reason || "").slice(0, 200);
+
+  const lite = parseLite(`${subject}\n${body}`, mode === "unknown" ? "air" : mode);
+  if (ai?.customer) lite.customer = String(ai.customer).slice(0, 120);
+  if (ai?.origin) lite.origin = extractCode(String(ai.origin), mode);
+  if (ai?.destination) lite.destination = extractCode(String(ai.destination), mode);
+  if (ai && (ai.origin || ai.destination || ai.customer)) {
+    lite.confidence = Math.max(lite.confidence, 75);
+  }
+  lite.source = ai ? "email-imap+ai" : "email-imap";
+
+  return {
+    tag,
+    mode,
+    actionRequired: Boolean(actionRequired) || tag === "new_enquiry" || tag === "needs_human",
+    reason,
+    summary,
+    classifier: ai ? "anthropic" : "heuristic",
+    parsed: lite,
+  };
+}
+
+async function pollOne(mailbox, password, apiKey) {
   if (!password) {
     functions.logger.warn("IMAP password secret empty — skip", { mailbox: mailbox.key });
-    return { mailbox: mailbox.key, imported: 0, skipped: true };
+    return { mailbox: mailbox.key, imported: 0, skippedNoise: 0, skipped: true };
   }
 
   const client = new ImapFlow({
@@ -156,13 +331,16 @@ async function pollOne(mailbox, password) {
 
   const db = admin.firestore();
   let imported = 0;
+  let skippedNoise = 0;
 
   await client.connect();
   try {
     const lock = await client.getMailboxLock(IMAP.folder);
     try {
+      // Prefer unseen; cap batch so AI + IMAP stay within timeout.
       const unseen = await client.search({ seen: false }, { uid: true });
-      const uids = Array.isArray(unseen) ? unseen.slice(-40) : [];
+      const uids = Array.isArray(unseen) ? unseen.slice(-25) : [];
+
       for await (const msg of client.fetch(uids, { envelope: true, source: true, uid: true })) {
         const messageId = msg.envelope?.messageId || `uid-${mailbox.key}-${msg.uid}`;
         const docId = crypto
@@ -170,44 +348,67 @@ async function pollOne(mailbox, password) {
           .update(`${mailbox.key}:${messageId}`)
           .digest("hex")
           .slice(0, 24);
+
         const existing = await db.collection("inbox_enquiries").doc(docId).get();
-        if (existing.exists) continue;
+        if (existing.exists) {
+          try {
+            await client.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"]);
+          } catch {
+            /* optional */
+          }
+          continue;
+        }
 
         const raw = msg.source ? msg.source.toString("utf8") : "";
-        const body = stripHtml(raw).slice(0, 12000);
+        // Work buffer only — never persisted in full.
+        const bodyWork = stripHtml(raw).slice(0, 8000);
         const subject = msg.envelope?.subject || "(no subject)";
         const from =
           (msg.envelope?.from || [])
             .map((a) => a.address || [a.name, a.address].filter(Boolean).join(" "))
             .join(", ") || "";
-        const mode = detectMode(`${subject}\n${body}`);
-        const assignment = assignUsers(mailbox.key, mode);
-        const parsed = parseLite(`${subject}\n${body}`, mode);
 
+        const classified = await classifyAndExtract(apiKey, subject, bodyWork);
+
+        // Mark seen either way so we do not re-process noise forever.
+        try {
+          await client.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"]);
+        } catch {
+          /* optional */
+        }
+
+        if (classified.tag === "noise" || !ACTIONABLE.has(classified.tag)) {
+          skippedNoise += 1;
+          continue;
+        }
+
+        const assignment = assignUsers(mailbox.key, classified.mode);
+
+        // Slim Firestore doc — no full body.
         await db.collection("inbox_enquiries").doc(docId).set({
           mailbox: mailbox.key,
           mailboxEmail: mailbox.user,
           messageId,
           from,
-          subject,
+          subject: subject.slice(0, 300),
           receivedAt: (msg.envelope?.date || new Date()).toISOString(),
           timestamp: Date.now(),
-          bodyPreview: body.slice(0, 280),
-          body,
-          mode,
-          confidence: parsed.confidence,
+          bodyPreview: bodyWork.slice(0, 240),
+          body: "", // intentionally empty — storage-safe; mail stays on IMAP
+          mode: classified.mode,
+          confidence: classified.parsed.confidence,
           assignedUsers: assignment.assignedUsers,
           suggestedUser: assignment.suggestedUser,
           claimedBy: null,
           status: "new",
-          parsed,
+          tag: classified.tag,
+          actionRequired: classified.actionRequired,
+          reason: classified.reason,
+          summary: classified.summary,
+          classifier: classified.classifier,
+          parsed: classified.parsed,
         });
         imported += 1;
-        try {
-          await client.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"]);
-        } catch {
-          /* flag optional */
-        }
       }
     } finally {
       lock.release();
@@ -220,21 +421,28 @@ async function pollOne(mailbox, password) {
     }
   }
 
-  return { mailbox: mailbox.key, imported };
+  return { mailbox: mailbox.key, imported, skippedNoise };
 }
 
 exports.pollPricingInboxes = functions
   .runWith({
-    secrets: [pricingPassword, salesPassword],
-    timeoutSeconds: 120,
-    memory: "256MB",
+    secrets: [pricingPassword, salesPassword, anthropicApiKey],
+    timeoutSeconds: 180,
+    memory: "512MB",
   })
   .pubsub.schedule("every 2 minutes")
   .onRun(async () => {
+    let apiKey = "";
+    try {
+      apiKey = anthropicApiKey.value() || "";
+    } catch {
+      apiKey = "";
+    }
+
     const results = [];
     for (const box of MAILBOXES) {
       try {
-        results.push(await pollOne(box, box.secret.value()));
+        results.push(await pollOne(box, box.secret.value(), apiKey));
       } catch (err) {
         functions.logger.error("IMAP poll failed", {
           mailbox: box.key,
@@ -246,6 +454,6 @@ exports.pollPricingInboxes = functions
         });
       }
     }
-    functions.logger.info("IMAP poll complete", { results });
+    functions.logger.info("IMAP slim intake complete", { results, ai: Boolean(apiKey) });
     return results;
   });

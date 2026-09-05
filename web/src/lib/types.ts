@@ -207,6 +207,8 @@ export interface CreditControl {
 
 export type InboxMailboxKey = 'pricing' | 'pricingsales'
 export type InboxStatus = 'new' | 'claimed' | 'applied' | 'ignored'
+/** AI / heuristic intake tag — noise is never stored. */
+export type InboxTag = 'new_enquiry' | 'follow_up' | 'needs_human'
 
 export interface InboxEnquiry {
   id: string
@@ -216,7 +218,9 @@ export interface InboxEnquiry {
   from: string
   subject: string
   receivedAt: string
+  /** Short preview only — full mail stays on IMAP. */
   bodyPreview: string
+  /** Deprecated: kept empty for storage; prefer parsed + bodyPreview. */
   body: string
   mode: 'air' | 'sea' | 'unknown'
   confidence: number
@@ -224,5 +228,10 @@ export interface InboxEnquiry {
   suggestedUser?: string | null
   claimedBy?: string | null
   status: InboxStatus
+  tag?: InboxTag
+  actionRequired?: boolean
+  reason?: string
+  summary?: string
+  classifier?: 'anthropic' | 'heuristic' | string
   parsed: ParsedEnquiry
 }

@@ -167,8 +167,9 @@ export default function QuoteHubPage() {
           Email automation (IMAP)
         </h2>
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-          Passwords received — set them as Firebase secrets on your Mac (never in git), then
-          redeploy <code className="rounded bg-slate-100 px-1">pollPricingInboxes</code>.
+          Slim AI intake: classify mail → store enquiry tickets only (no full body). Secrets are set
+          — redeploy <code className="rounded bg-slate-100 px-1">pollPricingInboxes</code> to activate
+          the classifier. Open <Link href="/inbox" className="font-bold text-sky-800 hover:underline">Enquiry intake</Link>.
         </p>
         <ul className="mt-3 space-y-2">
           {getImapMailboxStatus().map((box) => (
@@ -183,14 +184,13 @@ export default function QuoteHubPage() {
                 <div className="mt-1 font-mono text-[10px] text-slate-500">secret: {box.secretName}</div>
               </div>
               <span className="shrink-0 rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold text-teal-900">
-                Ready to set
+                Secrets set
               </span>
             </li>
           ))}
         </ul>
         <p className="mt-3 text-[11px] text-[var(--color-text-muted)]">
-          Mac: <code className="rounded bg-slate-100 px-1">./scripts/set-imap-secrets.sh</code> then
-          deploy functions.
+          Mac: <code className="rounded bg-slate-100 px-1">cd functions && npm install && cd .. && firebase deploy --only functions:pollPricingInboxes --project vertex-35d95</code>
         </p>
       </Card>
 

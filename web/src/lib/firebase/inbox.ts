@@ -10,10 +10,15 @@ import {
   query,
   updateDoc,
 } from "firebase/firestore";
-import type { InboxEnquiry } from "@/lib/types";
+import type { InboxEnquiry, InboxTag } from "@/lib/types";
 import { getFirebaseDb } from "./client";
 
+const TAGS = new Set(["new_enquiry", "follow_up", "needs_human"]);
+
 function mapInbox(id: string, data: Record<string, unknown>): InboxEnquiry {
+  const tagRaw = data.tag ? String(data.tag) : "";
+  const tag = TAGS.has(tagRaw) ? (tagRaw as InboxTag) : undefined;
+
   return {
     id,
     mailbox: (data.mailbox as InboxEnquiry["mailbox"]) || "pricing",
@@ -23,13 +28,18 @@ function mapInbox(id: string, data: Record<string, unknown>): InboxEnquiry {
     subject: String(data.subject ?? "(no subject)"),
     receivedAt: String(data.receivedAt ?? data.date ?? ""),
     bodyPreview: String(data.bodyPreview ?? "").slice(0, 280),
-    body: String(data.body ?? data.bodyPreview ?? ""),
+    body: String(data.body || data.bodyPreview || ""),
     mode: (data.mode as InboxEnquiry["mode"]) || "unknown",
     confidence: typeof data.confidence === "number" ? data.confidence : 0,
     assignedUsers: Array.isArray(data.assignedUsers) ? (data.assignedUsers as string[]) : [],
     suggestedUser: (data.suggestedUser as string) || null,
     claimedBy: (data.claimedBy as string) || null,
     status: (data.status as InboxEnquiry["status"]) || "new",
+    tag,
+    actionRequired: data.actionRequired !== false,
+    reason: data.reason ? String(data.reason) : undefined,
+    summary: data.summary ? String(data.summary) : undefined,
+    classifier: data.classifier ? String(data.classifier) : undefined,
     parsed: (data.parsed as InboxEnquiry["parsed"]) || {
       customer: "",
       origin: "",
@@ -65,7 +75,7 @@ export function subscribeInboxEnquiries(
 
 export async function patchInboxEnquiry(
   id: string,
-  patch: Partial<Pick<InboxEnquiry, "status" | "claimedBy">>,
+  patch: Partial<Pick<InboxEnquiry, "status" | "claimedBy" | "actionRequired">>,
 ): Promise<void> {
   const db = getFirebaseDb();
   await updateDoc(doc(db, "inbox_enquiries", id), {
