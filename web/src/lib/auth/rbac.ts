@@ -49,6 +49,7 @@ const ALL: AppRouteId[] = [
 
 const CORE: AppRouteId[] = [
   "dashboard",
+  "smart-quote",
   "air",
   "sea",
   "courier",
@@ -66,6 +67,7 @@ const CORE: AppRouteId[] = [
 const ROLE_ROUTES: Record<string, AppRouteId[]> = {
   shashank: [
     "dashboard",
+    "smart-quote",
     "air",
     "transport",
     "warehouse",
@@ -78,6 +80,7 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
   ],
   shaheer: [
     "dashboard",
+    "smart-quote",
     "sea",
     "transport",
     "warehouse",
@@ -93,6 +96,7 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
   cathrina: [...CORE, "admin"],
   pricing: [
     "dashboard",
+    "smart-quote",
     "air",
     "sea",
     "inbox",
