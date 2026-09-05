@@ -42,7 +42,7 @@ export function ToastContainer() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-[110] flex max-w-sm flex-col gap-2"
+      className="fixed bottom-20 right-4 z-[220] flex max-w-sm flex-col gap-2"
       aria-live="polite"
     >
       {toasts.map((t) => (
