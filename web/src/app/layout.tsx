@@ -12,7 +12,8 @@ const ibmPlex = IBM_Plex_Sans({
 export const metadata: Metadata = {
   title: "Atlas Pricing",
   description: "Atlas Logistics pricing desks — quote, inbox, carriers",
-  manifest: "/manifest.webmanifest",
+  // Explicit /app prefix: Next metadata basePath prefixing is unreliable with static export.
+  manifest: "/app/manifest.webmanifest",
   applicationName: "Atlas Pricing",
   appleWebApp: {
     capable: true,
@@ -22,10 +23,10 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
   icons: {
     icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/app/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/app/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/app/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   other: {
     "mobile-web-app-capable": "yes",
