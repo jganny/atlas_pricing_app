@@ -11,8 +11,33 @@ const ibmPlex = IBM_Plex_Sans({
 
 export const metadata: Metadata = {
   title: "Atlas Pricing",
-  description: "Vertex freight pricing workspace — Next.js migration preview",
+  description: "Atlas Logistics pricing desks — quote, inbox, carriers",
   manifest: "/manifest.webmanifest",
+  applicationName: "Atlas Pricing",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Atlas",
+  },
+  formatDetection: { telephone: false },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport = {
+  themeColor: "#0a2540",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({

@@ -60,6 +60,8 @@ const navItems: Array<{
   { href: "/inbox", label: "Inbox", icon: Inbox, route: "inbox" },
   { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
   { href: "/carriers", label: "Carriers", icon: Ship, route: "directory" },
+  { href: "/integrations", label: "DCSA / ONE Record", icon: Sparkles, route: "directory" },
+  { href: "/m", label: "Mobile app", icon: Home, route: "dashboard" },
   { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
   { href: "/directory", label: "Directory", icon: Users, route: "directory" },
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },

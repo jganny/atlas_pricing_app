@@ -20,3 +20,7 @@ web/dist/
 # Firebase
 .firebase/
 firebase-debug.log
+
+# Local IMAP secrets — never commit
+scripts/imap-secrets.env
+**/imap-secrets.env

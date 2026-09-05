@@ -1,50 +1,46 @@
 /**
- * IMAP automation config (pricing + pricingsales).
+ * IMAP mailbox status for the UI.
  *
- * Passwords must NEVER be committed. When you are ready, set these in the
- * hosting environment / Firebase Functions secrets and redeploy the mail poller:
+ * Live polling is server-side (Firebase Functions `pollPricingInboxes`).
+ * Passwords live ONLY as Firebase secrets:
+ *   IMAP_PRICING_PASSWORD
+ *   IMAP_PRICINGSALES_PASSWORD
  *
- *   ATLAS_IMAP_PRICING_USER=pricing@…
- *   ATLAS_IMAP_PRICING_PASS=********
- *   ATLAS_IMAP_PRICINGSALES_USER=pricingsales@…
- *   ATLAS_IMAP_PRICINGSALES_PASS=********
- *   ATLAS_IMAP_HOST=…
- *   ATLAS_IMAP_PORT=993
+ * On your Mac (one-time):
+ *   ./scripts/set-imap-secrets.sh
+ *   firebase deploy --only functions:pollPricingInboxes
  *
- * The React app only shows connection status; polling stays server-side.
+ * Never put mailbox passwords in NEXT_PUBLIC_* or commit them to git.
  */
+
+import { MAILBOX_TEAMS } from "@/lib/quotes/team-roles";
 
 export type ImapMailboxId = "pricing" | "pricingsales";
 
 export type ImapMailboxStatus = {
   id: ImapMailboxId;
   label: string;
-  userEnv: string;
-  configured: boolean;
+  email: string;
+  secretName: string;
+  /** Username is public; password presence is only known after Functions deploy. */
   note: string;
 };
 
 export function getImapMailboxStatus(): ImapMailboxStatus[] {
-  const pricingUser = process.env.NEXT_PUBLIC_IMAP_PRICING_USER || "";
-  const salesUser = process.env.NEXT_PUBLIC_IMAP_PRICINGSALES_USER || "";
   return [
     {
       id: "pricing",
-      label: "pricing mailbox",
-      userEnv: "NEXT_PUBLIC_IMAP_PRICING_USER",
-      configured: Boolean(pricingUser),
-      note: pricingUser
-        ? `Visible as ${pricingUser} — password stays in server secrets`
-        : "Share credentials when ready; we will wire Functions secrets (not the client).",
+      label: "Pricing mailbox",
+      email: MAILBOX_TEAMS.pricing.email,
+      secretName: "IMAP_PRICING_PASSWORD",
+      note: "Polled every 2 min → Air/Sea nomination desks (Shashank / Shaheer)",
     },
     {
       id: "pricingsales",
-      label: "pricingsales mailbox",
-      userEnv: "NEXT_PUBLIC_IMAP_PRICINGSALES_USER",
-      configured: Boolean(salesUser),
-      note: salesUser
-        ? `Visible as ${salesUser} — password stays in server secrets`
-        : "Share credentials when ready; inbox automation will poll this mailbox.",
+      label: "Pricing sales mailbox",
+      email: MAILBOX_TEAMS.pricingsales.email,
+      secretName: "IMAP_PRICINGSALES_PASSWORD",
+      note: "Polled every 2 min → Free-hand / NRS desks (Kavya / Cathrina)",
     },
   ];
 }

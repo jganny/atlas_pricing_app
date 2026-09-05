@@ -167,8 +167,8 @@ export default function QuoteHubPage() {
           Email automation (IMAP)
         </h2>
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-          Ready for pricing / pricingsales mailboxes. Share passwords when you want — they go in
-          server secrets only, never in the app bundle.
+          Passwords received — set them as Firebase secrets on your Mac (never in git), then
+          redeploy <code className="rounded bg-slate-100 px-1">pollPricingInboxes</code>.
         </p>
         <ul className="mt-3 space-y-2">
           {getImapMailboxStatus().map((box) => (
@@ -178,18 +178,20 @@ export default function QuoteHubPage() {
             >
               <div>
                 <div className="font-bold text-[var(--color-atlas-navy)]">{box.label}</div>
+                <div className="text-[var(--color-text-muted)]">{box.email}</div>
                 <div className="text-[var(--color-text-muted)]">{box.note}</div>
+                <div className="mt-1 font-mono text-[10px] text-slate-500">secret: {box.secretName}</div>
               </div>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  box.configured ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"
-                }`}
-              >
-                {box.configured ? "User set" : "Awaiting secrets"}
+              <span className="shrink-0 rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold text-teal-900">
+                Ready to set
               </span>
             </li>
           ))}
         </ul>
+        <p className="mt-3 text-[11px] text-[var(--color-text-muted)]">
+          Mac: <code className="rounded bg-slate-100 px-1">./scripts/set-imap-secrets.sh</code> then
+          deploy functions.
+        </p>
       </Card>
 
       <PremiumQuoteOverlay open={overlayOpen} onOpenChange={setOverlayOpen} />

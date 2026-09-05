@@ -1,16 +1,21 @@
 /**
  * Poll Atlas shared mailboxes over IMAP (Logix / czipop.logix.in:993).
- * Passwords are Firebase secrets — never committed.
+ * Passwords are Firebase secrets — never committed to git.
  *
- * Set once:
+ * Set once on your Mac (or via Firebase console):
  *   firebase functions:secrets:set IMAP_PRICING_PASSWORD
  *   firebase functions:secrets:set IMAP_PRICINGSALES_PASSWORD
+ *   firebase deploy --only functions:pollPricingInboxes
  */
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 const { defineSecret } = require("firebase-functions/params");
 const { ImapFlow } = require("imapflow");
+
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 const pricingPassword = defineSecret("IMAP_PRICING_PASSWORD");
 const salesPassword = defineSecret("IMAP_PRICINGSALES_PASSWORD");
@@ -54,6 +59,16 @@ function assignUsers(mailboxKey, mode) {
   return { assignedUsers: ["kavya", "cathrina"], suggestedUser: null };
 }
 
+function extractCode(value, mode) {
+  const v = String(value || "").trim();
+  if (mode === "sea") {
+    const m5 = v.match(/\b([A-Z]{2}[A-Z0-9]{3})\b/);
+    if (m5) return m5[1];
+  }
+  const m3 = v.match(/\b([A-Z]{3})\b/);
+  return m3 ? m3[1] : v.slice(0, 40);
+}
+
 function parseLite(text, mode) {
   const result = {
     customer: "",
@@ -63,6 +78,7 @@ function parseLite(text, mode) {
     containers: [],
     confidence: 40,
     source: "email-imap",
+    mode: mode === "sea" ? "fcl" : "air",
   };
   const cust = text.match(/(?:customer|client|shipper)\s*[:\-]\s*([^\n,;]+)/i);
   if (cust) result.customer = cust[1].trim();
@@ -96,8 +112,6 @@ function parseLite(text, mode) {
       });
       result.confidence = Math.min(100, result.confidence + 15);
     }
-    const ton = text.match(/(\d+(?:\.\d+)?)\s*(?:mt|tons?)\b/i);
-    if (ton) result.grossWeight = parseFloat(ton[1]) * 1000;
   } else {
     const gw = text.match(/(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/i);
     const dim = text.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
@@ -115,16 +129,6 @@ function parseLite(text, mode) {
   }
 
   return result;
-}
-
-function extractCode(value, mode) {
-  const v = String(value || "").trim();
-  if (mode === "sea") {
-    const m5 = v.match(/\b([A-Z]{2}[A-Z0-9]{3})\b/);
-    if (m5) return m5[1];
-  }
-  const m3 = v.match(/\b([A-Z]{3})\b/);
-  return m3 ? m3[1] : v.slice(0, 40);
 }
 
 function stripHtml(html) {
@@ -161,7 +165,11 @@ async function pollOne(mailbox, password) {
       const uids = Array.isArray(unseen) ? unseen.slice(-40) : [];
       for await (const msg of client.fetch(uids, { envelope: true, source: true, uid: true })) {
         const messageId = msg.envelope?.messageId || `uid-${mailbox.key}-${msg.uid}`;
-        const docId = crypto.createHash("sha1").update(`${mailbox.key}:${messageId}`).digest("hex").slice(0, 24);
+        const docId = crypto
+          .createHash("sha1")
+          .update(`${mailbox.key}:${messageId}`)
+          .digest("hex")
+          .slice(0, 24);
         const existing = await db.collection("inbox_enquiries").doc(docId).get();
         if (existing.exists) continue;
 
@@ -196,7 +204,7 @@ async function pollOne(mailbox, password) {
         });
         imported += 1;
         try {
-          await client.messageFlagsAdd(msg.uid, ["\\Seen"], { uid: true });
+          await client.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"]);
         } catch {
           /* flag optional */
         }
@@ -205,14 +213,22 @@ async function pollOne(mailbox, password) {
       lock.release();
     }
   } finally {
-    await client.logout().catch(() => client.close());
+    try {
+      await client.logout();
+    } catch {
+      client.close();
+    }
   }
 
   return { mailbox: mailbox.key, imported };
 }
 
 exports.pollPricingInboxes = functions
-  .runWith({ secrets: [pricingPassword, salesPassword], timeoutSeconds: 120, memory: "256MB" })
+  .runWith({
+    secrets: [pricingPassword, salesPassword],
+    timeoutSeconds: 120,
+    memory: "256MB",
+  })
   .pubsub.schedule("every 2 minutes")
   .onRun(async () => {
     const results = [];
@@ -220,8 +236,14 @@ exports.pollPricingInboxes = functions
       try {
         results.push(await pollOne(box, box.secret.value()));
       } catch (err) {
-        functions.logger.error("IMAP poll failed", { mailbox: box.key, message: err.message });
-        results.push({ mailbox: box.key, error: err.message });
+        functions.logger.error("IMAP poll failed", {
+          mailbox: box.key,
+          message: err instanceof Error ? err.message : String(err),
+        });
+        results.push({
+          mailbox: box.key,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
     functions.logger.info("IMAP poll complete", { results });

@@ -224,6 +224,18 @@ export const RATE_PROVIDER_SLOTS = [
     note: "Free mid-market USD/INR",
   },
   {
+    id: "dcsa",
+    name: "DCSA carrier APIs",
+    status: "ready" as const,
+    note: "Shared OpenAPI shape for MSC/Maersk/CMA/Hapag/… — needs per-carrier portal credentials",
+  },
+  {
+    id: "one-record",
+    name: "IATA ONE Record",
+    status: "ready" as const,
+    note: "Air cargo JSON-LD standard — pilot stage; Circulars remain live rates",
+  },
+  {
     id: "searates",
     name: "Searates / ShipsGo",
     status: "ready" as const,
