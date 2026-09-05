@@ -27,6 +27,10 @@ if [[ -n "$FB_TOKEN" ]]; then
   DEPLOY_ARGS+=(--token "$FB_TOKEN")
 fi
 
+echo "==> Installing functions deps + deploying slim AI IMAP poller..."
+(cd functions && npm install)
+npx firebase deploy --only functions:pollPricingInboxes "${DEPLOY_ARGS[@]}"
+
 echo "==> Deploying Firestore rules..."
 npx firebase deploy --only firestore:rules "${DEPLOY_ARGS[@]}"
 
@@ -37,4 +41,5 @@ echo ""
 echo "Done."
 echo "  Legacy:  https://${PROJECT}.web.app/index.html"
 echo "  New app: https://${PROJECT}.web.app/app/"
+echo "  Intake:  https://${PROJECT}.web.app/app/inbox/"
 echo "  Version: https://${PROJECT}.web.app/version.txt"
