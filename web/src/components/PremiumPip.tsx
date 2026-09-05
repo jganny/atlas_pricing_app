@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Minimize2, Maximize2, X, GripVertical, PanelRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui";
@@ -15,6 +16,14 @@ type PipState = {
   y: number;
 };
 
+function clampPos(x: number, y: number) {
+  if (typeof window === "undefined") return { x, y };
+  return {
+    x: Math.max(8, Math.min(window.innerWidth - 320, x)),
+    y: Math.max(56, Math.min(window.innerHeight - 80, y)),
+  };
+}
+
 function loadState(): PipState {
   if (typeof window === "undefined") {
     return { open: false, minimized: false, x: 24, y: 120 };
@@ -22,7 +31,9 @@ function loadState(): PipState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { open: false, minimized: false, x: 24, y: 120 };
-    return { ...JSON.parse(raw), open: false } as PipState;
+    const parsed = JSON.parse(raw) as PipState;
+    const pos = clampPos(parsed.x ?? 24, parsed.y ?? 120);
+    return { open: false, minimized: !!parsed.minimized, ...pos };
   } catch {
     return { open: false, minimized: false, x: 24, y: 120 };
   }
@@ -30,17 +41,16 @@ function loadState(): PipState {
 
 export function PremiumPipToggle({ onOpen }: { onOpen: () => void }) {
   return (
-    <Button
+    <button
       type="button"
-      variant="ghost"
-      size="sm"
-      className="hidden text-[var(--color-text-muted)] sm:inline-flex"
+      className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--color-text-muted)] hover:bg-slate-100 hover:text-[var(--color-atlas-navy)]"
       onClick={onOpen}
       title="Open floating work panel (PiP)"
+      data-testid="focus-open"
     >
       <PanelRight className="h-3.5 w-3.5" />
       <span className="hidden lg:inline">Focus</span>
-    </Button>
+    </button>
   );
 }
 
@@ -56,9 +66,12 @@ export function PremiumPip({
   title?: string;
 }) {
   const pathname = usePathname() ?? "/";
+  const [mounted, setMounted] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [pos, setPos] = useState({ x: 24, y: 120 });
   const [dragging, setDragging] = useState<{ ox: number; oy: number } | null>(null);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const s = loadState();
@@ -74,10 +87,7 @@ export function PremiumPip({
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: PointerEvent) => {
-      setPos({
-        x: Math.max(8, Math.min(window.innerWidth - 320, e.clientX - dragging.ox)),
-        y: Math.max(56, Math.min(window.innerHeight - 80, e.clientY - dragging.oy)),
-      });
+      setPos(clampPos(e.clientX - dragging.ox, e.clientY - dragging.oy));
     };
     const onUp = () => setDragging(null);
     window.addEventListener("pointermove", onMove);
@@ -91,24 +101,23 @@ export function PremiumPip({
   const contextHint = useMemo(() => {
     if (pathname.startsWith("/inbox")) return "Inbox context";
     if (pathname.startsWith("/edb") || pathname.startsWith("/enquiries")) return "EDB context";
-    if (pathname.startsWith("/quotes")) return "Quotes context";
-    if (pathname.startsWith("/shipments")) return "Shipments context";
     if (pathname.startsWith("/air")) return "Air desk";
     if (pathname.startsWith("/sea")) return "Sea desk";
     return "Workspace context";
   }, [pathname]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       className={cn(
-        "fixed z-[80] flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-[0_18px_50px_rgba(11,31,58,0.22)]",
+        "fixed z-[180] flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-[0_18px_50px_rgba(11,31,58,0.22)]",
         minimized ? "h-11 w-72" : "h-[min(420px,55vh)] w-[min(380px,92vw)]",
       )}
       style={{ left: pos.x, top: pos.y }}
       role="dialog"
       aria-label={title}
+      data-testid="focus-pip"
     >
       <div
         className="flex cursor-grab items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-1.5 active:cursor-grabbing"
@@ -144,6 +153,7 @@ export function PremiumPip({
         </Button>
       </div>
       {!minimized ? <div className="min-h-0 flex-1 overflow-auto p-3 text-sm">{children}</div> : null}
-    </div>
+    </div>,
+    document.body,
   );
 }
