@@ -13,7 +13,7 @@ export function Card({
     <div
       id={id}
       className={cn(
-        "rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm",
+        "rounded-lg border border-[var(--color-border)] bg-white/95 p-4 backdrop-blur-[6px]",
         className,
       )}
     >
@@ -25,15 +25,20 @@ export function Card({
 export function Button({
   className,
   variant = "primary",
+  size = "md",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "ghost";
+  size?: "md" | "sm" | "icon";
 }) {
   return (
     <button
       type={props.type ?? "button"}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50",
+        size === "md" && "px-4 py-2",
+        size === "sm" && "h-8 gap-1.5 px-2.5 text-xs",
+        size === "icon" && "h-8 w-8 p-0",
         variant === "primary" &&
           "bg-[var(--color-atlas-navy)] text-white hover:bg-[#14154a]",
         variant === "secondary" &&

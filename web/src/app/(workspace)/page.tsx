@@ -38,7 +38,7 @@ const STICKY_KEY = "atlas_desk_sticky_notes";
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const { data: enquiries = [], isLoading, error } = useEnquiries();
+  const { data: enquiries = [], isLoading, error, refetch } = useEnquiries();
   const { data: leads = [] } = useLeads();
   const focus = deskFocusLabel(user?.username);
   const admin = isAdminUser(user?.username, user?.role);
@@ -70,6 +70,18 @@ export default function DashboardPage() {
     if (!admin) return;
     void fetchAmendmentRequests().then(setAmendments);
   }, [admin]);
+
+  useEffect(() => {
+    function onRefresh() {
+      void refetch();
+      setOffline(listOfflineQuotes());
+      setSmsLog(listSmsOutbox());
+      setNrsAlerts(listNrsAlerts().filter((a) => !a.dismissed));
+      if (admin) void fetchAmendmentRequests().then(setAmendments);
+    }
+    window.addEventListener("atlas:refresh", onRefresh);
+    return () => window.removeEventListener("atlas:refresh", onRefresh);
+  }, [admin, refetch]);
 
   const mine = useMemo(
     () =>
@@ -117,6 +129,24 @@ export default function DashboardPage() {
   const showSea = canAccessRoute(user?.username, user?.role, "sea");
   const showInbox = canAccessRoute(user?.username, user?.role, "inbox");
   const showParity = canAccessRoute(user?.username, user?.role, "feature-parity");
+  const showAnalytics = canAccessRoute(user?.username, user?.role, "analytics");
+  const showDirectory = canAccessRoute(user?.username, user?.role, "directory");
+  const showSales = canAccessRoute(user?.username, user?.role, "sales");
+  const showEnquiries = canAccessRoute(user?.username, user?.role, "enquiries");
+
+  const hubLinks = [
+    showEnquiries
+      ? { href: "/enquiries", label: "Enquiry DB", blurb: "Lifecycle & CSV" }
+      : null,
+    showAnalytics
+      ? { href: "/analytics", label: "Analytics", blurb: "Pipeline & desks" }
+      : null,
+    showDirectory
+      ? { href: "/directory", label: "Directory", blurb: "Agents & vendors" }
+      : null,
+    showSales ? { href: "/sales", label: "Sales", blurb: "Kanban leads" } : null,
+    showInbox ? { href: "/inbox", label: "Inbox", blurb: "Email enquiries" } : null,
+  ].filter(Boolean) as Array<{ href: string; label: string; blurb: string }>;
 
   const nrsEntries = useMemo(() => {
     try {
@@ -129,6 +159,12 @@ export default function DashboardPage() {
       return [];
     }
   }, []);
+
+  const queueItems = useMemo(() => {
+    return [...scope]
+      .sort((a, b) => (b.slaHoursOpen || 0) - (a.slaHoursOpen || 0))
+      .slice(0, 10);
+  }, [scope]);
 
   function saveSticky() {
     try {
@@ -180,16 +216,47 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">
-          {admin ? "Manager overview" : "My desk"}
-        </h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          {focus} ·{" "}
-          {useLiveData
-            ? "Live enquiries — updates automatically. Press ⌘K to jump."
-            : "Mock data — mirrors Enquiry DB SLA."}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+            Atlas workbench
+          </p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-atlas-navy)]">
+            {admin ? "Manager overview" : "My desk"}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            {focus} ·{" "}
+            {useLiveData
+              ? "Live enquiries — header Refresh reloads workspace data."
+              : "Mock data — mirrors Enquiry DB SLA."}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {showAir ? (
+            <Link
+              href="/air"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-sky-300"
+            >
+              <PlaneTakeoff className="h-3.5 w-3.5" /> Air desk
+            </Link>
+          ) : null}
+          {showSea ? (
+            <Link
+              href="/sea"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-sky-300"
+            >
+              <Ship className="h-3.5 w-3.5" /> Sea desk
+            </Link>
+          ) : null}
+          {showInbox ? (
+            <Link
+              href="/inbox"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-xs font-bold text-white hover:bg-[#14154a]"
+            >
+              <Inbox className="h-3.5 w-3.5" /> Inbox
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {error ? (
@@ -201,371 +268,425 @@ export default function DashboardPage() {
       ) : null}
 
       {showParity ? (
-        <Card className="border-emerald-200 bg-emerald-50/60 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-emerald-800">
-                <ClipboardCheck className="h-4 w-4" />
-                <span className="text-sm font-bold">Legacy parity complete — ready for your cutover test</span>
-              </div>
-              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                120/120 tracker items shipped. Walk Feature parity, then approve cutover when React feels equal or better.
-              </p>
+        <div className="atlas-panel flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3">
+          <div>
+            <div className="flex items-center gap-2 text-emerald-800">
+              <ClipboardCheck className="h-4 w-4" />
+              <span className="text-sm font-bold">
+                Legacy parity complete — ready for your cutover test
+              </span>
             </div>
-            <Link
-              href="/feature-parity"
-              className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#14154a]"
-            >
-              Trackers
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+              120/120 tracker items shipped. Walk Feature parity, then approve cutover when React
+              feels equal or better.
+            </p>
           </div>
-        </Card>
-      ) : null}
-
-      {/* Hub cards */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { href: "/enquiries", label: "Enquiry DB", blurb: "Lifecycle & CSV" },
-          { href: "/analytics", label: "Analytics", blurb: "Pipeline & desks" },
-          { href: "/directory", label: "Directory", blurb: "Agents & vendors" },
-          { href: "/sales", label: "Sales", blurb: "Kanban leads" },
-        ].map((h) => (
-          <Link key={h.href} href={h.href}>
-            <Card className="py-3 transition hover:border-sky-300">
-              <div className="font-bold text-[var(--color-atlas-navy)]">{h.label}</div>
-              <div className="text-xs text-[var(--color-text-muted)]">{h.blurb}</div>
-            </Card>
+          <Link
+            href="/feature-parity"
+            className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#14154a]"
+          >
+            Trackers
+            <ArrowRight className="h-4 w-4" />
           </Link>
-        ))}
-      </div>
+        </div>
+      ) : null}
 
       {isLoading ? (
         <DashboardSkeleton />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Card className="py-3">
-              <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+          <div className="atlas-metric-strip">
+            <div className="atlas-metric-cell">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
                 Open
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-[var(--color-atlas-navy)]">
+              <div className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--color-atlas-navy)]">
                 {open}
               </div>
-            </Card>
-            <Card className="py-3">
-              <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+            </div>
+            <div className="atlas-metric-cell">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
                 Won
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-emerald-700">{won}</div>
-            </Card>
-            <Card className="py-3">
-              <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+              <div className="mt-1 text-2xl font-extrabold tabular-nums text-emerald-700">{won}</div>
+            </div>
+            <div className="atlas-metric-cell">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
                 Conversion
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-[var(--color-atlas-navy)]">
+              <div className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--color-atlas-navy)]">
                 {conversion}%
               </div>
-            </Card>
-            <Card className="py-3">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-amber-700">
-                <Clock className="h-3.5 w-3.5" />
-                Due soon
+            </div>
+            <div className="atlas-metric-cell">
+              <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                <Clock className="h-3 w-3" /> Due soon
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-amber-600">{dueSoon}</div>
-            </Card>
-            <Card className="py-3">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-red-700">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Overdue
+              <div className="mt-1 text-2xl font-extrabold tabular-nums text-amber-600">{dueSoon}</div>
+            </div>
+            <div className="atlas-metric-cell">
+              <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-red-700">
+                <AlertTriangle className="h-3 w-3" /> Overdue
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-red-600">{overdue}</div>
-            </Card>
+              <div className="mt-1 text-2xl font-extrabold tabular-nums text-red-600">{overdue}</div>
+            </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-3">
-            <Card className="py-3">
-              <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
-                {admin ? "Won revenue" : "My won revenue"}
-              </div>
-              <div className="mt-1 text-xl font-extrabold">
-                {formatCurrency(revenue, "INR")}
-              </div>
-              {admin ? (
-                <div className="mt-2 text-xs text-[var(--color-text-muted)]">
-                  {pipelineLabel} {formatCurrency(pipeline, "INR")}
-                </div>
-              ) : null}
-            </Card>
-            <Card className="py-3 lg:col-span-2">
-              <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-                <Users className="h-4 w-4" />
-                {admin ? "Quoting agents" : "Quick desks"}
-              </div>
-              {admin ? (
-                <ul className="grid gap-1 sm:grid-cols-2 text-sm">
-                  {byDesk.map(([id, n]) => (
-                    <li
-                      key={id}
-                      className="flex justify-between rounded-md bg-slate-50 px-2 py-1.5"
+          <div className="atlas-workbench">
+            <div className="space-y-4">
+              <section className="atlas-panel overflow-hidden rounded-xl">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+                  <div>
+                    <h2 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
+                      Work queue
+                    </h2>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      Highest SLA pressure first · {formatCurrency(revenue, "INR")} won
+                      {admin ? ` · ${pipelineLabel} ${formatCurrency(pipeline, "INR")}` : ""}
+                    </p>
+                  </div>
+                  {showEnquiries ? (
+                    <Link
+                      href="/enquiries"
+                      className="text-xs font-bold text-sky-800 hover:underline"
                     >
-                      <span>{deskDisplayName(id)}</span>
-                      <span className="font-bold">{n}</span>
-                    </li>
-                  ))}
-                  {byDesk.length === 0
-                    ? Object.keys(TEAM_ROLES)
-                        .filter((k) => TEAM_ROLES[k].type === "member")
-                        .slice(0, 6)
-                        .map((k) => (
-                          <li key={k} className="rounded-md bg-slate-50 px-2 py-1.5">
-                            {TEAM_ROLES[k].name}
-                          </li>
-                        ))
-                    : null}
-                </ul>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {showAir ? (
-                    <Link href="/air" className="rounded-lg bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900">
-                      <PlaneTakeoff className="mr-1 inline h-4 w-4" /> Air
-                    </Link>
-                  ) : null}
-                  {showSea ? (
-                    <Link href="/sea" className="rounded-lg bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900">
-                      <Ship className="mr-1 inline h-4 w-4" /> Sea
-                    </Link>
-                  ) : null}
-                  {showInbox ? (
-                    <Link href="/inbox" className="rounded-lg bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900">
-                      <Inbox className="mr-1 inline h-4 w-4" /> Inbox
+                      Open EDB →
                     </Link>
                   ) : null}
                 </div>
-              )}
-            </Card>
-          </div>
-
-          {!admin ? (
-            <div className="grid gap-3 lg:grid-cols-2">
-              <Card>
-                <div className="mb-2 flex items-center gap-2 font-bold">
-                  <StickyNote className="h-4 w-4" />
-                  Desk sticky note
-                </div>
-                <Textarea
-                  rows={4}
-                  value={sticky}
-                  onChange={(e) => setSticky(e.target.value)}
-                  placeholder="Reminders for this desk…"
-                />
-                <Button type="button" className="mt-2" onClick={saveSticky}>
-                  Save note
-                </Button>
-              </Card>
-              <Card>
-                <h2 className="mb-2 font-bold">My recent quotes</h2>
-                <ul className="max-h-48 space-y-1 overflow-auto text-sm">
-                  {mine.slice(0, 12).map((e) => (
+                <ul className="divide-y divide-[var(--color-border)]">
+                  {queueItems.map((e) => (
                     <li key={e.id}>
                       <Link
                         href={`/enquiries/?q=${encodeURIComponent(e.ref)}&select=${e.id}`}
-                        className="flex justify-between rounded-md px-2 py-1 hover:bg-slate-50"
+                        className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-sky-50/50"
                       >
-                        <span className="font-semibold text-sky-800">{e.ref}</span>
-                        <span className="text-[var(--color-text-muted)]">{e.customer}</span>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-[var(--color-atlas-navy)]">
+                            {e.ref} · {e.customer || "—"}
+                          </div>
+                          <div className="truncate text-xs text-[var(--color-text-muted)]">
+                            {e.status} · {e.mode || "—"} · {e.creator || "unassigned"}
+                          </div>
+                        </div>
+                        <Badge
+                          tone={
+                            e.slaHoursOpen > 8
+                              ? "error"
+                              : e.slaHoursOpen > 4
+                                ? "warn"
+                                : "neutral"
+                          }
+                        >
+                          {Math.round(e.slaHoursOpen)}h
+                        </Badge>
                       </Link>
                     </li>
                   ))}
-                  {mine.length === 0 ? (
-                    <li className="text-[var(--color-text-muted)]">No quotes for this desk yet.</li>
+                  {queueItems.length === 0 ? (
+                    <li className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                      Queue is clear for this desk.
+                    </li>
                   ) : null}
                 </ul>
-                {nrsEntries.length > 0 ? (
-                  <div className="mt-3 border-t pt-2">
-                    <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
-                      NRS registry (local)
-                    </div>
-                    <ul className="mt-1 text-xs">
-                      {nrsEntries.slice(0, 5).map((n, i) => (
-                        <li key={i}>
-                          {n.shipper} → {n.consignee}
-                          {n.quoteRef ? ` · ${n.quoteRef}` : ""}
-                        </li>
-                      ))}
-                    </ul>
+              </section>
+
+              {admin && pendingAmd.length > 0 ? (
+                <section className="atlas-panel rounded-xl p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h2 className="text-sm font-extrabold">Pending amendment approvals</h2>
+                    <Badge tone="warn">{pendingAmd.length}</Badge>
                   </div>
-                ) : null}
-              </Card>
-              <Card>
-                <div className="mb-2 flex items-center gap-2 font-bold">
-                  <MessageSquare className="h-4 w-4" />
-                  Instant SMS (outbox)
-                </div>
-                <p className="mb-2 text-xs text-[var(--color-text-muted)]">
-                  Queues messages locally until an SMS gateway API key is configured.
-                </p>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Mobile number"
-                    value={smsTo}
-                    onChange={(e) => setSmsTo(e.target.value)}
-                  />
-                  <Textarea
-                    rows={3}
-                    placeholder="Message"
-                    value={smsBody}
-                    onChange={(e) => setSmsBody(e.target.value)}
-                  />
-                  <Button type="button" onClick={queueSms}>
-                    Queue SMS
-                  </Button>
-                </div>
-                {smsLog.length > 0 ? (
-                  <ul className="mt-3 max-h-28 space-y-1 overflow-auto text-xs text-[var(--color-text-muted)]">
-                    {smsLog.slice(0, 5).map((s, i) => (
-                      <li key={`${s.at}-${i}`}>
-                        {s.to}: {s.body.slice(0, 60)}
-                        {s.body.length > 60 ? "…" : ""}
+                  <ul className="space-y-2 text-sm">
+                    {pendingAmd.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
+                      >
+                        <div>
+                          <div className="font-semibold">
+                            {a.quoteRef || a.quoteId} · {a.customer || "—"}
+                          </div>
+                          <div className="text-xs text-[var(--color-text-muted)]">
+                            by {a.requestedBy}
+                            {a.reason ? ` — ${a.reason}` : ""}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => void onResolve(a.id, "approved")}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void onResolve(a.id, "rejected")}
+                          >
+                            Reject
+                          </Button>
+                        </div>
                       </li>
                     ))}
                   </ul>
-                ) : null}
-              </Card>
+                </section>
+              ) : null}
+
+              {!admin && nrsAlerts.length > 0 ? (
+                <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                  <h2 className="mb-2 text-sm font-extrabold text-amber-950">
+                    NRS confirmation alerts
+                  </h2>
+                  <ul className="space-y-2 text-sm">
+                    {nrsAlerts.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex items-start justify-between gap-2 rounded-md bg-white/80 px-3 py-2"
+                      >
+                        <div>
+                          <div className="font-semibold">{a.message}</div>
+                          <div className="text-xs text-[var(--color-text-muted)]">
+                            {new Date(a.date).toLocaleString()}
+                            {a.quoteRef ? ` · ${a.quoteRef}` : ""}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            dismissNrsAlert(a.id);
+                            setNrsAlerts(listNrsAlerts().filter((x) => !x.dismissed));
+                          }}
+                        >
+                          Dismiss
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {admin ? <PerformanceReportPanel rows={enquiries} /> : null}
+              <LogisticsNewsFeed />
             </div>
-          ) : null}
 
-          {admin ? (
-            <Card>
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="font-bold">Pending amendment approvals</h2>
-                <Badge tone={pendingAmd.length ? "warn" : "neutral"}>{pendingAmd.length}</Badge>
-              </div>
-              {pendingAmd.length === 0 ? (
-                <p className="text-sm text-[var(--color-text-muted)]">No pending requests.</p>
-              ) : (
-                <ul className="space-y-2 text-sm">
-                  {pendingAmd.map((a) => (
-                    <li
-                      key={a.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
-                    >
-                      <div>
-                        <div className="font-semibold">
-                          {a.quoteRef || a.quoteId} · {a.customer || "—"}
-                        </div>
-                        <div className="text-xs text-[var(--color-text-muted)]">
-                          by {a.requestedBy}
-                          {a.reason ? ` — ${a.reason}` : ""}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          className="px-3 py-1 text-xs"
-                          onClick={() => void onResolve(a.id, "approved")}
+            <aside className="space-y-3">
+              {hubLinks.length > 0 ? (
+                <nav className="atlas-panel overflow-hidden rounded-xl">
+                  <div className="border-b border-[var(--color-border)] px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    Surfaces
+                  </div>
+                  <ul className="divide-y divide-[var(--color-border)]">
+                    {hubLinks.map((h) => (
+                      <li key={h.href}>
+                        <Link
+                          href={h.href}
+                          className="flex items-center justify-between px-3 py-2.5 hover:bg-sky-50/60"
                         >
-                          Approve
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="px-3 py-1 text-xs"
-                          onClick={() => void onResolve(a.id, "rejected")}
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          ) : null}
+                          <div>
+                            <div className="text-sm font-bold text-[var(--color-atlas-navy)]">
+                              {h.label}
+                            </div>
+                            <div className="text-[11px] text-[var(--color-text-muted)]">
+                              {h.blurb}
+                            </div>
+                          </div>
+                          <ArrowRight className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              ) : null}
 
-          {!admin && nrsAlerts.length > 0 ? (
-            <Card className="border-amber-200 bg-amber-50/50">
-              <h2 className="mb-2 font-bold text-amber-950">NRS confirmation alerts</h2>
-              <ul className="space-y-2 text-sm">
-                {nrsAlerts.map((a) => (
-                  <li
-                    key={a.id}
-                    className="flex items-start justify-between gap-2 rounded-md bg-white/80 px-3 py-2"
-                  >
-                    <div>
-                      <div className="font-semibold">{a.message}</div>
-                      <div className="text-xs text-[var(--color-text-muted)]">
-                        {new Date(a.date).toLocaleString()}
-                        {a.quoteRef ? ` · ${a.quoteRef}` : ""}
-                      </div>
+              <section className="atlas-panel rounded-xl p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+                  <Users className="h-4 w-4" />
+                  {admin ? "Quoting agents" : "Desk shortcuts"}
+                </div>
+                {admin ? (
+                  <ul className="space-y-1 text-sm">
+                    {byDesk.map(([id, n]) => (
+                      <li
+                        key={id}
+                        className="flex justify-between rounded-md bg-slate-50 px-2 py-1.5"
+                      >
+                        <span>{deskDisplayName(id)}</span>
+                        <span className="font-bold">{n}</span>
+                      </li>
+                    ))}
+                    {byDesk.length === 0
+                      ? Object.keys(TEAM_ROLES)
+                          .filter((k) => TEAM_ROLES[k].type === "member")
+                          .slice(0, 6)
+                          .map((k) => (
+                            <li key={k} className="rounded-md bg-slate-50 px-2 py-1.5">
+                              {TEAM_ROLES[k].name}
+                            </li>
+                          ))
+                      : null}
+                  </ul>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {showAir ? (
+                      <Link
+                        href="/air"
+                        className="rounded-lg bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900"
+                      >
+                        Air
+                      </Link>
+                    ) : null}
+                    {showSea ? (
+                      <Link
+                        href="/sea"
+                        className="rounded-lg bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900"
+                      >
+                        Sea
+                      </Link>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+
+              {!admin ? (
+                <>
+                  <section className="atlas-panel rounded-xl p-3">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+                      <StickyNote className="h-4 w-4" />
+                      Sticky note
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-xs"
-                      onClick={() => {
-                        dismissNrsAlert(a.id);
-                        setNrsAlerts(listNrsAlerts().filter((x) => !x.dismissed));
-                      }}
-                    >
-                      Dismiss
+                    <Textarea
+                      rows={3}
+                      value={sticky}
+                      onChange={(e) => setSticky(e.target.value)}
+                      placeholder="Reminders for this desk…"
+                    />
+                    <Button type="button" size="sm" className="mt-2" onClick={saveSticky}>
+                      Save note
                     </Button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ) : null}
+                  </section>
 
-          {admin ? <PerformanceReportPanel rows={enquiries} /> : null}
+                  <section className="atlas-panel rounded-xl p-3">
+                    <h2 className="mb-2 text-sm font-bold">My recent quotes</h2>
+                    <ul className="max-h-40 space-y-1 overflow-auto text-sm">
+                      {mine.slice(0, 8).map((e) => (
+                        <li key={e.id}>
+                          <Link
+                            href={`/enquiries/?q=${encodeURIComponent(e.ref)}&select=${e.id}`}
+                            className="flex justify-between rounded-md px-2 py-1 hover:bg-slate-50"
+                          >
+                            <span className="font-semibold text-sky-800">{e.ref}</span>
+                            <span className="truncate text-[var(--color-text-muted)]">
+                              {e.customer}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                      {mine.length === 0 ? (
+                        <li className="text-[var(--color-text-muted)]">No quotes yet.</li>
+                      ) : null}
+                    </ul>
+                    {nrsEntries.length > 0 ? (
+                      <div className="mt-3 border-t border-[var(--color-border)] pt-2">
+                        <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+                          NRS registry
+                        </div>
+                        <ul className="mt-1 text-xs">
+                          {nrsEntries.slice(0, 4).map((n, i) => (
+                            <li key={i}>
+                              {n.shipper} → {n.consignee}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </section>
 
-          <LogisticsNewsFeed />
+                  <section className="atlas-panel rounded-xl p-3">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+                      <MessageSquare className="h-4 w-4" />
+                      Instant SMS
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        className="mt-0"
+                        placeholder="Mobile number"
+                        value={smsTo}
+                        onChange={(e) => setSmsTo(e.target.value)}
+                      />
+                      <Textarea
+                        rows={2}
+                        placeholder="Message"
+                        value={smsBody}
+                        onChange={(e) => setSmsBody(e.target.value)}
+                      />
+                      <Button type="button" size="sm" onClick={queueSms}>
+                        Queue SMS
+                      </Button>
+                    </div>
+                    {smsLog.length > 0 ? (
+                      <ul className="mt-2 max-h-24 space-y-1 overflow-auto text-xs text-[var(--color-text-muted)]">
+                        {smsLog.slice(0, 4).map((s, i) => (
+                          <li key={`${s.at}-${i}`}>
+                            {s.to}: {s.body.slice(0, 48)}
+                            {s.body.length > 48 ? "…" : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </section>
+                </>
+              ) : null}
 
-          <Card>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-bold">Offline quote backups</h2>
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-xs"
-                onClick={() => setOffline(listOfflineQuotes())}
-              >
-                Refresh
-              </Button>
-            </div>
-            {offline.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Saves from desks are cached here if the network drops.
-              </p>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {offline.slice(0, 10).map((o) => (
-                  <li
-                    key={o.id}
-                    className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5"
+              <section className="atlas-panel rounded-xl p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-sm font-bold">Offline backups</h2>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setOffline(listOfflineQuotes())}
                   >
-                    <span>
-                      <Badge tone="neutral">{o.type}</Badge>{" "}
-                      <span className="font-semibold">{o.customer || o.id}</span>
-                      <span className="ml-2 text-xs text-[var(--color-text-muted)]">
-                        {new Date(o.savedAt).toLocaleString()}
-                      </span>
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-xs text-rose-700"
-                      onClick={() => {
-                        removeOfflineQuote(o.id);
-                        setOffline(listOfflineQuotes());
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+                    Refresh
+                  </Button>
+                </div>
+                {offline.length === 0 ? (
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Desk saves cache here if the network drops.
+                  </p>
+                ) : (
+                  <ul className="space-y-1 text-xs">
+                    {offline.slice(0, 6).map((o) => (
+                      <li
+                        key={o.id}
+                        className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5"
+                      >
+                        <span className="truncate">
+                          <Badge tone="neutral">{o.type}</Badge> {o.customer || o.id}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-rose-700"
+                          onClick={() => {
+                            removeOfflineQuote(o.id);
+                            setOffline(listOfflineQuotes());
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </aside>
+          </div>
         </>
       )}
     </div>

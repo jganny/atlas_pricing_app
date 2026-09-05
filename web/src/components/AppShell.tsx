@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart3,
   Briefcase,
@@ -24,8 +24,6 @@ import {
   Truck,
   Users,
   Warehouse,
-  Wifi,
-  WifiOff,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +37,8 @@ import {
 } from "@/lib/auth/rbac";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
+import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
+import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 
 const navItems: Array<{
   href: string;
@@ -67,45 +67,6 @@ const navItems: Array<{
   { href: "/docs", label: "Docs", icon: BookOpen, route: "docs" },
   { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
 ];
-
-function FxTicker() {
-  const [usdInr, setUsdInr] = useState(83.25);
-  useEffect(() => {
-    const t = window.setInterval(() => {
-      setUsdInr((v) => Number((v + (Math.random() - 0.5) * 0.08).toFixed(2)));
-    }, 12000);
-    return () => window.clearInterval(t);
-  }, []);
-  return (
-    <span className="hidden items-center gap-1 text-xs font-semibold text-[var(--color-text-muted)] sm:inline-flex">
-      USD/INR <span className="text-[var(--color-atlas-navy)]">{usdInr.toFixed(2)}</span>
-    </span>
-  );
-}
-
-function OfflineBadge() {
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    const up = () => setOnline(true);
-    const down = () => setOnline(false);
-    setOnline(navigator.onLine);
-    window.addEventListener("online", up);
-    window.addEventListener("offline", down);
-    return () => {
-      window.removeEventListener("online", up);
-      window.removeEventListener("offline", down);
-    };
-  }, []);
-  return online ? (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700">
-      <Wifi className="h-3 w-3" /> Online
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700">
-      <WifiOff className="h-3 w-3" /> Offline
-    </span>
-  );
-}
 
 function NavLinks({
   items,
@@ -150,6 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pipOpen, setPipOpen] = useState(false);
 
   const visibleNav = useMemo(
     () =>
@@ -159,6 +121,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const focus = deskFocusLabel(user?.username);
   const home = preferredHomePath(user?.username, user?.role);
+  const showInbox = canAccessRoute(user?.username, user?.role, "inbox");
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
@@ -170,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Sparkles className="h-4 w-4 text-[var(--color-atlas-sky)]" />
               ATLAS PRICING
             </div>
-            <div className="mt-1 text-xs text-white/60">Next.js preview · v{appVersion}</div>
+            <div className="mt-1 text-xs text-white/60">Enterprise workspace · v{appVersion}</div>
             <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-200">
               {focus}
             </div>
@@ -196,7 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="fixed inset-0 z-[90] md:hidden">
             <button
               type="button"
-              className="absolute inset-0 bg-black/40"
+              className="atlas-overlay absolute inset-0"
               aria-label="Close menu"
               onClick={() => setMobileOpen(false)}
             />
@@ -219,8 +182,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ) : null}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] bg-white px-4 py-3 md:px-6">
-            <div className="flex items-center gap-2">
+          <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--color-border)] bg-white/85 px-4 py-2.5 backdrop-blur-md md:px-6">
+            <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
                 className="rounded-lg border border-[var(--color-border)] p-2 md:hidden"
@@ -232,31 +195,62 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link href={home} className="text-sm font-extrabold text-[var(--color-atlas-navy)] md:hidden">
                 Atlas Pricing
               </Link>
-              <div className="hidden text-sm text-[var(--color-text-muted)] md:block">
-                {focus} workspace — press{" "}
+              <div className="hidden truncate text-sm text-[var(--color-text-muted)] md:block">
+                {focus} workspace —{" "}
                 <kbd className="rounded border border-[var(--color-border)] bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold">
                   ⌘K
                 </kbd>{" "}
                 to jump
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2">
               <OfflineBadge />
-              <FxTicker />
+              <GlobalRefreshButton />
+              <FxConverter />
+              <PremiumPipToggle onOpen={() => setPipOpen(true)} />
+              {showInbox ? (
+                <Link
+                  href="/inbox"
+                  className="hidden items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50 sm:inline-flex"
+                  title="Enquiry inbox"
+                >
+                  <Inbox className="h-3.5 w-3.5" />
+                  Inbox
+                </Link>
+              ) : null}
               <a
                 href="/index.html"
-                className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:bg-slate-50"
+                className="rounded-md border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:bg-slate-50"
               >
-                Open legacy app
+                Legacy
               </a>
             </div>
           </header>
 
-          <main className="flex-1 p-3 md:p-4">
+          <main className="flex-1 p-3 md:p-5">
             <RouteGuard>{children}</RouteGuard>
           </main>
         </div>
       </div>
+
+      <PremiumPip open={pipOpen} onOpenChange={setPipOpen} title="Atlas focus">
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Keep notes and queue items beside any desk without leaving your current screen.
+        </p>
+        <ul className="mt-3 space-y-2 text-xs">
+          <li className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-2.5 py-2">
+            Press <strong>⌘K</strong> to open the command palette.
+          </li>
+          <li className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-2.5 py-2">
+            Use header <strong>Refresh</strong> to reload enquiries, inbox, and tariffs.
+          </li>
+          <li className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-2.5 py-2">
+            <Link href="/inbox" className="font-semibold text-sky-800 hover:underline" onClick={() => setPipOpen(false)}>
+              Open enquiry inbox →
+            </Link>
+          </li>
+        </ul>
+      </PremiumPip>
     </div>
   );
 }
