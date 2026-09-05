@@ -2,10 +2,11 @@
 
 @theme {
   --font-sans: var(--font-ibm-plex), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-atlas-navy: #0b1f3a;
+  --color-atlas-navy: #0a2540;
   --color-atlas-ink: #132337;
   --color-atlas-sky: #1d7aef;
   --color-atlas-sea: #0f6a8f;
+  --color-atlas-teal: #0d9488;
   --color-atlas-air: #c47b16;
   --color-atlas-success: #0f7b5a;
   --color-atlas-warn: #b7791f;

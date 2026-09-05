@@ -148,7 +148,8 @@ export function routeIdFromPath(pathname: string): AppRouteId | null {
   if (p.startsWith("/finance")) return "finance";
   if (p.startsWith("/hr")) return "hr";
   if (p.startsWith("/feature-parity")) return "feature-parity";
-  if (p.startsWith("/smart-quote")) return "smart-quote";
+  if (p.startsWith("/smart-quote") || p.startsWith("/quote")) return "smart-quote";
+  if (p.startsWith("/carriers")) return "directory";
   return null;
 }
 
