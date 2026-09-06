@@ -39,7 +39,11 @@ import {
   validateSelectedAirline,
   type AirCargoRow,
 } from "@/lib/pricing/air-desk";
-import { createAirlineOption, type AirlineOption } from "@/lib/pricing/carrier-options";
+import {
+  copyAirBuyRatesToSell,
+  createAirlineOption,
+  type AirlineOption,
+} from "@/lib/pricing/carrier-options";
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
 import {
   formatRoutingPreview,
@@ -796,53 +800,92 @@ function AirDeskInner() {
                     </label>
 
                     {opt.wbEnabled ? (
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                          <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
-                            <tr>
-                              <th className="px-3 py-2 text-left">Break</th>
-                              <th className="px-3 py-2">Sell</th>
-                              <th className="px-3 py-2">Buy</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {AIR_WEIGHT_BREAKS.map((name) => (
-                              <tr
-                                key={name}
-                                className={`border-t ${
-                                  tot?.freight.usedBreak === name ? "bg-amber-50" : ""
-                                }`}
-                              >
-                                <td className="px-3 py-2 font-semibold">
-                                  {BREAK_LABELS[name]}
-                                  {tot?.freight.usedBreak === name ? (
-                                    <Badge tone="warn">Active</Badge>
-                                  ) : null}
-                                </td>
-                                <td className="p-1">
-                                  <NumberInput
-                                    step="0.01"
-                                    className="mt-0 w-24 px-2 py-1"
-                                    value={opt.breaks[name]?.sell ?? 0}
-                                    onValueChange={(n) =>
-                                      updateBreak(opt.id, name, "sell", n)
-                                    }
-                                  />
-                                </td>
-                                <td className="p-1">
-                                  <NumberInput
-                                    step="0.01"
-                                    className="mt-0 w-24 px-2 py-1"
-                                    value={opt.breaks[name]?.buy ?? 0}
-                                    onValueChange={(n) =>
-                                      updateBreak(opt.id, name, "buy", n)
-                                    }
-                                  />
-                                </td>
+                      <div className="space-y-2">
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                          Customer freight = Sell rate × chargeable kg. Example: 500 kg × $1.50 ={" "}
+                          <strong>$750</strong>, then add AMS + origin/dest Sell fees.
+                        </p>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
+                              <tr>
+                                <th className="px-3 py-2 text-left">Break</th>
+                                <th className="px-3 py-2">Sell (customer)</th>
+                                <th className="px-3 py-2">Buy (cost)</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {AIR_WEIGHT_BREAKS.map((name) => (
+                                <tr
+                                  key={name}
+                                  className={`border-t ${
+                                    tot?.freight.usedBreak === name ? "bg-amber-50" : ""
+                                  }`}
+                                >
+                                  <td className="px-3 py-2 font-semibold">
+                                    {BREAK_LABELS[name]}
+                                    {tot?.freight.usedBreak === name ? (
+                                      <Badge tone="warn">Active</Badge>
+                                    ) : null}
+                                  </td>
+                                  <td className="p-1">
+                                    <NumberInput
+                                      step="0.01"
+                                      className="mt-0 w-24 px-2 py-1"
+                                      value={opt.breaks[name]?.sell ?? 0}
+                                      onValueChange={(n) =>
+                                        updateBreak(opt.id, name, "sell", n)
+                                      }
+                                    />
+                                  </td>
+                                  <td className="p-1">
+                                    <NumberInput
+                                      step="0.01"
+                                      className="mt-0 w-24 px-2 py-1"
+                                      value={opt.breaks[name]?.buy ?? 0}
+                                      onValueChange={(n) =>
+                                        updateBreak(opt.id, name, "buy", n)
+                                      }
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {tot && tot.freight.activeRate > 0 ? (
+                          <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                            Freight: {tot.freight.chargeableWeightKg.toFixed(2)} kg × $
+                            {tot.freight.activeRate.toFixed(2)} ={" "}
+                            <strong>{formatCurrency(tot.freight.baseFreightSell, currency)}</strong>
+                          </p>
+                        ) : null}
+                        {tot?.freight.usingBuyFallback ? (
+                          <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                            <span>
+                              Rate is only under Buy (cost). Customer total needs the same rate in{" "}
+                              <strong>Sell</strong>
+                              {tot.freight.activeBuyRate > 0
+                                ? ` — ${tot.freight.chargeableWeightKg.toFixed(2)} kg × $${tot.freight.activeBuyRate.toFixed(2)} = ${formatCurrency(tot.freight.baseFreightBuy, currency)} cost`
+                                : ""}
+                              .
+                            </span>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="px-2 py-1 text-xs"
+                              onClick={() =>
+                                setAirlines((prev) =>
+                                  prev.map((a) =>
+                                    a.id === opt.id ? copyAirBuyRatesToSell(a) : a,
+                                  ),
+                                )
+                              }
+                            >
+                              Copy buy → sell
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -864,23 +907,35 @@ function AirDeskInner() {
                     />
 
                     {tot ? (
-                      <div className="flex flex-wrap gap-3 border-t pt-3 text-sm">
-                        <span>
-                          Freight:{" "}
-                          <strong>{formatCurrency(tot.freight.baseFreightSell, currency)}</strong>
-                        </span>
-                        <span>
-                          Origin: <strong>{formatCurrency(tot.originTotal, currency)}</strong>
-                        </span>
-                        <span>
-                          Dest: <strong>{formatCurrency(tot.destTotal, currency)}</strong>
-                        </span>
-                        <span>
-                          Total:{" "}
-                          <strong className="text-emerald-700">
-                            {formatCurrency(tot.grandSell, currency)}
-                          </strong>
-                        </span>
+                      <div className="space-y-1 border-t pt-3 text-sm">
+                        <div className="flex flex-wrap gap-3">
+                          <span>
+                            Freight:{" "}
+                            <strong>{formatCurrency(tot.freight.baseFreightSell, currency)}</strong>
+                          </span>
+                          <span>
+                            Origin: <strong>{formatCurrency(tot.originTotal, currency)}</strong>
+                          </span>
+                          <span>
+                            Dest: <strong>{formatCurrency(tot.destTotal, currency)}</strong>
+                          </span>
+                          {tot.ams > 0 ? (
+                            <span>
+                              AMS: <strong>{formatCurrency(tot.ams, currency)}</strong>
+                            </span>
+                          ) : null}
+                          <span>
+                            Customer total:{" "}
+                            <strong className="text-emerald-700">
+                              {formatCurrency(tot.grandSell, currency)}
+                            </strong>
+                          </span>
+                        </div>
+                        {tot.grandBuy > 0 ? (
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            Your cost (Buy): {formatCurrency(tot.grandBuy, currency)}
+                          </p>
+                        ) : null}
                       </div>
                     ) : null}
                   </Card>
@@ -987,15 +1042,23 @@ function AirDeskInner() {
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Base freight</dt>
-                  <dd>{formatCurrency(selectedTotals.freight.baseFreightSell, currency)}</dd>
+                  <dt className="text-[var(--color-text-muted)]">Base freight (Sell)</dt>
+                  <dd className="text-right">
+                    {selectedTotals.freight.activeRate > 0 ? (
+                      <span className="block text-[11px] font-normal text-[var(--color-text-muted)]">
+                        {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg × $
+                        {selectedTotals.freight.activeRate.toFixed(2)}
+                      </span>
+                    ) : null}
+                    {formatCurrency(selectedTotals.freight.baseFreightSell, currency)}
+                  </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Origin fees</dt>
+                  <dt className="text-[var(--color-text-muted)]">Origin fees (Sell)</dt>
                   <dd>{formatCurrency(selectedTotals.originTotal, currency)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Dest fees</dt>
+                  <dt className="text-[var(--color-text-muted)]">Dest fees (Sell)</dt>
                   <dd>{formatCurrency(selectedTotals.destTotal, currency)}</dd>
                 </div>
                 {selectedTotals.ams > 0 ? (
@@ -1005,11 +1068,17 @@ function AirDeskInner() {
                   </div>
                 ) : null}
                 <div className="flex justify-between border-t pt-2">
-                  <dt className="font-bold">Grand total</dt>
+                  <dt className="font-bold">Customer total</dt>
                   <dd className="font-extrabold text-emerald-700">
                     {formatCurrency(selectedTotals.grandSell, currency)}
                   </dd>
                 </div>
+                {selectedTotals.grandBuy > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Your cost (Buy)</dt>
+                    <dd>{formatCurrency(selectedTotals.grandBuy, currency)}</dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
                   <dd className="font-bold">

@@ -715,8 +715,8 @@ function SeaDeskInner() {
                               <tr>
                                 <th className="px-2 py-2 text-left">Type</th>
                                 <th className="px-2 py-2">Qty</th>
-                                <th className="px-2 py-2">Sell</th>
-                                <th className="px-2 py-2">Buy</th>
+                                <th className="px-2 py-2">Sell (customer)</th>
+                                <th className="px-2 py-2">Buy (cost)</th>
                                 <th className="px-2 py-2" />
                               </tr>
                             </thead>
@@ -790,7 +790,7 @@ function SeaDeskInner() {
                     ) : (
                       <div className="grid gap-3 md:grid-cols-2">
                         <Label>
-                          LCL sell / RT
+                          LCL sell / RT (customer)
                           <NumberInput
                             step="0.01"
                             value={opt.lclSell}
@@ -798,7 +798,7 @@ function SeaDeskInner() {
                           />
                         </Label>
                         <Label>
-                          LCL buy / RT
+                          LCL buy / RT (cost)
                           <NumberInput
                             step="0.01"
                             value={opt.lclBuy}
@@ -911,11 +911,17 @@ function SeaDeskInner() {
                   </div>
                 )}
                 <div className="flex justify-between border-t pt-2">
-                  <dt className="font-bold">Grand total</dt>
+                  <dt className="font-bold">Customer total</dt>
                   <dd className="font-extrabold text-emerald-700">
                     {formatCurrency(selectedTotals.grandSell, currency)}
                   </dd>
                 </div>
+                {selectedTotals.grandBuy > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Your cost (Buy)</dt>
+                    <dd>{formatCurrency(selectedTotals.grandBuy, currency)}</dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
                   <dd className="font-bold">

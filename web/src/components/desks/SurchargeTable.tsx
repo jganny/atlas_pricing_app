@@ -73,8 +73,12 @@ export function SurchargeTable({
           <thead className="text-[10px] uppercase text-[var(--color-text-muted)]">
             <tr>
               <th className="px-1 py-1 text-left">Name</th>
-              <th className="px-1 py-1">Sell</th>
-              <th className="px-1 py-1">Buy</th>
+              <th className="px-1 py-1" title="Charged to customer">
+                Sell (customer)
+              </th>
+              <th className="px-1 py-1" title="Your cost">
+                Buy (cost)
+              </th>
               <th className="px-1 py-1">Unit</th>
               <th className="px-1 py-1 text-left">Remarks</th>
               <th className="px-1 py-1" />

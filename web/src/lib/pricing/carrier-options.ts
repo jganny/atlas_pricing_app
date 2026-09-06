@@ -54,6 +54,31 @@ export function createAirlineOption(
   };
 }
 
+/** When rates were typed under Buy first, copy blank Sell cells from Buy. */
+export function copyAirBuyRatesToSell(option: AirlineOption): AirlineOption {
+  const breakNames = Object.keys(EMPTY_AIR_BREAKS) as Array<keyof WeightBreaks>;
+  const breaks = { ...option.breaks };
+  for (const name of breakNames) {
+    const pair = breaks[name] ?? { sell: 0, buy: 0 };
+    breaks[name] = {
+      sell: pair.sell > 0 ? pair.sell : pair.buy || 0,
+      buy: pair.buy || 0,
+    };
+  }
+  return {
+    ...option,
+    breaks,
+    originSurcharges: option.originSurcharges.map((r) => ({
+      ...r,
+      sell: r.sell > 0 ? r.sell : r.buy || 0,
+    })),
+    destSurcharges: option.destSurcharges.map((r) => ({
+      ...r,
+      sell: r.sell > 0 ? r.sell : r.buy || 0,
+    })),
+  };
+}
+
 export interface LinerOption {
   id: string;
   name: string;

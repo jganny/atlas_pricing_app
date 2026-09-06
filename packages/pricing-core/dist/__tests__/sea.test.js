@@ -36,7 +36,7 @@ describe("calculateSeaFreight", () => {
         expect(result.chargeableRt).toBe(2);
         expect(result.baseFreightSell).toBe(90);
     });
-    it("uses buy rate as interim fallback when sell is blank", () => {
+    it("keeps buy freight out of sell when sell is blank", () => {
         const result = calculateSeaFreight({
             mode: "lcl",
             grossWeightKg: 1000,
@@ -44,6 +44,7 @@ describe("calculateSeaFreight", () => {
             lclRate: { sell: 0, buy: 50 },
         });
         expect(result.usingBuyFallback).toBe(true);
-        expect(result.baseFreightSell).toBe(50);
+        expect(result.baseFreightSell).toBe(0);
+        expect(result.baseFreightBuy).toBe(50);
     });
 });

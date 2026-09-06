@@ -45,6 +45,31 @@ describe("calculateAirFreight", () => {
         expect(result.baseFreightSell).toBe(300);
         expect(result.chargeableWeightKg).toBe(120);
     });
+    it("500 kg × $1.50 sell = $750 base (practical quote math)", () => {
+        const result = calculateAirFreight({
+            cargo: [{ length: 0, width: 0, height: 0, qty: 0, grossWeightKg: 500 }],
+            breaks: {
+                plus500: { sell: 1.5, buy: 1.2 },
+                min: { sell: 0, buy: 0 },
+            },
+        });
+        expect(result.usedBreak).toBe("plus500");
+        expect(result.chargeableWeightKg).toBe(500);
+        expect(result.baseFreightSell).toBe(750);
+        expect(result.baseFreightBuy).toBe(600);
+    });
+    it("does not put buy freight into sell when sell is blank", () => {
+        const result = calculateAirFreight({
+            cargo: [{ length: 0, width: 0, height: 0, qty: 0, grossWeightKg: 500 }],
+            breaks: {
+                plus500: { sell: 0, buy: 1.5 },
+                min: { sell: 0, buy: 0 },
+            },
+        });
+        expect(result.baseFreightSell).toBe(0);
+        expect(result.baseFreightBuy).toBe(750);
+        expect(result.usingBuyFallback).toBe(true);
+    });
     it("applies minimum flat when freight is below min sell", () => {
         const result = calculateAirFreight({
             cargo: [{ length: 0, width: 0, height: 0, qty: 0, grossWeightKg: 10 }],

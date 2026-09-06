@@ -99,6 +99,21 @@ export function Input({
  * Number field that shows blank instead of "0" so users can type immediately.
  * Keeps a string draft so decimals like "1." / "0.04" are not eaten by Number().
  */
+function decimalPlacesFromStep(step?: string | number): number {
+  if (step == null || step === "any") return 2;
+  const s = String(step);
+  if (!s.includes(".")) return 0;
+  return s.split(".")[1]?.length ?? 0;
+}
+
+/** Keep rates like 1.50 and 0.04 visible (not 1.5 / 0.04 truncated oddly). */
+function formatRateDraft(n: number, step?: string | number): string {
+  if (!Number.isFinite(n) || n === 0) return "";
+  const places = decimalPlacesFromStep(step);
+  if (places <= 0) return String(n);
+  return n.toFixed(places);
+}
+
 export function NumberInput({
   value,
   onValueChange,
@@ -109,20 +124,21 @@ export function NumberInput({
   value: number;
   onValueChange: (n: number) => void;
 }) {
-  const [draft, setDraft] = useState(value === 0 ? "" : String(value));
+  const stepAttr = step ?? "0.01";
+  const [draft, setDraft] = useState(() => formatRateDraft(value, stepAttr));
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (focused) return;
-    setDraft(value === 0 ? "" : String(value));
-  }, [value, focused]);
+    setDraft(formatRateDraft(value, stepAttr));
+  }, [value, focused, stepAttr]);
 
   return (
     <Input
       {...props}
       type="text"
       inputMode="decimal"
-      step={step ?? "0.01"}
+      step={stepAttr}
       className={className}
       value={draft}
       placeholder={props.placeholder ?? "0"}
@@ -149,7 +165,7 @@ export function NumberInput({
         setFocused(false);
         const n = Number(draft);
         const next = Number.isFinite(n) ? n : 0;
-        setDraft(next === 0 ? "" : String(next));
+        setDraft(formatRateDraft(next, stepAttr));
         onValueChange(next);
         props.onBlur?.(e);
       }}
