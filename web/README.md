@@ -34,21 +34,36 @@ Deploy requires `npm install` inside `functions/` first — otherwise Firebase r
 
 DCSA / ONE Record are free **OpenAPI specs**, not a free live-rate gateway. Each carrier hosts its own API; you still need a customer portal account. Atlas ships a shared adapter + demo sailings until credentials exist. Live sell rates stay on Atlas Circulars.
 
-## Dashboard tab counts by role
+## Dashboard / sidebar tab counts by role
 
-Home cards (Open / Won / revenue / SLA) use **scoped** enquiry counts:
+**Primary sidebar** (after streamlining): Home, Quote hub, Air, Sea, Courier, Transport, Warehouse, Inbox, Enquiry DB, Carriers, Standards, Circulars, Directory, Sales, Analytics, Operations, Admin, NRS follow-ups (= **18** max).
 
-- **Admins** (`ganny`, `manager`, …): all enquiries.
-- **Desk members**: only quotes they created (or assigned to their desk focus).
+| Login / role | Sidebar links (approx) | Notes |
+|---|---|---|
+| Admin (`ganny` / manager) | **18** + **More** (Docs, Feature parity, Mobile) | Full desk |
+| `cathrina` (NRS) | **16** (CORE + Admin + NRS; no Analytics/Ops) | NRS follow-ups page |
+| `kavya` / `jaya` (Free Hand) | **15** | CORE desks |
+| `shashank` (Air Nomination) | **12** | Air + transport/warehouse; no Sea/Courier |
+| `shaheer` (Sea Nomination) | **12** | Sea + transport/warehouse; no Air/Courier |
+| `pricing` | **11** | Air/Sea focus; no transport/warehouse/sales |
 
-Shortcut tiles (Air, Sea, Inbox, Analytics, …) still respect RBAC — a user only sees links for routes they can open.
+Mobile bottom bar: up to **4** tabs (Home, Quote, Inbox, Lines) + **More**.
 
-## Adding a new user
+Home cards (Open / Won / revenue / SLA) use **scoped** enquiry counts (admins see all; desk users see their own).
 
-1. Create the Firebase Auth user with email `{username}@atlaspricing.com` (Auth console or Admin SDK).
-2. Create Firestore doc `users/{username}` with at least `{ role, displayName }` (role drives RBAC via `web/src/lib/auth/rbac.ts` / `team-roles.ts`).
-3. Never commit or document passwords in README or git.
+## Adding a new user (next week)
+
+Do this in Firebase Console for project `vertex-35d95` (or via Admin SDK). **Never paste passwords into chat or git.**
+
+1. **Authentication → Users → Add user**  
+   Email: `{username}@atlaspricing.com` (login form uses username + this domain).  
+   Set a temporary password; share it out-of-band (WhatsApp/1Password), not email-in-git.
+2. **Firestore → `users/{username}`** document, e.g.  
+   `{ "fullName": "Display Name", "role": "member" }`  
+   (or a known desk role). RBAC is in `web/src/lib/auth/rbac.ts` / `team-roles.ts` — add the username there if they need a custom desk (Air-only, Sea-only, NRS, etc.).
+3. Ask them to sign in at `/app/login`, then **change password** from Firebase or a reset link.
+4. Optional: Admin → pending users queue (if they self-signed-up) — still assign the Firestore profile before they can work live.
 
 ## Admin nav streamlining
 
-Default sidebar keeps desks + Inbox / EDB / Carriers / Circulars / Directory / Sales / Analytics / Ops / Admin / **NRS follow-ups**. Docs, Feature parity, and Mobile sit under a **More** subsection shown to admins only. Integrations is labeled **Standards** next to Carriers.
+Default sidebar keeps desks + Inbox / Enquiry DB / Carriers / Standards / Circulars / Directory / Sales / Analytics / Ops / Admin / **NRS follow-ups**. Docs, Feature parity, and Mobile sit under a **More** subsection for admins only. Finance/HR stay out of Pricing (separate apps later).
