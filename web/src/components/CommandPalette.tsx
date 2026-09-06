@@ -23,7 +23,6 @@ import {
   Truck,
   Users,
   Warehouse,
-  Landmark,
 } from "lucide-react";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
@@ -58,7 +57,6 @@ const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
   { id: "sales", label: "Sales pipeline", href: "/sales", icon: Briefcase, group: "Tools", route: "sales" },
   { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3, group: "Navigate", route: "analytics" },
   { id: "ops", label: "Operations board", href: "/ops", icon: PackageCheck, group: "Navigate", route: "ops" },
-  { id: "finance", label: "Finance", href: "/finance", icon: Landmark, group: "Navigate", route: "finance" },
   { id: "admin", label: "Admin console", href: "/admin", icon: Shield, group: "System", route: "admin" },
   { id: "docs", label: "Documentation", href: "/docs", icon: BookOpen, group: "System", route: "docs" },
   { id: "parity", label: "Feature parity tracker", href: "/feature-parity", icon: ClipboardCheck, group: "System", route: "feature-parity" },

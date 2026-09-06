@@ -17,6 +17,14 @@ import { cn } from "@/lib/utils";
 
 const FAQ = [
   {
+    q: "Why do Quote results say Estimate?",
+    a: "New quote uses Atlas lane-band estimates (not airline live APIs). Circulars hold your contracted rates. IATA TACT or carrier APIs can plug in later when Atlas subscribes.",
+  },
+  {
+    q: "How does DCSA / ONE Record work?",
+    a: "Those pages show open-standard demo shapes and GitHub/IATA docs — not live rates. Run demo returns sample sailings until carrier portal credentials are stored as Functions secrets.",
+  },
+  {
     q: "How do I quote from an email?",
     a: "Open Enquiry inbox or paste the mail body on Air/Sea desk Smart Quote strip, then tap Air or Sea.",
   },
@@ -30,7 +38,11 @@ const FAQ = [
   },
   {
     q: "Transport / Warehouse?",
-    a: "Use the Transport and Warehouse desks in the sidebar — ⌘S saves like other desks.",
+    a: "Transport uses India PIN search for origin/destination; Warehouse has CFS/ICD location dropdowns. ⌘S saves like other desks.",
+  },
+  {
+    q: "FX rates?",
+    a: "Header exchange control shows live USD, EUR, and GBP to INR (Frankfurter / ER-API). Open it to convert either direction.",
   },
 ];
 
@@ -229,7 +241,7 @@ export function HelpFab() {
         aria-label="Atlas Help"
         data-testid="help-fab"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-[120] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(11,31,58,0.35)] transition hover:scale-[1.03] hover:bg-[#14154a]"
+        className="fixed bottom-20 right-4 z-[220] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(11,31,58,0.35)] transition hover:scale-[1.03] hover:bg-[#14154a] md:bottom-5 md:right-5"
       >
         <HelpCircle className="h-5 w-5" />
       </button>

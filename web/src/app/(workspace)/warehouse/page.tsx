@@ -10,6 +10,7 @@ import { useLiveData } from "@/lib/api";
 import { saveWarehouseQuote } from "@/lib/firebase/save-transport-warehouse";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
+import { DESK_CURRENCIES, WAREHOUSE_LOCATIONS } from "@/lib/desk/constants";
 import { formatCurrency } from "@/lib/utils";
 
 const DEFAULT_TERMS =
@@ -21,7 +22,7 @@ export default function WarehouseDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const [customer, setCustomer] = useState("");
-  const [location, setLocation] = useState("JNPT CFS");
+  const [location, setLocation] = useState<string>(WAREHOUSE_LOCATIONS[0]);
   const [storageType, setStorageType] = useState("General cargo");
   const [currency, setCurrency] = useState("INR");
   const [ratePerCbm, setRatePerCbm] = useState(0);
@@ -102,7 +103,13 @@ export default function WarehouseDeskPage() {
             </div>
             <div>
               <Label>Location *</Label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} />
+              <Select value={location} onChange={(e) => setLocation(e.target.value)}>
+                {WAREHOUSE_LOCATIONS.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </Select>
             </div>
             <div>
               <Label>Storage type</Label>
@@ -148,8 +155,11 @@ export default function WarehouseDeskPage() {
             <div>
               <Label>Currency</Label>
               <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                <option>INR</option>
-                <option>USD</option>
+                {DESK_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </Select>
             </div>
             <div className="sm:col-span-2">

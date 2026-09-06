@@ -219,9 +219,15 @@ export const RATE_PROVIDER_SLOTS = [
   },
   {
     id: "frankfurter",
-    name: "Frankfurter FX",
+    name: "Frankfurter / ER-API FX",
     status: "active" as const,
-    note: "Free mid-market USD/INR",
+    note: "Free mid-market USD · EUR · GBP → INR",
+  },
+  {
+    id: "iata-tact",
+    name: "IATA TACT Tariffs API",
+    status: "ready" as const,
+    note: "Published air tariffs (not live inventory) — subscribe via IATA, then wire credentials",
   },
   {
     id: "dcsa",

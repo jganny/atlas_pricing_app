@@ -10,7 +10,8 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
-import { PortMapEmbed } from "@/components/PortMapEmbed";
+import { LocationCombobox } from "@/components/LocationCombobox";
+import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
@@ -488,20 +489,20 @@ function SeaDeskInner() {
                   Customer
                   <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Customer name" />
                 </Label>
-                <Label>
-                  POL
-                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="INNSA…" />
-                  <PortMapEmbed query={origin} kind="port" />
-                </Label>
-                <Label>
-                  POD
-                  <Input
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                    placeholder="CNSHA…"
-                  />
-                  <PortMapEmbed query={destination} kind="port" />
-                </Label>
+                <LocationCombobox
+                  label="POL (seaport)"
+                  value={origin}
+                  onChange={setOrigin}
+                  kind="seaport"
+                  placeholder="INNSA, INMAA…"
+                />
+                <LocationCombobox
+                  label="POD (seaport)"
+                  value={destination}
+                  onChange={setDestination}
+                  kind="seaport"
+                  placeholder="NLRTM, CNSHA…"
+                />
                 <Label>
                   Mode
                   <Select value={mode} onChange={(e) => setMode(e.target.value as SeaMode)}>
@@ -513,7 +514,7 @@ function SeaDeskInner() {
                 <Label>
                   Currency
                   <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                    {["USD", "INR", "EUR", "GBP", "AED", "SGD"].map((c) => (
+                    {DESK_CURRENCIES.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>

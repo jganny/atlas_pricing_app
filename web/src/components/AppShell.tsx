@@ -12,7 +12,6 @@ import {
   FileText,
   Home,
   Inbox,
-  Landmark,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -67,9 +66,7 @@ const navItems: Array<{
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, route: "analytics" },
   { href: "/ops", label: "Operations", icon: PackageCheck, route: "ops" },
-  { href: "/finance", label: "Finance", icon: Landmark, route: "finance" },
   { href: "/admin", label: "Admin", icon: Shield, route: "admin" },
-  { href: "/hr", label: "HR roster", icon: Users, route: "hr" },
   { href: "/docs", label: "Docs", icon: BookOpen, route: "docs" },
   { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
 ];
@@ -259,7 +256,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <GlobalRefreshButton />
               <FxConverter />
               <PremiumPipToggle onOpen={() => setPipOpen(true)} />
-              <QuoteOverlayToggle onOpen={() => setQuoteOpen(true)} />
               {showInbox ? (
                 <Link
                   href="/inbox"

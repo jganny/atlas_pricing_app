@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Save, Truck } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
+import { PincodeCombobox } from "@/components/PincodeCombobox";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { saveTransportQuote } from "@/lib/firebase/save-transport-warehouse";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
+import { DESK_CURRENCIES, INDIA_VEHICLE_TYPES } from "@/lib/desk/constants";
 import { formatCurrency } from "@/lib/utils";
 
 const DEFAULT_TERMS =
@@ -23,7 +25,7 @@ export default function TransportDeskPage() {
   const [customer, setCustomer] = useState("");
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
-  const [vehicleType, setVehicleType] = useState("32ft container");
+  const [vehicleType, setVehicleType] = useState<string>(INDIA_VEHICLE_TYPES[7]);
   const [currency, setCurrency] = useState("INR");
   const [freightBuy, setFreightBuy] = useState(0);
   const [freightSell, setFreightSell] = useState(0);
@@ -104,28 +106,36 @@ export default function TransportDeskPage() {
               <Label>Customer *</Label>
               <Input value={customer} onChange={(e) => setCustomer(e.target.value)} />
             </div>
-            <div>
-              <Label>Origin *</Label>
-              <Input value={origin} onChange={(e) => setOrigin(e.target.value)} />
-            </div>
-            <div>
-              <Label>Destination *</Label>
-              <Input value={destination} onChange={(e) => setDestination(e.target.value)} />
-            </div>
+            <PincodeCombobox
+              label="Origin (PIN / place) *"
+              value={origin}
+              onChange={setOrigin}
+              placeholder="560001 Bangalore…"
+            />
+            <PincodeCombobox
+              label="Destination (PIN / place) *"
+              value={destination}
+              onChange={setDestination}
+              placeholder="400001 Mumbai…"
+            />
             <div>
               <Label>Vehicle</Label>
               <Select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
-                <option>20ft container</option>
-                <option>32ft container</option>
-                <option>Trailer</option>
-                <option>Tempo</option>
+                {INDIA_VEHICLE_TYPES.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
               </Select>
             </div>
             <div>
               <Label>Currency</Label>
               <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                <option>INR</option>
-                <option>USD</option>
+                {DESK_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </Select>
             </div>
             <div>

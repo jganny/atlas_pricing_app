@@ -390,7 +390,7 @@ function CourierDeskInner() {
               <label className="text-sm font-semibold">
                 Currency
                 <select className="mt-1 w-full rounded-lg border px-3 py-2" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                  {["INR", "USD", "EUR", "GBP", "AED", "SGD"].map((c) => (
+                  {["INR", "USD", "EUR", "GBP"].map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>

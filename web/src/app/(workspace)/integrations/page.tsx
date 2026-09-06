@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Plane, Ship } from "lucide-react";
 import { Badge, Button, Card, Input, Label } from "@/components/ui";
 import {
@@ -22,7 +22,13 @@ export default function IntegrationsPage() {
   const [sailings, setSailings] = useState<DcsaScheduleSailing[]>([]);
 
   const shipment = useMemo(
-    () => demoOneRecordShipment({ origin: "BLR", destination: "LHR", weightKg: 250, pieces: 2 }),
+    () =>
+      demoOneRecordShipment({
+        origin: "BLR",
+        destination: "LHR",
+        weightKg: 250,
+        pieces: 2,
+      }),
     [],
   );
 
@@ -34,6 +40,11 @@ export default function IntegrationsPage() {
       }),
     );
   }
+
+  useEffect(() => {
+    runDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- demo on first paint only
+  }, []);
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -47,7 +58,9 @@ export default function IntegrationsPage() {
         <p className="mt-2 max-w-3xl text-sm text-[var(--color-text-muted)]">
           DCSA and ONE Record are free open standards — not free live rate gateways. Each carrier
           hosts its own API against a shared schema. Atlas uses that shared shape so we onboard
-          once per pattern, then plug credentials when you are a contracted customer.
+          once per pattern, then plug credentials when you are a contracted customer. The GitHub /
+          IATA links are official specs; the JSON panel and Run demo results are shape demos only
+          until portal secrets are configured.
         </p>
       </div>
 
@@ -146,8 +159,8 @@ export default function IntegrationsPage() {
           Demo: DCSA-shaped commercial schedules
         </h2>
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-          Same response model for every carrier. Swap demo → live when portal credentials are set
-          as Functions secrets.
+          Same response model for every carrier. The demo badge means sample data — swap to live
+          when portal credentials are set as Functions secrets.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
           <div>
@@ -202,7 +215,10 @@ export default function IntegrationsPage() {
             NVOCCs / coloaders are not DCSA members — they consume the same carrier data you will.
           </li>
         </ol>
-        <Link href="/carriers" className="mt-3 inline-block text-xs font-bold text-sky-800 hover:underline">
+        <Link
+          href="/carriers"
+          className="mt-3 inline-block text-xs font-bold text-sky-800 hover:underline"
+        >
           Open free carrier directory →
         </Link>
       </Card>

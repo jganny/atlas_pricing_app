@@ -338,7 +338,10 @@ export function PremiumQuoteOverlay({
                     Product options
                   </h3>
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    {origin} → {destination} · sorted by estimated total
+                    {origin} → {destination} · sorted by estimated total ·{" "}
+                    <span className="font-semibold text-amber-800">
+                      Source = Estimate (lane-band model, not airline live rates)
+                    </span>
                   </p>
                 </div>
                 <Button type="button" variant="secondary" size="sm" onClick={runSearch}>

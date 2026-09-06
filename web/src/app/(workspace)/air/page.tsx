@@ -18,7 +18,8 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
-import { PortMapEmbed } from "@/components/PortMapEmbed";
+import { LocationCombobox } from "@/components/LocationCombobox";
+import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
@@ -508,24 +509,24 @@ function AirDeskInner() {
                   Customer
                   <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Customer name" />
                 </Label>
-                <Label>
-                  POL
-                  <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="BOM / DEL…" />
-                  <PortMapEmbed query={origin} kind="airport" />
-                </Label>
-                <Label>
-                  POD
-                  <Input
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                    placeholder="DXB / SIN…"
-                  />
-                  <PortMapEmbed query={destination} kind="airport" />
-                </Label>
+                <LocationCombobox
+                  label="POL (airport)"
+                  value={origin}
+                  onChange={setOrigin}
+                  kind="airport"
+                  placeholder="BLR, BOM, DEL…"
+                />
+                <LocationCombobox
+                  label="POD (airport)"
+                  value={destination}
+                  onChange={setDestination}
+                  kind="airport"
+                  placeholder="LHR, DXB, SIN…"
+                />
                 <Label>
                   Currency
                   <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                    {["USD", "INR", "EUR", "GBP", "AED", "SGD"].map((c) => (
+                    {DESK_CURRENCIES.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>

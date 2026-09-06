@@ -52,9 +52,10 @@ export default function CarriersPage() {
           Airlines & shipping lines
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--color-text-muted)]">
-          Curated majors plus OpenFlights airline codes — no paid API keys. Live sell rates still
-          come from your Circulars / desks; this directory powers search, overlays, and tracking
-          links.
+          Public directory for search, tracking, and website shortcuts — not a rate shop. Cards
+          without Track/Site simply lack a known public URL; they do not hide live pricing. Sell
+          rates stay in Circulars / Air·Sea desks. Do not paste carrier portal passwords here —
+          official APIs or Circulars uploads are the supported path.
         </p>
       </div>
 
@@ -123,6 +124,11 @@ export default function CarriersPage() {
                   Site <ExternalLink className="h-3 w-3" />
                 </a>
               ) : null}
+              {!c.trackingUrl && !c.website ? (
+                <span className="text-[11px] font-medium text-[var(--color-text-muted)]">
+                  No public track/site link yet — use Circulars for rates
+                </span>
+              ) : null}
             </div>
           </Card>
         ))}
@@ -143,9 +149,11 @@ export default function CarriersPage() {
           ))}
         </ul>
         <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-          Paid live-rate APIs (Searates, ShipsGo, Amadeus) can plug into the rate aggregator later —
-          slots are already reserved. IMAP automation for pricing / pricingsales can be connected
-          when you share mailbox credentials (stored as env secrets, never in source).
+          Logging into airline/liner web portals with shared IDs inside Atlas is not supported
+          (fragile, against most carrier terms, and unsafe for credentials). Prefer: (1) Circulars
+          Excel for contracted buy rates, (2) official carrier APIs / IATA TACT when subscribed,
+          (3) Track/Site links above for public tools. Store future API secrets in Firebase
+          Functions — never in chat or source.
         </p>
       </Card>
     </div>
