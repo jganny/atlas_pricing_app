@@ -133,17 +133,16 @@ export default function MobileHomePage() {
                 <Button type="button" className="mt-3" onClick={() => void install()}>
                   Install
                 </Button>
-              ) : (
-                <p className="mt-2 flex flex-col gap-1 text-[11px] text-[var(--color-text-muted)]">
-                  <span className="flex items-center gap-1">
-                    <Share className="h-3.5 w-3.5" />
-                    iPhone: Share → Add to Home Screen
-                  </span>
-                  <span>
-                    Android (Chrome): Menu ⋮ → Install app / Add to Home screen
-                  </span>
-                </p>
-              )}
+              ) : null}
+              <p className="mt-2 flex flex-col gap-1 text-[11px] text-[var(--color-text-muted)]">
+                <span className="flex items-center gap-1">
+                  <Share className="h-3.5 w-3.5" />
+                  iPhone: Share → Add to Home Screen
+                </span>
+                <span>
+                  Android (Chrome): Menu ⋮ → Install app / Add to Home screen
+                </span>
+              </p>
             </div>
           </div>
         </Card>
