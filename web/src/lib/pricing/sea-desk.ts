@@ -64,6 +64,7 @@ export interface LinerTotals {
   grandSell: number;
   grandBuy: number;
   gp: number;
+  gpReady: boolean;
 }
 
 export function computeLinerTotals(
@@ -111,6 +112,9 @@ export function computeLinerTotals(
   const destSum = sumSurcharges(dest);
   const grandSell = freight.baseFreightSell + originSum.sell + destSum.sell;
   const grandBuy = freight.baseFreightBuy + originSum.buy + destSum.buy;
+  const freightSellReady = freight.baseFreightSell > 0;
+  const freightBuyReady = freight.baseFreightBuy > 0;
+  const gpReady = freightSellReady && freightBuyReady;
 
   return {
     freight,
@@ -120,7 +124,8 @@ export function computeLinerTotals(
     destTotal: destSum.sell,
     grandSell,
     grandBuy,
-    gp: grandSell - grandBuy,
+    gp: gpReady ? grandSell - grandBuy : 0,
+    gpReady,
   };
 }
 

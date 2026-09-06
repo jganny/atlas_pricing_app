@@ -9,7 +9,10 @@ export function getWeightBreakBracket(weightKg: number): WeightBreakName {
   return "plus1000";
 }
 
-/** Mirrors legacy resolveInterimRate — sell preferred, buy as interim fallback. */
+/**
+ * Legacy helper (tests / UI hints).
+ * Quote totals must NOT use buy-as-sell — see selectActiveBreakForSide.
+ */
 export function resolveInterimRate(val: RatePair | number | undefined): InterimRate {
   if (typeof val === "number") {
     return { rate: val, isFallback: false };
@@ -22,6 +25,12 @@ export function resolveInterimRate(val: RatePair | number | undefined): InterimR
   return { rate: 0, isFallback: false };
 }
 
+function sideRate(val: RatePair | number | undefined, side: "sell" | "buy"): number {
+  if (typeof val === "number") return side === "sell" ? val : 0;
+  if (!val) return 0;
+  return side === "sell" ? val.sell || 0 : val.buy || 0;
+}
+
 const BRACKET_LIMITS: Array<{ name: WeightBreakName; limit: number }> = [
   { name: "minus45", limit: 0 },
   { name: "plus45", limit: 45 },
@@ -31,6 +40,35 @@ const BRACKET_LIMITS: Array<{ name: WeightBreakName; limit: number }> = [
   { name: "plus1000", limit: 1000 },
 ];
 
+/** Active break using only sell OR only buy — money sides never cross. */
+export function selectActiveBreakForSide(
+  chargeableWeightKg: number,
+  breaks: WeightBreaks,
+  side: "sell" | "buy",
+): { usedBreak: WeightBreakName; rate: number } {
+  const autoBreak = getWeightBreakBracket(chargeableWeightKg);
+  const autoRate = sideRate(breaks[autoBreak], side);
+  if (autoRate > 0) return { usedBreak: autoBreak, rate: autoRate };
+
+  let best: (typeof BRACKET_LIMITS)[number] | null = null;
+  for (const br of BRACKET_LIMITS) {
+    if (sideRate(breaks[br.name], side) > 0 && chargeableWeightKg >= br.limit) {
+      best = br;
+    }
+  }
+  if (best) return { usedBreak: best.name, rate: sideRate(breaks[best.name], side) };
+
+  const withRates = BRACKET_LIMITS.filter((br) => sideRate(breaks[br.name], side) > 0);
+  if (withRates.length > 0) {
+    return {
+      usedBreak: withRates[0].name,
+      rate: sideRate(breaks[withRates[0].name], side),
+    };
+  }
+  return { usedBreak: autoBreak, rate: 0 };
+}
+
+/** UI hint helper — display rate may still show buy when sell blank. */
 export function selectActiveBreak(
   chargeableWeightKg: number,
   breaks: WeightBreaks,
@@ -40,54 +78,13 @@ export function selectActiveBreak(
   activeBuyRate: number;
   usingBuyFallback: boolean;
 } {
-  const autoBreak = getWeightBreakBracket(chargeableWeightKg);
-  const autoVal = breaks[autoBreak];
-  const autoResolved = resolveInterimRate(autoVal);
-
-  if (autoResolved.rate > 0) {
-    return {
-      usedBreak: autoBreak,
-      activeRate: autoResolved.rate,
-      activeBuyRate: autoVal?.buy ?? 0,
-      usingBuyFallback: autoResolved.isFallback,
-    };
-  }
-
-  let best: (typeof BRACKET_LIMITS)[number] | null = null;
-  for (const br of BRACKET_LIMITS) {
-    const val = breaks[br.name];
-    if (resolveInterimRate(val).rate > 0 && chargeableWeightKg >= br.limit) {
-      best = br;
-    }
-  }
-
-  if (best) {
-    const val = breaks[best.name];
-    const resolved = resolveInterimRate(val);
-    return {
-      usedBreak: best.name,
-      activeRate: resolved.rate,
-      activeBuyRate: val?.buy ?? 0,
-      usingBuyFallback: resolved.isFallback,
-    };
-  }
-
-  const withRates = BRACKET_LIMITS.filter((br) => resolveInterimRate(breaks[br.name]).rate > 0);
-  if (withRates.length > 0) {
-    const val = breaks[withRates[0].name];
-    const resolved = resolveInterimRate(val);
-    return {
-      usedBreak: withRates[0].name,
-      activeRate: resolved.rate,
-      activeBuyRate: val?.buy ?? 0,
-      usingBuyFallback: resolved.isFallback,
-    };
-  }
-
+  const sell = selectActiveBreakForSide(chargeableWeightKg, breaks, "sell");
+  const buy = selectActiveBreakForSide(chargeableWeightKg, breaks, "buy");
+  const usingBuyFallback = sell.rate <= 0 && buy.rate > 0;
   return {
-    usedBreak: autoBreak,
-    activeRate: 0,
-    activeBuyRate: 0,
-    usingBuyFallback: false,
+    usedBreak: sell.rate > 0 ? sell.usedBreak : buy.usedBreak,
+    activeRate: sell.rate > 0 ? sell.rate : buy.rate,
+    activeBuyRate: buy.rate,
+    usingBuyFallback,
   };
 }

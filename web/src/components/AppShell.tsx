@@ -8,6 +8,7 @@ import {
   BookOpen,
   Briefcase,
   ClipboardCheck,
+  ClipboardList,
   Database,
   FileText,
   Home,
@@ -15,7 +16,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  MoreHorizontal,
   Package,
   PackageCheck,
   PlaneTakeoff,
@@ -36,19 +36,22 @@ import {
   preferredHomePath,
   type AppRouteId,
 } from "@/lib/auth/rbac";
+import { isAdminUser } from "@/lib/quotes/team-roles";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 import { PremiumQuoteOverlay, QuoteOverlayToggle } from "./PremiumQuoteOverlay";
 
-const navItems: Array<{
+type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   exact?: boolean;
   route: AppRouteId;
-}> = [
+};
+
+const primaryNav: NavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboard, exact: true, route: "dashboard" },
   { href: "/quote", label: "Quote hub", icon: Sparkles, route: "smart-quote" },
   { href: "/air", label: "Air desk", icon: PlaneTakeoff, route: "air" },
@@ -59,21 +62,70 @@ const navItems: Array<{
   { href: "/inbox", label: "Inbox", icon: Inbox, route: "inbox" },
   { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
   { href: "/carriers", label: "Carriers", icon: Ship, route: "directory" },
-  { href: "/integrations", label: "DCSA / ONE Record", icon: Sparkles, route: "directory" },
-  { href: "/m", label: "Mobile app", icon: Home, route: "dashboard" },
+  { href: "/integrations", label: "Standards", icon: Sparkles, route: "directory" },
   { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
   { href: "/directory", label: "Directory", icon: Users, route: "directory" },
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, route: "analytics" },
   { href: "/ops", label: "Operations", icon: PackageCheck, route: "ops" },
   { href: "/admin", label: "Admin", icon: Shield, route: "admin" },
+  { href: "/nrs", label: "NRS follow-ups", icon: ClipboardList, route: "nrs" },
+];
+
+const adminMoreNav: NavItem[] = [
   { href: "/docs", label: "Docs", icon: BookOpen, route: "docs" },
   { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
+  { href: "/m", label: "Mobile app", icon: Home, route: "dashboard" },
 ];
 
 function pathActive(pathname: string, href: string, exact?: boolean) {
   if (exact) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavLink({
+  item,
+  pathname,
+  onNavigate,
+  dark,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate?: () => void;
+  dark?: boolean;
+}) {
+  const active = pathActive(pathname, item.href, item.exact);
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={cn(
+        dark
+          ? "relative flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors"
+          : "relative flex items-center gap-3 border-b border-slate-100 px-4 py-3.5 text-sm font-semibold",
+        dark
+          ? active
+            ? "bg-white/15 text-white"
+            : "text-white/70 hover:bg-white/10 hover:text-white"
+          : active
+            ? "bg-sky-50 text-[var(--color-atlas-navy)]"
+            : "text-slate-700",
+      )}
+    >
+      {active ? (
+        <span
+          className={cn(
+            "absolute left-0",
+            dark
+              ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-teal-400"
+              : "top-0 h-full w-1 bg-teal-500",
+          )}
+        />
+      ) : null}
+      <item.icon className="h-4 w-4" />
+      {item.label}
+    </Link>
+  );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -85,10 +137,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pipOpen, setPipOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const admin = isAdminUser(user?.username, user?.role);
 
-  const visibleNav = useMemo(
-    () => navItems.filter((item) => canAccessRoute(user?.username, user?.role, item.route)),
+  const visiblePrimary = useMemo(
+    () => primaryNav.filter((item) => canAccessRoute(user?.username, user?.role, item.route)),
     [user?.username, user?.role],
+  );
+  const visibleMore = useMemo(
+    () =>
+      admin
+        ? adminMoreNav.filter((item) => canAccessRoute(user?.username, user?.role, item.route))
+        : [],
+    [admin, user?.username, user?.role],
   );
 
   const mobileTabs = useMemo(() => {
@@ -137,27 +197,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
           <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-            {visibleNav.map((item) => {
-              const active = pathActive(normalized, item.href, item.exact);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "relative flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                    active
-                      ? "bg-white/15 text-white"
-                      : "text-white/70 hover:bg-white/10 hover:text-white",
-                  )}
-                >
-                  {active ? (
-                    <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-teal-400" />
-                  ) : null}
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {visiblePrimary.map((item) => (
+              <NavLink key={item.href} item={item} pathname={normalized} dark />
+            ))}
+            {visibleMore.length > 0 ? (
+              <>
+                <div className="mt-3 px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-white/40">
+                  More
+                </div>
+                {visibleMore.map((item) => (
+                  <NavLink key={item.href} item={item} pathname={normalized} dark />
+                ))}
+              </>
+            ) : null}
           </nav>
           <div className="border-t border-white/10 p-4">
             <div className="text-xs text-white/50">Signed in as</div>
@@ -189,26 +241,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto">
-                {visibleNav.map((item) => {
-                  const active = pathActive(normalized, item.href, item.exact);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        "relative flex items-center gap-3 border-b border-slate-100 px-4 py-3.5 text-sm font-semibold",
-                        active ? "bg-sky-50 text-[var(--color-atlas-navy)]" : "text-slate-700",
-                      )}
-                    >
-                      {active ? (
-                        <span className="absolute left-0 top-0 h-full w-1 bg-teal-500" />
-                      ) : null}
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
+                {visiblePrimary.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    pathname={normalized}
+                    onNavigate={() => setMobileOpen(false)}
+                  />
+                ))}
+                {visibleMore.length > 0 ? (
+                  <>
+                    <div className="bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      More
+                    </div>
+                    {visibleMore.map((item) => (
+                      <NavLink
+                        key={item.href}
+                        item={item}
+                        pathname={normalized}
+                        onNavigate={() => setMobileOpen(false)}
+                      />
+                    ))}
+                  </>
+                ) : null}
               </nav>
               <div className="border-t border-[var(--color-border)] p-4 text-xs text-[var(--color-text-muted)]">
                 Help · Connectivity · v{appVersion}
@@ -280,31 +335,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-[var(--color-border)] bg-white/95 backdrop-blur md:hidden">
-        {mobileTabs.map((tab) => {
-          const active = pathActive(normalized, tab.href, tab.exact);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-bold",
-                active ? "text-teal-600" : "text-[var(--color-text-muted)]",
-              )}
-            >
-              <tab.icon className="h-5 w-5" />
-              {tab.label}
-            </Link>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-bold text-[var(--color-text-muted)]"
-        >
-          <MoreHorizontal className="h-5 w-5" />
-          More
-        </button>
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border)] bg-white/95 backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
+          {mobileTabs.map((tab) => {
+            const active = pathActive(normalized, tab.href, tab.exact);
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={cn(
+                  "flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-2 text-[10px] font-bold",
+                  active ? "text-[var(--color-atlas-navy)]" : "text-[var(--color-text-muted)]",
+                )}
+              >
+                <tab.icon className={cn("h-5 w-5", active && "text-teal-600")} />
+                <span className="truncate">{tab.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-bold text-[var(--color-text-muted)]"
+          >
+            <Menu className="h-5 w-5" />
+            More
+          </button>
+        </div>
       </nav>
 
       <PremiumPip open={pipOpen} onOpenChange={setPipOpen} title="Atlas focus">

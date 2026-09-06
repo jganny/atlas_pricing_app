@@ -5,12 +5,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Plus, RotateCcw, Save, Ship, Trash2, Zap } from "lucide-react";
 import type { SeaMode } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Input, Label, NumberInput, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { LocationCombobox } from "@/components/LocationCombobox";
+import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { toast } from "@/components/Toast";
@@ -31,7 +32,11 @@ import {
   validateSelectedLiner,
   type SeaContainerRow,
 } from "@/lib/pricing/sea-desk";
-import { getDefaultFreightTerms } from "@/lib/pricing/terms";
+import {
+  formatRoutingPreview,
+  formatTransitPreview,
+  getDefaultFreightTerms,
+} from "@/lib/pricing/terms";
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
@@ -644,30 +649,39 @@ function SeaDeskInner() {
                         <Input
                           value={opt.name}
                           onChange={(e) => updateLiner(opt.id, { name: e.target.value })}
-                          placeholder="MSC - Mediterranean Shipping"
+                          placeholder="Shipping line"
                         />
                       </Label>
-                      <Label>
-                        Routing
+                      <div>
+                        <Label>Routing</Label>
                         <Input
                           value={opt.routing}
                           onChange={(e) => updateLiner(opt.id, { routing: e.target.value })}
                         />
-                      </Label>
-                      <Label>
-                        Transit time
+                        {opt.routing.trim() ? (
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                            Preview: {formatRoutingPreview(opt.routing)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div>
+                        <Label>Transit time</Label>
                         <Input
                           value={opt.tt}
                           onChange={(e) => updateLiner(opt.id, { tt: e.target.value })}
                         />
-                      </Label>
-                      <Label className="md:col-span-2">
-                        Validity
-                        <Input
+                        {opt.tt.trim() ? (
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                            Preview: {formatTransitPreview(opt.tt)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="md:col-span-2">
+                        <ValidityField
                           value={opt.validity}
-                          onChange={(e) => updateLiner(opt.id, { validity: e.target.value })}
+                          onChange={(v) => updateLiner(opt.id, { validity: v })}
                         />
-                      </Label>
+                      </div>
                     </div>
 
                     {mode === "fcl" ? (
@@ -719,36 +733,31 @@ function SeaDeskInner() {
                                     </select>
                                   </td>
                                   <td className="p-1">
-                                    <input
-                                      type="number"
-                                      className="w-14 rounded border px-1 py-1"
+                                    <NumberInput
+                                      className="mt-0 w-14 px-1 py-1"
                                       value={row.qty}
-                                      onChange={(e) =>
-                                        updateContainer(opt.id, i, { qty: Number(e.target.value) })
+                                      onValueChange={(n) =>
+                                        updateContainer(opt.id, i, { qty: Math.max(1, n || 1) })
                                       }
                                     />
                                   </td>
                                   <td className="p-1">
-                                    <input
-                                      type="number"
-                                      className="w-24 rounded border px-1 py-1"
-                                      value={row.sellRate || ""}
-                                      onChange={(e) =>
-                                        updateContainer(opt.id, i, {
-                                          sellRate: Number(e.target.value),
-                                        })
+                                    <NumberInput
+                                      step="0.01"
+                                      className="mt-0 w-24 px-1 py-1"
+                                      value={row.sellRate}
+                                      onValueChange={(n) =>
+                                        updateContainer(opt.id, i, { sellRate: n })
                                       }
                                     />
                                   </td>
                                   <td className="p-1">
-                                    <input
-                                      type="number"
-                                      className="w-24 rounded border px-1 py-1"
-                                      value={row.buyRate || ""}
-                                      onChange={(e) =>
-                                        updateContainer(opt.id, i, {
-                                          buyRate: Number(e.target.value),
-                                        })
+                                    <NumberInput
+                                      step="0.01"
+                                      className="mt-0 w-24 px-1 py-1"
+                                      value={row.buyRate}
+                                      onValueChange={(n) =>
+                                        updateContainer(opt.id, i, { buyRate: n })
                                       }
                                     />
                                   </td>
@@ -776,24 +785,18 @@ function SeaDeskInner() {
                       <div className="grid gap-3 md:grid-cols-2">
                         <Label>
                           LCL sell / RT
-                          <Input
-                            type="number"
+                          <NumberInput
                             step="0.01"
                             value={opt.lclSell}
-                            onChange={(e) =>
-                              updateLiner(opt.id, { lclSell: Number(e.target.value) })
-                            }
+                            onValueChange={(n) => updateLiner(opt.id, { lclSell: n })}
                           />
                         </Label>
                         <Label>
                           LCL buy / RT
-                          <Input
-                            type="number"
+                          <NumberInput
                             step="0.01"
                             value={opt.lclBuy}
-                            onChange={(e) =>
-                              updateLiner(opt.id, { lclBuy: Number(e.target.value) })
-                            }
+                            onValueChange={(n) => updateLiner(opt.id, { lclBuy: n })}
                           />
                         </Label>
                       </div>
@@ -909,7 +912,11 @@ function SeaDeskInner() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
-                  <dd className="font-bold">{formatCurrency(selectedTotals.gp, currency)}</dd>
+                  <dd className="font-bold">
+                    {selectedTotals.gpReady
+                      ? formatCurrency(selectedTotals.gp, currency)
+                      : "— (enter both buy & sell freight)"}
+                  </dd>
                 </div>
               </dl>
             ) : null}

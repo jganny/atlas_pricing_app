@@ -18,6 +18,21 @@ export const INDIA_VEHICLE_TYPES = [
   "LCV open",
   "HCV open",
   "Refrigerated truck",
+  "Box truck / closed body",
+  "Curtain sider",
+  "Tank / tanker",
+  "Flatbed",
+  "Car carrier",
+] as const;
+
+export const TRANSPORT_SERVICE_TYPES = [
+  "FTL (Full truck load)",
+  "LTL / PTL (Part load)",
+  "Container trucking",
+  "First mile / last mile",
+  "Cross-border road",
+  "Over-dimensional cargo (ODC)",
+  "Reefer / temperature controlled",
 ] as const;
 
 export const WAREHOUSE_LOCATIONS = [
@@ -35,5 +50,5 @@ export const WAREHOUSE_LOCATIONS = [
   "Hyderabad ICD",
   "Ahmedabad ICD",
   "Bonded warehouse — customer nominated",
-  "Other (see notes)",
+  "Others",
 ] as const;

@@ -23,6 +23,7 @@ export function LocationCombobox({
   const [q, setQ] = useState(value);
   const [hits, setHits] = useState<LocationHit[]>([]);
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setQ(value), [value]);
@@ -33,7 +34,10 @@ export function LocationCombobox({
       return;
     }
     const t = window.setTimeout(() => {
-      void searchLocations(q, kind, 10).then(setHits);
+      void searchLocations(q, kind, 10).then((rows) => {
+        setHits(rows);
+        setActive(0);
+      });
     }, 120);
     return () => window.clearTimeout(t);
   }, [q, kind]);
@@ -53,6 +57,28 @@ export function LocationCombobox({
     setOpen(false);
   }
 
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp") && hits.length > 0) {
+      setOpen(true);
+      e.preventDefault();
+      return;
+    }
+    if (!open || hits.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => (i + 1) % hits.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => (i - 1 + hits.length) % hits.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const hit = hits[active];
+      if (hit) pick(hit);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
   return (
     <div ref={boxRef} className="relative">
       <Label>{label}</Label>
@@ -62,7 +88,10 @@ export function LocationCombobox({
         autoComplete="off"
         aria-autocomplete="list"
         aria-controls={listId}
+        aria-expanded={open}
+        role="combobox"
         onFocus={() => setOpen(true)}
+        onKeyDown={onKeyDown}
         onChange={(e) => {
           setQ(e.target.value);
           onChange(e.target.value);
@@ -72,14 +101,18 @@ export function LocationCombobox({
       {open && hits.length > 0 ? (
         <ul
           id={listId}
+          role="listbox"
           className="absolute z-30 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-white py-1 shadow-lg"
         >
-          {hits.map((h) => (
-            <li key={`${h.kind}-${h.code}`}>
+          {hits.map((h, i) => (
+            <li key={`${h.kind}-${h.code}`} role="option" aria-selected={i === active}>
               <button
                 type="button"
-                className="flex w-full flex-col px-3 py-1.5 text-left text-sm hover:bg-sky-50"
+                className={`flex w-full flex-col px-3 py-1.5 text-left text-sm ${
+                  i === active ? "bg-sky-100" : "hover:bg-sky-50"
+                }`}
                 onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setActive(i)}
                 onClick={() => pick(h)}
               >
                 <span className="font-bold text-[var(--color-atlas-navy)]">

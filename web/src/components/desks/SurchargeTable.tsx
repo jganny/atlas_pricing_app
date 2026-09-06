@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, NumberInput } from "@/components/ui";
 import {
   createSurchargeRow,
   type BillingUnit,
@@ -92,23 +92,21 @@ export function SurchargeTable({
                   />
                 </td>
                 <td className="p-1">
-                  <input
-                    type="number"
-                    step="0.01"
+                  <NumberInput
                     disabled={!enabled}
-                    className="w-20 rounded border px-1 py-1 disabled:opacity-50"
+                    step="0.01"
+                    className="mt-0 w-20 px-1 py-1 text-xs"
                     value={row.sell}
-                    onChange={(e) => update(i, { sell: Number(e.target.value) })}
+                    onValueChange={(n) => update(i, { sell: n })}
                   />
                 </td>
                 <td className="p-1">
-                  <input
-                    type="number"
-                    step="0.01"
+                  <NumberInput
                     disabled={!enabled}
-                    className="w-20 rounded border px-1 py-1 disabled:opacity-50"
+                    step="0.01"
+                    className="mt-0 w-20 px-1 py-1 text-xs"
                     value={row.buy}
-                    onChange={(e) => update(i, { buy: Number(e.target.value) })}
+                    onValueChange={(n) => update(i, { buy: n })}
                   />
                 </td>
                 <td className="p-1">

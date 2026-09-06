@@ -61,6 +61,8 @@ export interface AirlineTotals {
   grandSell: number;
   grandBuy: number;
   gp: number;
+  /** True only when both freight sell and freight buy are entered. */
+  gpReady: boolean;
 }
 
 export function computeAirlineTotals(
@@ -90,8 +92,12 @@ export function computeAirlineTotals(
   const ams = option.amsFeeEnabled ? option.amsFee : 0;
   const baseSell = option.wbEnabled ? freight.baseFreightSell : 0;
   const baseBuy = option.wbEnabled ? freight.baseFreightBuy : 0;
+  // AMS is sell-only; it must not create GP when freight sell/buy are still blank.
   const grandSell = baseSell + originSum.sell + destSum.sell + ams;
   const grandBuy = baseBuy + originSum.buy + destSum.buy;
+  const freightSellReady = baseSell > 0;
+  const freightBuyReady = baseBuy > 0;
+  const gpReady = freightSellReady && freightBuyReady;
 
   return {
     freight,
@@ -102,9 +108,10 @@ export function computeAirlineTotals(
     originBuy: originSum.buy,
     destBuy: destSum.buy,
     ams,
-    grandSell,
+    grandSell: freightSellReady || ams > 0 || originSum.sell > 0 || destSum.sell > 0 ? grandSell : 0,
     grandBuy,
-    gp: grandSell - grandBuy,
+    gp: gpReady ? grandSell - grandBuy : 0,
+    gpReady,
   };
 }
 

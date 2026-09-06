@@ -23,7 +23,8 @@ export type AppRouteId =
   | "finance"
   | "hr"
   | "feature-parity"
-  | "smart-quote";
+  | "smart-quote"
+  | "nrs";
 
 const ALL: AppRouteId[] = [
   "dashboard",
@@ -45,6 +46,7 @@ const ALL: AppRouteId[] = [
   "hr",
   "feature-parity",
   "smart-quote",
+  "nrs",
 ];
 
 const CORE: AppRouteId[] = [
@@ -93,7 +95,7 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
   ],
   kavya: [...CORE],
   jaya: [...CORE],
-  cathrina: [...CORE, "admin"],
+  cathrina: [...CORE, "admin", "nrs"],
   pricing: [
     "dashboard",
     "smart-quote",
@@ -153,6 +155,7 @@ export function routeIdFromPath(pathname: string): AppRouteId | null {
   if (p.startsWith("/hr")) return "hr";
   if (p.startsWith("/feature-parity")) return "feature-parity";
   if (p.startsWith("/smart-quote") || p.startsWith("/quote")) return "smart-quote";
+  if (p.startsWith("/nrs")) return "nrs";
   if (p.startsWith("/carriers") || p.startsWith("/integrations")) return "directory";
   if (p === "/m" || p.startsWith("/m/")) return "dashboard";
   return null;

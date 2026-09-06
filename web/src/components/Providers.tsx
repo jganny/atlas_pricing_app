@@ -5,6 +5,7 @@ import { HelpFab } from "@/components/HelpFab";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastContainer } from "@/components/Toast";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
 import { initMonitoring } from "@/lib/monitoring/sentry";
 import { useLiveData } from "@/lib/api";
@@ -134,6 +135,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <CommandPalette />
         <HelpFab />
         <ToastContainer />
+        <UpdateBanner />
         {children}
       </ErrorBoundary>
     </QueryClientProvider>

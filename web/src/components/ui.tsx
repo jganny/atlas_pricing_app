@@ -88,6 +88,43 @@ export function Input({
   );
 }
 
+/**
+ * Number field that shows blank instead of "0" so users can type immediately
+ * without deleting a leading zero. Empty parses as 0.
+ */
+export function NumberInput({
+  value,
+  onValueChange,
+  className,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
+  value: number;
+  onValueChange: (n: number) => void;
+}) {
+  return (
+    <Input
+      {...props}
+      type="number"
+      className={className}
+      value={value === 0 ? "" : value}
+      placeholder={props.placeholder ?? "0"}
+      onChange={(e) => {
+        const raw = e.target.value;
+        if (raw === "" || raw === "-" || raw === ".") {
+          onValueChange(0);
+          return;
+        }
+        const n = Number(raw);
+        onValueChange(Number.isFinite(n) ? n : 0);
+      }}
+      onFocus={(e) => {
+        e.target.select();
+        props.onFocus?.(e);
+      }}
+    />
+  );
+}
+
 export function Label({
   className,
   children,

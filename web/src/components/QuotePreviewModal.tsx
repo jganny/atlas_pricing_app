@@ -5,6 +5,10 @@ import type { SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { Badge, Button } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
+import {
+  formatRoutingPreview,
+  formatTransitPreview,
+} from "@/lib/pricing/terms";
 
 function statusLabel(status: string | undefined) {
   const s = (status || "quoted").toLowerCase();
@@ -37,8 +41,8 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
       ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
       ["Volume weight", `${Number(d.volumeWeight ?? 0).toFixed(2)} kg`],
       ["Base freight", formatCurrency(Number(d.baseFreight ?? quote.amount ?? 0), quote.currency)],
-      ["Routing", String(d.routing ?? "—")],
-      ["Transit time", String(d.tt ?? "—")],
+      ["Routing", formatRoutingPreview(String(d.routing ?? "")) || "—"],
+      ["Transit time", formatTransitPreview(String(d.tt ?? "")) || "—"],
       ["Validity", String(d.validity ?? "—")],
     );
   } else if (type === "sea") {
@@ -52,8 +56,8 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
       ["Volume", `${Number(d.volumeCbm ?? d.volume ?? 0).toFixed(2)} CBM`],
       ["Chargeable RT", `${Number(d.chargeableRt ?? 0).toFixed(2)}`],
       ["Base freight", formatCurrency(Number(d.baseFreight ?? quote.amount ?? 0), quote.currency)],
-      ["Routing", String(d.routing ?? "—")],
-      ["Transit time", String(d.tt ?? "—")],
+      ["Routing", formatRoutingPreview(String(d.routing ?? "")) || "—"],
+      ["Transit time", formatTransitPreview(String(d.tt ?? "")) || "—"],
       ["Validity", String(d.validity ?? "—")],
     );
     const summary = d.containerSummary as string[] | undefined;

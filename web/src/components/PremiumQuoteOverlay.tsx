@@ -332,16 +332,17 @@ export function PremiumQuoteOverlay({
 
           {step === 3 ? (
             <div className="space-y-3">
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950">
+                Lane-band estimate — not a live carrier rate
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">
                     Product options
                   </h3>
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    {origin} → {destination} · sorted by estimated total ·{" "}
-                    <span className="font-semibold text-amber-800">
-                      Source = Estimate (lane-band model, not airline live rates)
-                    </span>
+                    {origin} → {destination} · sorted by estimated total · Atlas open estimate
+                    (not airline/liner APIs)
                   </p>
                 </div>
                 <Button type="button" variant="secondary" size="sm" onClick={runSearch}>
@@ -419,7 +420,9 @@ export function PremiumQuoteOverlay({
                             <div className="text-[10px] uppercase text-[var(--color-text-muted)]">
                               Source
                             </div>
-                            <div className="font-bold capitalize">{r.source}</div>
+                            <div className="font-bold text-amber-800">
+                              {r.source === "estimate" ? "Lane-band estimate" : r.source}
+                            </div>
                           </div>
                         </div>
                       </button>

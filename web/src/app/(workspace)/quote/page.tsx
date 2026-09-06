@@ -19,7 +19,7 @@ const MODES = [
   {
     id: "all",
     title: "All modes",
-    blurb: "Compare air, sea, and road lane estimates in one overlay.",
+    blurb: "Lane-band estimates (not live carrier rates) for air, sea, and road.",
     icon: Sparkles,
     action: "overlay" as const,
   },

@@ -6,16 +6,22 @@ import type { AirlineOption, LinerOption } from "@/lib/pricing/carrier-options";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
+import {
+  ensureIncidentalTerm,
+  formatRoutingPreview,
+  formatTransitPreview,
+} from "@/lib/pricing/terms";
 import { getFirebaseDb } from "./client";
 
-export const DEFAULT_COURIER_TERMS =
+export const DEFAULT_COURIER_TERMS = ensureIncidentalTerm(
   "1. Rates are based on chargeable weight (max of actual vs volumetric per piece).\n" +
-  "2. Volumetric weight (cm): L × W × H ÷ 5000 × quantity per piece.\n" +
-  "3. Fuel surcharge, remote area, residential, oversized and insurance are additional unless stated.\n" +
-  "4. Transit times are estimates only — not guaranteed unless express service is confirmed in writing.\n" +
-  "5. Customs duties, taxes and brokerage are receiver's account unless DDP is quoted.\n" +
-  "6. Dangerous goods, lithium batteries and restricted commodities require prior approval.\n" +
-  "7. Claims subject to carrier terms; insurance as declared value basis only.";
+    "2. Volumetric weight (cm): L × W × H ÷ 5000 × quantity per piece.\n" +
+    "3. Fuel surcharge, remote area, residential, oversized and insurance are additional unless stated.\n" +
+    "4. Transit times are estimates only — not guaranteed unless express service is confirmed in writing.\n" +
+    "5. Customs duties, taxes and brokerage are receiver's account unless DDP is quoted.\n" +
+    "6. Dangerous goods, lithium batteries and restricted commodities require prior approval.\n" +
+    "7. Claims subject to carrier terms; insurance as declared value basis only.",
+);
 
 interface SaveMeta {
   quoteId?: string;
@@ -132,8 +138,8 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     .filter((a) => a.id !== input.selected.id)
     .map((a) => ({
       name: a.name,
-      routing: a.routing,
-      tt: a.tt,
+      routing: formatRoutingPreview(a.routing),
+      tt: formatTransitPreview(a.tt),
       validity: a.validity,
       breaks: a.breaks,
       originFeesEnabled: a.originFeesEnabled,
@@ -186,8 +192,8 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       destSurcharges: input.totals.dest,
       surchargeTotal: input.totals.originTotal + input.totals.destTotal + input.totals.ams,
       amsFee: input.totals.ams,
-      routing: input.selected.routing,
-      tt: input.selected.tt,
+      routing: formatRoutingPreview(input.selected.routing),
+      tt: formatTransitPreview(input.selected.tt),
       validity: input.selected.validity,
       pivotWeight: input.selected.pivotWeightKg,
       cargoItems: input.cargo,
@@ -241,8 +247,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     .filter((l) => l.id !== input.selected.id)
     .map((l) => ({
       name: l.name,
-      routing: l.routing,
-      tt: l.tt,
+      routing: formatRoutingPreview(l.routing),
+      tt: formatTransitPreview(l.tt),
       validity: l.validity,
       containers: l.containers,
       lclSell: l.lclSell,
@@ -278,8 +284,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       shippingMode: input.mode,
       incoterm: input.incoterm,
       liner,
-      routing: input.selected.routing,
-      tt: input.selected.tt,
+      routing: formatRoutingPreview(input.selected.routing),
+      tt: formatTransitPreview(input.selected.tt),
       validity: input.selected.validity,
       grossWeight: input.grossWeightKg,
       volume: input.volumeCbm,

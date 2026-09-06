@@ -22,8 +22,8 @@ import {
   setQuoteStatus,
 } from "@/lib/firebase/quote-lifecycle";
 import { isAmendmentGrantActive, requestAmendment } from "@/lib/firebase/amendments";
-import { pushNrsAlert } from "@/lib/quotes/nrs-alerts";
-import { deskCategory } from "@/lib/auth/desk-rules";
+import { pushNrsAlert, pushNrsFollowUp } from "@/lib/quotes/nrs-alerts";
+import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { deskPathForQuote } from "@/lib/quotes/desk-loader";
 import { useLiveData } from "@/lib/api";
 import { queryKeys } from "@/hooks/query-keys";
@@ -162,23 +162,46 @@ export function EnquiryInspector({
     setLoading(true);
     setMsg(null);
     try {
+      const full = quote ?? (await fetchQuoteById(row.id));
+      if (full) setQuote(full);
+      const buy = Number(
+        full?.buyRate ?? full?.confirmedBuyRate ?? row.buyRate ?? row.buyTotal ?? 0,
+      );
+      const sell = Number(full?.amount ?? row.grandTotal ?? 0);
+      if (!(buy > 0) || !(sell > 0)) {
+        const err =
+          "Buy rate and sell amount must both be greater than 0 before converting to Won.";
+        setMsg(err);
+        toast(err, "error");
+        return;
+      }
+
       await convertQuoteToWon(row.id, {
         shipperName: shipperName.trim() || undefined,
         consigneeName: consigneeName.trim() || undefined,
         commodity: commodity.trim() || undefined,
       });
-      const cat = deskCategory(row.creator || user?.username);
-      if (cat.includes("NOMINATION") || cat.includes("NRS")) {
-        pushNrsAlert(
-          `NRS confirmation needed for ${row.ref} · ${row.customer}` +
-            (shipperName ? ` · shipper ${shipperName}` : "") +
-            (consigneeName ? ` · consignee ${consigneeName}` : ""),
-          row.ref,
-        );
-      }
+
+      const ref = full ? getQuoteRefId(full) : row.ref;
+      pushNrsFollowUp({
+        quoteId: row.id,
+        ref,
+        customer: row.customer,
+        buyRate: buy,
+        sellRate: sell,
+        shipper: "",
+        consignee: "",
+        commodity: commodity.trim() || String(full?.commodity ?? ""),
+      });
+      pushNrsAlert(
+        `NRS confirmation needed for ${ref} · ${row.customer}` +
+          (commodity.trim() ? ` · ${commodity.trim()}` : ""),
+        ref,
+      );
+
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       setShowWon(false);
-      toast("Converted to Won.", "success");
+      toast("Converted to Won. NRS follow-up queued for Cathrina.", "success");
       onClose();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Conversion failed";

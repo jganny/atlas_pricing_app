@@ -13,12 +13,13 @@ import {
 } from "lucide-react";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Input, Label, NumberInput, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { LocationCombobox } from "@/components/LocationCombobox";
+import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { toast } from "@/components/Toast";
@@ -40,7 +41,11 @@ import {
 } from "@/lib/pricing/air-desk";
 import { createAirlineOption, type AirlineOption } from "@/lib/pricing/carrier-options";
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
-import { getDefaultFreightTerms } from "@/lib/pricing/terms";
+import {
+  formatRoutingPreview,
+  formatTransitPreview,
+  getDefaultFreightTerms,
+} from "@/lib/pricing/terms";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
@@ -713,62 +718,66 @@ function AirDeskInner() {
                         <Input
                           value={opt.name}
                           onChange={(e) => updateAirline(opt.id, { name: e.target.value })}
-                          placeholder="EK - Emirates"
+                          placeholder="Airline name"
                         />
                       </Label>
-                      <Label>
-                        Routing
+                      <div>
+                        <Label>Routing</Label>
                         <Input
                           value={opt.routing}
                           onChange={(e) => updateAirline(opt.id, { routing: e.target.value })}
                           placeholder="BLR-DXB-LHR"
                         />
-                      </Label>
-                      <Label>
-                        Transit time
+                        {opt.routing.trim() ? (
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                            Preview: {formatRoutingPreview(opt.routing)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div>
+                        <Label>Transit time</Label>
                         <Input
                           value={opt.tt}
                           onChange={(e) => updateAirline(opt.id, { tt: e.target.value })}
-                          placeholder="3-4 days"
+                          placeholder="3-4"
                         />
-                      </Label>
-                      <Label>
-                        Validity
-                        <Input
-                          value={opt.validity}
-                          onChange={(e) => updateAirline(opt.id, { validity: e.target.value })}
-                          placeholder="15 days"
-                        />
-                      </Label>
+                        {opt.tt.trim() ? (
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                            Preview: {formatTransitPreview(opt.tt)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <ValidityField
+                        value={opt.validity}
+                        onChange={(v) => updateAirline(opt.id, { validity: v })}
+                      />
                       <Label>
                         Pivot weight (kg)
-                        <Input
-                          type="number"
-                          value={opt.pivotWeightKg || ""}
-                          onChange={(e) =>
-                            updateAirline(opt.id, { pivotWeightKg: Number(e.target.value) })
-                          }
+                        <NumberInput
+                          value={opt.pivotWeightKg || 0}
+                          onValueChange={(n) => updateAirline(opt.id, { pivotWeightKg: n })}
                         />
                       </Label>
-                      <Label>
-                        <span className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={opt.amsFeeEnabled}
-                            onChange={(e) =>
-                              updateAirline(opt.id, { amsFeeEnabled: e.target.checked })
-                            }
-                          />
-                          AMS fee
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
+                      <div>
+                        <Label>
+                          <span className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={opt.amsFeeEnabled}
+                              onChange={(e) =>
+                                updateAirline(opt.id, { amsFeeEnabled: e.target.checked })
+                              }
+                            />
+                            AMS fee
+                          </span>
+                        </Label>
+                        <NumberInput
                           disabled={!opt.amsFeeEnabled}
+                          step="0.01"
                           value={opt.amsFee}
-                          onChange={(e) => updateAirline(opt.id, { amsFee: Number(e.target.value) })}
+                          onValueChange={(n) => updateAirline(opt.id, { amsFee: n })}
                         />
-                      </Label>
+                      </div>
                     </div>
 
                     <label className="flex items-center gap-2 text-sm font-semibold">
@@ -805,24 +814,22 @@ function AirDeskInner() {
                                   ) : null}
                                 </td>
                                 <td className="p-1">
-                                  <input
-                                    type="number"
+                                  <NumberInput
                                     step="0.01"
-                                    className="w-24 rounded border px-2 py-1"
-                                    value={opt.breaks[name]?.sell ?? ""}
-                                    onChange={(e) =>
-                                      updateBreak(opt.id, name, "sell", Number(e.target.value))
+                                    className="mt-0 w-24 px-2 py-1"
+                                    value={opt.breaks[name]?.sell ?? 0}
+                                    onValueChange={(n) =>
+                                      updateBreak(opt.id, name, "sell", n)
                                     }
                                   />
                                 </td>
                                 <td className="p-1">
-                                  <input
-                                    type="number"
+                                  <NumberInput
                                     step="0.01"
-                                    className="w-24 rounded border px-2 py-1"
-                                    value={opt.breaks[name]?.buy ?? ""}
-                                    onChange={(e) =>
-                                      updateBreak(opt.id, name, "buy", Number(e.target.value))
+                                    className="mt-0 w-24 px-2 py-1"
+                                    value={opt.breaks[name]?.buy ?? 0}
+                                    onValueChange={(n) =>
+                                      updateBreak(opt.id, name, "buy", n)
                                     }
                                   />
                                 </td>
@@ -999,7 +1006,11 @@ function AirDeskInner() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
-                  <dd className="font-bold">{formatCurrency(selectedTotals.gp, currency)}</dd>
+                  <dd className="font-bold">
+                    {selectedTotals.gpReady
+                      ? formatCurrency(selectedTotals.gp, currency)
+                      : "— (enter both buy & sell freight)"}
+                  </dd>
                 </div>
               </dl>
             ) : (
