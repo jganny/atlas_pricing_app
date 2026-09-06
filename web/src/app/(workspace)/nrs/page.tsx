@@ -10,8 +10,13 @@ import {
   type NrsFollowUp,
 } from "@/lib/quotes/nrs-alerts";
 import { formatCurrency } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth";
+import { isNrsUser } from "@/lib/auth/rbac";
 
 export default function NrsFollowUpsPage() {
+  const user = useAuthStore((s) => s.user);
+  const allowed = isNrsUser(user?.username);
+
   const [rows, setRows] = useState<NrsFollowUp[]>([]);
   const [editing, setEditing] = useState<Record<string, Partial<NrsFollowUp>>>({});
 
@@ -20,11 +25,23 @@ export default function NrsFollowUpsPage() {
   }
 
   useEffect(() => {
-    reload();
-  }, []);
+    if (allowed) reload();
+  }, [allowed]);
 
   const pending = useMemo(() => rows.filter((r) => r.status === "pending"), [rows]);
   const complete = useMemo(() => rows.filter((r) => r.status === "complete"), [rows]);
+
+  if (!allowed) {
+    return (
+      <Card className="space-y-2">
+        <h1 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">NRS follow-ups</h1>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          This queue is only for the NRS login (Cathrina). Confirmed/won quotes still create a
+          follow-up copy here automatically for her — Admin and other desks do not use this tab.
+        </p>
+      </Card>
+    );
+  }
 
   function draft(id: string): NrsFollowUp {
     const base = rows.find((r) => r.id === id)!;

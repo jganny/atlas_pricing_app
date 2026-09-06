@@ -67,12 +67,14 @@ const primaryNav: NavItem[] = [
   { href: "/directory", label: "Directory", icon: Users, route: "directory" },
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, route: "analytics" },
-  { href: "/ops", label: "Operations", icon: PackageCheck, route: "ops" },
   { href: "/admin", label: "Admin", icon: Shield, route: "admin" },
+  // NRS follow-ups: visible only when RBAC grants `nrs` (Cathrina). Not Admin.
   { href: "/nrs", label: "NRS follow-ups", icon: ClipboardList, route: "nrs" },
 ];
 
 const adminMoreNav: NavItem[] = [
+  // Ops was overlapping Enquiry DB (won filter) — kept under More for admins only.
+  { href: "/ops", label: "Won handoff (ops)", icon: PackageCheck, route: "ops" },
   { href: "/docs", label: "Docs", icon: BookOpen, route: "docs" },
   { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
   { href: "/m", label: "Mobile app", icon: Home, route: "dashboard" },

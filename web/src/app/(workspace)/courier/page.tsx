@@ -346,7 +346,13 @@ function CourierDeskInner() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm font-semibold md:col-span-2">
                 Customer
-                <input className="mt-1 w-full rounded-lg border px-3 py-2" value={customer} onChange={(e) => setCustomer(e.target.value)} />
+                <input
+                  name="atlas-customer"
+                  autoComplete="off"
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={customer}
+                  onChange={(e) => setCustomer(e.target.value)}
+                />
               </label>
               <label className="text-sm font-semibold">
                 Origin city

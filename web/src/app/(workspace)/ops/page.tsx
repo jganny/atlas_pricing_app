@@ -24,7 +24,11 @@ export default function OpsPage() {
         <Badge tone="info">Phase 13</Badge>
       </div>
       <p className="text-sm text-[var(--color-text-muted)]">
-        Won shipments ready for ops handoff — open Enquiry DB for full lifecycle.
+        Lightweight won-shipment handoff list. For day-to-day quote work use{" "}
+        <Link href="/enquiries/" className="font-semibold text-[var(--color-atlas-sky)] underline">
+          Enquiry DB
+        </Link>{" "}
+        (filter status = Won) — that is the full lifecycle page.
       </p>
 
       {isLoading ? (

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function Card({
@@ -72,9 +75,10 @@ export function Badge({
   );
 }
 
-/** shadcn-style input primitive */
+/** Plain text input — contact/company browser autofill off by default. */
 export function Input({
   className,
+  autoComplete = "off",
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -83,43 +87,71 @@ export function Input({
         "mt-1 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-atlas-sky)] focus:ring-2 focus:ring-[var(--color-atlas-sky)]/20",
         className,
       )}
+      autoComplete={autoComplete}
+      autoCorrect="off"
+      spellCheck={false}
       {...props}
     />
   );
 }
 
 /**
- * Number field that shows blank instead of "0" so users can type immediately
- * without deleting a leading zero. Empty parses as 0.
+ * Number field that shows blank instead of "0" so users can type immediately.
+ * Keeps a string draft so decimals like "1." / "0.04" are not eaten by Number().
  */
 export function NumberInput({
   value,
   onValueChange,
   className,
+  step,
   ...props
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
   value: number;
   onValueChange: (n: number) => void;
 }) {
+  const [draft, setDraft] = useState(value === 0 ? "" : String(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (focused) return;
+    setDraft(value === 0 ? "" : String(value));
+  }, [value, focused]);
+
   return (
     <Input
       {...props}
-      type="number"
+      type="text"
+      inputMode="decimal"
+      step={step ?? "0.01"}
       className={className}
-      value={value === 0 ? "" : value}
+      value={draft}
       placeholder={props.placeholder ?? "0"}
+      autoComplete="off"
       onChange={(e) => {
-        const raw = e.target.value;
-        if (raw === "" || raw === "-" || raw === ".") {
+        const raw = e.target.value.replace(/,/g, "").trim();
+        if (raw === "" || raw === "-" || raw === "." || raw === "-.") {
+          setDraft(raw);
           onValueChange(0);
           return;
         }
+        if (!/^-?\d*(\.\d*)?$/.test(raw)) return;
+        setDraft(raw);
+        if (raw.endsWith(".")) return;
         const n = Number(raw);
-        onValueChange(Number.isFinite(n) ? n : 0);
+        if (Number.isFinite(n)) onValueChange(n);
       }}
       onFocus={(e) => {
+        setFocused(true);
         e.target.select();
         props.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        const n = Number(draft);
+        const next = Number.isFinite(n) ? n : 0;
+        setDraft(next === 0 ? "" : String(next));
+        onValueChange(next);
+        props.onBlur?.(e);
       }}
     />
   );

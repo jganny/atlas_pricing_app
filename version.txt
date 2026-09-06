@@ -1,1 +1,1 @@
-0.2.1-desk-ux
+0.2.2-desk-logic

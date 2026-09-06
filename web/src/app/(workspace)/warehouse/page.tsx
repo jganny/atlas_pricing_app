@@ -121,7 +121,12 @@ export default function WarehouseDeskPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label>Customer *</Label>
-              <Input value={customer} onChange={(e) => setCustomer(e.target.value)} />
+              <Input
+                name="atlas-customer"
+                autoComplete="off"
+                value={customer}
+                onChange={(e) => setCustomer(e.target.value)}
+              />
             </div>
             <div>
               <Label>Location *</Label>

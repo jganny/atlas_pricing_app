@@ -492,7 +492,13 @@ function SeaDeskInner() {
               <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer
-                  <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Customer name" />
+                  <Input
+                    name="atlas-customer"
+                    autoComplete="off"
+                    value={customer}
+                    onChange={(e) => setCustomer(e.target.value)}
+                    placeholder="Customer name"
+                  />
                 </Label>
                 <LocationCombobox
                   label="POL (seaport)"

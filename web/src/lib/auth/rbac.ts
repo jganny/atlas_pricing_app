@@ -26,6 +26,7 @@ export type AppRouteId =
   | "smart-quote"
   | "nrs";
 
+/** Full admin surface — excludes NRS follow-ups (Cathrina-only queue). */
 const ALL: AppRouteId[] = [
   "dashboard",
   "air",
@@ -46,7 +47,6 @@ const ALL: AppRouteId[] = [
   "hr",
   "feature-parity",
   "smart-quote",
-  "nrs",
 ];
 
 const CORE: AppRouteId[] = [
@@ -95,7 +95,8 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
   ],
   kavya: [...CORE],
   jaya: [...CORE],
-  cathrina: [...CORE, "admin", "nrs"],
+  /** NRS queue is only for the NRS login — not Admin. */
+  cathrina: [...CORE, "nrs"],
   pricing: [
     "dashboard",
     "smart-quote",
@@ -114,12 +115,18 @@ export function normalizeUsername(username: string | undefined | null): string {
   return (username || "").toLowerCase().trim();
 }
 
+/** NRS follow-ups sidebar + route: Cathrina only. */
+export function isNrsUser(username: string | undefined | null): boolean {
+  return normalizeUsername(username) === "cathrina";
+}
+
 export function allowedRoutesForUser(
   username: string | undefined | null,
   role?: string,
 ): AppRouteId[] {
-  if (isAdminUser(username, role)) return ALL;
   const u = normalizeUsername(username);
+  // Admins get full desk access but never the NRS personal follow-up queue.
+  if (isAdminUser(username, role)) return ALL;
   if (ROLE_ROUTES[u]) return ROLE_ROUTES[u];
   if (TEAM_ROLES[u]?.type === "member") return CORE;
   return ALL;

@@ -69,8 +69,9 @@ export function calcSurchargeCost(
   row: SurchargeRow,
   bases: { chargeableKg?: number; cbm?: number; containerCount?: number },
 ): CalculatedSurcharge {
-  const sellRate = row.sell > 0 ? row.sell : row.buy;
-  const buyRate = row.buy;
+  // Sell and buy stay independent — buy must never inflate customer-facing totals.
+  const sellRate = row.sell > 0 ? row.sell : 0;
+  const buyRate = row.buy > 0 ? row.buy : 0;
   let multiplier = 1;
   if (row.unit === "kg") multiplier = bases.chargeableKg ?? 0;
   else if (row.unit === "cbm") multiplier = bases.cbm ?? 0;
