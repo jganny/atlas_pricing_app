@@ -185,12 +185,16 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       volumeWeight: input.totals.freight.cargo.volumeWeightKg,
       cbm: input.totals.freight.cargo.volumeCbm,
       quantity: input.totals.freight.cargo.packageQty,
-      appliedRate: input.totals.freight.activeRate,
+      appliedRate:
+        input.totals.freight.activeRate > 0
+          ? input.totals.freight.activeRate
+          : input.totals.freight.activeBuyRate,
       appliedBuyRate: input.totals.freight.activeBuyRate,
-      baseFreight: input.totals.freight.baseFreightSell,
+      baseFreight: input.totals.baseFreightQuote,
+      baseFreightSell: input.totals.freight.baseFreightSell,
       baseBuyFreight: input.totals.freight.baseFreightBuy,
       usedBreak: input.totals.freight.usedBreak,
-      usingBuyFallback: input.totals.freight.usingBuyFallback,
+      usingBuyFallback: input.totals.quoteUsingBuyFreight,
       tariffsEnabled: input.selected.wbEnabled,
       originFeesEnabled: input.selected.originFeesEnabled,
       destFeesEnabled: input.selected.destFeesEnabled,
@@ -228,6 +232,7 @@ export interface SaveSeaInput extends SaveMeta {
   destination: string;
   currency: string;
   incoterm: string;
+  commodity?: string;
   module: "export" | "import";
   mode: string;
   grossWeightKg: number;
@@ -299,6 +304,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       type: input.mode,
       shippingMode: input.mode,
       incoterm: input.incoterm,
+      commodity: input.commodity ?? "",
       liner,
       routing: formatRoutingPreview(input.selected.routing),
       tt: formatTransitPreview(input.selected.tt),
@@ -308,7 +314,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       volumeCbm: input.volumeCbm,
       chargeableCbmOverride: chargeableCbmOverride > 0 ? chargeableCbmOverride : null,
       chargeableRt: input.totals.freight.chargeableRt,
-      baseFreight: input.totals.freight.baseFreightSell,
+      baseFreight: input.totals.baseFreightQuote,
+      baseFreightSell: input.totals.freight.baseFreightSell,
       baseBuyFreight: input.totals.freight.baseFreightBuy,
       containerSummary: input.totals.freight.containerSummary,
       containers: input.selected.containers,

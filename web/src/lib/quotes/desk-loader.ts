@@ -23,16 +23,19 @@ export function deskPathForQuote(quote: SavedQuote): string | null {
 
 function mapSurcharges(raw: unknown): SurchargeRow[] | undefined {
   if (!Array.isArray(raw) || !raw.length) return undefined;
-  return raw.map((s) => {
-    const row = s as Record<string, unknown>;
-    return createSurchargeRow({
-      name: String(row.name ?? ""),
-      sell: Number(row.sell ?? row.rate ?? 0),
-      buy: Number(row.buy ?? row.buyRate ?? 0),
-      unit: (row.unit as SurchargeRow["unit"]) || "flat",
-      remarks: String(row.remarks ?? ""),
-    });
-  });
+  return raw
+    .map((s) => {
+      const row = s as Record<string, unknown>;
+      return createSurchargeRow({
+        name: String(row.name ?? ""),
+        sell: Number(row.sell ?? row.rate ?? 0),
+        buy: Number(row.buy ?? row.buyRate ?? 0),
+        unit: (row.unit as SurchargeRow["unit"]) || "flat",
+        remarks: String(row.remarks ?? ""),
+      });
+    })
+    // AMS has its own field — never also keep it inside origin fee rows.
+    .filter((r) => r.name.trim() && !/^ams(\s+fee)?$/i.test(r.name.trim()));
 }
 
 export function loadAirDeskFromQuote(quote: SavedQuote) {

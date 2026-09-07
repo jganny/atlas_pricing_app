@@ -1,3 +1,5 @@
+import { quoteSideRate } from "@/lib/pricing/quote-rate";
+
 /** Shared local surcharge rows — mirrors legacy chg-name / chg-rate / chg-unit. */
 
 export type BillingUnit = "kg" | "flat" | "cbm" | "container";
@@ -12,8 +14,11 @@ export interface SurchargeRow {
 }
 
 export interface CalculatedSurcharge extends SurchargeRow {
+  /** Quote line: sell if set, else buy (drafting). */
   calculatedCost: number;
   calculatedBuy: number;
+  /** Pure sell side only (no buy fallback). */
+  calculatedSell: number;
 }
 
 export function newSurchargeId(): string {
@@ -63,28 +68,32 @@ export function defaultSeaDestSurcharges(): SurchargeRow[] {
 
 /**
  * Calculate surcharge cost.
- * kg → × chargeable kg; cbm → × CBM/RT; container → × container count; flat → rate as-is.
+ * Quote line uses sell when set, otherwise buy (so totals work while drafting).
  */
 export function calcSurchargeCost(
   row: SurchargeRow,
   bases: { chargeableKg?: number; cbm?: number; containerCount?: number },
 ): CalculatedSurcharge {
-  // Sell and buy stay independent — buy must never inflate customer-facing totals.
   const sellRate = row.sell > 0 ? row.sell : 0;
   const buyRate = row.buy > 0 ? row.buy : 0;
+  const quoteRate = quoteSideRate(sellRate, buyRate);
   let multiplier = 1;
   if (row.unit === "kg") multiplier = bases.chargeableKg ?? 0;
   else if (row.unit === "cbm") multiplier = bases.cbm ?? 0;
   else if (row.unit === "container") multiplier = bases.containerCount ?? 1;
 
-  const calculatedCost = sellRate * multiplier;
-  const calculatedBuy = buyRate * multiplier;
-  return { ...row, calculatedCost, calculatedBuy };
+  return {
+    ...row,
+    calculatedCost: quoteRate * multiplier,
+    calculatedBuy: buyRate * multiplier,
+    calculatedSell: sellRate * multiplier,
+  };
 }
 
 export function sumSurcharges(rows: CalculatedSurcharge[]) {
   return {
-    sell: rows.reduce((s, r) => s + r.calculatedCost, 0),
+    sell: rows.reduce((s, r) => s + r.calculatedSell, 0),
     buy: rows.reduce((s, r) => s + r.calculatedBuy, 0),
+    quote: rows.reduce((s, r) => s + r.calculatedCost, 0),
   };
 }

@@ -4,6 +4,7 @@ import {
   type SeaMode,
 } from "@atlas/pricing-core";
 import type { LinerOption } from "@/lib/pricing/carrier-options";
+import { quoteSideRate } from "@/lib/pricing/quote-rate";
 import {
   calcSurchargeCost,
   sumSurcharges,
@@ -65,6 +66,8 @@ export interface LinerTotals {
   grandBuy: number;
   gp: number;
   gpReady: boolean;
+  quoteUsingBuyFreight: boolean;
+  baseFreightQuote: number;
 }
 
 export function computeLinerTotals(
@@ -120,22 +123,26 @@ export function computeLinerTotals(
 
   const originSum = sumSurcharges(origin);
   const destSum = sumSurcharges(dest);
-  const grandSell = freight.baseFreightSell + originSum.sell + destSum.sell;
-  const grandBuy = freight.baseFreightBuy + originSum.buy + destSum.buy;
-  const freightSellReady = freight.baseFreightSell > 0;
-  const freightBuyReady = freight.baseFreightBuy > 0;
-  const gpReady = freightSellReady && freightBuyReady;
+  const baseSell = freight.baseFreightSell;
+  const baseBuy = freight.baseFreightBuy;
+  const baseFreightQuote = quoteSideRate(baseSell, baseBuy);
+  const quoteUsingBuyFreight = baseSell <= 0 && baseBuy > 0;
+  const grandSell = baseFreightQuote + originSum.quote + destSum.quote;
+  const grandBuy = baseBuy + originSum.buy + destSum.buy;
+  const gpReady = baseSell > 0 && baseBuy > 0;
 
   return {
     freight,
     origin,
     dest,
-    originTotal: originSum.sell,
-    destTotal: destSum.sell,
-    grandSell,
+    originTotal: originSum.quote,
+    destTotal: destSum.quote,
+    grandSell: grandSell > 0 ? grandSell : 0,
     grandBuy,
     gp: gpReady ? grandSell - grandBuy : 0,
     gpReady,
+    quoteUsingBuyFreight,
+    baseFreightQuote,
   };
 }
 

@@ -24,6 +24,8 @@ import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { lookupSeaTariff } from "@/lib/firebase/tariffs";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
+import { CarrierCombobox } from "@/components/CarrierCombobox";
+import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { seaShipmentSchema } from "@/lib/pricing/desk-schemas";
 import {
   computeLinerTotals,
@@ -71,6 +73,7 @@ function SeaDeskInner() {
   const [destination, setDestination] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [incoterm, setIncoterm] = useState("FOB");
+  const [commodity, setCommodity] = useState("GENERAL");
   const [module, setModule] = useState<"export" | "import">("export");
   const [mode, setMode] = useState<SeaMode>("fcl");
   const [grossWeightKg, setGrossWeightKg] = useState(0);
@@ -303,6 +306,7 @@ function SeaDeskInner() {
             destination,
             currency,
             incoterm,
+            commodity,
             module,
             mode,
             grossWeightKg,
@@ -329,7 +333,7 @@ function SeaDeskInner() {
             type: "sea",
             steps: [
               { label: "Chargeable RT", value: selectedTotals.freight.chargeableRt },
-              { label: "Base freight", value: selectedTotals.freight.baseFreightSell },
+              { label: "Base freight", value: selectedTotals.baseFreightQuote },
               { label: "Origin fees", value: selectedTotals.originTotal },
               { label: "Dest fees", value: selectedTotals.destTotal },
               { label: "Grand sell", value: selectedTotals.grandSell },
@@ -362,6 +366,7 @@ function SeaDeskInner() {
       destination,
       currency,
       incoterm,
+      commodity,
       module,
       mode,
       grossWeightKg,
@@ -544,6 +549,9 @@ function SeaDeskInner() {
                     ))}
                   </Select>
                 </Label>
+                <div className="md:col-span-2">
+                  <CommodityCombobox value={commodity} onChange={setCommodity} />
+                </div>
                 <Label>
                   Gross weight (kg)
                   <Input
@@ -673,14 +681,15 @@ function SeaDeskInner() {
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Label className="md:col-span-2">
-                        Liner
-                        <Input
+                      <div className="md:col-span-2">
+                        <CarrierCombobox
+                          label="Liner / Coloader"
                           value={opt.name}
-                          onChange={(e) => updateLiner(opt.id, { name: e.target.value })}
-                          placeholder="Shipping line"
+                          onChange={(v) => updateLiner(opt.id, { name: v })}
+                          kind="ocean+coloader"
+                          placeholder="MAEU, MSC, ECU…"
                         />
-                      </Label>
+                      </div>
                       <div>
                         <Label>Routing</Label>
                         <Input
@@ -852,7 +861,7 @@ function SeaDeskInner() {
                       <div className="flex flex-wrap gap-3 border-t pt-3 text-sm">
                         <span>
                           Freight:{" "}
-                          <strong>{formatCurrency(tot.freight.baseFreightSell, currency)}</strong>
+                          <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
                         </span>
                         <span>
                           Origin: <strong>{formatCurrency(tot.originTotal, currency)}</strong>
@@ -934,7 +943,7 @@ function SeaDeskInner() {
                   </div>
                 )}
                 <div className="flex justify-between border-t pt-2">
-                  <dt className="font-bold">Customer total</dt>
+                  <dt className="font-bold">Quote total</dt>
                   <dd className="font-extrabold text-emerald-700">
                     {formatCurrency(selectedTotals.grandSell, currency)}
                   </dd>
@@ -950,7 +959,7 @@ function SeaDeskInner() {
                   <dd className="font-bold">
                     {selectedTotals.gpReady
                       ? formatCurrency(selectedTotals.gp, currency)
-                      : "— (enter both buy & sell freight)"}
+                      : "— (both buy & sell freight at Won)"}
                   </dd>
                 </div>
               </dl>

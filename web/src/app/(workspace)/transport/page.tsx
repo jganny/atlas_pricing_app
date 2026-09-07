@@ -15,6 +15,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { PincodeCombobox } from "@/components/PincodeCombobox";
+import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { ValidityField } from "@/components/ValidityField";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
@@ -207,12 +208,7 @@ export default function TransportDeskPage() {
           {tab === "cargo" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <Label>Commodity</Label>
-                <Input
-                  value={commodity}
-                  onChange={(e) => setCommodity(e.target.value)}
-                  placeholder="General cargo"
-                />
+                <CommodityCombobox value={commodity} onChange={setCommodity} />
               </div>
               <div>
                 <Label>E-way bill no</Label>

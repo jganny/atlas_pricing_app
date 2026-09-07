@@ -55,7 +55,7 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
         "Base freight",
         rate > 0 && chw > 0
           ? `${chw.toFixed(2)} kg × ${money(rate, cur)} = ${money(base, cur)}`
-          : money(base || quote.amount, cur),
+          : money(base, cur),
       ],
     );
     if (originFees > 0) rows.push(["Origin fees", money(originFees, cur)]);
@@ -84,7 +84,7 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
         "Chargeable RT",
         override > 0 ? `${rt.toFixed(2)} (manual override ${override.toFixed(2)})` : `${rt.toFixed(2)}`,
       ],
-      ["Base freight", money(base || quote.amount, cur)],
+      ["Base freight", money(base, cur)],
     );
     if (originFees > 0) rows.push(["Origin fees", money(originFees, cur)]);
     if (destFees > 0) rows.push(["Destination fees", money(destFees, cur)]);

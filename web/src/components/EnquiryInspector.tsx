@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { Badge, Button, Card } from "@/components/ui";
+import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import {
   convertQuoteToWon,
@@ -189,12 +190,14 @@ export function EnquiryInspector({
         customer: row.customer,
         buyRate: buy,
         sellRate: sell,
-        shipper: "",
-        consignee: "",
+        shipper: shipperName.trim(),
+        consignee: consigneeName.trim(),
         commodity: commodity.trim() || String(full?.commodity ?? ""),
       });
       pushNrsAlert(
         `NRS confirmation needed for ${ref} · ${row.customer}` +
+          (shipperName.trim() ? ` · shipper ${shipperName.trim()}` : "") +
+          (consigneeName.trim() ? ` · consignee ${consigneeName.trim()}` : "") +
           (commodity.trim() ? ` · ${commodity.trim()}` : ""),
         ref,
       );
@@ -369,10 +372,11 @@ export function EnquiryInspector({
               Consignee name
               <input className="mt-1 w-full rounded border px-2 py-1.5 text-sm" value={consigneeName} onChange={(e) => setConsigneeName(e.target.value)} />
             </label>
-            <label className="block text-xs font-semibold">
-              Commodity
-              <input className="mt-1 w-full rounded border px-2 py-1.5 text-sm" value={commodity} onChange={(e) => setCommodity(e.target.value)} />
-            </label>
+            <CommodityCombobox
+              label="Commodity (HSN)"
+              value={commodity}
+              onChange={setCommodity}
+            />
             <div className="flex gap-2">
               <Button type="button" disabled={loading} onClick={() => void confirmWon()}>
                 Confirm Won

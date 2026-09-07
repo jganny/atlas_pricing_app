@@ -40,10 +40,11 @@ import {
   type AirCargoRow,
 } from "@/lib/pricing/air-desk";
 import {
-  copyAirBuyRatesToSell,
   createAirlineOption,
   type AirlineOption,
 } from "@/lib/pricing/carrier-options";
+import { CommodityCombobox } from "@/components/CommodityCombobox";
+import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
 import {
   formatRoutingPreview,
@@ -347,9 +348,10 @@ function AirDeskInner() {
             type: "air",
             steps: [
               { label: "Chargeable kg", value: selectedTotals.freight.chargeableWeightKg },
-              { label: "Base freight", value: selectedTotals.freight.baseFreightSell },
+              { label: "Base freight", value: selectedTotals.baseFreightQuote },
               { label: "Origin fees", value: selectedTotals.originTotal },
               { label: "Dest fees", value: selectedTotals.destTotal },
+              { label: "AMS", value: selectedTotals.ams },
               { label: "Grand sell", value: selectedTotals.grandSell },
               { label: "Currency", value: currency },
             ],
@@ -558,10 +560,9 @@ function AirDeskInner() {
                     ))}
                   </Select>
                 </Label>
-                <Label className="md:col-span-2">
-                  Commodity
-                  <Input value={commodity} onChange={(e) => setCommodity(e.target.value)} />
-                </Label>
+                <div className="md:col-span-2">
+                  <CommodityCombobox value={commodity} onChange={setCommodity} />
+                </div>
                 <Label>
                   Custom USD→INR override (optional)
                   <Input
@@ -747,14 +748,15 @@ function AirDeskInner() {
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Label className="md:col-span-2">
-                        Carrier / Airline
-                        <Input
+                      <div className="md:col-span-2">
+                        <CarrierCombobox
+                          label="Carrier / Airline"
                           value={opt.name}
-                          onChange={(e) => updateAirline(opt.id, { name: e.target.value })}
-                          placeholder="Airline name"
+                          onChange={(v) => updateAirline(opt.id, { name: v })}
+                          kind="airline"
+                          placeholder="EK, Emirates, QR…"
                         />
-                      </Label>
+                      </div>
                       <div>
                         <Label>Routing</Label>
                         <Input
@@ -826,8 +828,10 @@ function AirDeskInner() {
                     {opt.wbEnabled ? (
                       <div className="space-y-2">
                         <p className="text-xs text-[var(--color-text-muted)]">
-                          Customer freight = Sell rate × chargeable kg. Example: 500 kg × $1.50 ={" "}
-                          <strong>$750</strong>, then add AMS + origin/dest Sell fees.
+                          Enter Sell (customer) and/or Buy (cost). Quote total uses Sell when set;
+                          if Sell is blank it uses Buy so{" "}
+                          <strong>500 kg × $1.50 = $750</strong> still appears while drafting. Both
+                          sides are required only when converting to Won (then NRS follow-up).
                         </p>
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-sm">
@@ -877,38 +881,17 @@ function AirDeskInner() {
                             </tbody>
                           </table>
                         </div>
-                        {tot && tot.freight.activeRate > 0 ? (
+                        {tot && tot.baseFreightQuote > 0 ? (
                           <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
                             Freight: {tot.freight.chargeableWeightKg.toFixed(2)} kg × $
-                            {tot.freight.activeRate.toFixed(2)} ={" "}
-                            <strong>{formatCurrency(tot.freight.baseFreightSell, currency)}</strong>
+                            {(
+                              (tot.freight.activeRate > 0
+                                ? tot.freight.activeRate
+                                : tot.freight.activeBuyRate) || 0
+                            ).toFixed(2)}
+                            {tot.quoteUsingBuyFreight ? " (from Buy)" : ""} ={" "}
+                            <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
                           </p>
-                        ) : null}
-                        {tot?.freight.usingBuyFallback ? (
-                          <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                            <span>
-                              Rate is only under Buy (cost). Customer total needs the same rate in{" "}
-                              <strong>Sell</strong>
-                              {tot.freight.activeBuyRate > 0
-                                ? ` — ${tot.freight.chargeableWeightKg.toFixed(2)} kg × $${tot.freight.activeBuyRate.toFixed(2)} = ${formatCurrency(tot.freight.baseFreightBuy, currency)} cost`
-                                : ""}
-                              .
-                            </span>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="px-2 py-1 text-xs"
-                              onClick={() =>
-                                setAirlines((prev) =>
-                                  prev.map((a) =>
-                                    a.id === opt.id ? copyAirBuyRatesToSell(a) : a,
-                                  ),
-                                )
-                              }
-                            >
-                              Copy buy → sell
-                            </Button>
-                          </div>
                         ) : null}
                       </div>
                     ) : null}
@@ -935,7 +918,7 @@ function AirDeskInner() {
                         <div className="flex flex-wrap gap-3">
                           <span>
                             Freight:{" "}
-                            <strong>{formatCurrency(tot.freight.baseFreightSell, currency)}</strong>
+                            <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
                           </span>
                           <span>
                             Origin: <strong>{formatCurrency(tot.originTotal, currency)}</strong>
@@ -949,7 +932,7 @@ function AirDeskInner() {
                             </span>
                           ) : null}
                           <span>
-                            Customer total:{" "}
+                            Quote total:{" "}
                             <strong className="text-emerald-700">
                               {formatCurrency(tot.grandSell, currency)}
                             </strong>
@@ -958,6 +941,9 @@ function AirDeskInner() {
                         {tot.grandBuy > 0 ? (
                           <p className="text-xs text-[var(--color-text-muted)]">
                             Your cost (Buy): {formatCurrency(tot.grandBuy, currency)}
+                            {tot.gpReady
+                              ? ` · GP ${formatCurrency(tot.gp, currency)}`
+                              : " · GP when both freight buy & sell are set (required at Won)"}
                           </p>
                         ) : null}
                       </div>
@@ -1066,23 +1052,28 @@ function AirDeskInner() {
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Base freight (Sell)</dt>
+                  <dt className="text-[var(--color-text-muted)]">Base freight</dt>
                   <dd className="text-right">
-                    {selectedTotals.freight.activeRate > 0 ? (
+                    {selectedTotals.baseFreightQuote > 0 ? (
                       <span className="block text-[11px] font-normal text-[var(--color-text-muted)]">
                         {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg × $
-                        {selectedTotals.freight.activeRate.toFixed(2)}
+                        {(
+                          (selectedTotals.freight.activeRate > 0
+                            ? selectedTotals.freight.activeRate
+                            : selectedTotals.freight.activeBuyRate) || 0
+                        ).toFixed(2)}
+                        {selectedTotals.quoteUsingBuyFreight ? " (Buy)" : ""}
                       </span>
                     ) : null}
-                    {formatCurrency(selectedTotals.freight.baseFreightSell, currency)}
+                    {formatCurrency(selectedTotals.baseFreightQuote, currency)}
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Origin fees (Sell)</dt>
+                  <dt className="text-[var(--color-text-muted)]">Origin fees</dt>
                   <dd>{formatCurrency(selectedTotals.originTotal, currency)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Dest fees (Sell)</dt>
+                  <dt className="text-[var(--color-text-muted)]">Dest fees</dt>
                   <dd>{formatCurrency(selectedTotals.destTotal, currency)}</dd>
                 </div>
                 {selectedTotals.ams > 0 ? (
@@ -1092,7 +1083,7 @@ function AirDeskInner() {
                   </div>
                 ) : null}
                 <div className="flex justify-between border-t pt-2">
-                  <dt className="font-bold">Customer total</dt>
+                  <dt className="font-bold">Quote total</dt>
                   <dd className="font-extrabold text-emerald-700">
                     {formatCurrency(selectedTotals.grandSell, currency)}
                   </dd>
@@ -1108,7 +1099,7 @@ function AirDeskInner() {
                   <dd className="font-bold">
                     {selectedTotals.gpReady
                       ? formatCurrency(selectedTotals.gp, currency)
-                      : "— (enter both buy & sell freight)"}
+                      : "— (both buy & sell freight at Won)"}
                   </dd>
                 </div>
               </dl>

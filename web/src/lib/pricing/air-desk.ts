@@ -5,6 +5,7 @@ import {
   type WeightBreaks,
 } from "@atlas/pricing-core";
 import type { AirlineOption } from "@/lib/pricing/carrier-options";
+import { quoteSideRate } from "@/lib/pricing/quote-rate";
 import {
   calcSurchargeCost,
   sumSurcharges,
@@ -58,13 +59,24 @@ export interface AirlineTotals {
   originBuy: number;
   destBuy: number;
   ams: number;
+  /** Quote total: sell preferred, buy fallback per line while drafting. */
   grandSell: number;
   grandBuy: number;
   gp: number;
-  /** True only when both freight sell and freight buy are entered. */
+  /** True only when both freight sell and freight buy are entered (needed at Won). */
   gpReady: boolean;
+  /** True when quote freight is coming from buy because sell is blank. */
+  quoteUsingBuyFreight: boolean;
+  baseFreightQuote: number;
 }
 
+/**
+ * Practical desk math:
+ * - Quote total uses Sell when set; if Sell blank, uses Buy so the desk still shows
+ *   rate × kg + fees (e.g. 500 × 1.50 + AMS + origin).
+ * - Buy total is always cost-only (AMS is customer/quote side).
+ * - GP only when both freight sell and buy exist — required at Won/confirm, not while drafting.
+ */
 export function computeAirlineTotals(
   cargo: AirCargoRow[],
   option: AirlineOption,
@@ -78,22 +90,24 @@ export function computeAirlineTotals(
   const bases = { chargeableKg: freight.chargeableWeightKg };
   const origin = option.originFeesEnabled
     ? option.originSurcharges
-        .filter((r) => r.name.trim())
+        .filter((r) => r.name.trim() && !/^ams(\s+fee)?$/i.test(r.name.trim()))
         .map((r) => calcSurchargeCost(r, bases))
     : [];
   const dest = option.destFeesEnabled
     ? option.destSurcharges
-        .filter((r) => r.name.trim())
+        .filter((r) => r.name.trim() && !/^ams(\s+fee)?$/i.test(r.name.trim()))
         .map((r) => calcSurchargeCost(r, bases))
     : [];
 
   const originSum = sumSurcharges(origin);
   const destSum = sumSurcharges(dest);
-  const ams = option.amsFeeEnabled ? option.amsFee : 0;
+  const ams = option.amsFeeEnabled ? Number(option.amsFee) || 0 : 0;
   const baseSell = option.wbEnabled ? freight.baseFreightSell : 0;
   const baseBuy = option.wbEnabled ? freight.baseFreightBuy : 0;
-  // AMS is sell-only; it must not create GP when freight sell/buy are still blank.
-  const grandSell = baseSell + originSum.sell + destSum.sell + ams;
+  const baseFreightQuote = quoteSideRate(baseSell, baseBuy);
+  const quoteUsingBuyFreight = baseSell <= 0 && baseBuy > 0;
+
+  const grandSell = baseFreightQuote + originSum.quote + destSum.quote + ams;
   const grandBuy = baseBuy + originSum.buy + destSum.buy;
   const freightSellReady = baseSell > 0;
   const freightBuyReady = baseBuy > 0;
@@ -103,15 +117,17 @@ export function computeAirlineTotals(
     freight,
     origin,
     dest,
-    originTotal: originSum.sell,
-    destTotal: destSum.sell,
+    originTotal: originSum.quote,
+    destTotal: destSum.quote,
     originBuy: originSum.buy,
     destBuy: destSum.buy,
     ams,
-    grandSell: freightSellReady || ams > 0 || originSum.sell > 0 || destSum.sell > 0 ? grandSell : 0,
+    grandSell: grandSell > 0 ? grandSell : 0,
     grandBuy,
     gp: gpReady ? grandSell - grandBuy : 0,
     gpReady,
+    quoteUsingBuyFreight,
+    baseFreightQuote,
   };
 }
 
