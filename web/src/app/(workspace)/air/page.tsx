@@ -656,8 +656,32 @@ function AirDeskInner() {
                   </table>
                 </div>
               </div>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Enter L × W × H (cm), qty, and gross kg for every line. Chargeable weight = max(gross,
+                volumetric). Rates (Sell/Buy), AMS, and local fees are on the next step.
+              </p>
               <div className="flex justify-end">
-                <Button type="button" onClick={() => setStep("carrier")}>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (!customer.trim()) {
+                      toast("Enter customer name before carriers.", "error");
+                      return;
+                    }
+                    if (!origin.trim() || !destination.trim()) {
+                      toast("Enter origin and destination airports before carriers.", "error");
+                      return;
+                    }
+                    const cargoErr = validateAirCargo(cargo);
+                    if (cargoErr) {
+                      toast(cargoErr, "error");
+                      setSaveMsg(cargoErr);
+                      return;
+                    }
+                    setSaveMsg(null);
+                    setStep("carrier");
+                  }}
+                >
                   Next · Carriers
                 </Button>
               </div>

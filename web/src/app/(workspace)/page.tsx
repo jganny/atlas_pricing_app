@@ -470,15 +470,22 @@ export default function DashboardPage() {
                 </section>
               ) : null}
 
-              {admin ? <PerformanceReportPanel rows={enquiries} /> : null}
-              <LogisticsNewsFeed />
+              <details className="atlas-panel rounded-xl px-4 py-3">
+                <summary className="cursor-pointer text-sm font-bold text-[var(--color-atlas-navy)]">
+                  Optional: performance & industry news
+                </summary>
+                <div className="mt-3 space-y-4">
+                  {admin ? <PerformanceReportPanel rows={enquiries} /> : null}
+                  <LogisticsNewsFeed />
+                </div>
+              </details>
             </div>
 
             <aside className="space-y-3">
               {hubLinks.length > 0 ? (
                 <nav className="atlas-panel overflow-hidden rounded-xl">
                   <div className="border-b border-[var(--color-border)] px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Surfaces
+                    Quick links
                   </div>
                   <ul className="divide-y divide-[var(--color-border)]">
                     {hubLinks.map((h) => (
@@ -555,22 +562,6 @@ export default function DashboardPage() {
               {!admin ? (
                 <>
                   <section className="atlas-panel rounded-xl p-3">
-                    <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-                      <StickyNote className="h-4 w-4" />
-                      Sticky note
-                    </div>
-                    <Textarea
-                      rows={3}
-                      value={sticky}
-                      onChange={(e) => setSticky(e.target.value)}
-                      placeholder="Reminders for this desk…"
-                    />
-                    <Button type="button" size="sm" className="mt-2" onClick={saveSticky}>
-                      Save note
-                    </Button>
-                  </section>
-
-                  <section className="atlas-panel rounded-xl p-3">
                     <h2 className="mb-2 text-sm font-bold">My recent quotes</h2>
                     <ul className="max-h-40 space-y-1 overflow-auto text-sm">
                       {mine.slice(0, 8).map((e) => (
@@ -606,85 +597,100 @@ export default function DashboardPage() {
                     ) : null}
                   </section>
 
-                  <section className="atlas-panel rounded-xl p-3">
-                    <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-                      <MessageSquare className="h-4 w-4" />
-                      Instant SMS
+                  <details className="atlas-panel rounded-xl p-3">
+                    <summary className="cursor-pointer text-sm font-bold">
+                      Desk tools (notes, SMS, offline)
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <section>
+                        <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+                          <StickyNote className="h-4 w-4" />
+                          Sticky note
+                        </div>
+                        <Textarea
+                          rows={3}
+                          value={sticky}
+                          onChange={(e) => setSticky(e.target.value)}
+                          placeholder="Reminders for this desk…"
+                        />
+                        <Button type="button" size="sm" className="mt-2" onClick={saveSticky}>
+                          Save note
+                        </Button>
+                      </section>
+                      <section>
+                        <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+                          <MessageSquare className="h-4 w-4" />
+                          Instant SMS
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            className="mt-0"
+                            placeholder="Mobile number"
+                            value={smsTo}
+                            onChange={(e) => setSmsTo(e.target.value)}
+                          />
+                          <Textarea
+                            rows={2}
+                            placeholder="Message"
+                            value={smsBody}
+                            onChange={(e) => setSmsBody(e.target.value)}
+                          />
+                          <Button type="button" size="sm" onClick={queueSms}>
+                            Queue SMS
+                          </Button>
+                        </div>
+                      </section>
                     </div>
-                    <div className="space-y-2">
-                      <Input
-                        className="mt-0"
-                        placeholder="Mobile number"
-                        value={smsTo}
-                        onChange={(e) => setSmsTo(e.target.value)}
-                      />
-                      <Textarea
-                        rows={2}
-                        placeholder="Message"
-                        value={smsBody}
-                        onChange={(e) => setSmsBody(e.target.value)}
-                      />
-                      <Button type="button" size="sm" onClick={queueSms}>
-                        Queue SMS
-                      </Button>
-                    </div>
-                    {smsLog.length > 0 ? (
-                      <ul className="mt-2 max-h-24 space-y-1 overflow-auto text-xs text-[var(--color-text-muted)]">
-                        {smsLog.slice(0, 4).map((s, i) => (
-                          <li key={`${s.at}-${i}`}>
-                            {s.to}: {s.body.slice(0, 48)}
-                            {s.body.length > 48 ? "…" : ""}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </section>
+                  </details>
                 </>
               ) : null}
 
-              <section className="atlas-panel rounded-xl p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-sm font-bold">Offline backups</h2>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setOffline(listOfflineQuotes())}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-                {offline.length === 0 ? (
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    Desk saves cache here if the network drops.
-                  </p>
-                ) : (
-                  <ul className="space-y-1 text-xs">
-                    {offline.slice(0, 6).map((o) => (
-                      <li
-                        key={o.id}
-                        className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5"
-                      >
-                        <span className="truncate">
-                          <Badge tone="neutral">{o.type}</Badge> {o.customer || o.id}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-rose-700"
-                          onClick={() => {
-                            removeOfflineQuote(o.id);
-                            setOffline(listOfflineQuotes());
-                          }}
+              <details className="atlas-panel rounded-xl p-3">
+                <summary className="cursor-pointer text-sm font-bold">Offline backups</summary>
+                <div className="mt-2">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      Desk saves cache here if the network drops.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setOffline(listOfflineQuotes())}
+                    >
+                      Refresh
+                    </Button>
+                  </div>
+                  {offline.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">No offline drafts.</p>
+                  ) : (
+                    <ul className="space-y-1 text-xs">
+                      {offline.slice(0, 6).map((o) => (
+                        <li
+                          key={o.id}
+                          className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5"
                         >
-                          Remove
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+                          <span className="truncate">
+                            <Badge tone="neutral">{o.type}</Badge> {o.customer || o.id}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-rose-700"
+                            onClick={() => {
+                              removeOfflineQuote(o.id);
+                              setOffline(listOfflineQuotes());
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </details>
             </aside>
           </div>
         </>

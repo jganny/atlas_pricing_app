@@ -36,7 +36,7 @@ DCSA / ONE Record are free **OpenAPI specs**, not a free live-rate gateway. Each
 
 ## Dashboard / sidebar tab counts by role
 
-**Primary sidebar** (after streamlining): Home, Quote hub, Air, Sea, Courier, Transport, Warehouse, Inbox, Enquiry DB, Carriers, Standards, Circulars, Directory, Sales, Analytics, Operations, Admin, NRS follow-ups (= **18** max).
+**Primary sidebar** (grouped): **Desks** · **Work** · **Library** · **More** (admins). Max still ~18 links by role, but sectioned so desks stay on top.
 
 | Login / role | Sidebar links (approx) | Notes |
 |---|---|---|
@@ -51,18 +51,21 @@ Mobile bottom bar: up to **4** tabs (Home, Quote, Inbox, Lines) + **More**.
 
 Home cards (Open / Won / revenue / SLA) use **scoped** enquiry counts (admins see all; desk users see their own).
 
-## Adding a new user (next week)
+## Adding a new user (employee)
 
-Do this in Firebase Console for project `vertex-35d95` (or via Admin SDK). **Never paste passwords into chat or git.**
+**Yes — the employee can self-sign up.** On `/app/login`, click **Need an account? Sign up**, pick a username + password (min 6 chars) and display name. That creates a Firebase Auth account (`{username}@atlaspricing.com`) and queues them in Admin → pending users.
 
-1. **Authentication → Users → Add user**  
-   Email: `{username}@atlaspricing.com` (login form uses username + this domain).  
-   Set a temporary password; share it out-of-band (WhatsApp/1Password), not email-in-git.
+**Admin still must finish setup** (desk role + Firestore profile), or they will not get the correct Air/Sea/Inbox desks:
+
+1. **Firebase Console → Authentication → Users** — confirm the account exists (signup creates it).
 2. **Firestore → `users/{username}`** document, e.g.  
-   `{ "fullName": "Display Name", "role": "member" }`  
-   (or a known desk role). RBAC is in `web/src/lib/auth/rbac.ts` / `team-roles.ts` — add the username there if they need a custom desk (Air-only, Sea-only, NRS, etc.).
-3. Ask them to sign in at `/app/login`, then **change password** from Firebase or a reset link.
-4. Optional: Admin → pending users queue (if they self-signed-up) — still assign the Firestore profile before they can work live.
+   `{ "fullName": "Display Name", "role": "member" }`
+3. **RBAC** — if they need a custom desk map (Air-only, Sea-only, NRS, etc.), add the username in `web/src/lib/auth/rbac.ts` / `team-roles.ts`, then redeploy.
+4. Optional: **Admin → Queue registration** (local queue reminder) or mark the pending signup done after Auth + Firestore are set.
+
+**Admin-created path (recommended for controlled rollouts):** create the user in Firebase Auth yourself (or call `adminCreateUser` as `ganny`), set Firestore profile + RBAC, then share the temporary password out-of-band (WhatsApp/1Password) — never paste passwords into chat or git.
+
+Ask them to sign in at `/app/login`, then change password via Forgot/reset if needed.
 
 ## Admin nav streamlining
 

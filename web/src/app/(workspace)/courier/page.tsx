@@ -139,6 +139,7 @@ function CourierDeskInner() {
       }),
     [packages, originCountry, destCountry, service, currency, marginPct, selectedCarrier, gstEnabled, surcharges],
   );
+  const cargoReady = result.chargeableKg > 0;
 
   function updatePkg(index: number, patch: Partial<CourierPackageLine>) {
     setPackages((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -176,6 +177,13 @@ function CourierDeskInner() {
         const msg = "Enter customer name before saving.";
         setSaveMsg(msg);
         toast(msg, "error");
+        return;
+      }
+      if (result.chargeableKg <= 0) {
+        const msg = "Enter package weight / dimensions before saving (chargeable kg is 0).";
+        setSaveMsg(msg);
+        toast(msg, "error");
+        setTab("packages");
         return;
       }
       setSaving(true);
@@ -502,20 +510,32 @@ function CourierDeskInner() {
 
         <Card className="space-y-3">
           <h2 className="font-bold text-[var(--color-atlas-navy)]">Summary</h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Chargeable</dt><dd className="font-bold">{result.chargeableKg.toFixed(2)} kg</dd></div>
-            <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Zone</dt><dd className="font-bold">{result.zone}</dd></div>
-            <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Carrier</dt><dd className="font-bold">{result.chosen?.name ?? "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Base freight</dt><dd>{formatCurrency(result.baseFreight, currency)}</dd></div>
-            <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Surcharges</dt><dd>{formatCurrency(result.surcharges.total, currency)}</dd></div>
-            <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">GST (18%)</dt><dd>{formatCurrency(result.tax, currency)}</dd></div>
-            <div className="flex justify-between border-t pt-2 text-base"><dt className="font-bold">Grand total</dt><dd className="font-extrabold text-emerald-700">{formatCurrency(result.total, currency)}</dd></div>
-          </dl>
+          {!cargoReady ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              Enter package weight and dimensions first. Totals stay blank until chargeable kg &gt; 0
+              (avoids showing a min-charge quote on empty cargo).
+            </p>
+          ) : (
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Chargeable</dt><dd className="font-bold">{result.chargeableKg.toFixed(2)} kg</dd></div>
+              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Zone</dt><dd className="font-bold">{result.zone}</dd></div>
+              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Carrier</dt><dd className="font-bold">{result.chosen?.name ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Base freight</dt><dd>{formatCurrency(result.baseFreight, currency)}</dd></div>
+              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Surcharges</dt><dd>{formatCurrency(result.surcharges.total, currency)}</dd></div>
+              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">GST (18%)</dt><dd>{formatCurrency(result.tax, currency)}</dd></div>
+              <div className="flex justify-between border-t pt-2 text-base"><dt className="font-bold">Grand total</dt><dd className="font-extrabold text-emerald-700">{formatCurrency(result.total, currency)}</dd></div>
+            </dl>
+          )}
         </Card>
       </div>
 
       <Card>
         <h2 className="mb-3 font-bold">Carrier comparison</h2>
+        {!cargoReady ? (
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Add packages with weight (and dimensions) to compare carrier sell rates.
+          </p>
+        ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {result.quotes.map((q, idx) => (
             <button
@@ -530,10 +550,11 @@ function CourierDeskInner() {
               </div>
               <div className="mt-1 font-bold" style={{ color: q.color }}>{q.name}</div>
               <div className="text-lg font-extrabold">{formatCurrency(q.sellLocal, currency)}</div>
-              <div className="text-xs text-[var(--color-text-muted)]">{q.transit} · ${q.ratePerKg.toFixed(2)}/kg</div>
+              <div className="text-xs text-[var(--color-text-muted)]">{q.transit} · {formatCurrency(q.ratePerKg, currency)}/kg</div>
             </button>
           ))}
         </div>
+        )}
       </Card>
 
       {previewQuote ? (

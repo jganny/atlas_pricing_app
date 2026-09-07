@@ -18,9 +18,14 @@ function statusLabel(status: string | undefined) {
   return "Quoted";
 }
 
+function money(n: unknown, currency: string) {
+  return formatCurrency(Number(n ?? 0), currency);
+}
+
 function detailRows(quote: SavedQuote): Array<[string, string]> {
   const d = quote.details ?? {};
   const type = (quote.type || "").toLowerCase();
+  const cur = quote.currency || "USD";
   const rows: Array<[string, string]> = [
     ["Customer", quote.customer || "—"],
     ["Reference", getQuoteRefId(quote)],
@@ -31,21 +36,42 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
   ];
 
   if (type === "air") {
+    const chw = Number(d.chargeableWeight ?? 0);
+    const rate = Number(d.appliedRate ?? 0);
+    const base = Number(d.baseFreight ?? 0);
+    const originFees = Number(d.originFeesTotal ?? 0);
+    const destFees = Number(d.destFeesTotal ?? 0);
+    const ams = Number(d.amsFee ?? 0);
     rows.push(
       ["Origin", String(d.origin ?? "—")],
       ["Destination", String(d.destination ?? "—")],
       ["Airline", String(d.airline ?? "—")],
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Commodity", String(d.commodity ?? "—")],
-      ["Chargeable weight", `${Number(d.chargeableWeight ?? 0).toFixed(2)} kg`],
+      ["Chargeable weight", `${chw.toFixed(2)} kg`],
       ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
       ["Volume weight", `${Number(d.volumeWeight ?? 0).toFixed(2)} kg`],
-      ["Base freight", formatCurrency(Number(d.baseFreight ?? quote.amount ?? 0), quote.currency)],
+      [
+        "Base freight",
+        rate > 0 && chw > 0
+          ? `${chw.toFixed(2)} kg × ${money(rate, cur)} = ${money(base, cur)}`
+          : money(base || quote.amount, cur),
+      ],
+    );
+    if (originFees > 0) rows.push(["Origin fees", money(originFees, cur)]);
+    if (ams > 0) rows.push(["AMS", money(ams, cur)]);
+    if (destFees > 0) rows.push(["Destination fees", money(destFees, cur)]);
+    rows.push(
       ["Routing", formatRoutingPreview(String(d.routing ?? "")) || "—"],
       ["Transit time", formatTransitPreview(String(d.tt ?? "")) || "—"],
       ["Validity", String(d.validity ?? "—")],
     );
   } else if (type === "sea") {
+    const rt = Number(d.chargeableRt ?? 0);
+    const base = Number(d.baseFreight ?? 0);
+    const originFees = Number(d.originFeesTotal ?? 0);
+    const destFees = Number(d.destFeesTotal ?? 0);
+    const override = Number(d.chargeableCbmOverride ?? 0);
     rows.push(
       ["Origin", String(d.origin ?? "—")],
       ["Destination", String(d.destination ?? "—")],
@@ -54,8 +80,15 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
       ["Volume", `${Number(d.volumeCbm ?? d.volume ?? 0).toFixed(2)} CBM`],
-      ["Chargeable RT", `${Number(d.chargeableRt ?? 0).toFixed(2)}`],
-      ["Base freight", formatCurrency(Number(d.baseFreight ?? quote.amount ?? 0), quote.currency)],
+      [
+        "Chargeable RT",
+        override > 0 ? `${rt.toFixed(2)} (manual override ${override.toFixed(2)})` : `${rt.toFixed(2)}`,
+      ],
+      ["Base freight", money(base || quote.amount, cur)],
+    );
+    if (originFees > 0) rows.push(["Origin fees", money(originFees, cur)]);
+    if (destFees > 0) rows.push(["Destination fees", money(destFees, cur)]);
+    rows.push(
       ["Routing", formatRoutingPreview(String(d.routing ?? "")) || "—"],
       ["Transit time", formatTransitPreview(String(d.tt ?? "")) || "—"],
       ["Validity", String(d.validity ?? "—")],
@@ -72,11 +105,11 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
       ["Carrier", String(d.carrierName ?? d.carrier ?? "—")],
       ["Chargeable", `${Number(d.chargeableWeight ?? 0).toFixed(2)} kg`],
       ["Zone", String(d.zone ?? "—")],
-      ["Base freight", formatCurrency(Number(d.baseFreight ?? 0), quote.currency)],
-      ["GST", formatCurrency(Number(d.gstAmount ?? 0), quote.currency)],
+      ["Base freight", money(d.baseFreight, cur)],
+      ["GST", money(d.gstAmount, cur)],
     );
   } else {
-    rows.push(["Amount", formatCurrency(Number(quote.amount ?? 0), quote.currency)]);
+    rows.push(["Amount", money(quote.amount, cur)]);
   }
 
   if (quote.notes) rows.push(["Notes", quote.notes]);
@@ -93,6 +126,10 @@ export function QuotePreviewModal({
   const ref = getQuoteRefId(quote);
   const rows = detailRows(quote);
   const terms = String(quote.details?.termsAndConditions ?? "");
+  const type = (quote.type || "").toLowerCase();
+  const d = quote.details ?? {};
+  const showAirBreakdown = type === "air";
+  const showSeaBreakdown = type === "sea";
 
   function handlePrint() {
     window.print();
@@ -158,15 +195,47 @@ export function QuotePreviewModal({
             <tbody>
               {rows.map(([label, value]) => (
                 <tr key={label} className="border-b border-slate-100">
-                  <td className="py-2 pr-4 font-semibold text-[var(--color-text-muted)] w-40">{label}</td>
+                  <td className="w-40 py-2 pr-4 font-semibold text-[var(--color-text-muted)]">{label}</td>
                   <td className="py-2">{value}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
+          {(showAirBreakdown || showSeaBreakdown) && (
+            <div className="mb-4 rounded-lg border border-slate-200 p-4 text-sm">
+              <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Charges to customer
+              </div>
+              <dl className="space-y-1.5">
+                <div className="flex justify-between gap-4">
+                  <dt>Base freight</dt>
+                  <dd className="font-semibold">{money(d.baseFreight, quote.currency || "USD")}</dd>
+                </div>
+                {Number(d.originFeesTotal ?? 0) > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt>Origin fees</dt>
+                    <dd className="font-semibold">{money(d.originFeesTotal, quote.currency || "USD")}</dd>
+                  </div>
+                ) : null}
+                {showAirBreakdown && Number(d.amsFee ?? 0) > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt>AMS</dt>
+                    <dd className="font-semibold">{money(d.amsFee, quote.currency || "USD")}</dd>
+                  </div>
+                ) : null}
+                {Number(d.destFeesTotal ?? 0) > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt>Destination fees</dt>
+                    <dd className="font-semibold">{money(d.destFeesTotal, quote.currency || "USD")}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          )}
+
           <div className="rounded-lg bg-slate-50 p-4">
-            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Grand total</div>
+            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Customer total</div>
             <div className="text-2xl font-extrabold text-emerald-700">
               {formatCurrency(Number(quote.amount ?? 0), quote.currency)}
             </div>

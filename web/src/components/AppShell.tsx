@@ -51,7 +51,7 @@ type NavItem = {
   route: AppRouteId;
 };
 
-const primaryNav: NavItem[] = [
+const desksNav: NavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboard, exact: true, route: "dashboard" },
   { href: "/quote", label: "Quote hub", icon: Sparkles, route: "smart-quote" },
   { href: "/air", label: "Air desk", icon: PlaneTakeoff, route: "air" },
@@ -59,17 +59,23 @@ const primaryNav: NavItem[] = [
   { href: "/courier", label: "Courier", icon: Package, route: "courier" },
   { href: "/transport", label: "Transport", icon: Truck, route: "transport" },
   { href: "/warehouse", label: "Warehouse", icon: Warehouse, route: "warehouse" },
+];
+
+const workNav: NavItem[] = [
   { href: "/inbox", label: "Inbox", icon: Inbox, route: "inbox" },
   { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
-  { href: "/carriers", label: "Carriers", icon: Ship, route: "directory" },
-  { href: "/integrations", label: "Standards", icon: Sparkles, route: "directory" },
-  { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
-  { href: "/directory", label: "Directory", icon: Users, route: "directory" },
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, route: "analytics" },
   { href: "/admin", label: "Admin", icon: Shield, route: "admin" },
   // NRS follow-ups: visible only when RBAC grants `nrs` (Cathrina). Not Admin.
   { href: "/nrs", label: "NRS follow-ups", icon: ClipboardList, route: "nrs" },
+];
+
+const libraryNav: NavItem[] = [
+  { href: "/carriers", label: "Carriers", icon: Ship, route: "directory" },
+  { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
+  { href: "/directory", label: "Directory", icon: Users, route: "directory" },
+  { href: "/integrations", label: "Standards", icon: Sparkles, route: "directory" },
 ];
 
 const adminMoreNav: NavItem[] = [
@@ -79,6 +85,10 @@ const adminMoreNav: NavItem[] = [
   { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
   { href: "/m", label: "Mobile app", icon: Home, route: "dashboard" },
 ];
+
+function filterNav(items: NavItem[], username?: string, role?: string) {
+  return items.filter((item) => canAccessRoute(username, role, item.route));
+}
 
 function pathActive(pathname: string, href: string, exact?: boolean) {
   if (exact) return pathname === href;
@@ -141,17 +151,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [quoteOpen, setQuoteOpen] = useState(false);
   const admin = isAdminUser(user?.username, user?.role);
 
-  const visiblePrimary = useMemo(
-    () => primaryNav.filter((item) => canAccessRoute(user?.username, user?.role, item.route)),
+  const visibleDesks = useMemo(
+    () => filterNav(desksNav, user?.username, user?.role),
+    [user?.username, user?.role],
+  );
+  const visibleWork = useMemo(
+    () => filterNav(workNav, user?.username, user?.role),
+    [user?.username, user?.role],
+  );
+  const visibleLibrary = useMemo(
+    () => filterNav(libraryNav, user?.username, user?.role),
     [user?.username, user?.role],
   );
   const visibleMore = useMemo(
-    () =>
-      admin
-        ? adminMoreNav.filter((item) => canAccessRoute(user?.username, user?.role, item.route))
-        : [],
+    () => (admin ? filterNav(adminMoreNav, user?.username, user?.role) : []),
     [admin, user?.username, user?.role],
   );
+
+  function renderNavGroups(opts: { dark?: boolean; onNavigate?: () => void }) {
+    const sections: Array<{ title: string; items: NavItem[] }> = [
+      { title: "Desks", items: visibleDesks },
+      { title: "Work", items: visibleWork },
+      { title: "Library", items: visibleLibrary },
+    ];
+    if (visibleMore.length) sections.push({ title: "More", items: visibleMore });
+    return sections.map((section) =>
+      section.items.length === 0 ? null : (
+        <div key={section.title} className="space-y-0.5">
+          <div
+            className={
+              opts.dark
+                ? "mt-3 px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-white/40 first:mt-0"
+                : "bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-400"
+            }
+          >
+            {section.title}
+          </div>
+          {section.items.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              pathname={normalized}
+              dark={opts.dark}
+              onNavigate={opts.onNavigate}
+            />
+          ))}
+        </div>
+      ),
+    );
+  }
 
   const mobileTabs = useMemo(() => {
     const tabs: Array<{
@@ -199,19 +247,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
           <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-            {visiblePrimary.map((item) => (
-              <NavLink key={item.href} item={item} pathname={normalized} dark />
-            ))}
-            {visibleMore.length > 0 ? (
-              <>
-                <div className="mt-3 px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-white/40">
-                  More
-                </div>
-                {visibleMore.map((item) => (
-                  <NavLink key={item.href} item={item} pathname={normalized} dark />
-                ))}
-              </>
-            ) : null}
+            {renderNavGroups({ dark: true })}
           </nav>
           <div className="border-t border-white/10 p-4">
             <div className="text-xs text-white/50">Signed in as</div>
@@ -243,29 +279,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto">
-                {visiblePrimary.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    item={item}
-                    pathname={normalized}
-                    onNavigate={() => setMobileOpen(false)}
-                  />
-                ))}
-                {visibleMore.length > 0 ? (
-                  <>
-                    <div className="bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                      More
-                    </div>
-                    {visibleMore.map((item) => (
-                      <NavLink
-                        key={item.href}
-                        item={item}
-                        pathname={normalized}
-                        onNavigate={() => setMobileOpen(false)}
-                      />
-                    ))}
-                  </>
-                ) : null}
+                {renderNavGroups({ onNavigate: () => setMobileOpen(false) })}
               </nav>
               <div className="border-t border-[var(--color-border)] p-4 text-xs text-[var(--color-text-muted)]">
                 Help · Connectivity · v{appVersion}

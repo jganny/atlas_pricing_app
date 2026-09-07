@@ -133,6 +133,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const fx = input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : 83.5;
   const amountINR = input.currency === "INR" ? amount : amount * fx;
   const gp = input.totals.gp;
+  const gpReady = input.totals.gpReady;
 
   const alternatives = input.airlines
     .filter((a) => a.id !== input.selected.id)
@@ -164,9 +165,14 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     amount,
     amountINR,
     currency: input.currency,
-    grossProfit: gp,
-    grossProfitCurrency: input.currency,
-    grossProfitINR: input.currency === "INR" ? gp : gp * fx,
+    // Omit GP when freight buy+sell are incomplete — never store fake $0 margin.
+    ...(gpReady
+      ? {
+          grossProfit: gp,
+          grossProfitCurrency: input.currency,
+          grossProfitINR: input.currency === "INR" ? gp : gp * fx,
+        }
+      : {}),
     details: {
       origin: input.origin,
       destination: input.destination,
@@ -190,6 +196,8 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       destFeesEnabled: input.selected.destFeesEnabled,
       originSurcharges: input.totals.origin,
       destSurcharges: input.totals.dest,
+      originFeesTotal: input.totals.originTotal,
+      destFeesTotal: input.totals.destTotal,
       surchargeTotal: input.totals.originTotal + input.totals.destTotal + input.totals.ams,
       amsFee: input.totals.ams,
       routing: formatRoutingPreview(input.selected.routing),
@@ -224,6 +232,8 @@ export interface SaveSeaInput extends SaveMeta {
   mode: string;
   grossWeightKg: number;
   volumeCbm: number;
+  /** Manual RT override (LCL/BB). Persisted so amend/reload keeps the same freight. */
+  chargeableCbmOverride?: number;
   selected: LinerOption;
   totals: LinerTotals;
   liners: LinerOption[];
@@ -242,6 +252,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
   const fx = input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : 83.5;
   const amountINR = input.currency === "INR" ? amount : amount * fx;
   const gp = input.totals.gp;
+  const gpReady = input.totals.gpReady;
+  const chargeableCbmOverride = Number(input.chargeableCbmOverride ?? 0);
 
   const alternatives = input.liners
     .filter((l) => l.id !== input.selected.id)
@@ -273,9 +285,13 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     amount,
     amountINR,
     currency: input.currency,
-    grossProfit: gp,
-    grossProfitCurrency: input.currency,
-    grossProfitINR: input.currency === "INR" ? gp : gp * fx,
+    ...(gpReady
+      ? {
+          grossProfit: gp,
+          grossProfitCurrency: input.currency,
+          grossProfitINR: input.currency === "INR" ? gp : gp * fx,
+        }
+      : {}),
     details: {
       origin: input.origin,
       destination: input.destination,
@@ -290,6 +306,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       grossWeight: input.grossWeightKg,
       volume: input.volumeCbm,
       volumeCbm: input.volumeCbm,
+      chargeableCbmOverride: chargeableCbmOverride > 0 ? chargeableCbmOverride : null,
       chargeableRt: input.totals.freight.chargeableRt,
       baseFreight: input.totals.freight.baseFreightSell,
       baseBuyFreight: input.totals.freight.baseFreightBuy,
@@ -301,6 +318,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       destFeesEnabled: input.selected.destFeesEnabled,
       originSurcharges: input.totals.origin,
       destSurcharges: input.totals.dest,
+      originFeesTotal: input.totals.originTotal,
+      destFeesTotal: input.totals.destTotal,
       surchargeTotal: input.totals.originTotal + input.totals.destTotal,
       liners: input.liners,
       alternatives,

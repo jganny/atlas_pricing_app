@@ -92,9 +92,19 @@ export function computeLinerTotals(
     bbRate: { sell: option.lclSell, buy: option.lclBuy },
   });
 
+  const declaredContainers =
+    mode === "fcl"
+      ? option.containers.reduce((s, c) => s + Math.max(0, Number(c.qty) || 0), 0)
+      : 0;
   const bases = {
     cbm: freight.chargeableRt,
-    containerCount: freight.containerCount || 1,
+    // Prefer freight count; else declared qty. Never invent "1" when qty is known as 0.
+    containerCount:
+      freight.containerCount > 0
+        ? freight.containerCount
+        : declaredContainers > 0
+          ? declaredContainers
+          : 0,
   };
 
   const origin = option.originFeesEnabled

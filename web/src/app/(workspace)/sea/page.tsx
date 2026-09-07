@@ -307,6 +307,7 @@ function SeaDeskInner() {
             mode,
             grossWeightKg,
             volumeCbm,
+            chargeableCbmOverride,
             selected,
             totals: selectedTotals,
             liners,
@@ -365,6 +366,7 @@ function SeaDeskInner() {
       mode,
       grossWeightKg,
       volumeCbm,
+      chargeableCbmOverride,
       selected,
       selectedTotals,
       liners,
@@ -584,7 +586,28 @@ function SeaDeskInner() {
                 </Label>
               </div>
               <div className="flex justify-end">
-                <Button type="button" className="h-9" onClick={() => setStep("carrier")}>
+                <Button
+                  type="button"
+                  className="h-9"
+                  onClick={() => {
+                    if (!customer.trim()) {
+                      toast("Enter customer name before liners.", "error");
+                      return;
+                    }
+                    if (!origin.trim() || !destination.trim()) {
+                      toast("Enter origin and destination before liners.", "error");
+                      return;
+                    }
+                    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
+                    if (cargoErr) {
+                      toast(cargoErr, "error");
+                      setSaveMsg(cargoErr);
+                      return;
+                    }
+                    setSaveMsg(null);
+                    setStep("carrier");
+                  }}
+                >
                   Next · Liners
                 </Button>
               </div>

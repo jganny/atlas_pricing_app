@@ -119,7 +119,10 @@ export default function LoginPage() {
                 )}
               </>
             ) : (
-              <>Self-service signup queues your username for admin role assignment.</>
+              <>
+                Create your own username + password (min 6 characters). An admin must still assign
+                your desk role before full access — you will appear in Admin → pending users.
+              </>
             )}
           </p>
         </div>
