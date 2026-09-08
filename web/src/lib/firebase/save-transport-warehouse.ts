@@ -1,10 +1,10 @@
 "use client";
 
-import { omitUndefinedDeep } from "@atlas/pricing-core";
 import { doc, setDoc } from "firebase/firestore";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { computeGp } from "@/lib/pricing/quote-display";
 import { getFirebaseDb } from "./client";
+import { omitUndefinedDeep } from "./sanitize";
 
 export async function saveTransportQuote(input: {
   quoteId?: string;

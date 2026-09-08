@@ -1,9 +1,9 @@
 "use client";
 
-import { omitUndefinedDeep } from "@atlas/pricing-core";
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import type { SavedQuote } from "@/lib/types";
 import { getFirebaseDb } from "./client";
+import { omitUndefinedDeep } from "./sanitize";
 
 export async function fetchQuoteById(id: string): Promise<SavedQuote | null> {
   const db = getFirebaseDb();

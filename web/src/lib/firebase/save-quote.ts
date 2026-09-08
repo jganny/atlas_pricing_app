@@ -1,6 +1,5 @@
 "use client";
 
-import { omitUndefinedDeep } from "@atlas/pricing-core";
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult } from "@atlas/pricing-core";
 import {
@@ -19,6 +18,7 @@ import {
   normalizeRouting,
 } from "@/lib/pricing/terms";
 import { getFirebaseDb } from "./client";
+import { omitUndefinedDeep } from "./sanitize";
 
 export const DEFAULT_COURIER_TERMS = ensureIncidentalTerm(
   "1. Rates are based on chargeable weight (max of actual vs volumetric per piece).\n" +
