@@ -1,4 +1,14 @@
 {
   "name": "Atlas Pricing (Vertex)",
-  "install": "npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts"
+  "install": "npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts",
+  "terminals": [
+    {
+      "name": "hosting",
+      "command": "npx firebase emulators:start --only hosting --project vertex-35d95",
+      "description": "Serves the static Vertex / Atlas Pricing app at http://127.0.0.1:5000 (Firebase Hosting emulator, no login required)."
+    }
+  ],
+  "ports": [
+    { "name": "hosting", "port": 5000 }
+  ]
 }
