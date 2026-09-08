@@ -13251,8 +13251,16 @@ const DB = {
 
       const list = [];
       const seenRefIds = new Set();
+      const seenDocIds = new Set();
 
       snapshot.forEach(doc => {
+        // Skip duplicate Firestore documents (same doc.id appearing more than once)
+        if (seenDocIds.has(doc.id)) {
+          console.log("DB: Skipping duplicate Firestore document ID:", doc.id);
+          return;
+        }
+        seenDocIds.add(doc.id);
+
         const q = doc.data();
         this.sanitize(q, list.length);
 
@@ -13479,8 +13487,15 @@ const DB = {
     // Sanitize and deduplicate quotes array
     const dedupedList = [];
     const seenRefIds = new Set();
+    const seenDocIds = new Set();
     appState.quotes.forEach((q, idx) => {
       this.sanitize(q, idx);
+      if (q.id) {
+        if (seenDocIds.has(q.id)) {
+          return;
+        }
+        seenDocIds.add(q.id);
+      }
       const refId = getQuoteRefId(q);
       if (!seenRefIds.has(refId)) {
         seenRefIds.add(refId);
