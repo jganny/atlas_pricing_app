@@ -1,5 +1,6 @@
 "use client";
 
+import { omitUndefinedDeep } from "@atlas/pricing-core";
 import { doc, setDoc } from "firebase/firestore";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { computeGp } from "@/lib/pricing/quote-display";
@@ -33,7 +34,7 @@ export async function saveTransportQuote(input: {
   const { gp, gpReady } = computeGp(total, buy);
   const route = `${input.origin} → ${input.destination}`;
   const now = new Date();
-  await setDoc(doc(getFirebaseDb(), "quotes", id), {
+  await setDoc(doc(getFirebaseDb(), "quotes", id), omitUndefinedDeep({
     id,
     date: now.toISOString().split("T")[0],
     timestamp: Date.now(),
@@ -74,7 +75,7 @@ export async function saveTransportQuote(input: {
       validity: input.validity || "",
       termsAndConditions: input.terms || "",
     },
-  });
+  }));
   return id;
 }
 
@@ -105,7 +106,7 @@ export async function saveWarehouseQuote(input: {
       ? `Others — ${input.otherDescription.trim()}`
       : input.location;
   const now = new Date();
-  await setDoc(doc(getFirebaseDb(), "quotes", id), {
+  await setDoc(doc(getFirebaseDb(), "quotes", id), omitUndefinedDeep({
     id,
     date: now.toISOString().split("T")[0],
     timestamp: Date.now(),
@@ -143,6 +144,6 @@ export async function saveWarehouseQuote(input: {
       validity: input.validity || "",
       termsAndConditions: input.terms || "",
     },
-  });
+  }));
   return id;
 }

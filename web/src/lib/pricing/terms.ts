@@ -40,13 +40,18 @@ export function getDefaultFreightTerms(mode: "air" | "sea"): string {
   return mode === "sea" ? DEFAULT_SEA_TERMS : DEFAULT_AIR_TERMS;
 }
 
-/** Routing preview: prefix "via " unless Direct / empty. */
+/** Persist and display routing in CAPS even when typed in lowercase. */
+export function normalizeRouting(routing: string): string {
+  return routing.trim().toUpperCase();
+}
+
+/** Routing preview: prefix "VIA " unless DIRECT / empty. Always CAPS. */
 export function formatRoutingPreview(routing: string): string {
-  const r = routing.trim();
+  const r = normalizeRouting(routing);
   if (!r) return "";
-  if (/^direct\b/i.test(r)) return r.replace(/^direct\b/i, "Direct");
-  if (/^via\s+/i.test(r)) return r;
-  return `via ${r}`;
+  if (/^DIRECT\b/.test(r)) return r;
+  if (/^VIA\s+/.test(r)) return r;
+  return `VIA ${r}`;
 }
 
 /** Transit preview: "4" / "3-4" → suffix " Days". */

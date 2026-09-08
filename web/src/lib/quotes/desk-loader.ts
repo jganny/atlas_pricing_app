@@ -88,10 +88,19 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
     airlines[0] = { ...airlines[0], selected: true };
   }
 
+  const savedLanes = Array.isArray(d.lanes)
+    ? (d.lanes as Array<{ id?: string; origin?: string; destination?: string }>).map((l, i) => ({
+        id: String(l.id || `lane_${i}`),
+        origin: String(l.origin ?? ""),
+        destination: String(l.destination ?? ""),
+      }))
+    : [];
+
   return {
     customer: quote.customer ?? "",
     origin: String(d.origin ?? ""),
     destination: String(d.destination ?? ""),
+    lanes: savedLanes,
     currency: quote.currency ?? "USD",
     incoterm: String(d.incoterm ?? "FOB"),
     commodity: String(d.commodity ?? "GENERAL"),

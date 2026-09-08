@@ -416,6 +416,7 @@ function SeaDeskInner() {
             quoteId: loader.editingQuoteId ?? undefined,
             quoteNumber: loader.editingQuoteNumber,
             status: loader.editingStatus,
+            lanes,
           });
           await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
           cacheOfflineQuote({
@@ -472,6 +473,7 @@ function SeaDeskInner() {
       user,
       loader,
       queryClient,
+      lanes,
     ],
   );
 
@@ -828,7 +830,11 @@ function SeaDeskInner() {
                         <Label>Routing</Label>
                         <Input
                           value={opt.routing}
+                          autoComplete="off"
                           onChange={(e) => updateLiner(opt.id, { routing: e.target.value })}
+                          onBlur={() =>
+                            updateLiner(opt.id, { routing: opt.routing.trim().toUpperCase() })
+                          }
                         />
                         {opt.routing.trim() ? (
                           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
@@ -1019,7 +1025,7 @@ function SeaDeskInner() {
                 <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
                   Back
                 </Button>
-                <Button type="button" onClick={() => setStep("terms")}>
+                <Button id="sea-next-terms" type="button" onClick={() => setStep("terms")}>
                   Next · Terms
                 </Button>
               </div>

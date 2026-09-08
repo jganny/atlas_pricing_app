@@ -19,5 +19,6 @@ export {
   ensureIncidentalTerm,
   formatRoutingPreview,
   formatTransitPreview,
+  normalizeRouting,
   INCIDENTAL_TERM,
 } from "@/lib/pricing/terms";

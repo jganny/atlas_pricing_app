@@ -1,8 +1,14 @@
 "use client";
 
+import { omitUndefinedDeep } from "@atlas/pricing-core";
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult } from "@atlas/pricing-core";
-import type { AirlineOption, LinerOption } from "@/lib/pricing/carrier-options";
+import {
+  serializeAirlineOption,
+  serializeLinerOption,
+  type AirlineOption,
+  type LinerOption,
+} from "@/lib/pricing/carrier-options";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
@@ -10,6 +16,7 @@ import {
   ensureIncidentalTerm,
   formatRoutingPreview,
   formatTransitPreview,
+  normalizeRouting,
 } from "@/lib/pricing/terms";
 import { getFirebaseDb } from "./client";
 
@@ -29,6 +36,12 @@ interface SaveMeta {
   status?: string;
 }
 
+export interface SavedQuoteLane {
+  id: string;
+  origin: string;
+  destination: string;
+}
+
 export interface SaveCourierInput extends SaveMeta {
   customer: string;
   creator: string;
@@ -44,6 +57,12 @@ export interface SaveCourierInput extends SaveMeta {
   packages: CourierFreightResult["packages"];
   calc: CourierFreightResult;
   termsAndConditions?: string;
+}
+
+async function writeQuote(id: string, quoteData: Record<string, unknown>): Promise<string> {
+  const db = getFirebaseDb();
+  await setDoc(doc(db, "quotes", id), omitUndefinedDeep(quoteData));
+  return id;
 }
 
 export async function saveCourierQuote(input: SaveCourierInput): Promise<string> {
@@ -100,9 +119,7 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
     notes: `Courier quote. CHW: ${input.calc.chargeableKg} kg, Zone ${input.calc.zone}, ${input.calc.chosen?.name ?? ""}`,
   };
 
-  const db = getFirebaseDb();
-  await setDoc(doc(db, "quotes", id), quoteData);
-  return id;
+  return writeQuote(id, quoteData);
 }
 
 export interface SaveAirInput extends SaveMeta {
@@ -120,6 +137,7 @@ export interface SaveAirInput extends SaveMeta {
   airlines: AirlineOption[];
   termsAndConditions: string;
   customExchangeRate?: number;
+  lanes?: SavedQuoteLane[];
 }
 
 export async function saveAirQuote(input: SaveAirInput): Promise<string> {
@@ -134,6 +152,12 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const amountINR = input.currency === "INR" ? amount : amount * fx;
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
+  const airlines = input.airlines.map(serializeAirlineOption);
+  const lanes = (input.lanes ?? []).map((l) => ({
+    id: l.id,
+    origin: l.origin,
+    destination: l.destination,
+  }));
 
   const alternatives = input.airlines
     .filter((a) => a.id !== input.selected.id)
@@ -147,8 +171,9 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       destFeesEnabled: a.destFeesEnabled,
       originSurcharges: a.originSurcharges,
       destSurcharges: a.destSurcharges,
-      amsFee: a.amsFee,
-      amsFeeEnabled: a.amsFeeEnabled,
+      amsFee: a.amsFee || 0,
+      amsFeeBuy: a.amsFeeBuy || 0,
+      amsFeeEnabled: a.amsFeeEnabled !== false,
       selected: false,
     }));
 
@@ -165,7 +190,6 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     amount,
     amountINR,
     currency: input.currency,
-    // Omit GP when freight buy+sell are incomplete — never store fake $0 margin.
     ...(gpReady
       ? {
           grossProfit: gp,
@@ -176,6 +200,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     details: {
       origin: input.origin,
       destination: input.destination,
+      lanes,
       airline,
       incoterm: input.incoterm,
       module: input.module,
@@ -193,7 +218,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       baseFreight: input.totals.baseFreightQuote,
       baseFreightSell: input.totals.freight.baseFreightSell,
       baseBuyFreight: input.totals.freight.baseFreightBuy,
-      usedBreak: input.totals.freight.usedBreak,
+      usedBreak: input.totals.freight.usedBreak || "",
       usingBuyFallback: input.totals.quoteUsingBuyFreight,
       tariffsEnabled: input.selected.wbEnabled,
       originFeesEnabled: input.selected.originFeesEnabled,
@@ -204,27 +229,26 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       destFeesTotal: input.totals.destTotal,
       surchargeTotal: input.totals.originTotal + input.totals.destTotal + input.totals.ams,
       amsFee: input.totals.ams,
-      amsFeeBuy: input.selected.amsFeeBuy,
-      amsFeeEnabled: input.selected.amsFeeEnabled,
+      amsFeeBuy: input.selected.amsFeeBuy || 0,
+      amsFeeEnabled: input.selected.amsFeeEnabled !== false,
       routing: formatRoutingPreview(input.selected.routing),
+      routingRaw: normalizeRouting(input.selected.routing),
       tt: formatTransitPreview(input.selected.tt),
       validity: input.selected.validity,
       pivotWeight: input.selected.pivotWeightKg,
       cargoItems: input.cargo,
       breaks: input.selected.breaks,
-      airlines: input.airlines,
+      airlines,
       alternatives,
       termsAndConditions: input.termsAndConditions,
-      customExchangeRate: input.customExchangeRate ?? null,
+      customExchangeRate: input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : null,
       type: "air",
       mode: "Air",
     },
     notes: `Air quote (React Phase 7). CHW: ${input.totals.freight.chargeableWeightKg} kg · ${input.totals.freight.usedBreak} · ${input.airlines.length} options`,
   };
 
-  const db = getFirebaseDb();
-  await setDoc(doc(db, "quotes", id), quoteData);
-  return id;
+  return writeQuote(id, quoteData);
 }
 
 export interface SaveSeaInput extends SaveMeta {
@@ -239,13 +263,13 @@ export interface SaveSeaInput extends SaveMeta {
   mode: string;
   grossWeightKg: number;
   volumeCbm: number;
-  /** Manual RT override (LCL/BB). Persisted so amend/reload keeps the same freight. */
   chargeableCbmOverride?: number;
   selected: LinerOption;
   totals: LinerTotals;
   liners: LinerOption[];
   termsAndConditions: string;
   customExchangeRate?: number;
+  lanes?: SavedQuoteLane[];
 }
 
 export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
@@ -261,6 +285,12 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
   const chargeableCbmOverride = Number(input.chargeableCbmOverride ?? 0);
+  const liners = input.liners.map(serializeLinerOption);
+  const lanes = (input.lanes ?? []).map((l) => ({
+    id: l.id,
+    origin: l.origin,
+    destination: l.destination,
+  }));
 
   const alternatives = input.liners
     .filter((l) => l.id !== input.selected.id)
@@ -302,6 +332,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     details: {
       origin: input.origin,
       destination: input.destination,
+      lanes,
       module: input.module,
       type: input.mode,
       shippingMode: input.mode,
@@ -309,6 +340,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       commodity: input.commodity ?? "",
       liner,
       routing: formatRoutingPreview(input.selected.routing),
+      routingRaw: normalizeRouting(input.selected.routing),
       tt: formatTransitPreview(input.selected.tt),
       validity: input.selected.validity,
       grossWeight: input.grossWeightKg,
@@ -330,15 +362,13 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       originFeesTotal: input.totals.originTotal,
       destFeesTotal: input.totals.destTotal,
       surchargeTotal: input.totals.originTotal + input.totals.destTotal,
-      liners: input.liners,
+      liners,
       alternatives,
       termsAndConditions: input.termsAndConditions,
-      customExchangeRate: input.customExchangeRate ?? null,
+      customExchangeRate: input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : null,
     },
     notes: `Sea quote (React Phase 7). ${input.mode.toUpperCase()} · RT ${input.totals.freight.chargeableRt} · ${input.liners.length} options`,
   };
 
-  const db = getFirebaseDb();
-  await setDoc(doc(db, "quotes", id), quoteData);
-  return id;
+  return writeQuote(id, quoteData);
 }

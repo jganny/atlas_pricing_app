@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Input, Label } from "@/components/ui";
 import { PortalDropdown } from "@/components/PortalDropdown";
 import { searchLocations, type LocationHit } from "@/lib/locations/search";
+import { closeAllComboboxes, useCloseComboboxes } from "@/lib/ui/close-comboboxes";
 
 type Kind = "airport" | "seaport" | "all";
 
@@ -27,6 +28,8 @@ export function LocationCombobox({
   const [active, setActive] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputWrapRef = useRef<HTMLDivElement>(null);
+
+  useCloseComboboxes(() => setOpen(false));
 
   useEffect(() => setQ(value), [value]);
 
@@ -96,7 +99,13 @@ export function LocationCombobox({
           aria-controls={listId}
           aria-expanded={open}
           role="combobox"
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            closeAllComboboxes();
+            setOpen(true);
+          }}
+          onBlur={() => {
+            window.setTimeout(() => setOpen(false), 120);
+          }}
           onKeyDown={onKeyDown}
           onChange={(e) => {
             setQ(e.target.value);

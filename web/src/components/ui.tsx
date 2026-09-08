@@ -83,6 +83,7 @@ export function Input({
 }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
+      {...props}
       className={cn(
         "mt-1 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-atlas-sky)] focus:ring-2 focus:ring-[var(--color-atlas-sky)]/20",
         className,
@@ -90,7 +91,6 @@ export function Input({
       autoComplete={autoComplete}
       autoCorrect="off"
       spellCheck={false}
-      {...props}
     />
   );
 }

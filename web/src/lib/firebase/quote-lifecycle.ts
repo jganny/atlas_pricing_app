@@ -1,5 +1,6 @@
 "use client";
 
+import { omitUndefinedDeep } from "@atlas/pricing-core";
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import type { SavedQuote } from "@/lib/types";
 import { getFirebaseDb } from "./client";
@@ -13,13 +14,13 @@ export async function fetchQuoteById(id: string): Promise<SavedQuote | null> {
 
 export async function saveQuoteDocument(quote: SavedQuote): Promise<string> {
   const db = getFirebaseDb();
-  await setDoc(doc(db, "quotes", quote.id), quote, { merge: false });
+  await setDoc(doc(db, "quotes", quote.id), omitUndefinedDeep(quote), { merge: false });
   return quote.id;
 }
 
 export async function patchQuote(id: string, patch: Partial<SavedQuote>): Promise<void> {
   const db = getFirebaseDb();
-  await updateDoc(doc(db, "quotes", id), patch as Record<string, unknown>);
+  await updateDoc(doc(db, "quotes", id), omitUndefinedDeep(patch) as Record<string, unknown>);
 }
 
 export async function deleteQuoteById(id: string): Promise<void> {

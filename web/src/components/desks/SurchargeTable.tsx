@@ -22,6 +22,7 @@ export function SurchargeTable({
   rows,
   onChange,
   units = ["kg", "flat"],
+  lastFieldTabTarget,
 }: {
   title: string;
   enabled: boolean;
@@ -29,6 +30,8 @@ export function SurchargeTable({
   rows: SurchargeRow[];
   onChange: (rows: SurchargeRow[]) => void;
   units?: BillingUnit[];
+  /** When set, Tab on the last remarks field jumps here (e.g. Next · Terms). */
+  lastFieldTabTarget?: string;
 }) {
   function update(index: number, patch: Partial<SurchargeRow>) {
     onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
@@ -58,6 +61,7 @@ export function SurchargeTable({
         </label>
         <Button
           type="button"
+          tabIndex={-1}
           variant="secondary"
           className="px-2 py-1 text-xs"
           disabled={!enabled}
@@ -90,6 +94,8 @@ export function SurchargeTable({
                 <td className="p-1">
                   <input
                     disabled={!enabled}
+                    autoComplete="off"
+                    name={`atlas-surcharge-name-${row.id}`}
                     className="w-28 rounded border px-1 py-1 disabled:opacity-50"
                     value={row.name}
                     onChange={(e) => update(i, { name: e.target.value })}
@@ -130,15 +136,29 @@ export function SurchargeTable({
                 <td className="p-1">
                   <input
                     disabled={!enabled}
+                    autoComplete="off"
+                    name={`atlas-surcharge-remarks-${row.id}`}
                     className="w-24 rounded border px-1 py-1 disabled:opacity-50"
                     value={row.remarks}
                     onChange={(e) => update(i, { remarks: e.target.value })}
                     placeholder="Optional"
+                    onKeyDown={(e) => {
+                      if (
+                        lastFieldTabTarget &&
+                        e.key === "Tab" &&
+                        !e.shiftKey &&
+                        i === rows.length - 1
+                      ) {
+                        e.preventDefault();
+                        document.getElementById(lastFieldTabTarget)?.focus();
+                      }
+                    }}
                   />
                 </td>
                 <td className="p-1">
                   <button
                     type="button"
+                    tabIndex={-1}
                     disabled={!enabled || rows.length <= 1}
                     className="text-red-600 disabled:opacity-30"
                     onClick={() => onChange(rows.filter((_, j) => j !== i))}

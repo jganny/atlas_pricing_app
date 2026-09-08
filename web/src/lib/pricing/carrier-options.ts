@@ -1,4 +1,5 @@
 import type { WeightBreaks } from "@atlas/pricing-core";
+import { normalizeRouting } from "@/lib/pricing/terms";
 import {
   defaultAirDestSurcharges,
   defaultAirOriginSurcharges,
@@ -49,7 +50,7 @@ export function createAirlineOption(
     amsFee: partial.amsFee ?? 0,
     amsFeeBuy: partial.amsFeeBuy ?? 0,
     amsFeeEnabled: partial.amsFeeEnabled ?? true,
-    laneId: partial.laneId,
+    laneId: partial.laneId ?? "",
     kind: partial.kind ?? "airline",
     wbEnabled: partial.wbEnabled ?? true,
     originFeesEnabled: partial.originFeesEnabled ?? true,
@@ -115,7 +116,7 @@ export function createLinerOption(
     routing: partial.routing ?? "",
     tt: partial.tt ?? "",
     validity: partial.validity ?? "",
-    laneId: partial.laneId,
+    laneId: partial.laneId ?? "",
     kind: partial.kind ?? "liner",
     originFeesEnabled: partial.originFeesEnabled ?? true,
     destFeesEnabled: partial.destFeesEnabled ?? true,
@@ -128,4 +129,50 @@ export function createLinerOption(
     destSurcharges: partial.destSurcharges ?? defaultSeaDestSurcharges(),
     selected,
   };
+}
+
+/** Explicit fields only — never spread optional keys as `undefined` into Firestore. */
+export function serializeAirlineOption(a: AirlineOption): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    id: a.id,
+    name: a.name,
+    routing: normalizeRouting(a.routing),
+    tt: a.tt,
+    validity: a.validity,
+    pivotWeightKg: a.pivotWeightKg || 0,
+    amsFee: a.amsFee || 0,
+    amsFeeBuy: a.amsFeeBuy || 0,
+    amsFeeEnabled: a.amsFeeEnabled !== false,
+    kind: a.kind || "airline",
+    wbEnabled: a.wbEnabled !== false,
+    originFeesEnabled: a.originFeesEnabled !== false,
+    destFeesEnabled: a.destFeesEnabled !== false,
+    breaks: a.breaks,
+    originSurcharges: a.originSurcharges,
+    destSurcharges: a.destSurcharges,
+    selected: Boolean(a.selected),
+  };
+  if (a.laneId) row.laneId = a.laneId;
+  return row;
+}
+
+export function serializeLinerOption(l: LinerOption): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    id: l.id,
+    name: l.name,
+    routing: normalizeRouting(l.routing),
+    tt: l.tt,
+    validity: l.validity,
+    kind: l.kind || "liner",
+    originFeesEnabled: l.originFeesEnabled !== false,
+    destFeesEnabled: l.destFeesEnabled !== false,
+    containers: l.containers,
+    lclSell: l.lclSell || 0,
+    lclBuy: l.lclBuy || 0,
+    originSurcharges: l.originSurcharges,
+    destSurcharges: l.destSurcharges,
+    selected: Boolean(l.selected),
+  };
+  if (l.laneId) row.laneId = l.laneId;
+  return row;
 }

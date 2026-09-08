@@ -1,4 +1,5 @@
 export * from "./types.js";
+export { omitUndefinedDeep } from "./omit-undefined.js";
 export { summarizeCargo, chargeableWeightKg } from "./air/cargo.js";
 export { getWeightBreakBracket, resolveInterimRate, selectActiveBreak } from "./air/breaks.js";
 export { calculateAirFreight } from "./air/freight.js";

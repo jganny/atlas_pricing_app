@@ -1,5 +1,6 @@
 import {
   calculateAirFreight,
+  getWeightBreakBracket,
   type CargoLine,
   type WeightBreakName,
   type WeightBreaks,
@@ -131,6 +132,17 @@ export function computeAirlineTotals(
     quoteUsingBuyFreight,
     baseFreightQuote,
   };
+}
+
+/** One active break for the chargeable kg — full tariff card is opt-in. */
+export function visibleAirBreaks(
+  chargeableWeightKg: number,
+  usedBreak: WeightBreakName | undefined,
+  showAll: boolean,
+): WeightBreakName[] {
+  if (showAll || !(chargeableWeightKg > 0)) return AIR_WEIGHT_BREAKS;
+  const active = usedBreak || getWeightBreakBracket(chargeableWeightKg);
+  return AIR_WEIGHT_BREAKS.includes(active) ? [active] : AIR_WEIGHT_BREAKS;
 }
 
 export function validateAirCargo(cargo: AirCargoRow[]): string | null {

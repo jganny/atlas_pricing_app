@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Input, Label } from "@/components/ui";
 import { searchHsnCommodities, type HsnItem } from "@/lib/pricing/hsn";
+import { closeAllComboboxes, useCloseComboboxes } from "@/lib/ui/close-comboboxes";
 
 export function CommodityCombobox({
   label = "Commodity (HSN)",
@@ -21,6 +22,8 @@ export function CommodityCombobox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
+
+  useCloseComboboxes(() => setOpen(false));
 
   useEffect(() => setQ(value), [value]);
 
@@ -80,7 +83,13 @@ export function CommodityCombobox({
         aria-controls={listId}
         aria-expanded={open}
         role="combobox"
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          closeAllComboboxes();
+          setOpen(true);
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 120);
+        }}
         onKeyDown={onKeyDown}
         onChange={(e) => {
           setQ(e.target.value);

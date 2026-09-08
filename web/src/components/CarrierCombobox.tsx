@@ -8,6 +8,7 @@ import {
   type CarrierKind,
   type CarrierRecord,
 } from "@/lib/carriers/directory";
+import { closeAllComboboxes, useCloseComboboxes } from "@/lib/ui/close-comboboxes";
 
 const COLOADERS: CarrierRecord[] = [
   { code: "VANGUARD", name: "Vanguard Logistics", kind: "ocean", country: "IN" },
@@ -41,6 +42,8 @@ export function CarrierCombobox({
   const [active, setActive] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputWrapRef = useRef<HTMLDivElement>(null);
+
+  useCloseComboboxes(() => setOpen(false));
 
   const searchKind: CarrierKind | "all" =
     kind === "ocean+coloader" ? "ocean" : kind === "all" ? "all" : kind;
@@ -125,7 +128,13 @@ export function CarrierCombobox({
           aria-controls={listId}
           aria-expanded={open}
           role="combobox"
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            closeAllComboboxes();
+            setOpen(true);
+          }}
+          onBlur={() => {
+            window.setTimeout(() => setOpen(false), 120);
+          }}
           onKeyDown={onKeyDown}
           onChange={(e) => {
             setQ(e.target.value);

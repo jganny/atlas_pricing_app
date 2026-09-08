@@ -6,6 +6,7 @@ describe("getWeightBreakBracket", () => {
         expect(getWeightBreakBracket(45)).toBe("plus45");
         expect(getWeightBreakBracket(99)).toBe("plus45");
         expect(getWeightBreakBracket(100)).toBe("plus100");
+        expect(getWeightBreakBracket(500)).toBe("plus500");
         expect(getWeightBreakBracket(1000)).toBe("plus1000");
     });
 });

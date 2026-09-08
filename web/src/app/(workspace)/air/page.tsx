@@ -13,14 +13,13 @@ import {
 } from "lucide-react";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Input, Label, NumberInput, Select, Tabs, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
-import { SurchargeTable } from "@/components/desks/SurchargeTable";
+import { AirlineEditorOverlay, AirlineOptionForm } from "@/components/desks/AirlineOptionForm";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
-import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { toast } from "@/components/Toast";
@@ -33,7 +32,6 @@ import { saveAirQuote } from "@/lib/firebase/save-quote";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { lookupAirTariff } from "@/lib/firebase/tariffs";
 import {
-  AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
   computeAirlineTotals,
   validateAirCargo,
@@ -45,13 +43,9 @@ import {
   type AirlineOption,
 } from "@/lib/pricing/carrier-options";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
-import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
-import {
-  formatRoutingPreview,
-  formatTransitPreview,
-  getDefaultFreightTerms,
-} from "@/lib/pricing/terms";
+import { getDefaultFreightTerms } from "@/lib/pricing/terms";
+import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
@@ -60,16 +54,6 @@ import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-
-const BREAK_LABELS: Record<WeightBreakName, string> = {
-  min: "Minimum",
-  minus45: "−45 kg",
-  plus45: "+45 kg",
-  plus100: "+100 kg",
-  plus300: "+300 kg",
-  plus500: "+500 kg",
-  plus1000: "+1000 kg",
-};
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
@@ -113,6 +97,8 @@ function AirDeskInner() {
   const [customFx, setCustomFx] = useState(0);
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
+  const [editorAirlineId, setEditorAirlineId] = useState<string | null>(null);
+  const [showAllBreaksById, setShowAllBreaksById] = useState<Record<string, boolean>>({});
   const [terms, setTerms] = useState(getDefaultFreightTerms("air"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -126,6 +112,15 @@ function AirDeskInner() {
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
   }, [activeLaneId, lanes]);
+
+  useEffect(() => {
+    const lid = activeLane?.id || lanes[0]?.id;
+    if (!lid) return;
+    setAirlines((prev) => {
+      if (prev.every((a) => a.laneId)) return prev;
+      return prev.map((a) => (a.laneId ? a : { ...a, laneId: lid }));
+    });
+  }, [activeLane?.id, lanes]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -168,6 +163,19 @@ function AirDeskInner() {
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
 
+  const compareSorted = useMemo(() => {
+    return [...airlines].sort((a, b) => {
+      const ta = totalsById[a.id]?.grandSell ?? Number.POSITIVE_INFINITY;
+      const tb = totalsById[b.id]?.grandSell ?? Number.POSITIVE_INFINITY;
+      return ta - tb;
+    });
+  }, [airlines, totalsById]);
+
+  const cheapestId = useMemo(() => {
+    const priced = compareSorted.filter((a) => (totalsById[a.id]?.grandSell ?? 0) > 0);
+    return (priced[0] ?? compareSorted[0])?.id ?? null;
+  }, [compareSorted, totalsById]);
+
   useEffect(() => {
     if (!loader.sourceQuote) return;
     const loaded = loadAirDeskFromQuote(loader.sourceQuote);
@@ -181,9 +189,14 @@ function AirDeskInner() {
     setCustomFx(loaded.customExchangeRate);
     setCargo(loaded.cargo);
     setAirlines(loaded.airlines);
-    const lane = newLane({ origin: loaded.origin, destination: loaded.destination });
-    setLanes([lane]);
-    setActiveLaneId(lane.id);
+    if (loaded.lanes.length) {
+      setLanes(loaded.lanes.map((l) => newLane(l)));
+      setActiveLaneId(loaded.lanes[0]?.id || "");
+    } else {
+      const lane = newLane({ origin: loaded.origin, destination: loaded.destination });
+      setLanes([lane]);
+      setActiveLaneId(lane.id);
+    }
     if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
 
@@ -275,6 +288,14 @@ function AirDeskInner() {
 
   function selectAirline(id: string) {
     setAirlines((prev) => prev.map((a) => ({ ...a, selected: a.id === id })));
+  }
+
+  function addAirline(kind: "airline" | "coloader") {
+    const laneId = activeLane?.id || lanes[0]?.id || "";
+    const option = createAirlineOption({ laneId, kind }, airlines.length === 0);
+    const openOverlay = airlines.length >= 1;
+    setAirlines((prev) => [...prev, option]);
+    if (openOverlay) setEditorAirlineId(option.id);
   }
 
   function updateBreak(id: string, name: WeightBreakName, field: "sell" | "buy", value: number) {
@@ -426,6 +447,7 @@ function AirDeskInner() {
             quoteId: loader.editingQuoteId ?? undefined,
             quoteNumber: loader.editingQuoteNumber,
             status: loader.editingStatus,
+            lanes,
           });
           await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
           cacheOfflineQuote({
@@ -483,6 +505,7 @@ function AirDeskInner() {
       user,
       loader,
       queryClient,
+      lanes,
     ],
   );
 
@@ -595,6 +618,11 @@ function AirDeskInner() {
         <div className="space-y-3 lg:col-span-2">
           {step === "shipment" ? (
             <Card className="space-y-3 py-3">
+              <form
+                autoComplete="off"
+                onSubmit={(e) => e.preventDefault()}
+                className="space-y-3"
+              >
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
               <LaneChips
                 lanes={lanes}
@@ -628,8 +656,10 @@ function AirDeskInner() {
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-customer"
+                    name="atlas-quote-customer"
                     autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     value={customer}
                     onChange={(e) => setCustomer(e.target.value)}
                     placeholder="Customer name"
@@ -712,41 +742,71 @@ function AirDeskInner() {
                         <tr key={i} className="border-t">
                           <td className="p-1">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
+                              autoComplete="off"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              name={`atlas-cargo-l-${i}`}
                               className="w-16 rounded border px-1 py-1"
                               value={row.l || ""}
+                              onFocus={() => closeAllComboboxes()}
                               onChange={(e) => updateCargo(i, { l: Number(e.target.value) })}
                             />
                           </td>
                           <td className="p-1">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
+                              autoComplete="off"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              name={`atlas-cargo-w-${i}`}
                               className="w-16 rounded border px-1 py-1"
                               value={row.w || ""}
+                              onFocus={() => closeAllComboboxes()}
                               onChange={(e) => updateCargo(i, { w: Number(e.target.value) })}
                             />
                           </td>
                           <td className="p-1">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
+                              autoComplete="off"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              name={`atlas-cargo-h-${i}`}
                               className="w-16 rounded border px-1 py-1"
                               value={row.h || ""}
+                              onFocus={() => closeAllComboboxes()}
                               onChange={(e) => updateCargo(i, { h: Number(e.target.value) })}
                             />
                           </td>
                           <td className="p-1">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
+                              autoComplete="off"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              name={`atlas-cargo-qty-${i}`}
                               className="w-14 rounded border px-1 py-1"
                               value={row.qty}
+                              onFocus={() => closeAllComboboxes()}
                               onChange={(e) => updateCargo(i, { qty: Number(e.target.value) })}
                             />
                           </td>
                           <td className="p-1">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
+                              autoComplete="off"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              name={`atlas-cargo-gw-${i}`}
                               className="w-16 rounded border px-1 py-1"
                               value={row.gw || ""}
+                              onFocus={() => closeAllComboboxes()}
                               onChange={(e) => updateCargo(i, { gw: Number(e.target.value) })}
                               onKeyDown={(e) => {
                                 if (e.key === "Tab" && !e.shiftKey && i === cargo.length - 1) {
@@ -802,6 +862,7 @@ function AirDeskInner() {
                   Next · Carriers
                 </Button>
               </div>
+              </form>
             </Card>
           ) : null}
 
@@ -812,51 +873,42 @@ function AirDeskInner() {
                   Carriers on this lane ({laneAirlines.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      setAirlines((prev) => [
-                        ...prev,
-                        createAirlineOption(
-                          { laneId: activeLane?.id, kind: "airline" },
-                          prev.length === 0,
-                        ),
-                      ])
-                    }
-                  >
+                  <Button type="button" variant="secondary" onClick={() => addAirline("airline")}>
                     <Plus className="mr-1 h-4 w-4" /> Airline
                   </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      setAirlines((prev) => [
-                        ...prev,
-                        createAirlineOption(
-                          { laneId: activeLane?.id, kind: "coloader" },
-                          prev.length === 0,
-                        ),
-                      ])
-                    }
-                  >
+                  <Button type="button" variant="secondary" onClick={() => addAirline("coloader")}>
                     <Plus className="mr-1 h-4 w-4" /> Coloader
                   </Button>
                 </div>
               </div>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                First option stays on this page with the weight break that matches chargeable kg.
+                Extra airlines open in a popup so you do not scroll a full page per carrier.
+              </p>
 
               {laneAirlines.map((opt, idx) => {
                 const tot = totalsById[opt.id];
+                const inline = laneAirlines.length === 1 && idx === 0;
                 return (
                   <Card
                     key={opt.id}
                     className={`space-y-3 ${opt.selected ? "ring-2 ring-[var(--color-atlas-navy)]/30" : ""}`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="text-sm font-bold text-[var(--color-text-muted)]">
                           {opt.kind === "coloader" ? "Coloader" : "Airline"} #{idx + 1}
                         </span>
+                        <span className="font-bold">{opt.name || "Untitled"}</span>
+                        {opt.id === cheapestId && (tot?.grandSell ?? 0) > 0 ? (
+                          <Badge tone="success">Cheapest ★</Badge>
+                        ) : null}
+                        {opt.selected ? <Badge tone="info">Quoted</Badge> : null}
+                        <span className="text-sm font-semibold">
+                          {formatCurrency(tot?.grandSell ?? 0, currency)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
                         <label className="flex items-center gap-2 text-sm font-semibold">
                           <input
                             type="radio"
@@ -864,237 +916,61 @@ function AirDeskInner() {
                             checked={opt.selected}
                             onChange={() => selectAirline(opt.id)}
                           />
-                          Select as quoted
+                          Quote this
                         </label>
-                        {opt.selected ? <Badge tone="success">Quoted</Badge> : null}
-                      </div>
-                      <button
-                        type="button"
-                        className="text-sm font-semibold text-red-600 disabled:opacity-40"
-                        disabled={airlines.length <= 1}
-                        onClick={() => {
-                          setAirlines((prev) => {
-                            const next = prev.filter((a) => a.id !== opt.id);
-                            if (!next.some((a) => a.selected) && next[0]) {
-                              next[0] = { ...next[0], selected: true };
-                            }
-                            return next;
-                          });
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="md:col-span-2">
-                        <CarrierCombobox
-                          label="Carrier / Airline"
-                          value={opt.name}
-                          onChange={(v) => updateAirline(opt.id, { name: v })}
-                          kind="airline"
-                          placeholder="EK, Emirates, QR…"
-                        />
-                      </div>
-                      <div>
-                        <Label>Routing</Label>
-                        <Input
-                          value={opt.routing}
-                          onChange={(e) => updateAirline(opt.id, { routing: e.target.value })}
-                          placeholder="BLR-DXB-LHR"
-                        />
-                        {opt.routing.trim() ? (
-                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                            Preview: {formatRoutingPreview(opt.routing)}
-                          </p>
+                        {!inline ? (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-8"
+                            onClick={() => setEditorAirlineId(opt.id)}
+                          >
+                            Edit
+                          </Button>
                         ) : null}
-                      </div>
-                      <div>
-                        <Label>Transit time</Label>
-                        <Input
-                          value={opt.tt}
-                          onChange={(e) => updateAirline(opt.id, { tt: e.target.value })}
-                          placeholder="3-4"
-                        />
-                        {opt.tt.trim() ? (
-                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                            Preview: {formatTransitPreview(opt.tt)}
-                          </p>
-                        ) : null}
-                      </div>
-                      <ValidityField
-                        value={opt.validity}
-                        onChange={(v) => updateAirline(opt.id, { validity: v })}
-                      />
-                      <Label>
-                        Pivot weight (kg)
-                        <NumberInput
-                          value={opt.pivotWeightKg || 0}
-                          onValueChange={(n) => updateAirline(opt.id, { pivotWeightKg: n })}
-                        />
-                      </Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label>
-                            <span className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={opt.amsFeeEnabled}
-                                onChange={(e) =>
-                                  updateAirline(opt.id, { amsFeeEnabled: e.target.checked })
-                                }
-                              />
-                              AMS sell
-                            </span>
-                          </Label>
-                          <NumberInput
-                            disabled={!opt.amsFeeEnabled}
-                            step="0.01"
-                            value={opt.amsFee}
-                            onValueChange={(n) => updateAirline(opt.id, { amsFee: n })}
-                          />
-                        </div>
-                        <div>
-                          <Label>AMS buy</Label>
-                          <NumberInput
-                            disabled={!opt.amsFeeEnabled}
-                            step="0.01"
-                            value={opt.amsFeeBuy || 0}
-                            onValueChange={(n) => updateAirline(opt.id, { amsFeeBuy: n })}
-                          />
-                        </div>
+                        <button
+                          type="button"
+                          className="text-sm font-semibold text-red-600 disabled:opacity-40"
+                          disabled={airlines.length <= 1}
+                          onClick={() => {
+                            setAirlines((prev) => {
+                              const next = prev.filter((a) => a.id !== opt.id);
+                              if (!next.some((a) => a.selected) && next[0]) {
+                                next[0] = { ...next[0], selected: true };
+                              }
+                              return next;
+                            });
+                            if (editorAirlineId === opt.id) setEditorAirlineId(null);
+                          }}
+                        >
+                          Remove
+                        </button>
                       </div>
                     </div>
 
-                    <label className="flex items-center gap-2 text-sm font-semibold">
-                      <input
-                        type="checkbox"
-                        checked={opt.wbEnabled}
-                        onChange={(e) => updateAirline(opt.id, { wbEnabled: e.target.checked })}
+                    {inline ? (
+                      <AirlineOptionForm
+                        opt={opt}
+                        tot={tot}
+                        currency={currency}
+                        showAllBreaks={Boolean(showAllBreaksById[opt.id])}
+                        onToggleAllBreaks={() =>
+                          setShowAllBreaksById((prev) => ({
+                            ...prev,
+                            [opt.id]: !prev[opt.id],
+                          }))
+                        }
+                        lastDestTabTarget="air-next-terms"
+                        onUpdate={(patch) => updateAirline(opt.id, patch)}
+                        onUpdateBreak={(name, field, value) =>
+                          updateBreak(opt.id, name, field, value)
+                        }
                       />
-                      Weight-break tariffs included
-                    </label>
-
-                    {opt.wbEnabled ? (
-                      <div className="space-y-2">
-                        <p className="text-xs text-[var(--color-text-muted)]">
-                          Enter Sell (customer) and/or Buy (cost). Quote total uses Sell when set;
-                          if Sell is blank it uses Buy so{" "}
-                          <strong>500 kg × $1.50 = $750</strong> still appears while drafting. Both
-                          sides are required only when converting to Won (then NRS follow-up).
-                        </p>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full text-sm">
-                            <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
-                              <tr>
-                                <th className="px-3 py-2 text-left">Break</th>
-                                <th className="px-3 py-2">Sell (customer)</th>
-                                <th className="px-3 py-2">Buy (cost)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {AIR_WEIGHT_BREAKS.map((name) => (
-                                <tr
-                                  key={name}
-                                  className={`border-t ${
-                                    tot?.freight.usedBreak === name ? "bg-amber-50" : ""
-                                  }`}
-                                >
-                                  <td className="px-3 py-2 font-semibold">
-                                    {BREAK_LABELS[name]}
-                                    {tot?.freight.usedBreak === name ? (
-                                      <Badge tone="warn">Active</Badge>
-                                    ) : null}
-                                  </td>
-                                  <td className="p-1">
-                                    <NumberInput
-                                      step="0.01"
-                                      className="mt-0 w-24 px-2 py-1"
-                                      value={opt.breaks[name]?.sell ?? 0}
-                                      onValueChange={(n) =>
-                                        updateBreak(opt.id, name, "sell", n)
-                                      }
-                                    />
-                                  </td>
-                                  <td className="p-1">
-                                    <NumberInput
-                                      step="0.01"
-                                      className="mt-0 w-24 px-2 py-1"
-                                      value={opt.breaks[name]?.buy ?? 0}
-                                      onValueChange={(n) =>
-                                        updateBreak(opt.id, name, "buy", n)
-                                      }
-                                    />
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                        {tot && tot.baseFreightQuote > 0 ? (
-                          <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-                            Freight: {tot.freight.chargeableWeightKg.toFixed(2)} kg × $
-                            {(
-                              (tot.freight.activeRate > 0
-                                ? tot.freight.activeRate
-                                : tot.freight.activeBuyRate) || 0
-                            ).toFixed(2)}
-                            {tot.quoteUsingBuyFreight ? " (from Buy)" : ""} ={" "}
-                            <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    <SurchargeTable
-                      title="Origin local fees & surcharges"
-                      enabled={opt.originFeesEnabled}
-                      onEnabledChange={(v) => updateAirline(opt.id, { originFeesEnabled: v })}
-                      rows={opt.originSurcharges}
-                      onChange={(rows) => updateAirline(opt.id, { originSurcharges: rows })}
-                      units={["kg", "flat"]}
-                    />
-                    <SurchargeTable
-                      title="Destination local fees & surcharges"
-                      enabled={opt.destFeesEnabled}
-                      onEnabledChange={(v) => updateAirline(opt.id, { destFeesEnabled: v })}
-                      rows={opt.destSurcharges}
-                      onChange={(rows) => updateAirline(opt.id, { destSurcharges: rows })}
-                      units={["kg", "flat"]}
-                    />
-
-                    {tot ? (
-                      <div className="space-y-1 border-t pt-3 text-sm">
-                        <div className="flex flex-wrap gap-3">
-                          <span>
-                            Freight:{" "}
-                            <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
-                          </span>
-                          <span>
-                            Origin: <strong>{formatCurrency(tot.originTotal, currency)}</strong>
-                          </span>
-                          <span>
-                            Dest: <strong>{formatCurrency(tot.destTotal, currency)}</strong>
-                          </span>
-                          {tot.ams > 0 ? (
-                            <span>
-                              AMS: <strong>{formatCurrency(tot.ams, currency)}</strong>
-                            </span>
-                          ) : null}
-                          <span>
-                            Quote total:{" "}
-                            <strong className="text-emerald-700">
-                              {formatCurrency(tot.grandSell, currency)}
-                            </strong>
-                          </span>
-                        </div>
-                        {tot.gpReady ? (
-                          <p className="text-xs text-[var(--color-text-muted)]">
-                            GP {formatCurrency(tot.gp, currency)}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
+                    ) : (
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        Compact row — tap Edit to enter routing, AMS, and the matching weight break.
+                      </p>
+                    )}
                   </Card>
                 );
               })}
@@ -1103,7 +979,7 @@ function AirDeskInner() {
                 <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
                   Back
                 </Button>
-                <Button type="button" onClick={() => setStep("terms")}>
+                <Button id="air-next-terms" type="button" onClick={() => setStep("terms")}>
                   Next · Terms
                 </Button>
               </div>
@@ -1252,23 +1128,72 @@ function AirDeskInner() {
           {airlines.length > 1 ? (
             <Card>
               <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Compare options</h2>
+              <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">
+                Cheapest → highest. Star marks the lowest total. Click a row to quote it.
+              </p>
               <ul className="space-y-2 text-sm">
-                {airlines.map((a) => (
-                  <li key={a.id} className="flex justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                    <span className={a.selected ? "font-bold" : ""}>
-                      {a.name || "Untitled"}
-                      {a.selected ? " ★" : ""}
-                    </span>
-                    <span className="font-semibold">
-                      {formatCurrency(totalsById[a.id]?.grandSell ?? 0, currency)}
-                    </span>
-                  </li>
-                ))}
+                {compareSorted.map((a) => {
+                  const cheapest = a.id === cheapestId;
+                  return (
+                    <li key={a.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectAirline(a.id)}
+                        className={`flex w-full justify-between gap-2 rounded-lg px-3 py-2 text-left ${
+                          cheapest
+                            ? "bg-emerald-50 ring-1 ring-emerald-300"
+                            : a.selected
+                              ? "bg-sky-50"
+                              : "bg-slate-50"
+                        }`}
+                      >
+                        <span className={cheapest || a.selected ? "font-bold" : ""}>
+                          {a.name || "Untitled"}
+                          {cheapest ? " ★" : ""}
+                          {a.selected ? " · quoted" : ""}
+                        </span>
+                        <span className="font-semibold">
+                          {formatCurrency(totalsById[a.id]?.grandSell ?? 0, currency)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </Card>
           ) : null}
         </div>
       </div>
+
+      {editorAirlineId
+        ? (() => {
+            const opt = airlines.find((a) => a.id === editorAirlineId);
+            if (!opt) return null;
+            const tot = totalsById[opt.id];
+            const idx = laneAirlines.findIndex((a) => a.id === opt.id);
+            return (
+              <AirlineEditorOverlay
+                title={`${opt.kind === "coloader" ? "Coloader" : "Airline"} ${idx >= 0 ? `#${idx + 1}` : ""}`}
+                onDone={() => setEditorAirlineId(null)}
+              >
+                <AirlineOptionForm
+                  opt={opt}
+                  tot={tot}
+                  currency={currency}
+                  showAllBreaks={Boolean(showAllBreaksById[opt.id])}
+                  onToggleAllBreaks={() =>
+                    setShowAllBreaksById((prev) => ({
+                      ...prev,
+                      [opt.id]: !prev[opt.id],
+                    }))
+                  }
+                  onUpdate={(patch) => updateAirline(opt.id, patch)}
+                  onUpdateBreak={(name, field, value) => updateBreak(opt.id, name, field, value)}
+                />
+              </AirlineEditorOverlay>
+            );
+          })()
+        : null}
 
       {previewQuote ? (
         <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />
