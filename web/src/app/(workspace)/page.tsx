@@ -308,7 +308,7 @@ export default function DashboardPage() {
                             {e.ref} · {e.customer || "—"}
                           </div>
                           <div className="truncate text-xs text-[var(--color-text-muted)]">
-                            {e.status} · {e.mode || "—"} · {e.creator || "unassigned"}
+                            {e.status} · {e.mode || "—"} · {e.assignee || "unassigned"}
                           </div>
                         </div>
                         <Badge

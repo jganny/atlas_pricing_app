@@ -65,7 +65,7 @@ export function PremiumQuoteOverlay({
         onClick={() => onOpenChange(false)}
       />
       <div
-        className="atlas-glass relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-visible rounded-t-2xl sm:rounded-2xl"
+        className="atlas-glass relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         role="dialog"
         aria-modal="true"
         aria-label="New quote"
