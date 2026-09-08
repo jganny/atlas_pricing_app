@@ -25,18 +25,14 @@ Every time you say "start phase X", the agent builds that slice, you test it, an
 
 ---
 
-## Phases completed (0–5) — foundation only
+## Phases 0–14 — React source is at feature-parity “Done”
 
-| Phase | What was built | Full legacy parity? |
-|-------|----------------|---------------------|
-| **0** | First React mock screens | No |
-| **1** | Next.js at `/app` | No |
-| **2** | Firebase login + live reads | No |
-| **3** | Pricing math package | No |
-| **4** | Courier desk + Enquiry filters | Partial |
-| **5** | Air/Sea desks (simplified) + save | Partial |
+The tracker in `web/src/lib/migration/parity-features.ts` and `/app/feature-parity` marks every tracked row **Done**. That is a checklist, not a cutover.
 
-**~21% of legacy features are in React today.** See `/app/feature-parity` for the full list.
+**Production:** https://vertex-35d95.web.app/ (legacy 129.47)  
+**Test app:** https://vertex-35d95.web.app/app/ (React, same Firestore project)
+
+Cutover still waits on your testing + **“Approve migration.”** No data copy is required at cutover — both apps already read/write the same `quotes`, circulars, and directory collections.
 
 ---
 

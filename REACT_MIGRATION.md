@@ -45,7 +45,7 @@ Login: `ganny` / `demo` (or `manager` / `demo`). Amber banner = mock data, no Fi
 | Enquiry DB search/filter | ✅ Phase 4 |
 | Air / Sea full desks | ✅ Phase 5 (simplified — multi-carrier, PDF, fees still legacy) |
 | Feature parity tracker | ✅ `/app/feature-parity` |
-| Full legacy parity | ❌ Phases 6–14 — migration **on hold** until done |
+| Full legacy parity (tracker) | ✅ marked Done in `/app/feature-parity` — **cutover still on hold** until you approve |
 | Firebase deploy | ✅ Level A (`/app/` alongside legacy) when you deploy |
 | Cutover to React default | ❌ only after you approve full parity |
 
@@ -104,7 +104,7 @@ Copies static export to `app/` for Firebase route `/app/**`.
 | 3 | Pure TS `pricing-core` packages | ✅ |
 | 4 | Courier desk + Enquiry DB filters | ✅ |
 | 5 | Air/Sea desks (simplified) + save | ✅ |
-| 6–14 | Full legacy parity (see FEATURE_PARITY.md) | planned — **migration on hold** |
+| 6–14 | Full legacy parity (see FEATURE_PARITY.md) | ✅ tracker Done — **cutover on hold** until you approve |
 
 **Policy:** Do not switch default route to `/app/` until every legacy feature is in React and you approve cutover.
 

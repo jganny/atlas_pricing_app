@@ -20,7 +20,7 @@ Rough counts (~120 tracked features):
 | **Partial** | Started but missing pieces vs legacy |
 | **Missing** | Legacy only — still to build |
 
-**Current:** ~25 done, ~5 partial, ~90 missing (~21% complete).
+**Current:** tracker rows are marked **Done** in source. Production homepage is still legacy until you approve cutover. Test the React app at `/app/` side-by-side with legacy before that.
 
 ---
 
