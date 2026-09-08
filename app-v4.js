@@ -21805,12 +21805,26 @@ window.updateLinerRateSummary = updateLinerRateSummary;
     }
   }
 
+  // This app's version.txt has always looked like "129.46" — a plain
+  // digits.digits string. A stray write from an unrelated build/tooling
+  // process (seen once in production as "0.2.2-desk-logic") would never
+  // match the loaded app's own version, so the banner would show forever —
+  // "click Refresh" can never fix it because the reloaded page fetches the
+  // exact same bad file. Only compare against version.txt when it actually
+  // looks like a version this app would have written.
+  const VERSION_SHAPE = /^\d+\.\d+(\.\d+)?$/;
+
   async function checkForAppUpdate() {
     try {
       const loaded = getLoadedAppVersion();
       const res = await fetch("version.txt?_=" + Date.now(), { cache: "no-store" });
       if (!res.ok) return;
       const latest = (await res.text()).trim();
+      if (latest && !VERSION_SHAPE.test(latest)) {
+        console.warn("Update check: version.txt has an unexpected format, ignoring:", latest);
+        hideUpdateBanner();
+        return;
+      }
       if (latest && loaded && latest !== loaded) {
         showUpdateBanner(latest);
       } else {
