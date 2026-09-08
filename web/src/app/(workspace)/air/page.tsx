@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Eye,
@@ -18,6 +18,7 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
@@ -28,8 +29,8 @@ import { defaultDeskCurrency, defaultIncoterm, shouldHideAgencyAgreement } from 
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { appendCalcAudit } from "@/lib/quotes/calc-audit";
 import { useLiveData } from "@/lib/api";
-import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
+import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { lookupAirTariff } from "@/lib/firebase/tariffs";
 import {
   AIR_WEIGHT_BREAKS,
@@ -90,8 +91,21 @@ function AirDeskInner() {
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
+  const [activeLaneId, setActiveLaneId] = useState("");
+  const activeLane = lanes.find((l) => l.id === (activeLaneId || lanes[0]?.id)) ?? lanes[0];
+  const origin = activeLane?.origin ?? "";
+  const destination = activeLane?.destination ?? "";
+  function setOrigin(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, origin: next } : l)));
+  }
+  function setDestination(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, destination: next } : l)));
+  }
   const [currency, setCurrency] = useState("USD");
   const [incoterm, setIncoterm] = useState("FOB");
   const [commodity, setCommodity] = useState("GENERAL");
@@ -107,12 +121,30 @@ function AirDeskInner() {
   const [stripKey, setStripKey] = useState(0);
   const hideAgreement = shouldHideAgencyAgreement(user?.username);
   const [agreementName, setAgreementName] = useState<string | null>(null);
+  const prefillApplied = useRef(false);
 
   useEffect(() => {
-    if (loader.sourceQuote || loader.smartPrefill) return;
-    setCurrency(defaultDeskCurrency(user?.username));
-    setIncoterm(defaultIncoterm(user?.username));
-  }, [user?.username, loader.sourceQuote, loader.smartPrefill]);
+    if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
+  }, [activeLaneId, lanes]);
+
+  useEffect(() => {
+    if (prefillApplied.current || loader.sourceQuote) return;
+    if (!loader.prefillOrigin && !loader.prefillDest) return;
+    const id = activeLane?.id || lanes[0]?.id;
+    if (!id) return;
+    prefillApplied.current = true;
+    setLanes((prev) =>
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              origin: loader.prefillOrigin || l.origin,
+              destination: loader.prefillDest || l.destination,
+            }
+          : l,
+      ),
+    );
+  }, [loader.prefillOrigin, loader.prefillDest, loader.sourceQuote, activeLane?.id, lanes]);
 
   useEffect(() => {
     try {
@@ -149,6 +181,9 @@ function AirDeskInner() {
     setCustomFx(loaded.customExchangeRate);
     setCargo(loaded.cargo);
     setAirlines(loaded.airlines);
+    const lane = newLane({ origin: loaded.origin, destination: loaded.destination });
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
     if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
 
@@ -205,16 +240,18 @@ function AirDeskInner() {
   }
 
   function applyReset() {
+    const lane = newLane();
     setCustomer("");
-    setOrigin("");
-    setDestination("");
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
     setCurrency(defaultDeskCurrency(user?.username));
     setIncoterm(defaultIncoterm(user?.username));
     setCommodity("GENERAL");
     setModule("export");
     setCustomFx(0);
     setCargo([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
-    setAirlines([createAirlineOption({}, true)]);
+    setAirlines([createAirlineOption({ laneId: lane.id }, true)]);
+    prefillApplied.current = false;
     setTerms(getDefaultFreightTerms("air"));
     setSaveMsg(null);
     setPreviewQuote(null);
@@ -279,8 +316,62 @@ function AirDeskInner() {
     toast(`Loaded ${tariff.carrier} rates onto selected airline.`, "success");
   }
 
+  const laneAirlines = airlines.filter(
+    (a) => !a.laneId || a.laneId === (activeLane?.id || lanes[0]?.id),
+  );
+
+  const handlePreview = () => {
+    const cargoErr = validateAirCargo(cargo);
+    const airlineErr = validateSelectedAirline(selected);
+    if (cargoErr || airlineErr || !selected || !selectedTotals) {
+      toast(cargoErr || airlineErr || "Complete the quote before preview.", "error");
+      return;
+    }
+    const originCode = origin.split(" - ")[0]?.trim() || origin.trim();
+    const destCode = destination.split(" - ")[0]?.trim() || destination.trim();
+    const amount = selectedTotals.grandSell;
+    const fx = customFx > 0 ? customFx : 83.5;
+    const q: SavedQuote = {
+      id: loader.editingQuoteId || "preview",
+      customer: customer.trim() || "Draft",
+      creator: user?.username || "",
+      status: loader.editingStatus || "quoted",
+      type: "air",
+      quoteNumber: loader.editingQuoteNumber ?? nextQuoteNumber(),
+      date: new Date().toISOString().split("T")[0],
+      timestamp: Date.now(),
+      amount,
+      currency,
+      amountINR: currency === "INR" ? amount : amount * fx,
+      route: `${originCode} → ${destCode} via ${selected.name || "Any"}`,
+      details: {
+        origin,
+        destination,
+        airline: selected.name,
+        incoterm,
+        module,
+        commodity,
+        chargeableWeight: selectedTotals.freight.chargeableWeightKg,
+        grossWeight: selectedTotals.freight.cargo.grossWeightKg,
+        volumeWeight: selectedTotals.freight.cargo.volumeWeightKg,
+        baseFreight: selectedTotals.baseFreightQuote,
+        originFeesTotal: selectedTotals.originTotal,
+        destFeesTotal: selectedTotals.destTotal,
+        amsFee: selectedTotals.ams,
+        routing: selected.routing,
+        tt: selected.tt,
+        validity: selected.validity,
+        cargoItems: cargo,
+        termsAndConditions: terms,
+        type: "air",
+        mode: "Air",
+      },
+    };
+    setPreviewQuote(q);
+  };
+
   const handleSave = useCallback(
-    async (openPreview = false) => {
+    async () => {
       const shipment = airShipmentSchema.safeParse({
         customer,
         origin,
@@ -362,10 +453,6 @@ function AirDeskInner() {
           if (!hideAgreement) {
             /* Nomination desks keep agreement compliance in Directory */
           }
-          if (openPreview) {
-            const q = await fetchQuoteById(id);
-            if (q) setPreviewQuote(q);
-          }
         } else {
           const msg = "Mock mode — save disabled. Use live Firebase or the legacy app.";
           setSaveMsg(msg);
@@ -446,7 +533,7 @@ function AirDeskInner() {
             <Zap className="mr-1.5 h-4 w-4" />
             Circulars
           </Button>
-          <Button type="button" variant="secondary" className="h-9" onClick={() => void handleSave(true)} disabled={saving}>
+          <Button type="button" variant="secondary" className="h-9" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             Preview
           </Button>
@@ -509,6 +596,28 @@ function AirDeskInner() {
           {step === "shipment" ? (
             <Card className="space-y-3 py-3">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
+              <LaneChips
+                lanes={lanes}
+                activeId={activeLane?.id || lanes[0]?.id || ""}
+                onSelect={setActiveLaneId}
+                onAdd={() => {
+                  const lane = newLane();
+                  setLanes((prev) => [...prev, lane]);
+                  setActiveLaneId(lane.id);
+                }}
+                onRemove={(id) => {
+                  setLanes((prev) => {
+                    const next = prev.filter((l) => l.id !== id);
+                    return next.length ? next : prev;
+                  });
+                  setAirlines((prev) => prev.filter((a) => a.laneId !== id));
+                  if (activeLaneId === id && lanes[0]) setActiveLaneId(lanes[0].id);
+                }}
+              />
+              <p className="text-xs text-[var(--color-text-muted)]">
+                One lane is origin → destination. Add a lane for extra O/D pairs. Airlines and
+                coloading options sit on the selected lane.
+              </p>
               <TariffIntelHint
                 mode="air"
                 origin={origin}
@@ -639,6 +748,12 @@ function AirDeskInner() {
                               className="w-16 rounded border px-1 py-1"
                               value={row.gw || ""}
                               onChange={(e) => updateCargo(i, { gw: Number(e.target.value) })}
+                              onKeyDown={(e) => {
+                                if (e.key === "Tab" && !e.shiftKey && i === cargo.length - 1) {
+                                  e.preventDefault();
+                                  document.getElementById("air-next-carriers")?.focus();
+                                }
+                              }}
                             />
                           </td>
                           <td className="p-1">
@@ -663,6 +778,7 @@ function AirDeskInner() {
               </p>
               <div className="flex justify-end">
                 <Button
+                  id="air-next-carriers"
                   type="button"
                   onClick={() => {
                     if (!customer.trim()) {
@@ -691,22 +807,45 @@ function AirDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="font-bold text-[var(--color-atlas-navy)]">
-                  Airline options ({airlines.length})
+                  Carriers on this lane ({laneAirlines.length})
                 </h2>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() =>
-                    setAirlines((prev) => [...prev, createAirlineOption({}, prev.length === 0)])
-                  }
-                >
-                  <Plus className="mr-1 h-4 w-4" /> Add airline
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      setAirlines((prev) => [
+                        ...prev,
+                        createAirlineOption(
+                          { laneId: activeLane?.id, kind: "airline" },
+                          prev.length === 0,
+                        ),
+                      ])
+                    }
+                  >
+                    <Plus className="mr-1 h-4 w-4" /> Airline
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      setAirlines((prev) => [
+                        ...prev,
+                        createAirlineOption(
+                          { laneId: activeLane?.id, kind: "coloader" },
+                          prev.length === 0,
+                        ),
+                      ])
+                    }
+                  >
+                    <Plus className="mr-1 h-4 w-4" /> Coloader
+                  </Button>
+                </div>
               </div>
 
-              {airlines.map((opt, idx) => {
+              {laneAirlines.map((opt, idx) => {
                 const tot = totalsById[opt.id];
                 return (
                   <Card
@@ -716,7 +855,7 @@ function AirDeskInner() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-[var(--color-text-muted)]">
-                          Airline #{idx + 1}
+                          {opt.kind === "coloader" ? "Coloader" : "Airline"} #{idx + 1}
                         </span>
                         <label className="flex items-center gap-2 text-sm font-semibold">
                           <input
@@ -794,25 +933,36 @@ function AirDeskInner() {
                           onValueChange={(n) => updateAirline(opt.id, { pivotWeightKg: n })}
                         />
                       </Label>
-                      <div>
-                        <Label>
-                          <span className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={opt.amsFeeEnabled}
-                              onChange={(e) =>
-                                updateAirline(opt.id, { amsFeeEnabled: e.target.checked })
-                              }
-                            />
-                            AMS fee
-                          </span>
-                        </Label>
-                        <NumberInput
-                          disabled={!opt.amsFeeEnabled}
-                          step="0.01"
-                          value={opt.amsFee}
-                          onValueChange={(n) => updateAirline(opt.id, { amsFee: n })}
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label>
+                            <span className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={opt.amsFeeEnabled}
+                                onChange={(e) =>
+                                  updateAirline(opt.id, { amsFeeEnabled: e.target.checked })
+                                }
+                              />
+                              AMS sell
+                            </span>
+                          </Label>
+                          <NumberInput
+                            disabled={!opt.amsFeeEnabled}
+                            step="0.01"
+                            value={opt.amsFee}
+                            onValueChange={(n) => updateAirline(opt.id, { amsFee: n })}
+                          />
+                        </div>
+                        <div>
+                          <Label>AMS buy</Label>
+                          <NumberInput
+                            disabled={!opt.amsFeeEnabled}
+                            step="0.01"
+                            value={opt.amsFeeBuy || 0}
+                            onValueChange={(n) => updateAirline(opt.id, { amsFeeBuy: n })}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -938,12 +1088,9 @@ function AirDeskInner() {
                             </strong>
                           </span>
                         </div>
-                        {tot.grandBuy > 0 ? (
+                        {tot.gpReady ? (
                           <p className="text-xs text-[var(--color-text-muted)]">
-                            Your cost (Buy): {formatCurrency(tot.grandBuy, currency)}
-                            {tot.gpReady
-                              ? ` · GP ${formatCurrency(tot.gp, currency)}`
-                              : " · GP when both freight buy & sell are set (required at Won)"}
+                            GP {formatCurrency(tot.gp, currency)}
                           </p>
                         ) : null}
                       </div>
@@ -1088,12 +1235,6 @@ function AirDeskInner() {
                     {formatCurrency(selectedTotals.grandSell, currency)}
                   </dd>
                 </div>
-                {selectedTotals.grandBuy > 0 ? (
-                  <div className="flex justify-between">
-                    <dt className="text-[var(--color-text-muted)]">Your cost (Buy)</dt>
-                    <dd>{formatCurrency(selectedTotals.grandBuy, currency)}</dd>
-                  </div>
-                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
                   <dd className="font-bold">

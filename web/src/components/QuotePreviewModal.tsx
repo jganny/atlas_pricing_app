@@ -9,6 +9,7 @@ import {
   formatRoutingPreview,
   formatTransitPreview,
 } from "@/lib/pricing/terms";
+import { enquiryAssigneeLabel } from "@/lib/auth/desk-seats";
 
 function statusLabel(status: string | undefined) {
   const s = (status || "quoted").toLowerCase();
@@ -31,7 +32,7 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
     ["Reference", getQuoteRefId(quote)],
     ["Status", statusLabel(quote.status)],
     ["Route", quote.route || "—"],
-    ["Creator", quote.creator || "—"],
+    ["Creator", enquiryAssigneeLabel(quote.creator)],
     ["Date", quote.date || "—"],
   ];
 
@@ -148,7 +149,7 @@ export function QuotePreviewModal({
               <Printer className="mr-2 h-4 w-4" />
               Print / Save PDF
             </Button>
-            <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100" aria-label="Close">
+            <button type="button" data-modal-close onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100" aria-label="Close">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -171,7 +172,7 @@ export function QuotePreviewModal({
               <div className="text-right text-xs text-[var(--color-text-muted)]">
                 <div>Ref #{ref}</div>
                 <div>{quote.date || "—"}</div>
-                <div>Prepared by {quote.creator || "—"}</div>
+                <div>Prepared by {enquiryAssigneeLabel(quote.creator)}</div>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">

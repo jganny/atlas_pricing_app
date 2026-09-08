@@ -204,6 +204,8 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       destFeesTotal: input.totals.destTotal,
       surchargeTotal: input.totals.originTotal + input.totals.destTotal + input.totals.ams,
       amsFee: input.totals.ams,
+      amsFeeBuy: input.selected.amsFeeBuy,
+      amsFeeEnabled: input.selected.amsFeeEnabled,
       routing: formatRoutingPreview(input.selected.routing),
       tt: formatTransitPreview(input.selected.tt),
       validity: input.selected.validity,

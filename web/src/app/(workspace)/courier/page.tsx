@@ -14,15 +14,16 @@ import { Badge, Button, Card } from "@/components/ui";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
-import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { DEFAULT_COURIER_TERMS, saveCourierQuote } from "@/lib/firebase/save-quote";
 import { loadCourierDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { toast } from "@/components/Toast";
+import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import type { SavedQuote } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 
 const COUNTRIES = ["IN", "AE", "US", "GB", "DE", "SG", "AU", "CN", "HK", "CA", "FR"];
 
@@ -87,8 +88,21 @@ function CourierDeskInner() {
   const loader = useQuoteDeskLoader();
   const [tab, setTab] = useState<Tab>("shipment");
   const [customer, setCustomer] = useState("");
-  const [originCity, setOriginCity] = useState("");
-  const [destCity, setDestCity] = useState("");
+  const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
+  const [activeLaneId, setActiveLaneId] = useState("");
+  const activeLane = lanes.find((l) => l.id === (activeLaneId || lanes[0]?.id)) ?? lanes[0];
+  const originCity = activeLane?.origin ?? "";
+  const destCity = activeLane?.destination ?? "";
+  function setOriginCity(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, origin: next } : l)));
+  }
+  function setDestCity(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, destination: next } : l)));
+  }
   const [originCountry, setOriginCountry] = useState("IN");
   const [destCountry, setDestCountry] = useState("IN");
   const [scope, setScope] = useState<"domestic" | "international">("domestic");
@@ -106,11 +120,16 @@ function CourierDeskInner() {
   const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
+    if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
+  }, [activeLaneId, lanes]);
+
+  useEffect(() => {
     if (!loader.sourceQuote) return;
     const loaded = loadCourierDeskFromQuote(loader.sourceQuote);
     setCustomer(loaded.customer);
-    setOriginCity(loaded.originCity);
-    setDestCity(loaded.destCity);
+    const lane = newLane({ origin: loaded.originCity, destination: loaded.destCity });
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
     setOriginCountry(loaded.originCountry);
     setDestCountry(loaded.destCountry);
     setScope(loaded.scope);
@@ -146,9 +165,10 @@ function CourierDeskInner() {
   }
 
   function applyReset() {
+    const lane = newLane();
     setCustomer("");
-    setOriginCity("");
-    setDestCity("");
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
     setOriginCountry("IN");
     setDestCountry("IN");
     setScope("domestic");
@@ -171,8 +191,40 @@ function CourierDeskInner() {
     toast("Courier form cleared", "success");
   }
 
+  const handlePreview = () => {
+    if (result.chargeableKg <= 0) {
+      toast("Enter package weight / dimensions before preview.", "error");
+      setTab("packages");
+      return;
+    }
+    const amount = result.total ?? 0;
+    const q: SavedQuote = {
+      id: loader.editingQuoteId || "preview",
+      customer: customer.trim() || "Draft",
+      creator: user?.username || "",
+      status: loader.editingStatus || "quoted",
+      type: "courier",
+      quoteNumber: loader.editingQuoteNumber ?? nextQuoteNumber(),
+      date: new Date().toISOString().split("T")[0],
+      timestamp: Date.now(),
+      amount,
+      currency,
+      route: `${originCity || "—"} → ${destCity || "—"}`,
+      details: {
+        origin: originCity,
+        destination: destCity,
+        originCountry,
+        destCountry,
+        service,
+        termsAndConditions: terms,
+        mode: "Courier",
+      },
+    };
+    setPreviewQuote(q);
+  };
+
   const handleSave = useCallback(
-    async (openPreview = false) => {
+    async () => {
       if (!customer.trim()) {
         const msg = "Enter customer name before saving.";
         setSaveMsg(msg);
@@ -213,10 +265,6 @@ function CourierDeskInner() {
           const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
           setSaveMsg(msg);
           toast(msg, "success");
-          if (openPreview) {
-            const q = await fetchQuoteById(id);
-            if (q) setPreviewQuote(q);
-          }
         } else {
           const msg = "Mock mode — save disabled. Switch to live Firebase or use legacy app.";
           setSaveMsg(msg);
@@ -289,9 +337,9 @@ function CourierDeskInner() {
             <RotateCcw className="mr-2 h-4 w-4" />
             Reset
           </Button>
-          <Button type="button" variant="secondary" onClick={() => void handleSave(true)} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handlePreview}>
             <Eye className="mr-2 h-4 w-4" />
-            Save & preview
+            Preview
           </Button>
           <Button type="button" onClick={() => void handleSave()} disabled={saving}>
             <Save className="mr-2 h-4 w-4" />
@@ -352,6 +400,28 @@ function CourierDeskInner() {
         <Card className="space-y-4 lg:col-span-2">
           {tab === "shipment" ? (
             <div className="grid gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <LaneChips
+                  lanes={lanes}
+                  activeId={activeLane?.id || lanes[0]?.id || ""}
+                  onSelect={setActiveLaneId}
+                  onAdd={() => {
+                    const lane = newLane();
+                    setLanes((prev) => [...prev, lane]);
+                    setActiveLaneId(lane.id);
+                  }}
+                  onRemove={(id) => {
+                    setLanes((prev) => {
+                      const next = prev.filter((l) => l.id !== id);
+                      return next.length ? next : prev;
+                    });
+                    if (activeLaneId === id && lanes[0]) setActiveLaneId(lanes[0].id);
+                  }}
+                />
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Add a lane for extra origin → destination city pairs.
+                </p>
+              </div>
               <label className="text-sm font-semibold md:col-span-2">
                 Customer
                 <input

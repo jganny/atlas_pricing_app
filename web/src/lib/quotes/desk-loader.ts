@@ -75,6 +75,8 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
           originSurcharges: mapSurcharges(d.originSurcharges),
           destSurcharges: mapSurcharges(d.destSurcharges),
           amsFee: Number(d.amsFee ?? 0),
+          amsFeeBuy: Number(d.amsFeeBuy ?? 0),
+          amsFeeEnabled: d.amsFeeEnabled !== false,
         },
         true,
       ),

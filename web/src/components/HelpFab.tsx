@@ -17,8 +17,8 @@ import { cn } from "@/lib/utils";
 
 const FAQ = [
   {
-    q: "Why do Quote results say Estimate?",
-    a: "New quote uses Atlas lane-band estimates (not airline live APIs). Circulars hold your contracted rates. IATA TACT or carrier APIs can plug in later when Atlas subscribes.",
+    q: "Where do official rates come from?",
+    a: "New quote only prefills origin and destination, then opens Air / Sea / Transport. Customer-ready prices come from Circulars and the desk — not dummy carrier cards.",
   },
   {
     q: "How does DCSA / ONE Record work?",
@@ -67,11 +67,14 @@ export function HelpFab() {
         e.preventDefault();
         setOpen((v) => !v);
       }
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && open) {
+        e.preventDefault();
+        setOpen(false);
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -105,6 +108,7 @@ export function HelpFab() {
               type="button"
               className="atlas-overlay absolute inset-0"
               aria-label="Close Atlas Help"
+              data-modal-close
               onClick={() => setOpen(false)}
             />
             <aside
@@ -127,6 +131,7 @@ export function HelpFab() {
                   onClick={() => setOpen(false)}
                   aria-label="Close"
                   className="rounded-lg p-1.5 hover:bg-slate-100"
+                  data-modal-close
                 >
                   <X className="h-4 w-4" />
                 </button>

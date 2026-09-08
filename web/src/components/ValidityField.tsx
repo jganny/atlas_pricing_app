@@ -40,6 +40,14 @@ export function ValidityField({
           className="mt-0 max-w-[11rem]"
           value={dateVal}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const v = (e.target as HTMLInputElement).value;
+              if (v) onChange(v);
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
           aria-label="Validity date"
         />
         <Input

@@ -74,7 +74,7 @@ export interface AirlineTotals {
  * Practical desk math:
  * - Quote total uses Sell when set; if Sell blank, uses Buy so the desk still shows
  *   rate × kg + fees (e.g. 500 × 1.50 + AMS + origin).
- * - Buy total is always cost-only (AMS is customer/quote side).
+ * - AMS has sell + buy. Quote AMS uses sell when set, else buy (same as freight).
  * - GP only when both freight sell and buy exist — required at Won/confirm, not while drafting.
  */
 export function computeAirlineTotals(
@@ -101,14 +101,16 @@ export function computeAirlineTotals(
 
   const originSum = sumSurcharges(origin);
   const destSum = sumSurcharges(dest);
-  const ams = option.amsFeeEnabled ? Number(option.amsFee) || 0 : 0;
+  const amsSell = option.amsFeeEnabled ? Number(option.amsFee) || 0 : 0;
+  const amsBuy = option.amsFeeEnabled ? Number(option.amsFeeBuy) || 0 : 0;
+  const ams = quoteSideRate(amsSell, amsBuy);
   const baseSell = option.wbEnabled ? freight.baseFreightSell : 0;
   const baseBuy = option.wbEnabled ? freight.baseFreightBuy : 0;
   const baseFreightQuote = quoteSideRate(baseSell, baseBuy);
   const quoteUsingBuyFreight = baseSell <= 0 && baseBuy > 0;
 
   const grandSell = baseFreightQuote + originSum.quote + destSum.quote + ams;
-  const grandBuy = baseBuy + originSum.buy + destSum.buy;
+  const grandBuy = baseBuy + originSum.buy + destSum.buy + amsBuy;
   const freightSellReady = baseSell > 0;
   const freightBuyReady = baseBuy > 0;
   const gpReady = freightSellReady && freightBuyReady;

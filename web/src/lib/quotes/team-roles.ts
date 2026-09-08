@@ -1,5 +1,7 @@
 /** Desk roles — mirrors legacy TEAM_ROLES for ownership labels/filters. */
 
+import { enquiryAssigneeLabel, seatForLogin } from "@/lib/auth/desk-seats";
+
 export interface TeamRole {
   name: string;
   type: "admin" | "member";
@@ -55,7 +57,9 @@ const ADMIN_USERNAMES = new Set(["ganny", "manager", "admin"]);
 export function deskDisplayName(creator: string | undefined | null): string {
   if (!creator) return "—";
   const key = creator.toLowerCase();
-  return TEAM_ROLES[key]?.name || creator;
+  const seat = seatForLogin(key);
+  if (seat) return enquiryAssigneeLabel(key);
+  return TEAM_ROLES[key]?.name || enquiryAssigneeLabel(key);
 }
 
 export function isAdminUser(username: string | undefined | null, role?: string): boolean {

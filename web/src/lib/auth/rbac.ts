@@ -2,6 +2,7 @@
  * Phase 10–14 route access. Admins see everything.
  */
 
+import { seatForLogin, type DeskSeatId } from "@/lib/auth/desk-seats";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 
 export type AppRouteId =
@@ -120,6 +121,16 @@ export function isNrsUser(username: string | undefined | null): boolean {
   return normalizeUsername(username) === "cathrina";
 }
 
+function routesForSeat(seatId: DeskSeatId): AppRouteId[] | null {
+  if (seatId === "air-nom") return ROLE_ROUTES.shashank;
+  if (seatId === "sea-nom") return ROLE_ROUTES.shaheer;
+  if (seatId === "nrs") return ROLE_ROUTES.cathrina;
+  if (seatId === "freehand") return CORE;
+  if (seatId === "pricing") return ROLE_ROUTES.pricing;
+  if (seatId === "admin" || seatId === "manager") return ALL;
+  return null;
+}
+
 export function allowedRoutesForUser(
   username: string | undefined | null,
   role?: string,
@@ -127,9 +138,15 @@ export function allowedRoutesForUser(
   const u = normalizeUsername(username);
   // Admins get full desk access but never the NRS personal follow-up queue.
   if (isAdminUser(username, role)) return ALL;
+  const seat = seatForLogin(u);
+  if (seat) {
+    const fromSeat = routesForSeat(seat.id);
+    if (fromSeat) return fromSeat;
+  }
   if (ROLE_ROUTES[u]) return ROLE_ROUTES[u];
   if (TEAM_ROLES[u]?.type === "member") return CORE;
-  return ALL;
+  // Named people (e.g. Goutham) get the desk, not Admin.
+  return CORE;
 }
 
 export function canAccessRoute(
@@ -174,6 +191,10 @@ export function preferredHomePath(
 ): string {
   const u = normalizeUsername(username);
   if (isAdminUser(username, role)) return "/";
+  const seat = seatForLogin(u);
+  if (seat?.id === "air-nom") return "/air/";
+  if (seat?.id === "sea-nom") return "/sea/";
+  if (seat?.id === "nrs" || seat?.id === "freehand") return "/inbox/";
   if (u === "shashank") return "/air/";
   if (u === "shaheer") return "/sea/";
   if (u === "kavya" || u === "jaya" || u === "cathrina") return "/inbox/";
@@ -182,6 +203,8 @@ export function preferredHomePath(
 
 export function deskFocusLabel(username: string | undefined | null): string {
   const u = normalizeUsername(username);
+  const seat = seatForLogin(u);
+  if (seat) return seat.label;
   if (u === "shashank") return "Air Nomination";
   if (u === "shaheer") return "Sea Nomination";
   if (u === "kavya" || u === "jaya") return "Free Hand";

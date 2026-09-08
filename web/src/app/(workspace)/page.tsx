@@ -8,16 +8,14 @@ import {
   ClipboardCheck,
   Clock,
   Inbox,
-  MessageSquare,
   PlaneTakeoff,
   Ship,
-  StickyNote,
   Users,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { LogisticsNewsFeed } from "@/components/LogisticsNewsFeed";
 import { PerformanceReportPanel } from "@/components/PerformanceReportPanel";
-import { Badge, Button, Card, Input, Textarea } from "@/components/ui";
+import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
@@ -30,11 +28,8 @@ import {
 } from "@/lib/firebase/amendments";
 import { listOfflineQuotes, removeOfflineQuote } from "@/lib/quotes/offline-cache";
 import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
-import { listSmsOutbox, sendSms } from "@/lib/sms/gateway";
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
 import { formatCurrency } from "@/lib/utils";
-
-const STICKY_KEY = "atlas_desk_sticky_notes";
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -45,24 +40,14 @@ export default function DashboardPage() {
   const username = (user?.username || "").toLowerCase();
 
   const [amendments, setAmendments] = useState<AmendmentRequest[]>([]);
-  const [sticky, setSticky] = useState("");
   const [offline, setOffline] = useState(listOfflineQuotes());
-  const [smsTo, setSmsTo] = useState("");
-  const [smsBody, setSmsBody] = useState("");
-  const [smsLog, setSmsLog] = useState(listSmsOutbox());
   const [nrsAlerts, setNrsAlerts] = useState<NrsAlert[]>([]);
 
   useEffect(() => {
     try {
-      const all = JSON.parse(localStorage.getItem(STICKY_KEY) || "{}") as Record<
-        string,
-        string
-      >;
-      setSticky(all[username] || "");
-      setSmsLog(listSmsOutbox());
       setNrsAlerts(listNrsAlerts().filter((a) => !a.dismissed));
     } catch {
-      setSticky("");
+      /* ignore */
     }
   }, [username]);
 
@@ -75,7 +60,6 @@ export default function DashboardPage() {
     function onRefresh() {
       void refetch();
       setOffline(listOfflineQuotes());
-      setSmsLog(listSmsOutbox());
       setNrsAlerts(listNrsAlerts().filter((a) => !a.dismissed));
       if (admin) void fetchAmendmentRequests().then(setAmendments);
     }
@@ -165,48 +149,6 @@ export default function DashboardPage() {
       .sort((a, b) => (b.slaHoursOpen || 0) - (a.slaHoursOpen || 0))
       .slice(0, 10);
   }, [scope]);
-
-  function saveSticky() {
-    try {
-      const all = JSON.parse(localStorage.getItem(STICKY_KEY) || "{}") as Record<
-        string,
-        string
-      >;
-      all[username || "desk"] = sticky;
-      localStorage.setItem(STICKY_KEY, JSON.stringify(all));
-      toast("Sticky note saved", "success");
-    } catch {
-      toast("Could not save note", "error");
-    }
-  }
-
-  function queueSms() {
-    if (!smsTo.trim() || !smsBody.trim()) {
-      toast("Phone and message required", "error");
-      return;
-    }
-    void (async () => {
-      try {
-        const entry = await sendSms({
-          to: smsTo.trim(),
-          body: smsBody.trim(),
-          by: username,
-        });
-        setSmsLog(listSmsOutbox());
-        setSmsBody("");
-        toast(
-          entry.via === "device"
-            ? "Opened device SMS app"
-            : entry.via === "webhook"
-              ? "Sent via webhook"
-              : "SMS queued locally",
-          "success",
-        );
-      } catch {
-        toast("Could not send SMS", "error");
-      }
-    })();
-  }
 
   async function onResolve(id: string, status: "approved" | "rejected") {
     await resolveAmendment(id, status, username || "admin");
@@ -470,15 +412,17 @@ export default function DashboardPage() {
                 </section>
               ) : null}
 
-              <details className="atlas-panel rounded-xl px-4 py-3">
-                <summary className="cursor-pointer text-sm font-bold text-[var(--color-atlas-navy)]">
-                  Optional: performance & industry news
-                </summary>
-                <div className="mt-3 space-y-4">
-                  {admin ? <PerformanceReportPanel rows={enquiries} /> : null}
-                  <LogisticsNewsFeed />
-                </div>
-              </details>
+              {admin ? (
+                <details className="atlas-panel rounded-xl px-4 py-3">
+                  <summary className="cursor-pointer text-sm font-bold text-[var(--color-atlas-navy)]">
+                    Optional: performance & industry news
+                  </summary>
+                  <div className="mt-3 space-y-4">
+                    <PerformanceReportPanel rows={enquiries} />
+                    <LogisticsNewsFeed />
+                  </div>
+                </details>
+              ) : null}
             </div>
 
             <aside className="space-y-3">
@@ -596,52 +540,6 @@ export default function DashboardPage() {
                       </div>
                     ) : null}
                   </section>
-
-                  <details className="atlas-panel rounded-xl p-3">
-                    <summary className="cursor-pointer text-sm font-bold">
-                      Desk tools (notes, SMS, offline)
-                    </summary>
-                    <div className="mt-3 space-y-3">
-                      <section>
-                        <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-                          <StickyNote className="h-4 w-4" />
-                          Sticky note
-                        </div>
-                        <Textarea
-                          rows={3}
-                          value={sticky}
-                          onChange={(e) => setSticky(e.target.value)}
-                          placeholder="Reminders for this desk…"
-                        />
-                        <Button type="button" size="sm" className="mt-2" onClick={saveSticky}>
-                          Save note
-                        </Button>
-                      </section>
-                      <section>
-                        <div className="mb-2 flex items-center gap-2 text-sm font-bold">
-                          <MessageSquare className="h-4 w-4" />
-                          Instant SMS
-                        </div>
-                        <div className="space-y-2">
-                          <Input
-                            className="mt-0"
-                            placeholder="Mobile number"
-                            value={smsTo}
-                            onChange={(e) => setSmsTo(e.target.value)}
-                          />
-                          <Textarea
-                            rows={2}
-                            placeholder="Message"
-                            value={smsBody}
-                            onChange={(e) => setSmsBody(e.target.value)}
-                          />
-                          <Button type="button" size="sm" onClick={queueSms}>
-                            Queue SMS
-                          </Button>
-                        </div>
-                      </section>
-                    </div>
-                  </details>
                 </>
               ) : null}
 

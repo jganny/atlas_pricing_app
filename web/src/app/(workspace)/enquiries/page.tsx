@@ -7,11 +7,14 @@ import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
 import { EnquiryTable } from "@/components/EnquiryTable";
+import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { lookupQuoteByRef } from "@/lib/firebase/archive-lookup";
+import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
+import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import {
   downloadEnquiryCsv,
   summarizeEnquiryFinancials,
@@ -30,7 +33,6 @@ import {
   listDeskFilterOptions,
   matchesDeskFilter,
 } from "@/lib/quotes/team-roles";
-import type { EnquiryRecord } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryRecord) => boolean }> = [
@@ -103,6 +105,7 @@ function EnquiryDatabaseInner() {
   const [archiveRef, setArchiveRef] = useState("");
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveNote, setArchiveNote] = useState<string | null>(null);
+  const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
 
   useEffect(() => {
     const q = searchParams?.get("q");
@@ -526,6 +529,17 @@ function EnquiryDatabaseInner() {
                 rows={filtered}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
+                onViewPrint={(row) => {
+                  void (async () => {
+                    if (!useLiveData) {
+                      toast("Open live Firebase to preview this quote.", "info");
+                      return;
+                    }
+                    const q = await fetchQuoteById(row.id);
+                    if (q) setPreviewQuote(q);
+                    else toast("Quote not found.", "error");
+                  })();
+                }}
                 metricModes={metricModes}
                 visibleColumns={columns}
               />
@@ -544,6 +558,9 @@ function EnquiryDatabaseInner() {
           )}
         </div>
       </div>
+      {previewQuote ? (
+        <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />
+      ) : null}
     </div>
   );
 }

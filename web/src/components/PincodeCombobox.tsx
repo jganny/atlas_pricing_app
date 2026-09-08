@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Input, Label } from "@/components/ui";
+import { PortalDropdown } from "@/components/PortalDropdown";
 import { searchPostalCodes, type PostalHit } from "@/lib/locations/postal-search";
 
 /**
@@ -26,6 +27,7 @@ export function PincodeCombobox({
   const [active, setActive] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setQ(value), [value]);
 
@@ -48,7 +50,10 @@ export function PincodeCombobox({
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+      const node = e.target as Node | null;
+      if (boxRef.current?.contains(node)) return;
+      if (node instanceof Element && node.closest("[data-portal-dropdown]")) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -85,32 +90,30 @@ export function PincodeCombobox({
   return (
     <div ref={boxRef} className="relative">
       <Label>{label}</Label>
-      <Input
-        value={q}
-        placeholder={placeholder || "ZIP / PIN / city (global)"}
-        autoComplete="off"
-        aria-controls={listId}
-        aria-expanded={open}
-        aria-autocomplete="list"
-        role="combobox"
-        onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
-        onChange={(e) => {
-          setQ(e.target.value);
-          onChange(e.target.value);
-          setOpen(true);
-        }}
-      />
+      <div ref={inputWrapRef}>
+        <Input
+          value={q}
+          placeholder={placeholder || "ZIP / PIN / city (global)"}
+          autoComplete="off"
+          aria-controls={listId}
+          aria-expanded={open}
+          aria-autocomplete="list"
+          role="combobox"
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          onChange={(e) => {
+            setQ(e.target.value);
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+        />
+      </div>
       {err ? <p className="mt-1 text-[11px] text-amber-700">{err}</p> : null}
       <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">
         India PINs + world ZIPs · ↓↑ to select · type any postal code freely
       </p>
-      {open && hits.length > 0 ? (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute z-30 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-white py-1 shadow-lg"
-        >
+      <PortalDropdown open={open && hits.length > 0} anchorRef={inputWrapRef}>
+        <ul id={listId} role="listbox" data-portal-open={open ? "true" : "false"}>
           {hits.map((h, i) => (
             <li key={h.pin + h.label + (h.country || "")} role="option" aria-selected={i === active}>
               <button
@@ -119,7 +122,6 @@ export function PincodeCombobox({
                   i === active ? "bg-sky-100" : "hover:bg-sky-50"
                 }`}
                 onMouseDown={(e) => e.preventDefault()}
-                onMouseEnter={() => setActive(i)}
                 onClick={() => pick(h)}
               >
                 <span className="font-bold text-[var(--color-atlas-navy)]">
@@ -139,7 +141,7 @@ export function PincodeCombobox({
             </li>
           ))}
         </ul>
-      ) : null}
+      </PortalDropdown>
     </div>
   );
 }

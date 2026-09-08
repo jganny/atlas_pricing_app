@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -9,7 +9,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye } from "lucide-react";
 import { Badge } from "@/components/ui";
 import type { EnquiryRecord } from "@/lib/types";
 import {
@@ -38,12 +38,14 @@ export function EnquiryTable({
   rows,
   selectedId,
   onSelect,
+  onViewPrint,
   metricModes,
   visibleColumns,
 }: {
   rows: EnquiryRecord[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onViewPrint?: (row: EnquiryRecord) => void;
   metricModes: EdbMetricModes;
   visibleColumns?: EdbColumnVisibility;
 }) {
@@ -214,22 +216,148 @@ export function EnquiryTable({
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => (
-            <tr
+            <SwipeEnquiryRow
               key={row.id}
-              onClick={() => onSelect(row.original.id)}
-              className={`cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50/80 ${
-                selectedId === row.original.id ? "bg-sky-50" : ""
-              }`}
+              selected={selectedId === row.original.id}
+              onSelect={() => onSelect(row.original.id)}
+              onViewPrint={() => onViewPrint?.(row.original)}
             >
               {row.getVisibleCells().map((cell) => (
                 <td key={cell.id} className="whitespace-nowrap px-3 py-3">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
-            </tr>
+            </SwipeEnquiryRow>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+const EDGE = 56;
+const OPEN = 120;
+
+function SwipeEnquiryRow({
+  children,
+  selected,
+  onSelect,
+  onViewPrint,
+}: {
+  children: React.ReactNode;
+  selected: boolean;
+  onSelect: () => void;
+  onViewPrint: () => void;
+}) {
+  const [offset, setOffset] = useState(0);
+  const [revealed, setRevealed] = useState<"left" | "right" | null>(null);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const edge = useRef<"left" | "right" | null>(null);
+  const dragging = useRef(false);
+
+  function onPointerDown(e: React.PointerEvent<HTMLTableRowElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < EDGE) edge.current = "left";
+    else if (x > rect.width - EDGE) edge.current = "right";
+    else edge.current = null;
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+    dragging.current = false;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLTableRowElement>) {
+    if (!edge.current) return;
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
+    if (!dragging.current) {
+      if (Math.abs(dx) < 10) return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        edge.current = null;
+        return;
+      }
+      dragging.current = true;
+    }
+    if (edge.current === "left") setOffset(Math.max(0, Math.min(OPEN, dx)));
+    if (edge.current === "right") setOffset(Math.min(0, Math.max(-OPEN, dx)));
+  }
+
+  function onPointerUp() {
+    if (!dragging.current) {
+      setRevealed(null);
+      setOffset(0);
+      onSelect();
+      edge.current = null;
+      return;
+    }
+    if (offset > 48) {
+      setRevealed("left");
+      setOffset(OPEN);
+    } else if (offset < -48) {
+      setRevealed("right");
+      setOffset(-OPEN);
+    } else {
+      setRevealed(null);
+      setOffset(0);
+    }
+    dragging.current = false;
+    edge.current = null;
+  }
+
+  return (
+    <>
+      <tr
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className={`cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50/80 ${
+          selected ? "bg-sky-50" : ""
+        }`}
+        style={{ transform: offset ? `translateX(${offset}px)` : undefined, touchAction: "pan-y" }}
+      >
+        {children}
+      </tr>
+      {revealed ? (
+        <tr className="bg-[var(--color-atlas-navy)] text-white">
+          <td colSpan={20} className="px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-md bg-teal-500 px-3 py-1.5 text-xs font-bold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewPrint();
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                View / Print
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-white/30 px-3 py-1.5 text-xs font-bold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect();
+                  setRevealed(null);
+                  setOffset(0);
+                }}
+              >
+                More actions
+              </button>
+              <span className="text-[11px] text-white/70">
+                Swipe the row ends to reveal · View opens as overlay
+              </span>
+            </div>
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }

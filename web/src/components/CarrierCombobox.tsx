@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Input, Label } from "@/components/ui";
+import { PortalDropdown } from "@/components/PortalDropdown";
 import {
   searchCarriers,
   type CarrierKind,
@@ -39,6 +40,7 @@ export function CarrierCombobox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
 
   const searchKind: CarrierKind | "all" =
     kind === "ocean+coloader" ? "ocean" : kind === "all" ? "all" : kind;
@@ -72,7 +74,10 @@ export function CarrierCombobox({
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+      const node = e.target as Node | null;
+      if (boxRef.current?.contains(node)) return;
+      if (node instanceof Element && node.closest("[data-portal-dropdown]")) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -110,29 +115,27 @@ export function CarrierCombobox({
   return (
     <div ref={boxRef} className="relative">
       <Label>{label}</Label>
-      <Input
-        value={q}
-        placeholder={placeholder || "Type code or name…"}
-        autoComplete="off"
-        name="atlas-carrier"
-        aria-autocomplete="list"
-        aria-controls={listId}
-        aria-expanded={open}
-        role="combobox"
-        onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
-        onChange={(e) => {
-          setQ(e.target.value);
-          onChange(e.target.value);
-          setOpen(true);
-        }}
-      />
-      {open && hits.length > 0 ? (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-white py-1 shadow-lg"
-        >
+      <div ref={inputWrapRef}>
+        <Input
+          value={q}
+          placeholder={placeholder || "Type code or name…"}
+          autoComplete="off"
+          name="atlas-carrier"
+          aria-autocomplete="list"
+          aria-controls={listId}
+          aria-expanded={open}
+          role="combobox"
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          onChange={(e) => {
+            setQ(e.target.value);
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+        />
+      </div>
+      <PortalDropdown open={open && hits.length > 0} anchorRef={inputWrapRef}>
+        <ul id={listId} role="listbox" data-portal-open={open ? "true" : "false"}>
           {hits.map((h, i) => (
             <li key={`${h.kind}-${h.code}-${h.name}`} role="option" aria-selected={i === active}>
               <button
@@ -155,7 +158,7 @@ export function CarrierCombobox({
             </li>
           ))}
         </ul>
-      ) : null}
+      </PortalDropdown>
     </div>
   );
 }

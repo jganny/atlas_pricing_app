@@ -149,11 +149,14 @@ export function CommandPalette() {
         setQuery("");
         setActiveIndex(0);
       }
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && open) {
+        e.preventDefault();
+        setOpen(false);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [open]);
 
   useEffect(() => {
     setActiveIndex(0);

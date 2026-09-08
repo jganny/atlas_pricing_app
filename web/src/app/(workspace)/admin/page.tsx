@@ -18,6 +18,7 @@ import {
   saveGmapsKey,
   saveRuntimeFirebaseConfig,
 } from "@/lib/firebase/runtime-config";
+import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 import type { CreditControl } from "@/lib/types";
 
@@ -128,6 +129,8 @@ export default function AdminPage() {
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Admin console</h1>
         <Badge tone="info">Phase 12</Badge>
       </div>
+
+      <DeskSeatsAdmin />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

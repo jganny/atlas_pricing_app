@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Plus, RotateCcw, Save, Ship, Trash2, Zap } from "lucide-react";
 import type { SeaMode } from "@atlas/pricing-core";
@@ -10,6 +10,7 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
@@ -20,7 +21,6 @@ import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { appendCalcAudit } from "@/lib/quotes/calc-audit";
 import { useLiveData } from "@/lib/api";
-import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { lookupSeaTariff } from "@/lib/firebase/tariffs";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
@@ -47,6 +47,7 @@ import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
@@ -69,8 +70,21 @@ function SeaDeskInner() {
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
+  const [activeLaneId, setActiveLaneId] = useState("");
+  const activeLane = lanes.find((l) => l.id === (activeLaneId || lanes[0]?.id)) ?? lanes[0];
+  const origin = activeLane?.origin ?? "";
+  const destination = activeLane?.destination ?? "";
+  function setOrigin(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, origin: next } : l)));
+  }
+  function setDestination(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, destination: next } : l)));
+  }
   const [currency, setCurrency] = useState("USD");
   const [incoterm, setIncoterm] = useState("FOB");
   const [commodity, setCommodity] = useState("GENERAL");
@@ -87,6 +101,30 @@ function SeaDeskInner() {
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [stripKey, setStripKey] = useState(0);
+  const prefillApplied = useRef(false);
+
+  useEffect(() => {
+    if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
+  }, [activeLaneId, lanes]);
+
+  useEffect(() => {
+    if (prefillApplied.current || loader.sourceQuote) return;
+    if (!loader.prefillOrigin && !loader.prefillDest) return;
+    const id = activeLane?.id || lanes[0]?.id;
+    if (!id) return;
+    prefillApplied.current = true;
+    setLanes((prev) =>
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              origin: loader.prefillOrigin || l.origin,
+              destination: loader.prefillDest || l.destination,
+            }
+          : l,
+      ),
+    );
+  }, [loader.prefillOrigin, loader.prefillDest, loader.sourceQuote, activeLane?.id, lanes]);
 
   useEffect(() => {
     if (loader.sourceQuote || loader.smartPrefill) return;
@@ -125,6 +163,9 @@ function SeaDeskInner() {
     setChargeableCbmOverride(loaded.chargeableCbmOverride);
     setCustomFx(loaded.customExchangeRate);
     setLiners(loaded.liners);
+    const lane = newLane({ origin: loaded.origin, destination: loaded.destination });
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
     if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
 
@@ -180,9 +221,10 @@ function SeaDeskInner() {
   }
 
   function applyReset() {
+    const lane = newLane();
     setCustomer("");
-    setOrigin("");
-    setDestination("");
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
     setCurrency(defaultDeskCurrency(user?.username));
     setIncoterm(defaultIncoterm(user?.username));
     setModule("export");
@@ -191,13 +233,14 @@ function SeaDeskInner() {
     setVolumeCbm(0);
     setChargeableCbmOverride(0);
     setCustomFx(0);
-    setLiners([createLinerOption({}, true)]);
+    setLiners([createLinerOption({ laneId: lane.id }, true)]);
     setTerms(getDefaultFreightTerms("sea"));
     setSaveMsg(null);
     setPreviewQuote(null);
     setStep("shipment");
     setConfirmReset(false);
     setStripKey((k) => k + 1);
+    prefillApplied.current = false;
     loader.clearLoadedQuote();
     if (typeof window !== "undefined" && /[?&](edit|duplicate|smart)=/.test(window.location.search)) {
       router.replace("/sea/");
@@ -261,8 +304,61 @@ function SeaDeskInner() {
     toast(`Loaded ${tariff.carrier} ${mode.toUpperCase()} rates onto selected liner.`, "success");
   }
 
+  const laneLiners = liners.filter(
+    (l) => !l.laneId || l.laneId === (activeLane?.id || lanes[0]?.id),
+  );
+
+  const handlePreview = () => {
+    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
+    const linerErr = validateSelectedLiner(selected, mode);
+    if (cargoErr || linerErr || !selected || !selectedTotals) {
+      toast(cargoErr || linerErr || "Complete the quote before preview.", "error");
+      return;
+    }
+    const originCode = origin.split(" - ")[0]?.trim() || origin.trim();
+    const destCode = destination.split(" - ")[0]?.trim() || destination.trim();
+    const amount = selectedTotals.grandSell;
+    const fx = customFx > 0 ? customFx : 83.5;
+    const q: SavedQuote = {
+      id: loader.editingQuoteId || "preview",
+      customer: customer.trim() || "Draft",
+      creator: user?.username || "",
+      status: loader.editingStatus || "quoted",
+      type: "sea",
+      quoteNumber: loader.editingQuoteNumber ?? nextQuoteNumber(),
+      date: new Date().toISOString().split("T")[0],
+      timestamp: Date.now(),
+      amount,
+      currency,
+      amountINR: currency === "INR" ? amount : amount * fx,
+      route: `${originCode} → ${destCode} via ${selected.name || "Any"}`,
+      details: {
+        origin,
+        destination,
+        liner: selected.name,
+        shippingLine: selected.name,
+        incoterm,
+        module,
+        commodity,
+        type: mode,
+        chargeableRt: selectedTotals.freight.chargeableRt,
+        grossWeight: grossWeightKg,
+        volumeCbm,
+        baseFreight: selectedTotals.baseFreightQuote,
+        originFeesTotal: selectedTotals.originTotal,
+        destFeesTotal: selectedTotals.destTotal,
+        routing: selected.routing,
+        tt: selected.tt,
+        validity: selected.validity,
+        termsAndConditions: terms,
+        mode: "Sea",
+      },
+    };
+    setPreviewQuote(q);
+  };
+
   const handleSave = useCallback(
-    async (openPreview = false) => {
+    async () => {
       const shipment = seaShipmentSchema.safeParse({
         customer,
         origin,
@@ -343,10 +439,6 @@ function SeaDeskInner() {
           const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
           setSaveMsg(msg);
           toast(msg, "success");
-          if (openPreview) {
-            const q = await fetchQuoteById(id);
-            if (q) setPreviewQuote(q);
-          }
         } else {
           const msg = "Mock mode — save disabled. Use live Firebase or the legacy app.";
           setSaveMsg(msg);
@@ -425,7 +517,7 @@ function SeaDeskInner() {
             <Zap className="mr-1.5 h-4 w-4" />
             Circulars
           </Button>
-          <Button type="button" variant="secondary" className="h-9" onClick={() => void handleSave(true)} disabled={saving}>
+          <Button type="button" variant="secondary" className="h-9" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             Preview
           </Button>
@@ -490,6 +582,28 @@ function SeaDeskInner() {
           {step === "shipment" ? (
             <Card className="space-y-3 py-3">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Shipment</h2>
+              <LaneChips
+                lanes={lanes}
+                activeId={activeLane?.id || lanes[0]?.id || ""}
+                onSelect={setActiveLaneId}
+                onAdd={() => {
+                  const lane = newLane();
+                  setLanes((prev) => [...prev, lane]);
+                  setActiveLaneId(lane.id);
+                }}
+                onRemove={(id) => {
+                  setLanes((prev) => {
+                    const next = prev.filter((l) => l.id !== id);
+                    return next.length ? next : prev;
+                  });
+                  setLiners((prev) => prev.filter((l) => l.laneId !== id));
+                  if (activeLaneId === id && lanes[0]) setActiveLaneId(lanes[0].id);
+                }}
+              />
+              <p className="text-xs text-[var(--color-text-muted)]">
+                One lane is POL → POD. Add a lane for extra port pairs. Liners and coloading
+                options sit on the selected lane.
+              </p>
               <TariffIntelHint
                 mode="sea"
                 origin={origin}
@@ -624,22 +738,42 @@ function SeaDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="font-bold text-[var(--color-atlas-navy)]">
-                  Liner options ({liners.length})
+                  Carriers on this lane ({laneLiners.length})
                 </h2>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() =>
-                    setLiners((prev) => [...prev, createLinerOption({}, prev.length === 0)])
-                  }
-                >
-                  <Plus className="mr-1 h-4 w-4" /> Add liner
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      setLiners((prev) => [
+                        ...prev,
+                        createLinerOption({ laneId: activeLane?.id, kind: "liner" }, prev.length === 0),
+                      ])
+                    }
+                  >
+                    <Plus className="mr-1 h-4 w-4" /> Liner
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      setLiners((prev) => [
+                        ...prev,
+                        createLinerOption(
+                          { laneId: activeLane?.id, kind: "coloader" },
+                          prev.length === 0,
+                        ),
+                      ])
+                    }
+                  >
+                    <Plus className="mr-1 h-4 w-4" /> Coloader
+                  </Button>
+                </div>
               </div>
 
-              {liners.map((opt, idx) => {
+              {laneLiners.map((opt, idx) => {
                 const tot = totalsById[opt.id];
                 return (
                   <Card
@@ -649,7 +783,7 @@ function SeaDeskInner() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-[var(--color-text-muted)]">
-                          Liner #{idx + 1}
+                          {opt.kind === "coloader" ? "Coloader" : "Liner"} #{idx + 1}
                         </span>
                         <label className="flex items-center gap-2 text-sm font-semibold">
                           <input
@@ -948,12 +1082,6 @@ function SeaDeskInner() {
                     {formatCurrency(selectedTotals.grandSell, currency)}
                   </dd>
                 </div>
-                {selectedTotals.grandBuy > 0 ? (
-                  <div className="flex justify-between">
-                    <dt className="text-[var(--color-text-muted)]">Your cost (Buy)</dt>
-                    <dd>{formatCurrency(selectedTotals.grandBuy, currency)}</dd>
-                  </div>
-                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
                   <dd className="font-bold">

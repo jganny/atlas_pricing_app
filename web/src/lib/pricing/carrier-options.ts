@@ -21,7 +21,11 @@ export interface AirlineOption {
   validity: string;
   pivotWeightKg: number;
   amsFee: number;
+  /** AMS buy/cost. Quote AMS uses sell when set, else buy. */
+  amsFeeBuy: number;
   amsFeeEnabled: boolean;
+  laneId?: string;
+  kind?: "airline" | "coloader";
   wbEnabled: boolean;
   originFeesEnabled: boolean;
   destFeesEnabled: boolean;
@@ -43,7 +47,10 @@ export function createAirlineOption(
     validity: partial.validity ?? "",
     pivotWeightKg: partial.pivotWeightKg ?? 0,
     amsFee: partial.amsFee ?? 0,
+    amsFeeBuy: partial.amsFeeBuy ?? 0,
     amsFeeEnabled: partial.amsFeeEnabled ?? true,
+    laneId: partial.laneId,
+    kind: partial.kind ?? "airline",
     wbEnabled: partial.wbEnabled ?? true,
     originFeesEnabled: partial.originFeesEnabled ?? true,
     destFeesEnabled: partial.destFeesEnabled ?? true,
@@ -76,6 +83,7 @@ export function copyAirBuyRatesToSell(option: AirlineOption): AirlineOption {
       ...r,
       sell: r.sell > 0 ? r.sell : r.buy || 0,
     })),
+    amsFee: option.amsFee > 0 ? option.amsFee : option.amsFeeBuy || 0,
   };
 }
 
@@ -85,6 +93,8 @@ export interface LinerOption {
   routing: string;
   tt: string;
   validity: string;
+  laneId?: string;
+  kind?: "liner" | "coloader";
   originFeesEnabled: boolean;
   destFeesEnabled: boolean;
   containers: SeaContainerRow[];
@@ -105,6 +115,8 @@ export function createLinerOption(
     routing: partial.routing ?? "",
     tt: partial.tt ?? "",
     validity: partial.validity ?? "",
+    laneId: partial.laneId,
+    kind: partial.kind ?? "liner",
     originFeesEnabled: partial.originFeesEnabled ?? true,
     destFeesEnabled: partial.destFeesEnabled ?? true,
     containers: partial.containers ?? [

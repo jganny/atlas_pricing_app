@@ -36,6 +36,7 @@ import {
   preferredHomePath,
   type AppRouteId,
 } from "@/lib/auth/rbac";
+import { signedInCaption } from "@/lib/auth/desk-seats";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
@@ -160,11 +161,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [user?.username, user?.role],
   );
   const visibleLibrary = useMemo(
-    () => filterNav(libraryNav, user?.username, user?.role),
-    [user?.username, user?.role],
+    () => (admin ? filterNav(libraryNav, user?.username, user?.role) : []),
+    [admin, user?.username, user?.role],
   );
   const visibleMore = useMemo(
-    () => (admin ? filterNav(adminMoreNav, user?.username, user?.role) : []),
+    () => {
+      const extra = admin ? adminMoreNav : libraryNav;
+      return filterNav(extra, user?.username, user?.role);
+    },
     [admin, user?.username, user?.role],
   );
 
@@ -251,7 +255,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="border-t border-white/10 p-4">
             <div className="text-xs text-white/50">Signed in as</div>
-            <div className="text-sm font-semibold">{user?.displayName}</div>
+            <div className="text-sm font-semibold">
+              {signedInCaption(user?.username, user?.displayName)}
+            </div>
             <button
               type="button"
               onClick={() => void logout()}
@@ -269,6 +275,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               className="atlas-overlay absolute inset-0"
               aria-label="Close menu"
+              data-modal-close
               onClick={() => setMobileOpen(false)}
             />
             <aside className="absolute left-0 top-0 flex h-full w-[min(20rem,92vw)] flex-col bg-white shadow-2xl">
@@ -386,7 +393,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </p>
         <ul className="mt-3 space-y-2 text-xs">
           <li className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-2.5 py-2">
-            Use <strong>New quote</strong> for the 3-step rate finder overlay.
+            Use <strong>New quote</strong> to pick a lane, then quote on the real desk.
           </li>
           <li className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-2.5 py-2">
             Mobile keeps Quote, Inbox, and Carriers — full desks on larger screens.

@@ -92,7 +92,7 @@ export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
     destination,
     status: mapStatus(data.status),
     slaHoursOpen: open ? Math.round(hoursSince(createdAt)) : 0,
-    assignee: deskDisplayName(data.creator),
+    assignee: deskDisplayName(data.creator || ""),
     creator: (data.creator || "").toLowerCase(),
     createdAt,
     grandTotal: amount,

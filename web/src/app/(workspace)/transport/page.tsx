@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Save, Truck } from "lucide-react";
 import {
@@ -17,6 +17,7 @@ import {
 import { PincodeCombobox } from "@/components/PincodeCombobox";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { ValidityField } from "@/components/ValidityField";
+import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -44,8 +45,21 @@ export default function TransportDeskPage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabId>("lane");
   const [customer, setCustomer] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
+  const [activeLaneId, setActiveLaneId] = useState("");
+  const activeLane = lanes.find((l) => l.id === (activeLaneId || lanes[0]?.id)) ?? lanes[0];
+  const origin = activeLane?.origin ?? "";
+  const destination = activeLane?.destination ?? "";
+  function setOrigin(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, origin: next } : l)));
+  }
+  function setDestination(next: string) {
+    const id = activeLane?.id;
+    if (!id) return;
+    setLanes((prev) => prev.map((l) => (l.id === id ? { ...l, destination: next } : l)));
+  }
   const [vehicleType, setVehicleType] = useState<string>(INDIA_VEHICLE_TYPES[7]);
   const [serviceType, setServiceType] = useState<string>(TRANSPORT_SERVICE_TYPES[0]);
   const [currency, setCurrency] = useState("INR");
@@ -62,6 +76,25 @@ export default function TransportDeskPage() {
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
+  }, [activeLaneId, lanes]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const o = q.get("origin") || "";
+    const d = q.get("dest") || "";
+    if (!o && !d) return;
+    const id = lanes[0]?.id;
+    if (!id) return;
+    setLanes((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, origin: o || l.origin, destination: d || l.destination } : l)),
+    );
+    // Only apply once from the URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const total = useMemo(
     () => freightSell + detention + tolls,
@@ -150,6 +183,25 @@ export default function TransportDeskPage() {
         <Card className="space-y-3 lg:col-span-2">
           {tab === "lane" ? (
             <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <LaneChips
+                  lanes={lanes}
+                  activeId={activeLane?.id || lanes[0]?.id || ""}
+                  onSelect={setActiveLaneId}
+                  onAdd={() => {
+                    const lane = newLane();
+                    setLanes((prev) => [...prev, lane]);
+                    setActiveLaneId(lane.id);
+                  }}
+                  onRemove={(id) => {
+                    setLanes((prev) => {
+                      const next = prev.filter((l) => l.id !== id);
+                      return next.length ? next : prev;
+                    });
+                    if (activeLaneId === id && lanes[0]) setActiveLaneId(lanes[0].id);
+                  }}
+                />
+              </div>
               <div className="sm:col-span-2">
                 <Label>Customer *</Label>
                 <Input
