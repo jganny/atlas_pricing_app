@@ -47,6 +47,13 @@ async function checkBundled() {
   const courierDesk = await searchCarriers("ul", "airline+courier", 8);
   assert.equal(courierDesk[0]?.code, "UL");
   assert.ok(!courierDesk.some((c) => c.kind === "ocean"));
+
+  const blue = await searchCarriers("BLUE DART", "airline+courier", 12);
+  assert.equal(blue[0]?.code, "BLUEDART");
+  assert.equal(blue[0]?.name, "Blue Dart");
+
+  const dart = await searchCarriers("bluedart", "airline+courier", 8);
+  assert.ok(dart.some((c) => c.code === "BLUEDART"));
 }
 
 void checkBundled()

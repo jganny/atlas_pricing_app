@@ -9,6 +9,8 @@ import { subscribeDirectoryContacts } from "@/lib/firebase/directory";
 import { subscribeLeads } from "@/lib/firebase/sales";
 import { mockApi } from "@/lib/mock/api";
 import { mergeLocalEnquiries } from "@/lib/quotes/local-enquiries";
+import { mergeCourierTariffBooks } from "@/lib/quotes/courier-tariff";
+import { fetchCourierTariffBooks } from "@/lib/firebase/courier-tariffs";
 import { useAuthStore } from "@/store/auth";
 import { queryKeys } from "./query-keys";
 
@@ -132,6 +134,26 @@ export function useSeaTariffs() {
     queryKey: queryKeys.seaTariffs,
     queryFn: () => atlasApi.fetchSeaTariffs(),
     staleTime: 5 * 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useCourierTariffs() {
+  const enabled = useQueryEnabled();
+  return useQuery({
+    queryKey: queryKeys.courierTariffs,
+    queryFn: async () => {
+      try {
+        if (useLiveData) {
+          return mergeCourierTariffBooks(await fetchCourierTariffBooks());
+        }
+      } catch {
+        /* fall through to local */
+      }
+      return mergeCourierTariffBooks([]);
+    },
+    staleTime: 60_000,
     retry: 1,
     enabled,
   });

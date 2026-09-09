@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { toast } from "@/components/Toast";
-import { useAirTariffs, useCirculars, useSeaTariffs } from "@/hooks/use-atlas-data";
+import { useAirTariffs, useCirculars, useCourierTariffs, useSeaTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -19,6 +19,14 @@ import {
   saveCircular,
   uploadCircularFile,
 } from "@/lib/firebase/circulars";
+import { publishCourierTariffBook } from "@/lib/firebase/courier-tariffs";
+import { CourierTariffBoard } from "@/components/CourierTariffBoard";
+import {
+  mergeCourierTariffBooks,
+  parseCourierTariffSheets,
+  rememberCourierTariffBook,
+  type CourierTariffBook,
+} from "@/lib/quotes/courier-tariff";
 import { canAccessVendorsDirectory } from "@/lib/auth/directory-access";
 import type { CircularRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +37,7 @@ export default function CircularsPage() {
   const canManage = canAccessVendorsDirectory(user?.username, user?.role);
   const { data: air = [], isLoading: airLoading } = useAirTariffs();
   const { data: sea = [], isLoading: seaLoading } = useSeaTariffs();
+  const { data: courierBooks = [] } = useCourierTariffs();
   const { data: circulars = [], isLoading: circLoading, refetch } = useCirculars();
 
   const [category, setCategory] = useState("all");
@@ -38,7 +47,7 @@ export default function CircularsPage() {
   const [form, setForm] = useState({
     title: "",
     carrier: "",
-    category: "airline_tariff",
+    category: "courier_tariff",
     notes: "",
     effectiveDate: "",
     expiryDate: "",
@@ -47,6 +56,8 @@ export default function CircularsPage() {
   const [importPreview, setImportPreview] = useState<
     Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number }>
   >([]);
+  const [courierBook, setCourierBook] = useState<CourierTariffBook | null>(null);
+  const tariffYear = new Date().getFullYear();
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -164,6 +175,69 @@ export default function CircularsPage() {
     toast(`Parsed ${parsed.length} tariff rows`, parsed.length ? "success" : "info");
   }
 
+  async function onCourierTariffFile(f: File) {
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const sheets = wb.SheetNames.map((name) => ({
+      name,
+      rows: XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], {
+        header: 1,
+        defval: "",
+        raw: true,
+      }),
+    }));
+    const book = parseCourierTariffSheets(sheets, {
+      fileName: f.name,
+      year: tariffYear,
+      validFrom: `${tariffYear}-01-01`,
+      validTo: `${tariffYear}-12-31`,
+    });
+    if (!book.lanes.length) {
+      toast("Could not read weight × destination rates from that Excel.", "error");
+      return;
+    }
+    rememberCourierTariffBook(book);
+    setCourierBook(book);
+    queryClient.setQueryData(queryKeys.courierTariffs, mergeCourierTariffBooks(courierBooks));
+    toast(
+      `Loaded ${book.carrier} ${book.year}: ${book.lanes.length} lanes up to ${book.maxKg} kg`,
+      "success",
+    );
+  }
+
+  async function publishCourierBook() {
+    const book = courierBook;
+    if (!book) return;
+    setBusy(true);
+    try {
+      rememberCourierTariffBook(book);
+      if (useLiveData) {
+        const id = await publishCourierTariffBook(book, user?.username || "unknown");
+        rememberCourierTariffBook({ ...book, id });
+        await saveCircular(
+          {
+            title: `${book.carrier} ${book.year} courier tariff`,
+            carrier: book.carrier,
+            category: "courier_tariff",
+            notes: `${book.lanes.length} lanes · max ${book.maxKg} kg · ${book.validFrom} to ${book.validTo}`,
+            effectiveDate: book.validFrom.slice(0, 7),
+            expiryDate: book.validTo.slice(0, 7),
+            fileName: book.fileName,
+          },
+          user?.username || "unknown",
+        );
+      }
+      queryClient.setQueryData(queryKeys.courierTariffs, mergeCourierTariffBooks(courierBooks));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courierTariffs });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.circulars });
+      toast("Courier tariff is live for the year — Courier desk will fill rates up to 70 kg.", "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Saved on this computer only", "info");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function publishImport() {
     if (!importPreview.length) return;
     setBusy(true);
@@ -208,7 +282,7 @@ export default function CircularsPage() {
             <Badge tone="info">Phase 11</Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Documents, category tabs, and Excel → tariff publish.
+            Documents, yearly courier Excel (Jan–Dec, up to 70 kg), and air/sea publish.
           </p>
         </div>
         {canManage ? (
@@ -219,7 +293,7 @@ export default function CircularsPage() {
               setForm({
                 title: "",
                 carrier: "",
-                category: category === "all" ? "airline_tariff" : category,
+                category: category === "all" ? "courier_tariff" : category,
                 notes: "",
                 effectiveDate: "",
                 expiryDate: "",
@@ -270,6 +344,45 @@ export default function CircularsPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+
+      {canManage ? (
+        <Card className="border-slate-200 bg-gradient-to-b from-slate-50 to-white p-5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
+            Year tariff
+          </p>
+          <h2 className="mt-1 text-lg font-extrabold text-[var(--color-atlas-navy)]">
+            Upload FedEx / courier Excel
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--color-text-muted)]">
+            Import and Export sheets, weights through 70 kg. Validity defaults to Jan–Dec {tariffYear}.
+            Above 70 kg stays case-by-case. Courier desk fills the matching slab when origin,
+            destination, and chargeable weight are entered.
+          </p>
+          <Input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="mt-4 max-w-md"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void onCourierTariffFile(f);
+            }}
+          />
+          {courierBook ? (
+            <div className="mt-4 space-y-3">
+              <CourierTariffBoard book={courierBook} />
+              <Button type="button" disabled={busy} onClick={() => void publishCourierBook()}>
+                Keep {courierBook.carrier} {courierBook.year} live for the year
+              </Button>
+            </div>
+          ) : courierBooks[0] ? (
+            <div className="mt-4">
+              <CourierTariffBoard book={courierBooks[0]} />
+            </div>
+          ) : null}
+        </Card>
+      ) : courierBooks[0] ? (
+        <CourierTariffBoard book={courierBooks[0]} />
+      ) : null}
 
       {editorOpen ? (
         <Card id="circular-editor" className="border-sky-200 bg-sky-50/40">

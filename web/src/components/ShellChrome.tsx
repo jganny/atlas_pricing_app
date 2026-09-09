@@ -64,6 +64,7 @@ export function GlobalRefreshButton() {
         queryClient.invalidateQueries({ queryKey: queryKeys.directory }),
         queryClient.invalidateQueries({ queryKey: queryKeys.airTariffs }),
         queryClient.invalidateQueries({ queryKey: queryKeys.seaTariffs }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.courierTariffs }),
       ]);
       window.dispatchEvent(new CustomEvent("atlas:refresh"));
       toast("Workspace data refreshed", "success");

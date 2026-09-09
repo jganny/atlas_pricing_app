@@ -117,7 +117,13 @@ const NAME_ALIASES: Array<{ codes: string[]; needles: string[] }> = [
   { codes: ["EY"], needles: ["etihad cargo"] },
   { codes: ["QR"], needles: ["qatar cargo"] },
   { codes: ["AI"], needles: ["air india cargo"] },
+  { codes: ["BLUEDART"], needles: ["blue dart", "bluedart", "blue-dart"] },
+  { codes: ["ARAMEX"], needles: ["aramex"] },
+  { codes: ["DELHIVERY"], needles: ["delhivery"] },
+  { codes: ["FDX"], needles: ["fedex", "fed ex"] },
 ];
+
+const CURATED_KEYS = new Set(CURATED_CARRIERS.map((c) => `${c.kind}:${c.code}`));
 
 function isJunkCode(code: string): boolean {
   if (!code || code.length > 4) return true;
@@ -150,7 +156,9 @@ export function rankCarrierHits(
 
   const scored: Array<{ c: CarrierRecord; score: number }> = [];
   for (const c of records) {
-    if (isJunkCode(c.code) || isJunkName(c.name)) continue;
+    const curated = CURATED_KEYS.has(`${c.kind}:${c.code}`) || c.kind === "courier";
+    if (!curated && (isJunkCode(c.code) || isJunkName(c.name))) continue;
+    if (isJunkName(c.name) && !curated) continue;
     const code = c.code.toLowerCase();
     const name = c.name.toLowerCase();
     const country = (c.country || "").toLowerCase();

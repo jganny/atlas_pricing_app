@@ -10,14 +10,20 @@ import {
   type CourierPackageLine,
   type CourierServiceKey,
 } from "@atlas/pricing-core";
-import { Badge, Button, Card, Tabs } from "@/components/ui";
+import { Button, Card, Tabs } from "@/components/ui";
 import { PincodeCombobox } from "@/components/PincodeCombobox";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { ValidityField } from "@/components/ValidityField";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
+import { EmptyNumberInput } from "@/components/EmptyNumberInput";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
+import { useCourierTariffs } from "@/hooks/use-atlas-data";
+import {
+  COURIER_TARIFF_MAX_KG,
+  lookupCourierTariff,
+} from "@/lib/quotes/courier-tariff";
 import { DEFAULT_COURIER_TERMS, saveCourierQuote } from "@/lib/firebase/save-quote";
 import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
 import { allLanesRoute } from "@/lib/quotes/lanes";
@@ -48,20 +54,20 @@ function isoFromAirport(hit: LocationHit): string | null {
 const EMPTY_PACKAGE: CourierPackageLine = { qty: 1, gw: 0, l: 0, w: 0, h: 0 };
 
 const defaultSurcharges = {
-  fuelPct: 18,
+  fuelPct: 0,
   remote: false,
-  remoteAmount: 450,
+  remoteAmount: 0,
   residential: false,
-  residentialAmount: 350,
+  residentialAmount: 0,
   saturday: false,
-  saturdayAmount: 500,
+  saturdayAmount: 0,
   dg: false,
-  dgAmount: 1200,
+  dgAmount: 0,
   insurance: false,
-  insurancePct: 1.5,
+  insurancePct: 0,
   declaredValue: 0,
   oversized: false,
-  oversizedAmount: 800,
+  oversizedAmount: 0,
 };
 
 type Tab = "shipment" | "packages" | "surcharges" | "terms";
@@ -83,6 +89,7 @@ const COURIER_DIR_TO_ID: Record<string, string> = {
   TNT: "fedex",
   ARAMEX: "aramex",
   BLUEDART: "bluedart",
+  BD: "bluedart",
   DTDC: "dtdc",
 };
 
@@ -107,12 +114,10 @@ function SurchargeToggle({
       </label>
       <label className="text-xs font-semibold text-[var(--color-text-muted)]">
         Amount
-        <input
-          type="number"
-          disabled={!checked}
-          className="ml-2 w-24 rounded border px-2 py-1 text-sm disabled:opacity-50"
+        <EmptyNumberInput
+          className="ml-2 inline-block w-24 rounded border px-2 py-1 text-sm"
           value={amount}
-          onChange={(e) => onAmount(Number(e.target.value))}
+          onChange={onAmount}
         />
       </label>
     </div>
@@ -124,6 +129,7 @@ function CourierDeskInner() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const loader = useQuoteDeskLoader();
+  const { data: tariffBooks = [] } = useCourierTariffs();
   const [tab, setTab] = useState<Tab>("shipment");
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
@@ -317,6 +323,48 @@ function CourierDeskInner() {
     [packages, originCountry, destCountry, service, currency, marginPct, selectedCarrier, gstEnabled, surcharges],
   );
   const cargoReady = result.chargeableKg > 0;
+  const tariff = useMemo(
+    () =>
+      lookupCourierTariff(tariffBooks, {
+        carrierId: selectedCarrier,
+        directoryCarrier,
+        originCountry,
+        destCountry,
+        originText: `${originCity} ${originPin}`,
+        destText: `${destCity} ${destPin}`,
+        weightKg: result.chargeableKg,
+        scope,
+      }),
+    [
+      tariffBooks,
+      selectedCarrier,
+      directoryCarrier,
+      originCountry,
+      destCountry,
+      originCity,
+      originPin,
+      destCity,
+      destPin,
+      result.chargeableKg,
+      scope,
+    ],
+  );
+  const sell = useMemo(() => {
+    const base = tariff.status === "hit" ? tariff.rate : 0;
+    const fuel = base * ((surcharges.fuelPct || 0) / 100);
+    const extras =
+      (surcharges.remote ? surcharges.remoteAmount : 0) +
+      (surcharges.residential ? surcharges.residentialAmount : 0) +
+      (surcharges.saturday ? surcharges.saturdayAmount : 0) +
+      (surcharges.dg ? surcharges.dgAmount : 0) +
+      (surcharges.oversized ? surcharges.oversizedAmount : 0) +
+      (surcharges.insurance
+        ? Math.max((surcharges.declaredValue * surcharges.insurancePct) / 100, 0)
+        : 0);
+    const sub = base + fuel + extras;
+    const tax = gstEnabled ? sub * 0.18 : 0;
+    return { base, fuel, extras, tax, total: sub + tax };
+  }, [tariff, surcharges, gstEnabled]);
 
   function updatePkg(index: number, patch: Partial<CourierPackageLine>) {
     setPackages((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -354,15 +402,27 @@ function CourierDeskInner() {
     toast("Courier form cleared", "success");
   }
 
-  const quotedCarrierName = directoryCarrier.trim() || result.chosen?.name || "";
-  const carrierSnaps = () =>
-    result.quotes.map((q) =>
-      courierSnapshot(q, result.chosen?.id ?? selectedCarrier, {
-        validity,
-        chargeableKg: result.chargeableKg,
-        gstAmount: result.tax,
-      }),
-    );
+  const quotedCarrierName = directoryCarrier.trim() || "";
+  const carrierSnaps = () => {
+    if (tariff.status !== "hit") return [];
+    return [
+      courierSnapshot(
+        {
+          id: selectedCarrier,
+          name: quotedCarrierName || tariff.book.carrier,
+          sellLocal: sell.total,
+          ratePerKg: result.chargeableKg ? sell.base / result.chargeableKg : 0,
+          transit: SERVICE_LEVELS[service]?.transit,
+        },
+        selectedCarrier,
+        {
+          validity,
+          chargeableKg: result.chargeableKg,
+          gstAmount: sell.tax,
+        },
+      ),
+    ];
+  };
 
   const handlePreview = () => {
     if (result.chargeableKg <= 0) {
@@ -370,7 +430,7 @@ function CourierDeskInner() {
       setTab("packages");
       return;
     }
-    const amount = result.total ?? 0;
+    const amount = sell.total;
     const q: SavedQuote = {
       id: loader.editingQuoteId || "preview",
       customer: customer.trim() || "Draft",
@@ -389,14 +449,14 @@ function CourierDeskInner() {
         originCountry,
         destCountry,
         service,
-        carrier: result.chosen?.id ?? "",
+        carrier: selectedCarrier,
         carrierName: quotedCarrierName,
         directoryCarrier,
         carrierQuotes: carrierSnaps(),
         chargeableWeight: result.chargeableKg,
         zone: result.zone,
-        baseFreight: result.baseFreight,
-        gstAmount: result.tax,
+        baseFreight: sell.base,
+        gstAmount: sell.tax,
         validity,
         originCity,
         destCity,
@@ -423,7 +483,7 @@ function CourierDeskInner() {
         setTab("packages");
         return;
       }
-      const amount = result.total ?? 0;
+      const amount = sell.total;
       const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
       const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
       const name = directoryCarrier.trim() || result.chosen?.name || "";
@@ -445,14 +505,14 @@ function CourierDeskInner() {
           originCountry,
           destCountry,
           service,
-          carrier: result.chosen?.id ?? "",
+          carrier: selectedCarrier,
           carrierName: name,
           directoryCarrier,
           carrierQuotes: carrierSnaps(),
           chargeableWeight: result.chargeableKg,
           zone: result.zone,
-          baseFreight: result.baseFreight,
-          gstAmount: result.tax,
+          baseFreight: sell.base,
+          gstAmount: sell.tax,
           validity,
           originCity,
           destCity,
@@ -482,7 +542,21 @@ function CourierDeskInner() {
               marginPct,
               gstEnabled,
               packages: result.packages,
-              calc: result,
+              calc: {
+                ...result,
+                quotes: [],
+                baseFreight: sell.base,
+                buyFreight: sell.base,
+                subtotal: sell.base + sell.fuel + sell.extras,
+                tax: sell.tax,
+                total: sell.total,
+                grossProfit: 0,
+                surcharges: {
+                  ...result.surcharges,
+                  fuel: sell.fuel,
+                  total: sell.fuel + sell.extras,
+                },
+              },
               termsAndConditions: terms,
               validity,
               quoteId,
@@ -753,11 +827,11 @@ function CourierDeskInner() {
                     if (mapped) setSelectedCarrier(mapped);
                   }}
                   kind="airline+courier"
-                  placeholder="UL, SriLankan, DHL, FedEx…"
+                  placeholder="Blue Dart, DHL, FedEx, UL…"
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Same global airline + courier directory as Air export/import. Pick DHL/FedEx/UPS to
-                  select that zone card; pick UL or any IATA airline to quote it by name.
+                  Type Blue Dart, DHL, FedEx, or an airline code. Rates up to 70 kg come from the
+                  yearly Excel on Circulars — not from estimated carrier cards.
                 </p>
               </div>
               <label className="text-sm font-semibold">
@@ -892,12 +966,11 @@ function CourierDeskInner() {
             <div className="space-y-3">
               <label className="text-sm font-semibold">
                 Fuel surcharge %
-                <input
+                <EmptyNumberInput
                   id="courier-fuel"
-                  type="number"
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  className="mt-1 w-full"
                   value={surcharges.fuelPct}
-                  onChange={(e) => setSurcharges((s) => ({ ...s, fuelPct: Number(e.target.value) }))}
+                  onChange={(fuelPct) => setSurcharges((s) => ({ ...s, fuelPct }))}
                   onKeyDown={(e) =>
                     firstFieldBackTab(e, () => goCourierStep("packages", "courier-pkg-0-qty"))
                   }
@@ -916,11 +989,11 @@ function CourierDeskInner() {
                 <>
                   <label className="text-sm font-semibold">
                     Insurance %
-                    <input type="number" step="0.1" className="mt-1 w-full rounded-lg border px-3 py-2" value={surcharges.insurancePct} onChange={(e) => setSurcharges((s) => ({ ...s, insurancePct: Number(e.target.value) }))} />
+                    <EmptyNumberInput className="mt-1 w-full" value={surcharges.insurancePct} onChange={(insurancePct) => setSurcharges((s) => ({ ...s, insurancePct }))} />
                   </label>
                   <label className="text-sm font-semibold">
                     Declared value
-                    <input type="number" className="mt-1 w-full rounded-lg border px-3 py-2" value={surcharges.declaredValue} onChange={(e) => setSurcharges((s) => ({ ...s, declaredValue: Number(e.target.value) }))} />
+                    <EmptyNumberInput className="mt-1 w-full" value={surcharges.declaredValue} onChange={(declaredValue) => setSurcharges((s) => ({ ...s, declaredValue }))} />
                   </label>
                 </>
               ) : null}
@@ -961,63 +1034,67 @@ function CourierDeskInner() {
           <h2 className="font-bold text-[var(--color-atlas-navy)]">Summary</h2>
           {!cargoReady ? (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-              Enter package weight and dimensions first. Totals stay blank until chargeable kg &gt; 0
-              (avoids showing a min-charge quote on empty cargo).
+              Enter package weight and dimensions first. Totals stay blank until chargeable kg &gt; 0.
+            </p>
+          ) : tariff.status === "over-max" ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              Chargeable {result.chargeableKg.toFixed(2)} kg is above {COURIER_TARIFF_MAX_KG} kg.
+              Rate this shipment case-by-case with the carrier by email — the uploaded tariff stops
+              at {COURIER_TARIFF_MAX_KG} kg.
+            </p>
+          ) : tariff.status === "missing" ? (
+            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              No Circulars tariff matched {quotedCarrierName || "this carrier"} for{" "}
+              {originCountry} → {destCountry} at {result.chargeableKg.toFixed(2)} kg. Upload this
+              year’s Import / Export Excel on Circulars (valid Jan–Dec, up to {COURIER_TARIFF_MAX_KG}{" "}
+              kg) and the rate will fill here automatically.
             </p>
           ) : (
             <dl className="space-y-2 text-sm">
-              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Chargeable</dt><dd className="font-bold">{result.chargeableKg.toFixed(2)} kg</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Zone</dt><dd className="font-bold">{result.zone}</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Carrier</dt><dd className="font-bold">{quotedCarrierName || "—"}</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Base freight</dt><dd>{formatCurrency(result.baseFreight, currency)}</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Surcharges</dt><dd>{formatCurrency(result.surcharges.total, currency)}</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">GST (18%)</dt><dd>{formatCurrency(result.tax, currency)}</dd></div>
-              <div className="flex justify-between border-t pt-2 text-base"><dt className="font-bold">Grand total</dt><dd className="font-extrabold text-emerald-700">{formatCurrency(result.total, currency)}</dd></div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Chargeable</dt>
+                <dd className="font-bold">{result.chargeableKg.toFixed(2)} kg</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Tariff slab</dt>
+                <dd className="font-bold">
+                  {tariff.slabKg} kg · {tariff.book.carrier} {tariff.book.year}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Lane</dt>
+                <dd className="font-bold">
+                  {tariff.lane.origin} → {tariff.lane.destinationLabel || tariff.lane.destination}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Carrier</dt>
+                <dd className="font-bold">{quotedCarrierName || tariff.book.carrier}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Tariff freight</dt>
+                <dd>{formatCurrency(sell.base, tariff.book.currency || currency)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Fuel + extras</dt>
+                <dd>{formatCurrency(sell.fuel + sell.extras, currency)}</dd>
+              </div>
+              {gstEnabled ? (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">GST (18%)</dt>
+                  <dd>{formatCurrency(sell.tax, currency)}</dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between border-t pt-2 text-base">
+                <dt className="font-bold">Grand total</dt>
+                <dd className="font-extrabold text-emerald-700">
+                  {formatCurrency(sell.total, tariff.book.currency || currency)}
+                </dd>
+              </div>
             </dl>
           )}
         </Card>
       </div>
-
-      <Card>
-        <h2 className="mb-1 font-bold">Carrier comparison</h2>
-        <p className="mb-3 text-xs text-[var(--color-text-muted)]">
-          These DHL / FedEx / UPS / Aramex / Blue Dart / DTDC figures are an internal zone ×
-          carrier-factor model for comparing options — not live contracted API rates. Replace with
-          Circulars or a carrier portal when you have an account.
-        </p>
-        {!cargoReady ? (
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Add packages with weight (and dimensions) to compare carrier sell rates.
-          </p>
-        ) : (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {result.quotes.map((q, idx) => {
-            const cheapest =
-              result.quotes.length > 0 &&
-              q.sellLocal === Math.min(...result.quotes.map((x) => x.sellLocal));
-            return (
-            <button
-              key={q.id}
-              type="button"
-              onClick={() => setSelectedCarrier(q.id)}
-              className={`rounded-xl border p-3 text-left transition-colors ${selectedCarrier === q.id ? "border-[var(--color-atlas-navy)] bg-slate-50 ring-2 ring-[var(--color-atlas-navy)]/20" : "border-[var(--color-border)] hover:bg-slate-50"} ${cheapest ? "ring-1 ring-emerald-300" : ""}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <Badge tone="neutral">#{idx + 1}</Badge>
-                <span className="flex gap-1">
-                  {cheapest ? <Badge tone="success">Cheapest ★</Badge> : null}
-                  {selectedCarrier === q.id ? <Badge tone="success">Selected</Badge> : null}
-                </span>
-              </div>
-              <div className="mt-1 font-bold" style={{ color: q.color }}>{q.name}</div>
-              <div className="text-lg font-extrabold">{formatCurrency(q.sellLocal, currency)}</div>
-              <div className="text-xs text-[var(--color-text-muted)]">{q.transit} · {formatCurrency(q.ratePerKg, currency)}/kg</div>
-            </button>
-            );
-          })}
-        </div>
-        )}
-      </Card>
 
       {previewQuote ? (
         <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />

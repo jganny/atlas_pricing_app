@@ -16,6 +16,7 @@ import type { CircularRecord } from "@/lib/types";
 import { getFirebaseApp, getFirebaseDb } from "./client";
 
 export const CIRCULAR_CATEGORIES = [
+  { id: "courier_tariff", label: "Courier Tariff" },
   { id: "airline_tariff", label: "Airline Tariff" },
   { id: "fuel_circular_airline", label: "Fuel (Airline)" },
   { id: "line_circular", label: "Line Circular" },
