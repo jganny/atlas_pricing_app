@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Printer, X } from "lucide-react";
+import { Download, Mail, MessageCircle, Printer, X } from "lucide-react";
 import type { SavedQuote } from "@/lib/types";
+import { toast } from "@/components/Toast";
+import { GuideNote } from "@/components/GuideNote";
+import { buildClientQuoteDocument } from "@/lib/quotes/quote-document";
+import {
+  downloadTextFile,
+  openMailTo,
+  openWhatsApp,
+  printHtmlDocument,
+} from "@/lib/quotes/quote-print";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { Badge, Button } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
@@ -18,6 +27,7 @@ import {
 } from "@/lib/quotes/vendor-preview";
 import {
   optionBreakdownsFromQuote,
+  optionChargeLines,
   uniqueOptionBreakdowns,
   type OptionBreakdown,
 } from "@/lib/quotes/option-breakdown";
@@ -125,35 +135,13 @@ function BreakdownPanel({
   chargeableWeight: number;
   heading: string;
 }) {
-  const chw = option.chargeableWeight || chargeableWeight;
-  const rate = option.appliedRate;
-  const base = option.baseFreight;
   const kind = (option.kind || "").toLowerCase();
   const isTrucker = kind === "trucker" || kind === "transport";
   const isWarehouse = kind === "warehouse" || kind === "storage";
-  const isSea = kind === "liner" || (kind === "coloader" && rate <= 0);
-  const showKgRate = !isTrucker && !isWarehouse && !isSea && rate > 0 && chw > 0;
-  const chargeLines: Array<[string, string]> = [];
-  if (isTrucker) {
-    chargeLines.push(["Freight", money(option.freightSell || base, currency)]);
-    if (option.detention > 0) chargeLines.push(["Detention", money(option.detention, currency)]);
-    if (option.tolls > 0) chargeLines.push(["Tolls", money(option.tolls, currency)]);
-  } else if (isWarehouse) {
-    chargeLines.push(["Storage", money(option.storage || base, currency)]);
-    if (option.handling > 0) chargeLines.push(["Handling", money(option.handling, currency)]);
-  } else {
-    chargeLines.push([
-      "Base freight",
-      showKgRate
-        ? `${chw.toFixed(2)} kg × ${money(rate, currency)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base, currency)}`
-        : money(base, currency),
-    ]);
-    if (option.originFees > 0) chargeLines.push(["Origin fees", money(option.originFees, currency)]);
-    if (option.ams > 0) chargeLines.push(["AMS", money(option.ams, currency)]);
-    if (option.destFees > 0) chargeLines.push(["Destination fees", money(option.destFees, currency)]);
-    if (option.gst > 0) chargeLines.push(["GST", money(option.gst, currency)]);
-  }
   const showRouting = !isTrucker && !isWarehouse;
+  const lines = optionChargeLines(option, currency, chargeableWeight);
+  const body = lines.slice(0, -1);
+  const total = lines[lines.length - 1];
   return (
     <div className="rounded-lg border border-slate-200 p-4 text-sm" data-testid="quote-option-breakup">
       <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
@@ -166,16 +154,18 @@ function BreakdownPanel({
         {option.laneLabel ? ` · ${option.laneLabel}` : ""}
       </div>
       <dl className="space-y-1.5">
-        {chargeLines.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-4">
-            <dt>{label}</dt>
-            <dd className="font-semibold">{value}</dd>
+        {body.map((line) => (
+          <div key={line.label} className="flex justify-between gap-4">
+            <dt>{line.label}</dt>
+            <dd className="font-semibold">{line.value}</dd>
           </div>
         ))}
-        <div className="flex justify-between gap-4 border-t border-slate-100 pt-1.5">
-          <dt>Option total</dt>
-          <dd className="font-extrabold text-emerald-700">{money(option.total, currency)}</dd>
-        </div>
+        {total ? (
+          <div className="flex justify-between gap-4 border-t border-slate-100 pt-1.5">
+            <dt>{total.label}</dt>
+            <dd className="font-extrabold text-emerald-700">{total.value}</dd>
+          </div>
+        ) : null}
         {showRouting ? (
           <>
             <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
@@ -232,10 +222,47 @@ export function QuotePreviewModal({
   const cur = quote.currency || "USD";
   const chw = Number(d.chargeableWeight ?? 0);
   const inspectable = type === "air" || type === "sea" || options.length > 0;
+  const clientDoc = useMemo(() => buildClientQuoteDocument(quote), [quote]);
+  const [shareBusy, setShareBusy] = useState<string | null>(null);
 
-  function handlePrint() {
-    window.print();
+  async function handlePrint() {
+    setShareBusy("Opening printer…");
+    try {
+      await printHtmlDocument(clientDoc.html);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Print failed", "error");
+    } finally {
+      setShareBusy(null);
+    }
   }
+
+  function handleDownload() {
+    downloadTextFile(clientDoc.filename, clientDoc.html);
+    toast("Quote file saved. Open it to switch airlines, or Print → Save as PDF.", "success");
+  }
+
+  function handleEmail() {
+    downloadTextFile(clientDoc.filename, clientDoc.html);
+    openMailTo(clientDoc.shareSubject, clientDoc.shareText);
+    toast("Quote file downloaded — attach it to the email so the client can tap each airline.", "success");
+  }
+
+  function handleWhatsApp() {
+    downloadTextFile(clientDoc.filename, clientDoc.html);
+    openWhatsApp(clientDoc.shareText);
+    toast("Quote file downloaded — attach it in WhatsApp. The message already lists every option.", "success");
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P")) {
+        e.preventDefault();
+        void handlePrint();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clientDoc.html]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 print:relative print:inset-auto print:bg-white print:p-0">
@@ -248,10 +275,16 @@ export function QuotePreviewModal({
             <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">Quotation preview</h2>
             <p className="text-xs text-[var(--color-text-muted)]">#{ref} · {quote.customer}</p>
           </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" onClick={handlePrint}>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              data-testid="quote-print-btn"
+              onClick={() => void handlePrint()}
+              disabled={Boolean(shareBusy)}
+            >
               <Printer className="mr-2 h-4 w-4" />
-              Print / Save PDF
+              {shareBusy || "Print / Save PDF"}
             </Button>
             <button type="button" data-modal-close onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100" aria-label="Close">
               <X className="h-5 w-5" />
@@ -260,6 +293,25 @@ export function QuotePreviewModal({
         </div>
 
         <div className="p-6 print:p-8">
+          <div className="mb-4 flex flex-wrap gap-2 print:hidden" data-testid="quote-share-bar">
+            <Button type="button" variant="secondary" className="text-xs" data-testid="quote-download-btn" onClick={handleDownload}>
+              <Download className="mr-1 h-4 w-4" />
+              Download quote
+            </Button>
+            <Button type="button" variant="secondary" className="text-xs" data-testid="quote-email-btn" onClick={handleEmail}>
+              <Mail className="mr-1 h-4 w-4" />
+              Email
+            </Button>
+            <Button type="button" variant="secondary" className="text-xs" data-testid="quote-whatsapp-btn" onClick={handleWhatsApp}>
+              <MessageCircle className="mr-1 h-4 w-4" />
+              WhatsApp
+            </Button>
+          </div>
+          <GuideNote testId="quote-share-guide">
+            {options.length > 1
+              ? "A PDF cannot switch airlines. Download the quote file — your client taps each option to compare. Print / Save PDF is instant and still lists every airline on paper."
+              : "Download, email, or WhatsApp this quote. Print / Save PDF opens a clean page (not the whole Enquiry DB), so it responds immediately."}
+          </GuideNote>
           <div className="mb-6 border-b-2 border-[var(--color-atlas-navy)] pb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -308,7 +360,7 @@ export function QuotePreviewModal({
                 vendors={vendors}
                 currency={cur}
                 heading={compareHeading(type)}
-                hint="Click any option to view that breakup. Quoted stays the commercial offer."
+                hint="Click any option to inspect the breakup here. Quoted is our recommended offer — the client still receives every airline to compare."
                 onSelect={setInspectId}
                 activeId={inspectId}
                 testId="quote-preview-vendors"

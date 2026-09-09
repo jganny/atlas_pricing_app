@@ -19,6 +19,7 @@ import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { AirlineEditorOverlay, AirlineOptionForm } from "@/components/desks/AirlineOptionForm";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { VendorCompareList } from "@/components/VendorCompareList";
+import { GuideNote } from "@/components/GuideNote";
 import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
@@ -1354,6 +1355,10 @@ function AirDeskInner() {
 
           {airlines.length > 1 || lanes.length > 1 ? (
             <Card>
+              <GuideNote>
+                Add every airline you want the client to see. Quoted is our recommended offer — they
+                still get the full comparison when you share the quote.
+              </GuideNote>
               <VendorCompareList
                 vendors={compareVendors}
                 currency={currency}

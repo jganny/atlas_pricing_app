@@ -1,5 +1,6 @@
 import type { SeaMode } from "@atlas/pricing-core";
 import type { SavedQuote } from "../types";
+import { formatCurrency } from "../utils";
 import type { AirlineOption, LinerOption } from "../pricing/carrier-options";
 import {
   createAirlineOption,
@@ -286,6 +287,47 @@ function rawOptions(d: Record<string, unknown>): Record<string, unknown>[] {
   if (Array.isArray(d.carrierQuotes) && d.carrierQuotes.length) return d.carrierQuotes.map(rec);
   if (Array.isArray(d.truckers) && d.truckers.length) return d.truckers.map(rec);
   return [];
+}
+
+export type ChargeLine = { label: string; value: string };
+
+/** Sell-side lines for on-screen inspect, print pack, and the client quote file. */
+export function optionChargeLines(
+  option: OptionBreakdown,
+  currency: string,
+  chargeableWeight: number,
+): ChargeLine[] {
+  const chw = option.chargeableWeight || chargeableWeight;
+  const rate = option.appliedRate;
+  const base = option.baseFreight;
+  const kind = (option.kind || "").toLowerCase();
+  const isTrucker = kind === "trucker" || kind === "transport";
+  const isWarehouse = kind === "warehouse" || kind === "storage";
+  const isSea = kind === "liner" || (kind === "coloader" && rate <= 0);
+  const showKgRate = !isTrucker && !isWarehouse && !isSea && rate > 0 && chw > 0;
+  const money = (n: number) => formatCurrency(n, currency);
+  const lines: ChargeLine[] = [];
+  if (isTrucker) {
+    lines.push({ label: "Freight", value: money(option.freightSell || base) });
+    if (option.detention > 0) lines.push({ label: "Detention", value: money(option.detention) });
+    if (option.tolls > 0) lines.push({ label: "Tolls", value: money(option.tolls) });
+  } else if (isWarehouse) {
+    lines.push({ label: "Storage", value: money(option.storage || base) });
+    if (option.handling > 0) lines.push({ label: "Handling", value: money(option.handling) });
+  } else {
+    lines.push({
+      label: "Base freight",
+      value: showKgRate
+        ? `${chw.toFixed(2)} kg × ${money(rate)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base)}`
+        : money(base),
+    });
+    if (option.originFees > 0) lines.push({ label: "Origin fees", value: money(option.originFees) });
+    if (option.ams > 0) lines.push({ label: "AMS", value: money(option.ams) });
+    if (option.destFees > 0) lines.push({ label: "Destination fees", value: money(option.destFees) });
+    if (option.gst > 0) lines.push({ label: "GST", value: money(option.gst) });
+  }
+  lines.push({ label: "Option total", value: money(option.total) });
+  return lines;
 }
 
 /** Drop duplicate vendor rows so a quoted option is never printed twice. */

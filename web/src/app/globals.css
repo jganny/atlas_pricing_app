@@ -201,19 +201,6 @@ input[data-testid="vertex-ask"]::-webkit-search-results-decoration {
 }
 
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  .quote-print-root,
-  .quote-print-root * {
-    visibility: visible;
-  }
-  .quote-print-root {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
   .quote-print-screen-only {
     display: none !important;
   }
