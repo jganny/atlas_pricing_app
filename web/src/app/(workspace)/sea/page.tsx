@@ -841,10 +841,12 @@ function SeaDeskInner() {
                         <Input
                           value={opt.routing}
                           autoComplete="off"
+                          name={`atlas-sea-routing-${opt.id}`}
                           onChange={(e) => updateLiner(opt.id, { routing: e.target.value })}
                           onBlur={() =>
                             updateLiner(opt.id, { routing: normalizeRouting(opt.routing) })
                           }
+                          placeholder="DXB"
                         />
                         {opt.routing.trim() ? (
                           <p className="mt-1 text-xs text-[var(--color-text-muted)]">

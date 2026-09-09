@@ -43,7 +43,7 @@ export function createAirlineOption(
   return {
     id: partial.id ?? newCarrierId("air"),
     name: partial.name ?? "",
-    routing: partial.routing ?? "",
+    routing: normalizeRouting(partial.routing ?? ""),
     tt: partial.tt ?? "",
     validity: partial.validity ?? "",
     pivotWeightKg: partial.pivotWeightKg ?? 0,
@@ -113,7 +113,7 @@ export function createLinerOption(
   return {
     id: partial.id ?? newCarrierId("sea"),
     name: partial.name ?? "",
-    routing: partial.routing ?? "",
+    routing: normalizeRouting(partial.routing ?? ""),
     tt: partial.tt ?? "",
     validity: partial.validity ?? "",
     laneId: partial.laneId ?? "",

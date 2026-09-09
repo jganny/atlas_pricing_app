@@ -90,6 +90,7 @@ export function AirlineOptionForm({
         <Label>
           Pivot weight (kg)
           <NumberInput
+            name={`atlas-air-pivot-${opt.id}`}
             value={opt.pivotWeightKg || 0}
             onValueChange={(n) => onUpdate({ pivotWeightKg: n })}
             onKeyDown={(e) => {
