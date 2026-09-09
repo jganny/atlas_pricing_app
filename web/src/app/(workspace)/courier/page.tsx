@@ -12,6 +12,7 @@ import {
 } from "@atlas/pricing-core";
 import { Badge, Button, Card, Tabs } from "@/components/ui";
 import { PincodeCombobox } from "@/components/PincodeCombobox";
+import { LocationCombobox } from "@/components/LocationCombobox";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -31,9 +32,14 @@ import {
   inferCountryFromText,
 } from "@/lib/locations/country-aliases";
 import { searchPostalCodes, type PostalHit } from "@/lib/locations/postal-search";
+import { searchLocations, type LocationHit } from "@/lib/locations/search";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 
-const COURIER_STEPS = ["shipment", "packages", "surcharges", "terms"] as const;
+function isoFromAirport(hit: LocationHit): string | null {
+  const c = (hit.country || "").trim();
+  if (/^[A-Za-z]{2}$/.test(c)) return c.toUpperCase();
+  return inferCountryFromText(`${hit.city} ${hit.name} ${c}`);
+}
 
 const EMPTY_PACKAGE: CourierPackageLine = { qty: 1, gw: 0, l: 0, w: 0, h: 0 };
 
@@ -147,6 +153,14 @@ function CourierDeskInner() {
     else setDestCountry(code);
   }
 
+  function applyAirportHit(hit: LocationHit, which: "origin" | "dest") {
+    const code = hit.code.toUpperCase();
+    if (which === "origin") setOriginCity(code);
+    else setDestCity(code);
+    const cc = isoFromAirport(hit);
+    if (cc) applyCountry(cc, which);
+  }
+
   function applyPostalHit(hit: PostalHit, which: "origin" | "dest") {
     if (which === "origin") {
       setOriginPin(hit.pin);
@@ -165,14 +179,23 @@ function CourierDeskInner() {
     const next = fromCity || fromPin;
     if (next) setOriginCountry(next);
     const q = originCity.trim() || originPin.trim();
-    if (q.length < 3) return;
+    if (q.length < 2) return;
     let cancelled = false;
     const t = window.setTimeout(() => {
-      void searchPostalCodes(q, 6).then((hits) => {
-        if (cancelled) return;
-        const c = hits.find((h) => h.country)?.country;
-        if (c && (!next || next === "IN" || c === next)) setOriginCountry(c);
-      });
+      void Promise.all([searchLocations(q, "airport", 6), searchPostalCodes(q, 6)]).then(
+        ([air, post]) => {
+          if (cancelled) return;
+          const exact = air.find((h) => h.code.toUpperCase() === q.toUpperCase());
+          const airHit = exact || air[0];
+          const airCc = airHit ? isoFromAirport(airHit) : null;
+          if (airCc) {
+            setOriginCountry(airCc);
+            return;
+          }
+          const c = post.find((h) => h.country)?.country;
+          if (c && (!next || next === "IN" || c === next)) setOriginCountry(c);
+        },
+      );
     }, 180);
     return () => {
       cancelled = true;
@@ -186,14 +209,23 @@ function CourierDeskInner() {
     const next = fromCity || fromPin;
     if (next) setDestCountry(next);
     const q = destCity.trim() || destPin.trim();
-    if (q.length < 3) return;
+    if (q.length < 2) return;
     let cancelled = false;
     const t = window.setTimeout(() => {
-      void searchPostalCodes(q, 6).then((hits) => {
-        if (cancelled) return;
-        const c = hits.find((h) => h.country)?.country;
-        if (c && (!next || next === "IN" || c === next)) setDestCountry(c);
-      });
+      void Promise.all([searchLocations(q, "airport", 6), searchPostalCodes(q, 6)]).then(
+        ([air, post]) => {
+          if (cancelled) return;
+          const exact = air.find((h) => h.code.toUpperCase() === q.toUpperCase());
+          const airHit = exact || air[0];
+          const airCc = airHit ? isoFromAirport(airHit) : null;
+          if (airCc) {
+            setDestCountry(airCc);
+            return;
+          }
+          const c = post.find((h) => h.country)?.country;
+          if (c && (!next || next === "IN" || c === next)) setDestCountry(c);
+        },
+      );
     }, 180);
     return () => {
       cancelled = true;
@@ -522,7 +554,8 @@ function CourierDeskInner() {
                   }}
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Add a lane for extra origin → destination city pairs.
+                  Add a lane for extra origin → destination city pairs. Cities use the same IATA
+                  3-letter airport list as Air desk — type a city or code, then pick from the dropdown.
                 </p>
               </div>
               <label className="text-sm font-semibold md:col-span-2">
@@ -539,24 +572,24 @@ function CourierDeskInner() {
                   }
                 />
               </label>
-              <label className="text-sm font-semibold">
-                Origin city
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={originCity}
-                  onChange={(e) => setOriginCity(e.target.value)}
-                  placeholder="Bangalore"
-                />
-              </label>
-              <label className="text-sm font-semibold">
-                Destination city
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={destCity}
-                  onChange={(e) => setDestCity(e.target.value)}
-                  placeholder="Bahrain"
-                />
-              </label>
+              <LocationCombobox
+                label="Origin city"
+                value={originCity}
+                onChange={setOriginCity}
+                onPick={(hit) => applyAirportHit(hit, "origin")}
+                kind="airport"
+                placeholder="BLR, Bangalore…"
+                inputId="courier-origin-city"
+              />
+              <LocationCombobox
+                label="Destination city"
+                value={destCity}
+                onChange={setDestCity}
+                onPick={(hit) => applyAirportHit(hit, "dest")}
+                kind="airport"
+                placeholder="BAH, Bahrain…"
+                inputId="courier-dest-city"
+              />
               <PincodeCombobox
                 label="Origin PIN / ZIP"
                 value={originPin}

@@ -12,14 +12,20 @@ export function LocationCombobox({
   label,
   value,
   onChange,
+  onPick,
   kind,
   placeholder,
+  inputId,
+  onInputKeyDown,
 }: {
   label: string;
   value: string;
   onChange: (next: string) => void;
+  onPick?: (hit: LocationHit) => void;
   kind: Kind;
   placeholder?: string;
+  inputId?: string;
+  onInputKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const listId = useId();
   const [q, setQ] = useState(value);
@@ -60,12 +66,15 @@ export function LocationCombobox({
 
   function pick(hit: LocationHit) {
     const next = `${hit.code} — ${hit.name}${hit.city ? `, ${hit.city}` : ""}`;
+    onPick?.(hit);
     onChange(hit.code);
     setQ(next);
     setOpen(false);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    onInputKeyDown?.(e);
+    if (e.defaultPrevented) return;
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp") && hits.length > 0) {
       setOpen(true);
       e.preventDefault();
@@ -92,6 +101,7 @@ export function LocationCombobox({
       <Label>{label}</Label>
       <div ref={inputWrapRef}>
         <Input
+          id={inputId}
           value={q}
           placeholder={placeholder || (kind === "seaport" ? "INNSA, NLRTM…" : "BLR, LHR…")}
           autoComplete="off"
