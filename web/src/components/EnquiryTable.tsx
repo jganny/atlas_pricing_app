@@ -182,8 +182,8 @@ export function EnquiryTable({
 
   const leafCount = Math.max(1, table.getVisibleLeafColumns().length);
   const template = onDelete
-    ? `repeat(${leafCount}, minmax(7.5rem, 1fr)) 5.5rem`
-    : `repeat(${leafCount}, minmax(7.5rem, 1fr))`;
+    ? `repeat(${leafCount}, minmax(12rem, 1fr)) 6rem`
+    : `repeat(${leafCount}, minmax(12rem, 1fr))`;
 
   if (rows.length === 0) {
     return (
@@ -193,13 +193,14 @@ export function EnquiryTable({
 
   return (
     <div className="overflow-x-auto" data-testid="edb-table-scroll">
+      <div className="min-w-[92rem]">
       <div className="border-b border-[var(--color-border)] bg-slate-50 text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
         {table.getHeaderGroups().map((hg) => (
           <div key={hg.id} className="grid items-center" style={{ gridTemplateColumns: template }}>
             {hg.headers.map((header) => {
               const sorted = header.column.getIsSorted();
               return (
-                <div key={header.id} className="whitespace-nowrap px-3 py-3">
+                <div key={header.id} className="min-w-0 truncate whitespace-nowrap px-3 py-3">
                   {header.isPlaceholder ? null : (
                     <button
                       type="button"
@@ -219,12 +220,16 @@ export function EnquiryTable({
                 </div>
               );
             })}
-            {onDelete ? <div className="sticky right-0 bg-slate-50 px-3 py-3 text-right"> </div> : null}
+            {onDelete ? (
+              <div className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right"> </div>
+            ) : null}
           </div>
         ))}
       </div>
       <div>
-        {table.getRowModel().rows.map((row) => (
+        {table.getRowModel().rows.map((row) => {
+          const selected = selectedId === row.original.id;
+          return (
           <div
             key={row.id}
             role="button"
@@ -232,7 +237,7 @@ export function EnquiryTable({
             data-testid="edb-row-scroll"
             className={cn(
               "grid cursor-pointer items-center border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50/80",
-              selectedId === row.original.id ? "bg-sky-50" : "bg-white",
+              selected ? "bg-sky-50" : "bg-white",
             )}
             style={{ gridTemplateColumns: template }}
             onClick={() => onSelect(row.original.id)}
@@ -241,12 +246,17 @@ export function EnquiryTable({
             }}
           >
             {row.getVisibleCells().map((cell) => (
-              <div key={cell.id} className="whitespace-nowrap px-3 py-3">
+              <div key={cell.id} className="min-w-0 truncate whitespace-nowrap px-3 py-3">
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </div>
             ))}
             {onDelete ? (
-              <div className="sticky right-0 flex justify-end bg-inherit px-1 py-1">
+              <div
+                className={cn(
+                  "sticky right-0 z-10 flex justify-end px-1 py-1",
+                  selected ? "bg-sky-50" : "bg-white",
+                )}
+              >
                 <button
                   type="button"
                   data-testid="edb-row-delete"
@@ -261,7 +271,8 @@ export function EnquiryTable({
               </div>
             ) : null}
           </div>
-        ))}
+          );
+        })}
       </div>
       {onDelete ? (
         <p className="border-t border-[var(--color-border)] px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
@@ -269,6 +280,7 @@ export function EnquiryTable({
           removes the saved quote.
         </p>
       ) : null}
+      </div>
     </div>
   );
 }
