@@ -28,6 +28,7 @@ export function SwipeDeleteRow({
   const open = dx <= -OPEN_AT;
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest("[data-testid=swipe-delete]")) return;
     if (e.pointerType === "mouse" && e.buttons !== 1) return;
     startX.current = e.clientX;
     dragging.current = false;
@@ -76,6 +77,7 @@ export function SwipeDeleteRow({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onClickCapture={(e) => {
+          if ((e.target as HTMLElement).closest("[data-testid=swipe-delete]")) return;
           if (dragging.current || open) {
             e.preventDefault();
             e.stopPropagation();
