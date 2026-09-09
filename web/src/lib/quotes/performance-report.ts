@@ -1,7 +1,7 @@
 /** Performance report windows — daily → annual (legacy generatePerformanceReport). */
 
 import type { EnquiryRecord } from "@/lib/types";
-import { deskDisplayName } from "@/lib/quotes/team-roles";
+import { deskDisplayName, TEAM_ROLES } from "@/lib/quotes/team-roles";
 
 export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "annual" | "all";
 
@@ -85,6 +85,13 @@ export function buildPerformanceReport(
       deskMap[k].won += 1;
       deskMap[k].revenue += e.amountINR || e.grandTotal || 0;
     }
+  }
+  for (const e of rows) {
+    const k = (e.creator || "").toLowerCase();
+    if (k && !deskMap[k]) deskMap[k] = { count: 0, won: 0, revenue: 0 };
+  }
+  for (const id of Object.keys(TEAM_ROLES)) {
+    if (!deskMap[id]) deskMap[id] = { count: 0, won: 0, revenue: 0 };
   }
   const byDesk = Object.entries(deskMap)
     .map(([desk, v]) => {

@@ -1,9 +1,6 @@
-/* Atlas Pricing PWA shell — static assets only; never cache Firestore. */
-const CACHE = "atlas-app-shell-v2";
+/* Vertex PWA shell — never cache Firestore. Bump CACHE on every UI release. */
+const CACHE = "atlas-app-shell-v3";
 const PRECACHE = [
-  "/app/",
-  "/app/m/",
-  "/app/quote/",
   "/app/manifest.webmanifest",
   "/app/icon-192.png",
   "/app/icon-512.png",
@@ -42,17 +39,14 @@ self.addEventListener("fetch", (event) => {
   }
   if (!url.pathname.startsWith("/app")) return;
 
-  // Network-first for HTML navigations so deploys show up quickly.
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          void caches.open(CACHE).then((cache) => cache.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match(req).then((c) => c || caches.match("/app/m/"))),
-    );
+  // HTML must not stick — Safari was serving Control tower after deploys.
+  const isHtmlNav =
+    req.mode === "navigate" ||
+    url.pathname === "/app" ||
+    url.pathname === "/app/" ||
+    url.pathname.endsWith(".html");
+  if (isHtmlNav) {
+    event.respondWith(fetch(req, { cache: "no-store" }).catch(() => caches.match("/app/")));
     return;
   }
 

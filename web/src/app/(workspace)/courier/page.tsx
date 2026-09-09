@@ -356,6 +356,9 @@ function CourierDeskInner() {
         originCountry,
         destCountry,
         service,
+        carrier: result.chosen?.id ?? "",
+        carrierName: result.chosen?.name ?? "",
+        carrierQuotes: result.quotes,
         termsAndConditions: terms,
         mode: "Courier",
       },
@@ -862,22 +865,30 @@ function CourierDeskInner() {
           </p>
         ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {result.quotes.map((q, idx) => (
+          {result.quotes.map((q, idx) => {
+            const cheapest =
+              result.quotes.length > 0 &&
+              q.sellLocal === Math.min(...result.quotes.map((x) => x.sellLocal));
+            return (
             <button
               key={q.id}
               type="button"
               onClick={() => setSelectedCarrier(q.id)}
-              className={`rounded-xl border p-3 text-left transition-colors ${selectedCarrier === q.id ? "border-[var(--color-atlas-navy)] bg-slate-50 ring-2 ring-[var(--color-atlas-navy)]/20" : "border-[var(--color-border)] hover:bg-slate-50"}`}
+              className={`rounded-xl border p-3 text-left transition-colors ${selectedCarrier === q.id ? "border-[var(--color-atlas-navy)] bg-slate-50 ring-2 ring-[var(--color-atlas-navy)]/20" : "border-[var(--color-border)] hover:bg-slate-50"} ${cheapest ? "ring-1 ring-emerald-300" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <Badge tone="neutral">#{idx + 1}</Badge>
-                {selectedCarrier === q.id ? <Badge tone="success">Selected</Badge> : null}
+                <span className="flex gap-1">
+                  {cheapest ? <Badge tone="success">Cheapest ★</Badge> : null}
+                  {selectedCarrier === q.id ? <Badge tone="success">Selected</Badge> : null}
+                </span>
               </div>
               <div className="mt-1 font-bold" style={{ color: q.color }}>{q.name}</div>
               <div className="text-lg font-extrabold">{formatCurrency(q.sellLocal, currency)}</div>
               <div className="text-xs text-[var(--color-text-muted)]">{q.transit} · {formatCurrency(q.ratePerKg, currency)}/kg</div>
             </button>
-          ))}
+            );
+          })}
         </div>
         )}
       </Card>

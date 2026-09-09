@@ -133,10 +133,10 @@ export function PerformanceReportPanel({ rows }: { rows: EnquiryRecord[] }) {
         <p className="mt-3 text-sm text-[var(--color-text-muted)]">No quotes in this window.</p>
       )}
       <p className="mt-3 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-        Officers are everyone who saved a quote in this workspace (plus known desks), not a short
-        staff list. Monthly / weekly hide other months — use All time to see the full team. The
-        live list is the latest quotes Vertex can load, so very old files also live under Enquiry
-        DB → Find quote.
+        Officers are everyone who appears on quotes Vertex can load — including Spoorthi, Sunil,
+        Linson and others, not only the old short staff list. Monthly shows who quoted this month;
+        people with 0 this period still appear. Switch All time for the full team. Old files: Ask
+        Vertex or Enquiry DB → Find a quote (customer or city — no file name).
       </p>
     </Card>
   );

@@ -147,6 +147,13 @@ function SeaDeskInner() {
   }, [liners, mode, grossWeightKg, volumeCbm, chargeableCbmOverride]);
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
+  const cheapestLinerId = useMemo(() => {
+    const priced = liners.filter((l) => (totalsById[l.id]?.grandSell ?? 0) > 0);
+    const sorted = [...priced].sort(
+      (a, b) => (totalsById[a.id]?.grandSell ?? 0) - (totalsById[b.id]?.grandSell ?? 0),
+    );
+    return sorted[0]?.id ?? null;
+  }, [liners, totalsById]);
   const heavyWarn = seaHeavyWeightWarning(
     grossWeightKg,
     selectedTotals?.freight.containerCount ?? (mode === "fcl" ? 1 : 0),
@@ -354,6 +361,13 @@ function SeaDeskInner() {
         routing: selected.routing,
         tt: selected.tt,
         validity: selected.validity,
+        liners: liners.map((l) => ({
+          id: l.id,
+          name: l.name,
+          kind: l.kind,
+          selected: l.selected,
+          quoteTotal: totalsById[l.id]?.grandSell ?? 0,
+        })),
         termsAndConditions: terms,
         mode: "Sea",
       },
@@ -1114,19 +1128,34 @@ function SeaDeskInner() {
 
           {liners.length > 1 ? (
             <Card>
-              <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Alternatives</h2>
+              <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Compare options</h2>
+              <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">
+                Cheapest → highest. Star marks the lowest total.
+              </p>
               <ul className="space-y-2 text-sm">
-                {liners.map((l) => (
-                  <li key={l.id} className="flex justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                    <span className={l.selected ? "font-bold" : ""}>
-                      {l.name || "Untitled"}
-                      {l.selected ? " ★" : ""}
-                    </span>
-                    <span className="font-semibold">
-                      {formatCurrency(totalsById[l.id]?.grandSell ?? 0, currency)}
-                    </span>
-                  </li>
-                ))}
+                {liners.map((l) => {
+                  const cheapest = l.id === cheapestLinerId;
+                  return (
+                    <li
+                      key={l.id}
+                      className={`flex justify-between gap-2 rounded-lg px-3 py-2 ${
+                        cheapest
+                          ? "bg-emerald-50 ring-1 ring-emerald-300"
+                          : l.selected
+                            ? "bg-sky-50"
+                            : "bg-slate-50"
+                      }`}
+                    >
+                      <span className={cheapest || l.selected ? "font-bold" : ""}>
+                        {l.name || "Untitled"}
+                        {cheapest ? " ★" : ""}
+                      </span>
+                      <span className="font-semibold">
+                        {formatCurrency(totalsById[l.id]?.grandSell ?? 0, currency)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </Card>
           ) : null}

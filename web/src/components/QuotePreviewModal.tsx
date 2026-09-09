@@ -10,6 +10,7 @@ import {
   formatTransitPreview,
 } from "@/lib/pricing/terms";
 import { enquiryAssigneeLabel } from "@/lib/auth/desk-seats";
+import { vendorRowsFromQuote } from "@/lib/quotes/vendor-preview";
 
 function statusLabel(status: string | undefined) {
   const s = (status || "quoted").toLowerCase();
@@ -126,6 +127,7 @@ export function QuotePreviewModal({
 }) {
   const ref = getQuoteRefId(quote);
   const rows = detailRows(quote);
+  const vendors = vendorRowsFromQuote(quote);
   const terms = String(quote.details?.termsAndConditions ?? "");
   const type = (quote.type || "").toLowerCase();
   const d = quote.details ?? {};
@@ -202,6 +204,51 @@ export function QuotePreviewModal({
               ))}
             </tbody>
           </table>
+
+          {vendors.length > 0 ? (
+            <div className="mb-6">
+              <h3 className="mb-1 text-sm font-extrabold text-[var(--color-atlas-navy)]">
+                Carrier options
+              </h3>
+              <p className="mb-2 text-xs text-[var(--color-text-muted)]">
+                ★ is the cheapest total. Quoted is the option on this document.
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <th className="py-1.5">Option</th>
+                    <th className="py-1.5">Role</th>
+                    <th className="py-1.5 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vendors.map((v) => (
+                    <tr
+                      key={v.id}
+                      className={
+                        v.cheapest
+                          ? "bg-emerald-50 font-semibold"
+                          : v.selected
+                            ? "bg-sky-50"
+                            : ""
+                      }
+                    >
+                      <td className="py-1.5">
+                        {v.name}
+                        {v.cheapest ? " ★" : ""}
+                      </td>
+                      <td className="py-1.5 text-xs text-[var(--color-text-muted)]">
+                        {v.selected ? "Quoted" : v.kind}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums">
+                        {money(v.total, quote.currency || "USD")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
 
           {(showAirBreakdown || showSeaBreakdown) && (
             <div className="mb-4 rounded-lg border border-slate-200 p-4 text-sm">

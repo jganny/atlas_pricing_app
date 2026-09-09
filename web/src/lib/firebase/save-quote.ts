@@ -1,7 +1,7 @@
 "use client";
 
 import { doc, setDoc } from "firebase/firestore";
-import type { CourierFreightResult } from "@atlas/pricing-core";
+import type { CourierFreightResult, SeaMode } from "@atlas/pricing-core";
 import {
   serializeAirlineOption,
   serializeLinerOption,
@@ -9,7 +9,9 @@ import {
   type LinerOption,
 } from "@/lib/pricing/carrier-options";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
+import { computeAirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
+import { computeLinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import {
   ensureIncidentalTerm,
@@ -156,7 +158,10 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const amountINR = input.currency === "INR" ? amount : amount * fx;
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
-  const airlines = input.airlines.map(serializeAirlineOption);
+  const airlines = input.airlines.map((a) => ({
+    ...serializeAirlineOption(a),
+    quoteTotal: computeAirlineTotals(input.cargo, a).grandSell,
+  }));
   const lanes = (input.lanes ?? []).map((l) => ({
     id: l.id,
     origin: l.origin,
@@ -289,7 +294,16 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
   const chargeableCbmOverride = Number(input.chargeableCbmOverride ?? 0);
-  const liners = input.liners.map(serializeLinerOption);
+  const liners = input.liners.map((l) => ({
+    ...serializeLinerOption(l),
+    quoteTotal: computeLinerTotals(
+      input.mode as SeaMode,
+      input.grossWeightKg,
+      input.volumeCbm,
+      chargeableCbmOverride,
+      l,
+    ).grandSell,
+  }));
   const lanes = (input.lanes ?? []).map((l) => ({
     id: l.id,
     origin: l.origin,

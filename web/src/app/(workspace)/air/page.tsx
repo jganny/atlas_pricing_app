@@ -385,6 +385,13 @@ function AirDeskInner() {
         tt: selected.tt,
         validity: selected.validity,
         cargoItems: cargo,
+        airlines: airlines.map((a) => ({
+          id: a.id,
+          name: a.name,
+          kind: a.kind,
+          selected: a.selected,
+          quoteTotal: totalsById[a.id]?.grandSell ?? 0,
+        })),
         termsAndConditions: terms,
         type: "air",
         mode: "Air",
