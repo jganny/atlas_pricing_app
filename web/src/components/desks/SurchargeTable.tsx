@@ -15,6 +15,23 @@ const UNIT_OPTIONS: Array<{ value: BillingUnit; label: string }> = [
   { value: "container", label: "Per container" },
 ];
 
+function focusTabTarget(id: string | undefined): boolean {
+  if (!id) return false;
+  const el = document.getElementById(id);
+  if (!(el instanceof HTMLElement)) return false;
+  if (
+    (el instanceof HTMLButtonElement ||
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLSelectElement ||
+      el instanceof HTMLTextAreaElement) &&
+    el.disabled
+  ) {
+    return false;
+  }
+  el.focus();
+  return document.activeElement === el;
+}
+
 export function SurchargeTable({
   title,
   enabled,
@@ -23,6 +40,8 @@ export function SurchargeTable({
   onChange,
   units = ["kg", "flat"],
   lastFieldTabTarget,
+  firstNameInputId,
+  prevFieldTabTarget,
 }: {
   title: string;
   enabled: boolean;
@@ -30,12 +49,17 @@ export function SurchargeTable({
   rows: SurchargeRow[];
   onChange: (rows: SurchargeRow[]) => void;
   units?: BillingUnit[];
-  /** When set, Tab on the last row’s delete control jumps here (e.g. Next · Terms). */
+  /** When set, Tab on the last row’s delete control jumps here (e.g. dest Name or Next · Terms). */
   lastFieldTabTarget?: string;
+  /** Stable id on the first Name field (or Add, if empty) so the previous table can Tab into it. */
+  firstNameInputId?: string;
+  /** Shift+Tab from the first Name field jumps here (e.g. previous table’s last Delete). */
+  prevFieldTabTarget?: string;
 }) {
   function update(index: number, patch: Partial<SurchargeRow>) {
     onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   }
+  const emptyAddId = rows.length === 0 ? firstNameInputId : undefined;
 
   return (
     <div
@@ -61,7 +85,8 @@ export function SurchargeTable({
         </label>
         <Button
           type="button"
-          tabIndex={-1}
+          id={emptyAddId}
+          tabIndex={emptyAddId ? 0 : -1}
           variant="secondary"
           className="px-2 py-1 text-xs"
           disabled={!enabled}
@@ -89,16 +114,29 @@ export function SurchargeTable({
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-1 py-2 text-[11px] text-[var(--color-text-muted)]">
+                  No charges on this heading. Add one if you need a fee line.
+                </td>
+              </tr>
+            ) : null}
             {rows.map((row, i) => (
               <tr key={row.id} className="border-t border-[var(--color-border)]">
                 <td className="p-1">
                   <input
+                    id={i === 0 ? firstNameInputId || `surcharge-name-${row.id}` : `surcharge-name-${row.id}`}
                     disabled={!enabled}
                     autoComplete="off"
                     name={`atlas-surcharge-name-${row.id}`}
                     className="w-28 rounded border px-1 py-1 disabled:opacity-50"
                     value={row.name}
                     onChange={(e) => update(i, { name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Tab" && e.shiftKey && i === 0 && focusTabTarget(prevFieldTabTarget)) {
+                        e.preventDefault();
+                      }
+                    }}
                   />
                 </td>
                 <td className="p-1">
@@ -143,9 +181,8 @@ export function SurchargeTable({
                     onChange={(e) => update(i, { remarks: e.target.value })}
                     placeholder="Optional"
                     onKeyDown={(e) => {
-                      if (e.key === "Tab" && !e.shiftKey) {
+                      if (e.key === "Tab" && !e.shiftKey && focusTabTarget(`surcharge-del-${row.id}`)) {
                         e.preventDefault();
-                        document.getElementById(`surcharge-del-${row.id}`)?.focus();
                       }
                     }}
                   />
@@ -155,14 +192,19 @@ export function SurchargeTable({
                     type="button"
                     id={`surcharge-del-${row.id}`}
                     tabIndex={0}
-                    disabled={!enabled || rows.length <= 1}
+                    disabled={!enabled}
                     className="rounded p-0.5 text-red-600 outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-30"
                     aria-label="Delete surcharge row"
+                    data-testid="surcharge-delete"
                     onClick={() => onChange(rows.filter((_, j) => j !== i))}
                     onKeyDown={(e) => {
-                      if (e.key === "Tab" && !e.shiftKey && lastFieldTabTarget && i === rows.length - 1) {
+                      if (
+                        e.key === "Tab" &&
+                        !e.shiftKey &&
+                        i === rows.length - 1 &&
+                        focusTabTarget(lastFieldTabTarget)
+                      ) {
                         e.preventDefault();
-                        document.getElementById(lastFieldTabTarget)?.focus();
                       }
                     }}
                   >

@@ -11,6 +11,7 @@ import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { VendorCompareList } from "@/components/VendorCompareList";
+import { GuideNote } from "@/components/GuideNote";
 import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
@@ -1115,6 +1116,7 @@ function SeaDeskInner() {
                       rows={opt.originSurcharges}
                       onChange={(rows) => updateLiner(opt.id, { originSurcharges: rows })}
                       units={["flat", "cbm", "container"]}
+                      lastFieldTabTarget={`dest-fee-first-${opt.id}`}
                     />
                     <SurchargeTable
                       title="Destination local surcharges"
@@ -1123,6 +1125,12 @@ function SeaDeskInner() {
                       rows={opt.destSurcharges}
                       onChange={(rows) => updateLiner(opt.id, { destSurcharges: rows })}
                       units={["flat", "cbm", "container"]}
+                      firstNameInputId={`dest-fee-first-${opt.id}`}
+                      prevFieldTabTarget={
+                        opt.originSurcharges.length
+                          ? `surcharge-del-${opt.originSurcharges[opt.originSurcharges.length - 1].id}`
+                          : undefined
+                      }
                       lastFieldTabTarget={idx === laneLiners.length - 1 ? "sea-next-terms" : undefined}
                     />
 
@@ -1231,6 +1239,10 @@ function SeaDeskInner() {
 
           {liners.length > 1 ? (
             <Card>
+              <GuideNote>
+                Quote every liner you want the client to compare. Share after save — they pick, we
+                do not have to choose for them.
+              </GuideNote>
               <VendorCompareList
                 vendors={vendorRowsFromEntries(
                   liners.map((l) => ({

@@ -221,6 +221,7 @@ export function AirlineOptionForm({
         rows={opt.originSurcharges}
         onChange={(rows) => onUpdate({ originSurcharges: rows })}
         units={["kg", "flat"]}
+        lastFieldTabTarget={`dest-fee-first-${opt.id}`}
       />
       <SurchargeTable
         title="Destination local fees & surcharges"
@@ -229,6 +230,12 @@ export function AirlineOptionForm({
         rows={opt.destSurcharges}
         onChange={(rows) => onUpdate({ destSurcharges: rows })}
         units={["kg", "flat"]}
+        firstNameInputId={`dest-fee-first-${opt.id}`}
+        prevFieldTabTarget={
+          opt.originSurcharges.length
+            ? `surcharge-del-${opt.originSurcharges[opt.originSurcharges.length - 1].id}`
+            : undefined
+        }
         lastFieldTabTarget={lastDestTabTarget}
       />
 
