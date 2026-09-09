@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
-import { airportCode, allLanesRoute } from "@/lib/quotes/lanes";
+import { allLanesRoute } from "@/lib/quotes/lanes";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
 import { getFirebaseDb } from "./client";
