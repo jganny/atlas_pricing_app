@@ -32,7 +32,7 @@ export function kindLabel(kind: string): string {
 
 export function compareHeading(type: string): string {
   const t = (type || "").toLowerCase();
-  if (t.includes("air")) return "Airline / coloader options";
+  if (t.includes("air")) return "Airline options";
   if (t.includes("sea")) return "Liner / coloader options";
   if (t.includes("courier")) return "Courier options";
   if (t.includes("transport")) return "Trucker options";

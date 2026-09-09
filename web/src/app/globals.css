@@ -188,8 +188,12 @@
   }
 }
 
-.quote-print-pack {
+input[data-testid="vertex-ask"]::-webkit-search-decoration,
+input[data-testid="vertex-ask"]::-webkit-search-cancel-button,
+input[data-testid="vertex-ask"]::-webkit-search-results-button,
+input[data-testid="vertex-ask"]::-webkit-search-results-decoration {
   display: none;
+  appearance: none;
 }
 
 @media print {
