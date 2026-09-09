@@ -1072,6 +1072,30 @@ function AirDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
+              {lanes.length > 1 ? (
+                <LaneChips
+                  lanes={lanes}
+                  activeId={activeLane?.id || lanes[0]?.id || ""}
+                  onSelect={setActiveLaneId}
+                  onAdd={() => {
+                    const lane = newLane();
+                    setLanes((prev) => [...prev, lane]);
+                    setActiveLaneId(lane.id);
+                    setAirlines((prev) => [
+                      ...prev,
+                      createAirlineOption({ laneId: lane.id }, true),
+                    ]);
+                  }}
+                  onRemove={(id) => {
+                    setLanes((prev) => {
+                      const next = prev.filter((l) => l.id !== id);
+                      return next.length ? next : prev;
+                    });
+                    setAirlines((prev) => prev.filter((a) => a.laneId !== id));
+                    if (activeLaneId === id && lanes[0]) setActiveLaneId(lanes[0].id);
+                  }}
+                />
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="font-bold text-[var(--color-atlas-navy)]">
                   Carriers on this lane ({laneAirlines.length})
