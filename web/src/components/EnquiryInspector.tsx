@@ -118,7 +118,7 @@ export function EnquiryInspector({
   async function handleStatus(
     action: "won" | "lost" | "cancelled" | "delete",
   ) {
-    if (!useLiveData) {
+    if (!useLiveData && action !== "delete") {
       const msg = "Mock mode — status changes disabled.";
       setMsg(msg);
       toast(msg, "info");

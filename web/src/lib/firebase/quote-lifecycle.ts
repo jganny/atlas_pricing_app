@@ -4,7 +4,17 @@ import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import type { SavedQuote } from "@/lib/types";
 import { getFirebaseDb } from "./client";
 import { omitUndefinedDeep } from "./sanitize";
-import { getLocalQuote } from "@/lib/quotes/local-enquiries";
+import {
+  clearDeletedQuoteId,
+  forgetLocalEnquiry,
+  getLocalQuote,
+  listLocalEnquiries,
+  listLocalQuotes,
+  rememberLocalEnquiry,
+  rememberLocalQuote,
+} from "@/lib/quotes/local-enquiries";
+import { hideQuoteFromAsk, unhideQuoteFromAsk } from "@/lib/quotes/hidden-ask";
+import { removeOfflineQuote } from "@/lib/quotes/offline-cache";
 
 export async function fetchQuoteById(id: string): Promise<SavedQuote | null> {
   const local = getLocalQuote(id);
@@ -30,8 +40,28 @@ export async function patchQuote(id: string, patch: Partial<SavedQuote>): Promis
 }
 
 export async function deleteQuoteById(id: string): Promise<void> {
-  const db = getFirebaseDb();
-  await deleteDoc(doc(db, "quotes", id));
+  const localQuote = listLocalQuotes()[id] ?? null;
+  const localRow = listLocalEnquiries().find((r) => r.id === id) ?? null;
+  forgetLocalEnquiry(id);
+  hideQuoteFromAsk(id);
+  try {
+    removeOfflineQuote(id);
+  } catch {
+    /* ignore */
+  }
+  try {
+    const db = getFirebaseDb();
+    await deleteDoc(doc(db, "quotes", id));
+  } catch (err) {
+    const code = typeof err === "object" && err && "code" in err ? String((err as { code: unknown }).code) : "";
+    const msg = err instanceof Error ? err.message : String(err);
+    if (code === "not-found" || /not-found/i.test(msg)) return;
+    clearDeletedQuoteId(id);
+    unhideQuoteFromAsk(id);
+    if (localRow) rememberLocalEnquiry(localRow);
+    if (localQuote) rememberLocalQuote(localQuote);
+    throw err;
+  }
 }
 
 export async function setQuoteStatus(

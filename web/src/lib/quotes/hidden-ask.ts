@@ -30,6 +30,21 @@ export function hideQuoteFromAsk(id: string): void {
   }
 }
 
+export function unhideQuoteFromAsk(id: string): void {
+  if (!id) return;
+  try {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(listHiddenQuoteIds().filter((x) => x !== id)),
+    );
+  } catch {
+    /* quota */
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(EVENT));
+  }
+}
+
 export function subscribeHiddenAsk(onChange: () => void): () => void {
   if (typeof window === "undefined") return () => undefined;
   window.addEventListener(EVENT, onChange);

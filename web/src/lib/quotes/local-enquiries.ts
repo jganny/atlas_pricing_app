@@ -2,8 +2,49 @@ import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 
 const KEY = "atlas_local_enquiries_v1";
 const QUOTES_KEY = "atlas_local_quotes_v1";
+const DELETED_KEY = "atlas_deleted_quote_ids_v1";
+const LAST_KEY = "atlas_last_saved_enquiry_v1";
 
-export function listLocalEnquiries(): EnquiryRecord[] {
+function readDeletedIds(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DELETED_KEY) || "[]") as unknown;
+    return Array.isArray(raw) ? raw.map(String).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDeletedIds(ids: string[]) {
+  try {
+    localStorage.setItem(DELETED_KEY, JSON.stringify(Array.from(new Set(ids)).slice(-500)));
+  } catch {
+    /* quota */
+  }
+}
+
+export function listDeletedQuoteIds(): string[] {
+  return readDeletedIds();
+}
+
+export function isDeletedQuoteId(id: string): boolean {
+  return Boolean(id) && readDeletedIds().includes(id);
+}
+
+function markDeletedQuoteId(id: string) {
+  if (!id) return;
+  writeDeletedIds([...readDeletedIds(), id]);
+}
+
+function unmarkDeletedQuoteId(id: string) {
+  if (!id) return;
+  writeDeletedIds(readDeletedIds().filter((x) => x !== id));
+}
+
+export function clearDeletedQuoteId(id: string) {
+  unmarkDeletedQuoteId(id);
+}
+
+function readLocalEnquiryRows(): EnquiryRecord[] {
   try {
     const rows = JSON.parse(localStorage.getItem(KEY) || "[]") as EnquiryRecord[];
     return Array.isArray(rows) ? rows : [];
@@ -12,8 +53,13 @@ export function listLocalEnquiries(): EnquiryRecord[] {
   }
 }
 
+export function listLocalEnquiries(): EnquiryRecord[] {
+  return readLocalEnquiryRows().filter((r) => r.id && !isDeletedQuoteId(r.id));
+}
+
 export function rememberLocalEnquiry(row: EnquiryRecord) {
   try {
+    unmarkDeletedQuoteId(row.id);
     const rows = listLocalEnquiries().filter((r) => r.id !== row.id);
     rows.unshift(row);
     localStorage.setItem(KEY, JSON.stringify(rows.slice(0, 50)));
@@ -49,10 +95,35 @@ export function rememberLocalQuote(quote: SavedQuote) {
 
 export function getLocalQuote(id: string | null | undefined): SavedQuote | null {
   if (!id) return null;
+  if (isDeletedQuoteId(id)) return null;
   return listLocalQuotes()[id] ?? null;
 }
 
-const LAST_KEY = "atlas_last_saved_enquiry_v1";
+/** Drop this computer's copy so a Firestore delete is not resurrected in Enquiry DB. */
+export function forgetLocalEnquiry(id: string) {
+  if (!id) return;
+  try {
+    markDeletedQuoteId(id);
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(readLocalEnquiryRows().filter((r) => r.id !== id)),
+    );
+    const map = listLocalQuotes();
+    delete map[id];
+    localStorage.setItem(QUOTES_KEY, JSON.stringify(map));
+    try {
+      const raw = sessionStorage.getItem(LAST_KEY);
+      if (raw) {
+        const v = JSON.parse(raw) as { id?: string };
+        if (v?.id === id) sessionStorage.removeItem(LAST_KEY);
+      }
+    } catch {
+      /* private mode */
+    }
+  } catch {
+    /* quota / private mode */
+  }
+}
 
 export function rememberLastSavedEnquiry(row: Pick<EnquiryRecord, "id" | "ref">) {
   try {
@@ -71,6 +142,7 @@ export function getLastSavedEnquiry(): { id: string; ref: string; at: number } |
     if (!raw) return null;
     const v = JSON.parse(raw) as { id?: string; ref?: string; at?: number };
     if (!v?.id) return null;
+    if (isDeletedQuoteId(v.id)) return null;
     if (Date.now() - Number(v.at || 0) > 4 * 60 * 60 * 1000) return null;
     return { id: v.id, ref: String(v.ref || ""), at: Number(v.at || 0) };
   } catch {
@@ -80,7 +152,9 @@ export function getLastSavedEnquiry(): { id: string; ref: string; at: number } |
 
 /** Prepend quotes saved on this computer that Firestore has not returned yet. */
 export function mergeLocalEnquiries(live: EnquiryRecord[]): EnquiryRecord[] {
-  const seen = new Set(live.map((r) => r.id));
+  const deleted = new Set(readDeletedIds());
+  const liveKept = live.filter((r) => r.id && !deleted.has(r.id));
+  const seen = new Set(liveKept.map((r) => r.id));
   const extra = listLocalEnquiries().filter((r) => r.id && !seen.has(r.id));
-  return extra.length ? [...extra, ...live] : live;
+  return extra.length ? [...extra, ...liveKept] : liveKept;
 }

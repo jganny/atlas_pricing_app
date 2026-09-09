@@ -3,6 +3,7 @@ import {
   hideQuoteFromAsk,
   isQuoteHiddenFromAsk,
   listHiddenQuoteIds,
+  unhideQuoteFromAsk,
 } from "./hidden-ask";
 
 const g = globalThis as { localStorage?: Storage };
@@ -27,5 +28,7 @@ hideQuoteFromAsk("Q1");
 assert.equal(isQuoteHiddenFromAsk("Q1"), true);
 assert.equal(listHiddenQuoteIds().filter((id) => id === "Q1").length, 1);
 assert.equal(isQuoteHiddenFromAsk("Q2"), false);
+unhideQuoteFromAsk("Q1");
+assert.equal(isQuoteHiddenFromAsk("Q1"), false);
 
 console.log("hidden-ask tests passed");

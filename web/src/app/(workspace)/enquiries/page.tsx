@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Archive, Download, Loader2, Search } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
@@ -10,10 +11,11 @@ import { EnquiryTable } from "@/components/EnquiryTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
+import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { lookupQuoteByRef, lookupQuotesByText } from "@/lib/firebase/archive-lookup";
-import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
+import { deleteQuoteById, fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import {
   downloadEnquiryCsv,
@@ -22,6 +24,7 @@ import {
 import { searchQuotes } from "@/lib/quotes/find-quotes";
 import {
   getLastSavedEnquiry,
+  isDeletedQuoteId,
   listLocalEnquiries,
   mergeLocalEnquiries,
 } from "@/lib/quotes/local-enquiries";
@@ -85,7 +88,8 @@ function MetricToggle<T extends string>({
 
 function EnquiryDatabaseInner() {
   const searchParams = useSearchParams();
-  const { data: liveRows = [], isLoading, error, refetch } = useEnquiries();
+  const queryClient = useQueryClient();
+  const { data: liveRows = [], isLoading, error } = useEnquiries();
   const rows = useMemo(() => mergeLocalEnquiries(liveRows), [liveRows]);
   const user = useAuthStore((s) => s.user);
   const admin = isAdminUser(user?.username, user?.role);
@@ -123,7 +127,7 @@ function EnquiryDatabaseInner() {
       return;
     }
     const last = getLastSavedEnquiry();
-    if (last) {
+    if (last && !isDeletedQuoteId(last.id)) {
       setSelectedId(last.id);
       if (!q) setSearch(last.ref);
     }
@@ -152,7 +156,7 @@ function EnquiryDatabaseInner() {
     const username = (user?.username || "").toLowerCase();
     const out = rows.filter((row) => {
       if (row.creator === "mahendra") return false;
-      if (selectedId && row.id === selectedId) return true;
+      if (selectedId && !isDeletedQuoteId(selectedId) && row.id === selectedId) return true;
       if (!chip.match(row)) return false;
       if (modeFilter !== "all" && row.mode !== modeFilter) return false;
       if (originFilter && !row.origin.toLowerCase().includes(originFilter.toLowerCase())) return false;
@@ -184,9 +188,9 @@ function EnquiryDatabaseInner() {
         `${row.ref} ${row.customer} ${row.origin} ${row.destination} ${row.assignee} ${row.creator} ${row.carrier || ""}`.toLowerCase();
       return hay.includes(q);
     });
-    if (selectedId && !out.some((r) => r.id === selectedId)) {
+    if (selectedId && !isDeletedQuoteId(selectedId) && !out.some((r) => r.id === selectedId)) {
       const pinned =
-        rows.find((r) => r.id === selectedId) ??
+        rows.find((r) => r.id === selectedId && !isDeletedQuoteId(r.id)) ??
         listLocalEnquiries().find((r) => r.id === selectedId) ??
         (archiveHit?.id === selectedId ? archiveHit : null);
       if (pinned) return [pinned, ...out];
@@ -270,6 +274,22 @@ function EnquiryDatabaseInner() {
     }
   }
 
+  async function handleDeleteRow(id: string) {
+    const previous = queryClient.getQueryData(queryKeys.enquiries);
+    queryClient.setQueryData(queryKeys.enquiries, (current: EnquiryRecord[] | undefined) =>
+      (current ?? []).filter((row) => row.id !== id),
+    );
+    if (selectedId === id) setSelectedId(null);
+    try {
+      await deleteQuoteById(id);
+      toast("Quote deleted.", "success");
+      await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+    } catch (e) {
+      if (previous) queryClient.setQueryData(queryKeys.enquiries, previous);
+      toast(e instanceof Error ? e.message : "Could not delete quote.", "error");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -296,15 +316,6 @@ function EnquiryDatabaseInner() {
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
-          {useLiveData ? (
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold hover:bg-slate-50"
-            >
-              Refresh
-            </button>
-          ) : null}
         </div>
       </div>
 
@@ -540,7 +551,7 @@ function EnquiryDatabaseInner() {
             </Card>
           ) : null}
 
-          <Card className="overflow-x-auto p-0">
+          <Card className="overflow-hidden p-0">
             {isLoading ? (
               <TableSkeleton rows={8} />
             ) : (
@@ -555,6 +566,7 @@ function EnquiryDatabaseInner() {
                     else toast("Quote not found in Enquiry DB.", "error");
                   })();
                 }}
+                onDelete={(row) => void handleDeleteRow(row.id)}
                 metricModes={metricModes}
                 visibleColumns={columns}
               />
