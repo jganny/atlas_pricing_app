@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, Truck } from "lucide-react";
+import { Eye, Plus, Save, Truck } from "lucide-react";
 import {
   Badge,
   Button,
@@ -22,6 +22,16 @@ import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { saveTransportQuote } from "@/lib/firebase/save-transport-warehouse";
+import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { VendorCompareList } from "@/components/VendorCompareList";
+import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
+import {
+  createTruckerOption,
+  truckerQuoteTotal,
+  type TruckerOption,
+} from "@/lib/pricing/carrier-options";
+import type { SavedQuote } from "@/lib/types";
+import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
@@ -79,13 +89,31 @@ export default function TransportDeskPage() {
   const [gstin, setGstin] = useState("");
   const [invoiceValue, setInvoiceValue] = useState(0);
   const [validity, setValidity] = useState("15 days");
-  const [freightBuy, setFreightBuy] = useState(0);
-  const [freightSell, setFreightSell] = useState(0);
-  const [detention, setDetention] = useState(0);
-  const [tolls, setTolls] = useState(0);
+  const [truckers, setTruckers] = useState<TruckerOption[]>(() => [createTruckerOption({ name: "" }, true)]);
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
+  const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+
+  const selectedTrucker = truckers.find((t) => t.selected) ?? truckers[0];
+  const freightBuy = selectedTrucker?.freightBuy ?? 0;
+  const freightSell = selectedTrucker?.freightSell ?? 0;
+  const detention = selectedTrucker?.detention ?? 0;
+  const tolls = selectedTrucker?.tolls ?? 0;
+
+  function updateSelectedTrucker(patch: Partial<TruckerOption>) {
+    const id = selectedTrucker?.id;
+    if (!id) return;
+    setTruckers((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  function selectTrucker(id: string) {
+    setTruckers((prev) => prev.map((t) => ({ ...t, selected: t.id === id })));
+  }
+
+  function addTrucker() {
+    setTruckers((prev) => [...prev, createTruckerOption({ name: "" }, prev.length === 0)]);
+  }
 
   function goTransportStep(next: TabId, focusId = TRANSPORT_FOCUS[next]) {
     setTab(next);
@@ -123,6 +151,54 @@ export default function TransportDeskPage() {
   );
   const { gp, gpReady } = useMemo(() => computeGp(total, freightBuy), [total, freightBuy]);
 
+  function handlePreview() {
+    if (!origin.trim() || !destination.trim()) {
+      toast("Enter origin and destination before preview.", "error");
+      setTab("lane");
+      return;
+    }
+    const amount = total;
+    const q: SavedQuote = {
+      id: "preview",
+      customer: customer.trim() || "Draft",
+      creator: user?.username || "",
+      status: "quoted",
+      type: "transport",
+      quoteNumber: nextQuoteNumber(),
+      date: new Date().toISOString().split("T")[0],
+      timestamp: Date.now(),
+      amount,
+      currency,
+      route: `${origin} → ${destination}`,
+      details: {
+        origin,
+        destination,
+        vehicleType,
+        serviceType,
+        freightBuy,
+        freightSell,
+        detention,
+        tolls,
+        truckerName: selectedTrucker?.name || vehicleType,
+        truckers: truckers.map((t) => ({
+          id: t.id,
+          name: t.name || "Untitled",
+          kind: "trucker",
+          selected: t.selected,
+          freightBuy: t.freightBuy,
+          freightSell: t.freightSell,
+          detention: t.detention,
+          tolls: t.tolls,
+          quoteTotal: truckerQuoteTotal(t),
+        })),
+        termsAndConditions: terms,
+        mode: "Transport",
+        type: "transport",
+      },
+    };
+    setPreviewQuote(q);
+  }
+
   async function save() {
     if (!customer.trim() || !origin.trim() || !destination.trim()) {
       toast("Customer, origin and destination are required", "error");
@@ -152,6 +228,16 @@ export default function TransportDeskPage() {
               gstin,
               invoiceValue,
               validity,
+              truckerName: selectedTrucker?.name || "",
+              truckers: truckers.map((t) => ({
+                id: t.id,
+                name: t.name,
+                selected: t.selected,
+                freightBuy: t.freightBuy,
+                freightSell: t.freightSell,
+                detention: t.detention,
+                tolls: t.tolls,
+              })),
               notes,
               terms,
             }),
@@ -183,10 +269,16 @@ export default function TransportDeskPage() {
           </h1>
           <Badge tone="info">Phase 10</Badge>
         </div>
-        <Button id="transport-save" type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
-          <Save className="h-4 w-4" />
-          Save quote
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" className="h-9" onClick={handlePreview}>
+            <Eye className="mr-1.5 h-4 w-4" />
+            Preview
+          </Button>
+          <Button id="transport-save" type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
+            <Save className="h-4 w-4" />
+            Save quote
+          </Button>
+        </div>
       </div>
 
       <Tabs
@@ -340,34 +432,76 @@ export default function TransportDeskPage() {
           ) : null}
 
           {tab === "charges" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label>Freight buy</Label>
-                <NumberInput
-                  id="transport-freight-buy"
-                  value={freightBuy}
-                  onValueChange={setFreightBuy}
-                  onKeyDown={(e) =>
-                    firstFieldBackTab(e, () => goTransportStep("cargo", "transport-notes"))
-                  }
-                />
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-bold text-[var(--color-atlas-navy)]">
+                  Truckers ({truckers.length})
+                </h2>
+                <Button type="button" variant="secondary" onClick={addTrucker}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Trucker
+                </Button>
               </div>
-              <div>
-                <Label>Freight sell</Label>
-                <NumberInput value={freightSell} onValueChange={setFreightSell} />
-              </div>
-              <div>
-                <Label>Detention</Label>
-                <NumberInput value={detention} onValueChange={setDetention} />
-              </div>
-              <div>
-                <Label>Tolls / permits</Label>
-                <NumberInput
-                  id="transport-tolls"
-                  value={tolls}
-                  onValueChange={setTolls}
-                  onKeyDown={(e) => lastFieldTab(e, () => goTransportStep("terms"))}
-                />
+              {truckers.map((t, idx) => (
+                <label key={t.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="selected-trucker"
+                    checked={t.selected}
+                    onChange={() => selectTrucker(t.id)}
+                  />
+                  <span className="font-semibold">
+                    {t.name || `Trucker #${idx + 1}`}
+                    {t.selected ? " · quoted" : ""}
+                  </span>
+                  <span className="text-[var(--color-text-muted)]">
+                    {formatCurrency(truckerQuoteTotal(t), currency)}
+                  </span>
+                </label>
+              ))}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Label>Trucker / vendor</Label>
+                  <Input
+                    value={selectedTrucker?.name ?? ""}
+                    onChange={(e) => updateSelectedTrucker({ name: e.target.value })}
+                    placeholder="ABC Transport, local cartage…"
+                  />
+                </div>
+                <div>
+                  <Label>Freight buy</Label>
+                  <NumberInput
+                    id="transport-freight-buy"
+                    value={freightBuy}
+                    onValueChange={(n) => updateSelectedTrucker({ freightBuy: n })}
+                    onKeyDown={(e) =>
+                      firstFieldBackTab(e, () => goTransportStep("cargo", "transport-notes"))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Freight sell</Label>
+                  <NumberInput
+                    value={freightSell}
+                    onValueChange={(n) => updateSelectedTrucker({ freightSell: n })}
+                  />
+                </div>
+                <div>
+                  <Label>Detention</Label>
+                  <NumberInput
+                    value={detention}
+                    onValueChange={(n) => updateSelectedTrucker({ detention: n })}
+                  />
+                </div>
+                <div>
+                  <Label>Tolls / permits</Label>
+                  <NumberInput
+                    id="transport-tolls"
+                    value={tolls}
+                    onValueChange={(n) => updateSelectedTrucker({ tolls: n })}
+                    onKeyDown={(e) => lastFieldTab(e, () => goTransportStep("terms"))}
+                  />
+                </div>
               </div>
             </div>
           ) : null}
@@ -389,20 +523,46 @@ export default function TransportDeskPage() {
           ) : null}
         </Card>
 
-        <Card>
-          <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Total</div>
-          <div className="mt-1 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
-            {formatCurrency(total, currency)}
-          </div>
-          <div className="mt-3 text-sm">
-            GP{" "}
-            <span className="font-bold text-emerald-700">
-              {gpReady ? formatCurrency(gp, currency) : "—"}
-            </span>
-          </div>
-          <p className="mt-4 text-xs text-[var(--color-text-muted)]">⌘S to save</p>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Quoted total</div>
+            <div className="mt-1 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
+              {formatCurrency(total, currency)}
+            </div>
+            <div className="mt-3 text-sm">
+              GP{" "}
+              <span className="font-bold text-emerald-700">
+                {gpReady ? formatCurrency(gp, currency) : "—"}
+              </span>
+            </div>
+            <p className="mt-4 text-xs text-[var(--color-text-muted)]">⌘S to save</p>
+          </Card>
+          {truckers.length > 1 ? (
+            <Card>
+              <VendorCompareList
+                vendors={vendorRowsFromEntries(
+                  truckers.map((t) => ({
+                    id: t.id,
+                    name: t.name || "Untitled",
+                    kind: "trucker",
+                    total: truckerQuoteTotal(t),
+                    selected: t.selected,
+                  })),
+                )}
+                currency={currency}
+                heading="Trucker options"
+                hint="Cheapest → highest. ★ marks the lowest total. Click a row to quote it."
+                onSelect={selectTrucker}
+                testId="transport-desk-compare"
+              />
+            </Card>
+          ) : null}
+        </div>
       </div>
+
+      {previewQuote ? (
+        <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />
+      ) : null}
     </div>
   );
 }

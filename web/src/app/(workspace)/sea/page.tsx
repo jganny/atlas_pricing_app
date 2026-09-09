@@ -10,6 +10,8 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { VendorCompareList } from "@/components/VendorCompareList";
+import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { ValidityField } from "@/components/ValidityField";
@@ -367,6 +369,8 @@ function SeaDeskInner() {
           kind: l.kind,
           selected: l.selected,
           quoteTotal: totalsById[l.id]?.grandSell ?? 0,
+          routing: l.routing,
+          tt: l.tt,
         })),
         termsAndConditions: terms,
         mode: "Sea",
@@ -821,6 +825,9 @@ function SeaDeskInner() {
                           Select as quoted
                         </label>
                         {opt.selected ? <Badge tone="success">Quoted</Badge> : null}
+                        {opt.id === cheapestLinerId && (tot?.grandSell ?? 0) > 0 ? (
+                          <Badge tone="success">Cheapest ★</Badge>
+                        ) : null}
                       </div>
                       <button
                         type="button"
@@ -1128,35 +1135,23 @@ function SeaDeskInner() {
 
           {liners.length > 1 ? (
             <Card>
-              <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Compare options</h2>
-              <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">
-                Cheapest → highest. Star marks the lowest total.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {liners.map((l) => {
-                  const cheapest = l.id === cheapestLinerId;
-                  return (
-                    <li
-                      key={l.id}
-                      className={`flex justify-between gap-2 rounded-lg px-3 py-2 ${
-                        cheapest
-                          ? "bg-emerald-50 ring-1 ring-emerald-300"
-                          : l.selected
-                            ? "bg-sky-50"
-                            : "bg-slate-50"
-                      }`}
-                    >
-                      <span className={cheapest || l.selected ? "font-bold" : ""}>
-                        {l.name || "Untitled"}
-                        {cheapest ? " ★" : ""}
-                      </span>
-                      <span className="font-semibold">
-                        {formatCurrency(totalsById[l.id]?.grandSell ?? 0, currency)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <VendorCompareList
+                vendors={vendorRowsFromEntries(
+                  liners.map((l) => ({
+                    id: l.id,
+                    name: l.name || "Untitled",
+                    kind: l.kind,
+                    total: totalsById[l.id]?.grandSell ?? 0,
+                    selected: l.selected,
+                    routing: l.routing,
+                    tt: l.tt,
+                  })),
+                )}
+                currency={currency}
+                hint="Cheapest → highest. ★ marks the lowest total. Click a row to quote it."
+                onSelect={selectLiner}
+                testId="sea-desk-compare"
+              />
             </Card>
           ) : null}
         </div>

@@ -131,6 +131,37 @@ export function createLinerOption(
   };
 }
 
+export interface TruckerOption {
+  id: string;
+  name: string;
+  selected: boolean;
+  freightBuy: number;
+  freightSell: number;
+  detention: number;
+  tolls: number;
+}
+
+export function truckerQuoteTotal(
+  t: Pick<TruckerOption, "freightSell" | "detention" | "tolls">,
+): number {
+  return (Number(t.freightSell) || 0) + (Number(t.detention) || 0) + (Number(t.tolls) || 0);
+}
+
+export function createTruckerOption(
+  partial: Partial<TruckerOption> = {},
+  selected = false,
+): TruckerOption {
+  return {
+    id: partial.id ?? newCarrierId("trk"),
+    name: partial.name ?? "",
+    selected,
+    freightBuy: partial.freightBuy ?? 0,
+    freightSell: partial.freightSell ?? 0,
+    detention: partial.detention ?? 0,
+    tolls: partial.tolls ?? 0,
+  };
+}
+
 /** Explicit fields only — never spread optional keys as `undefined` into Firestore. */
 export function serializeAirlineOption(a: AirlineOption): Record<string, unknown> {
   const row: Record<string, unknown> = {

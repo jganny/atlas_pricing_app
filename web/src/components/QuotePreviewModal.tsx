@@ -10,7 +10,12 @@ import {
   formatTransitPreview,
 } from "@/lib/pricing/terms";
 import { enquiryAssigneeLabel } from "@/lib/auth/desk-seats";
-import { vendorRowsFromQuote } from "@/lib/quotes/vendor-preview";
+import {
+  compareHeading,
+  quotedFieldLabel,
+  vendorRowsFromQuote,
+} from "@/lib/quotes/vendor-preview";
+import { VendorCompareList } from "@/components/VendorCompareList";
 
 function statusLabel(status: string | undefined) {
   const s = (status || "quoted").toLowerCase();
@@ -24,10 +29,19 @@ function money(n: unknown, currency: string) {
   return formatCurrency(Number(n ?? 0), currency);
 }
 
-function detailRows(quote: SavedQuote): Array<[string, string]> {
+function starredName(name: string, cheapest: boolean) {
+  return cheapest ? `${name} ★` : name;
+}
+
+function detailRows(
+  quote: SavedQuote,
+  quotedName: string | null,
+  quotedIsCheapest: boolean,
+): Array<[string, string]> {
   const d = quote.details ?? {};
   const type = (quote.type || "").toLowerCase();
   const cur = quote.currency || "USD";
+  const quotedLabel = quotedFieldLabel(type);
   const rows: Array<[string, string]> = [
     ["Customer", quote.customer || "—"],
     ["Reference", getQuoteRefId(quote)],
@@ -44,10 +58,14 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
     const originFees = Number(d.originFeesTotal ?? 0);
     const destFees = Number(d.destFeesTotal ?? 0);
     const ams = Number(d.amsFee ?? 0);
+    const airlineName = starredName(
+      quotedName || String(d.airline ?? "—"),
+      quotedIsCheapest,
+    );
     rows.push(
       ["Origin", String(d.origin ?? "—")],
       ["Destination", String(d.destination ?? "—")],
-      ["Airline", String(d.airline ?? "—")],
+      [quotedLabel, airlineName],
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Commodity", String(d.commodity ?? "—")],
       ["Chargeable weight", `${chw.toFixed(2)} kg`],
@@ -74,10 +92,14 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
     const originFees = Number(d.originFeesTotal ?? 0);
     const destFees = Number(d.destFeesTotal ?? 0);
     const override = Number(d.chargeableCbmOverride ?? 0);
+    const linerName = starredName(
+      quotedName || String(d.liner ?? d.shippingLine ?? "—"),
+      quotedIsCheapest,
+    );
     rows.push(
       ["Origin", String(d.origin ?? "—")],
       ["Destination", String(d.destination ?? "—")],
-      ["Liner", String(d.liner ?? d.shippingLine ?? "—")],
+      [quotedLabel, linerName],
       ["Mode", String(d.type ?? d.module ?? "—").toUpperCase()],
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
@@ -100,15 +122,34 @@ function detailRows(quote: SavedQuote): Array<[string, string]> {
       rows.push(["Containers", summary.join(", ")]);
     }
   } else if (type === "courier") {
+    const carrierName = starredName(
+      quotedName || String(d.carrierName ?? d.carrier ?? "—"),
+      quotedIsCheapest,
+    );
     rows.push(
-      ["Origin", `${d.originCity ?? ""} (${d.originCountry ?? ""})`],
-      ["Destination", `${d.destCity ?? ""} (${d.destCountry ?? ""})`],
+      ["Origin", `${d.originCity ?? d.origin ?? ""} (${d.originCountry ?? ""})`],
+      ["Destination", `${d.destCity ?? d.destination ?? ""} (${d.destCountry ?? ""})`],
       ["Service", String(d.service ?? "—")],
-      ["Carrier", String(d.carrierName ?? d.carrier ?? "—")],
+      [quotedLabel, carrierName],
       ["Chargeable", `${Number(d.chargeableWeight ?? 0).toFixed(2)} kg`],
       ["Zone", String(d.zone ?? "—")],
       ["Base freight", money(d.baseFreight, cur)],
       ["GST", money(d.gstAmount, cur)],
+    );
+  } else if (type === "transport") {
+    const truckerName = starredName(
+      quotedName || String(d.truckerName ?? d.vehicleType ?? "—"),
+      quotedIsCheapest,
+    );
+    rows.push(
+      ["Origin", String(d.origin ?? "—")],
+      ["Destination", String(d.destination ?? "—")],
+      [quotedLabel, truckerName],
+      ["Vehicle", String(d.vehicleType ?? "—")],
+      ["Service", String(d.serviceType ?? "—")],
+      ["Freight", money(d.freightSell, cur)],
+      ["Detention", money(d.detention, cur)],
+      ["Tolls", money(d.tolls, cur)],
     );
   } else {
     rows.push(["Amount", money(quote.amount, cur)]);
@@ -126,13 +167,18 @@ export function QuotePreviewModal({
   onClose: () => void;
 }) {
   const ref = getQuoteRefId(quote);
-  const rows = detailRows(quote);
   const vendors = vendorRowsFromQuote(quote);
+  const quoted = vendors.find((v) => v.selected) ?? vendors[0];
+  const cheapest = vendors.find((v) => v.cheapest);
+  const rows = detailRows(quote, quoted?.name ?? null, Boolean(quoted?.cheapest));
   const terms = String(quote.details?.termsAndConditions ?? "");
   const type = (quote.type || "").toLowerCase();
   const d = quote.details ?? {};
   const showAirBreakdown = type === "air";
   const showSeaBreakdown = type === "sea";
+  const showCompare = vendors.length > 1;
+  const quotedIsNotCheapest =
+    Boolean(cheapest && quoted && cheapest.id !== quoted.id && cheapest.total > 0);
 
   function handlePrint() {
     window.print();
@@ -140,7 +186,10 @@ export function QuotePreviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 print:relative print:inset-auto print:bg-white print:p-0">
-      <div className="quote-print-root my-4 w-full max-w-3xl rounded-xl bg-white shadow-xl print:my-0 print:max-w-none print:shadow-none">
+      <div
+        data-testid="quote-preview-modal"
+        className="quote-print-root my-4 w-full max-w-3xl rounded-xl bg-white shadow-xl print:my-0 print:max-w-none print:shadow-none"
+      >
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4 print:hidden">
           <div>
             <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">Quotation preview</h2>
@@ -191,8 +240,22 @@ export function QuotePreviewModal({
                 {statusLabel(quote.status)}
               </Badge>
               <Badge tone="neutral">{(quote.type || "").toUpperCase()}</Badge>
+              {cheapest && showCompare ? (
+                <Badge tone="success">Cheapest ★ {cheapest.name}</Badge>
+              ) : null}
             </div>
           </div>
+
+          {showCompare ? (
+            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+              <VendorCompareList
+                vendors={vendors}
+                currency={quote.currency || "USD"}
+                heading={compareHeading(type)}
+                testId="quote-preview-vendors"
+              />
+            </div>
+          ) : null}
 
           <table className="mb-6 w-full text-sm">
             <tbody>
@@ -205,55 +268,10 @@ export function QuotePreviewModal({
             </tbody>
           </table>
 
-          {vendors.length > 0 ? (
-            <div className="mb-6">
-              <h3 className="mb-1 text-sm font-extrabold text-[var(--color-atlas-navy)]">
-                Carrier options
-              </h3>
-              <p className="mb-2 text-xs text-[var(--color-text-muted)]">
-                ★ is the cheapest total. Quoted is the option on this document.
-              </p>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-                    <th className="py-1.5">Option</th>
-                    <th className="py-1.5">Role</th>
-                    <th className="py-1.5 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vendors.map((v) => (
-                    <tr
-                      key={v.id}
-                      className={
-                        v.cheapest
-                          ? "bg-emerald-50 font-semibold"
-                          : v.selected
-                            ? "bg-sky-50"
-                            : ""
-                      }
-                    >
-                      <td className="py-1.5">
-                        {v.name}
-                        {v.cheapest ? " ★" : ""}
-                      </td>
-                      <td className="py-1.5 text-xs text-[var(--color-text-muted)]">
-                        {v.selected ? "Quoted" : v.kind}
-                      </td>
-                      <td className="py-1.5 text-right tabular-nums">
-                        {money(v.total, quote.currency || "USD")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
           {(showAirBreakdown || showSeaBreakdown) && (
             <div className="mb-4 rounded-lg border border-slate-200 p-4 text-sm">
               <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-                Charges to customer
+                Charges to customer (quoted option)
               </div>
               <dl className="space-y-1.5">
                 <div className="flex justify-between gap-4">
@@ -283,10 +301,18 @@ export function QuotePreviewModal({
           )}
 
           <div className="rounded-lg bg-slate-50 p-4">
-            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Customer total</div>
-            <div className="text-2xl font-extrabold text-emerald-700">
-              {formatCurrency(Number(quote.amount ?? 0), quote.currency)}
+            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
+              Quoted total{quoted ? ` · ${quoted.name}` : ""}
+              {quoted?.cheapest ? " ★" : ""}
             </div>
+            <div className="text-2xl font-extrabold text-emerald-700" data-testid="quote-preview-total">
+              {formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), quote.currency)}
+            </div>
+            {quotedIsNotCheapest && cheapest ? (
+              <div className="mt-2 text-sm font-semibold text-emerald-800" data-testid="quote-preview-cheapest-note">
+                Cheapest option: {cheapest.name} ★ {money(cheapest.total, quote.currency || "USD")}
+              </div>
+            ) : null}
             {quote.grossProfit != null ? (
               <div className="mt-1 text-sm text-[var(--color-text-muted)]">
                 Gross profit: {formatCurrency(quote.grossProfit, quote.grossProfitCurrency ?? quote.currency)}

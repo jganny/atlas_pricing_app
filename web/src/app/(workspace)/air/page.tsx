@@ -18,6 +18,8 @@ import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { AirlineEditorOverlay, AirlineOptionForm } from "@/components/desks/AirlineOptionForm";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { VendorCompareList } from "@/components/VendorCompareList";
+import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
@@ -391,6 +393,8 @@ function AirDeskInner() {
           kind: a.kind,
           selected: a.selected,
           quoteTotal: totalsById[a.id]?.grandSell ?? 0,
+          routing: a.routing,
+          tt: a.tt,
         })),
         termsAndConditions: terms,
         type: "air",
@@ -1141,39 +1145,23 @@ function AirDeskInner() {
 
           {airlines.length > 1 ? (
             <Card>
-              <h2 className="mb-2 font-bold text-[var(--color-atlas-navy)]">Compare options</h2>
-              <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">
-                Cheapest → highest. Star marks the lowest total. Click a row to quote it.
-              </p>
-              <ul className="space-y-2 text-sm">
-                {compareSorted.map((a) => {
-                  const cheapest = a.id === cheapestId;
-                  return (
-                    <li key={a.id}>
-                      <button
-                        type="button"
-                        onClick={() => selectAirline(a.id)}
-                        className={`flex w-full justify-between gap-2 rounded-lg px-3 py-2 text-left ${
-                          cheapest
-                            ? "bg-emerald-50 ring-1 ring-emerald-300"
-                            : a.selected
-                              ? "bg-sky-50"
-                              : "bg-slate-50"
-                        }`}
-                      >
-                        <span className={cheapest || a.selected ? "font-bold" : ""}>
-                          {a.name || "Untitled"}
-                          {cheapest ? " ★" : ""}
-                          {a.selected ? " · quoted" : ""}
-                        </span>
-                        <span className="font-semibold">
-                          {formatCurrency(totalsById[a.id]?.grandSell ?? 0, currency)}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <VendorCompareList
+                vendors={vendorRowsFromEntries(
+                  compareSorted.map((a) => ({
+                    id: a.id,
+                    name: a.name || "Untitled",
+                    kind: a.kind,
+                    total: totalsById[a.id]?.grandSell ?? 0,
+                    selected: a.selected,
+                    routing: a.routing,
+                    tt: a.tt,
+                  })),
+                )}
+                currency={currency}
+                hint="Cheapest → highest. ★ marks the lowest total. Click a row to quote it."
+                onSelect={selectAirline}
+                testId="air-desk-compare"
+              />
             </Card>
           ) : null}
         </div>

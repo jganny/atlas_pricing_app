@@ -19,6 +19,16 @@ export async function saveTransportQuote(input: {
   freightSell: number;
   detention: number;
   tolls: number;
+  truckerName?: string;
+  truckers?: Array<{
+    id: string;
+    name: string;
+    selected: boolean;
+    freightBuy: number;
+    freightSell: number;
+    detention: number;
+    tolls: number;
+  }>;
   commodity?: string;
   ewayBillNo?: string;
   ewayRequired?: boolean;
@@ -73,6 +83,17 @@ export async function saveTransportQuote(input: {
       gstin: input.gstin || "",
       invoiceValue: input.invoiceValue ?? 0,
       validity: input.validity || "",
+      truckerName: input.truckerName || "",
+      truckers: (input.truckers ?? []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        selected: Boolean(t.selected),
+        freightBuy: t.freightBuy,
+        freightSell: t.freightSell,
+        detention: t.detention,
+        tolls: t.tolls,
+        quoteTotal: t.freightSell + t.detention + t.tolls,
+      })),
       termsAndConditions: input.terms || "",
     },
   }));
