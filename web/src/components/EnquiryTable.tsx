@@ -83,7 +83,8 @@ export function EnquiryTable({
         defs.push({
           id: "lane",
           header: "Lane",
-          accessorFn: (r) => `${r.origin} → ${r.destination}`,
+          accessorFn: (r) =>
+            r.destination ? `${r.origin} → ${r.destination}` : r.origin || "—",
         });
       }
       if (vis.desk) {

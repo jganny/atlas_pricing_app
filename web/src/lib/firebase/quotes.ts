@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
-import { airportCode } from "@/lib/quotes/lanes";
+import { airportCode, allLanesRoute } from "@/lib/quotes/lanes";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
 import { getFirebaseDb } from "./client";
@@ -70,12 +70,12 @@ function laneOriginDest(data: SavedQuote): { origin: string; destination: string
   const d = data.details || {};
   const lanes = Array.isArray(d.lanes) ? d.lanes : [];
   if (lanes.length > 1) {
-    const origins = lanes.map((raw) => airportCode(String(rec(raw).origin ?? ""))).filter(Boolean);
-    const dests = lanes.map((raw) => airportCode(String(rec(raw).destination ?? ""))).filter(Boolean);
-    return {
-      origin: origins.join(" · ") || String(d.origin ?? ""),
-      destination: dests.join(" · ") || String(d.destination ?? ""),
-    };
+    const mapped = lanes.map((raw) => ({
+      id: String(rec(raw).id ?? ""),
+      origin: String(rec(raw).origin ?? ""),
+      destination: String(rec(raw).destination ?? ""),
+    }));
+    return { origin: allLanesRoute(mapped), destination: "" };
   }
   return {
     origin:
