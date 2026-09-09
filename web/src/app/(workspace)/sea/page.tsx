@@ -38,6 +38,7 @@ import {
   formatRoutingPreview,
   formatTransitPreview,
   getDefaultFreightTerms,
+  normalizeRouting,
 } from "@/lib/pricing/terms";
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
@@ -842,7 +843,7 @@ function SeaDeskInner() {
                           autoComplete="off"
                           onChange={(e) => updateLiner(opt.id, { routing: e.target.value })}
                           onBlur={() =>
-                            updateLiner(opt.id, { routing: opt.routing.trim().toUpperCase() })
+                            updateLiner(opt.id, { routing: normalizeRouting(opt.routing) })
                           }
                         />
                         {opt.routing.trim() ? (

@@ -40,18 +40,28 @@ export function getDefaultFreightTerms(mode: "air" | "sea"): string {
   return mode === "sea" ? DEFAULT_SEA_TERMS : DEFAULT_AIR_TERMS;
 }
 
-/** Persist and display routing in CAPS even when typed in lowercase. */
+/** Uppercase airport/port codes; keep the word "via" lowercase. DIRECT stays DIRECT. */
 export function normalizeRouting(routing: string): string {
-  return routing.trim().toUpperCase();
+  const t = routing.trim().replace(/\s+/g, " ");
+  if (!t) return "";
+  return t.replace(/[A-Za-z]+/g, (word) => {
+    const lower = word.toLowerCase();
+    if (lower === "via") return "via";
+    if (lower === "direct") return "DIRECT";
+    return word.toUpperCase();
+  });
 }
 
-/** Routing preview: prefix "VIA " unless DIRECT / empty. Always CAPS. */
+/** Routing preview: prefix "via " unless DIRECT / empty. Codes stay CAPS; via is lowercase. */
 export function formatRoutingPreview(routing: string): string {
   const r = normalizeRouting(routing);
   if (!r) return "";
   if (/^DIRECT\b/.test(r)) return r;
-  if (/^VIA\s+/.test(r)) return r;
-  return `VIA ${r}`;
+  if (/^via\s+/i.test(r)) {
+    const rest = r.replace(/^via\s+/i, "").trim();
+    return rest ? `via ${rest}` : "via";
+  }
+  return `via ${r}`;
 }
 
 /** Transit preview: "4" / "3-4" → suffix " Days". */
