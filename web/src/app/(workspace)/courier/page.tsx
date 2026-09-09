@@ -639,8 +639,8 @@ function CourierDeskInner() {
             <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Courier desk</h1>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            4-tab flow — shipment, packages, surcharges, terms. Indicative zone model (not live
-            DHL/UPS feeds). Tab last field → next step · Alt+1–4 · ⌘S to save.
+            4-tab flow — shipment, packages, rates, terms. Yearly Circulars Excel fills freight up
+            to 70 kg. Tab last field → next step · Alt+1–4 · ⌘S to save.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -932,15 +932,32 @@ function CourierDeskInner() {
                             }
                           />
                         </td>
-                        <td className="p-1"><input type="number" className="w-16 rounded border px-1 py-1" value={p.gw ?? ""} onChange={(e) => updatePkg(i, { gw: Number(e.target.value) })} /></td>
-                        <td className="p-1"><input type="number" className="w-14 rounded border px-1 py-1" value={p.l ?? ""} onChange={(e) => updatePkg(i, { l: Number(e.target.value) })} /></td>
-                        <td className="p-1"><input type="number" className="w-14 rounded border px-1 py-1" value={p.w ?? ""} onChange={(e) => updatePkg(i, { w: Number(e.target.value) })} /></td>
                         <td className="p-1">
-                          <input
-                            type="number"
+                          <EmptyNumberInput
+                            className="w-16 rounded border px-1 py-1"
+                            value={p.gw ?? 0}
+                            onChange={(gw) => updatePkg(i, { gw })}
+                          />
+                        </td>
+                        <td className="p-1">
+                          <EmptyNumberInput
                             className="w-14 rounded border px-1 py-1"
-                            value={p.h ?? ""}
-                            onChange={(e) => updatePkg(i, { h: Number(e.target.value) })}
+                            value={p.l ?? 0}
+                            onChange={(l) => updatePkg(i, { l })}
+                          />
+                        </td>
+                        <td className="p-1">
+                          <EmptyNumberInput
+                            className="w-14 rounded border px-1 py-1"
+                            value={p.w ?? 0}
+                            onChange={(w) => updatePkg(i, { w })}
+                          />
+                        </td>
+                        <td className="p-1">
+                          <EmptyNumberInput
+                            className="w-14 rounded border px-1 py-1"
+                            value={p.h ?? 0}
+                            onChange={(h) => updatePkg(i, { h })}
                             onKeyDown={(e) =>
                               i === packages.length - 1
                                 ? lastFieldTab(e, () => goCourierStep("surcharges", "courier-fuel"))
