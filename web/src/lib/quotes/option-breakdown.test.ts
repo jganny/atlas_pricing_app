@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import type { SavedQuote } from "../types";
-import { optionBreakdownsFromQuote } from "./option-breakdown";
+import {
+  optionBreakdownsFromQuote,
+  uniqueOptionBreakdowns,
+  quotePreviewPanelCounts,
+} from "./option-breakdown";
 
 const quote: SavedQuote = {
   id: "preview",
@@ -259,5 +263,22 @@ assert.equal(whRows[0].kind, "warehouse");
 assert.equal(whRows[0].storage, 35000);
 assert.equal(whRows[0].handling, 1500);
 assert.equal(whRows[0].validity, "30 days");
+
+const duped = uniqueOptionBreakdowns([
+  { id: "qr", name: "QR", laneId: "l1" },
+  { id: "ey", name: "EY", laneId: "l1" },
+  { id: "qr", name: "QR", laneId: "l1" },
+] as ReturnType<typeof optionBreakdownsFromQuote>);
+assert.equal(duped.length, 2);
+assert.deepEqual(
+  quotePreviewPanelCounts(1),
+  { screen: 1, print: 1 },
+  "one airline → one on-screen breakup",
+);
+assert.deepEqual(
+  quotePreviewPanelCounts(2),
+  { screen: 1, print: 2 },
+  "two airlines → one inspect on screen, two in the print pack — never three",
+);
 
 console.log("option-breakdown tests passed");

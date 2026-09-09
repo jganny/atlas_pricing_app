@@ -242,7 +242,6 @@ export function CommandPalette() {
                         type="button"
                         className={cn(
                           "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
-                          item.enquiryId ? "pr-16" : "",
                           idx === activeIndex ? "bg-[var(--color-atlas-navy)] text-white" : "hover:bg-slate-50",
                         )}
                         onMouseEnter={() => setActiveIndex(idx)}

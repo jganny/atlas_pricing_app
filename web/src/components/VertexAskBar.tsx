@@ -34,6 +34,8 @@ export function VertexAskBar({
   const [value, setValue] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [deleteRevealed, setDeleteRevealed] = useState(false);
 
   useEffect(() => {
     const refresh = () => setHiddenIds(listHiddenQuoteIds());
@@ -48,9 +50,21 @@ export function VertexAskBar({
     return searchQuotes(rows, intent.query, 12).filter((row) => !hidden.has(row.id));
   }, [value, rows, hiddenIds]);
 
+  const shown = hits.slice(0, 8);
+
+  useEffect(() => {
+    setActiveIndex((i) => (shown.length === 0 ? -1 : Math.min(Math.max(i, 0), shown.length - 1)));
+  }, [shown.length]);
+
   function go(href: string) {
     onNavigate?.();
     router.push(href);
+  }
+
+  function openHit(index: number) {
+    const row = shown[index];
+    if (!row) return;
+    go(enquiryHref(row));
   }
 
   function run() {
@@ -69,8 +83,12 @@ export function VertexAskBar({
       setNote(HELP[intent.topic] || HELP[""]);
       return;
     }
-    if (hits[0]) {
-      go(enquiryHref(hits[0]));
+    if (activeIndex >= 0 && shown[activeIndex]) {
+      openHit(activeIndex);
+      return;
+    }
+    if (shown[0]) {
+      openHit(0);
       return;
     }
     setNote(
@@ -100,6 +118,11 @@ export function VertexAskBar({
             autoCapitalize="off"
             spellCheck={false}
             name="atlas-vertex-ask"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={shown.length > 0}
+            aria-controls="vertex-ask-hits"
+            aria-activedescendant={activeIndex >= 0 ? `vertex-ask-hit-${shown[activeIndex]?.id}` : undefined}
             enterKeyHint="search"
             className="w-full rounded-lg border border-[var(--color-border)] bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-sky-400"
             placeholder="Find a quote (customer or city — no file name) · or quote air BLR to LHR"
@@ -107,8 +130,41 @@ export function VertexAskBar({
             onChange={(e) => {
               setValue(e.target.value);
               setNote(null);
+              setActiveIndex(0);
+              setDeleteRevealed(false);
             }}
             onKeyDown={(e) => {
+              if (e.key === "ArrowDown" && shown.length) {
+                e.preventDefault();
+                setDeleteRevealed(false);
+                setActiveIndex((i) => Math.min((i < 0 ? -1 : i) + 1, shown.length - 1));
+                return;
+              }
+              if (e.key === "ArrowUp" && shown.length) {
+                e.preventDefault();
+                setDeleteRevealed(false);
+                setActiveIndex((i) => Math.max(i - 1, 0));
+                return;
+              }
+              if (e.key === "ArrowLeft" && e.shiftKey && shown.length && activeIndex >= 0) {
+                e.preventDefault();
+                setDeleteRevealed(true);
+                return;
+              }
+              if (e.key === "ArrowRight" && deleteRevealed) {
+                e.preventDefault();
+                setDeleteRevealed(false);
+                return;
+              }
+              if ((e.key === "Delete" || e.key === "Backspace") && activeIndex >= 0 && shown[activeIndex] && !value) {
+                return;
+              }
+              if ((e.key === "Delete" || e.key === "Backspace") && e.shiftKey && activeIndex >= 0 && shown[activeIndex]) {
+                e.preventDefault();
+                hideQuoteFromAsk(shown[activeIndex].id);
+                setDeleteRevealed(false);
+                return;
+              }
               if (e.key === "Enter") {
                 e.preventDefault();
                 run();
@@ -124,20 +180,32 @@ export function VertexAskBar({
           Go
         </button>
       </div>
-      {hits.length > 0 ? (
+      {shown.length > 0 ? (
         <ul
+          id="vertex-ask-hits"
           data-testid="vertex-ask-hits"
+          role="listbox"
           className="divide-y divide-[var(--color-border)] overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-sm"
         >
-          {hits.slice(0, 8).map((row) => (
-            <li key={row.id}>
+          {shown.map((row, index) => (
+            <li key={row.id} role="presentation">
               <SwipeDeleteRow
                 deleteLabel="Delete"
+                revealed={deleteRevealed && index === activeIndex}
                 onDelete={() => hideQuoteFromAsk(row.id)}
               >
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 pr-16 text-left hover:bg-sky-50/70"
+                  id={`vertex-ask-hit-${row.id}`}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  data-testid="vertex-ask-hit"
+                  data-active={index === activeIndex ? "true" : "false"}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-3 px-3 py-2 text-left",
+                    index === activeIndex ? "bg-sky-50 ring-1 ring-inset ring-sky-300" : "hover:bg-sky-50/70",
+                  )}
+                  onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => go(enquiryHref(row))}
                 >
                   <span className="min-w-0">
@@ -158,12 +226,16 @@ export function VertexAskBar({
           ))}
         </ul>
       ) : null}
+      {shown.length > 0 ? (
+        <p className="text-[11px] text-[var(--color-text-muted)]">
+          ↓ highlights · Enter opens · swipe left (or Shift+←) to reveal Delete
+        </p>
+      ) : null}
       {note ? <p className="text-xs leading-relaxed text-[var(--color-text-muted)]">{note}</p> : null}
       {!compact && !value ? (
         <p className="text-xs text-[var(--color-text-muted)]">
           You do not need the file name. Type the customer, port, or airline — Vertex opens the
-          quote. Swipe a row left (or hover Delete) to hide it from this list. ⌘K does the same from
-          any screen.
+          quote. ↓ highlights a row · Enter opens · swipe left to reveal Delete.
         </p>
       ) : null}
     </div>

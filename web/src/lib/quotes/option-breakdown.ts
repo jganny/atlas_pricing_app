@@ -288,6 +288,26 @@ function rawOptions(d: Record<string, unknown>): Record<string, unknown>[] {
   return [];
 }
 
+/** Drop duplicate vendor rows so a quoted option is never printed twice. */
+export function uniqueOptionBreakdowns(options: OptionBreakdown[]): OptionBreakdown[] {
+  const seen = new Set<string>();
+  return options.filter((o) => {
+    const key = `${String(o.id)}::${String(o.laneId || "")}::${o.name.trim().toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Screen inspect shows one breakup; print pack lists each option once.
+ * Never show inspect + pack together on screen (that duplicated QR as "quoted" twice).
+ */
+export function quotePreviewPanelCounts(optionCount: number): { screen: number; print: number } {
+  const n = Math.max(0, optionCount);
+  return { screen: n > 0 ? 1 : 0, print: n };
+}
+
 /** Per-option breakup the client can inspect on screen and in the printed pack. */
 export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] {
   const d = (quote.details ?? {}) as Record<string, unknown>;

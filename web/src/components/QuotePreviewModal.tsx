@@ -18,6 +18,7 @@ import {
 } from "@/lib/quotes/vendor-preview";
 import {
   optionBreakdownsFromQuote,
+  uniqueOptionBreakdowns,
   type OptionBreakdown,
 } from "@/lib/quotes/option-breakdown";
 import { VendorCompareList } from "@/components/VendorCompareList";
@@ -205,7 +206,7 @@ export function QuotePreviewModal({
 }) {
   const ref = getQuoteRefId(quote);
   const vendors = vendorRowsFromQuote(quote);
-  const options = optionBreakdownsFromQuote(quote);
+  const options = uniqueOptionBreakdowns(optionBreakdownsFromQuote(quote));
   const quoted = vendors.find((v) => v.selected) ?? vendors[0];
   const cheapest = vendors.find((v) => v.cheapest);
   const [inspectId, setInspectId] = useState(quoted?.id ?? options[0]?.id ?? "");
@@ -302,12 +303,12 @@ export function QuotePreviewModal({
           </div>
 
           {showCompare ? (
-            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 print:hidden">
               <VendorCompareList
                 vendors={vendors}
                 currency={cur}
                 heading={compareHeading(type)}
-                hint="Click any option to view that breakup. Quoted stays the commercial offer. The PDF prints every option."
+                hint="Click any option to view that breakup. Quoted stays the commercial offer."
                 onSelect={setInspectId}
                 activeId={inspectId}
                 testId="quote-preview-vendors"
@@ -327,7 +328,7 @@ export function QuotePreviewModal({
           </table>
 
           {inspectable && inspected ? (
-            <div className="quote-print-screen-only mb-4">
+            <div className="quote-print-screen-only mb-4 print:hidden" data-testid="quote-screen-breakup">
               <BreakdownPanel
                 option={inspected}
                 currency={cur}
@@ -372,14 +373,15 @@ export function QuotePreviewModal({
           ) : null}
 
           {inspectable && options.length > 0 ? (
-            <div className="quote-print-pack mb-6 space-y-4">
+            <div className="quote-print-pack mb-6 hidden space-y-4 print:block" data-testid="quote-print-pack">
               <h3 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
-                Charge pack · every option
+                {options.length === 1 ? "Charges to customer" : "Charge pack · every option"}
               </h3>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                PDFs cannot run live toggles. Each option and origin–destination pair is printed in
-                full so the client can compare without opening the app.
-              </p>
+              {options.length > 1 ? (
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Each option is printed once so the client can compare without opening the app.
+                </p>
+              ) : null}
               {options.map((option) => (
                 <BreakdownPanel
                   key={`print-${option.id}`}
