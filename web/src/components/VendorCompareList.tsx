@@ -21,8 +21,9 @@ export function VendorCompareList({
   vendors,
   currency,
   heading = "Compare options",
-  hint = "Cheapest → highest. ★ marks the lowest total per lane. Quoted is the option on this document.",
+  hint = "Cheapest → highest. ★ marks the lowest total per lane. Click a row to inspect its breakup. Quoted is the option on this document.",
   onSelect,
+  activeId,
   testId = "vendor-compare-list",
 }: {
   vendors: VendorPreviewRow[];
@@ -30,6 +31,7 @@ export function VendorCompareList({
   heading?: string;
   hint?: string;
   onSelect?: (id: string) => void;
+  activeId?: string;
   testId?: string;
 }) {
   if (vendors.length === 0) return null;
@@ -74,6 +76,11 @@ export function VendorCompareList({
                           {v.tt ? ` · ${v.tt}` : ""}
                         </span>
                       ) : null}
+                      {v.id === activeId ? (
+                        <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-navy)]">
+                          Viewing breakup
+                        </span>
+                      ) : null}
                     </span>
                     <span className="shrink-0 font-semibold tabular-nums" data-testid="vendor-compare-total">
                       {v.total > 0 ? formatCurrency(v.total, currency) : "incomplete"}
@@ -82,11 +89,13 @@ export function VendorCompareList({
                 );
                 const className = cn(
                   "flex w-full items-start justify-between gap-2 rounded-lg px-3 py-2 text-left",
-                  v.cheapest
-                    ? "bg-emerald-50 ring-1 ring-emerald-300"
-                    : v.selected
-                      ? "bg-sky-50"
-                      : "bg-slate-50",
+                  v.id === activeId
+                    ? "bg-white ring-2 ring-[var(--color-atlas-navy)]"
+                    : v.cheapest
+                      ? "bg-emerald-50 ring-1 ring-emerald-300"
+                      : v.selected
+                        ? "bg-sky-50"
+                        : "bg-slate-50",
                 );
                 return (
                   <li

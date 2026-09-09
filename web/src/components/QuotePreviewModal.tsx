@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Printer, X } from "lucide-react";
 import type { SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
@@ -15,6 +16,10 @@ import {
   quotedFieldLabel,
   vendorRowsFromQuote,
 } from "@/lib/quotes/vendor-preview";
+import {
+  optionBreakdownsFromQuote,
+  type OptionBreakdown,
+} from "@/lib/quotes/option-breakdown";
 import { VendorCompareList } from "@/components/VendorCompareList";
 
 function statusLabel(status: string | undefined) {
@@ -29,19 +34,10 @@ function money(n: unknown, currency: string) {
   return formatCurrency(Number(n ?? 0), currency);
 }
 
-function starredName(name: string, cheapest: boolean) {
-  return cheapest ? `${name} ★` : name;
-}
-
-function detailRows(
-  quote: SavedQuote,
-  quotedName: string | null,
-  quotedIsCheapest: boolean,
-): Array<[string, string]> {
+function identityRows(quote: SavedQuote): Array<[string, string]> {
   const d = quote.details ?? {};
   const type = (quote.type || "").toLowerCase();
   const cur = quote.currency || "USD";
-  const quotedLabel = quotedFieldLabel(type);
   const rows: Array<[string, string]> = [
     ["Customer", quote.customer || "—"],
     ["Reference", getQuoteRefId(quote)],
@@ -52,12 +48,6 @@ function detailRows(
   ];
 
   if (type === "air") {
-    const chw = Number(d.chargeableWeight ?? 0);
-    const rate = Number(d.appliedRate ?? 0);
-    const base = Number(d.baseFreight ?? 0);
-    const originFees = Number(d.originFeesTotal ?? 0);
-    const destFees = Number(d.destFeesTotal ?? 0);
-    const ams = Number(d.amsFee ?? 0);
     const quotedLanes = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
     if (quotedLanes.length > 1) {
       rows.push(["Lanes", `${quotedLanes.length} origin → destination pairs`]);
@@ -66,105 +56,46 @@ function detailRows(
         const label = String(lane.laneLabel ?? "Lane");
         const name = String(lane.airline ?? "—");
         const amt = money(lane.amount, cur);
-        rows.push([label, `${name} · ${amt}`]);
+        const validity = String(lane.validity ?? "").trim();
+        rows.push([label, `${name} · ${amt}${validity ? ` · valid ${validity}` : ""}`]);
       });
       rows.push(["All lanes total", money(d.allLanesTotal ?? quote.amount, cur)]);
     } else {
-      const airlineName = starredName(
-        quotedName || String(d.airline ?? "—"),
-        quotedIsCheapest,
-      );
       rows.push(
         ["Origin", String(d.origin ?? "—")],
         ["Destination", String(d.destination ?? "—")],
-        [quotedLabel, airlineName],
       );
     }
     rows.push(
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Commodity", String(d.commodity ?? "—")],
-      ["Chargeable weight", `${chw.toFixed(2)} kg`],
+      ["Chargeable weight", `${Number(d.chargeableWeight ?? 0).toFixed(2)} kg`],
       ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
       ["Volume weight", `${Number(d.volumeWeight ?? 0).toFixed(2)} kg`],
-      [
-        "Base freight",
-        rate > 0 && chw > 0
-          ? `${chw.toFixed(2)} kg × ${money(rate, cur)} = ${money(base, cur)}`
-          : money(base, cur),
-      ],
-    );
-    if (originFees > 0) rows.push(["Origin fees", money(originFees, cur)]);
-    if (ams > 0) rows.push(["AMS", money(ams, cur)]);
-    if (destFees > 0) rows.push(["Destination fees", money(destFees, cur)]);
-    rows.push(
-      ["Routing", formatRoutingPreview(String(d.routing ?? "")) || "—"],
-      ["Transit time", formatTransitPreview(String(d.tt ?? "")) || "—"],
-      ["Validity", String(d.validity ?? "—")],
     );
   } else if (type === "sea") {
-    const rt = Number(d.chargeableRt ?? 0);
-    const base = Number(d.baseFreight ?? 0);
-    const originFees = Number(d.originFeesTotal ?? 0);
-    const destFees = Number(d.destFeesTotal ?? 0);
-    const override = Number(d.chargeableCbmOverride ?? 0);
-    const linerName = starredName(
-      quotedName || String(d.liner ?? d.shippingLine ?? "—"),
-      quotedIsCheapest,
-    );
     rows.push(
       ["Origin", String(d.origin ?? "—")],
       ["Destination", String(d.destination ?? "—")],
-      [quotedLabel, linerName],
       ["Mode", String(d.type ?? d.module ?? "—").toUpperCase()],
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
       ["Volume", `${Number(d.volumeCbm ?? d.volume ?? 0).toFixed(2)} CBM`],
-      [
-        "Chargeable RT",
-        override > 0 ? `${rt.toFixed(2)} (manual override ${override.toFixed(2)})` : `${rt.toFixed(2)}`,
-      ],
-      ["Base freight", money(base, cur)],
     );
-    if (originFees > 0) rows.push(["Origin fees", money(originFees, cur)]);
-    if (destFees > 0) rows.push(["Destination fees", money(destFees, cur)]);
-    rows.push(
-      ["Routing", formatRoutingPreview(String(d.routing ?? "")) || "—"],
-      ["Transit time", formatTransitPreview(String(d.tt ?? "")) || "—"],
-      ["Validity", String(d.validity ?? "—")],
-    );
-    const summary = d.containerSummary as string[] | undefined;
-    if (summary?.length) {
-      rows.push(["Containers", summary.join(", ")]);
-    }
   } else if (type === "courier") {
-    const carrierName = starredName(
-      quotedName || String(d.carrierName ?? d.carrier ?? "—"),
-      quotedIsCheapest,
-    );
     rows.push(
       ["Origin", `${d.originCity ?? d.origin ?? ""} (${d.originCountry ?? ""})`],
       ["Destination", `${d.destCity ?? d.destination ?? ""} (${d.destCountry ?? ""})`],
       ["Service", String(d.service ?? "—")],
-      [quotedLabel, carrierName],
       ["Chargeable", `${Number(d.chargeableWeight ?? 0).toFixed(2)} kg`],
       ["Zone", String(d.zone ?? "—")],
-      ["Base freight", money(d.baseFreight, cur)],
-      ["GST", money(d.gstAmount, cur)],
     );
   } else if (type === "transport") {
-    const truckerName = starredName(
-      quotedName || String(d.truckerName ?? d.vehicleType ?? "—"),
-      quotedIsCheapest,
-    );
     rows.push(
       ["Origin", String(d.origin ?? "—")],
       ["Destination", String(d.destination ?? "—")],
-      [quotedLabel, truckerName],
       ["Vehicle", String(d.vehicleType ?? "—")],
       ["Service", String(d.serviceType ?? "—")],
-      ["Freight", money(d.freightSell, cur)],
-      ["Detention", money(d.detention, cur)],
-      ["Tolls", money(d.tolls, cur)],
     );
   } else {
     rows.push(["Amount", money(quote.amount, cur)]);
@@ -172,6 +103,79 @@ function detailRows(
 
   if (quote.notes) rows.push(["Notes", quote.notes]);
   return rows;
+}
+
+function BreakdownPanel({
+  option,
+  currency,
+  chargeableWeight,
+  heading,
+}: {
+  option: OptionBreakdown;
+  currency: string;
+  chargeableWeight: number;
+  heading: string;
+}) {
+  const chw = option.chargeableWeight || chargeableWeight;
+  const rate = option.appliedRate;
+  const base = option.baseFreight;
+  return (
+    <div className="rounded-lg border border-slate-200 p-4 text-sm" data-testid="quote-option-breakup">
+      <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+        {heading}
+      </div>
+      <div className="mb-3 font-extrabold text-[var(--color-atlas-navy)]">
+        {option.name}
+        {option.cheapest ? " ★" : ""}
+        {option.selected ? " · quoted" : ""}
+        {option.laneLabel ? ` · ${option.laneLabel}` : ""}
+      </div>
+      <dl className="space-y-1.5">
+        <div className="flex justify-between gap-4">
+          <dt>Base freight</dt>
+          <dd className="font-semibold">
+            {rate > 0 && chw > 0
+              ? `${chw.toFixed(2)} kg × ${money(rate, currency)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base, currency)}`
+              : money(base, currency)}
+          </dd>
+        </div>
+        {option.originFees > 0 ? (
+          <div className="flex justify-between gap-4">
+            <dt>Origin fees</dt>
+            <dd className="font-semibold">{money(option.originFees, currency)}</dd>
+          </div>
+        ) : null}
+        {option.ams > 0 ? (
+          <div className="flex justify-between gap-4">
+            <dt>AMS</dt>
+            <dd className="font-semibold">{money(option.ams, currency)}</dd>
+          </div>
+        ) : null}
+        {option.destFees > 0 ? (
+          <div className="flex justify-between gap-4">
+            <dt>Destination fees</dt>
+            <dd className="font-semibold">{money(option.destFees, currency)}</dd>
+          </div>
+        ) : null}
+        <div className="flex justify-between gap-4 border-t border-slate-100 pt-1.5">
+          <dt>Option total</dt>
+          <dd className="font-extrabold text-emerald-700">{money(option.total, currency)}</dd>
+        </div>
+        <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
+          <dt>Routing</dt>
+          <dd>{formatRoutingPreview(option.routing || "") || "—"}</dd>
+        </div>
+        <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
+          <dt>Transit time</dt>
+          <dd>{formatTransitPreview(option.tt || "") || "—"}</dd>
+        </div>
+        <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
+          <dt>Validity</dt>
+          <dd data-testid="quote-option-validity">{option.validity || "—"}</dd>
+        </div>
+      </dl>
+    </div>
+  );
 }
 
 export function QuotePreviewModal({
@@ -183,19 +187,32 @@ export function QuotePreviewModal({
 }) {
   const ref = getQuoteRefId(quote);
   const vendors = vendorRowsFromQuote(quote);
+  const options = optionBreakdownsFromQuote(quote);
   const quoted = vendors.find((v) => v.selected) ?? vendors[0];
   const cheapest = vendors.find((v) => v.cheapest);
-  const rows = detailRows(quote, quoted?.name ?? null, Boolean(quoted?.cheapest));
+  const [inspectId, setInspectId] = useState(quoted?.id ?? options[0]?.id ?? "");
+
+  useEffect(() => {
+    setInspectId(quoted?.id ?? "");
+  }, [quote.id, quoted?.id]);
+
+  const inspected = useMemo(
+    () => options.find((o) => o.id === inspectId) ?? options.find((o) => o.selected) ?? options[0],
+    [options, inspectId],
+  );
+
+  const rows = identityRows(quote);
   const terms = String(quote.details?.termsAndConditions ?? "");
   const type = (quote.type || "").toLowerCase();
   const d = quote.details ?? {};
   const quotedLanes = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
   const multiLane = quotedLanes.length > 1;
-  const showAirBreakdown = type === "air" && !multiLane;
-  const showSeaBreakdown = type === "sea";
   const showCompare = vendors.length > 1;
   const quotedIsNotCheapest =
     !multiLane && Boolean(cheapest && quoted && cheapest.id !== quoted.id && cheapest.total > 0);
+  const cur = quote.currency || "USD";
+  const chw = Number(d.chargeableWeight ?? 0);
+  const inspectable = type === "air" || type === "sea" || options.length > 0;
 
   function handlePrint() {
     window.print();
@@ -270,8 +287,11 @@ export function QuotePreviewModal({
             <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
               <VendorCompareList
                 vendors={vendors}
-                currency={quote.currency || "USD"}
+                currency={cur}
                 heading={compareHeading(type)}
+                hint="Click any airline or liner to view that option’s charges, routing, transit, and validity. Quoted stays the commercial offer. The PDF prints every breakup."
+                onSelect={setInspectId}
+                activeId={inspectId}
                 testId="quote-preview-vendors"
               />
             </div>
@@ -288,7 +308,20 @@ export function QuotePreviewModal({
             </tbody>
           </table>
 
-          {(showAirBreakdown || showSeaBreakdown) && (
+          {inspectable && inspected ? (
+            <div className="quote-print-screen-only mb-4">
+              <BreakdownPanel
+                option={inspected}
+                currency={cur}
+                chargeableWeight={chw}
+                heading={
+                  inspected.selected
+                    ? `Charges to customer · ${quotedFieldLabel(type)}`
+                    : `Inspecting ${inspected.name} (not the quoted option)`
+                }
+              />
+            </div>
+          ) : type === "air" || type === "sea" ? (
             <div className="mb-4 rounded-lg border border-slate-200 p-4 text-sm">
               <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
                 Charges to customer (quoted option)
@@ -296,29 +329,54 @@ export function QuotePreviewModal({
               <dl className="space-y-1.5">
                 <div className="flex justify-between gap-4">
                   <dt>Base freight</dt>
-                  <dd className="font-semibold">{money(d.baseFreight, quote.currency || "USD")}</dd>
+                  <dd className="font-semibold">{money(d.baseFreight, cur)}</dd>
                 </div>
                 {Number(d.originFeesTotal ?? 0) > 0 ? (
                   <div className="flex justify-between gap-4">
                     <dt>Origin fees</dt>
-                    <dd className="font-semibold">{money(d.originFeesTotal, quote.currency || "USD")}</dd>
+                    <dd className="font-semibold">{money(d.originFeesTotal, cur)}</dd>
                   </div>
                 ) : null}
-                {showAirBreakdown && Number(d.amsFee ?? 0) > 0 ? (
+                {type === "air" && Number(d.amsFee ?? 0) > 0 ? (
                   <div className="flex justify-between gap-4">
                     <dt>AMS</dt>
-                    <dd className="font-semibold">{money(d.amsFee, quote.currency || "USD")}</dd>
+                    <dd className="font-semibold">{money(d.amsFee, cur)}</dd>
                   </div>
                 ) : null}
                 {Number(d.destFeesTotal ?? 0) > 0 ? (
                   <div className="flex justify-between gap-4">
                     <dt>Destination fees</dt>
-                    <dd className="font-semibold">{money(d.destFeesTotal, quote.currency || "USD")}</dd>
+                    <dd className="font-semibold">{money(d.destFeesTotal, cur)}</dd>
                   </div>
                 ) : null}
               </dl>
             </div>
-          )}
+          ) : null}
+
+          {inspectable && options.length > 0 ? (
+            <div className="quote-print-pack mb-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">
+                Charge pack · every option
+              </h3>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                PDFs cannot run live toggles. Each airline and origin–destination pair is printed in
+                full so the client can compare without opening the app.
+              </p>
+              {options.map((option) => (
+                <BreakdownPanel
+                  key={`print-${option.id}`}
+                  option={option}
+                  currency={cur}
+                  chargeableWeight={chw}
+                  heading={
+                    option.selected
+                      ? `Quoted option${option.laneLabel ? ` · ${option.laneLabel}` : ""}`
+                      : `Alternative${option.laneLabel ? ` · ${option.laneLabel}` : ""}`
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
 
           <div className="rounded-lg bg-slate-50 p-4">
             <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
@@ -333,12 +391,25 @@ export function QuotePreviewModal({
               <ul className="mt-2 space-y-1 text-sm" data-testid="quote-preview-lanes">
                 {quotedLanes.map((raw, i) => {
                   const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+                  const laneId = String(lane.laneId ?? i);
+                  const quotedOnLane = options.find((o) => o.selected && (o.laneId === laneId || o.laneLabel === String(lane.laneLabel ?? "")));
                   return (
-                    <li key={String(lane.laneId ?? i)} className="flex justify-between gap-2">
-                      <span>
-                        {String(lane.laneLabel ?? `Lane ${i + 1}`)} · {String(lane.airline ?? "—")}
-                      </span>
-                      <span className="font-semibold">{money(lane.amount, quote.currency || "USD")}</span>
+                    <li key={laneId}>
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left hover:bg-white print:hover:bg-transparent"
+                        onClick={() => quotedOnLane && setInspectId(quotedOnLane.id)}
+                      >
+                        <span>
+                          {String(lane.laneLabel ?? `Lane ${i + 1}`)} · {String(lane.airline ?? "—")}
+                          {String(lane.validity ?? "").trim()
+                            ? ` · valid ${String(lane.validity)}`
+                            : quotedOnLane?.validity
+                              ? ` · valid ${quotedOnLane.validity}`
+                              : ""}
+                        </span>
+                        <span className="font-semibold">{money(lane.amount, cur)}</span>
+                      </button>
                     </li>
                   );
                 })}
@@ -346,7 +417,8 @@ export function QuotePreviewModal({
             ) : null}
             {quotedIsNotCheapest && cheapest ? (
               <div className="mt-2 text-sm font-semibold text-emerald-800" data-testid="quote-preview-cheapest-note">
-                Cheapest option: {cheapest.name} ★ {money(cheapest.total, quote.currency || "USD")}
+                Cheapest option: {cheapest.name} ★ {money(cheapest.total, cur)} — click it above to
+                open that breakup.
               </div>
             ) : null}
             {quote.grossProfit != null ? (

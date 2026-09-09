@@ -29,6 +29,12 @@ import { useAuthStore } from "@/store/auth";
 import { canAccessRoute, type AppRouteId } from "@/lib/auth/rbac";
 import { cn } from "@/lib/utils";
 import { scoreQuoteMatch } from "@/lib/quotes/find-quotes";
+import {
+  hideQuoteFromAsk,
+  listHiddenQuoteIds,
+  subscribeHiddenAsk,
+} from "@/lib/quotes/hidden-ask";
+import { SwipeDeleteRow } from "@/components/SwipeDeleteRow";
 import type { EnquiryRecord } from "@/lib/types";
 
 export interface CommandItem {
@@ -40,6 +46,7 @@ export interface CommandItem {
   icon: React.ComponentType<{ className?: string }>;
   group: "Quotes" | "Navigate" | "Desks" | "Tools" | "System";
   route?: AppRouteId;
+  enquiryId?: string;
 }
 
 const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
@@ -74,6 +81,13 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const refresh = () => setHiddenIds(listHiddenQuoteIds());
+    refresh();
+    return subscribeHiddenAsk(refresh);
+  }, []);
 
   const items = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -98,10 +112,11 @@ export function CommandPalette() {
     ];
 
     const quoteHits: CommandItem[] = [];
+    const hidden = new Set(hiddenIds);
     if (q.length >= 2 && canAccessRoute(user?.username, user?.role, "enquiries")) {
       const ranked = enquiries
         .map((row) => ({ row, score: rankQuote(row, q) }))
-        .filter((x) => x.score > 0)
+        .filter((x) => x.score > 0 && !hidden.has(x.row.id))
         .sort((a, b) => b.score - a.score)
         .slice(0, 8);
       for (const { row } of ranked) {
@@ -111,6 +126,7 @@ export function CommandPalette() {
           hint: `${row.ref} · ${row.origin}→${row.destination}`,
           icon: Database,
           group: "Quotes",
+          enquiryId: row.id,
           action: () =>
             router.push(
               `/enquiries/?q=${encodeURIComponent(row.ref)}&select=${encodeURIComponent(row.id)}`,
@@ -128,7 +144,7 @@ export function CommandPalette() {
         item.hint?.toLowerCase().includes(q) ||
         item.group.toLowerCase().includes(q),
     );
-  }, [query, router, enquiries, user?.username, user?.role]);
+  }, [query, router, enquiries, user?.username, user?.role, hiddenIds]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -191,6 +207,11 @@ export function CommandPalette() {
           <Search className="h-4 w-4 text-[var(--color-text-muted)]" />
           <input
             autoFocus
+            type="text"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            name="atlas-command-palette"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-muted)]"
             placeholder="Customer, city, carrier, or quote no. — file name not required"
             value={query}
@@ -216,12 +237,12 @@ export function CommandPalette() {
                   {groupItems.map((item) => {
                     const idx = items.indexOf(item);
                     const Icon = item.icon;
-                    return (
+                    const row = (
                       <button
-                        key={item.id}
                         type="button"
                         className={cn(
                           "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
+                          item.enquiryId ? "pr-16" : "",
                           idx === activeIndex ? "bg-[var(--color-atlas-navy)] text-white" : "hover:bg-slate-50",
                         )}
                         onMouseEnter={() => setActiveIndex(idx)}
@@ -240,6 +261,16 @@ export function CommandPalette() {
                           </span>
                         ) : null}
                       </button>
+                    );
+                    if (!item.enquiryId) return <div key={item.id}>{row}</div>;
+                    return (
+                      <SwipeDeleteRow
+                        key={item.id}
+                        deleteLabel="Delete"
+                        onDelete={() => hideQuoteFromAsk(item.enquiryId!)}
+                      >
+                        {row}
+                      </SwipeDeleteRow>
                     );
                   })}
                 </li>

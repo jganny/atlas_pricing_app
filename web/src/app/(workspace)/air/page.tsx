@@ -30,6 +30,7 @@ import { defaultDeskCurrency, defaultIncoterm, shouldHideAgencyAgreement } from 
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { appendCalcAudit } from "@/lib/quotes/calc-audit";
 import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
+import { airlineSnapshot } from "@/lib/quotes/option-breakdown";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import {
   allLanesRoute,
@@ -453,24 +454,7 @@ function AirDeskInner() {
         lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
         quotedLanes,
         allLanesTotal: amount,
-        airlines: airlines.map((a) => {
-          const laneIndex = Math.max(
-            0,
-            lanes.findIndex((l) => l.id === (a.laneId || fallback)),
-          );
-          const lane = lanes[laneIndex] ?? lanes[0];
-          return {
-            id: a.id,
-            name: a.name,
-            kind: a.kind,
-            selected: a.selected,
-            quoteTotal: totalsById[a.id]?.grandSell ?? 0,
-            routing: a.routing,
-            tt: a.tt,
-            laneId: a.laneId || fallback,
-            laneLabel: lane ? laneRouteLabel(lane, laneIndex) : "",
-          };
-        }),
+        airlines: airlines.map((a) => airlineSnapshot(a, cargo, lanes, fallback)),
         termsAndConditions: terms,
         type: "air",
         mode: "Air",
@@ -587,19 +571,7 @@ function AirDeskInner() {
           lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
           quotedLanes,
           allLanesTotal: amount,
-          airlines: airlines.map((a) => {
-            const laneIndex = Math.max(
-              0,
-              lanes.findIndex((l) => l.id === (a.laneId || fallback)),
-            );
-            const lane = lanes[laneIndex] ?? lanes[0];
-            return {
-              ...a,
-              quoteTotal: totalsById[a.id]?.grandSell ?? 0,
-              laneId: a.laneId || fallback,
-              laneLabel: lane ? laneRouteLabel(lane, laneIndex) : "",
-            };
-          }),
+          airlines: airlines.map((a) => airlineSnapshot(a, cargo, lanes, fallback)),
           termsAndConditions: terms,
           type: "air",
           mode: "Air",
@@ -1103,9 +1075,6 @@ function AirDeskInner() {
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="secondary" onClick={() => addAirline("airline")}>
                     <Plus className="mr-1 h-4 w-4" /> Airline
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={() => addAirline("coloader")}>
-                    <Plus className="mr-1 h-4 w-4" /> Coloader
                   </Button>
                 </div>
               </div>

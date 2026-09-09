@@ -188,6 +188,10 @@
   }
 }
 
+.quote-print-pack {
+  display: none;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -201,5 +205,11 @@
     left: 0;
     top: 0;
     width: 100%;
+  }
+  .quote-print-screen-only {
+    display: none !important;
+  }
+  .quote-print-pack {
+    display: block !important;
   }
 }

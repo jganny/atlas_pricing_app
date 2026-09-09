@@ -24,7 +24,13 @@ import {
   resolveAmendment,
   type AmendmentRequest,
 } from "@/lib/firebase/amendments";
+import { SwipeDeleteRow } from "@/components/SwipeDeleteRow";
 import { deskEditHref } from "@/lib/quotes/find-quotes";
+import {
+  hideQuoteFromAsk,
+  listHiddenQuoteIds,
+  subscribeHiddenAsk,
+} from "@/lib/quotes/hidden-ask";
 import { listOfflineQuotes, removeOfflineQuote } from "@/lib/quotes/offline-cache";
 import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
@@ -41,6 +47,7 @@ export default function DashboardPage() {
   const [amendments, setAmendments] = useState<AmendmentRequest[]>([]);
   const [offline, setOffline] = useState(listOfflineQuotes());
   const [nrsAlerts, setNrsAlerts] = useState<NrsAlert[]>([]);
+  const [hiddenAskIds, setHiddenAskIds] = useState<string[]>([]);
 
   useEffect(() => {
     try {
@@ -49,6 +56,12 @@ export default function DashboardPage() {
       /* ignore */
     }
   }, [username]);
+
+  useEffect(() => {
+    const refresh = () => setHiddenAskIds(listHiddenQuoteIds());
+    refresh();
+    return subscribeHiddenAsk(refresh);
+  }, []);
 
   useEffect(() => {
     if (!admin) return;
@@ -143,10 +156,12 @@ export default function DashboardPage() {
   }, []);
 
   const queueItems = useMemo(() => {
+    const hidden = new Set(hiddenAskIds);
     return [...scope]
+      .filter((e) => !hidden.has(e.id))
       .sort((a, b) => (b.slaHoursOpen || 0) - (a.slaHoursOpen || 0))
       .slice(0, 10);
-  }, [scope]);
+  }, [scope, hiddenAskIds]);
 
   async function onResolve(id: string, status: "approved" | "rejected") {
     await resolveAmendment(id, status, username || "admin");
@@ -272,30 +287,35 @@ export default function DashboardPage() {
                 <ul className="divide-y divide-[var(--color-border)]">
                   {queueItems.map((e) => (
                     <li key={e.id}>
-                      <Link
-                        href={`/enquiries/?q=${encodeURIComponent(e.ref)}&select=${e.id}`}
-                        className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-sky-50/50"
+                      <SwipeDeleteRow
+                        deleteLabel="Delete"
+                        onDelete={() => hideQuoteFromAsk(e.id)}
                       >
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold text-[var(--color-atlas-navy)]">
-                            {e.ref} · {e.customer || "—"}
-                          </div>
-                          <div className="truncate text-xs text-[var(--color-text-muted)]">
-                            {e.status} · {e.mode || "—"} · {e.assignee || "unassigned"}
-                          </div>
-                        </div>
-                        <Badge
-                          tone={
-                            e.slaHoursOpen > 8
-                              ? "error"
-                              : e.slaHoursOpen > 4
-                                ? "warn"
-                                : "neutral"
-                          }
+                        <Link
+                          href={`/enquiries/?q=${encodeURIComponent(e.ref)}&select=${e.id}`}
+                          className="flex items-center justify-between gap-3 px-4 py-2.5 pr-16 hover:bg-sky-50/50"
                         >
-                          {Math.round(e.slaHoursOpen)}h
-                        </Badge>
-                      </Link>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-[var(--color-atlas-navy)]">
+                              {e.ref} · {e.customer || "—"}
+                            </div>
+                            <div className="truncate text-xs text-[var(--color-text-muted)]">
+                              {e.status} · {e.mode || "—"} · {e.assignee || "unassigned"}
+                            </div>
+                          </div>
+                          <Badge
+                            tone={
+                              e.slaHoursOpen > 8
+                                ? "error"
+                                : e.slaHoursOpen > 4
+                                  ? "warn"
+                                  : "neutral"
+                            }
+                          >
+                            {Math.round(e.slaHoursOpen)}h
+                          </Badge>
+                        </Link>
+                      </SwipeDeleteRow>
                     </li>
                   ))}
                   {queueItems.length === 0 ? (

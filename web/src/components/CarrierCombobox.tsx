@@ -38,6 +38,7 @@ export function CarrierCombobox({
   placeholder?: string;
 }) {
   const listId = useId();
+  const fieldName = `vx-carrier-lookup-${listId.replace(/:/g, "")}`;
   const [q, setQ] = useState(value);
   const [hits, setHits] = useState<CarrierRecord[]>([]);
   const [open, setOpen] = useState(false);
@@ -77,7 +78,7 @@ export function CarrierCombobox({
             if (!seen.has(c.code.toUpperCase())) merged.push(c);
           }
         }
-        setHits(merged.slice(0, 40));
+        setHits(merged.filter((c) => (kind === "airline" ? c.kind === "airline" : true)).slice(0, 40));
         setActive(0);
       })();
     }, 100);
@@ -125,31 +126,48 @@ export function CarrierCombobox({
     <div ref={boxRef} className="relative">
       <Label>{label}</Label>
       <div ref={inputWrapRef}>
-        <Input
-          value={q}
-          placeholder={placeholder || "Type code or name…"}
-          autoComplete="off"
-          name="atlas-carrier"
-          aria-autocomplete="list"
-          aria-controls={listId}
-          aria-expanded={open}
-          role="combobox"
-          onFocus={() => {
-            closeAllComboboxes();
-            setOpen(true);
-          }}
-          onBlur={() => {
-            window.setTimeout(() => {
-              if (q.trim() && q.trim() !== value.trim()) commit(q);
-              else setOpen(false);
-            }, 120);
-          }}
-          onKeyDown={onKeyDown}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setOpen(true);
-          }}
-        />
+        <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
+          <input
+            tabIndex={-1}
+            aria-hidden
+            autoComplete="given-name"
+            name="prevent-chrome-contacts"
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
+          />
+          <Input
+            id={fieldName}
+            value={q}
+            placeholder={placeholder || "Type code or name…"}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            name={fieldName}
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-bwignore="true"
+            data-form-type="other"
+            aria-autocomplete="list"
+            aria-controls={listId}
+            aria-expanded={open}
+            role="combobox"
+            onFocus={() => {
+              closeAllComboboxes();
+              setOpen(true);
+            }}
+            onBlur={() => {
+              window.setTimeout(() => {
+                if (q.trim() && q.trim() !== value.trim()) commit(q);
+                else setOpen(false);
+              }, 120);
+            }}
+            onKeyDown={onKeyDown}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setOpen(true);
+            }}
+          />
+        </form>
       </div>
       <PortalDropdown open={open && hits.length > 0} anchorRef={inputWrapRef}>
         <ul id={listId} role="listbox" data-portal-open={open ? "true" : "false"}>

@@ -69,9 +69,22 @@ export type QuotedLaneRow = {
   destination: string;
   airline: string;
   amount: number;
+  validity: string;
+  routing: string;
+  tt: string;
 };
 
-export function quotedLaneRows<T extends { id: string; name: string; selected: boolean; laneId?: string }>(
+export function quotedLaneRows<
+  T extends {
+    id: string;
+    name: string;
+    selected: boolean;
+    laneId?: string;
+    validity?: string;
+    routing?: string;
+    tt?: string;
+  },
+>(
   lanes: QuoteLane[],
   items: T[],
   amountOf: (item: T) => number,
@@ -86,6 +99,9 @@ export function quotedLaneRows<T extends { id: string; name: string; selected: b
       destination: lane.destination,
       airline: quoted?.name || "",
       amount: quoted ? amountOf(quoted) : 0,
+      validity: quoted?.validity || "",
+      routing: quoted?.routing || "",
+      tt: quoted?.tt || "",
     };
   });
 }

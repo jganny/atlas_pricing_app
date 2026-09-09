@@ -3,16 +3,15 @@
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult, SeaMode } from "@atlas/pricing-core";
 import {
-  serializeAirlineOption,
   serializeLinerOption,
   type AirlineOption,
   type LinerOption,
 } from "@/lib/pricing/carrier-options";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
-import { computeAirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
 import { computeLinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
+import { airlineSnapshot } from "@/lib/quotes/option-breakdown";
 import {
   ensureIncidentalTerm,
   formatRoutingPreview,
@@ -151,6 +150,9 @@ export interface SaveAirInput extends SaveMeta {
     destination: string;
     airline: string;
     amount: number;
+    validity?: string;
+    routing?: string;
+    tt?: string;
   }>;
   allLanesAmount?: number;
 }
@@ -181,14 +183,10 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const amountINR = input.currency === "INR" ? amount : amount * fx;
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
-  const airlines = input.airlines.map((a) => {
-    const lane = quotedLanes.find((l) => l.laneId === a.laneId);
-    return {
-      ...serializeAirlineOption(a),
-      quoteTotal: computeAirlineTotals(input.cargo, a).grandSell,
-      ...(lane?.laneLabel ? { laneLabel: lane.laneLabel } : {}),
-    };
-  });
+  const fallbackLane = (input.lanes ?? [])[0]?.id || "";
+  const airlines = input.airlines.map((a) =>
+    airlineSnapshot(a, input.cargo, input.lanes ?? [], fallbackLane),
+  );
   const lanes = (input.lanes ?? []).map((l) => ({
     id: l.id,
     origin: l.origin,

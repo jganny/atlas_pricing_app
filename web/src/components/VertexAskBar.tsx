@@ -1,11 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Sparkles } from "lucide-react";
+import { SwipeDeleteRow } from "@/components/SwipeDeleteRow";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { newQuoteHref, parseDeskIntent } from "@/lib/ai/desk-intent";
 import { enquiryHref, searchQuotes } from "@/lib/quotes/find-quotes";
+import {
+  hideQuoteFromAsk,
+  listHiddenQuoteIds,
+  subscribeHiddenAsk,
+} from "@/lib/quotes/hidden-ask";
 import { cn } from "@/lib/utils";
 
 const HELP: Record<string, string> = {
@@ -27,12 +33,20 @@ export function VertexAskBar({
   const { data: rows = [] } = useEnquiries();
   const [value, setValue] = useState("");
   const [note, setNote] = useState<string | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const refresh = () => setHiddenIds(listHiddenQuoteIds());
+    refresh();
+    return subscribeHiddenAsk(refresh);
+  }, []);
 
   const hits = useMemo(() => {
     const intent = parseDeskIntent(value);
     if (intent.kind !== "find") return [];
-    return searchQuotes(rows, intent.query, 8);
-  }, [value, rows]);
+    const hidden = new Set(hiddenIds);
+    return searchQuotes(rows, intent.query, 12).filter((row) => !hidden.has(row.id));
+  }, [value, rows, hiddenIds]);
 
   function go(href: string) {
     onNavigate?.();
@@ -79,6 +93,14 @@ export function VertexAskBar({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <input
             data-testid="vertex-ask"
+            type="text"
+            inputMode="text"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            name="atlas-vertex-ask"
+            enterKeyHint="search"
             className="w-full rounded-lg border border-[var(--color-border)] bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-sky-400"
             placeholder="Find a quote (customer or city — no file name) · or quote air BLR to LHR"
             value={value}
@@ -103,27 +125,35 @@ export function VertexAskBar({
         </button>
       </div>
       {hits.length > 0 ? (
-        <ul className="divide-y divide-[var(--color-border)] overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-sm">
-          {hits.map((row) => (
+        <ul
+          data-testid="vertex-ask-hits"
+          className="divide-y divide-[var(--color-border)] overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-sm"
+        >
+          {hits.slice(0, 8).map((row) => (
             <li key={row.id}>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-sky-50/70"
-                onClick={() => go(enquiryHref(row))}
+              <SwipeDeleteRow
+                deleteLabel="Delete"
+                onDelete={() => hideQuoteFromAsk(row.id)}
               >
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold text-[var(--color-atlas-navy)]">
-                    {row.customer || row.ref}
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 pr-16 text-left hover:bg-sky-50/70"
+                  onClick={() => go(enquiryHref(row))}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-[var(--color-atlas-navy)]">
+                      {row.customer || row.ref}
+                    </span>
+                    <span className="block truncate text-xs text-[var(--color-text-muted)]">
+                      {row.ref} · {row.origin}→{row.destination}
+                      {row.carrier ? ` · ${row.carrier}` : ""}
+                    </span>
                   </span>
-                  <span className="block truncate text-xs text-[var(--color-text-muted)]">
-                    {row.ref} · {row.origin}→{row.destination}
-                    {row.carrier ? ` · ${row.carrier}` : ""}
+                  <span className="shrink-0 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+                    {row.status}
                   </span>
-                </span>
-                <span className="shrink-0 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
-                  {row.status}
-                </span>
-              </button>
+                </button>
+              </SwipeDeleteRow>
             </li>
           ))}
         </ul>
@@ -132,7 +162,8 @@ export function VertexAskBar({
       {!compact && !value ? (
         <p className="text-xs text-[var(--color-text-muted)]">
           You do not need the file name. Type the customer, port, or airline — Vertex opens the
-          quote. ⌘K does the same from any screen.
+          quote. Swipe a row left (or hover Delete) to hide it from this list. ⌘K does the same from
+          any screen.
         </p>
       ) : null}
     </div>

@@ -48,9 +48,19 @@ export function ValidityField({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              const v = (e.target as HTMLInputElement).value;
-              if (v) onChange(v);
-              (e.target as HTMLInputElement).blur();
+              e.stopPropagation();
+              const el = e.currentTarget;
+              if (el.value) onChange(el.value);
+              el.blur();
+            }
+          }}
+          onKeyUp={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              const el = e.currentTarget;
+              if (el.value) onChange(el.value);
+              el.blur();
             }
           }}
           aria-label="Validity date"

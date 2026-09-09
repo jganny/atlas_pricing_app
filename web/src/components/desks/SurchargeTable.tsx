@@ -30,7 +30,7 @@ export function SurchargeTable({
   rows: SurchargeRow[];
   onChange: (rows: SurchargeRow[]) => void;
   units?: BillingUnit[];
-  /** When set, Tab on the last remarks field jumps here (e.g. Next · Terms). */
+  /** When set, Tab on the last row’s delete control jumps here (e.g. Next · Terms). */
   lastFieldTabTarget?: string;
 }) {
   function update(index: number, patch: Partial<SurchargeRow>) {
@@ -143,14 +143,9 @@ export function SurchargeTable({
                     onChange={(e) => update(i, { remarks: e.target.value })}
                     placeholder="Optional"
                     onKeyDown={(e) => {
-                      if (
-                        lastFieldTabTarget &&
-                        e.key === "Tab" &&
-                        !e.shiftKey &&
-                        i === rows.length - 1
-                      ) {
+                      if (e.key === "Tab" && !e.shiftKey) {
                         e.preventDefault();
-                        document.getElementById(lastFieldTabTarget)?.focus();
+                        document.getElementById(`surcharge-del-${row.id}`)?.focus();
                       }
                     }}
                   />
@@ -158,10 +153,18 @@ export function SurchargeTable({
                 <td className="p-1">
                   <button
                     type="button"
-                    tabIndex={-1}
+                    id={`surcharge-del-${row.id}`}
+                    tabIndex={0}
                     disabled={!enabled || rows.length <= 1}
-                    className="text-red-600 disabled:opacity-30"
+                    className="rounded p-0.5 text-red-600 outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-30"
+                    aria-label="Delete surcharge row"
                     onClick={() => onChange(rows.filter((_, j) => j !== i))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Tab" && !e.shiftKey && lastFieldTabTarget && i === rows.length - 1) {
+                        e.preventDefault();
+                        document.getElementById(lastFieldTabTarget)?.focus();
+                      }
+                    }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
