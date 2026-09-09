@@ -127,3 +127,77 @@ export async function lookupQuoteByRef(raw: string): Promise<ArchiveLookupResult
 
   return null;
 }
+
+function quoteHay(quote: SavedQuote): string {
+  const d = quote.details || {};
+  return [
+    quote.customer,
+    quote.route,
+    quote.routingDetails,
+    quote.creator,
+    quote.quoteRefNo,
+    quote.quoteNumber,
+    d.origin,
+    d.destination,
+    d.airline,
+    d.shippingLine,
+    d.carrier,
+  ]
+    .map((v) => String(v ?? ""))
+    .join(" ")
+    .toLowerCase();
+}
+
+function matchesText(quote: SavedQuote, raw: string): boolean {
+  const tokens = raw
+    .toLowerCase()
+    .trim()
+    .split(/[\s,/|→\-]+/)
+    .filter((t) => t.length >= 2);
+  if (!tokens.length) return false;
+  const hay = quoteHay(quote);
+  return tokens.every((t) => hay.includes(t));
+}
+
+/** Find quotes by customer, city, lane, or carrier — filename not required. */
+export async function lookupQuotesByText(raw: string): Promise<ArchiveLookupResult[]> {
+  const q = raw.trim();
+  if (q.length < 2) return [];
+  const db = getFirebaseDb();
+  const hits: ArchiveLookupResult[] = [];
+  const seen = new Set<string>();
+
+  const exact = await lookupQuoteByRef(q);
+  if (exact) {
+    seen.add(exact.quote.id);
+    hits.push(exact);
+  }
+
+  const liveSnap = await getDocs(query(collection(db, "quotes"), limit(400)));
+  for (const d of liveSnap.docs) {
+    if (seen.has(d.id)) continue;
+    const data = { id: d.id, ...(d.data() as Omit<SavedQuote, "id">) };
+    if (matchesText(data, q)) {
+      seen.add(d.id);
+      hits.push({ source: "live", quote: data, row: mapQuoteFromSaved(d.id, data) });
+    }
+    if (hits.length >= 12) return hits;
+  }
+
+  try {
+    const archSnap = await getDocs(query(collection(db, "archive_quotes"), limit(200)));
+    for (const d of archSnap.docs) {
+      if (seen.has(d.id)) continue;
+      const data = { id: d.id, ...(d.data() as Omit<SavedQuote, "id">) };
+      if (matchesText(data, q)) {
+        seen.add(d.id);
+        hits.push({ source: "archive", quote: data, row: mapQuoteFromSaved(d.id, data) });
+      }
+      if (hits.length >= 12) return hits;
+    }
+  } catch {
+    /* archive_quotes may be missing */
+  }
+
+  return hits;
+}

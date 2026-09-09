@@ -10,7 +10,7 @@ import {
   performanceReportCsv,
   type ReportPeriod,
 } from "@/lib/quotes/performance-report";
-import { TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { listOfficersFromQuotes, officerLabel } from "@/lib/quotes/officers";
 import { formatCurrency } from "@/lib/utils";
 
 function downloadText(filename: string, content: string) {
@@ -26,20 +26,14 @@ function downloadText(filename: string, content: string) {
 }
 
 export function PerformanceReportPanel({ rows }: { rows: EnquiryRecord[] }) {
-  const [period, setPeriod] = useState<ReportPeriod>("monthly");
+  const [period, setPeriod] = useState<ReportPeriod>("all");
   const [officer, setOfficer] = useState("all");
   const report = useMemo(
     () => buildPerformanceReport(rows, period, officer),
     [rows, period, officer],
   );
 
-  const officers = useMemo(
-    () =>
-      Object.entries(TEAM_ROLES)
-        .filter(([, r]) => r.type === "member" || r.type === "admin")
-        .map(([id, r]) => ({ id, name: r.name })),
-    [],
-  );
+  const officers = useMemo(() => listOfficersFromQuotes(rows), [rows]);
 
   function exportCsv() {
     downloadText(`atlas-performance-${period}.csv`, performanceReportCsv(report));
@@ -55,7 +49,7 @@ export function PerformanceReportPanel({ rows }: { rows: EnquiryRecord[] }) {
     w.document.write(`<!doctype html><html><head><title>${report.label}</title>
       <style>body{font-family:system-ui;padding:24px;color:#0b1b3a} table{border-collapse:collapse;width:100%;margin-top:16px}
       th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left;font-size:12px} h1{font-size:18px}</style></head><body>
-      <h1>Atlas Performance Report</h1>
+      <h1>Vertex desk performance</h1>
       <p>${report.label} · Officer: ${report.officer}</p>
       <p>Total ${report.total} · Open ${report.open} · Won ${report.won} · Lost ${report.lost} · Conversion ${report.conversion}%</p>
       <p>Revenue ${report.revenue} · GP ${report.gp}</p>
@@ -71,7 +65,7 @@ export function PerformanceReportPanel({ rows }: { rows: EnquiryRecord[] }) {
     <Card>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <FileBarChart className="h-4 w-4" />
-        <h2 className="font-bold">Performance report</h2>
+        <h2 className="font-bold">Desk performance</h2>
         <Badge tone="info">{report.label}</Badge>
       </div>
       <div className="mb-3 flex flex-wrap gap-2">
@@ -85,12 +79,13 @@ export function PerformanceReportPanel({ rows }: { rows: EnquiryRecord[] }) {
           <option value="monthly">Monthly</option>
           <option value="quarterly">Quarterly</option>
           <option value="annual">Annual</option>
+          <option value="all">All time</option>
         </Select>
-        <Select value={officer} onChange={(e) => setOfficer(e.target.value)} className="w-48">
-          <option value="all">All officers</option>
+        <Select value={officer} onChange={(e) => setOfficer(e.target.value)} className="w-56">
+          <option value="all">All officers ({rows.length} quotes)</option>
           {officers.map((o) => (
             <option key={o.id} value={o.id}>
-              {o.name}
+              {officerLabel(o)}
             </option>
           ))}
         </Select>
@@ -137,6 +132,12 @@ export function PerformanceReportPanel({ rows }: { rows: EnquiryRecord[] }) {
       ) : (
         <p className="mt-3 text-sm text-[var(--color-text-muted)]">No quotes in this window.</p>
       )}
+      <p className="mt-3 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+        Officers are everyone who saved a quote in this workspace (plus known desks), not a short
+        staff list. Monthly / weekly hide other months — use All time to see the full team. The
+        live list is the latest quotes Vertex can load, so very old files also live under Enquiry
+        DB → Find quote.
+      </p>
     </Card>
   );
 }

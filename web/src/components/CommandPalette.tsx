@@ -28,6 +28,7 @@ import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
 import { canAccessRoute, type AppRouteId } from "@/lib/auth/rbac";
 import { cn } from "@/lib/utils";
+import { scoreQuoteMatch } from "@/lib/quotes/find-quotes";
 import type { EnquiryRecord } from "@/lib/types";
 
 export interface CommandItem {
@@ -63,19 +64,7 @@ const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
 ];
 
 function rankQuote(row: EnquiryRecord, q: string): number {
-  const ref = row.ref.toLowerCase();
-  const customer = row.customer.toLowerCase();
-  const lane = `${row.origin} ${row.destination}`.toLowerCase();
-  const carrier = (row.carrier || "").toLowerCase();
-  if (ref === q) return 100;
-  if (ref.startsWith(q)) return 90;
-  if (ref.includes(q)) return 80;
-  if (customer.startsWith(q)) return 70;
-  if (customer.includes(q)) return 60;
-  if (carrier.includes(q)) return 50;
-  if (lane.includes(q)) return 40;
-  if (row.assignee.toLowerCase().includes(q) || row.creator.includes(q)) return 30;
-  return 0;
+  return scoreQuoteMatch(row, q);
 }
 
 export function CommandPalette() {
@@ -118,8 +107,8 @@ export function CommandPalette() {
       for (const { row } of ranked) {
         quoteHits.push({
           id: `quote-${row.id}`,
-          label: row.ref,
-          hint: `${row.customer} · ${row.origin}→${row.destination}`,
+          label: `${row.customer || row.ref}`,
+          hint: `${row.ref} · ${row.origin}→${row.destination}`,
           icon: Database,
           group: "Quotes",
           action: () =>
@@ -203,7 +192,7 @@ export function CommandPalette() {
           <input
             autoFocus
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-muted)]"
-            placeholder="Find quote by ref, customer, carrier… or jump to a desk"
+            placeholder="Customer, city, carrier, or quote no. — file name not required"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
@@ -259,7 +248,7 @@ export function CommandPalette() {
           )}
         </ul>
         <div className="border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-text-muted)]">
-          ↑↓ navigate · Enter open · ⌘K toggle — type a ref to jump straight into Enquiry DB
+          Type a customer or city to open a quote · Enter selects · ⌘K toggles
         </div>
       </div>
     </div>

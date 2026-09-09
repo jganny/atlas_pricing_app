@@ -63,7 +63,7 @@ export const parityGroups: ParityGroup[] = [
       { id: "home-amendments", name: "Pending amendment approval queue", legacy: "Overview", react: "/", status: "done", testHint: "Approve/reject on manager home — 2h unlock" },
       { id: "home-agents", name: "Quoting agents registry", legacy: "Quoting Agents tab", react: "/", status: "done" },
       { id: "home-analytics", name: "Analytics (pipeline, GP charts, route performance)", legacy: "Analytics tab", status: "done" },
-      { id: "home-news", name: "Control tower / logistics news", legacy: "Overview", react: "/", status: "done" },
+      { id: "home-news", name: "Industry news ticker", legacy: "Overview control tower", react: "/", status: "done" },
       { id: "dash-basic", name: "Basic SLA dashboard", legacy: "Member/admin home", react: "/", status: "done" },
     ],
   },

@@ -62,6 +62,8 @@ const defaultSurcharges = {
 
 type Tab = "shipment" | "packages" | "surcharges" | "terms";
 
+const COURIER_STEPS: Tab[] = ["shipment", "packages", "surcharges", "terms"];
+
 const COURIER_FOCUS: Record<Tab, string> = {
   shipment: "courier-customer",
   packages: "courier-pkg-0-qty",

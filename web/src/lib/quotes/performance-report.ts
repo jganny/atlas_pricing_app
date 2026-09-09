@@ -3,13 +3,17 @@
 import type { EnquiryRecord } from "@/lib/types";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 
-export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "annual";
+export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "annual" | "all";
 
 export function periodWindow(period: ReportPeriod, now = new Date()): { from: Date; to: Date; label: string } {
   const to = new Date(now);
   const from = new Date(now);
   from.setHours(0, 0, 0, 0);
   to.setHours(23, 59, 59, 999);
+  if (period === "all") {
+    from.setFullYear(2000, 0, 1);
+    return { from, to, label: "All time · every quote in this list" };
+  }
   if (period === "daily") {
     return { from, to, label: `Daily · ${from.toLocaleDateString()}` };
   }
@@ -74,7 +78,7 @@ export function buildPerformanceReport(
   const gp = filtered.reduce((s, e) => s + (e.grossProfit || 0), 0);
   const deskMap: Record<string, { count: number; won: number; revenue: number }> = {};
   for (const e of filtered) {
-    const k = e.creator || "unknown";
+    const k = (e.creator || "unknown").toLowerCase();
     if (!deskMap[k]) deskMap[k] = { count: 0, won: 0, revenue: 0 };
     deskMap[k].count += 1;
     if (e.status === "won") {
@@ -83,7 +87,13 @@ export function buildPerformanceReport(
     }
   }
   const byDesk = Object.entries(deskMap)
-    .map(([desk, v]) => ({ desk: deskDisplayName(desk), ...v }))
+    .map(([desk, v]) => {
+      const label = deskDisplayName(desk);
+      return {
+        desk: label.toLowerCase() === desk ? desk : `${label} · ${desk}`,
+        ...v,
+      };
+    })
     .sort((a, b) => b.revenue - a.revenue);
 
   return {

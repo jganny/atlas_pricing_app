@@ -1,4 +1,4 @@
-/** Mock logistics news when RSS is blocked — mirrors legacy control tower. */
+/** Industry headlines for the desk ticker (RSS live wire optional). */
 
 export interface NewsItem {
   id: string;
@@ -40,11 +40,29 @@ export const MOCK_LOGISTICS_NEWS: NewsItem[] = [
   },
   {
     id: "n4",
-    title: "Fuel surcharge watch: jet fuel eases week-on-week",
-    source: "Atlas Control Tower",
-    url: "#",
+    title: "Jet fuel eases week-on-week — re-check FSC before long-validity air quotes",
+    source: "Vertex desk",
+    url: "https://www.iata.org/en/publications/economics/",
     region: "global",
     publishedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
     summary: "Desk tip: re-check Circulars FSC before locking long-validity air quotes.",
+  },
+  {
+    id: "n5",
+    title: "USWC congestion watch as import boxes bunch after holidays",
+    source: "Journal of Commerce",
+    url: "https://www.joc.com/",
+    region: "global",
+    publishedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
+    summary: "Schedule reliability still uneven on transpacific loops.",
+  },
+  {
+    id: "n6",
+    title: "IATA: air cargo volumes hold above 2019 baseline",
+    source: "IATA",
+    url: "https://www.iata.org/en/pressroom/",
+    region: "global",
+    publishedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+    summary: "E-commerce and perishables keep widebody bellies busy on Asia–Europe.",
   },
 ];

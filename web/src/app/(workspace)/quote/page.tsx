@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronRight, Package, Plane, Ship, Sparkles, Truck } from "lucide-react";
 import { PremiumQuoteOverlay } from "@/components/PremiumQuoteOverlay";
+import { VertexAskBar } from "@/components/VertexAskBar";
 import { Button, Card } from "@/components/ui";
 
 const DESKS = [
@@ -42,8 +43,8 @@ export default function QuoteHubPage() {
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-200">Quote hub</p>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Start from the desk</h1>
         <p className="mt-2 max-w-lg text-sm text-white/75">
-          Official customer quotes are built on Air, Sea, Courier, or Transport — same Firestore as
-          legacy. Lane finder only prefills origin and destination.
+          Official quotes are built on Air, Sea, Courier, or Transport. To reopen an old one, type
+          the customer or city below — you do not need the file name.
         </p>
         <Button
           type="button"
@@ -54,6 +55,8 @@ export default function QuoteHubPage() {
           New quote
         </Button>
       </div>
+
+      <VertexAskBar />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {DESKS.map((d) => (

@@ -1,71 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  BookOpen,
-  HelpCircle,
+  AlertTriangle,
   Inbox,
-  Keyboard,
   PlaneTakeoff,
-  Ship,
+  Search,
+  Sparkles,
   X,
 } from "lucide-react";
-import { Button, Input } from "@/components/ui";
+import { VertexAskBar } from "@/components/VertexAskBar";
+import { useEnquiries } from "@/hooks/use-atlas-data";
 import { cn } from "@/lib/utils";
-
-const FAQ = [
-  {
-    q: "Where do official rates come from?",
-    a: "New quote only prefills origin and destination, then opens Air / Sea / Transport. Customer-ready prices come from Circulars and the desk — not dummy carrier cards.",
-  },
-  {
-    q: "Are Courier DHL / Blue Dart / UPS rates live?",
-    a: "No. Courier comparison is an internal zone × carrier-factor model so you can rank options. It is not a live DHL, UPS, FedEx, or Blue Dart API. Use Circulars or a contracted portal for sellable rates.",
-  },
-  {
-    q: "How does DCSA / ONE Record work?",
-    a: "Standards shows open-standard demo shapes and GitHub/IATA docs — not live rates. Run demo returns sample sailings until carrier portal credentials are stored as Functions secrets.",
-  },
-  {
-    q: "How do I quote from an email?",
-    a: "Open Enquiry inbox or paste the mail body on Air/Sea desk Smart Quote strip, then tap Air or Sea.",
-  },
-  {
-    q: "Where are Circulars tariffs?",
-    a: "Circulars library — browse published air/sea tariffs or upload Excel to publish.",
-  },
-  {
-    q: "How do I amend a locked quote?",
-    a: "From Enquiry DB inspector request an amendment; admins approve on the Dashboard queue (2-hour unlock).",
-  },
-  {
-    q: "Transport / Warehouse?",
-    a: "Transport uses India PIN + world ZIP search for origin/destination; Warehouse is Details → Storage → Terms. Tab on the last field of a step opens the next tab. ⌘S saves. Alt+1–4 jumps steps.",
-  },
-  {
-    q: "Keyboard without a mouse?",
-    a: "⌘K jump menu, ⌘S save, Alt+1–4 desk steps, Tab on the last field of a step to advance. Courier Margin % Tab opens Packages.",
-  },
-  {
-    q: "FX rates?",
-    a: "Header exchange control shows live USD, EUR, and GBP to INR (Frankfurter / ER-API). Open it to convert either direction.",
-  },
-];
-
-const QUICK_LINKS = [
-  { href: "/inbox", label: "Enquiry inbox", icon: Inbox },
-  { href: "/air", label: "Air desk", icon: PlaneTakeoff },
-  { href: "/sea", label: "Sea desk", icon: Ship },
-  { href: "/circulars", label: "Circulars", icon: BookOpen },
-];
 
 export function HelpFab() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [prompt, setPrompt] = useState("");
-  const [answer, setAnswer] = useState<string | null>(null);
+  const { data: rows = [] } = useEnquiries();
+
+  const overdue = useMemo(
+    () => rows.filter((e) => e.slaHoursOpen > 8).length,
+    [rows],
+  );
 
   useEffect(() => setMounted(true), []);
 
@@ -93,21 +51,6 @@ export function HelpFab() {
     };
   }, [open]);
 
-  function ask() {
-    const p = prompt.toLowerCase();
-    const hit = FAQ.find(
-      (f) =>
-        f.q.toLowerCase().includes(p) ||
-        f.a.toLowerCase().includes(p) ||
-        p.split(/\s+/).some((w) => w.length > 3 && (f.q + f.a).toLowerCase().includes(w)),
-    );
-    setAnswer(
-      hit
-        ? hit.a
-        : "Try: paste enquiry on Air/Sea, ⌘K to jump, Enquiry DB for lifecycle, Circulars for rates. Legacy app is still linked from the header for anything not migrated.",
-    );
-  }
-
   const panel =
     open && mounted
       ? createPortal(
@@ -115,7 +58,7 @@ export function HelpFab() {
             <button
               type="button"
               className="atlas-overlay absolute inset-0"
-              aria-label="Close Atlas Help"
+              aria-label="Close Vertex"
               data-modal-close
               onClick={() => setOpen(false)}
             />
@@ -123,15 +66,15 @@ export function HelpFab() {
               className="atlas-glass relative z-10 flex h-full w-full max-w-md flex-col shadow-2xl animate-[atlas-slide-in_0.22s_ease-out]"
               role="dialog"
               aria-modal="true"
-              aria-label="Atlas Help"
+              aria-label="Vertex assistant"
             >
               <div className="flex items-start justify-between border-b border-[var(--color-border)] px-5 py-4">
                 <div>
                   <div className="text-sm font-extrabold tracking-wide text-[var(--color-atlas-navy)]">
-                    Atlas Help
+                    Vertex
                   </div>
                   <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-                    Shortcuts, FAQ, and quick jumps — ⌘?
+                    Tell me the customer or lane — I will open it. ⌘?
                   </p>
                 </div>
                 <button
@@ -145,101 +88,55 @@ export function HelpFab() {
                 </button>
               </div>
 
-              <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
-                <div>
-                  <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    <Keyboard className="h-3 w-3" />
-                    Shortcuts
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {[
-                      ["⌘K", "Command palette"],
-                      ["⌘?", "Toggle help"],
-                      ["⌘S", "Save on desks"],
-                      ["Esc", "Close overlays"],
-                    ].map(([k, label]) => (
-                      <div
-                        key={k}
-                        className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-white/70 px-2.5 py-2"
-                      >
-                        <span className="text-[var(--color-text-muted)]">{label}</span>
-                        <kbd className="rounded border border-[var(--color-border)] bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold">
-                          {k}
-                        </kbd>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                <VertexAskBar compact onNavigate={() => setOpen(false)} />
 
                 <div>
                   <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Jump to
+                    I can do this now
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {QUICK_LINKS.map((l) => (
+                  <div className="grid gap-2">
+                    {overdue > 0 ? (
                       <Link
-                        key={l.href}
-                        href={l.href}
+                        href="/enquiries"
                         onClick={() => setOpen(false)}
-                        className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-sky-300 hover:bg-sky-50/60"
+                        className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-950"
                       >
-                        <l.icon className="h-3.5 w-3.5" />
-                        {l.label}
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {overdue} quote{overdue === 1 ? "" : "s"} past SLA — open Enquiry DB
                       </Link>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Common questions
-                  </div>
-                  <ul className="space-y-2">
-                    {FAQ.map((f) => (
-                      <li key={f.q}>
-                        <button
-                          type="button"
-                          className="w-full rounded-lg border border-[var(--color-border)] bg-white/70 px-3 py-2.5 text-left text-xs font-semibold hover:bg-slate-50"
-                          onClick={() => {
-                            setPrompt(f.q);
-                            setAnswer(f.a);
-                          }}
-                        >
-                          {f.q}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Ask Atlas
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      className="mt-0"
-                      placeholder="Ask about desks, inbox, amendments…"
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") ask();
-                      }}
-                    />
-                    <Button type="button" onClick={ask}>
-                      Ask
-                    </Button>
-                  </div>
-                  {answer ? (
-                    <p
-                      className={cn(
-                        "mt-2 rounded-lg border border-sky-100 bg-sky-50/90 px-3 py-2.5 text-xs leading-relaxed text-sky-950",
-                      )}
+                    ) : null}
+                    <Link
+                      href="/enquiries"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-sky-300"
                     >
-                      {answer}
-                    </p>
-                  ) : null}
+                      <Search className="h-3.5 w-3.5" />
+                      Find any quote by customer or city
+                    </Link>
+                    <Link
+                      href="/air"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-sky-300"
+                    >
+                      <PlaneTakeoff className="h-3.5 w-3.5" />
+                      Start an air quote
+                    </Link>
+                    <Link
+                      href="/inbox"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-sky-300"
+                    >
+                      <Inbox className="h-3.5 w-3.5" />
+                      Quote from inbox mail
+                    </Link>
+                  </div>
                 </div>
+
+                <p className="text-xs leading-relaxed text-[var(--color-text-muted)]">
+                  Vertex watches what you type and jumps: find quotes, open the right desk, or
+                  flag overdue work. You should not need to remember a file name.
+                </p>
               </div>
             </aside>
           </div>,
@@ -251,12 +148,14 @@ export function HelpFab() {
     <>
       <button
         type="button"
-        aria-label="Atlas Help"
+        aria-label="Ask Vertex"
         data-testid="help-fab"
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-[220] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(11,31,58,0.35)] transition hover:scale-[1.03] hover:bg-[#14154a] md:bottom-5 md:right-5"
+        className={cn(
+          "fixed bottom-20 right-4 z-[220] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(11,31,58,0.35)] transition hover:scale-[1.03] hover:bg-[#14154a] md:bottom-5 md:right-5",
+        )}
       >
-        <HelpCircle className="h-5 w-5" />
+        <Sparkles className="h-5 w-5" />
       </button>
       {panel}
     </>

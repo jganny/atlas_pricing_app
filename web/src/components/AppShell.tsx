@@ -39,6 +39,7 @@ import { isAdminUser } from "@/lib/quotes/team-roles";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
+import { NewsTicker } from "./NewsTicker";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 import { PremiumQuoteOverlay, QuoteOverlayToggle } from "./PremiumQuoteOverlay";
 
@@ -327,11 +328,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <header className="sticky top-0 z-40 hidden items-center justify-between gap-3 border-b border-[var(--color-border)] bg-white/90 px-6 py-2.5 backdrop-blur-md md:flex">
             <div className="min-w-0 text-sm text-[var(--color-text-muted)]">
-              {focus} workspace —{" "}
+              {focus} — type a customer or city in Ask Vertex /{" "}
               <kbd className="rounded border border-[var(--color-border)] bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold">
                 ⌘K
-              </kbd>{" "}
-              to jump
+              </kbd>
+              . File name not required.
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <OfflineBadge />
@@ -355,6 +356,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </a>
             </div>
           </header>
+
+          <NewsTicker />
 
           <main className="flex-1 p-3 md:p-5">
             <RouteGuard>{children}</RouteGuard>

@@ -121,7 +121,7 @@ function enquiriesQuery(max: number): Query {
   return query(collection(db, "quotes"), orderBy("timestamp", "desc"), limit(max));
 }
 
-export async function fetchLiveEnquiries(max = 200): Promise<EnquiryRecord[]> {
+export async function fetchLiveEnquiries(max = 400): Promise<EnquiryRecord[]> {
   const snap = await getDocs(enquiriesQuery(max));
   return snap.docs.map((docSnap) => mapQuote(docSnap.id, docSnap.data() as SavedQuote));
 }
@@ -130,7 +130,7 @@ export async function fetchLiveEnquiries(max = 200): Promise<EnquiryRecord[]> {
 export function subscribeLiveEnquiries(
   onData: (rows: EnquiryRecord[]) => void,
   onError?: (err: Error) => void,
-  max = 200,
+  max = 400,
 ): () => void {
   return onSnapshot(
     enquiriesQuery(max),

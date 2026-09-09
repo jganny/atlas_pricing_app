@@ -12,19 +12,19 @@ import {
   Users,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
-import { LogisticsNewsFeed } from "@/components/LogisticsNewsFeed";
 import { PerformanceReportPanel } from "@/components/PerformanceReportPanel";
+import { VertexAskBar } from "@/components/VertexAskBar";
 import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
 import { canAccessRoute, deskFocusLabel } from "@/lib/auth/rbac";
-import { useLiveData } from "@/lib/api";
 import {
   fetchAmendmentRequests,
   resolveAmendment,
   type AmendmentRequest,
 } from "@/lib/firebase/amendments";
+import { deskEditHref } from "@/lib/quotes/find-quotes";
 import { listOfflineQuotes, removeOfflineQuote } from "@/lib/quotes/offline-cache";
 import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
@@ -95,7 +95,7 @@ export default function DashboardPage() {
     });
     return Object.entries(m)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
+      .slice(0, 16);
   }, [enquiries]);
 
   const pendingAmd = amendments.filter((a) => a.status === "pending");
@@ -165,10 +165,7 @@ export default function DashboardPage() {
             {admin ? "Manager overview" : "My desk"}
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            {focus} ·{" "}
-            {useLiveData
-              ? "Live enquiries — header Refresh reloads workspace data."
-              : "Mock data — mirrors Enquiry DB SLA."}
+            {focus} · Ask Vertex for a customer or city — you do not need the file name.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -198,6 +195,8 @@ export default function DashboardPage() {
           ) : null}
         </div>
       </div>
+
+      <VertexAskBar />
 
       {error ? (
         <Card className="border-red-200 bg-red-50 py-3">
@@ -389,11 +388,10 @@ export default function DashboardPage() {
               {admin ? (
                 <details className="atlas-panel rounded-xl px-4 py-3">
                   <summary className="cursor-pointer text-sm font-bold text-[var(--color-atlas-navy)]">
-                    Optional: performance & industry news
+                    Desk performance
                   </summary>
-                  <div className="mt-3 space-y-4">
+                  <div className="mt-3">
                     <PerformanceReportPanel rows={enquiries} />
-                    <LogisticsNewsFeed />
                   </div>
                 </details>
               ) : null}
@@ -518,12 +516,14 @@ export default function DashboardPage() {
               ) : null}
 
               <details className="atlas-panel rounded-xl p-3">
-                <summary className="cursor-pointer text-sm font-bold">Offline backups</summary>
+                <summary className="cursor-pointer text-sm font-bold">Safety copies on this computer</summary>
                 <div className="mt-2">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Desk saves cache here if the network drops.
-                    </p>
+                  <p className="mb-2 text-xs leading-relaxed text-[var(--color-text-muted)]">
+                    When you save a quote, Vertex also keeps a short list here. If the network
+                    blips, you can reopen that quote from this browser — you do not need the file
+                    name. Live history is always Enquiry DB / Ask Vertex.
+                  </p>
+                  <div className="mb-2 flex justify-end">
                     <Button
                       type="button"
                       variant="ghost"
@@ -534,7 +534,9 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                   {offline.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">No offline drafts.</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      No local copies yet. They appear after you save on Air or Sea.
+                    </p>
                   ) : (
                     <ul className="space-y-1 text-xs">
                       {offline.slice(0, 6).map((o) => (
@@ -542,9 +544,12 @@ export default function DashboardPage() {
                           key={o.id}
                           className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5"
                         >
-                          <span className="truncate">
+                          <Link
+                            href={deskEditHref(o.type, o.id)}
+                            className="min-w-0 truncate font-semibold text-sky-800 hover:underline"
+                          >
                             <Badge tone="neutral">{o.type}</Badge> {o.customer || o.id}
-                          </span>
+                          </Link>
                           <Button
                             type="button"
                             variant="ghost"

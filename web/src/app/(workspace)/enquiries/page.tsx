@@ -12,13 +12,14 @@ import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
-import { lookupQuoteByRef } from "@/lib/firebase/archive-lookup";
+import { lookupQuoteByRef, lookupQuotesByText } from "@/lib/firebase/archive-lookup";
 import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import {
   downloadEnquiryCsv,
   summarizeEnquiryFinancials,
 } from "@/lib/quotes/edb-csv";
+import { searchQuotes } from "@/lib/quotes/find-quotes";
 import {
   archiveOlderThan,
   buildFyReportCards,
@@ -174,71 +175,55 @@ function EnquiryDatabaseInner() {
   const fyCards = useMemo(() => buildFyReportCards(filtered), [filtered]);
 
   async function findArchived() {
-    const ref = archiveRef.trim();
-    if (!ref) {
-      toast("Enter a quote ref or ID", "error");
+    const q = archiveRef.trim();
+    if (!q) {
+      toast("Type a customer, city, carrier, or quote number", "error");
       return;
     }
+    const localHits = searchQuotes([...listLocalArchive(), ...rows], q, 8);
+    const pick = (hit: EnquiryRecord, note: string) => {
+      setSelectedId(hit.id);
+      setSearch(hit.customer || hit.ref);
+      setArchiveHit(hit);
+      setArchiveNote(note);
+      toast(`Opened ${hit.ref} · ${hit.customer}`, "success");
+    };
     if (!useLiveData) {
-      const local = listLocalArchive().find(
-        (r) =>
-          r.ref.toLowerCase().includes(ref.toLowerCase()) ||
-          r.id.toLowerCase() === ref.toLowerCase(),
-      );
-      const hit =
-        local ||
-        rows.find(
-          (r) =>
-            r.ref.toLowerCase().includes(ref.toLowerCase()) ||
-            r.id.toLowerCase() === ref.toLowerCase(),
-        );
-      if (hit) {
-        setSelectedId(hit.id);
-        setSearch(hit.ref);
-        setArchiveHit(hit);
-        setArchiveNote(local ? "Found in local 90-day archive" : "Found in mock list");
-        toast(`Found ${hit.ref}`, "success");
-      } else {
-        setArchiveNote("Not found in mock data");
+      if (localHits[0]) pick(localHits[0], "Found without the file name");
+      else {
+        setArchiveNote("Nothing matched that customer or lane in mock data");
         toast("Not found", "error");
       }
+      return;
+    }
+    if (localHits[0]) {
+      pick(localHits[0], `Matched ${localHits[0].customer} · ${localHits[0].ref}`);
       return;
     }
     setArchiveBusy(true);
     setArchiveNote(null);
     try {
-      const local = listLocalArchive().find(
-        (r) =>
-          r.ref.toLowerCase().includes(ref.toLowerCase()) ||
-          r.id.toLowerCase() === ref.toLowerCase(),
-      );
-      if (local) {
-        setSelectedId(local.id);
-        setSearch(local.ref);
-        setArchiveHit(local);
-        setArchiveNote(`Found in local archive · ${local.ref}`);
-        toast(`Archived quote ${local.ref}`, "success");
-        return;
-      }
-      const hit = await lookupQuoteByRef(ref);
+      const hits = await lookupQuotesByText(q);
+      const hit = hits[0] ?? null;
       if (!hit) {
-        setArchiveNote("No live or archived quote matched that ref.");
-        toast("Quote not found in live or archive", "error");
+        const byRef = await lookupQuoteByRef(q);
+        if (!byRef) {
+          setArchiveNote("No live or archived quote matched. Try the customer name or a city.");
+          toast("Quote not found", "error");
+          return;
+        }
+        pick(
+          byRef.row,
+          byRef.source === "archive" ? `Archived · ${byRef.row.ref}` : `Live · ${byRef.row.ref}`,
+        );
         return;
       }
-      setSelectedId(hit.row.id);
-      setSearch(hit.row.ref);
-      setArchiveHit(hit.row);
-      setArchiveNote(
+      pick(
+        hit.row,
         hit.source === "archive"
-          ? `Found in archive_quotes · ${hit.row.ref}`
-          : `Found in live quotes · ${hit.row.ref}`,
+          ? `Archived · ${hit.row.customer} · ${hit.row.ref}`
+          : `Live · ${hit.row.customer} · ${hit.row.ref}`,
       );
-      toast(
-        hit.source === "archive" ? `Archived quote ${hit.row.ref}` : `Live quote ${hit.row.ref}`,
-        "success",
-      );
-      // Ensure row is visible even if not in current page of live list
       if (!rows.some((r) => r.id === hit.row.id)) {
         setPipeline("all");
         setModeFilter("all");
@@ -388,12 +373,12 @@ function EnquiryDatabaseInner() {
       <Card className="space-y-3 p-4">
         <div className="flex items-center gap-2 text-sm font-bold text-[var(--color-atlas-navy)]">
           <Archive className="h-4 w-4" />
-          Find old / archived quote
+          Find a quote — no file name needed
         </div>
         <div className="flex flex-wrap gap-2">
           <input
             className="min-w-[220px] flex-1 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
-            placeholder="Paste ref ID or quote number…"
+            placeholder="Customer, city, carrier, or quote number…"
             value={archiveRef}
             onChange={(e) => setArchiveRef(e.target.value)}
             onKeyDown={(e) => {
@@ -426,8 +411,8 @@ function EnquiryDatabaseInner() {
           <p className="text-xs font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
         ) : (
           <p className="text-xs text-[var(--color-text-muted)]">
-            Searches live quotes, local archive, then archive_quotes. Admins can run the 90-day
-            archive job into browser storage.
+            Searches customer, city, lane, and quote number across live quotes and archive. You do
+            not need the file name.
           </p>
         )}
       </Card>
