@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEventHandler } from "react";
 import { Input, Label } from "@/components/ui";
 
 const PRESETS = [
@@ -24,10 +25,14 @@ export function ValidityField({
   value,
   onChange,
   label = "Validity",
+  textInputId,
+  onTextKeyDown,
 }: {
   value: string;
   onChange: (next: string) => void;
   label?: string;
+  textInputId?: string;
+  onTextKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }) {
   const dateVal = asDateValue(value);
 
@@ -51,10 +56,12 @@ export function ValidityField({
           aria-label="Validity date"
         />
         <Input
+          id={textInputId}
           className="mt-0 min-w-[8rem] flex-1"
           value={dateVal ? "" : value}
           placeholder="or 15 days"
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onTextKeyDown}
           aria-label="Validity text"
         />
       </div>

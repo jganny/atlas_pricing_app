@@ -223,20 +223,36 @@ export function Tabs({
   value,
   onValueChange,
   items,
+  idPrefix,
 }: {
   value: string;
   onValueChange: (v: string) => void;
   items: Array<{ value: string; label: string }>;
+  idPrefix?: string;
 }) {
   return (
     <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-2" role="tablist">
-      {items.map((item) => (
+      {items.map((item, i) => (
         <button
           key={item.value}
+          id={idPrefix ? `${idPrefix}-${item.value}` : undefined}
           type="button"
           role="tab"
           aria-selected={value === item.value}
+          title={i < 9 ? `Alt+${i + 1}` : undefined}
           onClick={() => onValueChange(item.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+            e.preventDefault();
+            const delta = e.key === "ArrowRight" ? 1 : -1;
+            const next = items[(i + delta + items.length) % items.length];
+            if (!next) return;
+            onValueChange(next.value);
+            const el = idPrefix
+              ? document.getElementById(`${idPrefix}-${next.value}`)
+              : null;
+            if (el instanceof HTMLElement) el.focus();
+          }}
           className={cn(
             "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
             value === item.value

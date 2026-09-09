@@ -51,12 +51,14 @@ import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
+import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
+const AIR_STEPS = ["shipment", "carrier", "terms"] as const;
 
 export default function AirDeskPage() {
   return (
@@ -510,6 +512,10 @@ function AirDeskInner() {
   );
 
   useDeskSaveShortcut(() => void handleSave(), !saving);
+  useDeskStepKeys({
+    steps: AIR_STEPS,
+    setStep,
+  });
 
   return (
     <div className="space-y-3">
@@ -595,6 +601,7 @@ function AirDeskInner() {
       <Tabs
         value={step}
         onValueChange={(v) => setStep(v as Step)}
+        idPrefix="air-step"
         items={[
           { value: "shipment", label: "1 · Shipment" },
           { value: "carrier", label: "2 · Carriers" },
@@ -811,7 +818,7 @@ function AirDeskInner() {
                               onKeyDown={(e) => {
                                 if (e.key === "Tab" && !e.shiftKey && i === cargo.length - 1) {
                                   e.preventDefault();
-                                  document.getElementById("air-next-carriers")?.focus();
+                                  setStep("carrier");
                                 }
                               }}
                             />

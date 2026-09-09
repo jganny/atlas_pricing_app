@@ -49,6 +49,8 @@ export interface SaveCourierInput extends SaveMeta {
   destCity: string;
   originCountry: string;
   destCountry: string;
+  originPin?: string;
+  destPin?: string;
   scope: string;
   service: string;
   currency: string;
@@ -95,6 +97,8 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
       destCity: input.destCity,
       originCountry: input.originCountry,
       destCountry: input.destCountry,
+      originPin: input.originPin || "",
+      destPin: input.destPin || "",
       scope: input.scope,
       service: input.service,
       shipmentType: "parcel",

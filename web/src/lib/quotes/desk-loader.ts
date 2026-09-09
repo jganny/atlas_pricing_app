@@ -192,6 +192,8 @@ export function loadCourierDeskFromQuote(quote: SavedQuote) {
     destCity: String(d.destCity ?? ""),
     originCountry: String(d.originCountry ?? "IN"),
     destCountry: String(d.destCountry ?? "IN"),
+    originPin: String(d.originPin ?? ""),
+    destPin: String(d.destPin ?? ""),
     scope: (d.scope as "domestic" | "international") ?? "domestic",
     service: String(d.service ?? "economy"),
     currency: quote.currency ?? "INR",

@@ -56,7 +56,7 @@ const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
   { id: "directory", label: "Directory CRM", href: "/directory", icon: Users, group: "Tools", route: "directory" },
   { id: "sales", label: "Sales pipeline", href: "/sales", icon: Briefcase, group: "Tools", route: "sales" },
   { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3, group: "Navigate", route: "analytics" },
-  { id: "ops", label: "Operations board", href: "/ops", icon: PackageCheck, group: "Navigate", route: "ops" },
+  { id: "ops", label: "Won jobs (ops)", href: "/ops", icon: PackageCheck, group: "Navigate", route: "ops" },
   { id: "admin", label: "Admin console", href: "/admin", icon: Shield, group: "System", route: "admin" },
   { id: "docs", label: "Documentation", href: "/docs", icon: BookOpen, group: "System", route: "docs" },
   { id: "parity", label: "Feature parity tracker", href: "/feature-parity", icon: ClipboardCheck, group: "System", route: "feature-parity" },

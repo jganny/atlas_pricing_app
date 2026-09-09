@@ -15,6 +15,10 @@ describe("courier zone & chargeable", () => {
     expect(getCourierZone("IN", "IN")).toBe(1);
   });
 
+  it("India → Bahrain is Gulf zone 2 (not default 6)", () => {
+    expect(getCourierZone("IN", "BH")).toBe(2);
+  });
+
   it("computes volumetric per piece with 5000 divisor", () => {
     const { chargeableKg } = summarizeCourierPackages([
       { qty: 1, gw: 2, l: 50, w: 40, h: 30 },

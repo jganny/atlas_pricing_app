@@ -11,6 +11,7 @@ import {
   Label,
   NumberInput,
   Select,
+  Tabs,
   Textarea,
 } from "@/components/ui";
 import { ValidityField } from "@/components/ValidityField";
@@ -20,9 +21,11 @@ import { useLiveData } from "@/lib/api";
 import { saveWarehouseQuote } from "@/lib/firebase/save-transport-warehouse";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
+import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { DESK_CURRENCIES, WAREHOUSE_LOCATIONS } from "@/lib/desk/constants";
 import { computeGp, ensureIncidentalTerm } from "@/lib/pricing/quote-display";
 import { formatCurrency } from "@/lib/utils";
+import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 
 const DEFAULT_TERMS = ensureIncidentalTerm(
   "1. Storage billed per CBM per day (or part thereof).\n" +
@@ -30,9 +33,18 @@ const DEFAULT_TERMS = ensureIncidentalTerm(
     "3. Hazardous cargo requires prior approval.",
 );
 
+type WhTab = "details" | "storage" | "terms";
+const WH_STEPS = ["details", "storage", "terms"] as const;
+const WH_FOCUS: Record<WhTab, string> = {
+  details: "warehouse-customer",
+  storage: "warehouse-rate",
+  terms: "warehouse-notes",
+};
+
 export default function WarehouseDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<WhTab>("details");
   const [customer, setCustomer] = useState("");
   const [location, setLocation] = useState<string>(WAREHOUSE_LOCATIONS[0]);
   const [otherDescription, setOtherDescription] = useState("");
@@ -100,6 +112,17 @@ export default function WarehouseDeskPage() {
 
   useDeskSaveShortcut(() => void save());
 
+  function goWhStep(next: WhTab, focusId = WH_FOCUS[next]) {
+    setTab(next);
+    focusById(focusId);
+  }
+
+  useDeskStepKeys({
+    steps: WH_STEPS,
+    setStep: (s) => goWhStep(s),
+    focusIds: WH_FOCUS,
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -110,108 +133,173 @@ export default function WarehouseDeskPage() {
           </h1>
           <Badge tone="info">Phase 10</Badge>
         </div>
-        <Button type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
+        <Button id="warehouse-save" type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
           <Save className="h-4 w-4" />
           Save quote
         </Button>
       </div>
 
+      <Tabs
+        value={tab}
+        onValueChange={(v) => goWhStep(v as WhTab)}
+        idPrefix="warehouse-step"
+        items={[
+          { value: "details", label: "Details" },
+          { value: "storage", label: "Storage" },
+          { value: "terms", label: "Terms" },
+        ]}
+      />
+      <p className="-mt-2 text-[11px] text-[var(--color-text-muted)]">
+        Tab on last field → next step · Alt+1–3 · ⌘S save
+      </p>
+
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="space-y-3 lg:col-span-2">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Label>Customer *</Label>
-              <Input
-                name="atlas-customer"
-                autoComplete="off"
-                value={customer}
-                onChange={(e) => setCustomer(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Location *</Label>
-              <Select value={location} onChange={(e) => setLocation(e.target.value)}>
-                {WAREHOUSE_LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            {location === "Others" ? (
-              <div>
-                <Label>Other location description *</Label>
+          {tab === "details" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label>Customer *</Label>
                 <Input
-                  value={otherDescription}
-                  onChange={(e) => setOtherDescription(e.target.value)}
-                  placeholder="City / facility name"
+                  id="warehouse-customer"
+                  name="atlas-customer"
+                  autoComplete="off"
+                  value={customer}
+                  onChange={(e) => setCustomer(e.target.value)}
                 />
               </div>
-            ) : (
               <div>
-                <Label>Storage type</Label>
-                <Select value={storageType} onChange={(e) => setStorageType(e.target.value)}>
-                  <option>General cargo</option>
-                  <option>Bonded</option>
-                  <option>Reefer</option>
-                  <option>Hazardous</option>
+                <Label>Location *</Label>
+                <Select
+                  id="warehouse-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                >
+                  {WAREHOUSE_LOCATIONS.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
                 </Select>
               </div>
-            )}
-            {location === "Others" ? (
-              <div className="sm:col-span-2">
-                <Label>Storage type</Label>
-                <Select value={storageType} onChange={(e) => setStorageType(e.target.value)}>
-                  <option>General cargo</option>
-                  <option>Bonded</option>
-                  <option>Reefer</option>
-                  <option>Hazardous</option>
+              {location === "Others" ? (
+                <div>
+                  <Label>Other location description *</Label>
+                  <Input
+                    value={otherDescription}
+                    onChange={(e) => setOtherDescription(e.target.value)}
+                    placeholder="City / facility name"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <Label>Storage type</Label>
+                  <Select
+                    value={storageType}
+                    onChange={(e) => setStorageType(e.target.value)}
+                    onKeyDown={(e) => lastFieldTab(e, () => goWhStep("storage"))}
+                  >
+                    <option>General cargo</option>
+                    <option>Bonded</option>
+                    <option>Reefer</option>
+                    <option>Hazardous</option>
+                  </Select>
+                </div>
+              )}
+              {location === "Others" ? (
+                <div className="sm:col-span-2">
+                  <Label>Storage type</Label>
+                  <Select
+                    value={storageType}
+                    onChange={(e) => setStorageType(e.target.value)}
+                    onKeyDown={(e) => lastFieldTab(e, () => goWhStep("storage"))}
+                  >
+                    <option>General cargo</option>
+                    <option>Bonded</option>
+                    <option>Reefer</option>
+                    <option>Hazardous</option>
+                  </Select>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {tab === "storage" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>Rate / CBM / day</Label>
+                <NumberInput
+                  id="warehouse-rate"
+                  value={ratePerCbm}
+                  onValueChange={setRatePerCbm}
+                  onKeyDown={(e) =>
+                    firstFieldBackTab(e, () => goWhStep("details", "warehouse-customer"))
+                  }
+                />
+              </div>
+              <div>
+                <Label>CBM</Label>
+                <NumberInput value={cbm} onValueChange={setCbm} />
+              </div>
+              <div>
+                <Label>Days</Label>
+                <NumberInput
+                  value={days}
+                  onValueChange={(n) => setDays(Math.max(1, n || 1))}
+                />
+              </div>
+              <div>
+                <Label>Handling (sell)</Label>
+                <NumberInput value={handling} onValueChange={setHandling} />
+              </div>
+              <div>
+                <Label>Buy total</Label>
+                <NumberInput value={buyTotal} onValueChange={setBuyTotal} />
+              </div>
+              <div>
+                <Label>Currency</Label>
+                <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                  {DESK_CURRENCIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
                 </Select>
               </div>
-            ) : null}
-            <div>
-              <Label>Rate / CBM / day</Label>
-              <NumberInput value={ratePerCbm} onValueChange={setRatePerCbm} />
-            </div>
-            <div>
-              <Label>CBM</Label>
-              <NumberInput value={cbm} onValueChange={setCbm} />
-            </div>
-            <div>
-              <Label>Days</Label>
-              <NumberInput
-                value={days}
-                onValueChange={(n) => setDays(Math.max(1, n || 1))}
+              <ValidityField
+                value={validity}
+                onChange={setValidity}
+                textInputId="warehouse-validity"
+                onTextKeyDown={(e) => lastFieldTab(e, () => goWhStep("terms"))}
               />
             </div>
-            <div>
-              <Label>Handling (sell)</Label>
-              <NumberInput value={handling} onValueChange={setHandling} />
+          ) : null}
+
+          {tab === "terms" ? (
+            <div className="grid gap-3">
+              <div>
+                <Label>Notes</Label>
+                <Textarea
+                  id="warehouse-notes"
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  onKeyDown={(e) =>
+                    firstFieldBackTab(e, () => goWhStep("storage", "warehouse-validity"))
+                  }
+                />
+              </div>
+              <div>
+                <Label>Terms</Label>
+                <Textarea
+                  id="warehouse-terms"
+                  rows={4}
+                  value={terms}
+                  onChange={(e) => setTerms(e.target.value)}
+                  onKeyDown={(e) => lastFieldTab(e, () => focusById("warehouse-save"))}
+                />
+              </div>
             </div>
-            <div>
-              <Label>Buy total</Label>
-              <NumberInput value={buyTotal} onValueChange={setBuyTotal} />
-            </div>
-            <div>
-              <Label>Currency</Label>
-              <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                {DESK_CURRENCIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <ValidityField value={validity} onChange={setValidity} />
-            <div className="sm:col-span-2">
-              <Label>Notes</Label>
-              <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Terms</Label>
-              <Textarea rows={4} value={terms} onChange={(e) => setTerms(e.target.value)} />
-            </div>
-          </div>
+          ) : null}
         </Card>
         <Card>
           <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Total</div>

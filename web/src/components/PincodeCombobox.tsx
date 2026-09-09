@@ -13,12 +13,18 @@ export function PincodeCombobox({
   label,
   value,
   onChange,
+  onPick,
   placeholder,
+  inputId,
+  onInputKeyDown,
 }: {
   label: string;
   value: string;
   onChange: (next: string) => void;
+  onPick?: (hit: PostalHit) => void;
   placeholder?: string;
+  inputId?: string;
+  onInputKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const listId = useId();
   const [q, setQ] = useState(value);
@@ -60,12 +66,15 @@ export function PincodeCombobox({
   }, []);
 
   function pick(hit: PostalHit) {
-    onChange(hit.label);
-    setQ(hit.label);
+    if (onPick) onPick(hit);
+    else onChange(hit.label);
+    setQ(onPick ? hit.pin : hit.label);
     setOpen(false);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    onInputKeyDown?.(e);
+    if (e.defaultPrevented) return;
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp") && hits.length > 0) {
       setOpen(true);
       e.preventDefault();
@@ -92,6 +101,7 @@ export function PincodeCombobox({
       <Label>{label}</Label>
       <div ref={inputWrapRef}>
         <Input
+          id={inputId}
           value={q}
           placeholder={placeholder || "ZIP / PIN / city (global)"}
           autoComplete="off"

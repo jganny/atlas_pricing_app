@@ -24,6 +24,8 @@ import { useLiveData } from "@/lib/api";
 import { saveTransportQuote } from "@/lib/firebase/save-transport-warehouse";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
+import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
+import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import {
   DESK_CURRENCIES,
   INDIA_VEHICLE_TYPES,
@@ -39,6 +41,14 @@ const DEFAULT_TERMS = ensureIncidentalTerm(
 );
 
 type TabId = "lane" | "cargo" | "charges" | "terms";
+
+const TRANSPORT_STEPS = ["lane", "cargo", "charges", "terms"] as const;
+const TRANSPORT_FOCUS: Record<TabId, string> = {
+  lane: "transport-customer",
+  cargo: "transport-commodity",
+  charges: "transport-freight-buy",
+  terms: "transport-terms",
+};
 
 export default function TransportDeskPage() {
   const user = useAuthStore((s) => s.user);
@@ -76,6 +86,17 @@ export default function TransportDeskPage() {
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
+
+  function goTransportStep(next: TabId, focusId = TRANSPORT_FOCUS[next]) {
+    setTab(next);
+    focusById(focusId);
+  }
+
+  useDeskStepKeys({
+    steps: TRANSPORT_STEPS,
+    setStep: (s) => goTransportStep(s),
+    focusIds: TRANSPORT_FOCUS,
+  });
 
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
@@ -162,7 +183,7 @@ export default function TransportDeskPage() {
           </h1>
           <Badge tone="info">Phase 10</Badge>
         </div>
-        <Button type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
+        <Button id="transport-save" type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
           <Save className="h-4 w-4" />
           Save quote
         </Button>
@@ -170,7 +191,8 @@ export default function TransportDeskPage() {
 
       <Tabs
         value={tab}
-        onValueChange={(v) => setTab(v as TabId)}
+        onValueChange={(v) => goTransportStep(v as TabId)}
+        idPrefix="transport-step"
         items={[
           { value: "lane", label: "Lane" },
           { value: "cargo", label: "Cargo & compliance" },
@@ -178,6 +200,9 @@ export default function TransportDeskPage() {
           { value: "terms", label: "Terms" },
         ]}
       />
+      <p className="-mt-2 text-[11px] text-[var(--color-text-muted)]">
+        Tab on last field → next step · Alt+1–4 · ⌘S save
+      </p>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="space-y-3 lg:col-span-2">
@@ -205,6 +230,7 @@ export default function TransportDeskPage() {
               <div className="sm:col-span-2">
                 <Label>Customer *</Label>
                 <Input
+                  id="transport-customer"
                   name="atlas-customer"
                   autoComplete="off"
                   value={customer}
@@ -253,14 +279,26 @@ export default function TransportDeskPage() {
                   ))}
                 </Select>
               </div>
-              <ValidityField value={validity} onChange={setValidity} />
+              <ValidityField
+                value={validity}
+                onChange={setValidity}
+                textInputId="transport-validity"
+                onTextKeyDown={(e) => lastFieldTab(e, () => goTransportStep("cargo"))}
+              />
             </div>
           ) : null}
 
           {tab === "cargo" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <CommodityCombobox value={commodity} onChange={setCommodity} />
+                <CommodityCombobox
+                  value={commodity}
+                  onChange={setCommodity}
+                  inputId="transport-commodity"
+                  onInputKeyDown={(e) =>
+                    firstFieldBackTab(e, () => goTransportStep("lane", "transport-validity"))
+                  }
+                />
               </div>
               <div>
                 <Label>E-way bill no</Label>
@@ -290,7 +328,13 @@ export default function TransportDeskPage() {
               </div>
               <div className="sm:col-span-2">
                 <Label>Notes</Label>
-                <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Textarea
+                  id="transport-notes"
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  onKeyDown={(e) => lastFieldTab(e, () => goTransportStep("charges"))}
+                />
               </div>
             </div>
           ) : null}
@@ -299,7 +343,14 @@ export default function TransportDeskPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>Freight buy</Label>
-                <NumberInput value={freightBuy} onValueChange={setFreightBuy} />
+                <NumberInput
+                  id="transport-freight-buy"
+                  value={freightBuy}
+                  onValueChange={setFreightBuy}
+                  onKeyDown={(e) =>
+                    firstFieldBackTab(e, () => goTransportStep("cargo", "transport-notes"))
+                  }
+                />
               </div>
               <div>
                 <Label>Freight sell</Label>
@@ -311,7 +362,12 @@ export default function TransportDeskPage() {
               </div>
               <div>
                 <Label>Tolls / permits</Label>
-                <NumberInput value={tolls} onValueChange={setTolls} />
+                <NumberInput
+                  id="transport-tolls"
+                  value={tolls}
+                  onValueChange={setTolls}
+                  onKeyDown={(e) => lastFieldTab(e, () => goTransportStep("terms"))}
+                />
               </div>
             </div>
           ) : null}
@@ -319,7 +375,16 @@ export default function TransportDeskPage() {
           {tab === "terms" ? (
             <div>
               <Label>Terms</Label>
-              <Textarea rows={8} value={terms} onChange={(e) => setTerms(e.target.value)} />
+              <Textarea
+                id="transport-terms"
+                rows={8}
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+                onKeyDown={(e) => {
+                  firstFieldBackTab(e, () => goTransportStep("charges", "transport-tolls"));
+                  lastFieldTab(e, () => focusById("transport-save"));
+                }}
+              />
             </div>
           ) : null}
         </Card>

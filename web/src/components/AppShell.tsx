@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
   BarChart3,
-  BookOpen,
   Briefcase,
-  ClipboardCheck,
   ClipboardList,
   Database,
   FileText,
@@ -66,10 +64,13 @@ const workNav: NavItem[] = [
   { href: "/inbox", label: "Inbox", icon: Inbox, route: "inbox" },
   { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, route: "analytics" },
-  { href: "/admin", label: "Admin", icon: Shield, route: "admin" },
   // NRS follow-ups: visible only when RBAC grants `nrs` (Cathrina). Not Admin.
   { href: "/nrs", label: "NRS follow-ups", icon: ClipboardList, route: "nrs" },
+];
+
+const officeNav: NavItem[] = [
+  { href: "/analytics", label: "Analytics", icon: BarChart3, route: "analytics" },
+  { href: "/admin", label: "Admin", icon: Shield, route: "admin" },
 ];
 
 const libraryNav: NavItem[] = [
@@ -80,10 +81,8 @@ const libraryNav: NavItem[] = [
 ];
 
 const adminMoreNav: NavItem[] = [
-  // Ops was overlapping Enquiry DB (won filter) — kept under More for admins only.
-  { href: "/ops", label: "Won handoff (ops)", icon: PackageCheck, route: "ops" },
-  { href: "/docs", label: "Docs", icon: BookOpen, route: "docs" },
-  { href: "/feature-parity", label: "Feature parity", icon: ClipboardCheck, route: "feature-parity" },
+  // Won jobs for ops handoff — Enquiry DB (filter Won) is the full lifecycle page.
+  { href: "/ops", label: "Won jobs", icon: PackageCheck, route: "ops" },
   { href: "/m", label: "Mobile app", icon: Home, route: "dashboard" },
 ];
 
@@ -160,6 +159,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () => filterNav(workNav, user?.username, user?.role),
     [user?.username, user?.role],
   );
+  const visibleOffice = useMemo(
+    () => (admin ? filterNav(officeNav, user?.username, user?.role) : []),
+    [admin, user?.username, user?.role],
+  );
   const visibleLibrary = useMemo(
     () => (admin ? filterNav(libraryNav, user?.username, user?.role) : []),
     [admin, user?.username, user?.role],
@@ -176,6 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const sections: Array<{ title: string; items: NavItem[] }> = [
       { title: "Desks", items: visibleDesks },
       { title: "Work", items: visibleWork },
+      { title: "Office", items: visibleOffice },
       { title: "Library", items: visibleLibrary },
     ];
     if (visibleMore.length) sections.push({ title: "More", items: visibleMore });

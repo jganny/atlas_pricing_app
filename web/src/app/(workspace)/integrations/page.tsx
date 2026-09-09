@@ -20,6 +20,7 @@ export default function IntegrationsPage() {
   const [origin, setOrigin] = useState("INNSA");
   const [destination, setDestination] = useState("NLRTM");
   const [sailings, setSailings] = useState<DcsaScheduleSailing[]>([]);
+  const [showJson, setShowJson] = useState(false);
 
   const shipment = useMemo(
     () =>
@@ -56,11 +57,10 @@ export default function IntegrationsPage() {
           DCSA ocean · IATA ONE Record air
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-[var(--color-text-muted)]">
-          DCSA and ONE Record are free open standards — not free live rate gateways. Each carrier
-          hosts its own API against a shared schema. Atlas uses that shared shape so we onboard
-          once per pattern, then plug credentials when you are a contracted customer. The GitHub /
-          IATA links are official specs; the JSON panel and Run demo results are shape demos only
-          until portal secrets are configured.
+          Standards is a developer reference — not a rate shop. DCSA (ocean) and IATA ONE Record
+          (air) are shared API shapes so we can plug in a carrier portal later. Nothing on this page
+          is a live DHL / CMA / Emirates rate. Circulars remain the working tariff source until
+          portal credentials exist.
         </p>
       </div>
 
@@ -148,9 +148,23 @@ export default function IntegrationsPage() {
           >
             IATA ONE Record <ExternalLink className="h-3 w-3" />
           </a>
-          <pre className="mt-3 overflow-auto rounded-lg bg-slate-950 p-3 text-[10px] text-emerald-200">
-            {JSON.stringify(shipment, null, 2)}
-          </pre>
+          <button
+            type="button"
+            className="mt-3 block text-xs font-bold text-sky-800 hover:underline"
+            onClick={() => setShowJson((v) => !v)}
+          >
+            {showJson ? "Hide demo JSON" : "Show demo JSON (sample shape only)"}
+          </button>
+          {showJson ? (
+            <pre className="mt-3 overflow-auto rounded-lg bg-slate-950 p-3 text-[10px] text-emerald-200">
+              {JSON.stringify(shipment, null, 2)}
+            </pre>
+          ) : (
+            <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
+              Sample JSON is hidden so the desk does not look like a public code dump. Open it only
+              when checking the ONE Record shape.
+            </p>
+          )}
         </Card>
       </div>
 

@@ -10,11 +10,15 @@ export function CommodityCombobox({
   value,
   onChange,
   placeholder = "GENERAL, 2201, perishables…",
+  inputId,
+  onInputKeyDown,
 }: {
   label?: string;
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
+  inputId?: string;
+  onInputKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const listId = useId();
   const [q, setQ] = useState(value);
@@ -50,6 +54,8 @@ export function CommodityCombobox({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    onInputKeyDown?.(e);
+    if (e.defaultPrevented) return;
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp") && hits.length > 0) {
       setOpen(true);
       e.preventDefault();
@@ -75,6 +81,7 @@ export function CommodityCombobox({
     <div ref={boxRef} className="relative">
       <Label>{label}</Label>
       <Input
+        id={inputId}
         value={q}
         placeholder={placeholder}
         autoComplete="off"

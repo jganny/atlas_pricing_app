@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
-  ClipboardCheck,
   Clock,
   Inbox,
   PlaneTakeoff,
@@ -112,7 +111,6 @@ export default function DashboardPage() {
   const showAir = canAccessRoute(user?.username, user?.role, "air");
   const showSea = canAccessRoute(user?.username, user?.role, "sea");
   const showInbox = canAccessRoute(user?.username, user?.role, "inbox");
-  const showParity = canAccessRoute(user?.username, user?.role, "feature-parity");
   const showAnalytics = canAccessRoute(user?.username, user?.role, "analytics");
   const showDirectory = canAccessRoute(user?.username, user?.role, "directory");
   const showSales = canAccessRoute(user?.username, user?.role, "sales");
@@ -207,30 +205,6 @@ export default function DashboardPage() {
             Could not load enquiries. Sign in with your Atlas desk credentials.
           </p>
         </Card>
-      ) : null}
-
-      {showParity ? (
-        <div className="atlas-panel flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3">
-          <div>
-            <div className="flex items-center gap-2 text-emerald-800">
-              <ClipboardCheck className="h-4 w-4" />
-              <span className="text-sm font-bold">
-                Legacy parity complete — ready for your cutover test
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              120/120 tracker items shipped. Walk Feature parity, then approve cutover when React
-              feels equal or better.
-            </p>
-          </div>
-          <Link
-            href="/feature-parity"
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-atlas-navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#14154a]"
-          >
-            Trackers
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
       ) : null}
 
       {isLoading ? (

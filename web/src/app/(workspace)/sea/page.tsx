@@ -44,6 +44,8 @@ import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
+import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
+import { lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -52,6 +54,7 @@ import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
 type Step = "shipment" | "carrier" | "terms";
+const SEA_STEPS = ["shipment", "carrier", "terms"] as const;
 
 export default function SeaDeskPage() {
   return (
@@ -478,6 +481,10 @@ function SeaDeskInner() {
   );
 
   useDeskSaveShortcut(() => void handleSave(), !saving);
+  useDeskStepKeys({
+    steps: SEA_STEPS,
+    setStep,
+  });
 
   return (
     <div className="space-y-3">
@@ -560,6 +567,7 @@ function SeaDeskInner() {
       <Tabs
         value={step}
         onValueChange={(v) => setStep(v as Step)}
+        idPrefix="sea-step"
         items={[
           { value: "shipment", label: "1 · Shipment" },
           { value: "carrier", label: "2 · Liners" },
@@ -706,6 +714,7 @@ function SeaDeskInner() {
                     value={customFx || ""}
                     onChange={(e) => setCustomFx(Number(e.target.value))}
                     placeholder="Blank = 83.5"
+                    onKeyDown={(e) => lastFieldTab(e, () => setStep("carrier"))}
                   />
                 </Label>
               </div>

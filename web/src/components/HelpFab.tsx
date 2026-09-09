@@ -21,8 +21,12 @@ const FAQ = [
     a: "New quote only prefills origin and destination, then opens Air / Sea / Transport. Customer-ready prices come from Circulars and the desk — not dummy carrier cards.",
   },
   {
+    q: "Are Courier DHL / Blue Dart / UPS rates live?",
+    a: "No. Courier comparison is an internal zone × carrier-factor model so you can rank options. It is not a live DHL, UPS, FedEx, or Blue Dart API. Use Circulars or a contracted portal for sellable rates.",
+  },
+  {
     q: "How does DCSA / ONE Record work?",
-    a: "Those pages show open-standard demo shapes and GitHub/IATA docs — not live rates. Run demo returns sample sailings until carrier portal credentials are stored as Functions secrets.",
+    a: "Standards shows open-standard demo shapes and GitHub/IATA docs — not live rates. Run demo returns sample sailings until carrier portal credentials are stored as Functions secrets.",
   },
   {
     q: "How do I quote from an email?",
@@ -38,7 +42,11 @@ const FAQ = [
   },
   {
     q: "Transport / Warehouse?",
-    a: "Transport uses India PIN search for origin/destination; Warehouse has CFS/ICD location dropdowns. ⌘S saves like other desks.",
+    a: "Transport uses India PIN + world ZIP search for origin/destination; Warehouse is Details → Storage → Terms. Tab on the last field of a step opens the next tab. ⌘S saves. Alt+1–4 jumps steps.",
+  },
+  {
+    q: "Keyboard without a mouse?",
+    a: "⌘K jump menu, ⌘S save, Alt+1–4 desk steps, Tab on the last field of a step to advance. Courier Margin % Tab opens Packages.",
   },
   {
     q: "FX rates?",
@@ -50,7 +58,7 @@ const QUICK_LINKS = [
   { href: "/inbox", label: "Enquiry inbox", icon: Inbox },
   { href: "/air", label: "Air desk", icon: PlaneTakeoff },
   { href: "/sea", label: "Sea desk", icon: Ship },
-  { href: "/docs", label: "Docs", icon: BookOpen },
+  { href: "/circulars", label: "Circulars", icon: BookOpen },
 ];
 
 export function HelpFab() {

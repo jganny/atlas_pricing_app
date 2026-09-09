@@ -10,7 +10,8 @@ import {
   type CourierPackageLine,
   type CourierServiceKey,
 } from "@atlas/pricing-core";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button, Card, Tabs } from "@/components/ui";
+import { PincodeCombobox } from "@/components/PincodeCombobox";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -18,14 +19,21 @@ import { DEFAULT_COURIER_TERMS, saveCourierQuote } from "@/lib/firebase/save-quo
 import { loadCourierDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
+import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { toast } from "@/components/Toast";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import type { SavedQuote } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
+import {
+  countrySelectOptions,
+  inferCountryFromText,
+} from "@/lib/locations/country-aliases";
+import { searchPostalCodes, type PostalHit } from "@/lib/locations/postal-search";
+import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 
-const COUNTRIES = ["IN", "AE", "US", "GB", "DE", "SG", "AU", "CN", "HK", "CA", "FR"];
+const COURIER_STEPS = ["shipment", "packages", "surcharges", "terms"] as const;
 
 const EMPTY_PACKAGE: CourierPackageLine = { qty: 1, gw: 0, l: 0, w: 0, h: 0 };
 
@@ -47,6 +55,13 @@ const defaultSurcharges = {
 };
 
 type Tab = "shipment" | "packages" | "surcharges" | "terms";
+
+const COURIER_FOCUS: Record<Tab, string> = {
+  shipment: "courier-customer",
+  packages: "courier-pkg-0-qty",
+  surcharges: "courier-fuel",
+  terms: "courier-terms",
+};
 
 function SurchargeToggle({
   label,
@@ -105,6 +120,8 @@ function CourierDeskInner() {
   }
   const [originCountry, setOriginCountry] = useState("IN");
   const [destCountry, setDestCountry] = useState("IN");
+  const [originPin, setOriginPin] = useState("");
+  const [destPin, setDestPin] = useState("");
   const [scope, setScope] = useState<"domestic" | "international">("domestic");
   const [service, setService] = useState<CourierServiceKey>("economy");
   const [currency, setCurrency] = useState("INR");
@@ -123,6 +140,91 @@ function CourierDeskInner() {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
   }, [activeLaneId, lanes]);
 
+  function applyCountry(next: string, which: "origin" | "dest") {
+    const code = next.toUpperCase().slice(0, 2);
+    if (!code) return;
+    if (which === "origin") setOriginCountry(code);
+    else setDestCountry(code);
+  }
+
+  function applyPostalHit(hit: PostalHit, which: "origin" | "dest") {
+    if (which === "origin") {
+      setOriginPin(hit.pin);
+      if (hit.place) setOriginCity(hit.place);
+      if (hit.country) applyCountry(hit.country, "origin");
+    } else {
+      setDestPin(hit.pin);
+      if (hit.place) setDestCity(hit.place);
+      if (hit.country) applyCountry(hit.country, "dest");
+    }
+  }
+
+  useEffect(() => {
+    const fromCity = inferCountryFromText(originCity);
+    const fromPin = inferCountryFromText(originPin);
+    const next = fromCity || fromPin;
+    if (next) setOriginCountry(next);
+    const q = originCity.trim() || originPin.trim();
+    if (q.length < 3) return;
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      void searchPostalCodes(q, 6).then((hits) => {
+        if (cancelled) return;
+        const c = hits.find((h) => h.country)?.country;
+        if (c && (!next || next === "IN" || c === next)) setOriginCountry(c);
+      });
+    }, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [originCity, originPin]);
+
+  useEffect(() => {
+    const fromCity = inferCountryFromText(destCity);
+    const fromPin = inferCountryFromText(destPin);
+    const next = fromCity || fromPin;
+    if (next) setDestCountry(next);
+    const q = destCity.trim() || destPin.trim();
+    if (q.length < 3) return;
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      void searchPostalCodes(q, 6).then((hits) => {
+        if (cancelled) return;
+        const c = hits.find((h) => h.country)?.country;
+        if (c && (!next || next === "IN" || c === next)) setDestCountry(c);
+      });
+    }, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [destCity, destPin]);
+
+  useEffect(() => {
+    if (!originCountry || !destCountry) return;
+    setScope(originCountry === destCountry ? "domestic" : "international");
+    if (originCountry !== destCountry && service === "same_day") {
+      setService("economy");
+    }
+  }, [originCountry, destCountry, service]);
+
+  const countryOptions = countrySelectOptions([originCountry, destCountry]);
+
+  const goCourierStep = useCallback(
+    (next: Tab, focusId: string) => {
+      setTab(next);
+      focusById(focusId);
+    },
+    [],
+  );
+
+  useDeskStepKeys({
+    steps: COURIER_STEPS,
+    setStep: (s) => goCourierStep(s, COURIER_FOCUS[s]),
+    focusIds: COURIER_FOCUS,
+  });
+
   useEffect(() => {
     if (!loader.sourceQuote) return;
     const loaded = loadCourierDeskFromQuote(loader.sourceQuote);
@@ -132,6 +234,8 @@ function CourierDeskInner() {
     setActiveLaneId(lane.id);
     setOriginCountry(loaded.originCountry);
     setDestCountry(loaded.destCountry);
+    setOriginPin(loaded.originPin);
+    setDestPin(loaded.destPin);
     setScope(loaded.scope);
     setService(loaded.service as CourierServiceKey);
     setCurrency(loaded.currency);
@@ -171,6 +275,8 @@ function CourierDeskInner() {
     setActiveLaneId(lane.id);
     setOriginCountry("IN");
     setDestCountry("IN");
+    setOriginPin("");
+    setDestPin("");
     setScope("domestic");
     setService("economy");
     setCurrency("INR");
@@ -249,6 +355,8 @@ function CourierDeskInner() {
             destCity,
             originCountry,
             destCountry,
+            originPin,
+            destPin,
             scope,
             service,
             currency,
@@ -285,6 +393,8 @@ function CourierDeskInner() {
       destCity,
       originCountry,
       destCountry,
+      originPin,
+      destPin,
       scope,
       service,
       currency,
@@ -301,13 +411,6 @@ function CourierDeskInner() {
   );
 
   useDeskSaveShortcut(() => void handleSave(), !saving);
-
-  const tabs: Array<{ id: Tab; label: string }> = [
-    { id: "shipment", label: "Shipment" },
-    { id: "packages", label: "Packages" },
-    { id: "surcharges", label: "Rates & surcharges" },
-    { id: "terms", label: "Terms" },
-  ];
 
   return (
     <div className="space-y-6">
@@ -329,7 +432,8 @@ function CourierDeskInner() {
             <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Courier desk</h1>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            4-tab flow — shipment, packages, surcharges, terms. Same math as legacy. Press ⌘S to save.
+            4-tab flow — shipment, packages, surcharges, terms. Indicative zone model (not live
+            DHL/UPS feeds). Tab last field → next step · Alt+1–4 · ⌘S to save.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -341,7 +445,7 @@ function CourierDeskInner() {
             <Eye className="mr-2 h-4 w-4" />
             Preview
           </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+          <Button id="courier-save" type="button" onClick={() => void handleSave()} disabled={saving}>
             <Save className="mr-2 h-4 w-4" />
             {saving ? "Saving…" : "Save quote"}
           </Button>
@@ -379,22 +483,21 @@ function CourierDeskInner() {
         </Card>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-2">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-              tab === t.id
-                ? "bg-[var(--color-atlas-navy)] text-white"
-                : "text-[var(--color-text-muted)] hover:bg-slate-100"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => goCourierStep(v as Tab, COURIER_FOCUS[v as Tab])}
+        idPrefix="courier-step"
+        items={[
+          { value: "shipment", label: "Shipment" },
+          { value: "packages", label: "Packages" },
+          { value: "surcharges", label: "Rates & surcharges" },
+          { value: "terms", label: "Terms" },
+        ]}
+      />
+      <p className="-mt-2 text-[11px] text-[var(--color-text-muted)]">
+        Keyboard: Tab on the last field of a step opens the next tab. Shift+Tab on the first field
+        goes back. Alt+1 Shipment · Alt+2 Packages · Alt+3 Rates · Alt+4 Terms.
+      </p>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="space-y-4 lg:col-span-2">
@@ -425,63 +528,130 @@ function CourierDeskInner() {
               <label className="text-sm font-semibold md:col-span-2">
                 Customer
                 <input
+                  id="courier-customer"
                   name="atlas-customer"
                   autoComplete="off"
                   className="mt-1 w-full rounded-lg border px-3 py-2"
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
+                  onKeyDown={(e) =>
+                    firstFieldBackTab(e, () => document.getElementById("courier-step-shipment")?.focus())
+                  }
                 />
               </label>
               <label className="text-sm font-semibold">
                 Origin city
-                <input className="mt-1 w-full rounded-lg border px-3 py-2" value={originCity} onChange={(e) => setOriginCity(e.target.value)} />
+                <input
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={originCity}
+                  onChange={(e) => setOriginCity(e.target.value)}
+                  placeholder="Bangalore"
+                />
               </label>
               <label className="text-sm font-semibold">
                 Destination city
-                <input className="mt-1 w-full rounded-lg border px-3 py-2" value={destCity} onChange={(e) => setDestCity(e.target.value)} />
+                <input
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={destCity}
+                  onChange={(e) => setDestCity(e.target.value)}
+                  placeholder="Bahrain"
+                />
               </label>
+              <PincodeCombobox
+                label="Origin PIN / ZIP"
+                value={originPin}
+                onChange={setOriginPin}
+                onPick={(hit) => applyPostalHit(hit, "origin")}
+                placeholder="560001 or city"
+                inputId="courier-origin-pin"
+              />
+              <PincodeCombobox
+                label="Destination PIN / ZIP"
+                value={destPin}
+                onChange={setDestPin}
+                onPick={(hit) => applyPostalHit(hit, "dest")}
+                placeholder="Manama / 339"
+                inputId="courier-dest-pin"
+              />
               <label className="text-sm font-semibold">
                 Origin country
-                <select className="mt-1 w-full rounded-lg border px-3 py-2" value={originCountry} onChange={(e) => setOriginCountry(e.target.value)}>
-                  {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                <select
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={originCountry}
+                  onChange={(e) => setOriginCountry(e.target.value)}
+                >
+                  {countryOptions.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} · {c.name}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="text-sm font-semibold">
                 Destination country
-                <select className="mt-1 w-full rounded-lg border px-3 py-2" value={destCountry} onChange={(e) => setDestCountry(e.target.value)}>
-                  {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                <select
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={destCountry}
+                  onChange={(e) => setDestCountry(e.target.value)}
+                >
+                  {countryOptions.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} · {c.name}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="text-sm font-semibold">
                 Scope
-                <select className="mt-1 w-full rounded-lg border px-3 py-2" value={scope} onChange={(e) => setScope(e.target.value as "domestic" | "international")}>
+                <select
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value as "domestic" | "international")}
+                >
                   <option value="domestic">Domestic</option>
                   <option value="international">International</option>
                 </select>
               </label>
               <label className="text-sm font-semibold">
                 Service
-                <select className="mt-1 w-full rounded-lg border px-3 py-2" value={service} onChange={(e) => setService(e.target.value as CourierServiceKey)}>
+                <select
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={service}
+                  onChange={(e) => setService(e.target.value as CourierServiceKey)}
+                >
                   {Object.entries(SERVICE_LEVELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
+                    <option key={k} value={k}>
+                      {v.label}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="text-sm font-semibold">
                 Currency
-                <select className="mt-1 w-full rounded-lg border px-3 py-2" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                <select
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                >
                   {["INR", "USD", "EUR", "GBP"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="text-sm font-semibold">
                 Margin %
-                <input type="number" className="mt-1 w-full rounded-lg border px-3 py-2" value={marginPct} onChange={(e) => setMarginPct(Number(e.target.value))} />
+                <input
+                  id="courier-margin"
+                  type="number"
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={marginPct}
+                  onChange={(e) => setMarginPct(Number(e.target.value))}
+                  onKeyDown={(e) =>
+                    lastFieldTab(e, () => goCourierStep("packages", "courier-pkg-0-qty"))
+                  }
+                />
               </label>
             </div>
           ) : null}
@@ -510,11 +680,36 @@ function CourierDeskInner() {
                   <tbody>
                     {packages.map((p, i) => (
                       <tr key={i} className="border-t">
-                        <td className="p-1"><input type="number" className="w-14 rounded border px-1 py-1" value={p.qty} onChange={(e) => updatePkg(i, { qty: Number(e.target.value) })} /></td>
+                        <td className="p-1">
+                          <input
+                            id={i === 0 ? "courier-pkg-0-qty" : undefined}
+                            type="number"
+                            className="w-14 rounded border px-1 py-1"
+                            value={p.qty}
+                            onChange={(e) => updatePkg(i, { qty: Number(e.target.value) })}
+                            onKeyDown={(e) =>
+                              i === 0
+                                ? firstFieldBackTab(e, () => goCourierStep("shipment", "courier-margin"))
+                                : undefined
+                            }
+                          />
+                        </td>
                         <td className="p-1"><input type="number" className="w-16 rounded border px-1 py-1" value={p.gw ?? ""} onChange={(e) => updatePkg(i, { gw: Number(e.target.value) })} /></td>
                         <td className="p-1"><input type="number" className="w-14 rounded border px-1 py-1" value={p.l ?? ""} onChange={(e) => updatePkg(i, { l: Number(e.target.value) })} /></td>
                         <td className="p-1"><input type="number" className="w-14 rounded border px-1 py-1" value={p.w ?? ""} onChange={(e) => updatePkg(i, { w: Number(e.target.value) })} /></td>
-                        <td className="p-1"><input type="number" className="w-14 rounded border px-1 py-1" value={p.h ?? ""} onChange={(e) => updatePkg(i, { h: Number(e.target.value) })} /></td>
+                        <td className="p-1">
+                          <input
+                            type="number"
+                            className="w-14 rounded border px-1 py-1"
+                            value={p.h ?? ""}
+                            onChange={(e) => updatePkg(i, { h: Number(e.target.value) })}
+                            onKeyDown={(e) =>
+                              i === packages.length - 1
+                                ? lastFieldTab(e, () => goCourierStep("surcharges", "courier-fuel"))
+                                : undefined
+                            }
+                          />
+                        </td>
                         <td className="p-1 text-xs font-semibold">{result.packages[i]?.chargeable.toFixed(2) ?? "—"} kg</td>
                         <td className="p-1">
                           <button type="button" className="text-red-600" onClick={() => setPackages((prev) => prev.filter((_, j) => j !== i))} disabled={packages.length <= 1}>
@@ -533,7 +728,16 @@ function CourierDeskInner() {
             <div className="space-y-3">
               <label className="text-sm font-semibold">
                 Fuel surcharge %
-                <input type="number" className="mt-1 w-full rounded-lg border px-3 py-2" value={surcharges.fuelPct} onChange={(e) => setSurcharges((s) => ({ ...s, fuelPct: Number(e.target.value) }))} />
+                <input
+                  id="courier-fuel"
+                  type="number"
+                  className="mt-1 w-full rounded-lg border px-3 py-2"
+                  value={surcharges.fuelPct}
+                  onChange={(e) => setSurcharges((s) => ({ ...s, fuelPct: Number(e.target.value) }))}
+                  onKeyDown={(e) =>
+                    firstFieldBackTab(e, () => goCourierStep("packages", "courier-pkg-0-qty"))
+                  }
+                />
               </label>
               <SurchargeToggle label="Remote area" checked={surcharges.remote} amount={surcharges.remoteAmount} onToggle={(v) => setSurcharges((s) => ({ ...s, remote: v }))} onAmount={(v) => setSurcharges((s) => ({ ...s, remoteAmount: v }))} />
               <SurchargeToggle label="Residential delivery" checked={surcharges.residential} amount={surcharges.residentialAmount} onToggle={(v) => setSurcharges((s) => ({ ...s, residential: v }))} onAmount={(v) => setSurcharges((s) => ({ ...s, residentialAmount: v }))} />
@@ -557,7 +761,13 @@ function CourierDeskInner() {
                 </>
               ) : null}
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={gstEnabled} onChange={(e) => setGstEnabled(e.target.checked)} />
+                <input
+                  id="courier-gst"
+                  type="checkbox"
+                  checked={gstEnabled}
+                  onChange={(e) => setGstEnabled(e.target.checked)}
+                  onKeyDown={(e) => lastFieldTab(e, () => goCourierStep("terms", "courier-terms"))}
+                />
                 Apply GST (18%)
               </label>
             </div>
@@ -567,9 +777,14 @@ function CourierDeskInner() {
             <label className="block text-sm font-semibold">
               Terms & conditions
               <textarea
+                id="courier-terms"
                 className="mt-2 min-h-64 w-full rounded-lg border px-3 py-2 text-sm"
                 value={terms}
                 onChange={(e) => setTerms(e.target.value)}
+                onKeyDown={(e) => {
+                  firstFieldBackTab(e, () => goCourierStep("surcharges", "courier-gst"));
+                  lastFieldTab(e, () => focusById("courier-save"));
+                }}
               />
               <button type="button" className="mt-2 text-xs font-semibold text-sky-700 hover:underline" onClick={() => setTerms(DEFAULT_COURIER_TERMS)}>
                 Restore default terms
@@ -600,7 +815,12 @@ function CourierDeskInner() {
       </div>
 
       <Card>
-        <h2 className="mb-3 font-bold">Carrier comparison</h2>
+        <h2 className="mb-1 font-bold">Carrier comparison</h2>
+        <p className="mb-3 text-xs text-[var(--color-text-muted)]">
+          These DHL / FedEx / UPS / Aramex / Blue Dart / DTDC figures are an internal zone ×
+          carrier-factor model for comparing options — not live contracted API rates. Replace with
+          Circulars or a carrier portal when you have an account.
+        </p>
         {!cargoReady ? (
           <p className="text-sm text-[var(--color-text-muted)]">
             Add packages with weight (and dimensions) to compare carrier sell rates.

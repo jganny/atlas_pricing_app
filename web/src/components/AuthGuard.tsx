@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
 
 /** Public routes that render without login. */
-const PUBLIC_ROUTES = ["/feature-parity", "/login"];
+const PUBLIC_ROUTES = ["/login"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);

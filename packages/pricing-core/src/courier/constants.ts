@@ -32,10 +32,34 @@ export const CARRIER_FACTORS: Record<string, number> = {
 };
 
 export const ZONE_TABLE: Record<string, Record<string, number>> = {
-  IN: { IN: 1, AE: 2, SG: 3, GB: 4, US: 5, DE: 4, AU: 5, CN: 3, HK: 3, default: 6 },
-  AE: { IN: 2, AE: 1, GB: 3, US: 4, DE: 3, SG: 3, default: 5 },
-  US: { US: 1, CA: 2, GB: 3, DE: 3, IN: 5, AE: 4, default: 6 },
-  GB: { GB: 1, DE: 2, FR: 2, US: 3, IN: 4, AE: 3, default: 5 },
+  IN: {
+    IN: 1,
+    AE: 2,
+    BH: 2,
+    QA: 2,
+    KW: 2,
+    OM: 2,
+    SA: 2,
+    SG: 3,
+    CN: 3,
+    HK: 3,
+    GB: 4,
+    DE: 4,
+    FR: 4,
+    NL: 4,
+    AU: 5,
+    US: 5,
+    CA: 5,
+    default: 6,
+  },
+  AE: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, DE: 3, SG: 3, default: 5 },
+  BH: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, DE: 3, default: 5 },
+  QA: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+  KW: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+  OM: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+  SA: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+  US: { US: 1, CA: 2, GB: 3, DE: 3, IN: 5, AE: 4, BH: 4, default: 6 },
+  GB: { GB: 1, DE: 2, FR: 2, US: 3, IN: 4, AE: 3, BH: 3, default: 5 },
   default: { default: 5 },
 };
 

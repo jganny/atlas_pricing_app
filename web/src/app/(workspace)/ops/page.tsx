@@ -19,12 +19,13 @@ export default function OpsPage() {
       <div className="flex items-center gap-2">
         <PackageCheck className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
-          Operations board
+          Operations board — won jobs
         </h1>
         <Badge tone="info">Phase 13</Badge>
       </div>
       <p className="text-sm text-[var(--color-text-muted)]">
-        Lightweight won-shipment handoff list. For day-to-day quote work use{" "}
+        Lightweight list of won quotes for operations to pick up after sales. Day-to-day quote work
+        stays in{" "}
         <Link href="/enquiries/" className="font-semibold text-[var(--color-atlas-sky)] underline">
           Enquiry DB
         </Link>{" "}
