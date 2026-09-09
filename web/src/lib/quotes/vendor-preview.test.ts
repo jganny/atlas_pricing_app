@@ -160,4 +160,31 @@ assert.equal(merged.length, 2);
 assert.equal(merged[0].name, "EY - Etihad Cargo");
 assert.equal(merged[0].cheapest, true);
 
+const multiLane = vendorRowsFromQuote({
+  id: "m",
+  customer: "A",
+  creator: "ganny",
+  status: "quoted",
+  type: "air",
+  amount: 900,
+  currency: "USD",
+  details: {
+    lanes: [
+      { id: "l1", origin: "BOM", destination: "CMB" },
+      { id: "l2", origin: "DEL", destination: "LHR" },
+    ],
+    quotedLanes: [
+      { laneId: "l1", laneLabel: "Lane 1 · BOM → CMB", airline: "UL — SriLankan Airlines", amount: 400 },
+      { laneId: "l2", laneLabel: "Lane 2 · DEL → LHR", airline: "EK — Emirates SkyCargo", amount: 500 },
+    ],
+    airlines: [
+      { id: "ul", name: "UL — SriLankan Airlines", selected: true, quoteTotal: 400, laneId: "l1" },
+      { id: "ek", name: "EK — Emirates SkyCargo", selected: true, quoteTotal: 500, laneId: "l2" },
+    ],
+  },
+});
+assert.equal(multiLane.length, 2);
+assert.equal(multiLane.filter((r) => r.cheapest).length, 2, "each lane has its own cheapest star");
+assert.ok(multiLane.every((r) => (r.laneLabel || "").startsWith("Lane")));
+
 console.log("vendor-preview tests passed");

@@ -516,13 +516,9 @@ function EnquiryDatabaseInner() {
                 onSelect={setSelectedId}
                 onViewPrint={(row) => {
                   void (async () => {
-                    if (!useLiveData) {
-                      toast("Open live Firebase to preview this quote.", "info");
-                      return;
-                    }
                     const q = await fetchQuoteById(row.id);
                     if (q) setPreviewQuote(q);
-                    else toast("Quote not found.", "error");
+                    else toast("Quote not found in Enquiry DB.", "error");
                   })();
                 }}
                 metricModes={metricModes}

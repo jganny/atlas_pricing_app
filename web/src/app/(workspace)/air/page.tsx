@@ -29,9 +29,18 @@ import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm, shouldHideAgencyAgreement } from "@/lib/auth/desk-rules";
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { appendCalcAudit } from "@/lib/quotes/calc-audit";
+import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
+import { nextQuoteNumber } from "@/lib/quotes/ref-id";
+import {
+  allLanesRoute,
+  laneRouteLabel,
+  quotedLaneRows,
+  quotedOnLane,
+  selectWithinLane,
+  usableLanes,
+} from "@/lib/quotes/lanes";
 import { useLiveData } from "@/lib/api";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
-import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { lookupAirTariff } from "@/lib/firebase/tariffs";
 import {
   EMPTY_AIR_BREAKS,
@@ -51,7 +60,6 @@ import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
-import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
@@ -106,6 +114,7 @@ function AirDeskInner() {
   const [terms, setTerms] = useState(getDefaultFreightTerms("air"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [stripKey, setStripKey] = useState(0);
@@ -157,7 +166,10 @@ function AirDeskInner() {
     }
   }, [customer]);
 
-  const selected = airlines.find((a) => a.selected) ?? airlines[0];
+  const selected =
+    quotedOnLane(airlines, activeLane?.id, lanes[0]?.id || "") ??
+    airlines.find((a) => a.selected) ??
+    airlines[0];
 
   const totalsById = useMemo(() => {
     const map: Record<string, ReturnType<typeof computeAirlineTotals>> = {};
@@ -167,18 +179,42 @@ function AirDeskInner() {
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
 
-  const compareSorted = useMemo(() => {
-    return [...airlines].sort((a, b) => {
-      const ta = totalsById[a.id]?.grandSell ?? Number.POSITIVE_INFINITY;
-      const tb = totalsById[b.id]?.grandSell ?? Number.POSITIVE_INFINITY;
-      return ta - tb;
-    });
-  }, [airlines, totalsById]);
+  const allLanesQuotedTotal = useMemo(() => {
+    const fallback = lanes[0]?.id || "";
+    return lanes.reduce((sum, lane) => {
+      const q = quotedOnLane(airlines, lane.id, fallback);
+      return sum + (q ? totalsById[q.id]?.grandSell ?? 0 : 0);
+    }, 0);
+  }, [lanes, airlines, totalsById]);
 
-  const cheapestId = useMemo(() => {
-    const priced = compareSorted.filter((a) => (totalsById[a.id]?.grandSell ?? 0) > 0);
-    return (priced[0] ?? compareSorted[0])?.id ?? null;
-  }, [compareSorted, totalsById]);
+  const quotedLanes = useMemo(
+    () => quotedLaneRows(lanes, airlines, (a) => totalsById[a.id]?.grandSell ?? 0),
+    [lanes, airlines, totalsById],
+  );
+
+  const compareVendors = useMemo(() => {
+    const fallback = lanes[0]?.id || "";
+    return vendorRowsFromEntries(
+      airlines.map((a) => {
+        const laneIndex = Math.max(
+          0,
+          lanes.findIndex((l) => l.id === (a.laneId || fallback)),
+        );
+        const lane = lanes[laneIndex] ?? lanes[0];
+        return {
+          id: a.id,
+          name: a.name || "Untitled",
+          kind: a.kind,
+          total: totalsById[a.id]?.grandSell ?? 0,
+          selected: a.selected,
+          routing: a.routing,
+          tt: a.tt,
+          laneId: a.laneId || fallback,
+          laneLabel: lane ? laneRouteLabel(lane, laneIndex) : "",
+        };
+      }),
+    );
+  }, [airlines, lanes, totalsById]);
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
@@ -271,6 +307,7 @@ function AirDeskInner() {
     prefillApplied.current = false;
     setTerms(getDefaultFreightTerms("air"));
     setSaveMsg(null);
+    setSaveEnquiryPath(null);
     setPreviewQuote(null);
     setStep("shipment");
     setConfirmReset(false);
@@ -291,13 +328,15 @@ function AirDeskInner() {
   }
 
   function selectAirline(id: string) {
-    setAirlines((prev) => prev.map((a) => ({ ...a, selected: a.id === id })));
+    const fallback = activeLane?.id || lanes[0]?.id || "";
+    setAirlines((prev) => selectWithinLane(prev, id, fallback));
   }
 
   function addAirline(kind: "airline" | "coloader") {
     const laneId = activeLane?.id || lanes[0]?.id || "";
-    const option = createAirlineOption({ laneId, kind }, airlines.length === 0);
-    const openOverlay = airlines.length >= 1;
+    const onLane = airlines.filter((a) => !a.laneId || a.laneId === laneId);
+    const option = createAirlineOption({ laneId, kind }, onLane.length === 0);
+    const openOverlay = onLane.length >= 1;
     setAirlines((prev) => [...prev, option]);
     if (openOverlay) setEditorAirlineId(option.id);
   }
@@ -345,17 +384,41 @@ function AirDeskInner() {
     (a) => !a.laneId || a.laneId === (activeLane?.id || lanes[0]?.id),
   );
 
+  const cheapestId = useMemo(() => {
+    const priced = laneAirlines.filter((a) => (totalsById[a.id]?.grandSell ?? 0) > 0);
+    const sorted = [...priced].sort(
+      (a, b) => (totalsById[a.id]?.grandSell ?? 0) - (totalsById[b.id]?.grandSell ?? 0),
+    );
+    return sorted[0]?.id ?? null;
+  }, [laneAirlines, totalsById]);
+
   const handlePreview = () => {
     const cargoErr = validateAirCargo(cargo);
-    const airlineErr = validateSelectedAirline(selected);
-    if (cargoErr || airlineErr || !selected || !selectedTotals) {
-      toast(cargoErr || airlineErr || "Complete the quote before preview.", "error");
+    const fallback = lanes[0]?.id || "";
+    const completeLanes = usableLanes(lanes);
+    const toCheck = completeLanes.length ? completeLanes : [activeLane].filter(Boolean);
+    for (const lane of toCheck) {
+      if (!lane) continue;
+      const quoted = quotedOnLane(airlines, lane.id, fallback);
+      const airlineErr = validateSelectedAirline(quoted);
+      if (airlineErr) {
+        toast(`${laneRouteLabel(lane, lanes.indexOf(lane))}: ${airlineErr}`, "error");
+        setActiveLaneId(lane.id);
+        setStep("carrier");
+        return;
+      }
+    }
+    if (cargoErr || !selected || !selectedTotals) {
+      toast(cargoErr || "Complete the quote before preview.", "error");
       return;
     }
-    const originCode = origin.split(" - ")[0]?.trim() || origin.trim();
-    const destCode = destination.split(" - ")[0]?.trim() || destination.trim();
-    const amount = selectedTotals.grandSell;
+    const amount = allLanesQuotedTotal || selectedTotals.grandSell;
     const fx = customFx > 0 ? customFx : 83.5;
+    const quoted = selected;
+    const airlineLabel =
+      quotedLanes.length > 1
+        ? quotedLanes.map((l) => `${l.laneLabel}: ${l.airline || "—"}`).join(" · ")
+        : quoted.name;
     const q: SavedQuote = {
       id: loader.editingQuoteId || "preview",
       customer: customer.trim() || "Draft",
@@ -368,11 +431,11 @@ function AirDeskInner() {
       amount,
       currency,
       amountINR: currency === "INR" ? amount : amount * fx,
-      route: `${originCode} → ${destCode} via ${selected.name || "Any"}`,
+      route: allLanesRoute(lanes) || `${origin} → ${destination}`,
       details: {
         origin,
         destination,
-        airline: selected.name,
+        airline: airlineLabel,
         incoterm,
         module,
         commodity,
@@ -383,19 +446,31 @@ function AirDeskInner() {
         originFeesTotal: selectedTotals.originTotal,
         destFeesTotal: selectedTotals.destTotal,
         amsFee: selectedTotals.ams,
-        routing: selected.routing,
-        tt: selected.tt,
-        validity: selected.validity,
+        routing: quoted.routing,
+        tt: quoted.tt,
+        validity: quoted.validity,
         cargoItems: cargo,
-        airlines: airlines.map((a) => ({
-          id: a.id,
-          name: a.name,
-          kind: a.kind,
-          selected: a.selected,
-          quoteTotal: totalsById[a.id]?.grandSell ?? 0,
-          routing: a.routing,
-          tt: a.tt,
-        })),
+        lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+        quotedLanes,
+        allLanesTotal: amount,
+        airlines: airlines.map((a) => {
+          const laneIndex = Math.max(
+            0,
+            lanes.findIndex((l) => l.id === (a.laneId || fallback)),
+          );
+          const lane = lanes[laneIndex] ?? lanes[0];
+          return {
+            id: a.id,
+            name: a.name,
+            kind: a.kind,
+            selected: a.selected,
+            quoteTotal: totalsById[a.id]?.grandSell ?? 0,
+            routing: a.routing,
+            tt: a.tt,
+            laneId: a.laneId || fallback,
+            laneLabel: lane ? laneRouteLabel(lane, laneIndex) : "",
+          };
+        }),
         termsAndConditions: terms,
         type: "air",
         mode: "Air",
@@ -422,6 +497,27 @@ function AirDeskInner() {
         setStep("shipment");
         return;
       }
+      for (const lane of lanes) {
+        const hasOrigin = Boolean(lane.origin.trim());
+        const hasDest = Boolean(lane.destination.trim());
+        if (!hasOrigin && !hasDest) continue;
+        if (!hasOrigin || !hasDest) {
+          const msg = `${laneRouteLabel(lane, lanes.indexOf(lane))}: enter origin and destination.`;
+          setSaveMsg(msg);
+          toast(msg, "error");
+          setActiveLaneId(lane.id);
+          setStep("shipment");
+          return;
+        }
+      }
+      const completeLanes = usableLanes(lanes);
+      if (!completeLanes.length) {
+        const msg = "Enter origin and destination for at least one lane.";
+        setSaveMsg(msg);
+        toast(msg, "error");
+        setStep("shipment");
+        return;
+      }
       const cargoErr = validateAirCargo(cargo);
       if (cargoErr) {
         setSaveMsg(cargoErr);
@@ -429,70 +525,146 @@ function AirDeskInner() {
         setStep("shipment");
         return;
       }
-      const airlineErr = validateSelectedAirline(selected);
-      if (airlineErr) {
-        setSaveMsg(airlineErr);
-        toast(airlineErr, "error");
-        setStep("carrier");
-        return;
+      const fallback = lanes[0]?.id || "";
+      for (const lane of completeLanes) {
+        const quoted = quotedOnLane(airlines, lane.id, fallback);
+        const airlineErr = validateSelectedAirline(quoted);
+        if (airlineErr) {
+          const msg = `${laneRouteLabel(lane, lanes.indexOf(lane))}: ${airlineErr}`;
+          setSaveMsg(msg);
+          toast(msg, "error");
+          setActiveLaneId(lane.id);
+          setStep("carrier");
+          return;
+        }
       }
       if (!selected || !selectedTotals) return;
 
+      const amount = allLanesQuotedTotal || selectedTotals.grandSell;
+      const fx = customFx > 0 ? customFx : 83.5;
+      const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
+      const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+      const lanesNote =
+        quotedLanes.length > 1
+          ? `${quotedLanes.length} lanes · ${quotedLanes.map((l) => `${l.laneLabel} ${l.airline || "—"}`).join(" · ")}`
+          : quotedLanes[0]
+            ? `${quotedLanes[0].laneLabel} · ${quotedLanes[0].airline || selected.name}`
+            : selected.name;
+      const localQuote: SavedQuote = {
+        id: quoteId,
+        customer: customer.trim(),
+        creator: user?.username || "",
+        status: loader.editingStatus || "quoted",
+        type: "air",
+        quoteNumber,
+        date: new Date().toISOString().split("T")[0],
+        timestamp: Date.now(),
+        amount,
+        currency,
+        amountINR: currency === "INR" ? amount : amount * fx,
+        route: allLanesRoute(lanes) || `${origin} → ${destination}`,
+        details: {
+          origin,
+          destination,
+          airline:
+            quotedLanes.length > 1
+              ? quotedLanes.map((l) => `${l.laneLabel}: ${l.airline || "—"}`).join(" · ")
+              : selected.name,
+          incoterm,
+          module,
+          commodity,
+          chargeableWeight: selectedTotals.freight.chargeableWeightKg,
+          grossWeight: selectedTotals.freight.cargo.grossWeightKg,
+          volumeWeight: selectedTotals.freight.cargo.volumeWeightKg,
+          baseFreight: selectedTotals.baseFreightQuote,
+          originFeesTotal: selectedTotals.originTotal,
+          destFeesTotal: selectedTotals.destTotal,
+          amsFee: selectedTotals.ams,
+          routing: selected.routing,
+          tt: selected.tt,
+          validity: selected.validity,
+          cargoItems: cargo,
+          lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+          quotedLanes,
+          allLanesTotal: amount,
+          airlines: airlines.map((a) => {
+            const laneIndex = Math.max(
+              0,
+              lanes.findIndex((l) => l.id === (a.laneId || fallback)),
+            );
+            const lane = lanes[laneIndex] ?? lanes[0];
+            return {
+              ...a,
+              quoteTotal: totalsById[a.id]?.grandSell ?? 0,
+              laneId: a.laneId || fallback,
+              laneLabel: lane ? laneRouteLabel(lane, laneIndex) : "",
+            };
+          }),
+          termsAndConditions: terms,
+          type: "air",
+          mode: "Air",
+        },
+      };
+
       setSaving(true);
       setSaveMsg(null);
+      let cloud: "live" | "local" | "cloud-failed" = "local";
       try {
         if (useLiveData && user) {
-          const id = await saveAirQuote({
-            customer: customer.trim(),
-            creator: user.username,
-            origin,
-            destination,
-            currency,
-            incoterm,
-            commodity,
-            module,
-            cargo,
-            selected,
-            totals: selectedTotals,
-            airlines,
-            termsAndConditions: terms,
-            customExchangeRate: customFx || undefined,
-            quoteId: loader.editingQuoteId ?? undefined,
-            quoteNumber: loader.editingQuoteNumber,
-            status: loader.editingStatus,
-            lanes,
-          });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-          cacheOfflineQuote({
-            id,
-            type: "air",
-            customer: customer.trim(),
-            payload: { origin, destination, currency, amount: selectedTotals.grandSell },
-          });
-          appendCalcAudit({
-            quoteId: id,
-            type: "air",
-            steps: [
-              { label: "Chargeable kg", value: selectedTotals.freight.chargeableWeightKg },
-              { label: "Base freight", value: selectedTotals.baseFreightQuote },
-              { label: "Origin fees", value: selectedTotals.originTotal },
-              { label: "Dest fees", value: selectedTotals.destTotal },
-              { label: "AMS", value: selectedTotals.ams },
-              { label: "Grand sell", value: selectedTotals.grandSell },
-              { label: "Currency", value: currency },
-            ],
-          });
-          const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
-          setSaveMsg(msg);
-          toast(msg, "success");
-          if (!hideAgreement) {
-            /* Nomination desks keep agreement compliance in Directory */
+          try {
+            await saveAirQuote({
+              customer: customer.trim(),
+              creator: user.username,
+              origin,
+              destination,
+              currency,
+              incoterm,
+              commodity,
+              module,
+              cargo,
+              selected,
+              totals: selectedTotals,
+              airlines,
+              termsAndConditions: terms,
+              customExchangeRate: customFx || undefined,
+              quoteId,
+              quoteNumber,
+              status: loader.editingStatus,
+              lanes,
+              quotedLanes,
+              allLanesAmount: amount,
+            });
+            cloud = "live";
+            cacheOfflineQuote({
+              id: quoteId,
+              type: "air",
+              customer: customer.trim(),
+              payload: { origin, destination, currency, amount },
+            });
+            appendCalcAudit({
+              quoteId,
+              type: "air",
+              steps: [
+                { label: "Chargeable kg", value: selectedTotals.freight.chargeableWeightKg },
+                { label: "Base freight", value: selectedTotals.baseFreightQuote },
+                { label: "Origin fees", value: selectedTotals.originTotal },
+                { label: "Dest fees", value: selectedTotals.destTotal },
+                { label: "AMS", value: selectedTotals.ams },
+                { label: "Grand sell", value: amount },
+                { label: "Currency", value: currency },
+                { label: "Lanes", value: quotedLanes.length },
+              ],
+            });
+          } catch (e) {
+            cloud = "cloud-failed";
+            console.warn("Cloud save failed, kept local Enquiry DB row", e);
           }
-        } else {
-          const msg = "Mock mode — save disabled. Use live Firebase or the legacy app.";
-          setSaveMsg(msg);
-          toast(msg, "info");
         }
+        const row = persistQuoteToEnquiryDb(localQuote, queryClient);
+        const msg = savedEnquiryMessage(row, { cloud, lanesNote });
+        setSaveMsg(msg);
+        setSaveEnquiryPath(savedEnquiryHref(row));
+        toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Save failed";
         setSaveMsg(msg);
@@ -519,6 +691,9 @@ function AirDeskInner() {
       loader,
       queryClient,
       lanes,
+      quotedLanes,
+      allLanesQuotedTotal,
+      totalsById,
     ],
   );
 
@@ -628,7 +803,14 @@ function AirDeskInner() {
               : "border-amber-200 bg-amber-50"
           }
         >
-          <p className="text-sm font-semibold">{saveMsg}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">{saveMsg}</p>
+            {saveEnquiryPath ? (
+              <Button type="button" variant="secondary" className="h-8" onClick={() => router.push(saveEnquiryPath)}>
+                Open Enquiry DB
+              </Button>
+            ) : null}
+          </div>
         </Card>
       ) : null}
 
@@ -650,6 +832,10 @@ function AirDeskInner() {
                   const lane = newLane();
                   setLanes((prev) => [...prev, lane]);
                   setActiveLaneId(lane.id);
+                  setAirlines((prev) => [
+                    ...prev,
+                    createAirlineOption({ laneId: lane.id }, true),
+                  ]);
                 }}
                 onRemove={(id) => {
                   setLanes((prev) => {
@@ -930,7 +1116,7 @@ function AirDeskInner() {
                         <label className="flex items-center gap-2 text-sm font-semibold">
                           <input
                             type="radio"
-                            name="selected-airline"
+                            name={`selected-airline-${activeLane?.id || "lane"}`}
                             checked={opt.selected}
                             onChange={() => selectAirline(opt.id)}
                           />
@@ -951,10 +1137,14 @@ function AirDeskInner() {
                           className="text-sm font-semibold text-red-600 disabled:opacity-40"
                           disabled={airlines.length <= 1}
                           onClick={() => {
+                            const laneId = opt.laneId || activeLane?.id || lanes[0]?.id || "";
                             setAirlines((prev) => {
                               const next = prev.filter((a) => a.id !== opt.id);
-                              if (!next.some((a) => a.selected) && next[0]) {
-                                next[0] = { ...next[0], selected: true };
+                              const onLane = next.filter((a) => !a.laneId || a.laneId === laneId);
+                              if (!onLane.some((a) => a.selected) && onLane[0]) {
+                                return next.map((a) =>
+                                  a.id === onLane[0].id ? { ...a, selected: true } : a,
+                                );
                               }
                               return next;
                             });
@@ -1083,6 +1273,12 @@ function AirDeskInner() {
                   <dd className="font-bold uppercase">{module}</dd>
                 </div>
                 <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">This lane</dt>
+                  <dd className="text-right font-bold">
+                    {activeLane ? laneRouteLabel(activeLane, lanes.indexOf(activeLane)) : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Airline</dt>
                   <dd className="text-right font-bold">{selected.name || "—"}</dd>
                 </div>
@@ -1124,11 +1320,31 @@ function AirDeskInner() {
                   </div>
                 ) : null}
                 <div className="flex justify-between border-t pt-2">
-                  <dt className="font-bold">Quote total</dt>
+                  <dt className="font-bold">This lane total</dt>
                   <dd className="font-extrabold text-emerald-700">
                     {formatCurrency(selectedTotals.grandSell, currency)}
                   </dd>
                 </div>
+                {lanes.length > 1 ? (
+                  <>
+                    <div className="space-y-1 border-t pt-2 text-xs">
+                      {quotedLanes.map((lane) => (
+                        <div key={lane.laneId} className="flex justify-between gap-2">
+                          <span className="text-[var(--color-text-muted)]">{lane.laneLabel}</span>
+                          <span className="text-right font-semibold">
+                            {lane.airline || "—"} · {formatCurrency(lane.amount, currency)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <dt className="font-bold">All lanes total</dt>
+                      <dd className="font-extrabold text-emerald-700">
+                        {formatCurrency(allLanesQuotedTotal, currency)}
+                      </dd>
+                    </div>
+                  </>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Gross profit</dt>
                   <dd className="font-bold">
@@ -1143,22 +1359,13 @@ function AirDeskInner() {
             )}
           </Card>
 
-          {airlines.length > 1 ? (
+          {airlines.length > 1 || lanes.length > 1 ? (
             <Card>
               <VendorCompareList
-                vendors={vendorRowsFromEntries(
-                  compareSorted.map((a) => ({
-                    id: a.id,
-                    name: a.name || "Untitled",
-                    kind: a.kind,
-                    total: totalsById[a.id]?.grandSell ?? 0,
-                    selected: a.selected,
-                    routing: a.routing,
-                    tt: a.tt,
-                  })),
-                )}
+                vendors={compareVendors}
                 currency={currency}
-                hint="Cheapest → highest. ★ marks the lowest total. Click a row to quote it."
+                heading={lanes.length > 1 ? "Compare options by lane" : "Compare options"}
+                hint="Cheapest → highest per lane. ★ is the lowest priced option on that lane ($0 is incomplete). Quoted is the option that will save. One Save writes every lane into Enquiry DB."
                 onSelect={selectAirline}
                 testId="air-desk-compare"
               />

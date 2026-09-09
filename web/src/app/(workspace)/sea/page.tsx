@@ -22,6 +22,7 @@ import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { appendCalcAudit } from "@/lib/quotes/calc-audit";
+import { persistQuoteToEnquiryDb, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
 import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { lookupSeaTariff } from "@/lib/firebase/tariffs";
@@ -45,7 +46,6 @@ import {
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
-import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { lastFieldTab } from "@/lib/ui/desk-keyboard";
@@ -53,6 +53,7 @@ import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
+import { allLanesRoute, quotedOnLane, selectWithinLane } from "@/lib/quotes/lanes";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
@@ -138,7 +139,10 @@ function SeaDeskInner() {
     setIncoterm(defaultIncoterm(user?.username));
   }, [user?.username, loader.sourceQuote, loader.smartPrefill]);
 
-  const selected = liners.find((l) => l.selected) ?? liners[0];
+  const selected =
+    quotedOnLane(liners, activeLane?.id, lanes[0]?.id || "") ??
+    liners.find((l) => l.selected) ??
+    liners[0];
 
   const totalsById = useMemo(() => {
     const map: Record<string, ReturnType<typeof computeLinerTotals>> = {};
@@ -266,7 +270,8 @@ function SeaDeskInner() {
   }
 
   function selectLiner(id: string) {
-    setLiners((prev) => prev.map((l) => ({ ...l, selected: l.id === id })));
+    const fallback = activeLane?.id || lanes[0]?.id || "";
+    setLiners((prev) => selectWithinLane(prev, id, fallback));
   }
 
   function updateContainer(linerId: string, index: number, patch: Partial<SeaContainerRow>) {
@@ -413,60 +418,105 @@ function SeaDeskInner() {
       }
       if (!selected || !selectedTotals) return;
 
+      const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
+      const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+      const amount = selectedTotals.grandSell;
+      const fx = customFx > 0 ? customFx : 83.5;
+      const localQuote: SavedQuote = {
+        id: quoteId,
+        customer: customer.trim(),
+        creator: user?.username || "",
+        status: loader.editingStatus || "quoted",
+        type: "sea",
+        quoteNumber,
+        date: new Date().toISOString().split("T")[0],
+        timestamp: Date.now(),
+        amount,
+        currency,
+        amountINR: currency === "INR" ? amount : amount * fx,
+        route: allLanesRoute(lanes) || `${origin} → ${destination}`,
+        details: {
+          origin,
+          destination,
+          liner: selected.name,
+          shippingLine: selected.name,
+          incoterm,
+          module,
+          commodity,
+          type: mode,
+          lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+          liners: liners.map((l) => ({
+            id: l.id,
+            name: l.name,
+            kind: l.kind,
+            selected: l.selected,
+            quoteTotal: totalsById[l.id]?.grandSell ?? 0,
+            routing: l.routing,
+            tt: l.tt,
+            laneId: l.laneId,
+          })),
+          termsAndConditions: terms,
+          mode: "Sea",
+        },
+      };
+
       setSaving(true);
       setSaveMsg(null);
+      let cloud: "live" | "local" | "cloud-failed" = "local";
       try {
         if (useLiveData && user) {
-          const id = await saveSeaQuote({
-            customer: customer.trim(),
-            creator: user.username,
-            origin,
-            destination,
-            currency,
-            incoterm,
-            commodity,
-            module,
-            mode,
-            grossWeightKg,
-            volumeCbm,
-            chargeableCbmOverride,
-            selected,
-            totals: selectedTotals,
-            liners,
-            termsAndConditions: terms,
-            customExchangeRate: customFx || undefined,
-            quoteId: loader.editingQuoteId ?? undefined,
-            quoteNumber: loader.editingQuoteNumber,
-            status: loader.editingStatus,
-            lanes,
-          });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-          cacheOfflineQuote({
-            id,
-            type: "sea",
-            customer: customer.trim(),
-            payload: { origin, destination, currency, amount: selectedTotals.grandSell },
-          });
-          appendCalcAudit({
-            quoteId: id,
-            type: "sea",
-            steps: [
-              { label: "Chargeable RT", value: selectedTotals.freight.chargeableRt },
-              { label: "Base freight", value: selectedTotals.baseFreightQuote },
-              { label: "Origin fees", value: selectedTotals.originTotal },
-              { label: "Dest fees", value: selectedTotals.destTotal },
-              { label: "Grand sell", value: selectedTotals.grandSell },
-              { label: "Currency", value: currency },
-            ],
-          });
-          const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
-          setSaveMsg(msg);
-          toast(msg, "success");
-        } else {
-          const msg = "Mock mode — save disabled. Use live Firebase or the legacy app.";
-          setSaveMsg(msg);
-          toast(msg, "info");
+          try {
+            await saveSeaQuote({
+              customer: customer.trim(),
+              creator: user.username,
+              origin,
+              destination,
+              currency,
+              incoterm,
+              commodity,
+              module,
+              mode,
+              grossWeightKg,
+              volumeCbm,
+              chargeableCbmOverride,
+              selected,
+              totals: selectedTotals,
+              liners,
+              termsAndConditions: terms,
+              customExchangeRate: customFx || undefined,
+              quoteId,
+              quoteNumber,
+              status: loader.editingStatus,
+              lanes,
+            });
+            cloud = "live";
+            cacheOfflineQuote({
+              id: quoteId,
+              type: "sea",
+              customer: customer.trim(),
+              payload: { origin, destination, currency, amount },
+            });
+            appendCalcAudit({
+              quoteId,
+              type: "sea",
+              steps: [
+                { label: "Chargeable RT", value: selectedTotals.freight.chargeableRt },
+                { label: "Base freight", value: selectedTotals.baseFreightQuote },
+                { label: "Origin fees", value: selectedTotals.originTotal },
+                { label: "Dest fees", value: selectedTotals.destTotal },
+                { label: "Grand sell", value: amount },
+                { label: "Currency", value: currency },
+              ],
+            });
+          } catch (e) {
+            cloud = "cloud-failed";
+            console.warn("Cloud save failed, kept local Enquiry DB row", e);
+          }
         }
+        const row = persistQuoteToEnquiryDb(localQuote, queryClient);
+        const msg = savedEnquiryMessage(row, { cloud });
+        setSaveMsg(msg);
+        toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Save failed";
         setSaveMsg(msg);
@@ -496,6 +546,7 @@ function SeaDeskInner() {
       loader,
       queryClient,
       lanes,
+      totalsById,
     ],
   );
 
@@ -619,6 +670,7 @@ function SeaDeskInner() {
                   const lane = newLane();
                   setLanes((prev) => [...prev, lane]);
                   setActiveLaneId(lane.id);
+                  setLiners((prev) => [...prev, createLinerOption({ laneId: lane.id }, true)]);
                 }}
                 onRemove={(id) => {
                   setLanes((prev) => {

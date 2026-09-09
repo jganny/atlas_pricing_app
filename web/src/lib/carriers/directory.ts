@@ -38,6 +38,45 @@ export const CURATED_CARRIERS: CarrierRecord[] = [
   { code: "SV", name: "Saudia Cargo", kind: "airline", country: "SA" },
   { code: "ET", name: "Ethiopian Cargo", kind: "airline", country: "ET" },
   { code: "6E", name: "IndiGo", kind: "airline", country: "IN" },
+  { code: "UL", name: "SriLankan Airlines", kind: "airline", country: "LK", website: "https://www.srilankan.com" },
+  { code: "SG", name: "SpiceJet", kind: "airline", country: "IN" },
+  { code: "IX", name: "Air India Express", kind: "airline", country: "IN" },
+  { code: "G8", name: "Go First / GoAir", kind: "airline", country: "IN" },
+  { code: "UK", name: "Vistara", kind: "airline", country: "IN" },
+  { code: "WY", name: "Oman Air", kind: "airline", country: "OM" },
+  { code: "GF", name: "Gulf Air", kind: "airline", country: "BH" },
+  { code: "KU", name: "Kuwait Airways", kind: "airline", country: "KW" },
+  { code: "RJ", name: "Royal Jordanian", kind: "airline", country: "JO" },
+  { code: "MS", name: "EgyptAir Cargo", kind: "airline", country: "EG" },
+  { code: "OZ", name: "Asiana Cargo", kind: "airline", country: "KR" },
+  { code: "CZ", name: "China Southern Cargo", kind: "airline", country: "CN" },
+  { code: "CA", name: "Air China Cargo", kind: "airline", country: "CN" },
+  { code: "MU", name: "China Eastern", kind: "airline", country: "CN" },
+  { code: "BR", name: "EVA Air Cargo", kind: "airline", country: "TW" },
+  { code: "CI", name: "China Airlines Cargo", kind: "airline", country: "TW" },
+  { code: "JL", name: "JAL Cargo", kind: "airline", country: "JP" },
+  { code: "NZ", name: "Air New Zealand", kind: "airline", country: "NZ" },
+  { code: "SA", name: "South African Airways", kind: "airline", country: "ZA" },
+  { code: "KQ", name: "Kenya Airways Cargo", kind: "airline", country: "KE" },
+  { code: "AT", name: "Royal Air Maroc", kind: "airline", country: "MA" },
+  { code: "IB", name: "Iberia / IAG Cargo", kind: "airline", country: "ES" },
+  { code: "AZ", name: "ITA Airways / IAG Cargo", kind: "airline", country: "IT" },
+  { code: "LX", name: "SWISS WorldCargo", kind: "airline", country: "CH" },
+  { code: "OS", name: "Austrian Cargo", kind: "airline", country: "AT" },
+  { code: "SK", name: "SAS Cargo", kind: "airline", country: "SE" },
+  { code: "KL", name: "KLM Cargo", kind: "airline", country: "NL" },
+  { code: "VS", name: "Virgin Atlantic Cargo", kind: "airline", country: "GB" },
+  { code: "AC", name: "Air Canada Cargo", kind: "airline", country: "CA" },
+  { code: "AM", name: "Aeromexico Cargo", kind: "airline", country: "MX" },
+  { code: "LA", name: "LATAM Cargo", kind: "airline", country: "CL" },
+  { code: "JJ", name: "LATAM Brasil", kind: "airline", country: "BR" },
+  { code: "5X", name: "UPS Airlines", kind: "airline", country: "US" },
+  { code: "FX", name: "FedEx Express", kind: "airline", country: "US" },
+  { code: "5Y", name: "Atlas Air", kind: "airline", country: "US" },
+  { code: "CK", name: "China Cargo Airlines", kind: "airline", country: "CN" },
+  { code: "Y8", name: "Suparna / Yangtze River Express", kind: "airline", country: "CN" },
+  { code: "RU", name: "AirBridgeCargo", kind: "airline", country: "RU" },
+  { code: "QY", name: "European Air Transport / DHL", kind: "airline", country: "DE" },
   { code: "MAEU", name: "Maersk", kind: "ocean", country: "DK", website: "https://www.maersk.com", trackingUrl: "https://www.maersk.com/tracking/" },
   { code: "MSCU", name: "MSC", kind: "ocean", country: "CH", website: "https://www.msc.com", trackingUrl: "https://www.msc.com/track-a-shipment" },
   { code: "CMDU", name: "CMA CGM", kind: "ocean", country: "FR", website: "https://www.cma-cgm.com", trackingUrl: "https://www.cma-cgm.com/ebusiness/tracking" },
@@ -69,22 +108,85 @@ type SlimFile = {
 
 let slimCache: CarrierRecord[] | null = null;
 
+const GDS_CODES = new Set(["1A", "1B", "1E", "1F", "1G", "1L", "1P", "1S", "1U"]);
+
+const NAME_ALIASES: Array<{ codes: string[]; needles: string[] }> = [
+  { codes: ["UL"], needles: ["sri lankan", "srilankan", "sri-lankan", "srilanka"] },
+  { codes: ["EK"], needles: ["skycargo", "emirates cargo"] },
+  { codes: ["EY"], needles: ["etihad cargo"] },
+  { codes: ["QR"], needles: ["qatar cargo"] },
+  { codes: ["AI"], needles: ["air india cargo"] },
+];
+
 function isJunkCode(code: string): boolean {
   if (!code || code.length > 4) return true;
   if (!/^[A-Z0-9]{2,4}$/i.test(code)) return true;
+  if (GDS_CODES.has(code.toUpperCase())) return true;
   return false;
+}
+
+function isJunkName(name: string): boolean {
+  return /virtual|dummy|consultative|amadeus|sabre|galileo|travelport|abacus|worldspan/i.test(
+    name,
+  );
+}
+
+/** Rank hits so IATA code "UL" returns SriLankan Airlines, not names that merely contain "ul". */
+export function rankCarrierHits(
+  query: string,
+  records: CarrierRecord[],
+  limit = 40,
+): CarrierRecord[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return records.slice(0, limit);
+
+  const aliasCodes = new Set<string>();
+  for (const row of NAME_ALIASES) {
+    if (row.needles.some((n) => n.includes(q) || q.includes(n))) {
+      for (const c of row.codes) aliasCodes.add(c);
+    }
+  }
+
+  const scored: Array<{ c: CarrierRecord; score: number }> = [];
+  for (const c of records) {
+    if (isJunkCode(c.code) || isJunkName(c.name)) continue;
+    const code = c.code.toLowerCase();
+    const name = c.name.toLowerCase();
+    const country = (c.country || "").toLowerCase();
+    let score = 0;
+    if (code === q) score = 1000;
+    else if (aliasCodes.has(c.code.toUpperCase()) && q.length >= 2) score = 900;
+    else if (code.startsWith(q)) score = 800;
+    else if (name.startsWith(q)) score = 600;
+    else if (name.split(/[\s/—\-]+/).some((w) => w.startsWith(q))) score = 500;
+    else if (q.length >= 3 && name.includes(q)) score = 120;
+    else if (q.length >= 3 && country.includes(q)) score = 80;
+    else if (q.length >= 3 && code.includes(q)) score = 60;
+    if (score > 0) scored.push({ c, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name));
+  const seen = new Set<string>();
+  const out: CarrierRecord[] = [];
+  for (const row of scored) {
+    const key = `${row.c.kind}:${row.c.code}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row.c);
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 export async function loadExtendedCarriers(): Promise<CarrierRecord[]> {
   if (slimCache) return slimCache;
   try {
-    const res = await fetch("/app/data/carriers-slim.json", { cache: "force-cache" });
+    const res = await fetch("/app/data/carriers-slim.json?v=iata2", { cache: "no-store" });
     if (!res.ok) throw new Error("carriers");
     const data = (await res.json()) as SlimFile;
     const rows: CarrierRecord[] = [];
     for (const a of data.air || []) {
       if (isJunkCode(a.code)) continue;
-      if (!a.name || a.name.length < 2) continue;
+      if (!a.name || a.name.length < 2 || isJunkName(a.name)) continue;
       rows.push({
         code: a.code.toUpperCase(),
         name: a.name,
@@ -114,35 +216,21 @@ export async function searchCarriers(
   kind: CarrierKind | "all" = "all",
   limit = 40,
 ): Promise<CarrierRecord[]> {
-  const q = query.trim().toLowerCase();
   const curated = CURATED_CARRIERS.filter((c) => kind === "all" || c.kind === kind);
+  const q = query.trim();
   if (!q) return curated.slice(0, limit);
 
-  const curatedHits = curated.filter(
-    (c) =>
-      c.code.toLowerCase().includes(q) ||
-      c.name.toLowerCase().includes(q) ||
-      (c.country || "").toLowerCase().includes(q),
-  );
-
   const extended = await loadExtendedCarriers();
-  const seen = new Set(curatedHits.map((c) => `${c.kind}:${c.code}`));
-  const more: CarrierRecord[] = [];
-  for (const c of extended) {
+  const pool: CarrierRecord[] = [];
+  const seen = new Set<string>();
+  for (const c of [...curated, ...extended]) {
     if (kind !== "all" && c.kind !== kind) continue;
     const key = `${c.kind}:${c.code}`;
     if (seen.has(key)) continue;
-    if (
-      c.code.toLowerCase().includes(q) ||
-      c.name.toLowerCase().includes(q) ||
-      (c.country || "").toLowerCase().includes(q)
-    ) {
-      seen.add(key);
-      more.push(c);
-    }
-    if (curatedHits.length + more.length >= limit) break;
+    seen.add(key);
+    pool.push(c);
   }
-  return [...curatedHits, ...more].slice(0, limit);
+  return rankCarrierHits(q, pool, limit);
 }
 
 export const FREE_DATA_SOURCES = [

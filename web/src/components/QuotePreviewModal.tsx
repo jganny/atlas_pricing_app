@@ -58,14 +58,29 @@ function detailRows(
     const originFees = Number(d.originFeesTotal ?? 0);
     const destFees = Number(d.destFeesTotal ?? 0);
     const ams = Number(d.amsFee ?? 0);
-    const airlineName = starredName(
-      quotedName || String(d.airline ?? "—"),
-      quotedIsCheapest,
-    );
+    const quotedLanes = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
+    if (quotedLanes.length > 1) {
+      rows.push(["Lanes", `${quotedLanes.length} origin → destination pairs`]);
+      quotedLanes.forEach((raw) => {
+        const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+        const label = String(lane.laneLabel ?? "Lane");
+        const name = String(lane.airline ?? "—");
+        const amt = money(lane.amount, cur);
+        rows.push([label, `${name} · ${amt}`]);
+      });
+      rows.push(["All lanes total", money(d.allLanesTotal ?? quote.amount, cur)]);
+    } else {
+      const airlineName = starredName(
+        quotedName || String(d.airline ?? "—"),
+        quotedIsCheapest,
+      );
+      rows.push(
+        ["Origin", String(d.origin ?? "—")],
+        ["Destination", String(d.destination ?? "—")],
+        [quotedLabel, airlineName],
+      );
+    }
     rows.push(
-      ["Origin", String(d.origin ?? "—")],
-      ["Destination", String(d.destination ?? "—")],
-      [quotedLabel, airlineName],
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Commodity", String(d.commodity ?? "—")],
       ["Chargeable weight", `${chw.toFixed(2)} kg`],

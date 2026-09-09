@@ -144,24 +144,51 @@ export interface SaveAirInput extends SaveMeta {
   termsAndConditions: string;
   customExchangeRate?: number;
   lanes?: SavedQuoteLane[];
+  quotedLanes?: Array<{
+    laneId: string;
+    laneLabel: string;
+    origin: string;
+    destination: string;
+    airline: string;
+    amount: number;
+  }>;
+  allLanesAmount?: number;
 }
 
 export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
   const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
   const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
-  const airline = input.selected.name;
-  const route = `${originCode} → ${destCode} via ${airline || "Any"}`;
+  const quotedLanes = input.quotedLanes ?? [];
+  const airline =
+    quotedLanes.length > 1
+      ? quotedLanes.map((l) => `${l.laneLabel}: ${l.airline || "Any"}`).join(" · ")
+      : input.selected.name;
+  const routeParts = (input.lanes ?? [])
+    .map((l) => {
+      const o = (l.origin.split(" - ")[0] || l.origin).trim();
+      const d = (l.destination.split(" - ")[0] || l.destination).trim();
+      return o && d ? `${o} → ${d}` : "";
+    })
+    .filter(Boolean);
+  const route =
+    routeParts.length > 1
+      ? `${routeParts.join(" · ")} · ${quotedLanes.map((l) => l.airline || "Any").join(" / ")}`
+      : `${originCode} → ${destCode} via ${airline || "Any"}`;
   const now = new Date();
-  const amount = input.totals.grandSell;
+  const amount = input.allLanesAmount && input.allLanesAmount > 0 ? input.allLanesAmount : input.totals.grandSell;
   const fx = input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : 83.5;
   const amountINR = input.currency === "INR" ? amount : amount * fx;
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
-  const airlines = input.airlines.map((a) => ({
-    ...serializeAirlineOption(a),
-    quoteTotal: computeAirlineTotals(input.cargo, a).grandSell,
-  }));
+  const airlines = input.airlines.map((a) => {
+    const lane = quotedLanes.find((l) => l.laneId === a.laneId);
+    return {
+      ...serializeAirlineOption(a),
+      quoteTotal: computeAirlineTotals(input.cargo, a).grandSell,
+      ...(lane?.laneLabel ? { laneLabel: lane.laneLabel } : {}),
+    };
+  });
   const lanes = (input.lanes ?? []).map((l) => ({
     id: l.id,
     origin: l.origin,
@@ -247,6 +274,8 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       pivotWeight: input.selected.pivotWeightKg,
       cargoItems: input.cargo,
       breaks: input.selected.breaks,
+      quotedLanes,
+      allLanesTotal: amount,
       airlines,
       alternatives,
       termsAndConditions: input.termsAndConditions,

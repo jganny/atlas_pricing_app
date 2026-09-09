@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
+import { airportCode } from "@/lib/quotes/lanes";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
 import { getFirebaseDb } from "./client";
@@ -61,17 +62,54 @@ function billingMeta(data: SavedQuote): Pick<EnquiryRecord, "billingWeight" | "b
   return { billingWeight: gw || undefined, billingUnit: gw ? "gw" : undefined };
 }
 
+function rec(raw: unknown): Record<string, unknown> {
+  return raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+}
+
+function laneOriginDest(data: SavedQuote): { origin: string; destination: string } {
+  const d = data.details || {};
+  const lanes = Array.isArray(d.lanes) ? d.lanes : [];
+  if (lanes.length > 1) {
+    const origins = lanes.map((raw) => airportCode(String(rec(raw).origin ?? ""))).filter(Boolean);
+    const dests = lanes.map((raw) => airportCode(String(rec(raw).destination ?? ""))).filter(Boolean);
+    return {
+      origin: origins.join(" · ") || String(d.origin ?? ""),
+      destination: dests.join(" · ") || String(d.destination ?? ""),
+    };
+  }
+  return {
+    origin:
+      (d.origin as string) ||
+      (data.route?.includes("→") ? data.route.split("→")[0]?.trim() : data.route) ||
+      "",
+    destination:
+      (d.destination as string) ||
+      (data.route?.includes("→") ? data.route.split("→").slice(1).join("→").trim() : "") ||
+      "",
+  };
+}
+
+function carrierLabel(data: SavedQuote): string {
+  const d = data.details || {};
+  const quoted = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
+  if (quoted.length > 1) {
+    return quoted
+      .map((raw) => {
+        const row = rec(raw);
+        const label = String(row.laneLabel ?? "");
+        const name = String(row.airline ?? row.name ?? "");
+        return label && name ? `${label}: ${name}` : name;
+      })
+      .filter(Boolean)
+      .join(" · ");
+  }
+  return String(d.airline ?? d.shippingLine ?? d.carrierName ?? d.carrier ?? "").trim();
+}
+
 export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
   const createdAt = data.date || String(data.timestamp ?? "");
   const open = isOpenQuoteStatus(data.status);
-  const origin =
-    (data.details?.origin as string) ||
-    (data.route?.includes("→") ? data.route.split("→")[0]?.trim() : data.route) ||
-    "";
-  const destination =
-    (data.details?.destination as string) ||
-    (data.route?.includes("→") ? data.route.split("→").slice(1).join("→").trim() : "") ||
-    "";
+  const { origin, destination } = laneOriginDest(data);
 
   const amount = num(data.amount);
   const gp = num(data.grossProfit);
@@ -79,9 +117,7 @@ export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
     amount != null && gp != null ? amount - gp : undefined;
   const buyRate = num(data.buyRate) ?? num(data.details?.buyRate);
   const confirmedBuyRate = num(data.confirmedBuyRate);
-  const carrier = String(
-    data.details?.airline ?? data.details?.shippingLine ?? data.details?.carrier ?? "",
-  ).trim();
+  const carrier = carrierLabel(data);
 
   return {
     id,

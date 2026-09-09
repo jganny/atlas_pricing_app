@@ -1,4 +1,5 @@
 import type { SavedQuote } from "@/lib/types";
+import { laneRouteLabel } from "@/lib/quotes/lanes";
 
 export interface VendorPreviewRow {
   id: string;
@@ -10,6 +11,8 @@ export interface VendorPreviewRow {
   cheapest: boolean;
   routing?: string;
   tt?: string;
+  laneId?: string;
+  laneLabel?: string;
 }
 
 function num(v: unknown): number {
@@ -45,7 +48,23 @@ export function quotedFieldLabel(type: string): string {
   return "Quoted option";
 }
 
-export function markCheapest(rows: Omit<VendorPreviewRow, "cheapest">[]): VendorPreviewRow[] {
+export function markCheapest(
+  rows: Omit<VendorPreviewRow, "cheapest">[],
+  perLane = false,
+): VendorPreviewRow[] {
+  if (perLane) {
+    const groups = new Map<string, Omit<VendorPreviewRow, "cheapest">[]>();
+    const order: string[] = [];
+    for (const row of rows) {
+      const key = row.laneId || row.laneLabel || "_";
+      if (!groups.has(key)) {
+        groups.set(key, []);
+        order.push(key);
+      }
+      groups.get(key)!.push(row);
+    }
+    return order.flatMap((key) => markCheapest(groups.get(key)!, false));
+  }
   const priced = rows.filter((r) => r.total > 0);
   const min = priced.length ? Math.min(...priced.map((r) => r.total)) : 0;
   const marked = rows.map((r) => ({
@@ -93,6 +112,8 @@ function rowFromRaw(
     selected: Boolean(a.selected),
     routing: String(a.routing ?? ""),
     tt: String(a.tt ?? a.transit ?? ""),
+    laneId: String(a.laneId ?? ""),
+    laneLabel: String(a.laneLabel ?? ""),
   };
 }
 
@@ -124,8 +145,11 @@ export function vendorRowsFromEntries(
     selected: boolean;
     routing?: string;
     tt?: string;
+    laneId?: string;
+    laneLabel?: string;
   }>,
 ): VendorPreviewRow[] {
+  const multiLane = items.some((item) => item.laneId || item.laneLabel);
   return markCheapest(
     items.map((item) => {
       const kind = item.kind || "option";
@@ -138,24 +162,54 @@ export function vendorRowsFromEntries(
         selected: Boolean(item.selected),
         routing: item.routing || "",
         tt: item.tt || "",
+        laneId: item.laneId || "",
+        laneLabel: item.laneLabel || "",
       };
     }),
+    multiLane,
   );
 }
 
-/** Airline / liner / courier / trucker options for quote preview — star = lowest total. */
+function attachLaneLabels(
+  rows: Omit<VendorPreviewRow, "cheapest">[],
+  d: Record<string, unknown>,
+): Omit<VendorPreviewRow, "cheapest">[] {
+  const lanes = Array.isArray(d.lanes) ? d.lanes : [];
+  const labels = new Map<string, string>();
+  lanes.forEach((raw, i) => {
+    const l = rec(raw);
+    const id = String(l.id ?? "");
+    if (!id) return;
+    labels.set(
+      id,
+      laneRouteLabel({ origin: String(l.origin ?? ""), destination: String(l.destination ?? "") }, i),
+    );
+  });
+  return rows.map((row) => ({
+    ...row,
+    laneLabel: row.laneLabel || (row.laneId ? labels.get(row.laneId) || "" : ""),
+  }));
+}
 export function vendorRowsFromQuote(quote: SavedQuote): VendorPreviewRow[] {
   const d = (quote.details ?? {}) as Record<string, unknown>;
   const type = (quote.type || String(d.type ?? d.mode ?? "")).toLowerCase();
 
   if ((type.includes("air") || type === "ae" || type === "ai") && Array.isArray(d.airlines) && d.airlines.length > 0) {
-    const rows = d.airlines.map((raw, i) => rowFromRaw(raw, i, String(rec(raw).kind || "airline")));
-    return markCheapest(mergeMissingAlternatives(rows, d.alternatives, "airline"));
+    const rows = attachLaneLabels(
+      d.airlines.map((raw, i) => rowFromRaw(raw, i, String(rec(raw).kind || "airline"))),
+      d,
+    );
+    const multi = rows.some((r) => r.laneId);
+    return markCheapest(mergeMissingAlternatives(rows, d.alternatives, "airline"), multi);
   }
 
   if (type.includes("sea") && Array.isArray(d.liners) && d.liners.length > 0) {
-    const rows = d.liners.map((raw, i) => rowFromRaw(raw, i, String(rec(raw).kind || "liner")));
-    return markCheapest(mergeMissingAlternatives(rows, d.alternatives, "liner"));
+    const rows = attachLaneLabels(
+      d.liners.map((raw, i) => rowFromRaw(raw, i, String(rec(raw).kind || "liner"))),
+      d,
+    );
+    const multi = rows.some((r) => r.laneId);
+    return markCheapest(mergeMissingAlternatives(rows, d.alternatives, "liner"), multi);
   }
 
   if (type.includes("courier") && Array.isArray(d.carrierQuotes) && d.carrierQuotes.length > 0) {

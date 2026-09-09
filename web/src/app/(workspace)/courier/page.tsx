@@ -14,11 +14,13 @@ import { Badge, Button, Card, Tabs } from "@/components/ui";
 import { PincodeCombobox } from "@/components/PincodeCombobox";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
+import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { DEFAULT_COURIER_TERMS, saveCourierQuote } from "@/lib/firebase/save-quote";
+import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
+import { allLanesRoute } from "@/lib/quotes/lanes";
 import { loadCourierDeskFromQuote } from "@/lib/quotes/desk-loader";
-import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
@@ -69,6 +71,17 @@ const COURIER_FOCUS: Record<Tab, string> = {
   packages: "courier-pkg-0-qty",
   surcharges: "courier-fuel",
   terms: "courier-terms",
+};
+
+const COURIER_DIR_TO_ID: Record<string, string> = {
+  DHL: "dhl",
+  FDX: "fedex",
+  FX: "fedex",
+  UPS: "ups",
+  TNT: "fedex",
+  ARAMEX: "aramex",
+  BLUEDART: "bluedart",
+  DTDC: "dtdc",
 };
 
 function SurchargeToggle({
@@ -135,12 +148,14 @@ function CourierDeskInner() {
   const [currency, setCurrency] = useState("INR");
   const [marginPct, setMarginPct] = useState(12);
   const [selectedCarrier, setSelectedCarrier] = useState("dhl");
+  const [directoryCarrier, setDirectoryCarrier] = useState("");
   const [gstEnabled, setGstEnabled] = useState(true);
   const [packages, setPackages] = useState<CourierPackageLine[]>([{ ...EMPTY_PACKAGE }]);
   const [surcharges, setSurcharges] = useState(() => ({ ...defaultSurcharges }));
   const [terms, setTerms] = useState(DEFAULT_COURIER_TERMS);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -275,6 +290,7 @@ function CourierDeskInner() {
     setCurrency(loaded.currency);
     setMarginPct(loaded.marginPct);
     setSelectedCarrier(loaded.selectedCarrier);
+    setDirectoryCarrier(String(loader.sourceQuote?.details?.directoryCarrier ?? loaded.selectedCarrier ?? ""));
     setGstEnabled(loaded.gstEnabled);
     setPackages(loaded.packages);
     setSurcharges({ ...defaultSurcharges, ...loaded.surcharges });
@@ -316,11 +332,13 @@ function CourierDeskInner() {
     setCurrency("INR");
     setMarginPct(12);
     setSelectedCarrier("dhl");
+    setDirectoryCarrier("");
     setGstEnabled(true);
     setPackages([{ ...EMPTY_PACKAGE }]);
     setSurcharges({ ...defaultSurcharges });
     setTerms(DEFAULT_COURIER_TERMS);
     setSaveMsg(null);
+    setSaveEnquiryPath(null);
     setPreviewQuote(null);
     setConfirmReset(false);
     loader.clearLoadedQuote();
@@ -330,6 +348,8 @@ function CourierDeskInner() {
     }
     toast("Courier form cleared", "success");
   }
+
+  const quotedCarrierName = directoryCarrier.trim() || result.chosen?.name || "";
 
   const handlePreview = () => {
     if (result.chargeableKg <= 0) {
@@ -349,7 +369,7 @@ function CourierDeskInner() {
       timestamp: Date.now(),
       amount,
       currency,
-      route: `${originCity || "—"} → ${destCity || "—"}`,
+      route: allLanesRoute(lanes) || `${originCity || "—"} → ${destCity || "—"}`,
       details: {
         origin: originCity,
         destination: destCity,
@@ -357,7 +377,8 @@ function CourierDeskInner() {
         destCountry,
         service,
         carrier: result.chosen?.id ?? "",
-        carrierName: result.chosen?.name ?? "",
+        carrierName: quotedCarrierName,
+        directoryCarrier,
         carrierQuotes: result.quotes,
         chargeableWeight: result.chargeableKg,
         zone: result.zone,
@@ -365,6 +386,7 @@ function CourierDeskInner() {
         gstAmount: result.tax,
         originCity,
         destCity,
+        lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
         termsAndConditions: terms,
         mode: "Courier",
       },
@@ -387,40 +409,90 @@ function CourierDeskInner() {
         setTab("packages");
         return;
       }
+      const amount = result.total ?? 0;
+      const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
+      const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+      const name = directoryCarrier.trim() || result.chosen?.name || "";
+      const localQuote: SavedQuote = {
+        id: quoteId,
+        customer: customer.trim(),
+        creator: user?.username || "",
+        status: loader.editingStatus || "quoted",
+        type: "courier",
+        quoteNumber,
+        date: new Date().toISOString().split("T")[0],
+        timestamp: Date.now(),
+        amount,
+        currency,
+        route: allLanesRoute(lanes) || `${originCity || "—"} → ${destCity || "—"}`,
+        details: {
+          origin: originCity,
+          destination: destCity,
+          originCountry,
+          destCountry,
+          service,
+          carrier: result.chosen?.id ?? "",
+          carrierName: name,
+          directoryCarrier,
+          carrierQuotes: result.quotes,
+          chargeableWeight: result.chargeableKg,
+          zone: result.zone,
+          baseFreight: result.baseFreight,
+          gstAmount: result.tax,
+          originCity,
+          destCity,
+          lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+          termsAndConditions: terms,
+          mode: "Courier",
+        },
+      };
       setSaving(true);
       setSaveMsg(null);
+      let cloud: "live" | "local" | "cloud-failed" = "local";
       try {
         if (useLiveData && user) {
-          const id = await saveCourierQuote({
-            customer: customer.trim(),
-            creator: user.username,
-            originCity,
-            destCity,
-            originCountry,
-            destCountry,
-            originPin,
-            destPin,
-            scope,
-            service,
-            currency,
-            marginPct,
-            gstEnabled,
-            packages: result.packages,
-            calc: result,
-            termsAndConditions: terms,
-            quoteId: loader.editingQuoteId ?? undefined,
-            quoteNumber: loader.editingQuoteNumber,
-            status: loader.editingStatus,
-          });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-          const msg = loader.isEditing ? `Amended quote ${id}` : `Saved to Firestore · quote ${id}`;
-          setSaveMsg(msg);
-          toast(msg, "success");
-        } else {
-          const msg = "Mock mode — save disabled. Switch to live Firebase or use legacy app.";
-          setSaveMsg(msg);
-          toast(msg, "info");
+          try {
+            await saveCourierQuote({
+              customer: customer.trim(),
+              creator: user.username,
+              originCity,
+              destCity,
+              originCountry,
+              destCountry,
+              originPin,
+              destPin,
+              scope,
+              service,
+              currency,
+              marginPct,
+              gstEnabled,
+              packages: result.packages,
+              calc: result,
+              termsAndConditions: terms,
+              quoteId,
+              quoteNumber,
+              status: loader.editingStatus,
+            });
+            cloud = "live";
+          } catch (e) {
+            cloud = "cloud-failed";
+            console.warn("Cloud save failed, kept local Enquiry DB row", e);
+          }
         }
+        const row = persistQuoteToEnquiryDb(
+          {
+            ...localQuote,
+            details: {
+              ...localQuote.details,
+              carrierName: name,
+            },
+          },
+          queryClient,
+        );
+        const msg = savedEnquiryMessage(row, { cloud });
+        setSaveMsg(msg);
+        setSaveEnquiryPath(savedEnquiryHref(row));
+        toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Save failed";
         setSaveMsg(msg);
@@ -448,8 +520,9 @@ function CourierDeskInner() {
       loader.editingQuoteId,
       loader.editingQuoteNumber,
       loader.editingStatus,
-      loader.isEditing,
       queryClient,
+      directoryCarrier,
+      lanes,
     ],
   );
 
@@ -514,7 +587,14 @@ function CourierDeskInner() {
 
       {saveMsg ? (
         <Card className={saveMsg.includes("Saved") || saveMsg.includes("Amended") ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}>
-          <p className="text-sm font-semibold">{saveMsg}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">{saveMsg}</p>
+            {saveEnquiryPath ? (
+              <Button type="button" variant="secondary" className="h-8" onClick={() => router.push(saveEnquiryPath)}>
+                Open Enquiry DB
+              </Button>
+            ) : null}
+          </div>
         </Card>
       ) : null}
 
@@ -645,6 +725,24 @@ function CourierDeskInner() {
                   ))}
                 </select>
               </label>
+              <div className="md:col-span-2">
+                <CarrierCombobox
+                  label="Carrier / Airline"
+                  value={directoryCarrier}
+                  onChange={(v) => {
+                    setDirectoryCarrier(v);
+                    const code = v.split("—")[0]?.trim().toUpperCase();
+                    const mapped = COURIER_DIR_TO_ID[code];
+                    if (mapped) setSelectedCarrier(mapped);
+                  }}
+                  kind="all"
+                  placeholder="UL, SriLankan, DHL, FedEx…"
+                />
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Same global airline + courier directory as Air export/import. Pick DHL/FedEx/UPS to
+                  select that zone card; pick UL or any IATA airline to quote it by name.
+                </p>
+              </div>
               <label className="text-sm font-semibold">
                 Scope
                 <select
@@ -848,7 +946,7 @@ function CourierDeskInner() {
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Chargeable</dt><dd className="font-bold">{result.chargeableKg.toFixed(2)} kg</dd></div>
               <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Zone</dt><dd className="font-bold">{result.zone}</dd></div>
-              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Carrier</dt><dd className="font-bold">{result.chosen?.name ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Carrier</dt><dd className="font-bold">{quotedCarrierName || "—"}</dd></div>
               <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Base freight</dt><dd>{formatCurrency(result.baseFreight, currency)}</dd></div>
               <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Surcharges</dt><dd>{formatCurrency(result.surcharges.total, currency)}</dd></div>
               <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">GST (18%)</dt><dd>{formatCurrency(result.tax, currency)}</dd></div>

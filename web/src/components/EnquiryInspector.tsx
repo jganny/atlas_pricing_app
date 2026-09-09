@@ -57,18 +57,12 @@ export function EnquiryInspector({
 
   async function loadFullQuote(): Promise<SavedQuote | null> {
     if (quote) return quote;
-    if (!useLiveData) {
-      const msg = "Mock mode — open legacy app for full quote actions.";
-      setMsg(msg);
-      toast(msg, "info");
-      return null;
-    }
     setLoading(true);
     try {
       const q = await fetchQuoteById(row.id);
       if (q) setQuote(q);
       else {
-        const msg = "Quote not found in Firestore.";
+        const msg = "Quote not found in Enquiry DB.";
         setMsg(msg);
         toast(msg, "error");
       }

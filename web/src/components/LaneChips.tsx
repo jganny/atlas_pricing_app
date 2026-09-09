@@ -2,12 +2,9 @@
 
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui";
+import { type QuoteLane } from "@/lib/quotes/lanes";
 
-export type QuoteLane = {
-  id: string;
-  origin: string;
-  destination: string;
-};
+export type { QuoteLane };
 
 export function newLane(partial: Partial<QuoteLane> = {}): QuoteLane {
   return {

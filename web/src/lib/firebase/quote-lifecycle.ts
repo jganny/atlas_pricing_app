@@ -4,12 +4,18 @@ import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import type { SavedQuote } from "@/lib/types";
 import { getFirebaseDb } from "./client";
 import { omitUndefinedDeep } from "./sanitize";
+import { getLocalQuote } from "@/lib/quotes/local-enquiries";
 
 export async function fetchQuoteById(id: string): Promise<SavedQuote | null> {
-  const db = getFirebaseDb();
-  const snap = await getDoc(doc(db, "quotes", id));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...(snap.data() as Omit<SavedQuote, "id">) };
+  const local = getLocalQuote(id);
+  try {
+    const db = getFirebaseDb();
+    const snap = await getDoc(doc(db, "quotes", id));
+    if (snap.exists()) return { id: snap.id, ...(snap.data() as Omit<SavedQuote, "id">) };
+  } catch {
+    /* offline or unauthenticated — fall through to local */
+  }
+  return local;
 }
 
 export async function saveQuoteDocument(quote: SavedQuote): Promise<string> {

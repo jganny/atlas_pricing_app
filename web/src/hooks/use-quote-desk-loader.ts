@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { SavedQuote } from "@/lib/types";
+import { getLocalQuote } from "@/lib/quotes/local-enquiries";
 import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
 import { useLiveData } from "@/lib/api";
 import {
@@ -47,23 +48,36 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
       setReady(true);
       return;
     }
+    const local = getLocalQuote(loadId);
     if (!useLiveData) {
-      setLoadError("Mock mode — load quote from legacy or switch to live Firebase.");
+      if (local) {
+        setSourceQuote(local);
+        if (editId) {
+          setEditingQuoteId(local.id);
+          setEditingQuoteNumber(local.quoteNumber);
+          setEditingStatus(local.status);
+        }
+        setLoadError(null);
+        setReady(true);
+        return;
+      }
+      setLoadError("Mock mode — load quote from Enquiry DB or switch to live Firebase.");
       setReady(true);
       return;
     }
     setReady(false);
     void fetchQuoteById(loadId)
       .then((q) => {
-        if (!q) {
+        const found = q || local;
+        if (!found) {
           setLoadError("Quote not found.");
           return;
         }
-        setSourceQuote(q);
+        setSourceQuote(found);
         if (editId) {
-          setEditingQuoteId(q.id);
-          setEditingQuoteNumber(q.quoteNumber);
-          setEditingStatus(q.status);
+          setEditingQuoteId(found.id);
+          setEditingQuoteNumber(found.quoteNumber);
+          setEditingStatus(found.status);
         }
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : "Load failed"))

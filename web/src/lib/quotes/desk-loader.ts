@@ -49,7 +49,7 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
   let airlines: AirlineOption[] = [];
   const savedAirlines = d.airlines as AirlineOption[] | undefined;
   if (Array.isArray(savedAirlines) && savedAirlines.length) {
-    airlines = savedAirlines.map((a, i) =>
+    airlines = savedAirlines.map((a) =>
       createAirlineOption(
         {
           ...a,
@@ -57,7 +57,7 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
           originSurcharges: mapSurcharges(a.originSurcharges) ?? a.originSurcharges,
           destSurcharges: mapSurcharges(a.destSurcharges) ?? a.destSurcharges,
         },
-        a.selected || i === 0,
+        Boolean(a.selected),
       ),
     );
   } else {
@@ -83,11 +83,6 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
     ];
   }
 
-  // Ensure exactly one selected
-  if (!airlines.some((a) => a.selected) && airlines[0]) {
-    airlines[0] = { ...airlines[0], selected: true };
-  }
-
   const savedLanes = Array.isArray(d.lanes)
     ? (d.lanes as Array<{ id?: string; origin?: string; destination?: string }>).map((l, i) => ({
         id: String(l.id || `lane_${i}`),
@@ -95,6 +90,15 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
         destination: String(l.destination ?? ""),
       }))
     : [];
+
+  const fallbackLane = airlines[0]?.laneId || savedLanes[0]?.id || "";
+  const laneIds = new Set(airlines.map((a) => a.laneId || fallbackLane));
+  for (const laneId of laneIds) {
+    const onLane = airlines.filter((a) => (a.laneId || fallbackLane) === laneId);
+    if (!onLane.some((a) => a.selected) && onLane[0]) {
+      airlines = airlines.map((a) => (a.id === onLane[0].id ? { ...a, selected: true } : a));
+    }
+  }
 
   return {
     customer: quote.customer ?? "",

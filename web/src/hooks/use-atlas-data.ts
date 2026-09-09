@@ -8,6 +8,7 @@ import { subscribeInboxEnquiries } from "@/lib/firebase/inbox";
 import { subscribeDirectoryContacts } from "@/lib/firebase/directory";
 import { subscribeLeads } from "@/lib/firebase/sales";
 import { mockApi } from "@/lib/mock/api";
+import { mergeLocalEnquiries } from "@/lib/quotes/local-enquiries";
 import { useAuthStore } from "@/store/auth";
 import { queryKeys } from "./query-keys";
 
@@ -23,7 +24,7 @@ export function useEnquiries() {
   useEffect(() => {
     if (!enabled || !useLiveData) return;
     const unsub = subscribeLiveEnquiries(
-      (rows) => queryClient.setQueryData(queryKeys.enquiries, rows),
+      (rows) => queryClient.setQueryData(queryKeys.enquiries, mergeLocalEnquiries(rows)),
       (err) => {
         console.warn("Live enquiries sync:", err.message);
         // Preview / unauthenticated Firebase: keep UI usable with mock sample rows.
@@ -51,12 +52,14 @@ export function useEnquiries() {
           rows.length === 0
         ) {
           // Dev preview user often lacks Firestore read — show mock for UI testing.
-          return mockApi.fetchEnquiries();
+          return mergeLocalEnquiries(await mockApi.fetchEnquiries());
         }
-        return rows;
+        return mergeLocalEnquiries(rows);
       } catch {
-        if (process.env.NODE_ENV === "development") return mockApi.fetchEnquiries();
-        return [];
+        if (process.env.NODE_ENV === "development") {
+          return mergeLocalEnquiries(await mockApi.fetchEnquiries());
+        }
+        return mergeLocalEnquiries([]);
       }
     },
     staleTime: useLiveData ? Infinity : 60_000,
