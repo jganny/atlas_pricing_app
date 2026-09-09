@@ -76,7 +76,7 @@ export function VendorCompareList({
                       ) : null}
                     </span>
                     <span className="shrink-0 font-semibold tabular-nums" data-testid="vendor-compare-total">
-                      {formatCurrency(v.total, currency)}
+                      {v.total > 0 ? formatCurrency(v.total, currency) : "incomplete"}
                     </span>
                   </>
                 );

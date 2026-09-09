@@ -735,7 +735,7 @@ function CourierDeskInner() {
                     const mapped = COURIER_DIR_TO_ID[code];
                     if (mapped) setSelectedCarrier(mapped);
                   }}
-                  kind="all"
+                  kind="airline+courier"
                   placeholder="UL, SriLankan, DHL, FedEx…"
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">

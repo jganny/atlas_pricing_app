@@ -21,6 +21,11 @@ import {
 } from "@/lib/quotes/edb-csv";
 import { searchQuotes } from "@/lib/quotes/find-quotes";
 import {
+  getLastSavedEnquiry,
+  listLocalEnquiries,
+  mergeLocalEnquiries,
+} from "@/lib/quotes/local-enquiries";
+import {
   archiveOlderThan,
   buildFyReportCards,
   listLocalArchive,
@@ -80,7 +85,8 @@ function MetricToggle<T extends string>({
 
 function EnquiryDatabaseInner() {
   const searchParams = useSearchParams();
-  const { data: rows = [], isLoading, error, refetch } = useEnquiries();
+  const { data: liveRows = [], isLoading, error, refetch } = useEnquiries();
+  const rows = useMemo(() => mergeLocalEnquiries(liveRows), [liveRows]);
   const user = useAuthStore((s) => s.user);
   const admin = isAdminUser(user?.username, user?.role);
 
@@ -112,7 +118,15 @@ function EnquiryDatabaseInner() {
     const q = searchParams?.get("q");
     const sel = searchParams?.get("select");
     if (q) setSearch(q);
-    if (sel) setSelectedId(sel);
+    if (sel) {
+      setSelectedId(sel);
+      return;
+    }
+    const last = getLastSavedEnquiry();
+    if (last) {
+      setSelectedId(last.id);
+      if (!q) setSearch(last.ref);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -136,12 +150,16 @@ function EnquiryDatabaseInner() {
     const q = search.toLowerCase().trim();
     const chip = PIPELINE_CHIPS.find((c) => c.key === pipeline) ?? PIPELINE_CHIPS[0];
     const username = (user?.username || "").toLowerCase();
-    return rows.filter((row) => {
+    const out = rows.filter((row) => {
       if (row.creator === "mahendra") return false;
+      if (selectedId && row.id === selectedId) return true;
       if (!chip.match(row)) return false;
       if (modeFilter !== "all" && row.mode !== modeFilter) return false;
       if (originFilter && !row.origin.toLowerCase().includes(originFilter.toLowerCase())) return false;
-      if (destFilter && !row.destination.toLowerCase().includes(destFilter.toLowerCase())) return false;
+      if (destFilter) {
+        const destHay = `${row.destination} ${row.origin}`.toLowerCase();
+        if (!destHay.includes(destFilter.toLowerCase())) return false;
+      }
       if (
         carrierFilter &&
         !(row.carrier || "").toLowerCase().includes(carrierFilter.toLowerCase())
@@ -149,7 +167,15 @@ function EnquiryDatabaseInner() {
         return false;
       }
       if (deskFilter === "mine") {
-        if (row.creator !== username && row.assignee.toLowerCase() !== username) return false;
+        const creator = (row.creator || "").toLowerCase();
+        const assignee = (row.assignee || "").toLowerCase();
+        const mine =
+          !username ||
+          creator === username ||
+          assignee === username ||
+          assignee.includes(username) ||
+          creator.includes(username);
+        if (!mine) return false;
       } else if (!matchesDeskFilter(row.creator, deskFilter)) {
         return false;
       }
@@ -158,7 +184,15 @@ function EnquiryDatabaseInner() {
         `${row.ref} ${row.customer} ${row.origin} ${row.destination} ${row.assignee} ${row.creator} ${row.carrier || ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, search, pipeline, modeFilter, deskFilter, user?.username, originFilter, destFilter, carrierFilter]);
+    if (selectedId && !out.some((r) => r.id === selectedId)) {
+      const pinned =
+        rows.find((r) => r.id === selectedId) ??
+        listLocalEnquiries().find((r) => r.id === selectedId) ??
+        (archiveHit?.id === selectedId ? archiveHit : null);
+      if (pinned) return [pinned, ...out];
+    }
+    return out;
+  }, [rows, search, pipeline, modeFilter, deskFilter, user?.username, originFilter, destFilter, carrierFilter, selectedId, archiveHit]);
 
   const selected =
     filtered.find((r) => r.id === selectedId) ??

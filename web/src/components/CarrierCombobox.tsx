@@ -5,6 +5,8 @@ import { Input, Label } from "@/components/ui";
 import { PortalDropdown } from "@/components/PortalDropdown";
 import {
   searchCarriers,
+  resolveCarrierLabel,
+  formatCarrierLabel,
   type CarrierKind,
   type CarrierRecord,
 } from "@/lib/carriers/directory";
@@ -32,7 +34,7 @@ export function CarrierCombobox({
   label: string;
   value: string;
   onChange: (next: string) => void;
-  kind: CarrierKind | "all" | "ocean+coloader";
+  kind: CarrierKind | "all" | "ocean+coloader" | "airline+courier";
   placeholder?: string;
 }) {
   const listId = useId();
@@ -45,8 +47,15 @@ export function CarrierCombobox({
 
   useCloseComboboxes(() => setOpen(false));
 
-  const searchKind: CarrierKind | "all" =
-    kind === "ocean+coloader" ? "ocean" : kind === "all" ? "all" : kind;
+  const searchKind =
+    kind === "ocean+coloader" ? "ocean" : kind === "airline+courier" ? "airline+courier" : kind === "all" ? "all" : kind;
+
+  function commit(next: string) {
+    const resolved = resolveCarrierLabel(next, searchKind);
+    onChange(resolved);
+    setQ(resolved);
+    setOpen(false);
+  }
 
   useEffect(() => setQ(value), [value]);
 
@@ -87,10 +96,7 @@ export function CarrierCombobox({
   }, []);
 
   function pick(hit: CarrierRecord) {
-    const next = `${hit.code} — ${hit.name}`;
-    onChange(next);
-    setQ(next);
-    setOpen(false);
+    commit(formatCarrierLabel(hit));
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -133,12 +139,14 @@ export function CarrierCombobox({
             setOpen(true);
           }}
           onBlur={() => {
-            window.setTimeout(() => setOpen(false), 120);
+            window.setTimeout(() => {
+              if (q.trim() && q.trim() !== value.trim()) commit(q);
+              else setOpen(false);
+            }, 120);
           }}
           onKeyDown={onKeyDown}
           onChange={(e) => {
             setQ(e.target.value);
-            onChange(e.target.value);
             setOpen(true);
           }}
         />

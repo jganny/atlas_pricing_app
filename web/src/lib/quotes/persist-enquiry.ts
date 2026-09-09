@@ -5,6 +5,7 @@ import { queryKeys } from "@/hooks/query-keys";
 import { enquiryHref } from "@/lib/quotes/find-quotes";
 import {
   mergeLocalEnquiries,
+  rememberLastSavedEnquiry,
   rememberLocalEnquiry,
   rememberLocalQuote,
 } from "@/lib/quotes/local-enquiries";
@@ -16,9 +17,11 @@ export function persistQuoteToEnquiryDb(
   rememberLocalQuote(quote);
   const row = mapQuoteFromSaved(quote.id, quote);
   rememberLocalEnquiry(row);
+  rememberLastSavedEnquiry(row);
   queryClient?.setQueryData(queryKeys.enquiries, (old: EnquiryRecord[] | undefined) =>
     mergeLocalEnquiries(Array.isArray(old) ? old : []),
   );
+  void queryClient?.invalidateQueries({ queryKey: queryKeys.enquiries });
   return row;
 }
 

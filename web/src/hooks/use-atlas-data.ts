@@ -27,12 +27,16 @@ export function useEnquiries() {
       (rows) => queryClient.setQueryData(queryKeys.enquiries, mergeLocalEnquiries(rows)),
       (err) => {
         console.warn("Live enquiries sync:", err.message);
-        // Preview / unauthenticated Firebase: keep UI usable with mock sample rows.
+        const current = queryClient.getQueryData(queryKeys.enquiries);
+        queryClient.setQueryData(
+          queryKeys.enquiries,
+          mergeLocalEnquiries(Array.isArray(current) ? current : []),
+        );
         if (process.env.NODE_ENV === "development") {
           void mockApi.fetchEnquiries().then((rows) => {
-            const current = queryClient.getQueryData(queryKeys.enquiries);
-            if (!current || (Array.isArray(current) && current.length === 0)) {
-              queryClient.setQueryData(queryKeys.enquiries, rows);
+            const still = queryClient.getQueryData(queryKeys.enquiries);
+            if (!still || (Array.isArray(still) && still.length === 0)) {
+              queryClient.setQueryData(queryKeys.enquiries, mergeLocalEnquiries(rows));
             }
           });
         }

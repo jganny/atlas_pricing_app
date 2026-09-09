@@ -52,6 +52,32 @@ export function getLocalQuote(id: string | null | undefined): SavedQuote | null 
   return listLocalQuotes()[id] ?? null;
 }
 
+const LAST_KEY = "atlas_last_saved_enquiry_v1";
+
+export function rememberLastSavedEnquiry(row: Pick<EnquiryRecord, "id" | "ref">) {
+  try {
+    sessionStorage.setItem(
+      LAST_KEY,
+      JSON.stringify({ id: row.id, ref: row.ref, at: Date.now() }),
+    );
+  } catch {
+    /* private mode */
+  }
+}
+
+export function getLastSavedEnquiry(): { id: string; ref: string; at: number } | null {
+  try {
+    const raw = sessionStorage.getItem(LAST_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { id?: string; ref?: string; at?: number };
+    if (!v?.id) return null;
+    if (Date.now() - Number(v.at || 0) > 4 * 60 * 60 * 1000) return null;
+    return { id: v.id, ref: String(v.ref || ""), at: Number(v.at || 0) };
+  } catch {
+    return null;
+  }
+}
+
 /** Prepend quotes saved on this computer that Firestore has not returned yet. */
 export function mergeLocalEnquiries(live: EnquiryRecord[]): EnquiryRecord[] {
   const seen = new Set(live.map((r) => r.id));

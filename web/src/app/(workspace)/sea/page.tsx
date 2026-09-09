@@ -22,7 +22,7 @@ import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { appendCalcAudit } from "@/lib/quotes/calc-audit";
-import { persistQuoteToEnquiryDb, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
+import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
 import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { lookupSeaTariff } from "@/lib/firebase/tariffs";
@@ -105,6 +105,7 @@ function SeaDeskInner() {
   const [terms, setTerms] = useState(getDefaultFreightTerms("sea"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [stripKey, setStripKey] = useState(0);
@@ -516,6 +517,7 @@ function SeaDeskInner() {
         const row = persistQuoteToEnquiryDb(localQuote, queryClient);
         const msg = savedEnquiryMessage(row, { cloud });
         setSaveMsg(msg);
+        setSaveEnquiryPath(savedEnquiryHref(row));
         toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Save failed";
@@ -653,7 +655,14 @@ function SeaDeskInner() {
               : "border-amber-200 bg-amber-50"
           }
         >
-          <p className="text-sm font-semibold">{saveMsg}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">{saveMsg}</p>
+            {saveEnquiryPath ? (
+              <Button type="button" variant="secondary" className="h-8" onClick={() => router.push(saveEnquiryPath)}>
+                Open Enquiry DB
+              </Button>
+            ) : null}
+          </div>
         </Card>
       ) : null}
 

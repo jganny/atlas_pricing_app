@@ -189,11 +189,13 @@ export function QuotePreviewModal({
   const terms = String(quote.details?.termsAndConditions ?? "");
   const type = (quote.type || "").toLowerCase();
   const d = quote.details ?? {};
-  const showAirBreakdown = type === "air";
+  const quotedLanes = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
+  const multiLane = quotedLanes.length > 1;
+  const showAirBreakdown = type === "air" && !multiLane;
   const showSeaBreakdown = type === "sea";
   const showCompare = vendors.length > 1;
   const quotedIsNotCheapest =
-    Boolean(cheapest && quoted && cheapest.id !== quoted.id && cheapest.total > 0);
+    !multiLane && Boolean(cheapest && quoted && cheapest.id !== quoted.id && cheapest.total > 0);
 
   function handlePrint() {
     window.print();
@@ -255,8 +257,11 @@ export function QuotePreviewModal({
                 {statusLabel(quote.status)}
               </Badge>
               <Badge tone="neutral">{(quote.type || "").toUpperCase()}</Badge>
-              {cheapest && showCompare ? (
+              {cheapest && showCompare && !multiLane ? (
                 <Badge tone="success">Cheapest ★ {cheapest.name}</Badge>
+              ) : null}
+              {multiLane ? (
+                <Badge tone="info">{quotedLanes.length} lanes on this quote</Badge>
               ) : null}
             </div>
           </div>
@@ -317,12 +322,28 @@ export function QuotePreviewModal({
 
           <div className="rounded-lg bg-slate-50 p-4">
             <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
-              Quoted total{quoted ? ` · ${quoted.name}` : ""}
-              {quoted?.cheapest ? " ★" : ""}
+              {multiLane
+                ? "Quoted total · all lanes"
+                : `Quoted total${quoted ? ` · ${quoted.name}` : ""}${quoted?.cheapest ? " ★" : ""}`}
             </div>
             <div className="text-2xl font-extrabold text-emerald-700" data-testid="quote-preview-total">
               {formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), quote.currency)}
             </div>
+            {multiLane ? (
+              <ul className="mt-2 space-y-1 text-sm" data-testid="quote-preview-lanes">
+                {quotedLanes.map((raw, i) => {
+                  const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+                  return (
+                    <li key={String(lane.laneId ?? i)} className="flex justify-between gap-2">
+                      <span>
+                        {String(lane.laneLabel ?? `Lane ${i + 1}`)} · {String(lane.airline ?? "—")}
+                      </span>
+                      <span className="font-semibold">{money(lane.amount, quote.currency || "USD")}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
             {quotedIsNotCheapest && cheapest ? (
               <div className="mt-2 text-sm font-semibold text-emerald-800" data-testid="quote-preview-cheapest-note">
                 Cheapest option: {cheapest.name} ★ {money(cheapest.total, quote.currency || "USD")}

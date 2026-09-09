@@ -32,6 +32,26 @@ import { useAuthStore } from "@/store/auth";
 import { toast } from "@/components/Toast";
 import { formatCurrency } from "@/lib/utils";
 import { isAdminUser } from "@/lib/quotes/team-roles";
+import { getLocalQuote } from "@/lib/quotes/local-enquiries";
+
+function stubQuoteFromEnquiry(row: EnquiryRecord): SavedQuote {
+  return {
+    id: row.id,
+    customer: row.customer,
+    creator: row.creator,
+    status: row.status === "won" ? "converted" : row.status === "open" ? "quoted" : row.status,
+    type: row.mode,
+    amount: row.grandTotal || 0,
+    currency: row.currency || "USD",
+    route: row.destination ? `${row.origin} → ${row.destination}` : row.origin,
+    details: {
+      airline: row.carrier,
+      origin: row.origin,
+      destination: row.destination,
+      type: row.mode,
+    },
+  };
+}
 
 export function EnquiryInspector({
   row,
@@ -59,13 +79,8 @@ export function EnquiryInspector({
     if (quote) return quote;
     setLoading(true);
     try {
-      const q = await fetchQuoteById(row.id);
-      if (q) setQuote(q);
-      else {
-        const msg = "Quote not found in Enquiry DB.";
-        setMsg(msg);
-        toast(msg, "error");
-      }
+      const q = (await fetchQuoteById(row.id)) ?? getLocalQuote(row.id) ?? stubQuoteFromEnquiry(row);
+      setQuote(q);
       return q;
     } finally {
       setLoading(false);
@@ -231,8 +246,16 @@ export function EnquiryInspector({
           </div>
           <div className="flex justify-between">
             <dt className="text-[var(--color-text-muted)]">Lane</dt>
-            <dd className="text-right text-xs">{row.origin} → {row.destination}</dd>
+            <dd className="text-right text-xs">
+              {row.destination ? `${row.origin} → ${row.destination}` : row.origin || "—"}
+            </dd>
           </div>
+          {row.carrier ? (
+            <div className="flex justify-between">
+              <dt className="text-[var(--color-text-muted)]">Quoted</dt>
+              <dd className="max-w-[14rem] text-right text-xs font-semibold">{row.carrier}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between">
             <dt className="text-[var(--color-text-muted)]">Status</dt>
             <dd>

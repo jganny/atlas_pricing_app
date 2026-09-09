@@ -750,11 +750,11 @@ function AirDeskInner() {
           </Button>
           <Button type="button" variant="secondary" className="h-9" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
-            Preview
+            {lanes.length > 1 ? "Preview all lanes" : "Preview"}
           </Button>
           <Button type="button" className="h-9" onClick={() => void handleSave()} disabled={saving}>
             <Save className="mr-1.5 h-4 w-4" />
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : lanes.length > 1 ? "Save all lanes" : "Save"}
           </Button>
         </div>
       </div>
@@ -1256,7 +1256,7 @@ function AirDeskInner() {
                 </Button>
                 <Button type="button" onClick={() => void handleSave()} disabled={saving}>
                   <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Saving…" : "Save quote"}
+                  {saving ? "Saving…" : lanes.length > 1 ? "Save all lanes" : "Save quote"}
                 </Button>
               </div>
             </Card>

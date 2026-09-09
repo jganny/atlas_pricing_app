@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { rankCarrierHits, type CarrierRecord } from "./directory";
+import {
+  airlineDirectoryCount,
+  rankCarrierHits,
+  resolveCarrierLabel,
+  searchCarriers,
+  type CarrierRecord,
+} from "./directory";
 
 const rows: CarrierRecord[] = [
   { code: "1L", name: "Open Skies Consultative Commission", kind: "airline" },
@@ -23,4 +29,31 @@ assert.equal(lankan[0]?.code, "UL");
 const ek = rankCarrierHits("ek", rows, 10);
 assert.equal(ek[0]?.code, "EK");
 
-console.log("carrier rank tests passed");
+assert.equal(resolveCarrierLabel("ul"), "UL — SriLankan Airlines");
+assert.equal(resolveCarrierLabel("UL"), "UL — SriLankan Airlines");
+assert.equal(resolveCarrierLabel("sri lankan"), "UL — SriLankan Airlines");
+assert.ok(
+  resolveCarrierLabel("1L AIRLINE").includes("SriLankan") ||
+    resolveCarrierLabel("1L AIRLINE") === "1L AIRLINE",
+);
+
+assert.ok(airlineDirectoryCount() > 800, "bundled OpenFlights dump must cover global IATA airlines");
+
+async function checkBundled() {
+  const bundled = await searchCarriers("ul", "airline", 8);
+  assert.equal(bundled[0]?.code, "UL");
+  assert.equal(bundled[0]?.name, "SriLankan Airlines");
+
+  const courierDesk = await searchCarriers("ul", "airline+courier", 8);
+  assert.equal(courierDesk[0]?.code, "UL");
+  assert.ok(!courierDesk.some((c) => c.kind === "ocean"));
+}
+
+void checkBundled()
+  .then(() => {
+    console.log("carrier rank tests passed");
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

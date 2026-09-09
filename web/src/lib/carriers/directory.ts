@@ -1,9 +1,12 @@
 /**
  * Free global carrier directory — no paid API keys required.
- * Curated majors + slim OpenFlights dump for broad search.
+ * Curated majors + bundled OpenFlights dump (imported, never fetched from a stale CDN).
  */
 
+import slimSeed from "../../../public/data/carriers-slim.json";
+
 export type CarrierKind = "airline" | "ocean" | "courier";
+export type CarrierSearchKind = CarrierKind | "all" | "airline+courier";
 
 export type CarrierRecord = {
   code: string;
@@ -106,9 +109,7 @@ type SlimFile = {
   sea?: Array<{ code: string; name: string; country?: string }>;
 };
 
-let slimCache: CarrierRecord[] | null = null;
-
-const GDS_CODES = new Set(["1A", "1B", "1E", "1F", "1G", "1L", "1P", "1S", "1U"]);
+const GDS_CODES = new Set(["1A", "1B", "1C", "1D", "1E", "1F", "1G", "1L", "1P", "1S", "1U", "1Y"]);
 
 const NAME_ALIASES: Array<{ codes: string[]; needles: string[] }> = [
   { codes: ["UL"], needles: ["sri lankan", "srilankan", "sri-lankan", "srilanka"] },
@@ -177,59 +178,85 @@ export function rankCarrierHits(
   return out;
 }
 
-export async function loadExtendedCarriers(): Promise<CarrierRecord[]> {
-  if (slimCache) return slimCache;
-  try {
-    const res = await fetch("/app/data/carriers-slim.json?v=iata2", { cache: "no-store" });
-    if (!res.ok) throw new Error("carriers");
-    const data = (await res.json()) as SlimFile;
-    const rows: CarrierRecord[] = [];
-    for (const a of data.air || []) {
-      if (isJunkCode(a.code)) continue;
-      if (!a.name || a.name.length < 2 || isJunkName(a.name)) continue;
-      rows.push({
-        code: a.code.toUpperCase(),
-        name: a.name,
-        kind: "airline",
-        country: a.country,
-      });
-    }
-    for (const s of data.sea || []) {
-      if (!s.code || !s.name) continue;
-      rows.push({
-        code: s.code.toUpperCase(),
-        name: s.name,
-        kind: "ocean",
-        country: s.country,
-      });
-    }
-    slimCache = rows;
-    return rows;
-  } catch {
-    slimCache = [];
-    return [];
+function recordsFromSlim(data: SlimFile): CarrierRecord[] {
+  const rows: CarrierRecord[] = [];
+  for (const a of data.air || []) {
+    if (isJunkCode(a.code)) continue;
+    if (!a.name || a.name.length < 2 || isJunkName(a.name)) continue;
+    rows.push({
+      code: a.code.toUpperCase(),
+      name: a.name,
+      kind: "airline",
+      country: a.country,
+    });
   }
+  for (const s of data.sea || []) {
+    if (!s.code || !s.name) continue;
+    rows.push({
+      code: s.code.toUpperCase(),
+      name: s.name,
+      kind: "ocean",
+      country: s.country,
+    });
+  }
+  return rows;
 }
 
-export async function searchCarriers(
-  query: string,
-  kind: CarrierKind | "all" = "all",
-  limit = 40,
-): Promise<CarrierRecord[]> {
-  const curated = CURATED_CARRIERS.filter((c) => kind === "all" || c.kind === kind);
-  const q = query.trim();
-  if (!q) return curated.slice(0, limit);
+const BUNDLED_EXTENDED = recordsFromSlim(slimSeed as SlimFile);
 
-  const extended = await loadExtendedCarriers();
+function kindsFor(kind: CarrierSearchKind): CarrierKind[] | null {
+  if (kind === "all") return null;
+  if (kind === "airline+courier") return ["airline", "courier"];
+  return [kind];
+}
+
+function carrierPool(kind: CarrierSearchKind): CarrierRecord[] {
+  const kinds = kindsFor(kind);
   const pool: CarrierRecord[] = [];
   const seen = new Set<string>();
-  for (const c of [...curated, ...extended]) {
-    if (kind !== "all" && c.kind !== kind) continue;
+  for (const c of [...CURATED_CARRIERS, ...BUNDLED_EXTENDED]) {
+    if (kinds && !kinds.includes(c.kind)) continue;
     const key = `${c.kind}:${c.code}`;
     if (seen.has(key)) continue;
     seen.add(key);
     pool.push(c);
   }
+  return pool;
+}
+
+export function airlineDirectoryCount(): number {
+  return carrierPool("airline").length;
+}
+
+export function formatCarrierLabel(c: Pick<CarrierRecord, "code" | "name">): string {
+  return `${c.code} — ${c.name}`;
+}
+
+/** Turn "ul" / "UL" / "sri lankan" into "UL — SriLankan Airlines". */
+export function resolveCarrierLabel(raw: string, kind: CarrierSearchKind = "airline"): string {
+  const t = raw.trim();
+  if (!t) return t;
+  const labeled = t.match(/^([A-Za-z0-9]{2,4})\s*[—–-]\s*(.+)$/);
+  const codeGuess = (labeled?.[1] || t).trim().toUpperCase();
+  const hits = rankCarrierHits(labeled ? codeGuess : t, carrierPool(kind), 12);
+  const exact = hits.find((h) => h.code === codeGuess);
+  if (exact) return formatCarrierLabel(exact);
+  if (!labeled && t.length >= 3 && hits[0]) return formatCarrierLabel(hits[0]);
+  return t;
+}
+
+export async function loadExtendedCarriers(): Promise<CarrierRecord[]> {
+  return BUNDLED_EXTENDED;
+}
+
+export async function searchCarriers(
+  query: string,
+  kind: CarrierSearchKind = "all",
+  limit = 40,
+): Promise<CarrierRecord[]> {
+  const q = query.trim();
+  const pool = carrierPool(kind);
+  if (!q) return pool.filter((c) => CURATED_CARRIERS.some((x) => x.code === c.code && x.kind === c.kind)).slice(0, limit);
   return rankCarrierHits(q, pool, limit);
 }
 
