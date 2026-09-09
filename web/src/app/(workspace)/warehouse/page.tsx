@@ -182,7 +182,7 @@ export default function WarehouseDeskPage() {
           <Badge tone="info">Phase 10</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" className="h-9" onClick={handlePreview}>
+          <Button type="button" variant="secondary" className="h-9" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             Preview
           </Button>

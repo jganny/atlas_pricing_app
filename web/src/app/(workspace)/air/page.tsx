@@ -720,7 +720,7 @@ function AirDeskInner() {
             <Zap className="mr-1.5 h-4 w-4" />
             Circulars
           </Button>
-          <Button type="button" variant="secondary" className="h-9" onClick={handlePreview}>
+          <Button type="button" variant="secondary" className="h-9" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             {lanes.length > 1 ? "Preview all lanes" : "Preview"}
           </Button>

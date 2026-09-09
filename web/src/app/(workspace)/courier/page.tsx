@@ -574,7 +574,7 @@ function CourierDeskInner() {
             <RotateCcw className="mr-2 h-4 w-4" />
             Reset
           </Button>
-          <Button type="button" variant="secondary" onClick={handlePreview}>
+          <Button type="button" variant="secondary" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-2 h-4 w-4" />
             Preview
           </Button>
