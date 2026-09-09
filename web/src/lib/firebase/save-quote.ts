@@ -2,16 +2,11 @@
 
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult, SeaMode } from "@atlas/pricing-core";
-import {
-  serializeLinerOption,
-  type AirlineOption,
-  type LinerOption,
-} from "@/lib/pricing/carrier-options";
+import type { AirlineOption, LinerOption } from "@/lib/pricing/carrier-options";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
-import { computeLinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
-import { airlineSnapshot } from "@/lib/quotes/option-breakdown";
+import { airlineSnapshot, courierSnapshot, linerSnapshot } from "@/lib/quotes/option-breakdown";
 import {
   ensureIncidentalTerm,
   formatRoutingPreview,
@@ -60,6 +55,7 @@ export interface SaveCourierInput extends SaveMeta {
   packages: CourierFreightResult["packages"];
   calc: CourierFreightResult;
   termsAndConditions?: string;
+  validity?: string;
 }
 
 async function writeQuote(id: string, quoteData: Record<string, unknown>): Promise<string> {
@@ -109,7 +105,6 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
       carrierName: input.calc.chosen?.name ?? "",
       transit: input.calc.chosen?.transit ?? "",
       packages: input.packages,
-      carrierQuotes: input.calc.quotes,
       surcharges: input.calc.surcharges,
       baseFreight: input.calc.baseFreight,
       buyFreight: input.calc.buyFreight,
@@ -119,6 +114,14 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
       gstAmount: input.calc.tax,
       marginPct: input.marginPct,
       declaredValue: input.calc.surcharges.declaredValue,
+      validity: input.validity || "",
+      carrierQuotes: input.calc.quotes.map((q) =>
+        courierSnapshot(q, input.calc.chosen?.id ?? "", {
+          validity: input.validity || "",
+          chargeableKg: input.calc.chargeableKg,
+          gstAmount: input.calc.tax,
+        }),
+      ),
       termsAndConditions: input.termsAndConditions ?? DEFAULT_COURIER_TERMS,
     },
     notes: `Courier quote. CHW: ${input.calc.chargeableKg} kg, Zone ${input.calc.zone}, ${input.calc.chosen?.name ?? ""}`,
@@ -306,6 +309,18 @@ export interface SaveSeaInput extends SaveMeta {
   termsAndConditions: string;
   customExchangeRate?: number;
   lanes?: SavedQuoteLane[];
+  quotedLanes?: Array<{
+    laneId: string;
+    laneLabel: string;
+    origin: string;
+    destination: string;
+    airline: string;
+    amount: number;
+    validity?: string;
+    routing?: string;
+    tt?: string;
+  }>;
+  allLanesAmount?: number;
 }
 
 export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
@@ -315,27 +330,31 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
   const liner = input.selected.name;
   const route = `${originCode} → ${destCode} via ${liner || "Any"}`;
   const now = new Date();
-  const amount = input.totals.grandSell;
   const fx = input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : 83.5;
-  const amountINR = input.currency === "INR" ? amount : amount * fx;
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
   const chargeableCbmOverride = Number(input.chargeableCbmOverride ?? 0);
-  const liners = input.liners.map((l) => ({
-    ...serializeLinerOption(l),
-    quoteTotal: computeLinerTotals(
-      input.mode as SeaMode,
-      input.grossWeightKg,
-      input.volumeCbm,
-      chargeableCbmOverride,
-      l,
-    ).grandSell,
-  }));
-  const lanes = (input.lanes ?? []).map((l) => ({
+  const laneRows = (input.lanes ?? []).map((l) => ({
     id: l.id,
     origin: l.origin,
     destination: l.destination,
   }));
+  const fallbackLaneId = laneRows[0]?.id ?? "";
+  const liners = input.liners.map((l) =>
+    linerSnapshot(
+      l,
+      input.mode as SeaMode,
+      input.grossWeightKg,
+      input.volumeCbm,
+      chargeableCbmOverride,
+      laneRows,
+      fallbackLaneId,
+    ),
+  );
+  const quotedLanes = input.quotedLanes ?? [];
+  const amount =
+    input.allLanesAmount && input.allLanesAmount > 0 ? input.allLanesAmount : input.totals.grandSell;
+  const amountINR = input.currency === "INR" ? amount : amount * fx;
 
   const alternatives = input.liners
     .filter((l) => l.id !== input.selected.id)
@@ -377,7 +396,9 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     details: {
       origin: input.origin,
       destination: input.destination,
-      lanes,
+      lanes: laneRows,
+      quotedLanes,
+      allLanesTotal: amount,
       module: input.module,
       type: input.mode,
       shippingMode: input.mode,

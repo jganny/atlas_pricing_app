@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, Warehouse } from "lucide-react";
+import { Eye, Save, Warehouse } from "lucide-react";
 import {
   Badge,
   Button,
@@ -15,6 +15,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { ValidityField } from "@/components/ValidityField";
+import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -26,6 +27,8 @@ import { DESK_CURRENCIES, WAREHOUSE_LOCATIONS } from "@/lib/desk/constants";
 import { computeGp, ensureIncidentalTerm } from "@/lib/pricing/quote-display";
 import { formatCurrency } from "@/lib/utils";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { nextQuoteNumber } from "@/lib/quotes/ref-id";
+import type { SavedQuote } from "@/lib/types";
 
 const DEFAULT_TERMS = ensureIncidentalTerm(
   "1. Storage billed per CBM per day (or part thereof).\n" +
@@ -59,10 +62,55 @@ export default function WarehouseDeskPage() {
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
+  const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
 
   const storage = ratePerCbm * cbm * Math.max(1, days);
   const total = useMemo(() => storage + handling, [storage, handling]);
   const { gp, gpReady } = useMemo(() => computeGp(total, buyTotal), [total, buyTotal]);
+  const routeLabel =
+    location === "Others" && otherDescription.trim()
+      ? `Others — ${otherDescription.trim()}`
+      : location;
+
+  function handlePreview() {
+    if (!customer.trim() || !location.trim()) {
+      toast("Customer and location are required for preview.", "error");
+      setTab("details");
+      return;
+    }
+    if (location === "Others" && !otherDescription.trim()) {
+      toast("Describe the other warehouse location", "error");
+      return;
+    }
+    const q: SavedQuote = {
+      id: "preview",
+      customer: customer.trim() || "Draft",
+      creator: user?.username || "",
+      status: "quoted",
+      type: "warehouse",
+      quoteNumber: nextQuoteNumber(),
+      date: new Date().toISOString().split("T")[0],
+      timestamp: Date.now(),
+      amount: total,
+      currency,
+      route: routeLabel,
+      details: {
+        mode: "Warehouse",
+        type: "warehouse",
+        location,
+        otherDescription,
+        storageType,
+        ratePerCbm,
+        cbm,
+        days,
+        handling,
+        storage,
+        validity,
+        termsAndConditions: terms,
+      },
+    };
+    setPreviewQuote(q);
+  }
 
   async function save() {
     if (!customer.trim() || !location.trim()) {
@@ -133,10 +181,16 @@ export default function WarehouseDeskPage() {
           </h1>
           <Badge tone="info">Phase 10</Badge>
         </div>
-        <Button id="warehouse-save" type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
-          <Save className="h-4 w-4" />
-          Save quote
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" className="h-9" onClick={handlePreview}>
+            <Eye className="mr-1.5 h-4 w-4" />
+            Preview
+          </Button>
+          <Button id="warehouse-save" type="button" className="gap-1.5" disabled={busy} onClick={() => void save()}>
+            <Save className="h-4 w-4" />
+            Save quote
+          </Button>
+        </div>
       </div>
 
       <Tabs
@@ -318,6 +372,10 @@ export default function WarehouseDeskPage() {
           <p className="mt-4 text-xs text-[var(--color-text-muted)]">⌘S to save</p>
         </Card>
       </div>
+
+      {previewQuote ? (
+        <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />
+      ) : null}
     </div>
   );
 }

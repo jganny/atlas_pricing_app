@@ -30,6 +30,7 @@ import {
   truckerQuoteTotal,
   type TruckerOption,
 } from "@/lib/pricing/carrier-options";
+import { truckerSnapshot } from "@/lib/quotes/option-breakdown";
 import type { SavedQuote } from "@/lib/types";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { queryKeys } from "@/hooks/query-keys";
@@ -180,17 +181,8 @@ export default function TransportDeskPage() {
         detention,
         tolls,
         truckerName: selectedTrucker?.name || vehicleType,
-        truckers: truckers.map((t) => ({
-          id: t.id,
-          name: t.name || "Untitled",
-          kind: "trucker",
-          selected: t.selected,
-          freightBuy: t.freightBuy,
-          freightSell: t.freightSell,
-          detention: t.detention,
-          tolls: t.tolls,
-          quoteTotal: truckerQuoteTotal(t),
-        })),
+        validity,
+        truckers: truckers.map((t) => truckerSnapshot(t, validity)),
         termsAndConditions: terms,
         mode: "Transport",
         type: "transport",

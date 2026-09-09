@@ -13,6 +13,7 @@ import {
 import { Badge, Button, Card, Tabs } from "@/components/ui";
 import { PincodeCombobox } from "@/components/PincodeCombobox";
 import { LocationCombobox } from "@/components/LocationCombobox";
+import { ValidityField } from "@/components/ValidityField";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { useAuthStore } from "@/store/auth";
@@ -20,6 +21,7 @@ import { useLiveData } from "@/lib/api";
 import { DEFAULT_COURIER_TERMS, saveCourierQuote } from "@/lib/firebase/save-quote";
 import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
 import { allLanesRoute } from "@/lib/quotes/lanes";
+import { courierSnapshot } from "@/lib/quotes/option-breakdown";
 import { loadCourierDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
@@ -150,6 +152,7 @@ function CourierDeskInner() {
   const [selectedCarrier, setSelectedCarrier] = useState("dhl");
   const [directoryCarrier, setDirectoryCarrier] = useState("");
   const [gstEnabled, setGstEnabled] = useState(true);
+  const [validity, setValidity] = useState("15 days");
   const [packages, setPackages] = useState<CourierPackageLine[]>([{ ...EMPTY_PACKAGE }]);
   const [surcharges, setSurcharges] = useState(() => ({ ...defaultSurcharges }));
   const [terms, setTerms] = useState(DEFAULT_COURIER_TERMS);
@@ -292,6 +295,7 @@ function CourierDeskInner() {
     setSelectedCarrier(loaded.selectedCarrier);
     setDirectoryCarrier(String(loader.sourceQuote?.details?.directoryCarrier ?? loaded.selectedCarrier ?? ""));
     setGstEnabled(loaded.gstEnabled);
+    setValidity(loaded.validity);
     setPackages(loaded.packages);
     setSurcharges({ ...defaultSurcharges, ...loaded.surcharges });
     if (loaded.terms) setTerms(loaded.terms);
@@ -334,6 +338,7 @@ function CourierDeskInner() {
     setSelectedCarrier("dhl");
     setDirectoryCarrier("");
     setGstEnabled(true);
+    setValidity("15 days");
     setPackages([{ ...EMPTY_PACKAGE }]);
     setSurcharges({ ...defaultSurcharges });
     setTerms(DEFAULT_COURIER_TERMS);
@@ -350,6 +355,14 @@ function CourierDeskInner() {
   }
 
   const quotedCarrierName = directoryCarrier.trim() || result.chosen?.name || "";
+  const carrierSnaps = () =>
+    result.quotes.map((q) =>
+      courierSnapshot(q, result.chosen?.id ?? selectedCarrier, {
+        validity,
+        chargeableKg: result.chargeableKg,
+        gstAmount: result.tax,
+      }),
+    );
 
   const handlePreview = () => {
     if (result.chargeableKg <= 0) {
@@ -379,11 +392,12 @@ function CourierDeskInner() {
         carrier: result.chosen?.id ?? "",
         carrierName: quotedCarrierName,
         directoryCarrier,
-        carrierQuotes: result.quotes,
+        carrierQuotes: carrierSnaps(),
         chargeableWeight: result.chargeableKg,
         zone: result.zone,
         baseFreight: result.baseFreight,
         gstAmount: result.tax,
+        validity,
         originCity,
         destCity,
         lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
@@ -434,11 +448,12 @@ function CourierDeskInner() {
           carrier: result.chosen?.id ?? "",
           carrierName: name,
           directoryCarrier,
-          carrierQuotes: result.quotes,
+          carrierQuotes: carrierSnaps(),
           chargeableWeight: result.chargeableKg,
           zone: result.zone,
           baseFreight: result.baseFreight,
           gstAmount: result.tax,
+          validity,
           originCity,
           destCity,
           lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
@@ -469,6 +484,7 @@ function CourierDeskInner() {
               packages: result.packages,
               calc: result,
               termsAndConditions: terms,
+              validity,
               quoteId,
               quoteNumber,
               status: loader.editingStatus,
@@ -515,6 +531,7 @@ function CourierDeskInner() {
       currency,
       marginPct,
       gstEnabled,
+      validity,
       result,
       terms,
       loader.editingQuoteId,
@@ -790,11 +807,16 @@ function CourierDeskInner() {
                   className="mt-1 w-full rounded-lg border px-3 py-2"
                   value={marginPct}
                   onChange={(e) => setMarginPct(Number(e.target.value))}
-                  onKeyDown={(e) =>
-                    lastFieldTab(e, () => goCourierStep("packages", "courier-pkg-0-qty"))
-                  }
                 />
               </label>
+              <ValidityField
+                value={validity}
+                onChange={setValidity}
+                textInputId="courier-validity"
+                onTextKeyDown={(e) =>
+                  lastFieldTab(e, () => goCourierStep("packages", "courier-pkg-0-qty"))
+                }
+              />
             </div>
           ) : null}
 
@@ -831,7 +853,7 @@ function CourierDeskInner() {
                             onChange={(e) => updatePkg(i, { qty: Number(e.target.value) })}
                             onKeyDown={(e) =>
                               i === 0
-                                ? firstFieldBackTab(e, () => goCourierStep("shipment", "courier-margin"))
+                                ? firstFieldBackTab(e, () => goCourierStep("shipment", "courier-validity"))
                                 : undefined
                             }
                           />

@@ -23,6 +23,7 @@ import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
 import { cacheOfflineQuote } from "@/lib/quotes/offline-cache";
 import { appendCalcAudit } from "@/lib/quotes/calc-audit";
 import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "@/lib/quotes/persist-enquiry";
+import { linerSnapshot } from "@/lib/quotes/option-breakdown";
 import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { lookupSeaTariff } from "@/lib/firebase/tariffs";
@@ -53,7 +54,14 @@ import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
-import { allLanesRoute, quotedOnLane, selectWithinLane } from "@/lib/quotes/lanes";
+import {
+  allLanesRoute,
+  laneRouteLabel,
+  quotedLaneRows,
+  quotedOnLane,
+  selectWithinLane,
+  usableLanes,
+} from "@/lib/quotes/lanes";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
@@ -154,6 +162,14 @@ function SeaDeskInner() {
   }, [liners, mode, grossWeightKg, volumeCbm, chargeableCbmOverride]);
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
+  const quotedLanes = useMemo(
+    () => quotedLaneRows(lanes, liners, (l) => totalsById[l.id]?.grandSell ?? 0),
+    [lanes, liners, totalsById],
+  );
+  const allLanesQuotedTotal = useMemo(
+    () => quotedLanes.reduce((sum, lane) => sum + lane.amount, 0),
+    [quotedLanes],
+  );
   const cheapestLinerId = useMemo(() => {
     const priced = liners.filter((l) => (totalsById[l.id]?.grandSell ?? 0) > 0);
     const sorted = [...priced].sort(
@@ -329,15 +345,32 @@ function SeaDeskInner() {
 
   const handlePreview = () => {
     const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
-    const linerErr = validateSelectedLiner(selected, mode);
-    if (cargoErr || linerErr || !selected || !selectedTotals) {
-      toast(cargoErr || linerErr || "Complete the quote before preview.", "error");
+    const fallback = lanes[0]?.id || "";
+    const completeLanes = usableLanes(lanes);
+    const toCheck = completeLanes.length ? completeLanes : [activeLane].filter(Boolean);
+    for (const lane of toCheck) {
+      if (!lane) continue;
+      const quoted = quotedOnLane(liners, lane.id, fallback);
+      const linerErr = validateSelectedLiner(quoted, mode);
+      if (linerErr) {
+        toast(`${laneRouteLabel(lane, lanes.indexOf(lane))}: ${linerErr}`, "error");
+        setActiveLaneId(lane.id);
+        setStep("carrier");
+        return;
+      }
+    }
+    if (cargoErr || !selected || !selectedTotals) {
+      toast(cargoErr || "Complete the quote before preview.", "error");
       return;
     }
     const originCode = origin.split(" - ")[0]?.trim() || origin.trim();
     const destCode = destination.split(" - ")[0]?.trim() || destination.trim();
-    const amount = selectedTotals.grandSell;
+    const amount = allLanesQuotedTotal || selectedTotals.grandSell;
     const fx = customFx > 0 ? customFx : 83.5;
+    const linerLabel =
+      quotedLanes.length > 1
+        ? quotedLanes.map((l) => `${l.laneLabel}: ${l.airline || "—"}`).join(" · ")
+        : selected.name;
     const q: SavedQuote = {
       id: loader.editingQuoteId || "preview",
       customer: customer.trim() || "Draft",
@@ -350,11 +383,11 @@ function SeaDeskInner() {
       amount,
       currency,
       amountINR: currency === "INR" ? amount : amount * fx,
-      route: `${originCode} → ${destCode} via ${selected.name || "Any"}`,
+      route: allLanesRoute(lanes) || `${originCode} → ${destCode} via ${selected.name || "Any"}`,
       details: {
         origin,
         destination,
-        liner: selected.name,
+        liner: linerLabel,
         shippingLine: selected.name,
         incoterm,
         module,
@@ -369,15 +402,12 @@ function SeaDeskInner() {
         routing: selected.routing,
         tt: selected.tt,
         validity: selected.validity,
-        liners: liners.map((l) => ({
-          id: l.id,
-          name: l.name,
-          kind: l.kind,
-          selected: l.selected,
-          quoteTotal: totalsById[l.id]?.grandSell ?? 0,
-          routing: l.routing,
-          tt: l.tt,
-        })),
+        lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+        quotedLanes,
+        allLanesTotal: amount,
+        liners: liners.map((l) =>
+          linerSnapshot(l, mode, grossWeightKg, volumeCbm, chargeableCbmOverride, lanes, fallback),
+        ),
         termsAndConditions: terms,
         mode: "Sea",
       },
@@ -421,8 +451,12 @@ function SeaDeskInner() {
 
       const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
       const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
-      const amount = selectedTotals.grandSell;
+      const amount = allLanesQuotedTotal || selectedTotals.grandSell;
       const fx = customFx > 0 ? customFx : 83.5;
+      const fallback = lanes[0]?.id || "";
+      const linerSnaps = liners.map((l) =>
+        linerSnapshot(l, mode, grossWeightKg, volumeCbm, chargeableCbmOverride, lanes, fallback),
+      );
       const localQuote: SavedQuote = {
         id: quoteId,
         customer: customer.trim(),
@@ -439,23 +473,19 @@ function SeaDeskInner() {
         details: {
           origin,
           destination,
-          liner: selected.name,
+          liner:
+            quotedLanes.length > 1
+              ? quotedLanes.map((l) => `${l.laneLabel}: ${l.airline || "—"}`).join(" · ")
+              : selected.name,
           shippingLine: selected.name,
           incoterm,
           module,
           commodity,
           type: mode,
           lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
-          liners: liners.map((l) => ({
-            id: l.id,
-            name: l.name,
-            kind: l.kind,
-            selected: l.selected,
-            quoteTotal: totalsById[l.id]?.grandSell ?? 0,
-            routing: l.routing,
-            tt: l.tt,
-            laneId: l.laneId,
-          })),
+          quotedLanes,
+          allLanesTotal: amount,
+          liners: linerSnaps,
           termsAndConditions: terms,
           mode: "Sea",
         },
@@ -489,6 +519,8 @@ function SeaDeskInner() {
               quoteNumber,
               status: loader.editingStatus,
               lanes,
+              quotedLanes,
+              allLanesAmount: amount,
             });
             cloud = "live";
             cacheOfflineQuote({
@@ -548,6 +580,8 @@ function SeaDeskInner() {
       loader,
       queryClient,
       lanes,
+      quotedLanes,
+      allLanesQuotedTotal,
       totalsById,
     ],
   );
@@ -1089,6 +1123,7 @@ function SeaDeskInner() {
                       rows={opt.destSurcharges}
                       onChange={(rows) => updateLiner(opt.id, { destSurcharges: rows })}
                       units={["flat", "cbm", "container"]}
+                      lastFieldTabTarget={idx === laneLiners.length - 1 ? "sea-next-terms" : undefined}
                     />
 
                     {tot ? (
@@ -1206,6 +1241,7 @@ function SeaDeskInner() {
                     selected: l.selected,
                     routing: l.routing,
                     tt: l.tt,
+                    laneId: l.laneId,
                   })),
                 )}
                 currency={currency}

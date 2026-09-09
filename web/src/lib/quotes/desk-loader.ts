@@ -204,6 +204,7 @@ export function loadCourierDeskFromQuote(quote: SavedQuote) {
     marginPct: Number(d.marginPct ?? 12),
     selectedCarrier: String(d.carrier ?? "dhl"),
     gstEnabled: d.gstEnabled !== false,
+    validity: String(d.validity ?? "15 days") || "15 days",
     packages: (d.packages as Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>) ?? [
       { qty: 1, gw: 5, l: 30, w: 20, h: 15 },
     ],

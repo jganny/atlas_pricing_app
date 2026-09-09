@@ -27,6 +27,7 @@ export function kindLabel(kind: string): string {
   if (k === "courier") return "Courier";
   if (k === "trucker" || k === "transport") return "Trucker";
   if (k === "airline") return "Airline";
+  if (k === "warehouse" || k === "storage") return "Warehouse";
   return kind ? kind.charAt(0).toUpperCase() + kind.slice(1) : "Option";
 }
 
@@ -36,6 +37,7 @@ export function compareHeading(type: string): string {
   if (t.includes("sea")) return "Liner / coloader options";
   if (t.includes("courier")) return "Courier options";
   if (t.includes("transport")) return "Trucker options";
+  if (t.includes("warehouse")) return "Storage option";
   return "Vendor options";
 }
 
@@ -45,6 +47,7 @@ export function quotedFieldLabel(type: string): string {
   if (t.includes("sea")) return "Quoted liner";
   if (t.includes("courier")) return "Quoted carrier";
   if (t.includes("transport")) return "Quoted trucker";
+  if (t.includes("warehouse")) return "Quoted storage";
   return "Quoted option";
 }
 
@@ -246,6 +249,28 @@ export function vendorRowsFromQuote(quote: SavedQuote): VendorPreviewRow[] {
           kind: "trucker",
           kindLabel: kindLabel("trucker"),
           total: single || num(quote.amount),
+          selected: true,
+          routing: "",
+          tt: "",
+        },
+      ]);
+    }
+  }
+
+  if (type.includes("warehouse")) {
+    const days = Math.max(1, num(d.days) || 1);
+    const storage = num(d.storage) || num(d.ratePerCbm) * num(d.cbm) * days;
+    const handling = num(d.handling);
+    const total = storage + handling || num(quote.amount);
+    const name = String(d.location || d.otherDescription || "Warehouse");
+    if (total > 0 || name) {
+      return markCheapest([
+        {
+          id: "warehouse-0",
+          name,
+          kind: "warehouse",
+          kindLabel: kindLabel("warehouse"),
+          total,
           selected: true,
           routing: "",
           tt: "",

@@ -47,25 +47,26 @@ function identityRows(quote: SavedQuote): Array<[string, string]> {
     ["Date", quote.date || "—"],
   ];
 
+  const quotedLanes = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
+  if (quotedLanes.length > 1) {
+    rows.push(["Lanes", `${quotedLanes.length} origin → destination pairs`]);
+    quotedLanes.forEach((raw) => {
+      const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+      const label = String(lane.laneLabel ?? "Lane");
+      const name = String(lane.airline ?? "—");
+      const amt = money(lane.amount, cur);
+      const validity = String(lane.validity ?? "").trim();
+      rows.push([label, `${name} · ${amt}${validity ? ` · valid ${validity}` : ""}`]);
+    });
+    rows.push(["All lanes total", money(d.allLanesTotal ?? quote.amount, cur)]);
+  } else if (type === "air" || type === "sea" || type === "transport") {
+    rows.push(
+      ["Origin", String(d.origin ?? "—")],
+      ["Destination", String(d.destination ?? "—")],
+    );
+  }
+
   if (type === "air") {
-    const quotedLanes = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
-    if (quotedLanes.length > 1) {
-      rows.push(["Lanes", `${quotedLanes.length} origin → destination pairs`]);
-      quotedLanes.forEach((raw) => {
-        const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-        const label = String(lane.laneLabel ?? "Lane");
-        const name = String(lane.airline ?? "—");
-        const amt = money(lane.amount, cur);
-        const validity = String(lane.validity ?? "").trim();
-        rows.push([label, `${name} · ${amt}${validity ? ` · valid ${validity}` : ""}`]);
-      });
-      rows.push(["All lanes total", money(d.allLanesTotal ?? quote.amount, cur)]);
-    } else {
-      rows.push(
-        ["Origin", String(d.origin ?? "—")],
-        ["Destination", String(d.destination ?? "—")],
-      );
-    }
     rows.push(
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Commodity", String(d.commodity ?? "—")],
@@ -75,8 +76,6 @@ function identityRows(quote: SavedQuote): Array<[string, string]> {
     );
   } else if (type === "sea") {
     rows.push(
-      ["Origin", String(d.origin ?? "—")],
-      ["Destination", String(d.destination ?? "—")],
       ["Mode", String(d.type ?? d.module ?? "—").toUpperCase()],
       ["Incoterm", String(d.incoterm ?? "—")],
       ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
@@ -92,13 +91,22 @@ function identityRows(quote: SavedQuote): Array<[string, string]> {
     );
   } else if (type === "transport") {
     rows.push(
-      ["Origin", String(d.origin ?? "—")],
-      ["Destination", String(d.destination ?? "—")],
       ["Vehicle", String(d.vehicleType ?? "—")],
       ["Service", String(d.serviceType ?? "—")],
     );
-  } else {
+  } else if (type === "warehouse") {
+    rows.push(
+      ["Location", String(d.location ?? quote.route ?? "—")],
+      ["Storage type", String(d.storageType ?? "—")],
+      ["CBM", String(d.cbm ?? "—")],
+      ["Days", String(d.days ?? "—")],
+    );
+  } else if (quotedLanes.length <= 1) {
     rows.push(["Amount", money(quote.amount, cur)]);
+  }
+
+  if (quotedLanes.length <= 1 && String(d.validity ?? "").trim()) {
+    rows.push(["Validity", String(d.validity)]);
   }
 
   if (quote.notes) rows.push(["Notes", quote.notes]);
@@ -119,6 +127,32 @@ function BreakdownPanel({
   const chw = option.chargeableWeight || chargeableWeight;
   const rate = option.appliedRate;
   const base = option.baseFreight;
+  const kind = (option.kind || "").toLowerCase();
+  const isTrucker = kind === "trucker" || kind === "transport";
+  const isWarehouse = kind === "warehouse" || kind === "storage";
+  const isSea = kind === "liner" || (kind === "coloader" && rate <= 0);
+  const showKgRate = !isTrucker && !isWarehouse && !isSea && rate > 0 && chw > 0;
+  const chargeLines: Array<[string, string]> = [];
+  if (isTrucker) {
+    chargeLines.push(["Freight", money(option.freightSell || base, currency)]);
+    if (option.detention > 0) chargeLines.push(["Detention", money(option.detention, currency)]);
+    if (option.tolls > 0) chargeLines.push(["Tolls", money(option.tolls, currency)]);
+  } else if (isWarehouse) {
+    chargeLines.push(["Storage", money(option.storage || base, currency)]);
+    if (option.handling > 0) chargeLines.push(["Handling", money(option.handling, currency)]);
+  } else {
+    chargeLines.push([
+      "Base freight",
+      showKgRate
+        ? `${chw.toFixed(2)} kg × ${money(rate, currency)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base, currency)}`
+        : money(base, currency),
+    ]);
+    if (option.originFees > 0) chargeLines.push(["Origin fees", money(option.originFees, currency)]);
+    if (option.ams > 0) chargeLines.push(["AMS", money(option.ams, currency)]);
+    if (option.destFees > 0) chargeLines.push(["Destination fees", money(option.destFees, currency)]);
+    if (option.gst > 0) chargeLines.push(["GST", money(option.gst, currency)]);
+  }
+  const showRouting = !isTrucker && !isWarehouse;
   return (
     <div className="rounded-lg border border-slate-200 p-4 text-sm" data-testid="quote-option-breakup">
       <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
@@ -131,44 +165,28 @@ function BreakdownPanel({
         {option.laneLabel ? ` · ${option.laneLabel}` : ""}
       </div>
       <dl className="space-y-1.5">
-        <div className="flex justify-between gap-4">
-          <dt>Base freight</dt>
-          <dd className="font-semibold">
-            {rate > 0 && chw > 0
-              ? `${chw.toFixed(2)} kg × ${money(rate, currency)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base, currency)}`
-              : money(base, currency)}
-          </dd>
-        </div>
-        {option.originFees > 0 ? (
-          <div className="flex justify-between gap-4">
-            <dt>Origin fees</dt>
-            <dd className="font-semibold">{money(option.originFees, currency)}</dd>
+        {chargeLines.map(([label, value]) => (
+          <div key={label} className="flex justify-between gap-4">
+            <dt>{label}</dt>
+            <dd className="font-semibold">{value}</dd>
           </div>
-        ) : null}
-        {option.ams > 0 ? (
-          <div className="flex justify-between gap-4">
-            <dt>AMS</dt>
-            <dd className="font-semibold">{money(option.ams, currency)}</dd>
-          </div>
-        ) : null}
-        {option.destFees > 0 ? (
-          <div className="flex justify-between gap-4">
-            <dt>Destination fees</dt>
-            <dd className="font-semibold">{money(option.destFees, currency)}</dd>
-          </div>
-        ) : null}
+        ))}
         <div className="flex justify-between gap-4 border-t border-slate-100 pt-1.5">
           <dt>Option total</dt>
           <dd className="font-extrabold text-emerald-700">{money(option.total, currency)}</dd>
         </div>
-        <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
-          <dt>Routing</dt>
-          <dd>{formatRoutingPreview(option.routing || "") || "—"}</dd>
-        </div>
-        <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
-          <dt>Transit time</dt>
-          <dd>{formatTransitPreview(option.tt || "") || "—"}</dd>
-        </div>
+        {showRouting ? (
+          <>
+            <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
+              <dt>Routing</dt>
+              <dd>{formatRoutingPreview(option.routing || "") || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
+              <dt>Transit time</dt>
+              <dd>{formatTransitPreview(option.tt || "") || "—"}</dd>
+            </div>
+          </>
+        ) : null}
         <div className="flex justify-between gap-4 text-[var(--color-text-muted)]">
           <dt>Validity</dt>
           <dd data-testid="quote-option-validity">{option.validity || "—"}</dd>
@@ -289,7 +307,7 @@ export function QuotePreviewModal({
                 vendors={vendors}
                 currency={cur}
                 heading={compareHeading(type)}
-                hint="Click any airline or liner to view that option’s charges, routing, transit, and validity. Quoted stays the commercial offer. The PDF prints every breakup."
+                hint="Click any option to view that breakup. Quoted stays the commercial offer. The PDF prints every option."
                 onSelect={setInspectId}
                 activeId={inspectId}
                 testId="quote-preview-vendors"
@@ -359,7 +377,7 @@ export function QuotePreviewModal({
                 Charge pack · every option
               </h3>
               <p className="text-xs text-[var(--color-text-muted)]">
-                PDFs cannot run live toggles. Each airline and origin–destination pair is printed in
+                PDFs cannot run live toggles. Each option and origin–destination pair is printed in
                 full so the client can compare without opening the app.
               </p>
               {options.map((option) => (

@@ -135,6 +135,20 @@ assert.equal(truck[0].name, "Highway Express");
 assert.equal(truck[0].cheapest, true);
 assert.equal(truck[1].selected, true);
 
+const warehouse = vendorRowsFromQuote({
+  id: "w",
+  customer: "A",
+  creator: "ganny",
+  status: "quoted",
+  type: "warehouse",
+  amount: 8500,
+  currency: "INR",
+  details: { location: "Bhiwandi", ratePerCbm: 100, cbm: 10, days: 7, handling: 500 },
+});
+assert.equal(warehouse.length, 1);
+assert.equal(warehouse[0].name, "Bhiwandi");
+assert.equal(warehouse[0].total, 7500);
+
 const fromDesk = vendorRowsFromEntries([
   { id: "a", name: "QR", kind: "airline", total: 900, selected: true },
   { id: "b", name: "EY", kind: "airline", total: 700, selected: false },
