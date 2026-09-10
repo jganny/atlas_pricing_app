@@ -61,6 +61,68 @@ const CITY_TO_IATA: Record<string, string> = {
   shanghai: 'PVG',
   tokyo: 'NRT',
   sydney: 'SYD',
+  chandigarh: 'IXC',
+  mohali: 'IXC',
+  zirakpur: 'IXC',
+  dhakoli: 'IXC',
+  panchkula: 'IXC',
+  'sas nagar': 'IXC',
+  sasnagar: 'IXC',
+  kharar: 'IXC',
+  'dera bassi': 'IXC',
+  derabassi: 'IXC',
+  patiala: 'IXC',
+  baddi: 'IXC',
+  ludhiana: 'LUH',
+  amritsar: 'ATQ',
+  jalandhar: 'ATQ',
+  gurugram: 'DEL',
+  gurgaon: 'DEL',
+  noida: 'DEL',
+  faridabad: 'DEL',
+  ghaziabad: 'DEL',
+  'mexico city': 'MEX',
+  'ciudad de mexico': 'MEX',
+}
+
+/** First 3 digits of an Indian PIN → nearest cargo airport (EXW pickup). */
+const PIN_PREFIX_TO_IATA: Record<string, string> = {
+  110: 'DEL',
+  121: 'DEL',
+  122: 'DEL',
+  124: 'DEL',
+  201: 'DEL',
+  133: 'IXC',
+  134: 'IXC',
+  140: 'IXC',
+  147: 'IXC',
+  160: 'IXC',
+  141: 'LUH',
+  143: 'ATQ',
+  144: 'ATQ',
+  226: 'LKO',
+  302: 'JAI',
+  380: 'AMD',
+  382: 'AMD',
+  390: 'BDQ',
+  394: 'STV',
+  395: 'STV',
+  400: 'BOM',
+  401: 'BOM',
+  411: 'PNQ',
+  403: 'GOI',
+  440: 'NAG',
+  452: 'IDR',
+  500: 'HYD',
+  560: 'BLR',
+  600: 'MAA',
+  641: 'CJB',
+  682: 'COK',
+  695: 'TRV',
+  700: 'CCU',
+  751: 'BBI',
+  781: 'GAU',
+  800: 'PAT',
 }
 
 const CITY_TO_UNLOCODE: Record<string, string> = {
@@ -95,9 +157,39 @@ function resolveAirport(token: string): string {
   if (!t || /^(as per|tba|tbd|nil|-)$/i.test(t)) return ''
   const mapped = CITY_TO_IATA[normalizeCityKey(t)] || CITY_TO_IATA[normalizeCityKey(t).replace(/\s/g, '')]
   if (mapped) return mapped
+  const fromAddr = airportFromAddress(t)
+  if (fromAddr) return fromAddr
   const code = t.match(/\b([A-Z]{3})\b/)
   if (code) return code[1].toUpperCase()
   return t.toUpperCase().slice(0, 3)
+}
+
+function airportFromPin(blob: string): string {
+  const m = blob.match(/\b(\d{6})\b/)
+  if (!m) return ''
+  return PIN_PREFIX_TO_IATA[m[1].slice(0, 3)] || ''
+}
+
+/** Scan an address (not a 3-letter IATA field) for PIN or locality → airport. */
+export function airportFromAddress(blob: string): string {
+  const pin = airportFromPin(blob)
+  if (pin) return pin
+  const key = normalizeCityKey(blob)
+  if (!key) return ''
+  const names = Object.keys(CITY_TO_IATA).sort((a, b) => b.length - a.length)
+  for (const name of names) {
+    if (name.length < 4) continue
+    const pattern = name.replace(/\s+/g, '\\s+')
+    if (new RegExp(`(?:^|[^a-z])${pattern}(?:$|[^a-z])`).test(key)) return CITY_TO_IATA[name]
+  }
+  return ''
+}
+
+function extractPickupAddress(text: string): string {
+  const re =
+    /(?:^|[\n\r])\s*(?:pick\s*-?\s*up\s*(?:address|location)|pickup\s*(?:address|location)|collection\s*address|ex-?works?\s*address|factory\s*address|shipper\s*address)\s*[:|\-]?\s*([\s\S]{3,600}?)(?=\n\s*(?:destination|airport of|port of discharge|port of loading|commodity|dimensions?|weight|total weight|package|unquote)\b|$)/i
+  const m = text.match(re)
+  return m?.[1] ? m[1].replace(/[ \t]+/g, ' ').trim() : ''
 }
 
 function labeledValue(text: string, labels: string[]): string {
@@ -246,6 +338,20 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
   if (!result.destination) {
     const toCode = t.match(/\bto\s+([A-Z]{3})\b/)
     if (toCode) result.destination = toCode[1]
+  }
+
+  const pickup = extractPickupAddress(t)
+  if (pickup) {
+    result.notes = result.notes ? `${result.notes}\n${pickup}` : pickup
+  }
+  if (!result.origin) {
+    result.origin = airportFromAddress(pickup || collected.notes || '')
+  }
+  if (!result.origin) {
+    const pinOnly = airportFromPin(t)
+    if (pinOnly && /\bindia\b|\bpunjab\b|\bnagar\b|\bpincode\b|\bpin\s*code\b/i.test(t)) {
+      result.origin = pinOnly
+    }
   }
 
   const incoterm = parseIncoterm(t)
