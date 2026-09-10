@@ -12,7 +12,6 @@ import {
   htmlDocumentToPdfFile,
   openWhatsApp,
   printHtmlDocument,
-  shareQuotePdf,
 } from "@/lib/quotes/quote-print";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { Badge, Button } from "@/components/ui";
@@ -262,12 +261,11 @@ export function QuotePreviewModal({
       const how = await emailQuotePdf({
         file,
         subject: clientDoc.shareSubject,
-        cover: clientDoc.emailCover,
       });
       toast(
         how === "shared"
-          ? "Choose Mail — the quotation PDF is attached."
-          : "PDF downloaded. Open the .eml draft (PDF is attached) or drop the PDF onto a new mail.",
+          ? "Mail opened with the quotation PDF attached — body is empty."
+          : "Open the .eml draft — body is empty, PDF is attached.",
         "success",
       );
     } catch (err) {
@@ -279,23 +277,13 @@ export function QuotePreviewModal({
   }
 
   async function handleWhatsApp() {
+    openWhatsApp(clientDoc.shareText);
     setShareBusy("Preparing PDF…");
     try {
       const file = await pdfFile();
-      const how = await shareQuotePdf({
-        file,
-        subject: clientDoc.shareSubject,
-        text: clientDoc.shareText,
-      });
-      if (how === "downloaded") openWhatsApp(clientDoc.shareText);
-      toast(
-        how === "shared"
-          ? "Pick WhatsApp — the quotation PDF goes with the message."
-          : "PDF saved. Attach Quote-….pdf in the WhatsApp chat that just opened.",
-        "success",
-      );
+      downloadBlob(file.name, file);
+      toast("WhatsApp opened. Attach the Quote PDF that just downloaded.", "success");
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
       toast(err instanceof Error ? err.message : "Could not prepare the quotation PDF", "error");
     } finally {
       setShareBusy(null);
@@ -358,8 +346,8 @@ export function QuotePreviewModal({
           </div>
           <GuideNote testId="quote-share-guide">
             {options.length > 1
-              ? "Email, WhatsApp, and Download all send one PDF: comparison table plus the full breakup for every airline (quoted offer first). Print / Save PDF is the same pack."
-              : "Email, WhatsApp, and Download send the official quotation as a PDF. Print / Save PDF is the same page on paper."}
+              ? "Email opens with the PDF only (no body text). WhatsApp opens the chat — attach the PDF that downloads. Download is the same pack: comparison plus every airline breakup."
+              : "Email opens with the PDF only (no body text). WhatsApp opens the chat — attach the PDF that downloads."}
           </GuideNote>
           <div className="mb-6 border-b-2 border-[var(--color-atlas-navy)] pb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
