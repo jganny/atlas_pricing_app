@@ -1,5 +1,5 @@
 /* Vertex PWA shell — never cache Firestore. Bump CACHE on every UI release. */
-const CACHE = "atlas-app-shell-v15";
+const CACHE = "atlas-app-shell-v16";
 const PRECACHE = [
   "/app/manifest.webmanifest",
   "/app/icon-192.png",
@@ -8,23 +8,43 @@ const PRECACHE = [
 ];
 
 self.addEventListener("install", (event) => {
+  // Do not skipWaiting() here. Auto-activate + clients.claim() during a reload
+  // makes Safari restore the session 2–3 times. Refresh now posts SKIP_WAITING.
   event.waitUntil(
     caches
       .open(CACHE)
       .then((cache) => cache.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" }))))
-      .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting()),
+      .catch(() => undefined),
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim()),
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
   );
 });
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    void self.skipWaiting();
+  }
+});
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone());
+      return response;
+    }
+  } catch {
+    /* fall through to cache */
+  }
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  return fetch(request);
+}
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -50,17 +70,21 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const isScriptOrStyle =
+    req.destination === "script" ||
+    req.destination === "style" ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".css");
+  if (isScriptOrStyle) {
+    event.respondWith(networkFirst(req));
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then((cached) => {
       const fetchPromise = fetch(req)
         .then((res) => {
-          if (
-            res.ok &&
-            (req.destination === "style" ||
-              req.destination === "script" ||
-              req.destination === "image" ||
-              url.pathname.endsWith(".webmanifest"))
-          ) {
+          if (res.ok && (req.destination === "image" || url.pathname.endsWith(".webmanifest"))) {
             const copy = res.clone();
             void caches.open(CACHE).then((cache) => cache.put(req, copy));
           }
