@@ -161,7 +161,7 @@ export const parityGroups: ParityGroup[] = [
       { id: "sq-sea-text", name: "Sea — paste enquiry text", legacy: "Smart Quote", react: "/smart-quote/sea", status: "done" },
       { id: "sq-file-upload", name: "File upload (PDF, Excel, Word, email)", legacy: "Air/Sea desk", react: "/smart-quote/air", status: "done", testHint: "Drop PDF/Excel/DOCX/TXT/EML on Smart Quote" },
       { id: "sq-apply-desk", name: "Apply parsed enquiry to full desk form", legacy: "Air/Sea desk", react: "/smart-quote/air", status: "done", testHint: "After parse → Apply to Air/Sea desk" },
-      { id: "sq-home-launcher", name: "Home New quote launcher (Option B)", legacy: "Smart Quote", react: "ruled-out", status: "done", testHint: "Intentionally not shipping — Option A desk paste is the path" },
+      { id: "sq-home-launcher", name: "Home New quote launcher (Option B)", legacy: "Smart Quote", react: "removed", status: "done", testHint: "Overlay removed from Quote hub and sidebar — desks + Ask Vertex are the path" },
       { id: "sq-excel-publish", name: "Excel tariff import → Circulars publish", legacy: "Circulars", status: "done" },
       { id: "sq-save", name: "Save Smart Quote draft as quote", legacy: "Smart Quote", react: "/smart-quote/air", status: "done", testHint: "Save draft quote from Smart Quote result" },
       { id: "sq-imap-inbox", name: "IMAP enquiry inbox (pricing + pricingsales)", legacy: "Email", react: "/inbox", status: "done", testHint: "React inbox complete; live poller uses functions secrets when deployed" },

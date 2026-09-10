@@ -41,7 +41,6 @@ import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { NewsTicker } from "./NewsTicker";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
-import { PremiumQuoteOverlay, QuoteOverlayToggle } from "./PremiumQuoteOverlay";
 
 type NavItem = {
   href: string;
@@ -149,7 +148,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const logout = useAuthStore((s) => s.logout);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pipOpen, setPipOpen] = useState(false);
-  const [quoteOpen, setQuoteOpen] = useState(false);
   const admin = isAdminUser(user?.username, user?.role);
 
   const visibleDesks = useMemo(
@@ -246,14 +244,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-100">
               {focus}
             </div>
-            <button
-              type="button"
-              onClick={() => setQuoteOpen(true)}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 px-3 py-2 text-xs font-bold text-white hover:bg-teal-400"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              New quote
-            </button>
           </div>
           <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
             {renderNavGroups({ dark: true })}
@@ -317,7 +307,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Atlas
             </Link>
             <div className="flex items-center gap-1">
-              <QuoteOverlayToggle onOpen={() => setQuoteOpen(true)} />
               {showInbox ? (
                 <Link href="/inbox" className="rounded-lg p-2 hover:bg-white/10" aria-label="Inbox">
                   <Inbox className="h-4 w-4" />
@@ -400,7 +389,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </p>
         <ul className="mt-3 space-y-2 text-xs">
           <li className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-2.5 py-2">
-            Use <strong>New quote</strong> to pick a lane, then quote on the real desk.
+            Open Air, Sea, Courier, or Transport — quotes are built on the desk.
           </li>
           <li className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-2.5 py-2">
             Mobile keeps Quote, Inbox, and Carriers — full desks on larger screens.
@@ -416,8 +405,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </li>
         </ul>
       </PremiumPip>
-
-      <PremiumQuoteOverlay open={quoteOpen} onOpenChange={setQuoteOpen} />
     </div>
   );
 }

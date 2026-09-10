@@ -11,7 +11,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
-import { PremiumQuoteOverlay } from "@/components/PremiumQuoteOverlay";
 import { useAuthStore } from "@/store/auth";
 import { deskFocusLabel } from "@/lib/auth/rbac";
 
@@ -23,7 +22,6 @@ import { deskFocusLabel } from "@/lib/auth/rbac";
 export default function MobileHomePage() {
   const user = useAuthStore((s) => s.user);
   const focus = deskFocusLabel(user?.username);
-  const [quoteOpen, setQuoteOpen] = useState(false);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
 
@@ -51,10 +49,10 @@ export default function MobileHomePage() {
 
   const tiles = [
     {
-      title: "New quote",
-      blurb: "3-step rate finder",
+      title: "Quote hub",
+      blurb: "Pick Air, Sea, Courier, or Road",
       icon: Sparkles,
-      onClick: () => setQuoteOpen(true),
+      href: "/quote",
     },
     {
       title: "Inbox",
@@ -85,38 +83,19 @@ export default function MobileHomePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {tiles.map((t) => {
-          const inner = (
-            <>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-atlas-navy)] text-white">
-                <t.icon className="h-5 w-5" />
-              </span>
-              <span className="mt-3 text-sm font-extrabold text-[var(--color-atlas-navy)]">{t.title}</span>
-              <span className="text-[11px] text-[var(--color-text-muted)]">{t.blurb}</span>
-            </>
-          );
-          if (t.href) {
-            return (
-              <Link
-                key={t.title}
-                href={t.href}
-                className="flex flex-col rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm active:scale-[0.98]"
-              >
-                {inner}
-              </Link>
-            );
-          }
-          return (
-            <button
-              key={t.title}
-              type="button"
-              onClick={t.onClick}
-              className="flex flex-col rounded-2xl border border-[var(--color-border)] bg-white p-4 text-left shadow-sm active:scale-[0.98]"
-            >
-              {inner}
-            </button>
-          );
-        })}
+        {tiles.map((t) => (
+          <Link
+            key={t.title}
+            href={t.href}
+            className="flex flex-col rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm active:scale-[0.98]"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-atlas-navy)] text-white">
+              <t.icon className="h-5 w-5" />
+            </span>
+            <span className="mt-3 text-sm font-extrabold text-[var(--color-atlas-navy)]">{t.title}</span>
+            <span className="text-[11px] text-[var(--color-text-muted)]">{t.blurb}</span>
+          </Link>
+        ))}
       </div>
 
       {!installed ? (
@@ -159,8 +138,6 @@ export default function MobileHomePage() {
           Full desktop home
         </Link>
       </div>
-
-      <PremiumQuoteOverlay open={quoteOpen} onOpenChange={setQuoteOpen} />
     </div>
   );
 }

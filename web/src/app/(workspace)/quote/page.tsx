@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { ChevronRight, Package, Plane, Ship, Sparkles, Truck } from "lucide-react";
-import { PremiumQuoteOverlay } from "@/components/PremiumQuoteOverlay";
+import { ChevronRight, Package, Plane, Ship, Truck } from "lucide-react";
 import { VertexAskBar } from "@/components/VertexAskBar";
-import { Button, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 
 const DESKS = [
   {
@@ -35,25 +33,15 @@ const DESKS = [
 ];
 
 export default function QuoteHubPage() {
-  const [overlayOpen, setOverlayOpen] = useState(false);
-
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="rounded-2xl bg-[var(--color-atlas-navy)] px-6 py-7 text-white shadow-lg">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-200">Quote hub</p>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Start from the desk</h1>
         <p className="mt-2 max-w-lg text-sm text-white/75">
-          Official quotes are built on Air, Sea, Courier, or Transport. To reopen an old one, type
-          the customer or city below — you do not need the file name.
+          Official quotes are built on Air, Sea, Courier, or Transport. Pick a desk below. To reopen
+          an old one, type the customer or city in Ask Vertex — you do not need the file name.
         </p>
-        <Button
-          type="button"
-          className="mt-5 bg-teal-500 hover:bg-teal-400"
-          onClick={() => setOverlayOpen(true)}
-        >
-          <Sparkles className="mr-1.5 h-4 w-4" />
-          New quote
-        </Button>
       </div>
 
       <VertexAskBar />
@@ -80,8 +68,6 @@ export default function QuoteHubPage() {
           </Link>
         ))}
       </div>
-
-      <PremiumQuoteOverlay open={overlayOpen} onOpenChange={setOverlayOpen} />
     </div>
   );
 }
