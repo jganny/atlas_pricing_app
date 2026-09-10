@@ -12,6 +12,7 @@ import { mergeLocalEnquiries } from "@/lib/quotes/local-enquiries";
 import { mergeCourierTariffBooks } from "@/lib/quotes/courier-tariff";
 import { fetchCourierTariffBooks } from "@/lib/firebase/courier-tariffs";
 import { useAuthStore } from "@/store/auth";
+import type { EnquiryRecord } from "@/lib/types";
 import { queryKeys } from "./query-keys";
 
 function useQueryEnabled() {
@@ -30,10 +31,8 @@ export function useEnquiries() {
       (err) => {
         console.warn("Live enquiries sync:", err.message);
         const current = queryClient.getQueryData(queryKeys.enquiries);
-        queryClient.setQueryData(
-          queryKeys.enquiries,
-          mergeLocalEnquiries(Array.isArray(current) ? current : []),
-        );
+        if (Array.isArray(current) && current.length > 0) return;
+        queryClient.setQueryData(queryKeys.enquiries, mergeLocalEnquiries([]));
         if (process.env.NODE_ENV === "development") {
           void mockApi.fetchEnquiries().then((rows) => {
             const still = queryClient.getQueryData(queryKeys.enquiries);
@@ -61,11 +60,13 @@ export function useEnquiries() {
           return mergeLocalEnquiries(await mockApi.fetchEnquiries());
         }
         return mergeLocalEnquiries(rows);
-      } catch {
+      } catch (err) {
+        const current = queryClient.getQueryData(queryKeys.enquiries);
+        if (Array.isArray(current) && current.length > 0) return current as EnquiryRecord[];
         if (process.env.NODE_ENV === "development") {
           return mergeLocalEnquiries(await mockApi.fetchEnquiries());
         }
-        return mergeLocalEnquiries([]);
+        throw err;
       }
     },
     staleTime: useLiveData ? Infinity : 60_000,

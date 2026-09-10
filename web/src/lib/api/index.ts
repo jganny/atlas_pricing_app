@@ -69,7 +69,7 @@ async function logout(): Promise<void> {
 async function fetchEnquiries(): Promise<EnquiryRecord[]> {
   if (useLiveData) {
     try {
-      return await withTimeout(fetchLiveEnquiries(), 8_000, []);
+      return await withTimeout(fetchLiveEnquiries(), 25_000, []);
     } catch {
       return [];
     }

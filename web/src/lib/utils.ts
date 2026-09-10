@@ -6,11 +6,16 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency = 'USD') {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount)
+  const code = (currency || 'USD').trim().toUpperCase() || 'USD'
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: /^[A-Z]{3}$/.test(code) ? code : 'USD',
+      maximumFractionDigits: 2,
+    }).format(amount)
+  } catch {
+    return `${code} ${Number(amount).toFixed(2)}`
+  }
 }
 
 export function delay(ms: number) {

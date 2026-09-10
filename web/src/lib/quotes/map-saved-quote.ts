@@ -1,0 +1,164 @@
+import type { EnquiryRecord, SavedQuote } from "@/lib/types";
+import { getQuoteRefId } from "@/lib/quotes/ref-id";
+import { allLanesRoute } from "@/lib/quotes/lanes";
+import { deskDisplayName } from "@/lib/quotes/team-roles";
+import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
+
+export function mapMode(type: string | undefined, module: string | undefined): EnquiryRecord["mode"] {
+  const value = (type || module || "air").toLowerCase();
+  if (value.includes("sea")) return "sea";
+  if (value.includes("courier")) return "courier";
+  if (value.includes("transport")) return "transport";
+  if (value.includes("warehouse")) return "warehouse";
+  return "air";
+}
+
+/** Firestore stores won bookings as `converted`; the React UI uses `won`. */
+export function mapStatus(status: string | undefined): EnquiryRecord["status"] {
+  const s = (status || "quoted").toLowerCase().trim();
+  if (s === "converted" || s === "won" || s === "booked") return "won";
+  if (s === "cancelled" || s === "canceled") return "cancelled";
+  if (s === "lost") return "lost";
+  if (s === "quoted" || s === "priced") return "quoted";
+  if (s === "open" || s === "pending" || s === "new") return "open";
+  return "open";
+}
+
+function num(v: unknown): number | undefined {
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = parseFloat(v);
+    return Number.isNaN(n) ? undefined : n;
+  }
+  return undefined;
+}
+
+function billingMeta(data: SavedQuote): Pick<EnquiryRecord, "billingWeight" | "billingUnit"> {
+  const d = data.details || {};
+  const type = (data.type || "").toLowerCase();
+  if (type.includes("air")) {
+    const cw = num(d.chargeableWeight) || 0;
+    const pw = num(d.pivotWeight) || 0;
+    const gw = num(d.grossWeight) || 0;
+    return { billingWeight: Math.max(cw, pw, gw) || undefined, billingUnit: "kg" };
+  }
+  if (type.includes("sea")) {
+    const rt = num(d.lclChargeable) || num(d.chargeableCbm) || 0;
+    if (rt > 0) return { billingWeight: rt, billingUnit: "rt" };
+    const gw = num(d.grossWeight) || 0;
+    return { billingWeight: gw || undefined, billingUnit: gw ? "gw" : undefined };
+  }
+  const gw = num(d.grossWeight) || 0;
+  return { billingWeight: gw || undefined, billingUnit: gw ? "gw" : undefined };
+}
+
+function rec(raw: unknown): Record<string, unknown> {
+  return raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+}
+
+function laneOriginDest(data: SavedQuote): { origin: string; destination: string } {
+  const d = data.details || {};
+  const lanes = Array.isArray(d.lanes) ? d.lanes : [];
+  if (lanes.length > 1) {
+    const mapped = lanes.map((raw) => ({
+      id: String(rec(raw).id ?? ""),
+      origin: String(rec(raw).origin ?? ""),
+      destination: String(rec(raw).destination ?? ""),
+    }));
+    return { origin: allLanesRoute(mapped), destination: "" };
+  }
+  return {
+    origin:
+      (d.origin as string) ||
+      (data.route?.includes("→") ? data.route.split("→")[0]?.trim() : data.route) ||
+      "",
+    destination:
+      (d.destination as string) ||
+      (data.route?.includes("→") ? data.route.split("→").slice(1).join("→").trim() : "") ||
+      "",
+  };
+}
+
+function carrierLabel(data: SavedQuote): string {
+  const d = data.details || {};
+  const quoted = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
+  if (quoted.length > 1) {
+    return quoted
+      .map((raw) => {
+        const row = rec(raw);
+        const label = String(row.laneLabel ?? "");
+        const name = String(row.airline ?? row.name ?? "");
+        return label && name ? `${label}: ${name}` : name;
+      })
+      .filter(Boolean)
+      .join(" · ");
+  }
+  return String(d.airline ?? d.shippingLine ?? d.carrierName ?? d.carrier ?? "").trim();
+}
+
+export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
+  const createdAt = data.date || String(data.timestamp ?? "");
+  const open = isOpenQuoteStatus(data.status);
+  const { origin, destination } = laneOriginDest(data);
+
+  const amount = num(data.amount);
+  const gp = num(data.grossProfit);
+  const buyFromGp = amount != null && gp != null ? amount - gp : undefined;
+  const buyRate = num(data.buyRate) ?? num(data.details?.buyRate);
+  const confirmedBuyRate = num(data.confirmedBuyRate);
+  const carrier = carrierLabel(data);
+
+  return {
+    id,
+    ref: getQuoteRefId(data),
+    customer: data.customer || "—",
+    mode: mapMode(data.type, data.details?.module as string),
+    origin,
+    destination,
+    status: mapStatus(data.status),
+    slaHoursOpen: open ? Math.round(hoursSince(createdAt)) : 0,
+    assignee: deskDisplayName(data.creator || ""),
+    creator: (data.creator || "").toLowerCase(),
+    createdAt,
+    grandTotal: amount,
+    currency: data.currency,
+    amountINR: num(data.amountINR),
+    grossProfit: gp,
+    grossProfitCurrency: data.grossProfitCurrency,
+    grossProfitINR: num(data.grossProfitINR),
+    buyTotal: buyFromGp ?? buyRate ?? confirmedBuyRate,
+    buyRate,
+    confirmedBuyRate,
+    carrier: carrier || undefined,
+    appliedRate: num(data.details?.appliedRate),
+    appliedBuyRate: num(data.details?.appliedBuyRate),
+    usedBreak: data.details?.usedBreak ? String(data.details.usedBreak) : undefined,
+    ...billingMeta(data),
+  };
+}
+
+export function mapQuoteDocsSafely(
+  docs: Array<{ id: string; data: () => unknown }>,
+): EnquiryRecord[] {
+  const rows: EnquiryRecord[] = [];
+  for (const docSnap of docs) {
+    try {
+      rows.push(mapQuoteFromSaved(docSnap.id, docSnap.data() as SavedQuote));
+    } catch (err) {
+      console.warn("Skipped unreadable quote", docSnap.id, err);
+    }
+  }
+  return rows;
+}
+
+export function mergeEnquiryRows(...lists: EnquiryRecord[][]): EnquiryRecord[] {
+  const map = new Map<string, EnquiryRecord>();
+  for (const list of lists) {
+    for (const row of list) map.set(row.id, row);
+  }
+  return [...map.values()].sort((a, b) => {
+    const tb = Date.parse(b.createdAt) || Number(b.createdAt) || 0;
+    const ta = Date.parse(a.createdAt) || Number(a.createdAt) || 0;
+    return tb - ta;
+  });
+}

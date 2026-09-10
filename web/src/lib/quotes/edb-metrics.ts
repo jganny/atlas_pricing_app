@@ -61,11 +61,7 @@ export function formatSellCell(row: EnquiryRecord, mode: BuySellMode): string {
     return `${formatCurrency(rate, currency)}${unit}`;
   }
   if (row.grandTotal == null) return "—";
-  const main = formatCurrency(row.grandTotal, currency);
-  if (row.amountINR != null && currency !== "INR") {
-    return `${main} · ₹${row.amountINR.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
-  }
-  return main;
+  return formatCurrency(row.grandTotal, currency);
 }
 
 export function formatGpCell(row: EnquiryRecord, mode: GpMode): string {

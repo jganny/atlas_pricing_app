@@ -100,6 +100,7 @@ function EnquiryDatabaseInner() {
     lane: true,
     desk: false,
     carrier: false,
+    buy: false,
     amount: true,
     gp: true,
     sla: false,
@@ -497,7 +498,8 @@ function EnquiryDatabaseInner() {
                   ["lane", "Lane"],
                   ["desk", "Desk"],
                   ["carrier", "Carrier"],
-                  ["amount", "Buy / Sell"],
+                  ["buy", "Buy"],
+                  ["amount", "Sell"],
                   ["gp", "GP"],
                   ["sla", "SLA"],
                 ] as const

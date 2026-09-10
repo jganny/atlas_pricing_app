@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { Badge, Button, Card } from "@/components/ui";
+import { PortalDropdown } from "@/components/PortalDropdown";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import {
@@ -75,6 +76,7 @@ export function EnquiryInspector({
   const [amdReason, setAmdReason] = useState("");
   const [showAmd, setShowAmd] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsBtnRef = useRef<HTMLButtonElement>(null);
   const admin = isAdminUser(user?.username, user?.role);
 
   async function loadFullQuote(): Promise<SavedQuote | null> {
@@ -276,7 +278,13 @@ export function EnquiryInspector({
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-[var(--color-text-muted)]">GP</dt>
-            <dd className="text-right font-bold leading-snug text-emerald-700">{formatQuoteGp(row)}</dd>
+            <dd
+              className={`text-right font-bold leading-snug ${
+                formatQuoteGp(row) === "—" ? "text-slate-400" : "text-emerald-700"
+              }`}
+            >
+              {formatQuoteGp(row)}
+            </dd>
           </div>
           {row.carrier ? (
             <div className="flex justify-between">
@@ -294,6 +302,7 @@ export function EnquiryInspector({
 
         <button
           type="button"
+          ref={actionsBtnRef}
           data-testid="edb-actions-toggle"
           onClick={() => setActionsOpen((open) => !open)}
           className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border)] bg-slate-50 px-3 py-2.5 text-left hover:border-sky-300"
@@ -303,49 +312,127 @@ export function EnquiryInspector({
             Actions
           </span>
           <span className="text-[11px] font-semibold text-[var(--color-text-muted)]">
-            {actionsOpen ? "Hide" : "View, amend, won, delete…"}
+            {actionsOpen ? "Close" : "View, amend, won, delete…"}
           </span>
         </button>
 
-        {actionsOpen ? (
-        <div className="grid gap-2">
-          <Button type="button" variant="secondary" disabled={loading} onClick={() => void handleView()}>
-            <Eye className="mr-2 h-4 w-4" />
-            View / Print
-          </Button>
-          {canAct ? (
-            <>
-              <Button type="button" variant="secondary" disabled={loading} onClick={() => void goToDesk("edit")}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Amend on desk
-              </Button>
-              <Button type="button" variant="secondary" disabled={loading} onClick={() => setShowAmd(true)}>
-                Request amendment unlock
-              </Button>
-              <Button type="button" variant="secondary" disabled={loading} onClick={() => void goToDesk("duplicate")}>
-                <Copy className="mr-2 h-4 w-4" />
-                Duplicate to desk
-              </Button>
-              <Button type="button" disabled={loading} onClick={() => void handleStatus("won")}>
-                <Trophy className="mr-2 h-4 w-4" />
-                Convert to Won
-              </Button>
-              <Button type="button" variant="secondary" disabled={loading} onClick={() => void handleStatus("lost")}>
-                <XCircle className="mr-2 h-4 w-4" />
-                Mark lost
-              </Button>
-              <Button type="button" variant="secondary" disabled={loading} onClick={() => void handleStatus("cancelled")}>
-                <Ban className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            </>
-          ) : null}
-          <Button type="button" variant="ghost" disabled={loading} onClick={() => void handleStatus("delete")}>
-            <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-            <span className="text-red-600">Delete</span>
-          </Button>
-        </div>
-        ) : null}
+        <PortalDropdown
+          open={actionsOpen}
+          anchorRef={actionsBtnRef}
+          maxHeight={420}
+          backdrop
+          onDismiss={() => setActionsOpen(false)}
+          testId="edb-actions-overlay"
+        >
+          <div className="grid gap-1.5 p-1.5">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full justify-start"
+              disabled={loading}
+              onClick={() => {
+                setActionsOpen(false);
+                void handleView();
+              }}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View / Print
+            </Button>
+            {canAct ? (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-start"
+                  disabled={loading}
+                  onClick={() => {
+                    setActionsOpen(false);
+                    void goToDesk("edit");
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Amend on desk
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-start"
+                  disabled={loading}
+                  onClick={() => {
+                    setActionsOpen(false);
+                    setShowAmd(true);
+                  }}
+                >
+                  Request amendment unlock
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-start"
+                  disabled={loading}
+                  onClick={() => {
+                    setActionsOpen(false);
+                    void goToDesk("duplicate");
+                  }}
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicate to desk
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full justify-start"
+                  disabled={loading}
+                  onClick={() => {
+                    setActionsOpen(false);
+                    void handleStatus("won");
+                  }}
+                >
+                  <Trophy className="mr-2 h-4 w-4" />
+                  Convert to Won
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-start"
+                  disabled={loading}
+                  onClick={() => {
+                    setActionsOpen(false);
+                    void handleStatus("lost");
+                  }}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Mark lost
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-start"
+                  disabled={loading}
+                  onClick={() => {
+                    setActionsOpen(false);
+                    void handleStatus("cancelled");
+                  }}
+                >
+                  <Ban className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              </>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full justify-start"
+              disabled={loading}
+              onClick={() => {
+                setActionsOpen(false);
+                void handleStatus("delete");
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+              <span className="text-red-600">Delete</span>
+            </Button>
+          </div>
+        </PortalDropdown>
 
         {showAmd ? (
           <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">

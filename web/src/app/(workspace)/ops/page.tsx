@@ -33,7 +33,19 @@ export default function OpsPage() {
       {isLoading ? (
         <Card>Loading…</Card>
       ) : won.length === 0 ? (
-        <Card className="text-sm text-[var(--color-text-muted)]">No won quotes yet.</Card>
+        <Card className="space-y-2 text-sm text-[var(--color-text-muted)]">
+          <p>No won quotes in the current live list.</p>
+          <p>
+            Vertex stores won bookings as status <span className="font-semibold">converted</span>.
+            They were not deleted. If this page used to show many jobs, tap{" "}
+            <span className="font-semibold">Refresh</span> so the live quote feed can reload,
+            or open{" "}
+            <Link href="/enquiries/?pipeline=won" className="font-semibold text-[var(--color-atlas-sky)] underline">
+              Enquiry DB → Won
+            </Link>
+            .
+          </p>
+        </Card>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white">
           <table className="w-full min-w-[640px] text-left text-sm">
