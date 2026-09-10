@@ -19,6 +19,7 @@ import {
   PlaneTakeoff,
   Shield,
   Ship,
+  Smartphone,
   Sparkles,
   Truck,
   Users,
@@ -83,7 +84,6 @@ const libraryNav: NavItem[] = [
 const adminMoreNav: NavItem[] = [
   // Won jobs for ops handoff — Enquiry DB (filter Won) is the full lifecycle page.
   { href: "/ops", label: "Won jobs", icon: PackageCheck, route: "ops" },
-  { href: "/m", label: "Mobile app", icon: Home, route: "dashboard" },
 ];
 
 function filterNav(items: NavItem[], username?: string, role?: string) {
@@ -244,6 +244,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-100">
               {focus}
             </div>
+            <Link
+              href="/m"
+              data-testid="mobile-app-top"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 px-3 py-2 text-xs font-bold text-white hover:bg-teal-400"
+            >
+              <Smartphone className="h-3.5 w-3.5" />
+              Mobile app
+            </Link>
           </div>
           <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
             {renderNavGroups({ dark: true })}
@@ -281,6 +289,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto">
+                <Link
+                  href="/m"
+                  onClick={() => setMobileOpen(false)}
+                  className="m-3 mb-0 flex items-center justify-center gap-2 rounded-lg bg-teal-500 px-3 py-2.5 text-sm font-bold text-white"
+                >
+                  <Smartphone className="h-4 w-4" />
+                  Mobile app
+                </Link>
                 {renderNavGroups({ onNavigate: () => setMobileOpen(false) })}
               </nav>
               <div className="border-t border-[var(--color-border)] p-4 text-xs text-[var(--color-text-muted)]">
@@ -307,6 +323,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Atlas
             </Link>
             <div className="flex items-center gap-1">
+              <Link href="/m" className="rounded-lg p-2 hover:bg-white/10" aria-label="Mobile app">
+                <Smartphone className="h-4 w-4" />
+              </Link>
               {showInbox ? (
                 <Link href="/inbox" className="rounded-lg p-2 hover:bg-white/10" aria-label="Inbox">
                   <Inbox className="h-4 w-4" />
