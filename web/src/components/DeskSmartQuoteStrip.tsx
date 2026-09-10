@@ -15,6 +15,7 @@ import { Badge, Button, Card, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useAirSmartQuote, useSeaSmartQuote } from "@/hooks/use-smart-quote";
 import { detectEnquiryMode } from "@/lib/mail/inbox-assign";
+import { classifyQuoteMode } from "@/lib/pricing/quote-mode";
 import {
   SMART_QUOTE_ACCEPT,
   ingestEnquiryFile,
@@ -80,8 +81,12 @@ export function DeskSmartQuoteStrip({
     setWarning(null);
     setAirDraft(null);
     setSeaDraft(null);
-    const guess = detectEnquiryMode(body);
-    setDetected(guess);
+    const classified = classifyQuoteMode(body);
+    const guess =
+      classified === "sea" || classified === "air"
+        ? classified
+        : detectEnquiryMode(body);
+    setDetected(guess === "sea" || guess === "air" ? guess : "unknown");
     const primary: DeskMode = guess === "sea" ? "sea" : "air";
     let abandoned = false;
     const safety = window.setTimeout(() => {

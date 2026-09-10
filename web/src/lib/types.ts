@@ -109,6 +109,8 @@ export interface ParsedEnquiry {
   mode?: 'fcl' | 'lcl' | 'bb'
   linerLabel?: string
   commodity?: string
+  incoterm?: string
+  notes?: string
   grossWeight?: number
   volume?: number
   packages: Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>

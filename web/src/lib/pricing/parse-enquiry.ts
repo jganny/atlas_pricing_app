@@ -29,6 +29,21 @@ const CITY_TO_IATA: Record<string, string> = {
   delhi: 'DEL',
   chennai: 'MAA',
   hyderabad: 'HYD',
+  ahmedabad: 'AMD',
+  ahd: 'AMD',
+  pune: 'PNQ',
+  kolkata: 'CCU',
+  calcutta: 'CCU',
+  kochi: 'COK',
+  cochin: 'COK',
+  jaipur: 'JAI',
+  goa: 'GOI',
+  lucknow: 'LKO',
+  nagpur: 'NAG',
+  indore: 'IDR',
+  coimbatore: 'CJB',
+  vadodara: 'BDQ',
+  baroda: 'BDQ',
   london: 'LHR',
   heathrow: 'LHR',
   dubai: 'DXB',
@@ -76,11 +91,98 @@ function normalizeCityKey(s: string) {
 }
 
 function resolveAirport(token: string): string {
-  const t = token.trim()
+  const t = token.trim().split(/[\n|,]/)[0].trim()
+  if (!t || /^(as per|tba|tbd|nil|-)$/i.test(t)) return ''
+  const mapped = CITY_TO_IATA[normalizeCityKey(t)] || CITY_TO_IATA[normalizeCityKey(t).replace(/\s/g, '')]
+  if (mapped) return mapped
   const code = t.match(/\b([A-Z]{3})\b/)
   if (code) return code[1].toUpperCase()
-  const key = normalizeCityKey(t)
-  return CITY_TO_IATA[key] || CITY_TO_IATA[key.replace(/\s/g, '')] || t.toUpperCase().slice(0, 3)
+  return t.toUpperCase().slice(0, 3)
+}
+
+function labeledValue(text: string, labels: string[]): string {
+  for (const label of labels) {
+    const re = new RegExp(
+      `(?:^|[\\n\\r])\\s*${label}\\s*(?:[:|\\t]|\\s+)\\s*([^\\n\\r]+)`,
+      "i",
+    );
+    const m = text.match(re);
+    if (m?.[1]) {
+      const v = m[1].replace(/\s+/g, " ").trim();
+      if (v && !/^(as per bl|tba|tbd|-)?$/i.test(v)) return v;
+    }
+  }
+  return "";
+}
+
+function parseIncoterm(text: string): string | undefined {
+  const blob = `${labeledValue(text, ['terms', 'incoterm', 'incoterms'])} ${text.slice(0, 400)}`
+  if (/\bex-?works?\b|\bexw\b/i.test(blob)) return 'EXW'
+  if (/\bdap\b/i.test(blob)) return 'DAP'
+  if (/\bddp\b/i.test(blob)) return 'DDP'
+  if (/\bfca\b/i.test(blob)) return 'FCA'
+  if (/\bcif\b/i.test(blob)) return 'CIF'
+  if (/\bcfr\b/i.test(blob)) return 'CFR'
+  if (/\bfob\b/i.test(blob)) return 'FOB'
+  return undefined
+}
+
+function parseCollectionCustomer(text: string): { customer: string; notes: string } {
+  const block = text.match(
+    /collection\s*[:|\t]?\s*([\s\S]{8,500}?)(?=\n\s*(?:place of loading|port of discharge|\bpol\b|\bpod\b|commodity|dimensions|weight|package))/i,
+  )
+  const raw = (block?.[1] || labeledValue(text, ['collection', 'shipper', 'consignor'])).trim()
+  if (!raw) return { customer: '', notes: '' }
+  const lines = raw
+    .split(/\n/)
+    .map((l) => l.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+  const company =
+    lines.find((l) => /engineers|logistics|pvt|ltd|limited|inc|llc|llp|industries|exports/i.test(l)) ||
+    lines.find((l) => /^[A-Z0-9][A-Z0-9 .,&'-]{3,60}$/.test(l) && !/mobile|email|e mail|mr\.|place of/i.test(l)) ||
+    lines[0] ||
+    ''
+  const customer = company
+    .replace(/^(mr\.?|ms\.?|mrs\.?)\s+/i, "")
+    .split(",")[0]
+    .replace(/\s+\d{1,6}\b.*$/, "")
+    .trim();
+  return { customer, notes: lines.join("\n") };
+}
+
+function parseNumberedPackages(text: string): ParsedEnquiry['packages'] {
+  const rows: ParsedEnquiry['packages'] = []
+  const re =
+    /(?:^|\n)\s*0?\d{1,2}\s+(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)[^\n]*?(\d+(?:\.\d+)?)\s*(?:kg|kgs)\b/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    if (/total/i.test(m[0])) continue
+    rows.push({
+      qty: 1,
+      l: parseFloat(m[1]),
+      w: parseFloat(m[2]),
+      h: parseFloat(m[3]),
+      gw: parseFloat(m[4]),
+    })
+  }
+  return collapsePackageLines(rows)
+}
+
+function collapsePackageLines(rows: ParsedEnquiry['packages']): ParsedEnquiry['packages'] {
+  const map = new Map<string, { qty: number; gw: number; l?: number; w?: number; h?: number }>()
+  for (const p of rows) {
+    const key = `${p.l ?? 0}|${p.w ?? 0}|${p.h ?? 0}`
+    const prev = map.get(key)
+    const gw = p.gw ?? 0
+    const qty = p.qty || 1
+    if (prev) {
+      prev.qty += qty
+      prev.gw += gw
+    } else {
+      map.set(key, { qty, gw, l: p.l, w: p.w, h: p.h })
+    }
+  }
+  return [...map.values()]
 }
 
 function resolvePort(token: string): string {
@@ -103,16 +205,31 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
     source: 'email-text',
   }
 
-  const custMatch =
-    t.match(/(?:customer|client|shipper)\s*[:\-]\s*([^\n,;]+)/i) ||
-    t.match(/(?:quote\s+(?:air\s+)?(?:export|import)\s+for|for)\s+([A-Z][^\n,;.]{2,60})/i)
-  if (custMatch) result.customer = custMatch[1].replace(/\s+/g, ' ').trim()
+  const collected = parseCollectionCustomer(t)
+  const labeledCustomer = labeledValue(t, ['customer', 'client', 'shipper', 'company'])
+  result.customer = (labeledCustomer || collected.customer).replace(/\s+/g, ' ').trim()
+  if (/^(below order|quote|dear)\b/i.test(result.customer)) result.customer = collected.customer
+  if (collected.notes) result.notes = collected.notes
 
-  const polPod = t.match(/\bpol\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})[\s\S]*?\bpod\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})/i)
-  if (polPod) {
-    result.origin = resolveAirport(polPod[1])
-    result.destination = resolveAirport(polPod[2])
-  } else {
+  const originLabel = labeledValue(t, ['place of loading', 'airport of departure', 'origin airport', 'pol', 'origin'])
+  const destLabel = labeledValue(t, [
+    'port of discharge',
+    'airport of arrival',
+    'destination airport',
+    'pod',
+    'destination',
+  ])
+  if (originLabel) result.origin = resolveAirport(originLabel)
+  if (destLabel) result.destination = resolveAirport(destLabel)
+
+  if (!result.origin || !result.destination) {
+    const polPod = t.match(/\bpol\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})[\s\S]*?\bpod\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})/i)
+    if (polPod) {
+      if (!result.origin) result.origin = resolveAirport(polPod[1])
+      if (!result.destination) result.destination = resolveAirport(polPod[2])
+    }
+  }
+  if (!result.origin || !result.destination) {
     const routePatterns = [
       /(?:origin|from|ex)\s+([A-Za-z][A-Za-z0-9 \-]{1,30})[\s\S]{0,40}?(?:to|→|->)\s+([A-Za-z][A-Za-z0-9 \-]{1,30})/i,
       /\b([A-Z]{3})\s*(?:to|→|->|-|–)\s*([A-Z]{3})\b/,
@@ -120,12 +237,19 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
     for (const pattern of routePatterns) {
       const match = t.match(pattern)
       if (match) {
-        result.origin = resolveAirport(match[1])
-        result.destination = resolveAirport(match[2])
+        if (!result.origin) result.origin = resolveAirport(match[1])
+        if (!result.destination) result.destination = resolveAirport(match[2])
         break
       }
     }
   }
+  if (!result.destination) {
+    const toCode = t.match(/\bto\s+([A-Z]{3})\b/)
+    if (toCode) result.destination = toCode[1]
+  }
+
+  const incoterm = parseIncoterm(t)
+  if (incoterm) result.incoterm = incoterm
 
   Object.entries(AIRLINE_HINTS).forEach(([code, label]) => {
     if (result.airline) return
@@ -160,56 +284,67 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
     }
   }
 
-  const gwMatches: number[] = []
-  const gwRe = /(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/gi
-  let gwm: RegExpExecArray | null
-  while ((gwm = gwRe.exec(t)) !== null) gwMatches.push(parseFloat(gwm[1]))
-
-  // Prefer "dims … x N pcs" so qty is per dim line when present
-  const dimWithQty =
-    /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(?:cm)?\s*[x×*]?\s*(\d+)\s*(?:pcs|pieces|pkgs|cartons)?/gi
-  let dimQty: RegExpExecArray | null
-  while ((dimQty = dimWithQty.exec(t)) !== null) {
-    result.packages.push({
-      qty: parseInt(dimQty[4], 10) || 1,
-      gw: 0,
-      l: parseFloat(dimQty[1]),
-      w: parseFloat(dimQty[2]),
-      h: parseFloat(dimQty[3]),
-    })
-  }
+  result.packages = parseNumberedPackages(t)
 
   if (!result.packages.length) {
-    const dimGlobal = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/gi
-    let dimMatch: RegExpExecArray | null
-    const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons)/i)
-    const qtyDefault = qtyM ? parseInt(qtyM[1], 10) : 1
-    while ((dimMatch = dimGlobal.exec(t)) !== null) {
+    const gwMatches: number[] = []
+    const gwRe = /(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/gi
+    let gwm: RegExpExecArray | null
+    while ((gwm = gwRe.exec(t)) !== null) gwMatches.push(parseFloat(gwm[1]))
+
+    const dimWithQty =
+      /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(?:cm)?\s*[x×*]?\s*(\d+)\s*(?:pcs|pieces|pkgs|cartons|boxes)?/gi
+    let dimQty: RegExpExecArray | null
+    while ((dimQty = dimWithQty.exec(t)) !== null) {
       result.packages.push({
-        qty: qtyDefault,
+        qty: parseInt(dimQty[4], 10) || 1,
         gw: 0,
-        l: parseFloat(dimMatch[1]),
-        w: parseFloat(dimMatch[2]),
-        h: parseFloat(dimMatch[3]),
+        l: parseFloat(dimQty[1]),
+        w: parseFloat(dimQty[2]),
+        h: parseFloat(dimQty[3]),
       })
+    }
+
+    if (!result.packages.length) {
+      const dimGlobal = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/gi
+      let dimMatch: RegExpExecArray | null
+      const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons|boxes)/i)
+      const qtyDefault = qtyM ? parseInt(qtyM[1], 10) : 1
+      while ((dimMatch = dimGlobal.exec(t)) !== null) {
+        result.packages.push({
+          qty: qtyDefault,
+          gw: 0,
+          l: parseFloat(dimMatch[1]),
+          w: parseFloat(dimMatch[2]),
+          h: parseFloat(dimMatch[3]),
+        })
+      }
+      result.packages = collapsePackageLines(result.packages)
+    }
+
+    if (result.packages.length && gwMatches.length) {
+      const totalQty = result.packages.reduce((s, p) => s + (p.qty || 1), 0) || 1
+      const totalGw = gwMatches[0]
+      result.packages = result.packages.map((p) => ({
+        ...p,
+        gw: Math.round(((totalGw * (p.qty || 1)) / totalQty) * 100) / 100,
+      }))
+    } else if (!result.packages.length && gwMatches.length) {
+      const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons|boxes)/i)
+      result.packages.push({ qty: qtyM ? parseInt(qtyM[1], 10) : 1, gw: gwMatches[0] })
     }
   }
 
-  // Distribute total GW across package lines by qty share
-  if (result.packages.length && gwMatches.length) {
-    const totalQty = result.packages.reduce((s, p) => s + (p.qty || 1), 0) || 1
-    const totalGw = gwMatches[0]
-    result.packages = result.packages.map((p) => ({
-      ...p,
-      gw: Math.round(((totalGw * (p.qty || 1)) / totalQty) * 100) / 100,
-    }))
-  } else if (!result.packages.length && gwMatches.length) {
-    const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons)/i)
-    result.packages.push({ qty: qtyM ? parseInt(qtyM[1], 10) : 1, gw: gwMatches[0] })
+  const weightLine = labeledValue(t, ['weight', 'gross weight', 'total weight'])
+  const weightNum = weightLine.match(/(\d+(?:\.\d+)?)/)
+  if (weightNum) result.grossWeight = parseFloat(weightNum[1])
+  else if (result.packages.length) {
+    result.grossWeight = result.packages.reduce((s, p) => s + (p.gw || 0), 0)
   }
 
-  const commodity = t.match(/(?:commodity|goods|description)[:\s]+([^\n;]+)/i)
-  if (commodity) result.commodity = commodity[1].trim()
+  const commodity = labeledValue(t, ['commodity', 'goods', 'description of goods']) ||
+    (t.match(/(?:commodity|goods|description)[:\s]+([^\n;]+)/i)?.[1] || '').trim()
+  if (commodity && !/^as per/i.test(commodity)) result.commodity = commodity.trim()
 
   result.confidence = scoreAir(result)
   return result

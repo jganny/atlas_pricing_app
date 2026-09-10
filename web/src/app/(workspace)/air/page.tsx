@@ -266,6 +266,14 @@ function AirDeskInner() {
     setDestination(p.destination || "");
     if (draft.currency) setCurrency(draft.currency);
     if (p.commodity) setCommodity(p.commodity);
+    if (p.incoterm) setIncoterm(p.incoterm);
+    if (p.notes) {
+      setTerms((prev) => {
+        const block = `Pickup / collection\n${p.notes}`;
+        if (prev.includes(block)) return prev;
+        return `${block}\n\n${prev}`;
+      });
+    }
     if (p.packages.length) {
       setCargo(
         p.packages.map((pkg) => ({
@@ -841,6 +849,7 @@ function AirDeskInner() {
                     autoComplete="off"
                     autoCorrect="off"
                     spellCheck={false}
+                    data-testid="air-customer"
                     value={customer}
                     onChange={(e) => setCustomer(e.target.value)}
                     placeholder="Customer name"

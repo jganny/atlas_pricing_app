@@ -1,5 +1,7 @@
 /** Lightweight desk intent — Vertex acts on what you type, not just FAQ. */
 
+import { classifyQuoteMode } from "@/lib/pricing/quote-mode";
+
 export type QuoteMode = "air" | "sea" | "courier" | "transport" | "warehouse";
 
 export type DeskIntent =
@@ -17,12 +19,7 @@ const MODE_PATH: Record<QuoteMode, string> = {
 };
 
 function detectMode(p: string): QuoteMode | null {
-  if (/\b(sea|ocean|fcl|lcl|liner)\b/.test(p)) return "sea";
-  if (/\b(courier|express|dhl|ups)\b/.test(p)) return "courier";
-  if (/\b(transport|truck|road|haulage)\b/.test(p)) return "transport";
-  if (/\b(warehouse|storage)\b/.test(p)) return "warehouse";
-  if (/\b(air|airline|aero|flight)\b/.test(p)) return "air";
-  return null;
+  return classifyQuoteMode(p);
 }
 
 function laneFrom(p: string): { origin?: string; dest?: string } {

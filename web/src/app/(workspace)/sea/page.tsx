@@ -227,6 +227,7 @@ function SeaDeskInner() {
     setCustomer(p.customer || "");
     setOrigin(p.origin || "");
     setDestination(p.destination || "");
+    if (p.incoterm) setIncoterm(p.incoterm);
     if (p.mode) setMode(p.mode);
     else if (st?.mode) setMode(st.mode);
     if (draft.currency || st?.currency) {

@@ -14,7 +14,7 @@ import { Button, Card, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useEnquiries, useInbox } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
-import { detectEnquiryMode, canSeeInboxItem } from "@/lib/mail/inbox-assign";
+import { canSeeInboxItem } from "@/lib/mail/inbox-assign";
 import { parseAirEnquiry, parseSeaEnquiry } from "@/lib/pricing/parse-enquiry";
 import {
   SMART_QUOTE_ACCEPT,
@@ -22,14 +22,18 @@ import {
 } from "@/lib/pricing/enquiry-ingest";
 import { storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { parseDeskIntent, newQuoteHref } from "@/lib/ai/desk-intent";
+import { deskModeForPaste } from "@/lib/pricing/quote-mode";
 import { getLastSavedEnquiry } from "@/lib/quotes/local-enquiries";
 import { deskEditHref, enquiryHref } from "@/lib/quotes/find-quotes";
 
-function hubMode(text: string): "air" | "sea" | "courier" {
-  if (/\b(courier|dhl|fedex|ups|aramex|bluedart|express parcel)\b/i.test(text)) {
-    return "courier";
-  }
-  return detectEnquiryMode(text) === "sea" ? "sea" : "air";
+function summaryToast(mode: string, parsed: { customer?: string; origin?: string; destination?: string; packages?: unknown[] }) {
+  const bits = [
+    mode === "sea" ? "Sea" : mode === "courier" ? "Courier" : "Air",
+    parsed.customer,
+    parsed.origin && parsed.destination ? `${parsed.origin} → ${parsed.destination}` : "",
+    Array.isArray(parsed.packages) && parsed.packages.length ? `${parsed.packages.length} cargo line(s)` : "",
+  ].filter(Boolean);
+  return `Opening ${bits.join(" · ")}`;
 }
 
 export function QuoteHubIntake() {
@@ -75,15 +79,26 @@ export function QuoteHubIntake() {
       toast("Paste the enquiry first", "error");
       return;
     }
-    const mode = hubMode(blob);
+    const mode = deskModeForPaste(blob);
     if (mode === "courier") {
-      const intent = parseDeskIntent(`courier ${blob}`);
+      const parsed = parseAirEnquiry(blob);
+      const intent = parseDeskIntent(`courier ${parsed.origin || ""} ${parsed.destination || ""}`.trim());
       const href =
         intent.kind === "new"
           ? newQuoteHref({ ...intent, mode: "courier" })
           : "/courier";
-      toast("Opening Courier desk", "success");
+      toast(summaryToast("courier", parsed), "success");
       router.push(href);
+      return;
+    }
+    if (mode === "transport") {
+      toast("Opening Transport desk", "success");
+      router.push("/transport");
+      return;
+    }
+    if (mode === "warehouse") {
+      toast("Opening Warehouse desk", "success");
+      router.push("/warehouse");
       return;
     }
     const parsed = mode === "sea" ? parseSeaEnquiry(blob) : parseAirEnquiry(blob);
@@ -95,7 +110,7 @@ export function QuoteHubIntake() {
       tariffFound: false,
       createdAt: Date.now(),
     });
-    toast(`Opening ${mode === "sea" ? "Sea" : "Air"} desk with this enquiry`, "success");
+    toast(summaryToast(mode, parsed), "success");
     router.push(mode === "sea" ? "/sea/?smart=1" : "/air/?smart=1");
   }
 
@@ -122,8 +137,8 @@ export function QuoteHubIntake() {
           <div>
             <h2 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">Drop the job</h2>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Paste the mail or drop a PDF. Vertex picks Air, Sea, or Courier and fills the desk.
-              You do not choose the module first.
+              Paste the mail. Vertex reads Air freight vs Courier vs Sea — a MODE (AIR/COURIER)
+              label does not send an air job to Courier — and fills the desk.
             </p>
           </div>
         </div>
