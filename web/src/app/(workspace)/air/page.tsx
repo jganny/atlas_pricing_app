@@ -14,7 +14,6 @@ import {
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
-import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { AirlineEditorOverlay, AirlineOptionForm } from "@/components/desks/AirlineOptionForm";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
@@ -119,7 +118,6 @@ function AirDeskInner() {
   const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [stripKey, setStripKey] = useState(0);
   const hideAgreement = shouldHideAgencyAgreement(user?.username);
   const [agreementName, setAgreementName] = useState<string | null>(null);
   const prefillApplied = useRef(false);
@@ -325,7 +323,6 @@ function AirDeskInner() {
     setPreviewQuote(null);
     setStep("shipment");
     setConfirmReset(false);
-    setStripKey((k) => k + 1);
     loader.clearLoadedQuote();
     if (typeof window !== "undefined" && /[?&](edit|duplicate|smart)=/.test(window.location.search)) {
       router.replace("/air/");
@@ -700,8 +697,6 @@ function AirDeskInner() {
           <p className="text-sm font-semibold text-amber-900">{loader.loadError}</p>
         </Card>
       ) : null}
-
-      <DeskSmartQuoteStrip key={stripKey} mode="air" onApply={applySmartDraft} />
 
       <DeskResetDialog
         open={confirmReset}

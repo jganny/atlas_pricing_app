@@ -6,7 +6,6 @@ import { Eye, Plus, RotateCcw, Save, Ship, Trash2, Zap } from "lucide-react";
 import type { SeaMode } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Input, Label, NumberInput, Select, Tabs, Textarea } from "@/components/ui";
-import { DeskSmartQuoteStrip } from "@/components/DeskSmartQuoteStrip";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
@@ -117,7 +116,6 @@ function SeaDeskInner() {
   const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [stripKey, setStripKey] = useState(0);
   const prefillApplied = useRef(false);
 
   useEffect(() => {
@@ -279,7 +277,6 @@ function SeaDeskInner() {
     setPreviewQuote(null);
     setStep("shipment");
     setConfirmReset(false);
-    setStripKey((k) => k + 1);
     prefillApplied.current = false;
     loader.clearLoadedQuote();
     if (typeof window !== "undefined" && /[?&](edit|duplicate|smart)=/.test(window.location.search)) {
@@ -605,8 +602,6 @@ function SeaDeskInner() {
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
         </Card>
       ) : null}
-
-      <DeskSmartQuoteStrip key={stripKey} mode="sea" onApply={applySmartDraft} />
 
       <DeskResetDialog
         open={confirmReset}
