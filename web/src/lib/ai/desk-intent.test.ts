@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { newQuoteHref, parseDeskIntent } from "./desk-intent";
 
-const airLane = parseDeskIntent("quote BLR to LHR");
+const airLane = parseDeskIntent("quote air BLR to LHR");
 assert.equal(airLane.kind, "new");
 if (airLane.kind === "new") {
   assert.equal(airLane.mode, "air");
@@ -11,9 +11,10 @@ if (airLane.kind === "new") {
 }
 
 const seaDesk = parseDeskIntent("sea desk");
-assert.equal(seaDesk.kind, "goto");
-if (seaDesk.kind === "goto") {
-  assert.equal(seaDesk.href, "/sea");
+assert.equal(seaDesk.kind, "new");
+if (seaDesk.kind === "new") {
+  assert.equal(seaDesk.mode, "sea");
+  assert.equal(newQuoteHref(seaDesk), "/sea");
 }
 
 const findCustomer = parseDeskIntent("Acme Logistics");
