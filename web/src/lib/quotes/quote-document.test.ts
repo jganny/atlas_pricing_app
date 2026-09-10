@@ -48,6 +48,11 @@ const quote: SavedQuote = {
 
 const doc = buildClientQuoteDocument(quote);
 assert.match(doc.filename, /Quote-.*\.html/);
+assert.match(doc.pdfFilename, /Quote-.*\.pdf/);
+assert.match(doc.emailCover, /attached as PDF/);
+assert.match(doc.emailCover, /ABC/);
+assert.doesNotMatch(doc.emailCover, /Emirates/);
+assert.doesNotMatch(doc.emailCover, /Airline options/);
 assert.match(doc.shareText, /EK — Emirates SkyCargo/);
 assert.match(doc.shareText, /TK — Turkish Cargo/);
 assert.match(doc.shareText, /quoted offer/);

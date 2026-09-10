@@ -39,9 +39,11 @@ function optionFlags(option: OptionBreakdown): string {
 export interface ClientQuoteDocument {
   ref: string;
   filename: string;
+  pdfFilename: string;
   title: string;
   shareSubject: string;
   shareText: string;
+  emailCover: string;
   html: string;
   optionCount: number;
 }
@@ -56,8 +58,15 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   const prepared = enquiryAssigneeLabel(quote.creator);
   const quoted = options.find((o) => o.selected) ?? options[0];
   const filename = `Quote-${ref}.html`;
+  const pdfFilename = `Quote-${ref}.pdf`;
   const title = `Quotation ${ref} · ${quote.customer || "Vertex"}`;
   const shareSubject = `Freight quotation ${ref} — ${quote.customer || ""}`.trim();
+  const emailCover = [
+    "Please find our official freight quotation attached as PDF.",
+    "",
+    `Ref: ${ref}`,
+    `Customer: ${quote.customer || "—"}`,
+  ].join("\n");
 
   const shareLines = [
     `Atlas Logistics quotation ${ref}`,
@@ -150,6 +159,11 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   .total-box { background: #f8fafc; border-radius: 12px; padding: 16px; margin-top: 18px; }
   .total-box strong { display: block; font-size: 1.6rem; color: #047857; }
   pre { white-space: pre-wrap; font-size: 12px; color: #64748b; }
+  @media print, screen {
+    body.pdf-pack .hint, body.pdf-pack .no-print { display: none !important; }
+    body.pdf-pack .panel { display: block !important; page-break-inside: avoid; }
+    body.pdf-pack .tab { text-decoration: none; cursor: default; }
+  }
   @media print {
     .hint, .no-print { display: none !important; }
     .tab { text-decoration: none; cursor: default; }
@@ -210,9 +224,11 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   return {
     ref,
     filename,
+    pdfFilename,
     title,
     shareSubject,
     shareText,
+    emailCover,
     html,
     optionCount: options.length,
   };

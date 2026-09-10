@@ -8,7 +8,8 @@ import { GuideNote } from "@/components/GuideNote";
 import { buildClientQuoteDocument } from "@/lib/quotes/quote-document";
 import {
   downloadTextFile,
-  openMailTo,
+  emailQuotePdf,
+  htmlDocumentToPdfFile,
   openWhatsApp,
   printHtmlDocument,
 } from "@/lib/quotes/quote-print";
@@ -241,10 +242,27 @@ export function QuotePreviewModal({
     toast("Quote file saved. Open it to switch airlines, or Print → Save as PDF.", "success");
   }
 
-  function handleEmail() {
-    downloadTextFile(clientDoc.filename, clientDoc.html);
-    openMailTo(clientDoc.shareSubject, clientDoc.shareText);
-    toast("Quote file downloaded — attach it to the email so the client can tap each airline.", "success");
+  async function handleEmail() {
+    setShareBusy("Preparing PDF…");
+    try {
+      const file = await htmlDocumentToPdfFile(clientDoc.html, clientDoc.pdfFilename);
+      const how = await emailQuotePdf({
+        file,
+        subject: clientDoc.shareSubject,
+        cover: clientDoc.emailCover,
+      });
+      toast(
+        how === "shared"
+          ? "Choose Mail — the official quotation PDF is attached."
+          : "Mail draft downloaded with the quotation PDF attached. Open the .eml if Mail did not pop up.",
+        "success",
+      );
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast(err instanceof Error ? err.message : "Could not prepare the quotation PDF", "error");
+    } finally {
+      setShareBusy(null);
+    }
   }
 
   function handleWhatsApp() {
@@ -298,9 +316,9 @@ export function QuotePreviewModal({
               <Download className="mr-1 h-4 w-4" />
               Download quote
             </Button>
-            <Button type="button" variant="secondary" className="text-xs" data-testid="quote-email-btn" onClick={handleEmail}>
+            <Button type="button" variant="secondary" className="text-xs" data-testid="quote-email-btn" onClick={() => void handleEmail()} disabled={Boolean(shareBusy)}>
               <Mail className="mr-1 h-4 w-4" />
-              Email
+              {shareBusy === "Preparing PDF…" ? "Preparing PDF…" : "Email"}
             </Button>
             <Button type="button" variant="secondary" className="text-xs" data-testid="quote-whatsapp-btn" onClick={handleWhatsApp}>
               <MessageCircle className="mr-1 h-4 w-4" />
@@ -309,8 +327,8 @@ export function QuotePreviewModal({
           </div>
           <GuideNote testId="quote-share-guide">
             {options.length > 1
-              ? "A PDF cannot switch airlines. Download the quote file — your client taps each option to compare. Print / Save PDF is instant and still lists every airline on paper."
-              : "Download, email, or WhatsApp this quote. Print / Save PDF opens a clean page (not the whole Enquiry DB), so it responds immediately."}
+              ? "Email sends the official quotation as a PDF (every airline listed). Print / Save PDF is the same pack on paper. Download quote is the tap-to-compare file."
+              : "Email sends the official quotation as a PDF. Print / Save PDF opens a clean page so it responds immediately."}
           </GuideNote>
           <div className="mb-6 border-b-2 border-[var(--color-atlas-navy)] pb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
