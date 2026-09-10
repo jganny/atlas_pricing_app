@@ -61,68 +61,135 @@ const CITY_TO_IATA: Record<string, string> = {
   shanghai: 'PVG',
   tokyo: 'NRT',
   sydney: 'SYD',
-  chandigarh: 'IXC',
-  mohali: 'IXC',
-  zirakpur: 'IXC',
-  dhakoli: 'IXC',
-  panchkula: 'IXC',
-  'sas nagar': 'IXC',
-  sasnagar: 'IXC',
-  kharar: 'IXC',
-  'dera bassi': 'IXC',
-  derabassi: 'IXC',
-  patiala: 'IXC',
-  baddi: 'IXC',
-  ludhiana: 'LUH',
-  amritsar: 'ATQ',
-  jalandhar: 'ATQ',
+  'mexico city': 'MEX',
+  'ciudad de mexico': 'MEX',
   gurugram: 'DEL',
   gurgaon: 'DEL',
   noida: 'DEL',
   faridabad: 'DEL',
   ghaziabad: 'DEL',
-  'mexico city': 'MEX',
-  'ciudad de mexico': 'MEX',
+  'new delhi': 'DEL',
+  okhla: 'DEL',
 }
 
-/** First 3 digits of an Indian PIN → nearest cargo airport (EXW pickup). */
+/**
+ * Street / PIN / locality guesses use major international cargo gateways only
+ * (Delhi, not Chandigarh IXC or Ludhiana LUH). Typed IATA codes still win.
+ */
+const INTERNATIONAL_GATEWAYS = new Set([
+  "DEL",
+  "BOM",
+  "BLR",
+  "MAA",
+  "HYD",
+  "CCU",
+  "AMD",
+  "COK",
+  "PNQ",
+  "GOI",
+  "TRV",
+  "GAU",
+  "JAI",
+  "LKO",
+  "ATQ",
+  "DXB",
+  "SIN",
+  "HKG",
+  "LHR",
+  "FRA",
+  "AMS",
+  "CDG",
+  "JFK",
+  "ORD",
+  "LAX",
+  "PVG",
+  "NRT",
+  "SYD",
+  "MEX",
+  "SAP",
+])
+
+/** Pickup-address localities → nearest international gateway. */
+const ADDRESS_TO_GATEWAY: Record<string, string> = {
+  delhi: "DEL",
+  "new delhi": "DEL",
+  okhla: "DEL",
+  gurugram: "DEL",
+  gurgaon: "DEL",
+  noida: "DEL",
+  faridabad: "DEL",
+  ghaziabad: "DEL",
+  chandigarh: "DEL",
+  mohali: "DEL",
+  zirakpur: "DEL",
+  dhakoli: "DEL",
+  panchkula: "DEL",
+  "sas nagar": "DEL",
+  sasnagar: "DEL",
+  kharar: "DEL",
+  "dera bassi": "DEL",
+  derabassi: "DEL",
+  patiala: "DEL",
+  baddi: "DEL",
+  ludhiana: "DEL",
+  jalandhar: "DEL",
+  punjab: "DEL",
+  haryana: "DEL",
+  amritsar: "ATQ",
+  mumbai: "BOM",
+  pune: "PNQ",
+  bengaluru: "BLR",
+  bangalore: "BLR",
+  chennai: "MAA",
+  hyderabad: "HYD",
+  ahmedabad: "AMD",
+  kolkata: "CCU",
+  kochi: "COK",
+  cochin: "COK",
+  jaipur: "JAI",
+  lucknow: "LKO",
+  goa: "GOI",
+}
+
+/** First 3 digits of an Indian PIN → nearest international cargo airport. */
 const PIN_PREFIX_TO_IATA: Record<string, string> = {
-  110: 'DEL',
-  121: 'DEL',
-  122: 'DEL',
-  124: 'DEL',
-  201: 'DEL',
-  133: 'IXC',
-  134: 'IXC',
-  140: 'IXC',
-  147: 'IXC',
-  160: 'IXC',
-  141: 'LUH',
-  143: 'ATQ',
-  144: 'ATQ',
-  226: 'LKO',
-  302: 'JAI',
-  380: 'AMD',
-  382: 'AMD',
-  390: 'BDQ',
-  394: 'STV',
-  395: 'STV',
-  400: 'BOM',
-  401: 'BOM',
-  411: 'PNQ',
-  403: 'GOI',
-  440: 'NAG',
-  452: 'IDR',
-  500: 'HYD',
-  560: 'BLR',
-  600: 'MAA',
-  641: 'CJB',
-  682: 'COK',
-  695: 'TRV',
-  700: 'CCU',
-  751: 'BBI',
-  781: 'GAU',
-  800: 'PAT',
+  110: "DEL",
+  121: "DEL",
+  122: "DEL",
+  124: "DEL",
+  132: "DEL",
+  133: "DEL",
+  134: "DEL",
+  140: "DEL",
+  141: "DEL",
+  143: "DEL",
+  144: "DEL",
+  147: "DEL",
+  160: "DEL",
+  201: "DEL",
+  226: "LKO",
+  302: "JAI",
+  380: "AMD",
+  382: "AMD",
+  390: "AMD",
+  394: "AMD",
+  395: "AMD",
+  400: "BOM",
+  401: "BOM",
+  411: "PNQ",
+  403: "GOI",
+  440: "BOM",
+  452: "BOM",
+  500: "HYD",
+  560: "BLR",
+  600: "MAA",
+  641: "MAA",
+  682: "COK",
+  695: "TRV",
+  700: "CCU",
+  751: "CCU",
+  781: "GAU",
+  800: "CCU",
 }
 
 const CITY_TO_UNLOCODE: Record<string, string> = {
@@ -152,37 +219,77 @@ function normalizeCityKey(s: string) {
   return s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim()
 }
 
+function isInternationalGateway(code: string): boolean {
+  return INTERNATIONAL_GATEWAYS.has(code.toUpperCase())
+}
+
+function looksLikeStreetAddress(token: string): boolean {
+  const t = token.trim()
+  return (
+    t.length > 24 ||
+    /\b\d{6}\b/.test(t) ||
+    /india|nagar|street|road|phase|limited|private|industrial|pickup/i.test(t)
+  )
+}
+
 function resolveAirport(token: string): string {
-  const t = token.trim().split(/[\n|,]/)[0].trim()
-  if (!t || /^(as per|tba|tbd|nil|-)$/i.test(t)) return ''
-  const mapped = CITY_TO_IATA[normalizeCityKey(t)] || CITY_TO_IATA[normalizeCityKey(t).replace(/\s/g, '')]
+  const full = token.trim()
+  if (!full || /^(as per|tba|tbd|nil|-)$/i.test(full)) return ""
+  if (looksLikeStreetAddress(full)) {
+    return airportFromAddress(full)
+  }
+  const t = full.split(/[\n|,]/)[0].trim()
+  const mapped =
+    CITY_TO_IATA[normalizeCityKey(t)] || CITY_TO_IATA[normalizeCityKey(t).replace(/\s/g, "")]
   if (mapped) return mapped
   const fromAddr = airportFromAddress(t)
   if (fromAddr) return fromAddr
-  const code = t.match(/\b([A-Z]{3})\b/)
-  if (code) return code[1].toUpperCase()
-  return t.toUpperCase().slice(0, 3)
+  const codes = full.match(/\b([A-Z]{3})\b/g) || []
+  const iata = codes.map((c) => c.toUpperCase()).find((c) => isInternationalGateway(c))
+  if (iata) return iata
+  const first = codes[0]?.toUpperCase()
+  if (
+    first &&
+    t.length <= 6 &&
+    !/^(EXW|FCA|FOB|CFR|CIF|DAP|DDP|CBM|KGS|IMO|NON|USD|INR|SCO)$/.test(first)
+  ) {
+    return first
+  }
+  if (t.length <= 12) {
+    const slice = t.toUpperCase().slice(0, 3)
+    if (isInternationalGateway(slice)) return slice
+  }
+  return ""
 }
 
 function airportFromPin(blob: string): string {
   const m = blob.match(/\b(\d{6})\b/)
-  if (!m) return ''
-  return PIN_PREFIX_TO_IATA[m[1].slice(0, 3)] || ''
+  if (!m) return ""
+  const code = PIN_PREFIX_TO_IATA[m[1].slice(0, 3)] || ""
+  return isInternationalGateway(code) ? code : ""
 }
 
-/** Scan an address (not a 3-letter IATA field) for PIN or locality → airport. */
+function matchLocalityMap(key: string, map: Record<string, string>): string {
+  const names = Object.keys(map).sort((a, b) => b.length - a.length)
+  for (const name of names) {
+    if (name.length < 4) continue
+    const pattern = name.replace(/\s+/g, "\\s+")
+    if (new RegExp(`(?:^|[^a-z])${pattern}(?:$|[^a-z])`).test(key)) return map[name]
+  }
+  return ""
+}
+
+/** Scan a pickup address for PIN or locality → nearest international airport. */
 export function airportFromAddress(blob: string): string {
   const pin = airportFromPin(blob)
   if (pin) return pin
   const key = normalizeCityKey(blob)
-  if (!key) return ''
-  const names = Object.keys(CITY_TO_IATA).sort((a, b) => b.length - a.length)
-  for (const name of names) {
-    if (name.length < 4) continue
-    const pattern = name.replace(/\s+/g, '\\s+')
-    if (new RegExp(`(?:^|[^a-z])${pattern}(?:$|[^a-z])`).test(key)) return CITY_TO_IATA[name]
-  }
-  return ''
+  if (!key) return ""
+  const fromAddr = matchLocalityMap(key, ADDRESS_TO_GATEWAY)
+  if (fromAddr && isInternationalGateway(fromAddr)) return fromAddr
+  const fromCity = matchLocalityMap(key, CITY_TO_IATA)
+  if (fromCity && isInternationalGateway(fromCity)) return fromCity
+  return ""
 }
 
 function extractPickupAddress(text: string): string {
@@ -313,6 +420,10 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
   ])
   if (originLabel) result.origin = resolveAirport(originLabel)
   if (destLabel) result.destination = resolveAirport(destLabel)
+  if (originLabel && looksLikeStreetAddress(originLabel)) {
+    const fromOriginAddr = airportFromAddress(originLabel)
+    if (fromOriginAddr) result.origin = fromOriginAddr
+  }
 
   if (!result.origin || !result.destination) {
     const polPod = t.match(/\bpol\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})[\s\S]*?\bpod\b[:\s]*([A-Za-z][A-Za-z0-9 \-]{1,40})/i)
@@ -344,8 +455,9 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
   if (pickup) {
     result.notes = result.notes ? `${result.notes}\n${pickup}` : pickup
   }
-  if (!result.origin) {
-    result.origin = airportFromAddress(pickup || collected.notes || '')
+  const pickupGw = airportFromAddress(pickup || collected.notes || "")
+  if (pickupGw && (!result.origin || !isInternationalGateway(result.origin) || looksLikeStreetAddress(originLabel))) {
+    result.origin = pickupGw
   }
   if (!result.origin) {
     const pinOnly = airportFromPin(t)

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { classifyQuoteMode, deskModeForPaste } from "./quote-mode";
-import { parseAirEnquiry } from "./parse-enquiry";
+import { airportFromAddress, parseAirEnquiry } from "./parse-enquiry";
 
 const JECKSON = `Dear Shashank,
 
@@ -69,7 +69,8 @@ Destination: Mexico City
 
 assert.equal(deskModeForPaste(ZIRAKPUR), "air");
 const zirakpur = parseAirEnquiry(ZIRAKPUR);
-assert.equal(zirakpur.origin, "IXC", "Zirakpur / SAS Nagar PIN 160104 → Chandigarh (IXC)");
+assert.equal(zirakpur.origin, "DEL", "Zirakpur / SAS Nagar PIN 160104 → Delhi (international gateway), not IXC");
+assert.notEqual(zirakpur.origin, "IXC");
 assert.notEqual(zirakpur.origin, "SCO");
 assert.equal(zirakpur.destination, "MEX");
 assert.equal(zirakpur.incoterm, "EXW");
@@ -80,12 +81,15 @@ assert.match(zirakpur.notes || "", /Zirakpur/);
 const pinOnly = parseAirEnquiry(
   "Air freight EXW pickup SAS Nagar-160104 Punjab India\nDestination: Mexico City\n2 cartons 80 x 60 x 50 cm Total Weight: 100 kgs",
 );
-assert.equal(pinOnly.origin, "IXC");
+assert.equal(pinOnly.origin, "DEL");
 
 const localityOnly = parseAirEnquiry(
   "Air freight from pickup at Dhakoli, Zirakpur, Punjab, India to Mexico City. 1 carton 40 x 40 x 40 cm weight 20 kg",
 );
-assert.equal(localityOnly.origin, "IXC");
+assert.equal(localityOnly.origin, "DEL");
 assert.equal(localityOnly.destination, "MEX");
+
+assert.equal(airportFromAddress("SCO-06, Wadhawa Nagar, Dhakoli, Zirakpur, SAS Nagar-160104, Punjab, INDIA"), "DEL");
+assert.equal(airportFromAddress("Ludhiana 141001 Punjab India"), "DEL");
 
 console.log("jeckson air-freight intake tests passed");
