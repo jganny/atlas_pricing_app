@@ -49,10 +49,10 @@ export function PortalDropdown({
 
       const spaceBelow = window.innerHeight - r.bottom - pad;
       const spaceAbove = r.top - pad;
-      const openUp = spaceBelow < Math.min(maxHeight, 160) && spaceAbove > spaceBelow;
-      const available = Math.max(120, openUp ? spaceAbove : spaceBelow);
+      const openUp = spaceBelow < maxHeight && spaceAbove > spaceBelow;
+      const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
       const height = Math.min(maxHeight, available);
-      const top = openUp ? Math.max(pad, r.top - height - 4) : r.bottom + 4;
+      const top = openUp ? Math.max(pad, r.top - height - 4) : Math.min(r.bottom + 4, window.innerHeight - height - pad);
       setBox({ top, left, width, height });
     }
     place();

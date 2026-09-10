@@ -324,7 +324,7 @@ export function EnquiryInspector({
           onDismiss={() => setActionsOpen(false)}
           testId="edb-actions-overlay"
         >
-          <div className="grid gap-1.5 p-1.5">
+          <div className="grid gap-1 p-1.5">
             <Button
               type="button"
               variant="secondary"
