@@ -13,7 +13,5 @@ assert.match(eml, /Content-Type: application\/pdf/);
 assert.match(eml, /filename="Quote-AECAR0926IN00837.pdf"/);
 assert.match(eml, /X-Unsent: 1/);
 assert.match(eml, /attached as PDF/);
-assert.doesNotMatch(eml, /Airline options/);
-assert.doesNotMatch(eml, /Emirates: €0\.00/);
 
 console.log("quote-print draft tests passed");

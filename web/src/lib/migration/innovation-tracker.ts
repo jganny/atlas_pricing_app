@@ -81,7 +81,7 @@ export const innovationItems: InnovationItem[] = [
   { id: "i14-pwa", name: "PWA + offline draft", phase: 14, status: "done", why: "Manifest + shell SW + offline quote cache", react: "public/sw.js + offline-cache" },
   { id: "i15-swipe-ask", name: "Ask Vertex swipe-to-hide", phase: 15, status: "done", why: "Mail/Outlook swipe-left Delete on search + work queue without touching Firestore", react: "SwipeDeleteRow + hidden-ask" },
   { id: "i15-quote-pack", name: "Interactive option inspector + print pack", phase: 15, status: "done", why: "Click EK/EY on screen; PDF prints every airline/lane breakup with its own validity — Flexport-style quote pack because PDFs cannot run JS", react: "QuotePreviewModal" },
-  { id: "i16-quote-share", name: "Fast print + client quote PDF (email / WhatsApp / download)", phase: 16, status: "done", why: "Email sends an official PDF (every option listed). Download remains the tap-to-compare HTML. Print uses an isolated document.", react: "quote-document + QuotePreviewModal" },
+  { id: "i16-quote-share", name: "Client quotation PDF pack", phase: 16, status: "done", why: "Email, WhatsApp, and Download send one PDF: comparison table plus every airline breakup (quoted first). No tap-to-compare HTML for clients.", react: "quote-document + QuotePreviewModal" },
 ];
 
 export function innovationStats(items: InnovationItem[] = innovationItems) {

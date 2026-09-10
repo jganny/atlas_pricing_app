@@ -1,5 +1,5 @@
 /* Vertex PWA shell — never cache Firestore. Bump CACHE on every UI release. */
-const CACHE = "atlas-app-shell-v14";
+const CACHE = "atlas-app-shell-v15";
 const PRECACHE = [
   "/app/manifest.webmanifest",
   "/app/icon-192.png",

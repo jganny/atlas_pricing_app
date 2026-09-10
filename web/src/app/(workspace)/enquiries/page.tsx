@@ -2,21 +2,17 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { Archive, Download, Loader2, Search } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
 import { EnquiryTable } from "@/components/EnquiryTable";
-import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
-import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { lookupQuoteByRef, lookupQuotesByText } from "@/lib/firebase/archive-lookup";
-import { deleteQuoteById, fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
-import type { EnquiryRecord, SavedQuote } from "@/lib/types";
+import type { EnquiryRecord } from "@/lib/types";
 import {
   downloadEnquiryCsv,
   summarizeEnquiryFinancials,
@@ -88,7 +84,6 @@ function MetricToggle<T extends string>({
 
 function EnquiryDatabaseInner() {
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
   const { data: liveRows = [], isLoading, error } = useEnquiries();
   const rows = useMemo(() => mergeLocalEnquiries(liveRows), [liveRows]);
   const user = useAuthStore((s) => s.user);
@@ -116,7 +111,6 @@ function EnquiryDatabaseInner() {
   const [archiveRef, setArchiveRef] = useState("");
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveNote, setArchiveNote] = useState<string | null>(null);
-  const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
 
   useEffect(() => {
     const q = searchParams?.get("q");
@@ -271,22 +265,6 @@ function EnquiryDatabaseInner() {
       toast(e instanceof Error ? e.message : "Lookup failed", "error");
     } finally {
       setArchiveBusy(false);
-    }
-  }
-
-  async function handleDeleteRow(id: string) {
-    const previous = queryClient.getQueryData(queryKeys.enquiries);
-    queryClient.setQueryData(queryKeys.enquiries, (current: EnquiryRecord[] | undefined) =>
-      (current ?? []).filter((row) => row.id !== id),
-    );
-    if (selectedId === id) setSelectedId(null);
-    try {
-      await deleteQuoteById(id);
-      toast("Quote deleted.", "success");
-      await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
-    } catch (e) {
-      if (previous) queryClient.setQueryData(queryKeys.enquiries, previous);
-      toast(e instanceof Error ? e.message : "Could not delete quote.", "error");
     }
   }
 
@@ -559,14 +537,6 @@ function EnquiryDatabaseInner() {
                 rows={filtered}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
-                onViewPrint={(row) => {
-                  void (async () => {
-                    const q = await fetchQuoteById(row.id);
-                    if (q) setPreviewQuote(q);
-                    else toast("Quote not found in Enquiry DB.", "error");
-                  })();
-                }}
-                onDelete={(row) => void handleDeleteRow(row.id)}
                 metricModes={metricModes}
                 visibleColumns={columns}
               />
@@ -585,9 +555,6 @@ function EnquiryDatabaseInner() {
           )}
         </div>
       </div>
-      {previewQuote ? (
-        <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />
-      ) : null}
     </div>
   );
 }

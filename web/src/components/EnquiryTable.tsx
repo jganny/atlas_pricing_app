@@ -39,16 +39,12 @@ export function EnquiryTable({
   rows,
   selectedId,
   onSelect,
-  onViewPrint,
-  onDelete,
   metricModes,
   visibleColumns,
 }: {
   rows: EnquiryRecord[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onViewPrint?: (row: EnquiryRecord) => void;
-  onDelete?: (row: EnquiryRecord) => void;
   metricModes: EdbMetricModes;
   visibleColumns?: EdbColumnVisibility;
 }) {
@@ -181,9 +177,7 @@ export function EnquiryTable({
   });
 
   const leafCount = Math.max(1, table.getVisibleLeafColumns().length);
-  const template = onDelete
-    ? `repeat(${leafCount}, minmax(12rem, 1fr)) 6rem`
-    : `repeat(${leafCount}, minmax(12rem, 1fr))`;
+  const template = `repeat(${leafCount}, minmax(12rem, 1fr))`;
 
   if (rows.length === 0) {
     return (
@@ -193,7 +187,7 @@ export function EnquiryTable({
 
   return (
     <div className="overflow-x-auto" data-testid="edb-table-scroll">
-      <div className="min-w-[92rem]">
+      <div className="min-w-[80rem]">
       <div className="border-b border-[var(--color-border)] bg-slate-50 text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
         {table.getHeaderGroups().map((hg) => (
           <div key={hg.id} className="grid items-center" style={{ gridTemplateColumns: template }}>
@@ -220,9 +214,6 @@ export function EnquiryTable({
                 </div>
               );
             })}
-            {onDelete ? (
-              <div className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right"> </div>
-            ) : null}
           </div>
         ))}
       </div>
@@ -250,36 +241,10 @@ export function EnquiryTable({
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </div>
             ))}
-            {onDelete ? (
-              <div
-                className={cn(
-                  "sticky right-0 z-10 flex justify-end px-1 py-1",
-                  selected ? "bg-sky-50" : "bg-white",
-                )}
-              >
-                <button
-                  type="button"
-                  data-testid="edb-row-delete"
-                  className="rounded-md bg-red-600 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-white hover:bg-red-700"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(row.original);
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            ) : null}
           </div>
           );
         })}
       </div>
-      {onDelete ? (
-        <p className="border-t border-[var(--color-border)] px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
-          Scroll the row left to right if columns overflow — Delete stays at the far right and
-          removes the saved quote.
-        </p>
-      ) : null}
       </div>
     </div>
   );

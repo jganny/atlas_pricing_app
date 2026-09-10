@@ -47,23 +47,25 @@ const quote: SavedQuote = {
 };
 
 const doc = buildClientQuoteDocument(quote);
-assert.match(doc.filename, /Quote-.*\.html/);
+assert.match(doc.filename, /Quote-.*\.pdf/);
 assert.match(doc.pdfFilename, /Quote-.*\.pdf/);
-assert.match(doc.emailCover, /attached as PDF/);
+assert.match(doc.emailCover, /Official Freight Quotation/);
 assert.match(doc.emailCover, /ABC/);
-assert.doesNotMatch(doc.emailCover, /Emirates/);
-assert.doesNotMatch(doc.emailCover, /Airline options/);
-assert.match(doc.shareText, /EK — Emirates SkyCargo/);
-assert.match(doc.shareText, /TK — Turkish Cargo/);
-assert.match(doc.shareText, /quoted offer/);
-assert.match(doc.shareText, /A PDF cannot switch airlines/);
+assert.match(doc.emailCover, /EK — Emirates SkyCargo/);
+assert.match(doc.emailCover, /TK — Turkish Cargo/);
+assert.match(doc.emailCover, /attached PDF/);
+assert.match(doc.shareText, /PDF attached/);
 assert.equal(doc.optionCount, 2);
-assert.match(doc.html, /data-tab=/);
+assert.doesNotMatch(doc.html, /data-tab=/);
+assert.doesNotMatch(doc.html, /function show\(id\)/);
 assert.match(doc.html, /EK — Emirates SkyCargo/);
 assert.match(doc.html, /TK — Turkish Cargo/);
-assert.match(doc.html, /function show\(id\)/);
-assert.match(doc.html, /@media print/);
+assert.match(doc.html, /1 of 2 · quoted offer/);
+assert.match(doc.html, /2 of 2 · alternative/);
 assert.match(doc.html, /ABC/);
+const quotedAt = doc.html.indexOf("quoted offer");
+const altAt = doc.html.indexOf("alternative");
+assert.ok(quotedAt >= 0 && altAt > quotedAt, "quoted offer must appear before alternatives in the pack");
 
 const injected: SavedQuote = {
   ...quote,

@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Ban,
+  ChevronsUpDown,
   Copy,
   Eye,
   Pencil,
   Trash2,
   Trophy,
   XCircle,
-  Ban,
 } from "lucide-react";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { Badge, Button, Card } from "@/components/ui";
@@ -73,6 +74,7 @@ export function EnquiryInspector({
   const [commodity, setCommodity] = useState("");
   const [amdReason, setAmdReason] = useState("");
   const [showAmd, setShowAmd] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const admin = isAdminUser(user?.username, user?.role);
 
   async function loadFullQuote(): Promise<SavedQuote | null> {
@@ -296,6 +298,22 @@ export function EnquiryInspector({
           </p>
         ) : null}
 
+        <button
+          type="button"
+          data-testid="edb-actions-toggle"
+          onClick={() => setActionsOpen((open) => !open)}
+          className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border)] bg-slate-50 px-3 py-2.5 text-left hover:border-sky-300"
+        >
+          <span className="inline-flex items-center gap-2 text-sm font-extrabold text-[var(--color-atlas-navy)]">
+            <ChevronsUpDown className="h-4 w-4" />
+            Actions
+          </span>
+          <span className="text-[11px] font-semibold text-[var(--color-text-muted)]">
+            {actionsOpen ? "Hide" : "View, amend, won, delete…"}
+          </span>
+        </button>
+
+        {actionsOpen ? (
         <div className="grid gap-2">
           <Button type="button" variant="secondary" disabled={loading} onClick={() => void handleView()}>
             <Eye className="mr-2 h-4 w-4" />
@@ -333,6 +351,7 @@ export function EnquiryInspector({
             <span className="text-red-600">Delete</span>
           </Button>
         </div>
+        ) : null}
 
         {showAmd ? (
           <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">

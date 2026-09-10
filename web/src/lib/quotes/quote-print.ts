@@ -83,6 +83,7 @@ export function openWhatsApp(text: string): void {
 
 function htmlForPdfCapture(html: string): string {
   return html
+    .replace(/ hidden(="")?/g, "")
     .replace("<body>", '<body class="pdf-pack">')
     .replace("<body ", '<body class="pdf-pack" ');
 }
@@ -157,28 +158,41 @@ export async function htmlDocumentToPdfFile(html: string, filename: string): Pro
     if (!body) throw new Error("PDF frame was empty");
     await new Promise((r) => window.setTimeout(r, 120));
 
+    doc.querySelectorAll(".panel").forEach((panel) => {
+      panel.removeAttribute("hidden");
+      (panel as HTMLElement).style.display = "block";
+    });
+    await new Promise((r) => window.setTimeout(r, 80));
+
     const canvas = await html2canvas(body, {
       scale: 2,
       backgroundColor: "#ffffff",
       useCORS: true,
       logging: false,
-      windowWidth: 800,
+      windowWidth: 720,
+      onclone: (clone) => {
+        clone.querySelectorAll(".panel").forEach((panel) => {
+          panel.removeAttribute("hidden");
+          (panel as HTMLElement).style.display = "block";
+        });
+      },
     });
-    const img = canvas.toDataURL("image/jpeg", 0.92);
+    const img = canvas.toDataURL("image/jpeg", 0.86);
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
+    const margin = 36;
+    const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
-    let position = 0;
-    pdf.addImage(img, "JPEG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    let position = margin;
+    pdf.addImage(img, "JPEG", margin, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight - margin * 2;
     while (heightLeft > 8) {
-      position -= pageHeight;
+      position -= pageHeight - margin;
       pdf.addPage();
-      pdf.addImage(img, "JPEG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      pdf.addImage(img, "JPEG", margin, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight - margin;
     }
     const blob = pdf.output("blob");
     return new File([blob], filename, { type: "application/pdf" });
@@ -197,10 +211,10 @@ export async function emailQuotePdf(opts: {
     share?: (data: ShareData) => Promise<void>;
   };
   if (typeof nav.canShare === "function" && typeof nav.share === "function") {
-    const payload = { files: [opts.file], title: opts.subject, text: opts.cover };
+    const withFile = { files: [opts.file] };
     try {
-      if (nav.canShare(payload)) {
-        await nav.share(payload);
+      if (nav.canShare(withFile)) {
+        await nav.share({ files: [opts.file], title: opts.subject, text: opts.cover });
         return "shared";
       }
     } catch (err) {
@@ -215,7 +229,33 @@ export async function emailQuotePdf(opts: {
     filename: opts.file.name,
     pdfBytes,
   });
+  downloadBlob(opts.file.name, opts.file);
   const emlName = opts.file.name.replace(/\.pdf$/i, ".eml");
   downloadBlob(emlName, new Blob([eml], { type: "message/rfc822" }));
   return "draft";
+}
+
+/** WhatsApp / share sheet with the PDF. Falls back to downloading the file. */
+export async function shareQuotePdf(opts: {
+  file: File;
+  subject: string;
+  text: string;
+}): Promise<"shared" | "downloaded"> {
+  const nav = navigator as Navigator & {
+    canShare?: (data: ShareData) => boolean;
+    share?: (data: ShareData) => Promise<void>;
+  };
+  if (typeof nav.canShare === "function" && typeof nav.share === "function") {
+    const withFile = { files: [opts.file] };
+    try {
+      if (nav.canShare(withFile)) {
+        await nav.share({ files: [opts.file], title: opts.subject, text: opts.text });
+        return "shared";
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+    }
+  }
+  downloadBlob(opts.file.name, opts.file);
+  return "downloaded";
 }
