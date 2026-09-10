@@ -8,8 +8,8 @@ const PRECACHE = [
 ];
 
 self.addEventListener("install", (event) => {
-  // Do not skipWaiting() here. Auto-activate + clients.claim() during a reload
-  // makes Safari restore the session 2–3 times. Refresh now posts SKIP_WAITING.
+  // Stay waiting until Refresh now posts SKIP_WAITING. Auto-activate + claiming
+  // clients during a reload makes Safari restore the session 2–3 times.
   event.waitUntil(
     caches
       .open(CACHE)
