@@ -136,6 +136,7 @@ export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
     amountINR: num(data.amountINR),
     grossProfit: gp,
     grossProfitCurrency: data.grossProfitCurrency,
+    grossProfitINR: num(data.grossProfitINR),
     buyTotal: buyFromGp ?? buyRate ?? confirmedBuyRate,
     buyRate,
     confirmedBuyRate,

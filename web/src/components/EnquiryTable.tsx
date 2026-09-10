@@ -176,8 +176,19 @@ export function EnquiryTable({
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const leafCount = Math.max(1, table.getVisibleLeafColumns().length);
-  const template = `repeat(${leafCount}, minmax(12rem, 1fr))`;
+  const template = table
+    .getVisibleLeafColumns()
+    .map((col) => {
+      const id = col.id;
+      if (id === "ref") return "minmax(9.5rem, 1.1fr)";
+      if (id === "customer") return "minmax(8rem, 1.1fr)";
+      if (id === "mode" || id === "status") return "minmax(4.5rem, 0.55fr)";
+      if (id === "lane") return "minmax(9rem, 1.2fr)";
+      if (id === "buy" || id === "sell" || id === "gp") return "minmax(7.5rem, 0.9fr)";
+      if (id === "sla") return "minmax(5rem, 0.5fr)";
+      return "minmax(6.5rem, 0.8fr)";
+    })
+    .join(" ");
 
   if (rows.length === 0) {
     return (
@@ -187,7 +198,7 @@ export function EnquiryTable({
 
   return (
     <div className="overflow-x-auto" data-testid="edb-table-scroll">
-      <div className="min-w-[80rem]">
+      <div className="min-w-[52rem]">
       <div className="border-b border-[var(--color-border)] bg-slate-50 text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
         {table.getHeaderGroups().map((hg) => (
           <div key={hg.id} className="grid items-center" style={{ gridTemplateColumns: template }}>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Save, Warehouse } from "lucide-react";
 import {
@@ -47,6 +48,7 @@ const WH_FOCUS: Record<WhTab, string> = {
 export default function WarehouseDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<WhTab>("details");
   const [customer, setCustomer] = useState("");
   const [location, setLocation] = useState<string>(WAREHOUSE_LOCATIONS[0]);
@@ -63,6 +65,11 @@ export default function WarehouseDeskPage() {
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+
+  useEffect(() => {
+    const c = searchParams?.get("customer");
+    if (c) setCustomer(c);
+  }, [searchParams]);
 
   const storage = ratePerCbm * cbm * Math.max(1, days);
   const total = useMemo(() => storage + handling, [storage, handling]);

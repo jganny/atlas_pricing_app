@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Plus, Save, Truck } from "lucide-react";
 import {
@@ -64,6 +65,7 @@ const TRANSPORT_FOCUS: Record<TabId, string> = {
 export default function TransportDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabId>("lane");
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
@@ -95,6 +97,21 @@ export default function TransportDeskPage() {
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+
+  useEffect(() => {
+    const c = searchParams?.get("customer");
+    if (c) setCustomer(c);
+    const originQ = searchParams?.get("origin");
+    const destQ = searchParams?.get("dest");
+    if (originQ || destQ) {
+      setLanes((prev) => {
+        const id = prev[0]?.id;
+        return prev.map((l) =>
+          l.id === id ? { ...l, origin: originQ || l.origin, destination: destQ || l.destination } : l,
+        );
+      });
+    }
+  }, [searchParams]);
 
   const selectedTrucker = truckers.find((t) => t.selected) ?? truckers[0];
   const freightBuy = selectedTrucker?.freightBuy ?? 0;

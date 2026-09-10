@@ -1,5 +1,6 @@
 import type { EnquiryRecord } from "@/lib/types";
 import { computeBuyTotal, gpNumeric } from "@/lib/quotes/edb-metrics";
+import { summarizeInr } from "@/lib/quotes/money";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 
 const CSV_HEADERS = [
@@ -64,24 +65,6 @@ export function downloadEnquiryCsv(rows: EnquiryRecord[], filename?: string): vo
 }
 
 export function summarizeEnquiryFinancials(rows: EnquiryRecord[]) {
-  let revenue = 0;
-  let buy = 0;
-  let gp = 0;
-  for (const row of rows) {
-    const sellInr = row.amountINR ?? row.grandTotal ?? 0;
-    const buyTotal = computeBuyTotal(row);
-    const gpVal = gpNumeric(row);
-    revenue += sellInr;
-    if (gpVal != null && row.amountINR != null) {
-      buy += sellInr - gpVal;
-      gp += gpVal;
-    } else if (buyTotal != null) {
-      buy += buyTotal;
-      gp += (row.grandTotal ?? 0) - buyTotal;
-    } else if (gpVal != null) {
-      gp += gpVal;
-      buy += (row.grandTotal ?? 0) - gpVal;
-    }
-  }
-  return { count: rows.length, revenue, buy, gp };
+  const { count, sell, gp, buy } = summarizeInr(rows);
+  return { count, revenue: sell, buy, gp };
 }

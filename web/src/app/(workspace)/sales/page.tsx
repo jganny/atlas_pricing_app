@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Briefcase, Loader2, Plus } from "lucide-react";
-import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { useLeads } from "@/hooks/use-atlas-data";
+import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -16,31 +18,75 @@ import {
   updateLeadStatus,
 } from "@/lib/firebase/sales";
 import { mockApi } from "@/lib/mock/api";
+import { TEAM_ROLES } from "@/lib/quotes/team-roles";
+import {
+  LEAD_SOURCES,
+  deskHrefForLead,
+  isFollowUpDue,
+  quotesForCompany,
+  stashLeadDeskPrefill,
+} from "@/lib/sales/quote-from-lead";
 import type { LeadActivity, LeadStatus, SalesLead } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const STAGES: LeadStatus[] = ["new", "contacted", "qualified", "quoted", "won", "lost"];
 
+const EMPTY_FORM = {
+  company: "",
+  contactName: "",
+  email: "",
+  phone: "",
+  source: "",
+  mode: "air" as SalesLead["mode"],
+  lane: "",
+  dealValue: 0,
+  nextAction: "",
+  nextDueDate: "",
+  owner: "",
+  winLossReason: "",
+};
+
 export default function SalesPage() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: leads = [], isLoading } = useLeads();
+  const { data: enquiries = [] } = useEnquiries();
+  const [view, setView] = useState<"list" | "board">("list");
+  const [statusFilter, setStatusFilter] = useState<"all" | LeadStatus>("all");
+  const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [note, setNote] = useState("");
+  const [noteType, setNoteType] = useState<LeadActivity["type"]>("note");
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
-    company: "",
-    contactName: "",
-    email: "",
-    mode: "air" as SalesLead["mode"],
-    lane: "",
-    dealValue: 0,
-    nextAction: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const selected = leads.find((l) => l.id === selectedId) ?? null;
+  const relatedQuotes = useMemo(
+    () => quotesForCompany(enquiries, selected?.company),
+    [enquiries, selected?.company],
+  );
+
+  const visible = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    return leads.filter((lead) => {
+      if (statusFilter !== "all" && lead.status !== statusFilter) return false;
+      if (!q) return true;
+      const hay = `${lead.company} ${lead.contactName || ""} ${lead.lane || ""} ${lead.owner || ""} ${lead.mode || ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [leads, query, statusFilter]);
+
+  const followUps = useMemo(() => leads.filter((l) => isFollowUpDue(l)), [leads]);
+
+  const stats = useMemo(() => {
+    const open = leads.filter((l) => l.status !== "lost" && l.status !== "won");
+    const pipeline = open.reduce((s, l) => s + (l.dealValue || 0), 0);
+    const won = leads.filter((l) => l.status === "won").reduce((s, l) => s + (l.dealValue || 0), 0);
+    return { count: leads.length, pipeline, won, followUps: followUps.length };
+  }, [leads, followUps.length]);
 
   async function openLead(lead: SalesLead) {
     setSelectedId(lead.id);
@@ -48,9 +94,7 @@ export default function SalesPage() {
       if (useLiveData) {
         const rows = await Promise.race([
           fetchLeadActivities(lead.id),
-          new Promise<LeadActivity[]>((resolve) =>
-            setTimeout(() => resolve([]), 4000),
-          ),
+          new Promise<LeadActivity[]>((resolve) => setTimeout(() => resolve([]), 4000)),
         ]);
         if (rows.length) setActivities(rows);
         else setActivities(await mockApi.fetchLeadActivities(lead.id));
@@ -98,21 +142,23 @@ export default function SalesPage() {
         company: form.company,
         contactName: form.contactName,
         email: form.email,
+        phone: form.phone,
+        source: form.source,
         status: "new" as LeadStatus,
         mode: form.mode,
         lane: form.lane,
         dealValue: form.dealValue,
         nextAction: form.nextAction,
-        owner: user?.username || "",
+        nextDueDate: form.nextDueDate,
+        owner: form.owner || user?.username || "",
+        winLossReason: form.winLossReason,
       };
       let id = `lead-local-${Date.now()}`;
       if (useLiveData) {
         try {
           id = await Promise.race([
             saveLead(payload),
-            new Promise<string>((_, rej) =>
-              setTimeout(() => rej(new Error("timeout")), 4000),
-            ),
+            new Promise<string>((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000)),
           ]);
         } catch {
           /* keep local id */
@@ -126,15 +172,7 @@ export default function SalesPage() {
       };
       queryClient.setQueryData(queryKeys.leads, [row, ...leads]);
       setCreating(false);
-      setForm({
-        company: "",
-        contactName: "",
-        email: "",
-        mode: "air",
-        lane: "",
-        dealValue: 0,
-        nextAction: "",
-      });
+      setForm({ ...EMPTY_FORM, owner: user?.username || "" });
       toast("Lead created", "success");
     } finally {
       setBusy(false);
@@ -149,7 +187,7 @@ export default function SalesPage() {
       if (useLiveData) {
         try {
           await Promise.race([
-            addLeadActivity(selected.id, body, user?.username || "desk", "note"),
+            addLeadActivity(selected.id, body, user?.username || "desk", noteType),
             new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000)),
           ]);
         } catch {
@@ -160,7 +198,7 @@ export default function SalesPage() {
         {
           id: `act-${Date.now()}`,
           leadId: selected.id,
-          type: "note",
+          type: noteType,
           body,
           createdBy: user?.username,
           createdAt: new Date().toISOString(),
@@ -174,27 +212,24 @@ export default function SalesPage() {
     }
   }
 
-  const pipelineValue = useMemo(
-    () =>
-      leads
-        .filter((l) => l.status !== "lost" && l.status !== "won")
-        .reduce((s, l) => s + (l.dealValue || 0), 0),
-    [leads],
-  );
+  function quoteFromLead(lead: SalesLead) {
+    stashLeadDeskPrefill(lead);
+    const href = deskHrefForLead(lead);
+    router.push(lead.mode === "air" || lead.mode === "sea" || !lead.mode ? `${href}${href.includes("?") ? "&" : "?"}smart=1` : href);
+  }
+
+  const owners = Object.keys(TEAM_ROLES).filter((k) => k !== "ganny");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-[var(--color-atlas-sky)]" />
-            <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
-              Sales pipeline
-            </h1>
-            <Badge tone="info">Phase 11</Badge>
+            <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Sales</h1>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Kanban leads · open pipeline {formatCurrency(pipelineValue, "INR")}
+            Pipeline, follow-ups, and quote from lead — same records as legacy Sales.
           </p>
         </div>
         <Button type="button" className="gap-1.5" onClick={() => setCreating(true)}>
@@ -203,42 +238,103 @@ export default function SalesPage() {
         </Button>
       </div>
 
+      <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm sm:grid-cols-4" data-testid="sales-kpi-strip">
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Leads</div>
+          <div className="text-lg font-extrabold">{stats.count}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Open pipeline</div>
+          <div className="text-sm font-extrabold">{formatCurrency(stats.pipeline, "INR")}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Won</div>
+          <div className="text-sm font-extrabold text-emerald-700">{formatCurrency(stats.won, "INR")}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Follow-ups due</div>
+          <div className="text-lg font-extrabold text-amber-600">{stats.followUps}</div>
+        </div>
+      </div>
+
+      {followUps.length ? (
+        <Card className="border-amber-200 bg-amber-50/50 py-2.5">
+          <p className="text-xs font-extrabold uppercase tracking-wide text-amber-900">Needs follow-up</p>
+          <ul className="mt-1 space-y-1 text-sm">
+            {followUps.slice(0, 5).map((l) => (
+              <li key={l.id}>
+                <button type="button" className="font-semibold text-sky-800" onClick={() => void openLead(l)}>
+                  {l.company}
+                </button>
+                <span className="text-[var(--color-text-muted)]">
+                  {" "}
+                  · {l.nextAction || "Follow up"} · due {l.nextDueDate}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
       {creating ? (
         <Card className="border-sky-200 bg-sky-50/40">
           <h2 className="font-bold">New lead</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label>Company *</Label>
-              <Input
-                value={form.company}
-                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-              />
+              <Input value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} />
             </div>
             <div>
               <Label>Contact</Label>
-              <Input
-                value={form.contactName}
-                onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
-              />
+              <Input value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Phone</Label>
+              <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Source</Label>
+              <Select value={form.source} onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}>
+                <option value="">—</option>
+                {LEAD_SOURCES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Owner</Label>
+              <Select value={form.owner} onChange={(e) => setForm((f) => ({ ...f, owner: e.target.value }))}>
+                <option value="">—</option>
+                {owners.map((id) => (
+                  <option key={id} value={id}>
+                    {TEAM_ROLES[id]?.name || id}
+                  </option>
+                ))}
+              </Select>
             </div>
             <div>
               <Label>Mode</Label>
               <Select
                 value={form.mode}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, mode: e.target.value as SalesLead["mode"] }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, mode: e.target.value as SalesLead["mode"] }))}
               >
                 <option value="air">Air</option>
                 <option value="sea">Sea</option>
+                <option value="courier">Courier</option>
                 <option value="transport">Transport</option>
                 <option value="warehouse">Warehouse</option>
-                <option value="courier">Courier</option>
               </Select>
             </div>
             <div>
               <Label>Lane</Label>
               <Input
+                placeholder="LHR → BLR"
                 value={form.lane}
                 onChange={(e) => setForm((f) => ({ ...f, lane: e.target.value }))}
               />
@@ -248,16 +344,19 @@ export default function SalesPage() {
               <Input
                 type="number"
                 value={form.dealValue}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, dealValue: Number(e.target.value) || 0 }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, dealValue: Number(e.target.value) || 0 }))}
               />
             </div>
             <div>
               <Label>Next action</Label>
+              <Input value={form.nextAction} onChange={(e) => setForm((f) => ({ ...f, nextAction: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Follow-up date</Label>
               <Input
-                value={form.nextAction}
-                onChange={(e) => setForm((f) => ({ ...f, nextAction: e.target.value }))}
+                type="date"
+                value={form.nextDueDate}
+                onChange={(e) => setForm((f) => ({ ...f, nextDueDate: e.target.value }))}
               />
             </div>
           </div>
@@ -272,12 +371,111 @@ export default function SalesPage() {
         </Card>
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-0.5 text-xs font-bold">
+          <button
+            type="button"
+            className={cn("rounded-md px-2.5 py-1", view === "list" ? "bg-[var(--color-atlas-navy)] text-white" : "")}
+            onClick={() => setView("list")}
+          >
+            List
+          </button>
+          <button
+            type="button"
+            className={cn("rounded-md px-2.5 py-1", view === "board" ? "bg-[var(--color-atlas-navy)] text-white" : "")}
+            onClick={() => setView("board")}
+          >
+            Board
+          </button>
+        </div>
+        <input
+          className="min-w-[12rem] flex-1 rounded-md border px-2.5 py-1.5 text-sm"
+          placeholder="Search company, contact, lane, owner…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-1">
+          {(["all", ...STAGES] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                statusFilter === s
+                  ? "bg-[var(--color-atlas-navy)] text-white"
+                  : "border border-[var(--color-border)] bg-white text-[var(--color-text-muted)]"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {isLoading ? (
         <Card>Loading pipeline…</Card>
+      ) : view === "list" ? (
+        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead className="border-b bg-slate-50 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+              <tr>
+                <th className="px-3 py-2">Company</th>
+                <th className="px-3 py-2">Contact</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Lane / mode</th>
+                <th className="px-3 py-2">Deal (INR)</th>
+                <th className="px-3 py-2">Owner</th>
+                <th className="px-3 py-2">Follow-up</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-6 text-center text-[var(--color-text-muted)]">
+                    No leads in this view.
+                  </td>
+                </tr>
+              ) : (
+                visible.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className={cn(
+                      "cursor-pointer border-b last:border-0 hover:bg-slate-50",
+                      selectedId === lead.id && "bg-sky-50",
+                    )}
+                    onClick={() => void openLead(lead)}
+                  >
+                    <td className="px-3 py-2 font-semibold">{lead.company}</td>
+                    <td className="px-3 py-2">{lead.contactName || "—"}</td>
+                    <td className="px-3 py-2">
+                      <Badge tone={lead.status === "won" ? "success" : lead.status === "lost" ? "neutral" : "warn"}>
+                        {lead.status}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {[lead.lane, lead.mode?.toUpperCase()].filter(Boolean).join(" · ") || "—"}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {lead.dealValue ? formatCurrency(lead.dealValue, "INR") : "—"}
+                    </td>
+                    <td className="px-3 py-2">{TEAM_ROLES[lead.owner || ""]?.name || lead.owner || "—"}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {isFollowUpDue(lead) ? (
+                        <span className="font-bold text-amber-700">Due {lead.nextDueDate}</span>
+                      ) : (
+                        lead.nextDueDate || "—"
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {STAGES.map((status) => {
-            const col = leads.filter((l) => l.status === status);
+            const col = visible.filter((l) => l.status === status);
             return (
               <div
                 key={status}
@@ -289,9 +487,7 @@ export default function SalesPage() {
                 }}
               >
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-600">
-                    {status}
-                  </span>
+                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-600">{status}</span>
                   <Badge tone="neutral">{col.length}</Badge>
                 </div>
                 <div className="space-y-2">
@@ -303,25 +499,21 @@ export default function SalesPage() {
                       onDragStart={(e) => e.dataTransfer.setData("text/lead-id", lead.id)}
                       onClick={() => void openLead(lead)}
                       className={cn(
-                        "w-full rounded-lg border bg-white p-2.5 text-left text-sm shadow-sm transition",
+                        "w-full rounded-lg border bg-white p-2.5 text-left text-sm shadow-sm",
                         selectedId === lead.id
                           ? "border-[var(--color-atlas-sky)] ring-2 ring-sky-100"
-                          : "border-[var(--color-border)] hover:border-slate-300",
+                          : "border-[var(--color-border)]",
                       )}
                     >
-                      <div className="font-bold text-[var(--color-atlas-navy)]">
-                        {lead.company}
-                      </div>
+                      <div className="font-bold text-[var(--color-atlas-navy)]">{lead.company}</div>
                       <div className="text-xs text-[var(--color-text-muted)]">
                         {lead.contactName || "—"} · {lead.mode || "—"}
                       </div>
                       {lead.dealValue ? (
-                        <div className="mt-1 text-xs font-semibold">
-                          {formatCurrency(lead.dealValue, "INR")}
-                        </div>
+                        <div className="mt-1 text-xs font-semibold">{formatCurrency(lead.dealValue, "INR")}</div>
                       ) : null}
-                      {lead.lane ? (
-                        <div className="mt-0.5 text-[10px] text-slate-500">{lead.lane}</div>
+                      {isFollowUpDue(lead) ? (
+                        <div className="mt-1 text-[10px] font-bold text-amber-700">Follow-up due</div>
                       ) : null}
                     </button>
                   ))}
@@ -336,30 +528,76 @@ export default function SalesPage() {
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">
-                {selected.company}
-              </h2>
+              <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">{selected.company}</h2>
               <p className="text-sm text-[var(--color-text-muted)]">
-                {selected.contactName} · {selected.status} · {selected.lane || "no lane"}
+                {selected.contactName || "No contact"}
+                {selected.phone ? ` · ${selected.phone}` : ""}
+                {selected.email ? ` · ${selected.email}` : ""}
+                {selected.source ? ` · ${selected.source}` : ""}
               </p>
+              <p className="mt-1 text-sm">
+                {selected.lane || "No lane"} · {selected.mode || "—"} ·{" "}
+                {selected.dealValue ? formatCurrency(selected.dealValue, "INR") : "no value"}
+              </p>
+              {selected.nextAction ? (
+                <p className="mt-1 text-sm">
+                  Next: {selected.nextAction}
+                  {selected.nextDueDate ? ` · ${selected.nextDueDate}` : ""}
+                </p>
+              ) : null}
+              {selected.winLossReason ? (
+                <p className="mt-1 text-sm text-slate-600">Win/loss: {selected.winLossReason}</p>
+              ) : null}
             </div>
-            <Select
-              className="w-40"
-              value={selected.status}
-              onChange={(e) => void moveLead(selected.id, e.target.value as LeadStatus)}
-            >
-              {STAGES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
+            <div className="flex flex-wrap gap-2">
+              <Select
+                className="w-36"
+                value={selected.status}
+                onChange={(e) => void moveLead(selected.id, e.target.value as LeadStatus)}
+              >
+                {STAGES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </Select>
+              <Button type="button" size="sm" onClick={() => quoteFromLead(selected)}>
+                Quote from lead
+              </Button>
+            </div>
           </div>
-          <h3 className="mt-4 text-sm font-bold">Activity log</h3>
-          <div className="mt-2 flex gap-2">
+
+          {relatedQuotes.length ? (
+            <div className="mt-3 rounded-lg bg-slate-50 p-3">
+              <p className="text-xs font-extrabold uppercase text-[var(--color-text-muted)]">Quote history</p>
+              <ul className="mt-1 space-y-1 text-sm">
+                {relatedQuotes.map((q) => (
+                  <li key={q.id}>
+                    <Link className="font-semibold text-sky-800" href={`/enquiries/?q=${encodeURIComponent(q.ref)}&select=${encodeURIComponent(q.id)}`}>
+                      {q.ref}
+                    </Link>{" "}
+                    · {q.mode.toUpperCase()} · {q.status}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <h3 className="mt-4 text-sm font-bold">Activity</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Select
+              className="w-28"
+              value={noteType}
+              onChange={(e) => setNoteType(e.target.value as LeadActivity["type"])}
+            >
+              <option value="note">Note</option>
+              <option value="call">Call</option>
+              <option value="email">Email</option>
+              <option value="meeting">Meeting</option>
+            </Select>
             <Input
-              className="mt-0"
-              placeholder="Add a note…"
+              className="mt-0 min-w-[12rem] flex-1"
+              placeholder="Log a call, meeting, or follow-up…"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -367,6 +605,9 @@ export default function SalesPage() {
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log"}
             </Button>
           </div>
+          {(selected.status === "won" || selected.status === "lost") && !selected.winLossReason ? (
+            <p className="mt-2 text-xs text-amber-800">Add a win/loss reason when you edit this lead in Firestore or recreate it.</p>
+          ) : null}
           <ul className="mt-3 space-y-2 text-sm">
             {activities.length === 0 ? (
               <li className="text-[var(--color-text-muted)]">No activities yet.</li>

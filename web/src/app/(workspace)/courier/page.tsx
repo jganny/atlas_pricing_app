@@ -284,6 +284,11 @@ function CourierDeskInner() {
   });
 
   useEffect(() => {
+    if (loader.sourceQuote || !loader.prefillCustomer) return;
+    setCustomer(loader.prefillCustomer);
+  }, [loader.prefillCustomer, loader.sourceQuote]);
+
+  useEffect(() => {
     if (!loader.sourceQuote) return;
     const loaded = loadCourierDeskFromQuote(loader.sourceQuote);
     setCustomer(loaded.customer);

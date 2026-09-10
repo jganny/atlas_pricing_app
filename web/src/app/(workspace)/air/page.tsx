@@ -139,9 +139,13 @@ function AirDeskInner() {
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
-    if (!loader.prefillOrigin && !loader.prefillDest) return;
+    if (!loader.prefillOrigin && !loader.prefillDest && !loader.prefillCustomer) return;
+    if (loader.prefillCustomer) setCustomer(loader.prefillCustomer);
     const id = activeLane?.id || lanes[0]?.id;
-    if (!id) return;
+    if (!id) {
+      if (loader.prefillCustomer) prefillApplied.current = true;
+      return;
+    }
     prefillApplied.current = true;
     setLanes((prev) =>
       prev.map((l) =>
@@ -154,7 +158,7 @@ function AirDeskInner() {
           : l,
       ),
     );
-  }, [loader.prefillOrigin, loader.prefillDest, loader.sourceQuote, activeLane?.id, lanes]);
+  }, [loader.prefillOrigin, loader.prefillDest, loader.prefillCustomer, loader.sourceQuote, activeLane?.id, lanes]);
 
   useEffect(() => {
     try {

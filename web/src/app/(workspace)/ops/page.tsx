@@ -3,9 +3,9 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { PackageCheck } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { useEnquiries } from "@/hooks/use-atlas-data";
-import { formatCurrency } from "@/lib/utils";
+import { formatQuoteSell } from "@/lib/quotes/money";
 
 export default function OpsPage() {
   const { data: enquiries = [], isLoading } = useEnquiries();
@@ -19,17 +19,15 @@ export default function OpsPage() {
       <div className="flex items-center gap-2">
         <PackageCheck className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
-          Operations board — won jobs
+          Won jobs
         </h1>
-        <Badge tone="info">Phase 13</Badge>
       </div>
       <p className="text-sm text-[var(--color-text-muted)]">
-        Lightweight list of won quotes for operations to pick up after sales. Day-to-day quote work
-        stays in{" "}
-        <Link href="/enquiries/" className="font-semibold text-[var(--color-atlas-sky)] underline">
+        Jobs handed to operations after sales. Open a row for the full quote in{" "}
+        <Link href="/enquiries/?pipeline=won" className="font-semibold text-[var(--color-atlas-sky)] underline">
           Enquiry DB
-        </Link>{" "}
-        (filter status = Won) — that is the full lifecycle page.
+        </Link>
+        . Amounts show the quoted currency and the INR equivalent.
       </p>
 
       {isLoading ? (
@@ -54,7 +52,7 @@ export default function OpsPage() {
                 <tr key={e.id} className="border-b last:border-0">
                   <td className="px-3 py-2">
                     <Link
-                      href={`/enquiries/?q=${encodeURIComponent(e.ref)}`}
+                      href={`/enquiries/?q=${encodeURIComponent(e.ref)}&select=${encodeURIComponent(e.id)}&pipeline=won`}
                       className="font-semibold text-sky-700"
                     >
                       {e.ref}
@@ -65,9 +63,7 @@ export default function OpsPage() {
                     {e.origin} → {e.destination}
                   </td>
                   <td className="px-3 py-2 capitalize">{e.mode}</td>
-                  <td className="px-3 py-2">
-                    {formatCurrency(e.amountINR || e.grandTotal || 0, e.currency || "INR")}
-                  </td>
+                  <td className="px-3 py-2 tabular-nums">{formatQuoteSell(e)}</td>
                   <td className="px-3 py-2">{e.assignee}</td>
                 </tr>
               ))}

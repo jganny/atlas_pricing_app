@@ -31,7 +31,7 @@ import { useLiveData } from "@/lib/api";
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { toast } from "@/components/Toast";
-import { formatCurrency } from "@/lib/utils";
+import { formatQuoteGp, formatQuoteSell } from "@/lib/quotes/money";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { getLocalQuote } from "@/lib/quotes/local-enquiries";
 
@@ -270,19 +270,13 @@ export function EnquiryInspector({
             <dt className="text-[var(--color-text-muted)]">Assignee</dt>
             <dd>{row.assignee}</dd>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-3">
             <dt className="text-[var(--color-text-muted)]">Sell</dt>
-            <dd className="font-bold">
-              {row.grandTotal ? formatCurrency(row.grandTotal, row.currency) : "—"}
-            </dd>
+            <dd className="text-right font-bold leading-snug">{formatQuoteSell(row)}</dd>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-3">
             <dt className="text-[var(--color-text-muted)]">GP</dt>
-            <dd className="font-bold text-emerald-700">
-              {row.grossProfit != null
-                ? formatCurrency(row.grossProfit, row.grossProfitCurrency || row.currency)
-                : "—"}
-            </dd>
+            <dd className="text-right font-bold leading-snug text-emerald-700">{formatQuoteGp(row)}</dd>
           </div>
           {row.carrier ? (
             <div className="flex justify-between">

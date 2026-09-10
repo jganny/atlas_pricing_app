@@ -2,6 +2,7 @@
 
 import type { EnquiryRecord } from "@/lib/types";
 import { deskDisplayName, TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 
 export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "annual" | "all";
 
@@ -74,8 +75,8 @@ export function buildPerformanceReport(
   const lost = filtered.filter((e) => e.status === "lost" || e.status === "cancelled").length;
   const revenue = filtered
     .filter((e) => e.status === "won")
-    .reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
-  const gp = filtered.reduce((s, e) => s + (e.grossProfit || 0), 0);
+    .reduce((s, e) => s + sellAmountInr(e), 0);
+  const gp = filtered.reduce((s, e) => s + gpAmountInr(e), 0);
   const deskMap: Record<string, { count: number; won: number; revenue: number }> = {};
   for (const e of filtered) {
     const k = (e.creator || "unknown").toLowerCase();
@@ -83,7 +84,7 @@ export function buildPerformanceReport(
     deskMap[k].count += 1;
     if (e.status === "won") {
       deskMap[k].won += 1;
-      deskMap[k].revenue += e.amountINR || e.grandTotal || 0;
+      deskMap[k].revenue += sellAmountInr(e);
     }
   }
   for (const e of rows) {

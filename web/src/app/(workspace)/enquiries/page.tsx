@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Archive, Download, Loader2, Search } from "lucide-react";
+import { Archive, Columns3, Download, Loader2, Search } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
@@ -60,15 +60,15 @@ function MetricToggle<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs">
+    <div className="flex items-center gap-1 text-[11px]">
       <span className="font-bold uppercase tracking-wide text-[var(--color-text-muted)]">{label}</span>
-      <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-0.5">
+      <div className="inline-flex rounded-md border border-[var(--color-border)] bg-white p-0.5">
         {options.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={`rounded-md px-2 py-1 font-semibold ${
+            className={`rounded px-1.5 py-0.5 font-semibold ${
               value === opt.value
                 ? "bg-[var(--color-atlas-navy)] text-white"
                 : "text-[var(--color-text-muted)] hover:bg-slate-50"
@@ -90,7 +90,7 @@ function EnquiryDatabaseInner() {
   const admin = isAdminUser(user?.username, user?.role);
 
   const [search, setSearch] = useState(searchParams?.get("q") || "");
-  const [pipeline, setPipeline] = useState("all");
+  const [pipeline, setPipeline] = useState(searchParams?.get("pipeline") || "all");
   const [modeFilter, setModeFilter] = useState<string>("all");
   const [deskFilter, setDeskFilter] = useState<string>(admin ? "all" : "mine");
   const [originFilter, setOriginFilter] = useState("");
@@ -98,32 +98,35 @@ function EnquiryDatabaseInner() {
   const [carrierFilter, setCarrierFilter] = useState("");
   const [columns, setColumns] = useState({
     lane: true,
-    desk: true,
+    desk: false,
     carrier: true,
     amount: true,
     gp: true,
-    sla: true,
+    sla: false,
   });
   const [showColumns, setShowColumns] = useState(false);
+  const [showReports, setShowReports] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
   const [metricModes, setMetricModes] = useState<EdbMetricModes>(DEFAULT_EDB_METRIC_MODES);
   const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
-  const [archiveRef, setArchiveRef] = useState("");
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveNote, setArchiveNote] = useState<string | null>(null);
 
   useEffect(() => {
     const q = searchParams?.get("q");
     const sel = searchParams?.get("select");
+    const pipe = searchParams?.get("pipeline");
+    if (pipe && PIPELINE_CHIPS.some((c) => c.key === pipe)) setPipeline(pipe);
     if (q) setSearch(q);
     if (sel) {
       setSelectedId(sel);
       return;
     }
+    if (q) return;
     const last = getLastSavedEnquiry();
     if (last && !isDeletedQuoteId(last.id)) {
       setSelectedId(last.id);
-      if (!q) setSearch(last.ref);
+      setSearch(last.ref);
     }
   }, [searchParams]);
 
@@ -207,7 +210,7 @@ function EnquiryDatabaseInner() {
   const fyCards = useMemo(() => buildFyReportCards(filtered), [filtered]);
 
   async function findArchived() {
-    const q = archiveRef.trim();
+    const q = search.trim();
     if (!q) {
       toast("Type a customer, city, carrier, or quote number", "error");
       return;
@@ -269,153 +272,41 @@ function EnquiryDatabaseInner() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Enquiry database</h1>
-            <Badge tone="info">Phase 9</Badge>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Enquiry DB</h1>
+          <div className="flex flex-wrap gap-1">
+            {PIPELINE_CHIPS.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => setPipeline(chip.key)}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                  pipeline === chip.key
+                    ? "bg-[var(--color-atlas-navy)] text-white"
+                    : "border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:bg-slate-50"
+                }`}
+              >
+                {chip.label} ({pipelineCounts[chip.key] ?? 0})
+              </button>
+            ))}
           </div>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Buy / Sell / GP modes · desk ownership · CSV · find archived quotes.
-            {useLiveData ? " Live Firestore sync." : " Mock data."}
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="secondary"
-            disabled={!filtered.length}
-            onClick={() => {
-              downloadEnquiryCsv(filtered);
-              toast(`Exported ${filtered.length} rows`, "success");
-            }}
+            size="sm"
+            onClick={() => setShowReports((v) => !v)}
           >
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {PIPELINE_CHIPS.map((chip) => (
-          <button
-            key={chip.key}
-            type="button"
-            onClick={() => setPipeline(chip.key)}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-              pipeline === chip.key
-                ? "bg-[var(--color-atlas-navy)] text-white"
-                : "border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:bg-slate-50"
-            }`}
-          >
-            {chip.label} <span className="opacity-80">({pipelineCounts[chip.key] ?? 0})</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <div className="text-xs text-[var(--color-text-muted)]">Showing</div>
-          <div className="text-2xl font-bold">{stats.total}</div>
-        </Card>
-        <Card>
-          <div className="text-xs text-[var(--color-text-muted)]">Open in view</div>
-          <div className="text-2xl font-bold text-amber-600">{stats.open}</div>
-        </Card>
-        <Card>
-          <div className="text-xs text-[var(--color-text-muted)]">Overdue</div>
-          <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-        </Card>
-        <Card>
-          <div className="text-xs text-[var(--color-text-muted)]">Sell (view)</div>
-          <div className="text-lg font-bold tabular-nums">
-            {formatCurrency(stats.revenue, "USD")}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs text-[var(--color-text-muted)]">GP (view)</div>
-          <div className="text-lg font-bold tabular-nums text-emerald-700">
-            {formatCurrency(stats.gp, "USD")}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
-        {fyCards.map((b) => (
-          <Card key={b.id} className="py-3">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-              {b.label}
-            </div>
-            <div className="mt-1 text-sm font-extrabold tabular-nums">
-              {formatCurrency(b.sell, "USD")}
-            </div>
-            <div className="text-xs text-emerald-700">
-              GP {formatCurrency(b.gp, "USD")} · {b.count} quotes
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {error ? (
-        <Card className="border-red-200 bg-red-50">
-          <p className="text-sm font-semibold text-red-800">Could not load enquiries.</p>
-        </Card>
-      ) : null}
-
-      <Card className="flex flex-wrap items-center gap-4 p-4">
-        <MetricToggle
-          label="Buy"
-          value={metricModes.buy}
-          options={[
-            { value: "total", label: "Total" },
-            { value: "perkg", label: "Per kg" },
-          ]}
-          onChange={(buy) => setMetricModes((m) => ({ ...m, buy }))}
-        />
-        <MetricToggle
-          label="Sell"
-          value={metricModes.sell}
-          options={[
-            { value: "total", label: "Total" },
-            { value: "perkg", label: "Per kg" },
-          ]}
-          onChange={(sell) => setMetricModes((m) => ({ ...m, sell }))}
-        />
-        <MetricToggle
-          label="GP"
-          value={metricModes.gp}
-          options={[
-            { value: "amount", label: "Amount" },
-            { value: "percent", label: "%" },
-          ]}
-          onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
-        />
-      </Card>
-
-      <Card className="space-y-3 p-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-[var(--color-atlas-navy)]">
-          <Archive className="h-4 w-4" />
-          Find a quote — no file name needed
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="min-w-[220px] flex-1 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
-            placeholder="Customer, city, carrier, or quote number…"
-            value={archiveRef}
-            onChange={(e) => setArchiveRef(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void findArchived();
-            }}
-          />
-          <Button type="button" disabled={archiveBusy} onClick={() => void findArchived()}>
-            {archiveBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Look up
+            {showReports ? "Hide FY" : "FY report"}
           </Button>
           {admin ? (
             <Button
               type="button"
               variant="secondary"
+              size="sm"
               onClick={() => {
                 const { archived } = archiveOlderThan(rows, 90);
                 toast(
@@ -426,34 +317,99 @@ function EnquiryDatabaseInner() {
                 );
               }}
             >
-              Run 90-day archive
+              <Archive className="mr-1 h-3.5 w-3.5" />
+              90-day archive
             </Button>
           ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={!filtered.length}
+            onClick={() => {
+              downloadEnquiryCsv(filtered);
+              toast(`Exported ${filtered.length} rows`, "success");
+            }}
+          >
+            <Download className="mr-1 h-3.5 w-3.5" />
+            CSV
+          </Button>
         </div>
-        {archiveNote ? (
-          <p className="text-xs font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
-        ) : (
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Searches customer, city, lane, and quote number across live quotes and archive. You do
-            not need the file name.
-          </p>
-        )}
-      </Card>
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <Card className="flex flex-wrap gap-3 p-4">
-            <label className="flex min-w-[200px] flex-1 items-center gap-2 text-sm font-semibold">
-              <Search className="h-4 w-4 text-[var(--color-text-muted)]" />
+      <div
+        className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm sm:grid-cols-5"
+        data-testid="edb-kpi-strip"
+      >
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">In view</div>
+          <div className="text-lg font-extrabold tabular-nums">{stats.total}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Open</div>
+          <div className="text-lg font-extrabold tabular-nums text-amber-600">{stats.open}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Overdue</div>
+          <div className="text-lg font-extrabold tabular-nums text-red-600">{stats.overdue}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Sell (INR)</div>
+          <div className="text-sm font-extrabold tabular-nums">{formatCurrency(stats.revenue, "INR")}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">GP (INR)</div>
+          <div className="text-sm font-extrabold tabular-nums text-emerald-700">
+            {formatCurrency(stats.gp, "INR")}
+          </div>
+        </div>
+      </div>
+
+      {showReports ? (
+        <div className="grid gap-2 sm:grid-cols-5">
+          {fyCards.map((b) => (
+            <Card key={b.id} className="py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                {b.label}
+              </div>
+              <div className="mt-0.5 text-sm font-extrabold tabular-nums">
+                {formatCurrency(b.sell, "INR")}
+              </div>
+              <div className="text-[11px] text-emerald-700">
+                GP {formatCurrency(b.gp, "INR")} · {b.count}
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+
+      {error ? (
+        <Card className="border-red-200 bg-red-50">
+          <p className="text-sm font-semibold text-red-800">Could not load enquiries.</p>
+        </Card>
+      ) : null}
+
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-2">
+          <Card className="flex flex-wrap items-center gap-2 p-2.5">
+            <label className="flex min-w-[16rem] flex-1 items-center gap-2 text-sm">
+              <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
               <input
-                className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2"
-                placeholder="Search ref, customer, lane, carrier…"
+                className="w-full rounded-md border border-[var(--color-border)] px-2.5 py-1.5"
+                placeholder="Customer, city, carrier, or quote no."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void findArchived();
+                }}
               />
             </label>
+            <Button type="button" size="sm" disabled={archiveBusy} onClick={() => void findArchived()}>
+              {archiveBusy ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+              Look up
+            </Button>
             <select
-              className="rounded-lg border px-3 py-2 text-sm"
+              className="rounded-md border px-2 py-1.5 text-sm"
               value={modeFilter}
               onChange={(e) => setModeFilter(e.target.value)}
             >
@@ -465,7 +421,7 @@ function EnquiryDatabaseInner() {
               <option value="warehouse">Warehouse</option>
             </select>
             <select
-              className="rounded-lg border px-3 py-2 text-sm"
+              className="rounded-md border px-2 py-1.5 text-sm"
               value={deskFilter}
               onChange={(e) => setDeskFilter(e.target.value)}
             >
@@ -478,39 +434,70 @@ function EnquiryDatabaseInner() {
               ))}
             </select>
             <input
-              className="w-24 rounded-lg border px-2 py-2 text-sm"
+              className="w-20 rounded-md border px-2 py-1.5 text-sm"
               placeholder="POL"
               value={originFilter}
               onChange={(e) => setOriginFilter(e.target.value)}
             />
             <input
-              className="w-24 rounded-lg border px-2 py-2 text-sm"
+              className="w-20 rounded-md border px-2 py-1.5 text-sm"
               placeholder="POD"
               value={destFilter}
               onChange={(e) => setDestFilter(e.target.value)}
             />
             <input
-              className="w-28 rounded-lg border px-2 py-2 text-sm"
+              className="w-24 rounded-md border px-2 py-1.5 text-sm"
               placeholder="Carrier"
               value={carrierFilter}
               onChange={(e) => setCarrierFilter(e.target.value)}
             />
             <button
               type="button"
-              className="rounded-lg border px-3 py-2 text-xs font-bold"
+              className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
               onClick={() => setShowColumns((v) => !v)}
             >
+              <Columns3 className="h-3.5 w-3.5" />
               Columns
             </button>
+            <MetricToggle
+              label="Buy"
+              value={metricModes.buy}
+              options={[
+                { value: "total", label: "Total" },
+                { value: "perkg", label: "/kg" },
+              ]}
+              onChange={(buy) => setMetricModes((m) => ({ ...m, buy }))}
+            />
+            <MetricToggle
+              label="Sell"
+              value={metricModes.sell}
+              options={[
+                { value: "total", label: "Total" },
+                { value: "perkg", label: "/kg" },
+              ]}
+              onChange={(sell) => setMetricModes((m) => ({ ...m, sell }))}
+            />
+            <MetricToggle
+              label="GP"
+              value={metricModes.gp}
+              options={[
+                { value: "amount", label: "Amt" },
+                { value: "percent", label: "%" },
+              ]}
+              onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
+            />
           </Card>
+          {archiveNote ? (
+            <p className="px-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
+          ) : null}
           {showColumns ? (
-            <Card className="flex flex-wrap gap-3 p-3 text-xs font-semibold">
+            <Card className="flex flex-wrap gap-3 p-2 text-xs font-semibold">
               {(
                 [
                   ["lane", "Lane"],
                   ["desk", "Desk"],
                   ["carrier", "Carrier"],
-                  ["amount", "Amount"],
+                  ["amount", "Buy / Sell"],
                   ["gp", "GP"],
                   ["sla", "SLA"],
                 ] as const
@@ -544,13 +531,12 @@ function EnquiryDatabaseInner() {
           </Card>
         </div>
 
-        <div>
+        <div className="lg:sticky lg:top-16">
           {selected ? (
             <EnquiryInspector row={selected} onClose={() => setSelectedId(null)} />
           ) : (
             <Card className="text-sm text-[var(--color-text-muted)]">
-              Select a row to view details, print, amend, or update status. Press ⌘K to find quotes by
-              ref or customer.
+              Select a quote. Look up searches live quotes and archive — no file name needed.
             </Card>
           )}
         </div>

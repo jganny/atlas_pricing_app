@@ -19,6 +19,7 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
   const smart = searchParams?.get("smart") ?? null;
   const prefillOrigin = searchParams?.get("origin") ?? "";
   const prefillDest = searchParams?.get("dest") ?? "";
+  const prefillCustomer = searchParams?.get("customer") ?? "";
   const loadId = editId || duplicateId;
   const isDuplicate = Boolean(duplicateId && !editId);
 
@@ -96,6 +97,7 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
     editingStatus,
     prefillOrigin,
     prefillDest,
+    prefillCustomer,
     clearLoadedQuote() {
       setSourceQuote(null);
       setSmartPrefill(null);

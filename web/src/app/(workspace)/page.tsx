@@ -34,6 +34,7 @@ import {
 import { listOfflineQuotes, removeOfflineQuote } from "@/lib/quotes/offline-cache";
 import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
+import { sellAmountInr } from "@/lib/quotes/money";
 import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -96,7 +97,7 @@ export default function DashboardPage() {
   const dueSoon = scope.filter((e) => e.slaHoursOpen > 4 && e.slaHoursOpen <= 8).length;
   const revenue = scope
     .filter((e) => e.status === "won")
-    .reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
+    .reduce((s, e) => s + sellAmountInr(e), 0);
   const conversion =
     scope.length > 0 ? Math.round((won / Math.max(1, scope.length)) * 100) : 0;
 
@@ -117,7 +118,7 @@ export default function DashboardPage() {
     .reduce((s, l) => s + (l.dealValue || 0), 0);
   const enquiryPipeline = scope
     .filter((e) => e.status === "open" || e.status === "quoted")
-    .reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
+    .reduce((s, e) => s + sellAmountInr(e), 0);
   const pipeline = salesPipeline > 0 ? salesPipeline : enquiryPipeline;
   const pipelineLabel = salesPipeline > 0 ? "Sales pipeline" : "Open quote pipeline";
 

@@ -27,6 +27,7 @@ export interface EnquiryRecord {
   amountINR?: number
   grossProfit?: number
   grossProfitCurrency?: string
+  grossProfitINR?: number
   /** Precomputed buy total when available (amount − GP or stored). */
   buyTotal?: number
   buyRate?: number
@@ -178,6 +179,7 @@ export interface SalesLead {
   nextAction?: string
   nextDueDate?: string
   winLossReason?: string
+  source?: string
   owner?: string
   notes?: string
   updatedAt?: string

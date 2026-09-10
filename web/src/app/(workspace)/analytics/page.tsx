@@ -5,6 +5,7 @@ import { BarChart3 } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { formatCurrency } from "@/lib/utils";
+import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 
 export default function AnalyticsPage() {
   const { data: enquiries = [] } = useEnquiries();
@@ -13,8 +14,8 @@ export default function AnalyticsPage() {
   const stats = useMemo(() => {
     const won = enquiries.filter((e) => e.status === "won");
     const quoted = enquiries.filter((e) => e.status === "quoted" || e.status === "open");
-    const revenue = won.reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
-    const gp = won.reduce((s, e) => s + (e.grossProfit || 0), 0);
+    const revenue = won.reduce((s, e) => s + sellAmountInr(e), 0);
+    const gp = won.reduce((s, e) => s + gpAmountInr(e), 0);
     const byMode: Record<string, number> = {};
     enquiries.forEach((e) => {
       byMode[e.mode] = (byMode[e.mode] || 0) + 1;
@@ -28,7 +29,7 @@ export default function AnalyticsPage() {
     .reduce((s, l) => s + (l.dealValue || 0), 0);
   const enquiryPipeline = enquiries
     .filter((e) => e.status === "open" || e.status === "quoted")
-    .reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
+    .reduce((s, e) => s + sellAmountInr(e), 0);
   const pipeline = salesPipeline > 0 ? salesPipeline : enquiryPipeline;
     return { won: won.length, quoted: quoted.length, revenue, gp, byMode, byDesk, pipeline };
   }, [enquiries, leads]);

@@ -6,6 +6,7 @@ import { Landmark } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { useCreditControls, useEnquiries } from "@/hooks/use-atlas-data";
 import { formatCurrency } from "@/lib/utils";
+import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 
 export default function FinancePage() {
   const { data: enquiries = [] } = useEnquiries();
@@ -13,8 +14,8 @@ export default function FinancePage() {
 
   const totals = useMemo(() => {
     const won = enquiries.filter((e) => e.status === "won");
-    const sell = won.reduce((s, e) => s + (e.amountINR || e.grandTotal || 0), 0);
-    const gp = won.reduce((s, e) => s + (e.grossProfit || 0), 0);
+    const sell = won.reduce((s, e) => s + sellAmountInr(e), 0);
+    const gp = won.reduce((s, e) => s + gpAmountInr(e), 0);
     return { sell, gp, blocked: credits.filter((c) => c.blocked).length };
   }, [enquiries, credits]);
 
