@@ -99,7 +99,7 @@ function EnquiryDatabaseInner() {
   const [columns, setColumns] = useState({
     lane: true,
     desk: false,
-    carrier: true,
+    carrier: false,
     amount: true,
     gp: true,
     sla: false,
