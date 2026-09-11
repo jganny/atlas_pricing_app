@@ -566,9 +566,16 @@ async function handleLogin(e) {
   let user = document.getElementById("login-username").value.toLowerCase().trim();
   let pass = document.getElementById("login-password").value;
 
+  // A blank submit (both fields empty — e.g. a stray Enter/click that fires
+  // before typing or autofill has registered) used to silently log the
+  // person in as admin "ganny" with the hardcoded fallback password. That
+  // shortcut was input-independent: it could fire regardless of whose
+  // credentials someone actually meant to type, landing real desk users on
+  // the admin account without any error. Treat a blank submit like any
+  // other incomplete one instead.
   if (!user && !pass) {
-    user = "ganny";
-    pass = "password";
+    alert("Please enter your desk username and password.");
+    return;
   } else if (!user) {
     alert("Please enter a desk username.");
     return;
