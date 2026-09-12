@@ -77,7 +77,7 @@ export default function MobileHomePage() {
   return (
     <div className="mx-auto max-w-lg space-y-4 pb-4">
       <div className="rounded-2xl bg-[var(--color-atlas-navy)] px-5 py-6 text-white shadow-lg">
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-200">Atlas mobile</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-atlas-gold-bright)]">Atlas mobile</p>
         <h1 className="mt-1 text-2xl font-extrabold">Hi {user?.displayName?.split(" ")[0] || "desk"}</h1>
         <p className="mt-1 text-sm text-white/75">{focus} · essentials only</p>
       </div>
@@ -101,7 +101,7 @@ export default function MobileHomePage() {
       {!installed ? (
         <Card className="py-4">
           <div className="flex items-start gap-3">
-            <Download className="mt-0.5 h-5 w-5 text-teal-600" />
+            <Download className="mt-0.5 h-5 w-5 text-[var(--color-atlas-gold)]" />
             <div className="min-w-0 flex-1">
               <div className="text-sm font-extrabold text-[var(--color-atlas-navy)]">Install Atlas app</div>
               <p className="mt-1 text-xs text-[var(--color-text-muted)]">

@@ -42,8 +42,8 @@ export function LaneChips({
             onClick={() => onSelect(lane.id)}
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${
               active
-                ? "border-teal-500 bg-teal-50 text-[var(--color-atlas-navy)]"
-                : "border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:border-sky-300"
+                ? "border-[var(--color-atlas-gold)] bg-[var(--color-atlas-gold-soft)] text-[var(--color-atlas-navy)]"
+                : "border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:border-[var(--color-atlas-gold)]"
             }`}
           >
             {label}

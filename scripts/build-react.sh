@@ -10,6 +10,11 @@ npm run build
 echo "==> Building Next.js app..."
 cd "$ROOT/web"
 npm install
+# Shell env beats .env.local — never ship mock mode or a stale version to /app.
+set -a
+# shellcheck disable=SC1091
+source "$ROOT/web/.env.production"
+set +a
 npm run build
 
 echo "==> Copying static export to app/..."

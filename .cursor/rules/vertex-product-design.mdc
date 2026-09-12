@@ -1,0 +1,107 @@
+---
+description: Vertex product design — simple and futuristic; ask before 3D/scroll scenes
+alwaysApply: true
+---
+
+# Vertex product design
+
+Owner brief (keep for every future UI change):
+
+Apple-like sites feel advanced because they are **quiet**, not because they use a secret stack. Vertex apps should be **simplistic and futuristic together**.
+
+## Daily chrome
+
+- One job per screen. Do not stack a cutover banner, news ticker, FX rates, Inbox, Focus, Refresh, LIVE, and Legacy in one header.
+- Cutover / “awaiting approval” banners and a **Legacy** jump are parallel-run tools — keep them out of the daily header (overflow / docs is fine).
+- Industry news marquee is not default chrome.
+- LIVE, Refresh, FX, Inbox, Focus stay reachable in **one compact control cluster**.
+- Onboarding hints (Ask Vertex / ⌘K) live on Home, not repeated as header copy.
+
+## Look
+
+- Atlas Logistics logo sits beside **ATLAS PRICING** in the sidebar (and login / quotation letterhead).
+- Palette (in chrome): **K Glacier + Q Graphite** hybrid — steel rail `#323843`, ice paper `#eef3f7`, ice-steel accents `#6b8499`. Owner liked K and Q; dusk navy is retired unless they object.
+- Logo yellow stays in the mark — not as big filled buttons.
+- Extra combo letters (sketches): H–S still on file if they want to switch.
+- **Glass / depth** (blur, thin border, one soft shadow) is allowed on chrome, cards, and overlays.
+- Motion only when it means something. Honor `prefers-reduced-motion`.
+
+## Premium techniques — ask first
+
+A / B / C were **examples**, not a closed menu. Before adding spectacle to desks, show a **sample image referenced to this app** and wait for which treatment to ship.
+
+Never add 3D/scroll spectacle that slows a desk or hides POL/POD/cargo fields.
+
+## Design glossary (plain language → technical name)
+
+Use these words with the owner. They can pick any mix for Vertex or later apps.
+
+### Always-on (already in Vertex)
+
+- **Visual hierarchy** — the eye hits the job first, then the next action, then chrome.
+- **Whitespace / negative space** — empty padding so the screen does not feel crowded.
+- **Type scale** — a few planned sizes (eyebrow, title, body, caption) instead of random font sizes.
+- **Color tokens** — named colors (`--color-atlas-navy`) so the whole app stays consistent.
+- **Contrast / WCAG** — dark text on light (or white on navy) so type stays readable.
+- **Accent vs brand color** — logo may have yellow; buttons and fills do not have to copy it.
+- **Glassmorphism** — frosted panel: translucent fill + `backdrop-filter: blur`.
+- **Elevation / depth** — thin border + one soft shadow so a card sits above the page.
+- **Sticky nav** — header stays put while the page scrolls.
+- **Skeleton loaders** — grey placeholders while quotes/inbox load.
+- **Micro-interactions** — small hover/press feedback (button darkens, chip highlights).
+- **`prefers-reduced-motion`** — skip animation when the OS asks for less motion.
+
+### Showpiece letters A–G were a short Vertex menu, not the whole field
+
+- **Hero** — a large opening block (Quote hub navy panel is a small hero).
+- **Bento grid** — a magazine-like mosaic of unequal tiles (Home metrics could become this).
+- **Scrollytelling / scroll-driven animation** — the page plays a short film as you scroll (`animation-timeline: scroll()`).
+- **Parallax** — background moves slower than foreground. Easy to overdo.
+- **Mesh gradient / aurora** — soft overlapping color blobs behind a hero (not a loud wallpaper).
+- **Grain / noise** — faint film texture so flat color feels less digital.
+- **Dark cinematic mode** — near-black stage, one spotlight subject (login or a quote-share page).
+- **View transitions** — the browser cross-fades between screens (`document.startViewTransition`).
+- **Custom cursor / magnetic hover** — pointer sticks to buttons. Skip on desks; it fights data entry.
+
+### 2D and motion (no 3D engine)
+
+Apple marketing pages mostly live here: CSS, video, and type — not a game engine.
+
+- **CSS transforms** — move, scale, rotate a panel in 2D (or fake-3D with `rotateX`).
+- **SVG** — sharp icons and simple line drawings that stay crisp at any size.
+- **Canvas 2D** — a drawing surface for charts, not a 3D world.
+- **Lottie** — After Effects motion exported as a tiny JSON animation.
+- **Rive** — interactive motion (a button that “breathes” as you hover).
+- **GSAP** — a timeline library to choreograph many animations.
+- **Scroll-driven CSS** — the scrollbar is the playhead.
+
+### Real-time 3D family (owner wants this)
+
+**WebGL is not the only design term.** It is the browser’s GPU door. Everything below is a sibling, a library, or a look.
+
+- **WebGL** — the browser API that talks to the graphics chip (the door).
+- **WebGPU** — the newer door; same idea, more power. Not required yet.
+- **Three.js** — the popular toolkit that sits on WebGL so we do not write raw GPU code.
+- **React Three Fiber (R3F)** — Three.js written as React components. Fits this Next app.
+- **Babylon.js** — another 3D toolkit (same job as Three.js).
+- **Spline** — a visual 3D editor; export a scene into the site.
+- **glTF / .glb** — the file format for a 3D model (the aircraft file).
+- **Shaders (GLSL)** — tiny GPU programs that paint the surface (metal, glass, glow).
+- **PBR** — physically based materials (how metal vs cardboard should reflect light).
+- **HDRI lighting** — lighting a scene with a studio photo instead of a single lamp.
+- **Bloom** — a soft glow on bright edges.
+- **Orbit controls** — drag to spin the object.
+- **Raycasting** — click a 3D object and the app knows what you hit.
+
+Owner direction: **Apple calm is the base** (quiet type, whitespace, one job per screen). **WebGL/Three.js** makes it live, but as **ornaments**, not a theme park.
+
+- **Hero 3D** with **Three.js** (not Babylon.js — same job, do not run both). Quote hub: **L3 daylight** + angular sci-fi aircraft. `/motion` is the live feel-it sample.
+- **Semantic 3D only** (not decoration on every page): a 3D **carton** at Dimensions / no. of pkgs; a 3D **pallet** only at Pallet. POL/POD get none. Object must match the word. Honor `prefers-reduced-motion`.
+- Raised chrome: `.atlas-pop` buttons (shadow + slight lift) and `.atlas-page-card` on the workspace sheet — the Home mockup “pop out of the page” look, app-wide.
+- Motion sample at `/motion` so the owner can *feel* three different tools: CSS smooth scroll, parallax, Three.js. Hub may later use scroll-driven craft; desks stay still. Honor `prefers-reduced-motion`.
+
+Apple’s public sites mix **restraint + a few of these**. The “wow” is not a secret toolkit.
+
+## Brand
+
+Market brand is **Vertex**. Do not show Namahsky Nexus in UI.

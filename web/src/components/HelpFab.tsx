@@ -109,7 +109,7 @@ export function HelpFab() {
                     <Link
                       href="/enquiries"
                       onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-sky-300"
+                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-[var(--color-atlas-gold)]"
                     >
                       <Search className="h-3.5 w-3.5" />
                       Find any quote by customer or city
@@ -117,7 +117,7 @@ export function HelpFab() {
                     <Link
                       href="/air"
                       onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-sky-300"
+                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-[var(--color-atlas-gold)]"
                     >
                       <PlaneTakeoff className="h-3.5 w-3.5" />
                       Start an air quote
@@ -125,7 +125,7 @@ export function HelpFab() {
                     <Link
                       href="/inbox"
                       onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-sky-300"
+                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:border-[var(--color-atlas-gold)]"
                     >
                       <Inbox className="h-3.5 w-3.5" />
                       Quote from inbox mail
@@ -152,7 +152,7 @@ export function HelpFab() {
         data-testid="help-fab"
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed bottom-20 right-4 z-[220] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(11,31,58,0.35)] transition hover:scale-[1.03] hover:bg-[#14154a] md:bottom-5 md:right-5",
+          "fixed bottom-20 right-4 z-[220] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(28,24,79,0.32)] transition hover:scale-[1.03] hover:bg-[var(--color-atlas-ink)] md:bottom-5 md:right-5",
         )}
       >
         <Sparkles className="h-5 w-5" />

@@ -23,7 +23,7 @@ export default function DocsPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {LINKS.map((l) => (
           <a key={l.title} href={l.href}>
-            <Card className="h-full transition hover:border-sky-300">
+            <Card className="h-full transition hover:border-[var(--color-atlas-gold)]">
               <div className="font-bold text-[var(--color-atlas-navy)]">{l.title}</div>
               <p className="mt-1 text-sm text-[var(--color-text-muted)]">{l.blurb}</p>
             </Card>

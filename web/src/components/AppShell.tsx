@@ -40,8 +40,9 @@ import { isAdminUser } from "@/lib/quotes/team-roles";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
-import { NewsTicker } from "./NewsTicker";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
+import { WorkspaceMore } from "./WorkspaceMore";
+import { BrandMark } from "./BrandMark";
 
 type NavItem = {
   href: string;
@@ -120,7 +121,7 @@ function NavLink({
             ? "bg-white/15 text-white"
             : "text-white/70 hover:bg-white/10 hover:text-white"
           : active
-            ? "bg-sky-50 text-[var(--color-atlas-navy)]"
+            ? "bg-[var(--color-atlas-gold-soft)] text-[var(--color-atlas-navy)]"
             : "text-slate-700",
       )}
     >
@@ -129,8 +130,8 @@ function NavLink({
           className={cn(
             "absolute left-0",
             dark
-              ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-teal-400"
-              : "top-0 h-full w-1 bg-teal-500",
+              ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-white"
+              : "top-0 h-full w-1 bg-[var(--color-atlas-sky)]",
           )}
         />
       ) : null}
@@ -234,20 +235,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         <aside className="hidden w-64 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-atlas-navy)] text-white md:flex md:flex-col">
           <div className="border-b border-white/10 px-5 py-5">
-            <div className="flex items-center gap-2 text-sm font-extrabold tracking-wide">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-500 text-[11px] font-black text-white">
-                A
-              </span>
+            <div className="flex items-center gap-2.5 text-sm font-extrabold tracking-wide">
+              <BrandMark size={40} />
               ATLAS PRICING
             </div>
             <div className="mt-1 text-xs text-white/60">Quote · book · track · v{appVersion}</div>
-            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-100">
+            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-gold-bright)]">
               {focus}
             </div>
             <Link
               href="/m"
               data-testid="mobile-app-top"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 px-3 py-2 text-xs font-bold text-white hover:bg-teal-400"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"
             >
               <Smartphone className="h-3.5 w-3.5" />
               Mobile app
@@ -283,7 +282,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
             <aside className="absolute left-0 top-0 flex h-full w-[min(20rem,92vw)] flex-col bg-white shadow-2xl">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-atlas-navy)] px-4 py-4 text-white">
-                <span className="font-extrabold">Menu</span>
+                <span className="flex items-center gap-2 font-extrabold">
+                  <BrandMark size={28} />
+                  Menu
+                </span>
                 <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close">
                   <X className="h-5 w-5" />
                 </button>
@@ -292,7 +294,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href="/m"
                   onClick={() => setMobileOpen(false)}
-                  className="m-3 mb-0 flex items-center justify-center gap-2 rounded-lg bg-teal-500 px-3 py-2.5 text-sm font-bold text-white"
+                  className="m-3 mb-0 flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm font-bold text-[var(--color-atlas-navy)]"
                 >
                   <Smartphone className="h-4 w-4" />
                   Mobile app
@@ -317,9 +319,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </button>
             <Link href={home} className="flex items-center gap-2 text-sm font-extrabold tracking-wide">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-500 text-[10px]">
-                A
-              </span>
+              <BrandMark size={28} />
               Atlas
             </Link>
             <div className="flex items-center gap-1">
@@ -334,41 +334,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <header className="sticky top-0 z-40 hidden items-center justify-between gap-3 border-b border-[var(--color-border)] bg-white/90 px-6 py-2.5 backdrop-blur-md md:flex">
-            <div className="min-w-0 text-sm text-[var(--color-text-muted)]">
-              {focus} — type a customer or city in Ask Vertex /{" "}
-              <kbd className="rounded border border-[var(--color-border)] bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold">
-                ⌘K
-              </kbd>
-              . File name not required.
+          <header
+            data-testid="workspace-header"
+            className="sticky top-0 z-40 hidden items-center justify-between gap-3 border-b border-white/50 bg-white/65 px-6 py-2 backdrop-blur-xl md:flex"
+          >
+            <div className="min-w-0 text-sm font-semibold text-[var(--color-atlas-navy)]">
+              {focus}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <OfflineBadge />
-              <GlobalRefreshButton />
-              <FxConverter />
-              <PremiumPipToggle onOpen={() => setPipOpen(true)} />
+            <div
+              data-testid="workspace-tools"
+              className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/70 bg-white/75 p-1 shadow-[0_8px_28px_rgba(15,35,58,0.06)] backdrop-blur-xl"
+            >
+              <OfflineBadge compact />
+              <GlobalRefreshButton compact />
+              <FxConverter compact />
               {showInbox ? (
                 <Link
                   href="/inbox"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-atlas-navy)] hover:bg-white"
+                  aria-label="Inbox"
+                  title="Inbox"
                 >
                   <Inbox className="h-3.5 w-3.5" />
-                  Inbox
                 </Link>
               ) : null}
-              <a
-                href="/index.html"
-                className="rounded-md border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-atlas-navy)] hover:bg-slate-50"
-              >
-                Legacy
-              </a>
+              <PremiumPipToggle onOpen={() => setPipOpen(true)} />
+              <WorkspaceMore />
             </div>
           </header>
 
-          <NewsTicker />
-
           <main className="flex-1 p-3 md:p-5">
-            <RouteGuard>{children}</RouteGuard>
+            <div className="atlas-page-card min-h-[70vh] p-4 md:p-6">
+              <RouteGuard>{children}</RouteGuard>
+            </div>
           </main>
         </div>
       </div>
@@ -386,7 +384,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   active ? "text-[var(--color-atlas-navy)]" : "text-[var(--color-text-muted)]",
                 )}
               >
-                <tab.icon className={cn("h-5 w-5", active && "text-teal-600")} />
+                <tab.icon className={cn("h-5 w-5", active && "text-[var(--color-atlas-gold)]")} />
                 <span className="truncate">{tab.label}</span>
               </Link>
             );

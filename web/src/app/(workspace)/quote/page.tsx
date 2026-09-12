@@ -36,7 +36,7 @@ export default function QuoteHubPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="rounded-2xl bg-[var(--color-atlas-navy)] px-6 py-7 text-white shadow-lg">
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-200">Quote hub</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-atlas-gold-bright)]">Quote hub</p>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Dump the job. Vertex routes it.</h1>
         <p className="mt-2 max-w-lg text-sm text-white/75">
           Do not pick Air vs Sea first. Paste the enquiry or tap what Vertex already queued. Finding
@@ -53,7 +53,7 @@ export default function QuoteHubPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {DESKS.map((d) => (
             <Link key={d.href} href={d.href}>
-              <Card className="h-full transition hover:border-sky-300 hover:shadow-sm">
+              <Card className="atlas-pop h-full transition hover:border-[var(--color-atlas-gold)]">
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-atlas-navy)] text-white">
                     <d.icon className="h-4 w-4" />

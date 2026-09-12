@@ -38,15 +38,15 @@ export function Button({
     <button
       type={props.type ?? "button"}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 atlas-pop",
         size === "md" && "px-4 py-2",
         size === "sm" && "h-8 gap-1.5 px-2.5 text-xs",
         size === "icon" && "h-8 w-8 p-0",
         variant === "primary" &&
-          "bg-[var(--color-atlas-navy)] text-white hover:bg-[#14154a]",
+          "bg-[var(--color-atlas-navy)] text-white hover:bg-[var(--color-atlas-ink)]",
         variant === "secondary" &&
-          "border border-[var(--color-border)] bg-white text-[var(--color-atlas-navy)] hover:bg-slate-50",
-        variant === "ghost" && "text-[var(--color-atlas-navy)] hover:bg-slate-100",
+          "border border-[var(--color-border)] bg-white text-[var(--color-atlas-navy)] hover:bg-[var(--color-atlas-gold-soft)]",
+        variant === "ghost" && "text-[var(--color-atlas-navy)] hover:bg-[var(--color-atlas-gold-soft)]",
         className,
       )}
       {...props}
@@ -66,7 +66,7 @@ export function Badge({
     success: "bg-emerald-100 text-emerald-800",
     warn: "bg-amber-100 text-amber-800",
     error: "bg-red-100 text-red-800",
-    info: "bg-sky-100 text-sky-800",
+    info: "bg-[var(--color-atlas-gold-soft)] text-[var(--color-atlas-ink)]",
   };
   return (
     <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", tones[tone])}>

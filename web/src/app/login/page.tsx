@@ -15,6 +15,7 @@ import {
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useLiveData } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -105,12 +106,18 @@ export default function LoginPage() {
   const mock = process.env.NEXT_PUBLIC_MOCK_MODE !== "false";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-white to-sky-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface)] p-4">
       <div className="grid w-full max-w-4xl gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="order-2 lg:order-1">
           <div className="mb-5">
-            <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-atlas-sky)]">
-              Vertex
+            <div className="flex items-center gap-2.5">
+              <BrandMark size={44} />
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-atlas-sky)]">
+                  Atlas Pricing
+                </div>
+                <div className="text-[11px] text-[var(--color-text-muted)]">Vertex workspace</div>
+              </div>
             </div>
             <h1 className="mt-2 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
               {mode === "signin" ? "Sign in" : "Create your login"}
@@ -268,15 +275,15 @@ export default function LoginPage() {
                     );
                   }}
                   className={cn(
-                    "rounded-xl border bg-white px-3 py-3 text-left transition hover:border-sky-300 hover:shadow-sm",
+                    "rounded-xl border bg-white px-3 py-3 text-left transition hover:border-[var(--color-atlas-gold)] hover:shadow-sm",
                     username.toLowerCase() === login.toLowerCase()
-                      ? "border-teal-500 ring-1 ring-teal-200"
+                      ? "border-[var(--color-atlas-gold)] ring-1 ring-[var(--color-atlas-gold-soft)]"
                       : "border-[var(--color-border)]",
                   )}
                 >
                   <div className="text-sm font-extrabold text-[var(--color-atlas-navy)]">{seat.label}</div>
                   <div className="text-[11px] text-[var(--color-text-muted)]">{seat.blurb}</div>
-                  <div className="mt-1 text-xs font-semibold text-teal-800">
+                  <div className="mt-1 text-xs font-semibold text-[var(--color-atlas-navy)]">
                     Occupant · {occupant}
                   </div>
                 </button>

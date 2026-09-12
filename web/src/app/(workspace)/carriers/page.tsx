@@ -119,7 +119,7 @@ export default function CarriersPage() {
                   href={c.website}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-teal-700 hover:underline"
+                  className="inline-flex items-center gap-1 text-[var(--color-atlas-navy)] hover:underline"
                 >
                   Site <ExternalLink className="h-3 w-3" />
                 </a>
