@@ -95,7 +95,7 @@ Apple marketing pages mostly live here: CSS, video, and type — not a game engi
 
 Owner direction: **Apple calm is the base** (quiet type, whitespace, one job per screen). **WebGL/Three.js** makes it live, but as **ornaments**, not a theme park.
 
-- **Hero 3D** on Quote hub: combo **S2 orbital emptiness + L3 daylight** (pale sky, sunlit ocean planet, faint roads, tiny solid cargo hauler — **not an aircraft**). Opaque UI. **No boxes on the hub.** Variants C1–C3.
+- **Hero 3D** on Quote hub: **L3 daylight** (pale sky, sunlit ocean, faint roads). Aircraft **must stay**, but as a **super-futuristic solid airframe** (blended-wing, waverider, lifting-body, or laminar silent) — not a today’s passenger jet, not a glass/ghost ship. UI cards more **opaque**. Variants **P1–P4**. Never cyberpunk clutter.
 - **Semantic 3D only** (not decoration on every page): a 3D **carton** at Dimensions / no. of pkgs; a 3D **pallet** only at Pallet. POL/POD get none. Object must match the word. Honor `prefers-reduced-motion`.
 - Palette in chrome: **K+Q** glacier-graphite. Color is close to signed; 3D is not shipped yet.
 
