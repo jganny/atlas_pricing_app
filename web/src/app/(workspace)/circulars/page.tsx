@@ -22,6 +22,7 @@ import {
 import { publishCourierTariffBook } from "@/lib/firebase/courier-tariffs";
 import { CourierTariffBoard } from "@/components/CourierTariffBoard";
 import {
+  courierTariffNeedsReupload,
   mergeCourierTariffBooks,
   parseCourierTariffSheets,
   rememberCourierTariffBook,
@@ -199,9 +200,11 @@ export default function CircularsPage() {
     rememberCourierTariffBook(book);
     setCourierBook(book);
     queryClient.setQueryData(queryKeys.courierTariffs, mergeCourierTariffBooks(courierBooks));
+    const extra = book.warnings?.length ? ` ${book.warnings[0]}` : "";
+    const mapped = book.zoneMap ? ` · ${Object.keys(book.zoneMap).length} countries mapped to zones` : "";
     toast(
-      `Loaded ${book.carrier} ${book.year}: ${book.lanes.length} lanes up to ${book.maxKg} kg`,
-      "success",
+      `Loaded ${book.carrier} ${book.year}: ${book.lanes.length} lanes up to ${book.maxKg} kg${mapped}.${extra}`,
+      book.warnings?.length ? "info" : "success",
     );
   }
 
@@ -355,8 +358,9 @@ export default function CircularsPage() {
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-[var(--color-text-muted)]">
             Import and Export sheets, weights through 70 kg. Validity defaults to Jan–Dec {tariffYear}.
-            Above 70 kg stays case-by-case. Courier desk fills the matching slab when origin,
-            destination, and chargeable weight are entered.
+            Above 70 kg stays case-by-case. Courier desk fills the matching slab when FedEx is selected
+            and cargo is entered, then sells at +5% on the uploaded tariff (fuel extra). If the file
+            uses Zone A–N columns, include a Country / Zone sheet so USA, UK, UAE match.
           </p>
           <Input
             type="file"
@@ -369,14 +373,27 @@ export default function CircularsPage() {
           />
           {courierBook ? (
             <div className="mt-4 space-y-3">
+              {courierBook.warnings?.length ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  {courierBook.warnings.join(" ")}
+                </p>
+              ) : null}
               <CourierTariffBoard book={courierBook} />
               <Button type="button" disabled={busy} onClick={() => void publishCourierBook()}>
                 Keep {courierBook.carrier} {courierBook.year} live for the year
               </Button>
             </div>
-          ) : courierBooks[0] ? (
-            <div className="mt-4">
-              <CourierTariffBoard book={courierBooks[0]} />
+          ) : courierBooks.length ? (
+            <div className="mt-4 space-y-4">
+              {courierBooks.some((b) => courierTariffNeedsReupload(b)) ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  A live FedEx book was stored as rate numbers (1331, 1443…) instead of Zone A–N.
+                  Re-upload EXPORT FEDEX RATES and IMPORTS RATES so Courier desk can fill rates.
+                </p>
+              ) : null}
+              {courierBooks.map((b) => (
+                <CourierTariffBoard key={b.id} book={b} />
+              ))}
             </div>
           ) : null}
         </Card>

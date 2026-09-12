@@ -53,6 +53,7 @@ export function CourierTariffBoard({
           <p className="mt-1 text-xs text-sky-100">
             Valid {book.validFrom.slice(0, 10)} → {book.validTo.slice(0, 10)} · up to {book.maxKg}{" "}
             kg · {book.currency}
+            {book.zoneMap ? ` · ${Object.keys(book.zoneMap).length} countries → zones` : ""}
           </p>
         </div>
         <p className="text-xs text-sky-100">
