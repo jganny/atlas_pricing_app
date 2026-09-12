@@ -95,7 +95,7 @@ Apple marketing pages mostly live here: CSS, video, and type — not a game engi
 
 Owner direction: **Apple calm is the base** (quiet type, whitespace, one job per screen). **WebGL/Three.js** makes it live, but as **ornaments**, not a theme park.
 
-- **Hero 3D** with **Three.js** (not Babylon.js — same job, do not run both). Quote hub: **L3 daylight** + angular sci-fi aircraft. `/motion` is the live feel-it sample.
+- **Hero 3D** with **Three.js** (not Babylon.js — same job, do not run both). Quote hub: **L3 daylight ocean** + angular sci-fi aircraft behind frost cards. Home: small **carton tokens** beside Ask Vertex. `/motion` remains the explainer.
 - **Semantic 3D only** (not decoration on every page): a 3D **carton** at Dimensions / no. of pkgs; a 3D **pallet** only at Pallet. POL/POD get none. Object must match the word. Honor `prefers-reduced-motion`.
 - Raised chrome: `.atlas-pop` buttons (shadow + slight lift) and `.atlas-page-card` on the workspace sheet — the Home mockup “pop out of the page” look, app-wide.
 - Motion sample at `/motion` so the owner can *feel* three different tools: CSS smooth scroll, parallax, Three.js. Hub may later use scroll-driven craft; desks stay still. Honor `prefers-reduced-motion`.

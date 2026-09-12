@@ -54,7 +54,7 @@ export function CraftCanvas() {
           <ambientLight intensity={0.7} />
           <directionalLight position={[6, 8, 4]} intensity={1.35} castShadow />
           <hemisphereLight args={["#f4f7fb", "#6b8499", 0.35]} />
-          <SciFiCraft spin={!reduce} />
+          <SciFiCraft spin={!reduce} float={false} />
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.85, 0]} receiveShadow>
             <circleGeometry args={[6, 40]} />
             <meshStandardMaterial color="#7eacbf" roughness={0.85} />
