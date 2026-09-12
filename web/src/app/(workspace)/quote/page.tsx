@@ -53,7 +53,7 @@ export default function QuoteHubPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {DESKS.map((d) => (
             <Link key={d.href} href={d.href}>
-              <Card className="h-full transition hover:border-[var(--color-atlas-gold)] hover:shadow-sm">
+              <Card className="atlas-pop h-full transition hover:border-[var(--color-atlas-gold)]">
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-atlas-navy)] text-white">
                     <d.icon className="h-4 w-4" />

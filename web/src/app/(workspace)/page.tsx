@@ -188,7 +188,7 @@ export default function DashboardPage() {
           {showAir ? (
             <Link
               href="/air"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-[var(--color-atlas-gold)]"
+              className="atlas-pop inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)]"
             >
               <PlaneTakeoff className="h-3.5 w-3.5" /> Air desk
             </Link>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
           {showSea ? (
             <Link
               href="/sea"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-[var(--color-atlas-gold)]"
+              className="atlas-pop inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)]"
             >
               <Ship className="h-3.5 w-3.5" /> Sea desk
             </Link>
@@ -204,11 +204,18 @@ export default function DashboardPage() {
           {showInbox ? (
             <Link
               href="/inbox"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-xs font-bold text-white hover:bg-[var(--color-atlas-ink)]"
+              className="atlas-pop inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-xs font-bold text-white"
             >
               <Inbox className="h-3.5 w-3.5" /> Inbox
             </Link>
           ) : null}
+          <Link
+            href="/motion"
+            data-testid="motion-sample"
+            className="atlas-pop inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)]"
+          >
+            Motion sample
+          </Link>
         </div>
       </div>
 

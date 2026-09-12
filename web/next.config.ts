@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   basePath: "/app",
   output: "export",
-  transpilePackages: ["@atlas/pricing-core"],
+  transpilePackages: ["@atlas/pricing-core", "three", "@react-three/fiber", "@react-three/drei"],
   images: {
     unoptimized: true,
   },

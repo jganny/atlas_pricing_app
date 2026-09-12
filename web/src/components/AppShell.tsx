@@ -364,7 +364,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </header>
 
           <main className="flex-1 p-3 md:p-5">
-            <RouteGuard>{children}</RouteGuard>
+            <div className="atlas-page-card min-h-[70vh] p-4 md:p-6">
+              <RouteGuard>{children}</RouteGuard>
+            </div>
           </main>
         </div>
       </div>

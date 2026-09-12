@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 
 /** Overflow for parallel-run tools — not daily header buttons. */
@@ -35,6 +36,14 @@ export function WorkspaceMore() {
           role="menu"
           className="atlas-glass absolute right-0 z-[80] mt-1 w-48 overflow-hidden rounded-xl py-1 text-sm shadow-lg"
         >
+          <Link
+            role="menuitem"
+            href="/motion"
+            className="block px-3 py-2 font-semibold text-[var(--color-atlas-navy)] hover:bg-white/70"
+            onClick={() => setOpen(false)}
+          >
+            Motion sample
+          </Link>
           <a
             role="menuitem"
             href="/index.html"

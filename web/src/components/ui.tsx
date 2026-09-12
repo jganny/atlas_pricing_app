@@ -38,7 +38,7 @@ export function Button({
     <button
       type={props.type ?? "button"}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 atlas-pop",
         size === "md" && "px-4 py-2",
         size === "sm" && "h-8 gap-1.5 px-2.5 text-xs",
         size === "icon" && "h-8 w-8 p-0",

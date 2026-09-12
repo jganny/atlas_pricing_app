@@ -174,7 +174,7 @@ export function VertexAskBar({
         </label>
         <button
           type="button"
-          className="rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-sm font-bold text-white hover:bg-[var(--color-atlas-ink)]"
+          className="atlas-pop rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-sm font-bold text-white"
           onClick={run}
         >
           Go

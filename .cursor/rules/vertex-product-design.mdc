@@ -95,9 +95,10 @@ Apple marketing pages mostly live here: CSS, video, and type — not a game engi
 
 Owner direction: **Apple calm is the base** (quiet type, whitespace, one job per screen). **WebGL/Three.js** makes it live, but as **ornaments**, not a theme park.
 
-- **Hero 3D** on Quote hub: **L3 daylight** (pale sky, sunlit ocean, faint roads). Aircraft **must stay**, but as a **super-futuristic solid airframe** (blended-wing, waverider, lifting-body, or laminar silent) — not a today’s passenger jet, not a glass/ghost ship. UI cards more **opaque**. Variants **P1–P4**. Never cyberpunk clutter.
+- **Hero 3D** with **Three.js** (not Babylon.js — same job, do not run both). Quote hub: **L3 daylight** + angular sci-fi aircraft. `/motion` is the live feel-it sample.
 - **Semantic 3D only** (not decoration on every page): a 3D **carton** at Dimensions / no. of pkgs; a 3D **pallet** only at Pallet. POL/POD get none. Object must match the word. Honor `prefers-reduced-motion`.
-- Scroll: **scrollytelling / scroll-driven animation** is wanted as a *look* on Quote hub (craft moves as you scroll, sticky Drop the job). Do **not** animate POL/POD typing pages. Honor `prefers-reduced-motion`. Owner asked how it would look — samples first, do not ship until they pick.
+- Raised chrome: `.atlas-pop` buttons (shadow + slight lift) and `.atlas-page-card` on the workspace sheet — the Home mockup “pop out of the page” look, app-wide.
+- Motion sample at `/motion` so the owner can *feel* three different tools: CSS smooth scroll, parallax, Three.js. Hub may later use scroll-driven craft; desks stay still. Honor `prefers-reduced-motion`.
 
 Apple’s public sites mix **restraint + a few of these**. The “wow” is not a secret toolkit.
 
