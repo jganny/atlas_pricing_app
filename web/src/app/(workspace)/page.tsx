@@ -188,7 +188,7 @@ export default function DashboardPage() {
           {showAir ? (
             <Link
               href="/air"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-sky-300"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-[var(--color-atlas-gold)]"
             >
               <PlaneTakeoff className="h-3.5 w-3.5" /> Air desk
             </Link>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
           {showSea ? (
             <Link
               href="/sea"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-sky-300"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)] hover:border-[var(--color-atlas-gold)]"
             >
               <Ship className="h-3.5 w-3.5" /> Sea desk
             </Link>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
           {showInbox ? (
             <Link
               href="/inbox"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-xs font-bold text-white hover:bg-[#14154a]"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-xs font-bold text-white hover:bg-[var(--color-atlas-ink)]"
             >
               <Inbox className="h-3.5 w-3.5" /> Inbox
             </Link>

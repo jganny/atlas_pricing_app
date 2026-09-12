@@ -15,6 +15,7 @@ import {
 } from "@/lib/quotes/quote-print";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { Badge, Button } from "@/components/ui";
+import { BrandMark } from "@/components/BrandMark";
 import { formatCurrency } from "@/lib/utils";
 import {
   formatRoutingPreview,
@@ -351,7 +352,9 @@ export function QuotePreviewModal({
           </GuideNote>
           <div className="mb-6 border-b-2 border-[var(--color-atlas-navy)] pb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
+              <div className="flex items-start gap-3">
+                <BrandMark size={52} />
+                <div>
                 <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-atlas-navy)]">
                   Atlas Logistics
                 </div>
@@ -361,6 +364,7 @@ export function QuotePreviewModal({
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                   This quotation is subject to carrier space and the terms below.
                 </p>
+                </div>
               </div>
               <div className="text-right text-xs text-[var(--color-text-muted)]">
                 <div>Ref #{ref}</div>

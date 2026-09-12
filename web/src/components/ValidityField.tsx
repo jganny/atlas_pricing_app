@@ -172,7 +172,7 @@ export function ValidityField({
         <button
           type="button"
           data-testid="validity-cal-toggle"
-          className="rounded-md border border-[var(--color-border)] bg-white px-2 py-1.5 text-[11px] font-semibold text-[var(--color-atlas-navy)] hover:bg-sky-50"
+          className="rounded-md border border-[var(--color-border)] bg-white px-2 py-1.5 text-[11px] font-semibold text-[var(--color-atlas-navy)] hover:bg-[var(--color-atlas-gold-soft)]"
           onClick={openChooser}
           aria-label="Open date picker"
         >
@@ -230,7 +230,7 @@ export function ValidityField({
                   className={cn(
                     "h-7 rounded text-xs",
                     cell.inMonth ? "text-[var(--color-atlas-navy)]" : "text-slate-300",
-                    selected ? "bg-[var(--color-atlas-navy)] font-bold text-white" : "hover:bg-sky-50",
+                    selected ? "bg-[var(--color-atlas-navy)] font-bold text-white" : "hover:bg-[var(--color-atlas-gold-soft)]",
                   )}
                   onClick={() => commit(cell.iso)}
                 >
@@ -249,7 +249,7 @@ export function ValidityField({
           <button
             key={p.label}
             type="button"
-            className="rounded-md border border-[var(--color-border)] bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--color-atlas-navy)] hover:bg-sky-50"
+            className="rounded-md border border-[var(--color-border)] bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--color-atlas-navy)] hover:bg-[var(--color-atlas-gold-soft)]"
             onClick={() => onChange(addDays(p.days))}
           >
             {p.label}

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const swPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../public/sw.js");
 const src = fs.readFileSync(swPath, "utf8");
 
-assert.match(src, /atlas-app-shell-v23/);
+assert.match(src, /atlas-app-shell-v24/);
 assert.match(src, /event\.data\.type === "SKIP_WAITING"/);
 assert.match(src, /networkFirst/);
 assert.equal(

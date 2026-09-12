@@ -102,7 +102,7 @@ export function VertexAskBar({
     <div className={cn("space-y-2", compact ? "" : "atlas-panel rounded-xl p-3 md:p-4")}>
       {!compact ? (
         <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-          <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+          <Sparkles className="h-3.5 w-3.5 text-[var(--color-atlas-gold)]" />
           Ask Vertex
         </div>
       ) : null}
@@ -174,7 +174,7 @@ export function VertexAskBar({
         </label>
         <button
           type="button"
-          className="rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-sm font-bold text-white hover:bg-[#14154a]"
+          className="rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-sm font-bold text-white hover:bg-[var(--color-atlas-ink)]"
           onClick={run}
         >
           Go

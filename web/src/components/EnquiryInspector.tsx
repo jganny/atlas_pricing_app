@@ -305,7 +305,7 @@ export function EnquiryInspector({
           ref={actionsBtnRef}
           data-testid="edb-actions-toggle"
           onClick={() => setActionsOpen((open) => !open)}
-          className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border)] bg-slate-50 px-3 py-2.5 text-left hover:border-sky-300"
+          className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border)] bg-slate-50 px-3 py-2.5 text-left hover:border-[var(--color-atlas-gold)]"
         >
           <span className="inline-flex items-center gap-2 text-sm font-extrabold text-[var(--color-atlas-navy)]">
             <ChevronsUpDown className="h-4 w-4" />

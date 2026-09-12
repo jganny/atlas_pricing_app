@@ -187,10 +187,10 @@ export function QuoteHubIntake() {
         {last ? (
           <button
             type="button"
-            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-sky-300"
+            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
             onClick={() => router.push(deskEditHref(last.mode, last.id))}
           >
-            <p className="text-[10px] font-bold uppercase tracking-wide text-teal-700">Continue</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-navy)]">Continue</p>
             <p className="mt-1 text-sm font-extrabold text-[var(--color-atlas-navy)]">{last.customer}</p>
             <p className="text-xs text-[var(--color-text-muted)]">{last.ref}</p>
           </button>
@@ -198,7 +198,7 @@ export function QuoteHubIntake() {
         {overdue && overdue.id !== last?.id ? (
           <button
             type="button"
-            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-sky-300"
+            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
             onClick={() => router.push(enquiryHref(overdue))}
           >
             <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
@@ -211,7 +211,7 @@ export function QuoteHubIntake() {
         {nextMail ? (
           <button
             type="button"
-            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-sky-300"
+            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
             onClick={() => router.push("/inbox")}
           >
             <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-sky-800">

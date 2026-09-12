@@ -2,22 +2,28 @@
 
 @theme {
   --font-sans: var(--font-ibm-plex), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-atlas-navy: #0a2540;
-  --color-atlas-ink: #132337;
-  --color-atlas-sky: #1d7aef;
-  --color-atlas-sea: #0f6a8f;
-  --color-atlas-teal: #0d9488;
-  --color-atlas-air: #c47b16;
-  --color-atlas-success: #0f7b5a;
+  /* Logo indigo, slightly opened so large fields are not a black hole. */
+  --color-atlas-navy: #2c2772;
+  --color-atlas-ink: #1c184f;
+  /* Mid indigo for links — not as loud as the circle, still on-brand. */
+  --color-atlas-sky: #5a55a6;
+  --color-atlas-sea: #3e5878;
+  --color-atlas-teal: #4a6c6a;
+  /* Logo ring, muted for UI (never as a filled button with white type). */
+  --color-atlas-gold: #d4b43a;
+  --color-atlas-gold-bright: #e8c94a;
+  --color-atlas-gold-soft: #f6efd4;
+  --color-atlas-air: #c49a2a;
+  --color-atlas-success: #2f7a5c;
   --color-atlas-warn: #b7791f;
   --color-atlas-error: #c53030;
-  --color-surface: #eef2f6;
-  --color-surface-elevated: #ffffff;
-  --color-surface-muted: #f5f7fa;
-  --color-border: #d7dee8;
-  --color-border-strong: #b8c4d4;
-  --color-text: #0f172a;
-  --color-text-muted: #5b6b7c;
+  --color-surface: #f7f4ec;
+  --color-surface-elevated: #fffdf8;
+  --color-surface-muted: #efe9dc;
+  --color-border: #e4ddd0;
+  --color-border-strong: #cfc4ae;
+  --color-text: #1c1938;
+  --color-text-muted: #6a6478;
 }
 
 @layer base {
@@ -35,30 +41,30 @@
     font-family: var(--font-sans);
     color: var(--color-text);
     background:
-      radial-gradient(1200px 480px at 12% -10%, rgba(29, 122, 239, 0.08), transparent 55%),
-      radial-gradient(900px 420px at 92% 0%, rgba(15, 106, 143, 0.07), transparent 50%),
+      radial-gradient(1100px 460px at 8% -8%, rgba(232, 201, 74, 0.16), transparent 55%),
+      radial-gradient(900px 420px at 96% 0%, rgba(44, 39, 114, 0.08), transparent 52%),
       var(--color-surface);
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background: rgba(29, 122, 239, 0.18);
+    background: rgba(212, 180, 58, 0.28);
   }
 }
 
 @layer utilities {
   .atlas-panel {
     border: 1px solid var(--color-border);
-    background: color-mix(in srgb, white 92%, transparent);
+    background: color-mix(in srgb, white 92%, var(--color-atlas-gold-soft));
     backdrop-filter: blur(10px);
-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03), 0 8px 24px rgba(15, 35, 58, 0.04);
+    box-shadow: 0 1px 0 rgba(28, 24, 79, 0.03), 0 8px 24px rgba(28, 24, 79, 0.05);
   }
 
   .atlas-glass {
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.82);
-    backdrop-filter: blur(16px) saturate(1.2);
-    box-shadow: 0 12px 40px rgba(11, 31, 58, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(255, 253, 248, 0.84);
+    backdrop-filter: blur(16px) saturate(1.15);
+    box-shadow: 0 12px 40px rgba(28, 24, 79, 0.12);
   }
 
   .atlas-metric-strip {
@@ -81,7 +87,7 @@
   }
 
   .atlas-overlay {
-    background: rgba(11, 31, 58, 0.42);
+    background: rgba(28, 24, 79, 0.42);
     backdrop-filter: blur(2px);
   }
 
@@ -114,7 +120,7 @@
   gap: 0.65rem;
   min-height: 1.85rem;
   border-bottom: 1px solid var(--color-border);
-  background: #0a2540;
+  background: var(--color-atlas-navy);
   color: rgba(255, 255, 255, 0.92);
   padding: 0 0.75rem;
 }
@@ -125,7 +131,7 @@
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #5eead4;
+  color: var(--color-atlas-gold-bright);
 }
 
 .atlas-ticker-mask {

@@ -42,6 +42,7 @@ import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 import { WorkspaceMore } from "./WorkspaceMore";
+import { BrandMark } from "./BrandMark";
 
 type NavItem = {
   href: string;
@@ -120,7 +121,7 @@ function NavLink({
             ? "bg-white/15 text-white"
             : "text-white/70 hover:bg-white/10 hover:text-white"
           : active
-            ? "bg-sky-50 text-[var(--color-atlas-navy)]"
+            ? "bg-[var(--color-atlas-gold-soft)] text-[var(--color-atlas-navy)]"
             : "text-slate-700",
       )}
     >
@@ -129,8 +130,8 @@ function NavLink({
           className={cn(
             "absolute left-0",
             dark
-              ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-teal-400"
-              : "top-0 h-full w-1 bg-teal-500",
+              ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-[var(--color-atlas-gold-bright)]"
+              : "top-0 h-full w-1 bg-[var(--color-atlas-gold)]",
           )}
         />
       ) : null}
@@ -234,20 +235,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         <aside className="hidden w-64 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-atlas-navy)] text-white md:flex md:flex-col">
           <div className="border-b border-white/10 px-5 py-5">
-            <div className="flex items-center gap-2 text-sm font-extrabold tracking-wide">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-500 text-[11px] font-black text-white">
-                A
-              </span>
+            <div className="flex items-center gap-2.5 text-sm font-extrabold tracking-wide">
+              <BrandMark size={40} />
               ATLAS PRICING
             </div>
             <div className="mt-1 text-xs text-white/60">Quote · book · track · v{appVersion}</div>
-            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-100">
+            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-gold-soft)]">
               {focus}
             </div>
             <Link
               href="/m"
               data-testid="mobile-app-top"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 px-3 py-2 text-xs font-bold text-white hover:bg-teal-400"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-atlas-gold)] px-3 py-2 text-xs font-bold text-[var(--color-atlas-ink)] hover:bg-[var(--color-atlas-gold-bright)]"
             >
               <Smartphone className="h-3.5 w-3.5" />
               Mobile app
@@ -283,7 +282,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
             <aside className="absolute left-0 top-0 flex h-full w-[min(20rem,92vw)] flex-col bg-white shadow-2xl">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-atlas-navy)] px-4 py-4 text-white">
-                <span className="font-extrabold">Menu</span>
+                <span className="flex items-center gap-2 font-extrabold">
+                  <BrandMark size={28} />
+                  Menu
+                </span>
                 <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close">
                   <X className="h-5 w-5" />
                 </button>
@@ -292,7 +294,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href="/m"
                   onClick={() => setMobileOpen(false)}
-                  className="m-3 mb-0 flex items-center justify-center gap-2 rounded-lg bg-teal-500 px-3 py-2.5 text-sm font-bold text-white"
+                  className="m-3 mb-0 flex items-center justify-center gap-2 rounded-lg bg-[var(--color-atlas-gold)] px-3 py-2.5 text-sm font-bold text-[var(--color-atlas-ink)]"
                 >
                   <Smartphone className="h-4 w-4" />
                   Mobile app
@@ -317,9 +319,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </button>
             <Link href={home} className="flex items-center gap-2 text-sm font-extrabold tracking-wide">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-500 text-[10px]">
-                A
-              </span>
+              <BrandMark size={28} />
               Atlas
             </Link>
             <div className="flex items-center gap-1">
@@ -382,7 +382,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   active ? "text-[var(--color-atlas-navy)]" : "text-[var(--color-text-muted)]",
                 )}
               >
-                <tab.icon className={cn("h-5 w-5", active && "text-teal-600")} />
+                <tab.icon className={cn("h-5 w-5", active && "text-[var(--color-atlas-gold)]")} />
                 <span className="truncate">{tab.label}</span>
               </Link>
             );

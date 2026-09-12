@@ -152,9 +152,11 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; color: #0f172a; background: #fff; }
   main { max-width: 720px; margin: 0 auto; padding: 8px 4px 28px; }
   h1 { font-size: 1.45rem; margin: 0.2rem 0 0; }
-  .brand { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #1e1b4b; }
-  .meta { color: #64748b; font-size: 12px; }
-  header { border-bottom: 3px solid #1e1b4b; padding-bottom: 14px; margin-bottom: 16px; }
+  .brand { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #2c2772; }
+  .meta { color: #6a6478; font-size: 12px; }
+  header { border-bottom: 3px solid #2c2772; padding-bottom: 14px; margin-bottom: 16px; }
+  .brand-row { display: flex; align-items: flex-start; gap: 12px; }
+  .brand-row img { width: 56px; height: 56px; border-radius: 999px; background: #fff; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
   th { font-size: 11px; text-transform: uppercase; color: #64748b; }
@@ -175,10 +177,15 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
 <body>
 <main>
   <header>
-    <div class="brand">Atlas Logistics</div>
-    <h1>Official Freight Quotation</h1>
-    <p class="meta">Ref #${esc(ref)} · ${esc(quote.date || "—")} · Prepared by ${esc(prepared)}</p>
-    <p class="meta">${esc(quote.customer || "—")} · ${esc(quote.route || "—")} · ${(quote.type || "").toUpperCase()}</p>
+    <div class="brand-row">
+      <img src="/app/atlas-logo.png" width="56" height="56" alt="Atlas Logistics" />
+      <div>
+        <div class="brand">Atlas Logistics</div>
+        <h1>Official Freight Quotation</h1>
+        <p class="meta">Ref #${esc(ref)} · ${esc(quote.date || "—")} · Prepared by ${esc(prepared)}</p>
+        <p class="meta">${esc(quote.customer || "—")} · ${esc(quote.route || "—")} · ${(quote.type || "").toUpperCase()}</p>
+      </div>
+    </div>
   </header>
   ${packHint}
   ${

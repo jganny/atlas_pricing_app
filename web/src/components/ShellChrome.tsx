@@ -253,7 +253,7 @@ export function FxConverter({ compact = false }: { compact?: boolean }) {
                   <button
                     type="button"
                     aria-label="Swap currencies"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[var(--color-atlas-navy)] shadow hover:bg-amber-300"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-atlas-gold)] text-[var(--color-atlas-ink)] shadow hover:bg-[var(--color-atlas-gold-bright)]"
                     onClick={() => {
                       setAmount(String(Number(converted.toFixed(6))));
                       setFromForeign((v) => !v);

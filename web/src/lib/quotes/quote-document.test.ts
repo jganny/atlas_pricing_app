@@ -63,6 +63,7 @@ assert.match(doc.html, /TK — Turkish Cargo/);
 assert.match(doc.html, /1 of 2 · quoted offer/);
 assert.match(doc.html, /2 of 2 · alternative/);
 assert.match(doc.html, /ABC/);
+assert.match(doc.html, /atlas-logo\.png/);
 const quotedAt = doc.html.indexOf("quoted offer");
 const altAt = doc.html.indexOf("alternative");
 assert.ok(quotedAt >= 0 && altAt > quotedAt, "quoted offer must appear before alternatives in the pack");

@@ -19,7 +19,9 @@ Apple-like sites feel advanced because they are **quiet**, not because they use 
 
 ## Look
 
-- One typeface, two weights, navy + one accent. Whitespace is a feature.
+- Atlas Logistics logo sits beside **ATLAS PRICING** in the sidebar (and login / quotation letterhead).
+- Palette from the mark: indigo navy `#2c2772` for chrome and primary buttons (white type), gold `#d4b43a` as accent on dark or as a light cream fill `#f6efd4` with navy type on pills. Do not fill small pills with logo-blue and white type if the words vanish.
+- Warm paper surfaces (`#f7f4ec`), not cold grey. One typeface, two weights. Whitespace is a feature.
 - **Glass / depth** (blur, thin border, one soft shadow) is allowed on chrome, cards, and overlays.
 - Motion only when it means something. Honor `prefers-reduced-motion`.
 
