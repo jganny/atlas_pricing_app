@@ -916,6 +916,7 @@ function CourierDeskInner() {
                       <th className="px-2 py-2">L</th>
                       <th className="px-2 py-2">W</th>
                       <th className="px-2 py-2">H</th>
+                      <th className="px-2 py-2">VWT</th>
                       <th className="px-2 py-2">CHW</th>
                       <th className="px-2 py-2" />
                     </tr>
@@ -970,7 +971,14 @@ function CourierDeskInner() {
                             }
                           />
                         </td>
-                        <td className="p-1 text-xs font-semibold">{result.packages[i]?.chargeable.toFixed(2) ?? "—"} kg</td>
+                        <td className="p-1 text-xs font-semibold" data-testid="courier-vwt">
+                          {result.packages[i]?.volumeWeight != null
+                            ? `${result.packages[i].volumeWeight.toFixed(2)} kg`
+                            : "—"}
+                        </td>
+                        <td className="p-1 text-xs font-semibold" data-testid="courier-chw">
+                          {result.packages[i]?.chargeable.toFixed(2) ?? "—"} kg
+                        </td>
                         <td className="p-1">
                           <button type="button" className="text-red-600" onClick={() => setPackages((prev) => prev.filter((_, j) => j !== i))} disabled={packages.length <= 1}>
                             <Trash2 className="h-4 w-4" />
@@ -981,6 +989,10 @@ function CourierDeskInner() {
                   </tbody>
                 </table>
               </div>
+              <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
+                CHW is the higher of GW and volume weight (L × W × H × qty ÷ 5000). Qty does not
+                multiply GW.
+              </p>
             </div>
           ) : null}
 
