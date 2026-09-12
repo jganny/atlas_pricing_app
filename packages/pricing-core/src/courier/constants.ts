@@ -121,9 +121,11 @@ export function summarizeCourierPackages(
     const w = p.w || 0;
     const h = p.h || 0;
     const volPerPiece = (l * w * h) / divisor;
-    const chargeablePerPiece = Math.max(gw, volPerPiece);
-    const chargeable = roundChargeableKg(chargeablePerPiece) * qty;
-    return { ...p, qty, volPerPiece, chargeable };
+    // GW is the line's actual weight (not per-piece). Volume weight uses qty.
+    // Chargeable is the higher of those two — never qty × GW.
+    const volumeWeight = volPerPiece * qty;
+    const chargeable = roundChargeableKg(Math.max(gw, volumeWeight));
+    return { ...p, qty, volPerPiece, volumeWeight, chargeable };
   });
   const total = roundChargeableKg(lines.reduce((s, p) => s + p.chargeable, 0));
   const oversized = lines.some(

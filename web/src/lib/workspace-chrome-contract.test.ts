@@ -17,5 +17,6 @@ assert.doesNotMatch(shell, /bg-teal-500/);
 assert.doesNotMatch(banner, /awaiting cutover approval/);
 assert.doesNotMatch(banner, /Live Firebase/);
 assert.match(banner, /demo data only/);
+assert.match(shell, /FxConverter compact/);
 
 console.log("workspace chrome: quiet header — no ticker, no cutover banner, tools clustered");

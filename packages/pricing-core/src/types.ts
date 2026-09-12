@@ -140,7 +140,7 @@ export interface CourierCarrierQuote {
 }
 
 export interface CourierFreightResult {
-  packages: Array<CourierPackageLine & { volPerPiece: number; chargeable: number }>;
+  packages: Array<CourierPackageLine & { volPerPiece: number; volumeWeight: number; chargeable: number }>;
   chargeableKg: number;
   zone: number;
   oversized: boolean;

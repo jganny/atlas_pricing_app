@@ -308,19 +308,10 @@ export function FxConverter({ compact = false }: { compact?: boolean }) {
         }
         title="Open FX converter (USD / EUR / GBP → INR)"
       >
-        <ArrowLeftRight className="h-3.5 w-3.5" />
-        {compact ? (
-          <span>USD {rates.USD.toFixed(2)}</span>
-        ) : (
-          <>
-            <span className="hidden lg:inline">
-              USD {rates.USD.toFixed(2)} · EUR {rates.EUR.toFixed(2)} · GBP {rates.GBP.toFixed(2)}
-            </span>
-            <span className="lg:hidden">
-              {pair}/INR {rate.toFixed(2)}
-            </span>
-          </>
-        )}
+        <ArrowLeftRight className="h-3.5 w-3.5 shrink-0" />
+        <span data-testid="fx-rates" className="whitespace-nowrap tabular-nums">
+          USD {rates.USD.toFixed(2)} · EUR {rates.EUR.toFixed(2)} · GBP {rates.GBP.toFixed(2)}
+        </span>
       </button>
       {modal}
     </>
