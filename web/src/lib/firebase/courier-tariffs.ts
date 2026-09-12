@@ -18,6 +18,10 @@ function mapBook(id: string, data: Record<string, unknown>): CourierTariffBook |
     currency: String(data.currency ?? "INR"),
     maxKg: Number(data.maxKg) || 70,
     lanes: lanes as CourierTariffBook["lanes"],
+    zoneMap:
+      data.zoneMap && typeof data.zoneMap === "object" && !Array.isArray(data.zoneMap)
+        ? (data.zoneMap as Record<string, string>)
+        : undefined,
     fileName: data.fileName ? String(data.fileName) : undefined,
     uploadedAt: String(data.uploadedAt ?? data.createdAt ?? ""),
   };
@@ -46,6 +50,7 @@ export async function publishCourierTariffBook(
     currency: book.currency,
     maxKg: book.maxKg,
     lanes: book.lanes,
+    zoneMap: book.zoneMap || {},
     fileName: book.fileName || "",
     uploadedAt: book.uploadedAt,
     uploadedBy,

@@ -22,6 +22,10 @@ import { useLiveData } from "@/lib/api";
 import { useCourierTariffs } from "@/hooks/use-atlas-data";
 import {
   COURIER_TARIFF_MAX_KG,
+  COURIER_TARIFF_MARKUP_PCT,
+  applyCourierTariffMarkup,
+  courierTariffNeedsReupload,
+  inferCourierCarrier,
   lookupCourierTariff,
 } from "@/lib/quotes/courier-tariff";
 import { DEFAULT_COURIER_TERMS, saveCourierQuote } from "@/lib/firebase/save-quote";
@@ -79,18 +83,6 @@ const COURIER_FOCUS: Record<Tab, string> = {
   packages: "courier-pkg-0-qty",
   surcharges: "courier-fuel",
   terms: "courier-terms",
-};
-
-const COURIER_DIR_TO_ID: Record<string, string> = {
-  DHL: "dhl",
-  FDX: "fedex",
-  FX: "fedex",
-  UPS: "ups",
-  TNT: "fedex",
-  ARAMEX: "aramex",
-  BLUEDART: "bluedart",
-  BD: "bluedart",
-  DTDC: "dtdc",
 };
 
 function SurchargeToggle({
@@ -355,7 +347,10 @@ function CourierDeskInner() {
     ],
   );
   const sell = useMemo(() => {
-    const base = tariff.status === "hit" ? tariff.rate : 0;
+    const uploaded = tariff.status === "hit" ? tariff.rate : 0;
+    const base = uploaded > 0 ? applyCourierTariffMarkup(uploaded) : 0;
+    const markupPct = uploaded > 0 ? COURIER_TARIFF_MARKUP_PCT : 0;
+    const markupAmount = Math.max(0, base - uploaded);
     const fuel = base * ((surcharges.fuelPct || 0) / 100);
     const extras =
       (surcharges.remote ? surcharges.remoteAmount : 0) +
@@ -368,8 +363,9 @@ function CourierDeskInner() {
         : 0);
     const sub = base + fuel + extras;
     const tax = gstEnabled ? sub * 0.18 : 0;
-    return { base, fuel, extras, tax, total: sub + tax };
+    return { uploaded, markupPct, markupAmount, base, fuel, extras, tax, total: sub + tax };
   }, [tariff, surcharges, gstEnabled]);
+  const tariffNeedsReupload = tariffBooks.some((b) => courierTariffNeedsReupload(b));
 
   function updatePkg(index: number, patch: Partial<CourierPackageLine>) {
     setPackages((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -827,16 +823,14 @@ function CourierDeskInner() {
                   value={directoryCarrier}
                   onChange={(v) => {
                     setDirectoryCarrier(v);
-                    const code = v.split("—")[0]?.trim().toUpperCase();
-                    const mapped = COURIER_DIR_TO_ID[code];
-                    if (mapped) setSelectedCarrier(mapped);
+                    setSelectedCarrier(inferCourierCarrier(v).id);
                   }}
                   kind="airline+courier"
                   placeholder="Blue Dart, DHL, FedEx, UL…"
                 />
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Type Blue Dart, DHL, FedEx, or an airline code. Rates up to 70 kg come from the
-                  yearly Excel on Circulars — not from estimated carrier cards.
+                  Select FedEx after cargo is filled and the yearly Circulars tariff fills
+                  automatically (sell = uploaded rate + {COURIER_TARIFF_MARKUP_PCT}%). Fuel is extra.
                 </p>
               </div>
               <label className="text-sm font-semibold">
@@ -887,6 +881,9 @@ function CourierDeskInner() {
                   value={marginPct}
                   onChange={(e) => setMarginPct(Number(e.target.value))}
                 />
+                <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
+                  Estimated cards only. Circulars FedEx tariff always sells at +{COURIER_TARIFF_MARKUP_PCT}% on the uploaded rate.
+                </span>
               </label>
               <ValidityField
                 value={validity}
@@ -1078,10 +1075,20 @@ function CourierDeskInner() {
             </p>
           ) : tariff.status === "missing" ? (
             <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              No Circulars tariff matched {quotedCarrierName || "this carrier"} for{" "}
-              {originCountry} → {destCountry} at {result.chargeableKg.toFixed(2)} kg. Upload this
-              year’s Import / Export Excel on Circulars (valid Jan–Dec, up to {COURIER_TARIFF_MAX_KG}{" "}
-              kg) and the rate will fill here automatically.
+              {tariffNeedsReupload ? (
+                <>
+                  The uploaded FedEx Excel was stored as rate numbers instead of zones. Re-upload{" "}
+                  <strong>EXPORT FEDEX RATES</strong> and <strong>IMPORTS RATES</strong> on Circulars,
+                  then select FedEx here with origin, destination, and cargo under {COURIER_TARIFF_MAX_KG}{" "}
+                  kg — the slab fills automatically at +{COURIER_TARIFF_MARKUP_PCT}% on the tariff.
+                </>
+              ) : (
+                <>
+                  No Circulars tariff matched {quotedCarrierName || "this carrier"} for{" "}
+                  {originCountry} → {destCountry} at {result.chargeableKg.toFixed(2)} kg. Select FedEx,
+                  fill cargo, and keep a Jan–Dec Excel (up to {COURIER_TARIFF_MAX_KG} kg) on Circulars.
+                </>
+              )}
             </p>
           ) : (
             <dl className="space-y-2 text-sm">
@@ -1106,8 +1113,16 @@ function CourierDeskInner() {
                 <dd className="font-bold">{quotedCarrierName || tariff.book.carrier}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-[var(--color-text-muted)]">Tariff freight</dt>
-                <dd>{formatCurrency(sell.base, tariff.book.currency || currency)}</dd>
+                <dt className="text-[var(--color-text-muted)]">Uploaded tariff</dt>
+                <dd>{formatCurrency(sell.uploaded, tariff.book.currency || currency)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Sell +{sell.markupPct}%</dt>
+                <dd>{formatCurrency(sell.markupAmount, tariff.book.currency || currency)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-text-muted)]">Freight after {sell.markupPct}%</dt>
+                <dd className="font-bold">{formatCurrency(sell.base, tariff.book.currency || currency)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-[var(--color-text-muted)]">Fuel + extras</dt>
