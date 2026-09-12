@@ -2,28 +2,27 @@
 
 @theme {
   --font-sans: var(--font-ibm-plex), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  /* Logo indigo, slightly opened so large fields are not a black hole. */
-  --color-atlas-navy: #2c2772;
-  --color-atlas-ink: #1c184f;
-  /* Mid indigo for links — not as loud as the circle, still on-brand. */
-  --color-atlas-sky: #5a55a6;
-  --color-atlas-sea: #3e5878;
-  --color-atlas-teal: #4a6c6a;
-  /* Logo ring, muted for UI (never as a filled button with white type). */
-  --color-atlas-gold: #d4b43a;
-  --color-atlas-gold-bright: #e8c94a;
-  --color-atlas-gold-soft: #f6efd4;
-  --color-atlas-air: #c49a2a;
+  /* Dusk navy — logo-adjacent, less grape than the circle. */
+  --color-atlas-navy: #1f2a44;
+  --color-atlas-ink: #152033;
+  --color-atlas-sky: #4d7ca3;
+  --color-atlas-sea: #3a5a78;
+  --color-atlas-teal: #3e6b72;
+  /* Class names still say "gold"; values are air-blue. Logo yellow stays in the mark. */
+  --color-atlas-gold: #4d7ca3;
+  --color-atlas-gold-bright: #8eb0cc;
+  --color-atlas-gold-soft: #e8eef5;
+  --color-atlas-air: #3d6f9a;
   --color-atlas-success: #2f7a5c;
   --color-atlas-warn: #b7791f;
   --color-atlas-error: #c53030;
-  --color-surface: #f7f4ec;
-  --color-surface-elevated: #fffdf8;
-  --color-surface-muted: #efe9dc;
-  --color-border: #e4ddd0;
-  --color-border-strong: #cfc4ae;
-  --color-text: #1c1938;
-  --color-text-muted: #6a6478;
+  --color-surface: #f5f6f8;
+  --color-surface-elevated: #ffffff;
+  --color-surface-muted: #eef1f4;
+  --color-border: #d7dde5;
+  --color-border-strong: #b8c2ce;
+  --color-text: #1a2333;
+  --color-text-muted: #5c6778;
 }
 
 @layer base {
@@ -41,30 +40,30 @@
     font-family: var(--font-sans);
     color: var(--color-text);
     background:
-      radial-gradient(1100px 460px at 8% -8%, rgba(232, 201, 74, 0.16), transparent 55%),
-      radial-gradient(900px 420px at 96% 0%, rgba(44, 39, 114, 0.08), transparent 52%),
+      radial-gradient(900px 380px at 8% -14%, rgba(77, 124, 163, 0.07), transparent 55%),
+      radial-gradient(720px 340px at 96% 0%, rgba(31, 42, 68, 0.04), transparent 52%),
       var(--color-surface);
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background: rgba(212, 180, 58, 0.28);
+    background: rgba(77, 124, 163, 0.22);
   }
 }
 
 @layer utilities {
   .atlas-panel {
     border: 1px solid var(--color-border);
-    background: color-mix(in srgb, white 92%, var(--color-atlas-gold-soft));
+    background: color-mix(in srgb, white 94%, var(--color-atlas-gold-soft));
     backdrop-filter: blur(10px);
-    box-shadow: 0 1px 0 rgba(28, 24, 79, 0.03), 0 8px 24px rgba(28, 24, 79, 0.05);
+    box-shadow: 0 1px 0 rgba(21, 32, 51, 0.03), 0 8px 24px rgba(21, 32, 51, 0.05);
   }
 
   .atlas-glass {
     border: 1px solid rgba(255, 255, 255, 0.45);
-    background: rgba(255, 253, 248, 0.84);
-    backdrop-filter: blur(16px) saturate(1.15);
-    box-shadow: 0 12px 40px rgba(28, 24, 79, 0.12);
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(16px) saturate(1.1);
+    box-shadow: 0 12px 40px rgba(21, 32, 51, 0.10);
   }
 
   .atlas-metric-strip {
@@ -87,7 +86,7 @@
   }
 
   .atlas-overlay {
-    background: rgba(28, 24, 79, 0.42);
+    background: rgba(21, 32, 51, 0.42);
     backdrop-filter: blur(2px);
   }
 

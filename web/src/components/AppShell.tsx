@@ -130,8 +130,8 @@ function NavLink({
           className={cn(
             "absolute left-0",
             dark
-              ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-[var(--color-atlas-gold-bright)]"
-              : "top-0 h-full w-1 bg-[var(--color-atlas-gold)]",
+              ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-white"
+              : "top-0 h-full w-1 bg-[var(--color-atlas-sky)]",
           )}
         />
       ) : null}
@@ -240,13 +240,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ATLAS PRICING
             </div>
             <div className="mt-1 text-xs text-white/60">Quote · book · track · v{appVersion}</div>
-            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-gold-soft)]">
+            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-gold-bright)]">
               {focus}
             </div>
             <Link
               href="/m"
               data-testid="mobile-app-top"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-atlas-gold)] px-3 py-2 text-xs font-bold text-[var(--color-atlas-ink)] hover:bg-[var(--color-atlas-gold-bright)]"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"
             >
               <Smartphone className="h-3.5 w-3.5" />
               Mobile app
@@ -294,7 +294,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href="/m"
                   onClick={() => setMobileOpen(false)}
-                  className="m-3 mb-0 flex items-center justify-center gap-2 rounded-lg bg-[var(--color-atlas-gold)] px-3 py-2.5 text-sm font-bold text-[var(--color-atlas-ink)]"
+                  className="m-3 mb-0 flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm font-bold text-[var(--color-atlas-navy)]"
                 >
                   <Smartphone className="h-4 w-4" />
                   Mobile app

@@ -20,18 +20,49 @@ Apple-like sites feel advanced because they are **quiet**, not because they use 
 ## Look
 
 - Atlas Logistics logo sits beside **ATLAS PRICING** in the sidebar (and login / quotation letterhead).
-- Palette from the mark: indigo navy `#2c2772` for chrome and primary buttons (white type), gold `#d4b43a` as accent on dark or as a light cream fill `#f6efd4` with navy type on pills. Do not fill small pills with logo-blue and white type if the words vanish.
-- Warm paper surfaces (`#f7f4ec`), not cold grey. One typeface, two weights. Whitespace is a feature.
+- Palette (current): dusk navy `#1f2a44` for chrome; calm air-blue `#4d7ca3` for links/hovers; gallery white `#f5f6f8` surfaces. Logo yellow stays in the mark — not as big filled buttons.
 - **Glass / depth** (blur, thin border, one soft shadow) is allowed on chrome, cards, and overlays.
 - Motion only when it means something. Honor `prefers-reduced-motion`.
 
 ## Premium techniques — ask first
 
-Scroll-driven animation, WebGL / Three.js 3D, and cinematic product scenes are **wanted**, but do **not** drop them onto quoting desks without samples.
-
-Before implementing those, show the owner **sample images referenced to this app** (Home, Quote hub, Air/Sea desk) and wait for which treatment to ship.
+A / B / C were **examples**, not a closed menu. Before adding spectacle to desks, show a **sample image referenced to this app** and wait for which treatment to ship.
 
 Never add 3D/scroll spectacle that slows a desk or hides POL/POD/cargo fields.
+
+## Design glossary (plain language → technical name)
+
+Use these words with the owner. They can pick any mix for Vertex or later apps.
+
+### Always-on (already in Vertex)
+
+- **Visual hierarchy** — the eye hits the job first, then the next action, then chrome.
+- **Whitespace / negative space** — empty padding so the screen does not feel crowded.
+- **Type scale** — a few planned sizes (eyebrow, title, body, caption) instead of random font sizes.
+- **Color tokens** — named colors (`--color-atlas-navy`) so the whole app stays consistent.
+- **Contrast / WCAG** — dark text on light (or white on navy) so type stays readable.
+- **Accent vs brand color** — logo may have yellow; buttons and fills do not have to copy it.
+- **Glassmorphism** — frosted panel: translucent fill + `backdrop-filter: blur`.
+- **Elevation / depth** — thin border + one soft shadow so a card sits above the page.
+- **Sticky nav** — header stays put while the page scrolls.
+- **Skeleton loaders** — grey placeholders while quotes/inbox load.
+- **Micro-interactions** — small hover/press feedback (button darkens, chip highlights).
+- **`prefers-reduced-motion`** — skip animation when the OS asks for less motion.
+
+### Showpiece (sample first)
+
+- **Hero** — a large opening block (Quote hub navy panel is a small hero).
+- **Bento grid** — a magazine-like mosaic of unequal tiles (Home metrics could become this).
+- **Scrollytelling / scroll-driven animation** — the page plays a short film as you scroll (`animation-timeline: scroll()`).
+- **Parallax** — background moves slower than foreground. Easy to overdo.
+- **WebGL / Three.js** — real 3D in the browser (aircraft, carton). Heavy; keep off the quote form.
+- **Mesh gradient / aurora** — soft overlapping color blobs behind a hero (not a loud wallpaper).
+- **Grain / noise** — faint film texture so flat color feels less digital.
+- **Dark cinematic mode** — near-black stage, one spotlight subject (login or a quote-share page).
+- **View transitions** — the browser cross-fades between screens (`document.startViewTransition`).
+- **Custom cursor / magnetic hover** — pointer sticks to buttons. Skip on desks; it fights data entry.
+
+Apple’s public sites mix **restraint + a few of these**. The “wow” is not a secret toolkit.
 
 ## Brand
 
