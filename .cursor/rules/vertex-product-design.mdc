@@ -93,7 +93,7 @@ Apple marketing pages mostly live here: CSS, video, and type — not a game engi
 - **Orbit controls** — drag to spin the object.
 - **Raycasting** — click a 3D object and the app knows what you hit.
 
-Owner direction: **use WebGL/Three.js**. Quote hub is a **router for all desks** (Air, Sea, Courier, Road/warehouse) — never imply it is Air-only. Visual metaphor the owner likes: a **cargo aircraft hero**, with other modes still present (chips, globe lanes, or a dim ring). Aircraft looks to keep showing until they pick a letter: **A1** studio plinth, **A2** wireframe/x-ray, **A3** cargo loading / ULDs, **A4** night tarmac, **A5** low-poly, **A6** over globe, **A7** exploded + orbit controls. Do **not** put a 3D scene on POL/POD fields. Color is not signed off yet.
+Owner direction: **use WebGL/Three.js**. Quote hub is a **router for all desks** (Air, Sea, Courier, Road/warehouse) — never imply it is Air-only. Liked combo: **A4 night cinematic + A6 globe**, layered as **storm / mid-ocean waves at the bottom (Sea)**, **cargo aircraft in flight above (Air)**, **faint satellite / GPS road traces on land (Road)**, courier as last-mile dots. Keep showing variants of that stack until they pick one (v1 storm+satellite, v2 globe-cut, v3 wide ocean + horizon roads, v4 lightning/wet wing). Do **not** put a 3D scene on POL/POD fields. Color is not signed off yet.
 
 Apple’s public sites mix **restraint + a few of these**. The “wow” is not a secret toolkit.
 
