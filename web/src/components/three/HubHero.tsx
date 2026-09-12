@@ -26,12 +26,13 @@ function OceanStage({ reduce }: { reduce: boolean }) {
       <hemisphereLight args={["#fff6e8", "#4d7a8c", 0.55]} />
       <directionalLight position={[12, 10, 4]} intensity={1.55} castShadow color="#fff4d6" />
       <ambientLight intensity={0.35} />
-      <SciFiCraft spin={false} float={!reduce} />
+      <group position={[-1.6, 0.2, 0.3]}>
+        <SciFiCraft spin={false} float={!reduce} />
+      </group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.15, 0]} receiveShadow>
         <circleGeometry args={[48, 64]} />
         <meshStandardMaterial color="#4e93b0" roughness={0.28} metalness={0.18} />
       </mesh>
-      {/* Far coast / road wash — keeps L3 daylight, not a busy map */}
       <mesh rotation={[-Math.PI / 2.15, 0, 0.18]} position={[14, -0.95, -6]} receiveShadow>
         <planeGeometry args={[22, 10]} />
         <meshStandardMaterial color="#cbbba3" roughness={0.9} />
