@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -36,6 +37,11 @@ import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
 import { sellAmountInr } from "@/lib/quotes/money";
 import { formatCurrency } from "@/lib/utils";
+
+const CartonTokens = dynamic(
+  () => import("@/components/three/CartonTokens").then((m) => m.CartonTokens),
+  { ssr: false, loading: () => <div className="h-[8.5rem] rounded-2xl bg-[var(--color-surface-muted)]" /> },
+);
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -209,17 +215,17 @@ export default function DashboardPage() {
               <Inbox className="h-3.5 w-3.5" /> Inbox
             </Link>
           ) : null}
-          <Link
-            href="/motion"
-            data-testid="motion-sample"
-            className="atlas-pop inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-bold text-[var(--color-atlas-navy)]"
-          >
-            Motion sample
-          </Link>
         </div>
       </div>
 
-      <VertexAskBar />
+      <div className="flex items-end gap-4">
+        <div className="min-w-0 flex-1">
+          <VertexAskBar />
+        </div>
+        <div className="hidden w-44 shrink-0 pb-1 lg:block">
+          <CartonTokens />
+        </div>
+      </div>
 
       {error ? (
         <Card className="border-red-200 bg-red-50 py-3">

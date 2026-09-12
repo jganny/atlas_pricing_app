@@ -363,10 +363,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 p-3 md:p-5">
-            <div className="atlas-page-card min-h-[70vh] p-4 md:p-6">
+          <main className={cn("flex-1", normalized === "/quote" ? "relative min-h-0 p-0" : "p-3 md:p-5")}>
+            {normalized === "/quote" ? (
               <RouteGuard>{children}</RouteGuard>
-            </div>
+            ) : (
+              <div className="atlas-page-card min-h-[70vh] p-4 md:p-6">
+                <RouteGuard>{children}</RouteGuard>
+              </div>
+            )}
           </main>
         </div>
       </div>

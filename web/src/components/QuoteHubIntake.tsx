@@ -36,7 +36,7 @@ function summaryToast(mode: string, parsed: { customer?: string; origin?: string
   return `Opening ${bits.join(" · ")}`;
 }
 
-export function QuoteHubIntake() {
+export function QuoteHubIntake({ frosted = false }: { frosted?: boolean }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -129,7 +129,7 @@ export function QuoteHubIntake() {
 
   return (
     <div className="space-y-4">
-      <Card className="space-y-3">
+      <Card className={frosted ? "atlas-frost space-y-3 rounded-2xl bg-white/70" : "space-y-3"}>
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-atlas-navy)] text-white">
             <Sparkles className="h-5 w-5" />
@@ -187,7 +187,11 @@ export function QuoteHubIntake() {
         {last ? (
           <button
             type="button"
-            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
+            className={
+              frosted
+                ? "atlas-frost atlas-pop rounded-2xl p-4 text-left"
+                : "rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
+            }
             onClick={() => router.push(deskEditHref(last.mode, last.id))}
           >
             <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-navy)]">Continue</p>
@@ -198,7 +202,11 @@ export function QuoteHubIntake() {
         {overdue && overdue.id !== last?.id ? (
           <button
             type="button"
-            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
+            className={
+              frosted
+                ? "atlas-frost atlas-pop rounded-2xl p-4 text-left"
+                : "rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
+            }
             onClick={() => router.push(enquiryHref(overdue))}
           >
             <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
@@ -211,7 +219,11 @@ export function QuoteHubIntake() {
         {nextMail ? (
           <button
             type="button"
-            className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
+            className={
+              frosted
+                ? "atlas-frost atlas-pop rounded-2xl p-4 text-left"
+                : "rounded-xl border border-[var(--color-border)] bg-white p-4 text-left hover:border-[var(--color-atlas-gold)]"
+            }
             onClick={() => router.push("/inbox")}
           >
             <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-sky-800">
