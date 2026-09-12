@@ -20,7 +20,9 @@ Apple-like sites feel advanced because they are **quiet**, not because they use 
 ## Look
 
 - Atlas Logistics logo sits beside **ATLAS PRICING** in the sidebar (and login / quotation letterhead).
-- Palette (current): dusk navy `#1f2a44` for chrome; calm air-blue `#4d7ca3` for links/hovers; gallery white `#f5f6f8` surfaces. Logo yellow stays in the mark — not as big filled buttons.
+- Palette (current live chrome): dusk navy `#1f2a44`; air-blue `#4d7ca3`; gallery white `#f5f6f8`. Owner has **not** signed off — keep showing more combos until they pick a letter.
+- Logo yellow stays in the mark — not as big filled buttons.
+- Extra combo letters for the owner (sketches, not shipped): **H** French navy + bone, **I** Ink + paper, **J** Petrol + foam, **K** Glacier steel, **L** Espresso + sand, **M** Porcelain + cobalt, **N** Moonlight dark, **O** Sage office, **P** Khaki field, **Q** Graphite + ice, **R** Cloud rail (white sidebar), **S** Forest night.
 - **Glass / depth** (blur, thin border, one soft shadow) is allowed on chrome, cards, and overlays.
 - Motion only when it means something. Honor `prefers-reduced-motion`.
 
@@ -49,18 +51,49 @@ Use these words with the owner. They can pick any mix for Vertex or later apps.
 - **Micro-interactions** — small hover/press feedback (button darkens, chip highlights).
 - **`prefers-reduced-motion`** — skip animation when the OS asks for less motion.
 
-### Showpiece (sample first)
+### Showpiece letters A–G were a short Vertex menu, not the whole field
 
 - **Hero** — a large opening block (Quote hub navy panel is a small hero).
 - **Bento grid** — a magazine-like mosaic of unequal tiles (Home metrics could become this).
 - **Scrollytelling / scroll-driven animation** — the page plays a short film as you scroll (`animation-timeline: scroll()`).
 - **Parallax** — background moves slower than foreground. Easy to overdo.
-- **WebGL / Three.js** — real 3D in the browser (aircraft, carton). Heavy; keep off the quote form.
 - **Mesh gradient / aurora** — soft overlapping color blobs behind a hero (not a loud wallpaper).
 - **Grain / noise** — faint film texture so flat color feels less digital.
 - **Dark cinematic mode** — near-black stage, one spotlight subject (login or a quote-share page).
 - **View transitions** — the browser cross-fades between screens (`document.startViewTransition`).
 - **Custom cursor / magnetic hover** — pointer sticks to buttons. Skip on desks; it fights data entry.
+
+### 2D and motion (no 3D engine)
+
+Apple marketing pages mostly live here: CSS, video, and type — not a game engine.
+
+- **CSS transforms** — move, scale, rotate a panel in 2D (or fake-3D with `rotateX`).
+- **SVG** — sharp icons and simple line drawings that stay crisp at any size.
+- **Canvas 2D** — a drawing surface for charts, not a 3D world.
+- **Lottie** — After Effects motion exported as a tiny JSON animation.
+- **Rive** — interactive motion (a button that “breathes” as you hover).
+- **GSAP** — a timeline library to choreograph many animations.
+- **Scroll-driven CSS** — the scrollbar is the playhead.
+
+### Real-time 3D family (owner wants this)
+
+**WebGL is not the only design term.** It is the browser’s GPU door. Everything below is a sibling, a library, or a look.
+
+- **WebGL** — the browser API that talks to the graphics chip (the door).
+- **WebGPU** — the newer door; same idea, more power. Not required yet.
+- **Three.js** — the popular toolkit that sits on WebGL so we do not write raw GPU code.
+- **React Three Fiber (R3F)** — Three.js written as React components. Fits this Next app.
+- **Babylon.js** — another 3D toolkit (same job as Three.js).
+- **Spline** — a visual 3D editor; export a scene into the site.
+- **glTF / .glb** — the file format for a 3D model (the aircraft file).
+- **Shaders (GLSL)** — tiny GPU programs that paint the surface (metal, glass, glow).
+- **PBR** — physically based materials (how metal vs cardboard should reflect light).
+- **HDRI lighting** — lighting a scene with a studio photo instead of a single lamp.
+- **Bloom** — a soft glow on bright edges.
+- **Orbit controls** — drag to spin the object.
+- **Raycasting** — click a 3D object and the app knows what you hit.
+
+Owner direction: **use WebGL/Three.js**. Preferred first placement is Quote hub hero aircraft. Do **not** put a 3D scene on POL/POD fields. Login splash globe and a tiny Air-desk carton are later options. Color must be signed off (or explicitly “do 3D first, palette later”) before shipping the scene.
 
 Apple’s public sites mix **restraint + a few of these**. The “wow” is not a secret toolkit.
 
