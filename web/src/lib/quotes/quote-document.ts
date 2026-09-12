@@ -152,9 +152,9 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; color: #0f172a; background: #fff; }
   main { max-width: 720px; margin: 0 auto; padding: 8px 4px 28px; }
   h1 { font-size: 1.45rem; margin: 0.2rem 0 0; }
-  .brand { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #1f2a44; }
+  .brand { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #323843; }
   .meta { color: #6a6478; font-size: 12px; }
-  header { border-bottom: 3px solid #1f2a44; padding-bottom: 14px; margin-bottom: 16px; }
+  header { border-bottom: 3px solid #323843; padding-bottom: 14px; margin-bottom: 16px; }
   .brand-row { display: flex; align-items: flex-start; gap: 12px; }
   .brand-row img { width: 56px; height: 56px; border-radius: 999px; background: #fff; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }

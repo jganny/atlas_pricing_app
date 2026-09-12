@@ -2,27 +2,27 @@
 
 @theme {
   --font-sans: var(--font-ibm-plex), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  /* Dusk navy — logo-adjacent, less grape than the circle. */
-  --color-atlas-navy: #1f2a44;
-  --color-atlas-ink: #152033;
-  --color-atlas-sky: #4d7ca3;
-  --color-atlas-sea: #3a5a78;
-  --color-atlas-teal: #3e6b72;
-  /* Class names still say "gold"; values are air-blue. Logo yellow stays in the mark. */
-  --color-atlas-gold: #4d7ca3;
-  --color-atlas-gold-bright: #8eb0cc;
-  --color-atlas-gold-soft: #e8eef5;
-  --color-atlas-air: #3d6f9a;
+  /* K Glacier + Q Graphite: steel rail, ice paper. Logo yellow stays in the mark. */
+  --color-atlas-navy: #323843;
+  --color-atlas-ink: #1c2228;
+  --color-atlas-sky: #6b8499;
+  --color-atlas-sea: #4a5c6b;
+  --color-atlas-teal: #4d6468;
+  /* Class names still say "gold"; values are ice-steel. */
+  --color-atlas-gold: #6b8499;
+  --color-atlas-gold-bright: #8aa0b3;
+  --color-atlas-gold-soft: #e8eef2;
+  --color-atlas-air: #5a7388;
   --color-atlas-success: #2f7a5c;
   --color-atlas-warn: #b7791f;
   --color-atlas-error: #c53030;
-  --color-surface: #f5f6f8;
+  --color-surface: #eef3f7;
   --color-surface-elevated: #ffffff;
-  --color-surface-muted: #eef1f4;
-  --color-border: #d7dde5;
-  --color-border-strong: #b8c2ce;
-  --color-text: #1a2333;
-  --color-text-muted: #5c6778;
+  --color-surface-muted: #e6ecf1;
+  --color-border: #d3dbe3;
+  --color-border-strong: #b5c0cb;
+  --color-text: #1a222b;
+  --color-text-muted: #5c6774;
 }
 
 @layer base {
@@ -40,14 +40,14 @@
     font-family: var(--font-sans);
     color: var(--color-text);
     background:
-      radial-gradient(900px 380px at 8% -14%, rgba(77, 124, 163, 0.07), transparent 55%),
-      radial-gradient(720px 340px at 96% 0%, rgba(31, 42, 68, 0.04), transparent 52%),
+      radial-gradient(900px 380px at 8% -14%, rgba(107, 132, 153, 0.06), transparent 55%),
+      radial-gradient(720px 340px at 96% 0%, rgba(50, 56, 67, 0.04), transparent 52%),
       var(--color-surface);
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background: rgba(77, 124, 163, 0.22);
+    background: rgba(107, 132, 153, 0.22);
   }
 }
 

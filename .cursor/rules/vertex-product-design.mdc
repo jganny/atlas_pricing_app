@@ -20,9 +20,9 @@ Apple-like sites feel advanced because they are **quiet**, not because they use 
 ## Look
 
 - Atlas Logistics logo sits beside **ATLAS PRICING** in the sidebar (and login / quotation letterhead).
-- Palette (current live chrome): dusk navy `#1f2a44`; air-blue `#4d7ca3`; gallery white `#f5f6f8`. Owner has **not** signed off — keep showing more combos until they pick a letter.
+- Palette (in chrome): **K Glacier + Q Graphite** hybrid — steel rail `#323843`, ice paper `#eef3f7`, ice-steel accents `#6b8499`. Owner liked K and Q; dusk navy is retired unless they object.
 - Logo yellow stays in the mark — not as big filled buttons.
-- Extra combo letters for the owner (sketches, not shipped): **H** French navy + bone, **I** Ink + paper, **J** Petrol + foam, **K** Glacier steel, **L** Espresso + sand, **M** Porcelain + cobalt, **N** Moonlight dark, **O** Sage office, **P** Khaki field, **Q** Graphite + ice, **R** Cloud rail (white sidebar), **S** Forest night.
+- Extra combo letters (sketches): H–S still on file if they want to switch.
 - **Glass / depth** (blur, thin border, one soft shadow) is allowed on chrome, cards, and overlays.
 - Motion only when it means something. Honor `prefers-reduced-motion`.
 
@@ -93,7 +93,11 @@ Apple marketing pages mostly live here: CSS, video, and type — not a game engi
 - **Orbit controls** — drag to spin the object.
 - **Raycasting** — click a 3D object and the app knows what you hit.
 
-Owner direction: **use WebGL/Three.js** on Quote hub (placement 2), not on POL/POD fields. Hub is a router for all desks. Liked layers: Air + Sea + Road. First storm/satellite sketches felt **busy/congested**. New direction: **space concept** — lots of **negative space**, one cargo **spaceship** (Air), a **calm ocean rim** (Sea, not a lightning storm), **two or three faint satellite road traces** only (Road). Variants **S1–S8**. Color is not signed off yet.
+Owner direction: **Apple calm is the base** (quiet type, whitespace, one job per screen). **WebGL/Three.js** makes it live, but as **ornaments**, not a theme park.
+
+- **Hero 3D** only on Quote hub (placement 2): sparse space, one cargo **spaceship** (Air), **calm ocean rim** (Sea), **two or three faint road traces** (Road), optional **tiny 3D cartons** for the job. No storm congestion.
+- **Reuse 3D tokens** later, after hub + palette feel final: carton, ULD, pallet — one small object per page (login, Home, Air/Sea/Courier rails). Never on POL/POD typing fields. Honor `prefers-reduced-motion`.
+- Palette in chrome: **K+Q** glacier-graphite. Color is close to signed; 3D is not shipped yet.
 
 Apple’s public sites mix **restraint + a few of these**. The “wow” is not a secret toolkit.
 
