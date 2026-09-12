@@ -6,6 +6,8 @@ import {
   pickTariffSlab,
   applyCourierTariffMarkup,
   courierTariffNeedsReupload,
+  repairCourierTariffBook,
+  dedupeCourierTariffBooks,
   COURIER_TARIFF_MAX_KG,
   COURIER_TARIFF_MARKUP_PCT,
   type CourierTariffBook,
@@ -264,5 +266,53 @@ assert.equal(
   }).status,
   "missing",
 );
+
+const liveStyleDests = [1331, 1443, 1548, 1547, 1783, 1982, 1985, 1676, 2117, 1974, 1658, 1871, 1418, 2091];
+const liveExport: CourierTariffBook = {
+  id: "export-live",
+  carrier: "FedEx",
+  carrierCode: "FDX",
+  carrierId: "fedex",
+  year: 2026,
+  validFrom: "2026-01-01",
+  validTo: "2026-12-31",
+  currency: "INR",
+  maxKg: 70,
+  uploadedAt: "2026-09-12T20:30:13.029Z",
+  fileName: "EXPORT FEDEX RATES 1.0.xlsx",
+  lanes: liveStyleDests.map((rate, i) => ({
+    origin: "IN",
+    destination: String(rate),
+    destinationLabel: String(rate),
+    direction: "export" as const,
+    breaks: [
+      { kg: 1, rate: rate + 100 },
+      { kg: 50, rate: 20000 + i * 1000 },
+      { kg: 70, rate: 28000 + i * 1000 },
+    ],
+  })),
+};
+assert.equal(repairCourierTariffBook(liveExport).lanes[3].destination, "ZONE-D");
+const london = lookupCourierTariff([liveExport], {
+  carrierId: "dhl",
+  directoryCarrier: "FDX — FedEx",
+  originCountry: "IN",
+  destCountry: "GB",
+  destText: "London",
+  weightKg: 50,
+});
+assert.equal(london.status, "hit", "India → London 50 kg must fill from the 4th recovered FedEx zone");
+if (london.status === "hit") {
+  assert.equal(london.rate, 23000);
+  assert.equal(london.lane.destinationLabel, "Zone D");
+  assert.equal(applyCourierTariffMarkup(london.rate), 24150);
+}
+
+const dup = dedupeCourierTariffBooks([
+  liveExport,
+  { ...liveExport, id: "export-dup", uploadedAt: "2026-09-12T21:00:00.000Z", fileName: "EXPORT FEDEX RATES 1.0.xlsx" },
+]);
+assert.equal(dup.length, 1);
+assert.equal(dup[0].id, "export-dup");
 
 console.log("courier-tariff tests passed");
