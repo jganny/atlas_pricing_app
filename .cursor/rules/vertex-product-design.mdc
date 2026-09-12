@@ -95,7 +95,7 @@ Apple marketing pages mostly live here: CSS, video, and type — not a game engi
 
 Owner direction: **Apple calm is the base** (quiet type, whitespace, one job per screen). **WebGL/Three.js** makes it live, but as **ornaments**, not a theme park.
 
-- **Hero 3D** only on Quote hub (placement 2): sparse space, one cargo **spaceship** (Air), **calm ocean rim** (Sea), **two or three faint road traces** (Road), optional **tiny 3D cartons** for the job. No storm congestion.
+- **Hero 3D** only on Quote hub (placement 2): sparse **sci-fi** space — one cargo **spaceship** (Air), **calm ocean rim** (Sea), **two or three faint road traces** (Road), optional **tiny 3D cartons**. Quiet cinematic (Arrival/Interstellar), not cyberpunk clutter or a storm. Variants F1–F3.
 - **Reuse 3D tokens** later, after hub + palette feel final: carton, ULD, pallet — one small object per page (login, Home, Air/Sea/Courier rails). Never on POL/POD typing fields. Honor `prefers-reduced-motion`.
 - Palette in chrome: **K+Q** glacier-graphite. Color is close to signed; 3D is not shipped yet.
 
