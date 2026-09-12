@@ -95,7 +95,7 @@ Apple marketing pages mostly live here: CSS, video, and type — not a game engi
 
 Owner direction: **Apple calm is the base** (quiet type, whitespace, one job per screen). **WebGL/Three.js** makes it live, but as **ornaments**, not a theme park.
 
-- **Hero 3D** on Quote hub: sci-fi can be **low-key** (dark space) or **high-key** (white studio, daylight, mist). Owner asked — it does **not** have to be contrasty and dark. Apple + K/Q glacier sits more naturally with light sci-fi (L2–L5). Still: one ship, ocean, faint roads, lots of empty space. Never cyberpunk clutter.
+- **Hero 3D** on Quote hub: **L3 daylight** is the liked lighting (pale sky, bright ocean, faint coastal roads). **No aircraft/shuttle.** Replace with a **solid opaque** futuristic cargo craft (hauler, hover-barge, wedge — not glass, not a jet). UI cards **opaque**, not frosted/transparent. A bit more future than a plane, still Apple-calm. Variants L3b–L3e / P1–P4.
 - **Reuse 3D tokens** later, after hub + palette feel final: carton, ULD, pallet — one small object per page (login, Home, Air/Sea/Courier rails). Never on POL/POD typing fields. Honor `prefers-reduced-motion`.
 - Palette in chrome: **K+Q** glacier-graphite. Color is close to signed; 3D is not shipped yet.
 
