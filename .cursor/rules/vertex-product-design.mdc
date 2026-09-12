@@ -1,0 +1,36 @@
+---
+description: Vertex product design — simple and futuristic; ask before 3D/scroll scenes
+alwaysApply: true
+---
+
+# Vertex product design
+
+Owner brief (keep for every future UI change):
+
+Apple-like sites feel advanced because they are **quiet**, not because they use a secret stack. Vertex apps should be **simplistic and futuristic together**.
+
+## Daily chrome
+
+- One job per screen. Do not stack a cutover banner, news ticker, FX rates, Inbox, Focus, Refresh, LIVE, and Legacy in one header.
+- Cutover / “awaiting approval” banners and a **Legacy** jump are parallel-run tools — keep them out of the daily header (overflow / docs is fine).
+- Industry news marquee is not default chrome.
+- LIVE, Refresh, FX, Inbox, Focus stay reachable in **one compact control cluster**.
+- Onboarding hints (Ask Vertex / ⌘K) live on Home, not repeated as header copy.
+
+## Look
+
+- One typeface, two weights, navy + one accent. Whitespace is a feature.
+- **Glass / depth** (blur, thin border, one soft shadow) is allowed on chrome, cards, and overlays.
+- Motion only when it means something. Honor `prefers-reduced-motion`.
+
+## Premium techniques — ask first
+
+Scroll-driven animation, WebGL / Three.js 3D, and cinematic product scenes are **wanted**, but do **not** drop them onto quoting desks without samples.
+
+Before implementing those, show the owner **sample images referenced to this app** (Home, Quote hub, Air/Sea desk) and wait for which treatment to ship.
+
+Never add 3D/scroll spectacle that slows a desk or hides POL/POD/cargo fields.
+
+## Brand
+
+Market brand is **Vertex**. Do not show Namahsky Nexus in UI.

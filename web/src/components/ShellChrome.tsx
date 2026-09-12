@@ -25,7 +25,7 @@ const FX_FALLBACK: Record<FxPair, number> = {
 
 const PAIRS: FxPair[] = ["USD", "EUR", "GBP"];
 
-export function OfflineBadge() {
+export function OfflineBadge({ compact = false }: { compact?: boolean }) {
   const [online, setOnline] = useState(true);
   useEffect(() => {
     const up = () => setOnline(true);
@@ -38,6 +38,20 @@ export function OfflineBadge() {
       window.removeEventListener("offline", down);
     };
   }, []);
+  if (compact) {
+    return (
+      <span
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-bold uppercase tracking-wide",
+          online ? "text-emerald-800" : "text-amber-800",
+        )}
+        title={online ? "Connected" : "Offline"}
+      >
+        {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+        {online ? "Live" : "Off"}
+      </span>
+    );
+  }
   return online ? (
     <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
       <Wifi className="h-3 w-3" /> Live
@@ -49,7 +63,7 @@ export function OfflineBadge() {
   );
 }
 
-export function GlobalRefreshButton() {
+export function GlobalRefreshButton({ compact = false }: { compact?: boolean }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
 
@@ -81,11 +95,16 @@ export function GlobalRefreshButton() {
       onClick={() => void refreshAll()}
       disabled={busy}
       data-testid="global-refresh"
-      className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50 disabled:opacity-60"
+      className={
+        compact
+          ? "inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-atlas-navy)] hover:bg-white disabled:opacity-60"
+          : "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50 disabled:opacity-60"
+      }
       title="Refresh enquiries, inbox, tariffs"
+      aria-label="Refresh"
     >
       <RefreshCw className={cn("h-3.5 w-3.5", busy && "animate-spin")} />
-      Refresh
+      {compact ? null : "Refresh"}
     </button>
   );
 }
@@ -123,7 +142,7 @@ async function fetchAllFx(): Promise<Partial<Record<FxPair, number>>> {
   return out;
 }
 
-export function FxConverter() {
+export function FxConverter({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [rates, setRates] = useState<Record<FxPair, number>>({ ...FX_FALLBACK });
@@ -282,16 +301,26 @@ export function FxConverter() {
         type="button"
         onClick={() => setOpen(true)}
         data-testid="fx-open"
-        className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50"
+        className={
+          compact
+            ? "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-bold tabular-nums text-[var(--color-atlas-navy)] hover:bg-white"
+            : "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50"
+        }
         title="Open FX converter (USD / EUR / GBP → INR)"
       >
         <ArrowLeftRight className="h-3.5 w-3.5" />
-        <span className="hidden lg:inline">
-          USD {rates.USD.toFixed(2)} · EUR {rates.EUR.toFixed(2)} · GBP {rates.GBP.toFixed(2)}
-        </span>
-        <span className="lg:hidden">
-          {pair}/INR {rate.toFixed(2)}
-        </span>
+        {compact ? (
+          <span>USD {rates.USD.toFixed(2)}</span>
+        ) : (
+          <>
+            <span className="hidden lg:inline">
+              USD {rates.USD.toFixed(2)} · EUR {rates.EUR.toFixed(2)} · GBP {rates.GBP.toFixed(2)}
+            </span>
+            <span className="lg:hidden">
+              {pair}/INR {rate.toFixed(2)}
+            </span>
+          </>
+        )}
       </button>
       {modal}
     </>

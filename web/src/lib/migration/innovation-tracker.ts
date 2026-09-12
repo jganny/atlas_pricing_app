@@ -82,6 +82,7 @@ export const innovationItems: InnovationItem[] = [
   { id: "i15-swipe-ask", name: "Ask Vertex swipe-to-hide", phase: 15, status: "done", why: "Mail/Outlook swipe-left Delete on search + work queue without touching Firestore", react: "SwipeDeleteRow + hidden-ask" },
   { id: "i15-quote-pack", name: "Interactive option inspector + print pack", phase: 15, status: "done", why: "Click EK/EY on screen; PDF prints every airline/lane breakup with its own validity — Flexport-style quote pack because PDFs cannot run JS", react: "QuotePreviewModal" },
   { id: "i16-quote-share", name: "Client quotation PDF pack", phase: 16, status: "done", why: "Email, WhatsApp, and Download send one PDF: comparison table plus every airline breakup (quoted first). No tap-to-compare HTML for clients.", react: "quote-document + QuotePreviewModal" },
+  { id: "i17-quiet-chrome", name: "Quiet glass workspace header", phase: 17, status: "done", why: "Cutover banner + news ticker off daily chrome; LIVE/Refresh/FX/Inbox/Focus in one glass pill", react: "AppShell" },
 ];
 
 export function innovationStats(items: InnovationItem[] = innovationItems) {

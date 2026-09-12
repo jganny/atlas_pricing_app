@@ -43,13 +43,13 @@ export function PremiumPipToggle({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
-      className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-[var(--color-text-muted)] hover:bg-slate-100 hover:text-[var(--color-atlas-navy)]"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-white hover:text-[var(--color-atlas-navy)]"
       onClick={onOpen}
       title="Open floating work panel (PiP)"
+      aria-label="Focus"
       data-testid="focus-open"
     >
       <PanelRight className="h-3.5 w-3.5" />
-      <span className="hidden lg:inline">Focus</span>
     </button>
   );
 }
