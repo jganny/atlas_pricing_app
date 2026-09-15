@@ -117,6 +117,7 @@ export interface CourierCarrierQuote {
 export interface CourierFreightResult {
     packages: Array<CourierPackageLine & {
         volPerPiece: number;
+        volumeWeight: number;
         chargeable: number;
     }>;
     chargeableKg: number;
