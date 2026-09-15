@@ -49,7 +49,7 @@ import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
-import { lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -831,6 +831,18 @@ function SeaDeskInner() {
                     placeholder="Blank = 83.5"
                     onKeyDown={(e) => lastFieldTab(e, () => setStep("carrier"))}
                   />
+                  {currency !== "INR" ? (
+                    <span className="mt-1 block text-xs text-[var(--color-text-muted)]" data-testid="custom-fx-preview">
+                      Used only for the INR-equivalent figure saved with this quote (Enquiry DB
+                      reporting) — it doesn&apos;t change the {currency} total shown to the
+                      customer. ≈{" "}
+                      {formatCurrency(
+                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (customFx > 0 ? customFx : 83.5),
+                        "INR",
+                      )}{" "}
+                      at {customFx > 0 ? customFx.toFixed(2) : "83.5 (default)"}
+                    </span>
+                  ) : null}
                 </Label>
               </div>
               <div className="flex justify-end">
@@ -1162,7 +1174,20 @@ function SeaDeskInner() {
                 <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
                   Back
                 </Button>
-                <Button id="sea-next-terms" type="button" onClick={() => setStep("terms")}>
+                <Button
+                  id="sea-next-terms"
+                  type="button"
+                  onClick={() => {
+                    setStep("terms");
+                    focusById("sea-terms-textarea");
+                  }}
+                  onKeyDown={(e) =>
+                    lastFieldTab(e, () => {
+                      setStep("terms");
+                      focusById("sea-terms-textarea");
+                    })
+                  }
+                >
                   Next · Terms
                 </Button>
               </div>
@@ -1172,7 +1197,7 @@ function SeaDeskInner() {
           {step === "terms" ? (
             <Card className="space-y-4">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Terms & conditions</h2>
-              <Textarea className="min-h-56" value={terms} onChange={(e) => setTerms(e.target.value)} />
+              <Textarea id="sea-terms-textarea" className="min-h-56" value={terms} onChange={(e) => setTerms(e.target.value)} />
               <button
                 type="button"
                 className="text-xs font-semibold text-sky-700 hover:underline"

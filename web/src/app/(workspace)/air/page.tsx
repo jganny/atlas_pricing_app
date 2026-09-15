@@ -58,6 +58,7 @@ import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
 import { getDefaultFreightTerms } from "@/lib/pricing/terms";
 import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
+import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
@@ -679,6 +680,26 @@ function AirDeskInner() {
     ],
   );
 
+  function goToCarriers() {
+    if (!customer.trim()) {
+      toast("Enter customer name before carriers.", "error");
+      return;
+    }
+    if (!origin.trim() || !destination.trim()) {
+      toast("Enter origin and destination airports before carriers.", "error");
+      return;
+    }
+    const cargoErr = validateAirCargo(cargo);
+    if (cargoErr) {
+      toast(cargoErr, "error");
+      setSaveMsg(cargoErr);
+      return;
+    }
+    setSaveMsg(null);
+    setStep("carrier");
+    focusById("air-step-carrier-anchor");
+  }
+
   useDeskSaveShortcut(() => void handleSave(), !saving);
   useDeskStepKeys({
     steps: AIR_STEPS,
@@ -896,6 +917,18 @@ function AirDeskInner() {
                     onChange={(e) => setCustomFx(Number(e.target.value))}
                     placeholder="Leave blank for 83.5"
                   />
+                  {currency !== "INR" ? (
+                    <span className="mt-1 block text-xs text-[var(--color-text-muted)]" data-testid="custom-fx-preview">
+                      Used only for the INR-equivalent figure saved with this quote (Enquiry DB
+                      reporting) — it doesn&apos;t change the {currency} total shown to the
+                      customer. ≈{" "}
+                      {formatCurrency(
+                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (customFx > 0 ? customFx : 83.5),
+                        "INR",
+                      )}{" "}
+                      at {customFx > 0 ? customFx.toFixed(2) : "83.5 (default)"}
+                    </span>
+                  ) : null}
                 </Label>
               </div>
 
@@ -1025,24 +1058,8 @@ function AirDeskInner() {
                 <Button
                   id="air-next-carriers"
                   type="button"
-                  onClick={() => {
-                    if (!customer.trim()) {
-                      toast("Enter customer name before carriers.", "error");
-                      return;
-                    }
-                    if (!origin.trim() || !destination.trim()) {
-                      toast("Enter origin and destination airports before carriers.", "error");
-                      return;
-                    }
-                    const cargoErr = validateAirCargo(cargo);
-                    if (cargoErr) {
-                      toast(cargoErr, "error");
-                      setSaveMsg(cargoErr);
-                      return;
-                    }
-                    setSaveMsg(null);
-                    setStep("carrier");
-                  }}
+                  onClick={goToCarriers}
+                  onKeyDown={(e) => lastFieldTab(e, goToCarriers)}
                 >
                   Next · Carriers
                 </Button>
@@ -1078,7 +1095,11 @@ function AirDeskInner() {
                 />
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-bold text-[var(--color-atlas-navy)]">
+                <h2
+                  id="air-step-carrier-anchor"
+                  tabIndex={-1}
+                  className="font-bold text-[var(--color-atlas-navy)] outline-none"
+                >
                   Carriers on this lane ({laneAirlines.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
@@ -1189,7 +1210,20 @@ function AirDeskInner() {
                 <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
                   Back
                 </Button>
-                <Button id="air-next-terms" type="button" onClick={() => setStep("terms")}>
+                <Button
+                  id="air-next-terms"
+                  type="button"
+                  onClick={() => {
+                    setStep("terms");
+                    focusById("air-terms-textarea");
+                  }}
+                  onKeyDown={(e) =>
+                    lastFieldTab(e, () => {
+                      setStep("terms");
+                      focusById("air-terms-textarea");
+                    })
+                  }
+                >
                   Next · Terms
                 </Button>
               </div>
@@ -1200,6 +1234,7 @@ function AirDeskInner() {
             <Card className="space-y-4">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Terms & conditions</h2>
               <Textarea
+                id="air-terms-textarea"
                 className="min-h-56"
                 value={terms}
                 onChange={(e) => setTerms(e.target.value)}

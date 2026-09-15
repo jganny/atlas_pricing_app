@@ -86,6 +86,43 @@ export function openWhatsApp(text: string): void {
   if (!opened) window.location.assign(url);
 }
 
+/**
+ * WhatsApp has no URL scheme that pre-attaches a file (unlike the .eml trick
+ * used for email) — the only way a web page can hand WhatsApp a file directly
+ * is the OS share sheet via the Web Share API, and only on devices/browsers
+ * that support sharing files (mostly mobile). Where that works, the user
+ * picks WhatsApp from the share sheet with the PDF already attached and the
+ * message text pre-filled. Where it doesn't (most desktop browsers, and
+ * WhatsApp Desktop itself has no drop target a page can reach), this falls
+ * back to opening the chat with the text pre-filled and downloading the PDF
+ * for the user to attach by hand — there's no further workaround for that
+ * case.
+ */
+export async function shareQuoteViaWhatsApp(opts: {
+  file: File;
+  text: string;
+  title: string;
+}): Promise<"shared" | "fallback"> {
+  const nav = navigator as Navigator & {
+    canShare?: (data: ShareData) => boolean;
+    share?: (data: ShareData) => Promise<void>;
+  };
+  if (typeof nav.canShare === "function" && typeof nav.share === "function") {
+    const payload: ShareData = { files: [opts.file], text: opts.text, title: opts.title };
+    try {
+      if (nav.canShare({ files: payload.files })) {
+        await nav.share(payload);
+        return "shared";
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+      // Share sheet exists but failed for another reason — fall through to the chat-link path.
+    }
+  }
+  openWhatsApp(opts.text);
+  return "fallback";
+}
+
 function htmlForPdfCapture(html: string): string {
   const css = "<style>html,body.pdf-pack{height:auto!important;min-height:0!important;}</style>";
   return html
@@ -185,14 +222,63 @@ function cropCanvasBottom(canvas: HTMLCanvasElement): HTMLCanvasElement {
   return next;
 }
 
+const PDF_CAPTURE_WIDTH = 720;
+const PDF_CAPTURE_SCALE = 2;
+const PDF_MARGIN = 36;
+
+/**
+ * The PDF is one tall html2canvas screenshot sliced into A4-sized pages by
+ * jsPDF (see below) — a raster crop, not a real print layout, so CSS rules
+ * like `.panel { break-inside: avoid }` have no effect on it. Without this,
+ * a card that happens to straddle a slice boundary gets cut on one page and
+ * then the same rows repeat at the top of the next, because each page
+ * re-draws the same source image at a shifted offset. This walks every
+ * `.panel` in capture order and, where one would straddle a boundary,
+ * inserts a spacer before it so it starts cleanly on the next page instead
+ * — the same effect `break-inside: avoid` gives a real printed page, just
+ * done by hand since the raster capture can't see that CSS rule.
+ */
+function insertPageBreakSpacers(doc: Document, usableCanvasPx: number) {
+  if (!(usableCanvasPx > 0)) return;
+  let shift = 0;
+  const panels = Array.from(doc.querySelectorAll<HTMLElement>(".panel"));
+  for (const panel of panels) {
+    const top = panel.offsetTop + shift;
+    const bottom = top + panel.offsetHeight;
+    const pageOfTop = Math.floor(top / usableCanvasPx);
+    const pageOfBottom = Math.floor((bottom - 1) / usableCanvasPx);
+    if (panel.offsetHeight >= usableCanvasPx || pageOfTop === pageOfBottom) continue;
+    const nextPageTop = (pageOfTop + 1) * usableCanvasPx;
+    const gap = nextPageTop - top;
+    const spacer = doc.createElement("div");
+    spacer.style.cssText = `height:${gap}px;`;
+    panel.parentElement?.insertBefore(spacer, panel);
+    shift += gap;
+  }
+}
+
 export async function htmlDocumentToPdfFile(html: string, filename: string): Promise<File> {
   const [{ jsPDF }, html2canvasMod] = await Promise.all([import("jspdf"), import("html2canvas")]);
   const html2canvas = html2canvasMod.default;
 
+  // A throwaway instance purely to read the A4 page geometry (pt) needed to
+  // work out where page breaks fall in captured-canvas pixels, before the
+  // real capture runs. The same geometry (pageWidth/pageHeight/margin) is
+  // reused below for the actual output — this isn't a second, different PDF.
+  const pageMetrics = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const pageWidthPt = pageMetrics.internal.pageSize.getWidth();
+  const pageHeightPt = pageMetrics.internal.pageSize.getHeight();
+  const imgWidthPt = pageWidthPt - PDF_MARGIN * 2;
+  const usablePt = usablePdfPageHeight(pageHeightPt, PDF_MARGIN);
+  const captureCanvasWidthPx = PDF_CAPTURE_WIDTH * PDF_CAPTURE_SCALE;
+  // pt-per-canvas-px is imgWidthPt / captureCanvasWidthPx (mirrors how
+  // imgHeight is derived from canvas.height below) — invert it to convert
+  // the page's usable height from pt into capture-canvas pixels.
+  const usableCanvasPx = usablePt * (captureCanvasWidthPx / imgWidthPt);
+
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
-  iframe.style.cssText =
-    "position:fixed;left:-10000px;top:0;width:800px;height:200px;border:0;background:#fff;";
+  iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${PDF_CAPTURE_WIDTH}px;height:200px;border:0;background:#fff;`;
   document.body.appendChild(iframe);
 
   try {
@@ -213,17 +299,18 @@ export async function htmlDocumentToPdfFile(html: string, filename: string): Pro
       (panel as HTMLElement).style.display = "block";
     });
     await new Promise((r) => window.setTimeout(r, 80));
+    insertPageBreakSpacers(doc, usableCanvasPx);
     const main = (body.querySelector("main") as HTMLElement | null) || body;
     const contentH = Math.max(main.scrollHeight, body.scrollHeight, 1);
     iframe.style.height = `${contentH + 4}px`;
     await new Promise((r) => window.setTimeout(r, 40));
 
     const rawCanvas = await html2canvas(body, {
-      scale: 2,
+      scale: PDF_CAPTURE_SCALE,
       backgroundColor: "#ffffff",
       useCORS: true,
       logging: false,
-      windowWidth: 720,
+      windowWidth: PDF_CAPTURE_WIDTH,
       windowHeight: contentH,
       height: contentH,
       onclone: (clone) => {
@@ -239,17 +326,14 @@ export async function htmlDocumentToPdfFile(html: string, filename: string): Pro
     });
     const canvas = cropCanvasBottom(rawCanvas);
     const img = canvas.toDataURL("image/jpeg", 0.86);
-    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 36;
-    const imgWidth = pageWidth - margin * 2;
+    const pdf = pageMetrics;
+    const imgWidth = imgWidthPt;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    const usable = usablePdfPageHeight(pageHeight, margin);
-    const pages = pdfPageCount(imgHeight, pageHeight, margin);
+    const usable = usablePt;
+    const pages = pdfPageCount(imgHeight, pageHeightPt, PDF_MARGIN);
     for (let i = 0; i < pages; i++) {
       if (i > 0) pdf.addPage();
-      pdf.addImage(img, "JPEG", margin, margin - i * usable, imgWidth, imgHeight);
+      pdf.addImage(img, "JPEG", PDF_MARGIN, PDF_MARGIN - i * usable, imgWidth, imgHeight);
     }
     const blob = pdf.output("blob");
     return new File([blob], filename, { type: "application/pdf" });

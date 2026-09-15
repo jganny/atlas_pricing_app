@@ -10,8 +10,8 @@ import {
   downloadBlob,
   emailQuotePdf,
   htmlDocumentToPdfFile,
-  openWhatsApp,
   printHtmlDocument,
+  shareQuoteViaWhatsApp,
 } from "@/lib/quotes/quote-print";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { Badge, Button } from "@/components/ui";
@@ -278,13 +278,22 @@ export function QuotePreviewModal({
   }
 
   async function handleWhatsApp() {
-    openWhatsApp(clientDoc.shareText);
     setShareBusy("Preparing PDF…");
     try {
       const file = await pdfFile();
-      downloadBlob(file.name, file);
-      toast("WhatsApp opened. Attach the Quote PDF that just downloaded.", "success");
+      const how = await shareQuoteViaWhatsApp({
+        file,
+        text: clientDoc.shareText,
+        title: clientDoc.shareSubject,
+      });
+      if (how === "shared") {
+        toast("Share sheet opened with the PDF attached — pick WhatsApp there.", "success");
+      } else {
+        downloadBlob(file.name, file);
+        toast("WhatsApp opened. Attach the Quote PDF that just downloaded.", "success");
+      }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       toast(err instanceof Error ? err.message : "Could not prepare the quotation PDF", "error");
     } finally {
       setShareBusy(null);
