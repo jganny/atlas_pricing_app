@@ -861,8 +861,9 @@ function AirDeskInner() {
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-quote-customer"
+                    name="atlas-party-air"
                     autoComplete="off"
+                    data-1p-ignore="true"
                     autoCorrect="off"
                     spellCheck={false}
                     data-testid="air-customer"

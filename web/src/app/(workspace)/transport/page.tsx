@@ -332,8 +332,9 @@ export default function TransportDeskPage() {
                 <Label>Customer *</Label>
                 <Input
                   id="transport-customer"
-                  name="atlas-customer"
+                  name="atlas-party-transport"
                   autoComplete="off"
+                  data-1p-ignore="true"
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
                 />

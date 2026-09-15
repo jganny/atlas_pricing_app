@@ -87,16 +87,31 @@ export function openWhatsApp(text: string): void {
 }
 
 /**
+ * `navigator.canShare({files})` returning true only means the OS share
+ * sheet CAN carry a file — it says nothing about which apps will actually
+ * be listed in it. On desktop (confirmed: macOS Safari) that share sheet
+ * routinely has no WhatsApp entry at all, since WhatsApp Desktop doesn't
+ * register as a share extension — so attempting Web Share there replaces a
+ * working wa.me link with a dead end. Mobile is different: WhatsApp reliably
+ * registers as a share target there when installed. So this only attempts
+ * Web Share on mobile; desktop always goes straight to the proven wa.me +
+ * download-and-attach path, matching what worked before.
+ */
+function isLikelyMobileDevice(): boolean {
+  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
+  if (typeof nav.userAgentData?.mobile === "boolean") return nav.userAgentData.mobile;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+}
+
+/**
  * WhatsApp has no URL scheme that pre-attaches a file (unlike the .eml trick
  * used for email) — the only way a web page can hand WhatsApp a file directly
- * is the OS share sheet via the Web Share API, and only on devices/browsers
- * that support sharing files (mostly mobile). Where that works, the user
- * picks WhatsApp from the share sheet with the PDF already attached and the
- * message text pre-filled. Where it doesn't (most desktop browsers, and
- * WhatsApp Desktop itself has no drop target a page can reach), this falls
- * back to opening the chat with the text pre-filled and downloading the PDF
- * for the user to attach by hand — there's no further workaround for that
- * case.
+ * is the OS share sheet via the Web Share API, and that only reliably lists
+ * WhatsApp as a target on mobile (see isLikelyMobileDevice above). Where that
+ * works, the user picks WhatsApp from the share sheet with the PDF already
+ * attached and the message text pre-filled. Everywhere else this opens the
+ * chat with the text pre-filled and downloads the PDF for the user to attach
+ * by hand — there's no further workaround for that case.
  */
 export async function shareQuoteViaWhatsApp(opts: {
   file: File;
@@ -107,7 +122,7 @@ export async function shareQuoteViaWhatsApp(opts: {
     canShare?: (data: ShareData) => boolean;
     share?: (data: ShareData) => Promise<void>;
   };
-  if (typeof nav.canShare === "function" && typeof nav.share === "function") {
+  if (isLikelyMobileDevice() && typeof nav.canShare === "function" && typeof nav.share === "function") {
     const payload: ShareData = { files: [opts.file], text: opts.text, title: opts.title };
     try {
       if (nav.canShare({ files: payload.files })) {

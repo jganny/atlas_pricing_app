@@ -222,8 +222,9 @@ export default function WarehouseDeskPage() {
                 <Label>Customer *</Label>
                 <Input
                   id="warehouse-customer"
-                  name="atlas-customer"
+                  name="atlas-party-warehouse"
                   autoComplete="off"
+                  data-1p-ignore="true"
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
                 />

@@ -501,42 +501,52 @@ export function QuotePreviewModal({
           ) : null}
 
           <div className="rounded-lg bg-slate-50 p-4">
-            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
-              {multiLane
-                ? "Quoted total · all lanes"
-                : `Quoted total${quoted ? ` · ${quoted.name}` : ""}${quoted?.cheapest ? " ★" : ""}`}
-            </div>
-            <div className="text-2xl font-extrabold text-emerald-700" data-testid="quote-preview-total">
-              {formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), quote.currency)}
-            </div>
             {multiLane ? (
-              <ul className="mt-2 space-y-1 text-sm" data-testid="quote-preview-lanes">
-                {quotedLanes.map((raw, i) => {
-                  const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-                  const laneId = String(lane.laneId ?? i);
-                  const quotedOnLane = options.find((o) => o.selected && (o.laneId === laneId || o.laneLabel === String(lane.laneLabel ?? "")));
-                  return (
-                    <li key={laneId}>
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left hover:bg-white print:hover:bg-transparent"
-                        onClick={() => quotedOnLane && setInspectId(quotedOnLane.id)}
-                      >
-                        <span>
-                          {String(lane.laneLabel ?? `Lane ${i + 1}`)} · {String(lane.airline ?? "—")}
-                          {String(lane.validity ?? "").trim()
-                            ? ` · valid ${String(lane.validity)}`
-                            : quotedOnLane?.validity
-                              ? ` · valid ${quotedOnLane.validity}`
-                              : ""}
-                        </span>
-                        <span className="font-semibold">{money(lane.amount, cur)}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
+              <>
+                <div className="mb-1 text-xs font-bold uppercase text-[var(--color-text-muted)]">
+                  Quoted offer total per lane
+                </div>
+                <ul className="space-y-2" data-testid="quote-preview-lanes">
+                  {quotedLanes.map((raw, i) => {
+                    const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+                    const laneId = String(lane.laneId ?? i);
+                    const quotedOnLane = options.find((o) => o.selected && (o.laneId === laneId || o.laneLabel === String(lane.laneLabel ?? "")));
+                    return (
+                      <li key={laneId}>
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left hover:bg-white print:hover:bg-transparent"
+                          onClick={() => quotedOnLane && setInspectId(quotedOnLane.id)}
+                        >
+                          <span className="text-sm">
+                            <span className="font-bold text-[var(--color-atlas-navy)]">
+                              {String(lane.laneLabel ?? `Lane ${i + 1}`)}
+                            </span>
+                            {" · "}
+                            {String(lane.airline ?? "—")}
+                            {String(lane.validity ?? "").trim()
+                              ? ` · valid ${String(lane.validity)}`
+                              : quotedOnLane?.validity
+                                ? ` · valid ${quotedOnLane.validity}`
+                                : ""}
+                          </span>
+                          <span className="text-lg font-extrabold text-emerald-700">{money(lane.amount, cur)}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <>
+                <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
+                  {`Quoted total${quoted ? ` · ${quoted.name}` : ""}${quoted?.cheapest ? " ★" : ""}`}
+                </div>
+                <div className="text-2xl font-extrabold text-emerald-700" data-testid="quote-preview-total">
+                  {formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), quote.currency)}
+                </div>
+              </>
+            )}
             {quotedIsNotCheapest && cheapest ? (
               <div className="mt-2 text-sm font-semibold text-emerald-800" data-testid="quote-preview-cheapest-note">
                 Cheapest option: {cheapest.name} ★ {money(cheapest.total, cur)} — click it above to

@@ -739,8 +739,9 @@ function SeaDeskInner() {
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-customer"
+                    name="atlas-party-sea"
                     autoComplete="off"
+                    data-1p-ignore="true"
                     value={customer}
                     onChange={(e) => setCustomer(e.target.value)}
                     placeholder="Customer name"
