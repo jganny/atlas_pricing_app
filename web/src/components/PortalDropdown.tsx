@@ -49,7 +49,15 @@ export function PortalDropdown({
 
       const spaceBelow = window.innerHeight - r.bottom - pad;
       const spaceAbove = r.top - pad;
-      const openUp = spaceBelow < maxHeight && spaceAbove > spaceBelow;
+      // Only flip the dropdown above the field when there's genuinely too
+      // little room below to show a useful list (roughly 2-3 rows) — not
+      // simply whenever it's less than the full maxHeight. Comparing
+      // against maxHeight meant a perfectly usable ~190px below (plenty
+      // for several results) still flipped the dropdown all the way above
+      // the field, sometimes far from it, on any page where the field
+      // wasn't near the very top of the viewport.
+      const minUsable = 140;
+      const openUp = spaceBelow < minUsable && spaceAbove > spaceBelow;
       const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
       const height = Math.min(maxHeight, available);
       const top = openUp ? Math.max(pad, r.top - height - 4) : Math.min(r.bottom + 4, window.innerHeight - height - pad);
