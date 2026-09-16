@@ -44,12 +44,15 @@ import { useLiveData } from "@/lib/api";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
 import { lookupAirTariff } from "@/lib/firebase/tariffs";
 import {
+  AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
   computeAirlineTotals,
   validateAirCargo,
   validateSelectedAirline,
   type AirCargoRow,
 } from "@/lib/pricing/air-desk";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
 import {
   createAirlineOption,
   type AirlineOption,
@@ -113,6 +116,16 @@ function AirDeskInner() {
   const [customFx, setCustomFx] = useState(0);
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "air",
+    origin,
+    destination,
+    incoterm,
+    currency,
+    module,
+    customer,
+    carrierNames: airlines.map((a) => a.name),
+  });
   const [editorAirlineId, setEditorAirlineId] = useState<string | null>(null);
   const [showAllBreaksById, setShowAllBreaksById] = useState<Record<string, boolean>>({});
   const [terms, setTerms] = useState(getDefaultFreightTerms("air"));
@@ -137,6 +150,76 @@ function AirDeskInner() {
       return prev.map((a) => (a.laneId ? a : { ...a, laneId: lid }));
     });
   }, [activeLane?.id, lanes]);
+
+  // Silently fill charge lines that have been consistent across this
+  // customer/route/incoterm/carrier's history — only fields still at their
+  // default (0, or an untouched 0/0 surcharge row) are ever written.
+  useEffect(() => {
+    if (!Object.keys(historicalAutofill.air).length) return;
+    setAirlines((prev) =>
+      prev.map((a) => {
+        if (!a.name.trim()) return a;
+        const result =
+          historicalAutofill.air[normalizeCarrierName(a.name)] ?? historicalAutofill.air[""];
+        if (!result) return a;
+
+        let changed = false;
+        const nextBreaks = { ...a.breaks };
+        for (const bn of AIR_WEIGHT_BREAKS) {
+          const cv = result.breaks[bn];
+          if (!cv) continue;
+          const pair = nextBreaks[bn] ?? { sell: 0, buy: 0 };
+          const nextPair = { ...pair };
+          if (pair.sell === 0 && cv.sell !== null) {
+            nextPair.sell = cv.sell;
+            changed = true;
+          }
+          if (pair.buy === 0 && cv.buy !== null) {
+            nextPair.buy = cv.buy;
+            changed = true;
+          }
+          nextBreaks[bn] = nextPair;
+        }
+
+        let nextAms = a.amsFee;
+        let nextAmsBuy = a.amsFeeBuy;
+        if (a.amsFee === 0 && result.ams.sell !== null) {
+          nextAms = result.ams.sell;
+          changed = true;
+        }
+        if (a.amsFeeBuy === 0 && result.ams.buy !== null) {
+          nextAmsBuy = result.ams.buy;
+          changed = true;
+        }
+
+        const nextOrigin = a.originSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.originSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+        const nextDest = a.destSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.destSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+
+        if (!changed) return a;
+        return {
+          ...a,
+          breaks: nextBreaks,
+          amsFee: nextAms,
+          amsFeeBuy: nextAmsBuy,
+          originSurcharges: nextOrigin,
+          destSurcharges: nextDest,
+        };
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.air]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;

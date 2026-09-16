@@ -52,6 +52,8 @@ import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
@@ -112,6 +114,16 @@ function SeaDeskInner() {
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
   const [liners, setLiners] = useState<LinerOption[]>([createLinerOption({}, true)]);
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "sea",
+    origin,
+    destination,
+    incoterm,
+    currency,
+    module,
+    customer,
+    carrierNames: liners.map((l) => l.name),
+  });
   const [terms, setTerms] = useState(getDefaultFreightTerms("sea"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -123,6 +135,74 @@ function SeaDeskInner() {
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
   }, [activeLaneId, lanes]);
+
+  // Silently fill charge lines that have been consistent across this
+  // customer/route/incoterm/carrier's history — only fields still at their
+  // default (0, or an untouched 0/0 surcharge row) are ever written.
+  useEffect(() => {
+    if (!Object.keys(historicalAutofill.sea).length) return;
+    setLiners((prev) =>
+      prev.map((l) => {
+        if (!l.name.trim()) return l;
+        const result =
+          historicalAutofill.sea[normalizeCarrierName(l.name)] ?? historicalAutofill.sea[""];
+        if (!result) return l;
+
+        let changed = false;
+        const nextContainers = l.containers.map((row) => {
+          const cv = result.containers[normalizeSurchargeName(row.type)];
+          if (!cv) return row;
+          const nextRow = { ...row };
+          if (row.sellRate === 0 && cv.sell !== null) {
+            nextRow.sellRate = cv.sell;
+            changed = true;
+          }
+          if (row.buyRate === 0 && cv.buy !== null) {
+            nextRow.buyRate = cv.buy;
+            changed = true;
+          }
+          return nextRow;
+        });
+
+        let nextLclSell = l.lclSell;
+        let nextLclBuy = l.lclBuy;
+        if (l.lclSell === 0 && result.lcl.sell !== null) {
+          nextLclSell = result.lcl.sell;
+          changed = true;
+        }
+        if (l.lclBuy === 0 && result.lcl.buy !== null) {
+          nextLclBuy = result.lcl.buy;
+          changed = true;
+        }
+
+        const nextOrigin = l.originSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.originSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+        const nextDest = l.destSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.destSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+
+        if (!changed) return l;
+        return {
+          ...l,
+          containers: nextContainers,
+          lclSell: nextLclSell,
+          lclBuy: nextLclBuy,
+          originSurcharges: nextOrigin,
+          destSurcharges: nextDest,
+        };
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.sea]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
