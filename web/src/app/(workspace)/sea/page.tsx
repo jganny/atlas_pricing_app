@@ -50,6 +50,7 @@ import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -82,6 +83,7 @@ function SeaDeskInner() {
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useSeaTariffs();
   const loader = useQuoteDeskLoader("sea");
+  const customerFieldName = useAntiAutofillName("atlas-party-sea");
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -739,7 +741,7 @@ function SeaDeskInner() {
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-party-sea"
+                    name={customerFieldName}
                     autoComplete="off"
                     data-1p-ignore="true"
                     value={customer}

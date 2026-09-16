@@ -59,6 +59,7 @@ import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
 import { getDefaultFreightTerms } from "@/lib/pricing/terms";
 import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
 import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
@@ -86,6 +87,7 @@ function AirDeskInner() {
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useAirTariffs();
   const loader = useQuoteDeskLoader("air");
+  const customerFieldName = useAntiAutofillName("atlas-party-air");
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -861,7 +863,7 @@ function AirDeskInner() {
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-party-air"
+                    name={customerFieldName}
                     autoComplete="off"
                     data-1p-ignore="true"
                     autoCorrect="off"

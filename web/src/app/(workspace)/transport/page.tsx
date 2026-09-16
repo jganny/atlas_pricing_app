@@ -38,6 +38,7 @@ import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import {
   DESK_CURRENCIES,
   INDIA_VEHICLE_TYPES,
@@ -66,6 +67,7 @@ export default function TransportDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const customerFieldName = useAntiAutofillName("atlas-party-transport");
   const [tab, setTab] = useState<TabId>("lane");
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
@@ -332,7 +334,7 @@ export default function TransportDeskPage() {
                 <Label>Customer *</Label>
                 <Input
                   id="transport-customer"
-                  name="atlas-party-transport"
+                  name={customerFieldName}
                   autoComplete="off"
                   data-1p-ignore="true"
                   value={customer}

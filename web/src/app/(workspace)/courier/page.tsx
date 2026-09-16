@@ -47,6 +47,7 @@ import {
 import { searchPostalCodes, type PostalHit } from "@/lib/locations/postal-search";
 import { searchLocations, type LocationHit } from "@/lib/locations/search";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 
 function isoFromAirport(hit: LocationHit): string | null {
   const c = (hit.country || "").trim();
@@ -121,6 +122,7 @@ function CourierDeskInner() {
   const queryClient = useQueryClient();
   const loader = useQuoteDeskLoader();
   const { data: tariffBooks = [] } = useCourierTariffs();
+  const customerFieldName = useAntiAutofillName("atlas-party-courier");
   const [tab, setTab] = useState<Tab>("shipment");
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
@@ -743,7 +745,7 @@ function CourierDeskInner() {
                 Customer
                 <input
                   id="courier-customer"
-                  name="atlas-party-courier"
+                  name={customerFieldName}
                   autoComplete="off"
                   data-1p-ignore="true"
                   className="mt-1 w-full rounded-lg border px-3 py-2"

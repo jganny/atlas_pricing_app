@@ -28,6 +28,7 @@ import { DESK_CURRENCIES, WAREHOUSE_LOCATIONS } from "@/lib/desk/constants";
 import { computeGp, ensureIncidentalTerm } from "@/lib/pricing/quote-display";
 import { formatCurrency } from "@/lib/utils";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import type { SavedQuote } from "@/lib/types";
 
@@ -49,6 +50,7 @@ export default function WarehouseDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const customerFieldName = useAntiAutofillName("atlas-party-warehouse");
   const [tab, setTab] = useState<WhTab>("details");
   const [customer, setCustomer] = useState("");
   const [location, setLocation] = useState<string>(WAREHOUSE_LOCATIONS[0]);
@@ -222,7 +224,7 @@ export default function WarehouseDeskPage() {
                 <Label>Customer *</Label>
                 <Input
                   id="warehouse-customer"
-                  name="atlas-party-warehouse"
+                  name={customerFieldName}
                   autoComplete="off"
                   data-1p-ignore="true"
                   value={customer}
