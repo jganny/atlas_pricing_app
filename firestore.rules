@@ -18,6 +18,18 @@ service cloud.firestore {
     function isOwnUserDoc(userId) {
       return isSignedIn() && request.auth.token.email.split('@')[0] == userId;
     }
+    // Sales Module (test app) — accounts/salesContacts/salesTargets/
+    // salesTerritories only. Deliberately NOT applied to leads/activities:
+    // the legacy app also reads/writes those two collections directly, and
+    // tightening them risks breaking its live usage in ways that can't be
+    // verified without touching legacy code.
+    function ownerUsername() {
+      return isSignedIn() ? request.auth.token.email.split('@')[0] : null;
+    }
+    function isSalesAdmin() {
+      return isSignedIn() && request.auth.token.email in
+        ['ganny@atlaspricing.com', 'manager@atlaspricing.com', 'admin@atlaspricing.com'];
+    }
 
     match /quotes/{quoteId} { allow read, write: if isSignedIn(); }
     match /amendment_requests/{requestId} { allow read, write: if isSignedIn(); }
@@ -35,6 +47,24 @@ service cloud.firestore {
     match /resetRequests/{userId} { allow read, write: if isSignedIn(); }
     match /leads/{leadId} { allow read, write: if isSignedIn(); }
     match /activities/{activityId} { allow read, write: if isSignedIn(); }
+    match /accounts/{accountId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.owner == ownerUsername();
+      allow update, delete: if isSignedIn() && (isSalesAdmin() || resource.data.owner == ownerUsername());
+    }
+    match /salesContacts/{contactId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.owner == ownerUsername();
+      allow update, delete: if isSignedIn() && (isSalesAdmin() || resource.data.owner == ownerUsername());
+    }
+    match /salesTargets/{targetId} {
+      allow read: if isSignedIn();
+      allow write: if isSalesAdmin();
+    }
+    match /salesTerritories/{territoryId} {
+      allow read: if isSignedIn();
+      allow write: if isSalesAdmin();
+    }
     match /circularsLibrary/{circularId} { allow read, write: if isSignedIn(); }
     match /air_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
     match /sea_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
