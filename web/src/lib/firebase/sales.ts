@@ -147,7 +147,10 @@ export async function saveLead(
 
 export async function updateLeadStatus(id: string, status: LeadStatus): Promise<void> {
   const db = getFirebaseDb();
-  await updateDoc(doc(db, "leads", id), { status, updatedAt: serverTimestamp() });
+  const patch: Record<string, unknown> = { status, updatedAt: serverTimestamp() };
+  if (status === "won") patch.wonAt = new Date().toISOString();
+  if (status === "lost") patch.lostAt = new Date().toISOString();
+  await updateDoc(doc(db, "leads", id), patch);
 }
 
 export async function deleteLead(id: string): Promise<void> {

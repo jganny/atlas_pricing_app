@@ -42,6 +42,7 @@ import {
 } from "@/lib/quotes/lanes";
 import { useLiveData } from "@/lib/api";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
+import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupAirTariff } from "@/lib/firebase/tariffs";
 import {
   AIR_WEIGHT_BREAKS,
@@ -136,6 +137,7 @@ function AirDeskInner() {
   const [confirmReset, setConfirmReset] = useState(false);
   const hideAgreement = shouldHideAgencyAgreement(user?.username);
   const [agreementName, setAgreementName] = useState<string | null>(null);
+  const [leadId, setLeadId] = useState<string | undefined>(undefined);
   const prefillApplied = useRef(false);
 
   useEffect(() => {
@@ -340,6 +342,7 @@ function AirDeskInner() {
       airBreaks: loader.smartPrefill.airBreaks,
       message: "Prefill from Smart Quote / Inbox",
     });
+    if (loader.smartPrefill.leadId) setLeadId(loader.smartPrefill.leadId);
     clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
@@ -701,7 +704,9 @@ function AirDeskInner() {
               lanes,
               quotedLanes,
               allLanesAmount: amount,
+              leadId,
             });
+            if (leadId) void linkQuoteToLead(leadId, quoteId);
             cloud = "live";
             cacheOfflineQuote({
               id: quoteId,

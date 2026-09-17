@@ -26,6 +26,7 @@ import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "
 import { linerSnapshot } from "@/lib/quotes/option-breakdown";
 import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
+import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariff } from "@/lib/firebase/tariffs";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
@@ -86,6 +87,7 @@ function SeaDeskInner() {
   const { data: tariffs = [] } = useSeaTariffs();
   const loader = useQuoteDeskLoader("sea");
   const customerFieldName = useAntiAutofillName("atlas-party-sea");
+  const [leadId, setLeadId] = useState<string | undefined>(undefined);
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -298,6 +300,7 @@ function SeaDeskInner() {
       seaTariff: loader.smartPrefill.seaTariff,
       message: "Prefill from Smart Quote / Inbox",
     });
+    if (loader.smartPrefill.leadId) setLeadId(loader.smartPrefill.leadId);
     clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
@@ -606,7 +609,9 @@ function SeaDeskInner() {
               lanes,
               quotedLanes,
               allLanesAmount: amount,
+              leadId,
             });
+            if (leadId) void linkQuoteToLead(leadId, quoteId);
             cloud = "live";
             cacheOfflineQuote({
               id: quoteId,

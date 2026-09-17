@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
+import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -26,6 +26,7 @@ import {
   quotesForCompany,
   stashLeadDeskPrefill,
 } from "@/lib/sales/quote-from-lead";
+import { LOSS_REASON_CODES, lossReasonLabel } from "@/lib/sales/loss-reasons";
 import type { LeadActivity, LeadStatus, SalesLead } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ export function PipelineView() {
   const queryClient = useQueryClient();
   const { data: leads = [], isLoading } = useLeads();
   const { data: enquiries = [] } = useEnquiries();
+  const { data: accounts = [] } = useAccounts();
   const [view, setView] = useState<"list" | "board">("list");
   const [statusFilter, setStatusFilter] = useState<"all" | LeadStatus>("all");
   const [query, setQuery] = useState("");
@@ -67,12 +69,20 @@ export function PipelineView() {
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<SalesLead | null>(null);
+  const { data: editContacts = [] } = useSalesContacts(editForm?.accountId);
 
   const selected = leads.find((l) => l.id === selectedId) ?? null;
-  const relatedQuotes = useMemo(
-    () => quotesForCompany(enquiries, selected?.company),
-    [enquiries, selected?.company],
+  const linkedQuotes = useMemo(
+    () => enquiries.filter((q) => selected?.quoteIds?.includes(q.id)),
+    [enquiries, selected?.quoteIds],
   );
+  const relatedQuotes = useMemo(() => {
+    const linkedIds = new Set(linkedQuotes.map((q) => q.id));
+    return quotesForCompany(enquiries, selected?.company).filter((q) => !linkedIds.has(q.id));
+  }, [enquiries, selected?.company, linkedQuotes]);
+  const selectedAccount = accounts.find((a) => a.id === selected?.accountId) ?? null;
 
   const visible = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -95,6 +105,8 @@ export function PipelineView() {
 
   async function openLead(lead: SalesLead) {
     setSelectedId(lead.id);
+    setEditing(false);
+    setEditForm(null);
     try {
       if (useLiveData) {
         const rows = await Promise.race([
@@ -221,6 +233,39 @@ export function PipelineView() {
     stashLeadDeskPrefill(lead);
     const href = deskHrefForLead(lead);
     router.push(lead.mode === "air" || lead.mode === "sea" || !lead.mode ? `${href}${href.includes("?") ? "&" : "?"}smart=1` : href);
+  }
+
+  function startEdit(lead: SalesLead) {
+    setEditForm({ ...lead });
+    setEditing(true);
+  }
+
+  async function saveLeadEdit() {
+    if (!editForm) return;
+    if (!editForm.company.trim()) {
+      toast("Company is required", "error");
+      return;
+    }
+    if ((editForm.status === "lost") && !editForm.lossReasonCode) {
+      toast("Pick a loss reason before saving a lost lead", "error");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { id, updatedAt: _updatedAt, createdAt: _createdAt, ...rest } = editForm;
+      await saveLead({ ...rest, id });
+      queryClient.setQueryData(
+        queryKeys.leads,
+        leads.map((l) => (l.id === id ? { ...editForm, updatedAt: new Date().toISOString() } : l)),
+      );
+      setEditing(false);
+      setEditForm(null);
+      toast("Lead saved", "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not save lead", "error");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const owners = Object.keys(TEAM_ROLES).filter((k) => k !== "ganny");
@@ -523,7 +568,140 @@ export function PipelineView() {
         </div>
       )}
 
-      {selected ? (
+      {selected && editing && editForm ? (
+        <Card className="border-sky-200 bg-sky-50/40">
+          <h2 className="font-bold">Edit lead</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <Label>Company *</Label>
+              <Input value={editForm.company} onChange={(e) => setEditForm((f) => f && { ...f, company: e.target.value })} />
+            </div>
+            <div>
+              <Label>Contact</Label>
+              <Input value={editForm.contactName || ""} onChange={(e) => setEditForm((f) => f && { ...f, contactName: e.target.value })} />
+            </div>
+            <div>
+              <Label>Phone</Label>
+              <Input value={editForm.phone || ""} onChange={(e) => setEditForm((f) => f && { ...f, phone: e.target.value })} />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input value={editForm.email || ""} onChange={(e) => setEditForm((f) => f && { ...f, email: e.target.value })} />
+            </div>
+            <div>
+              <Label>Deal value (INR)</Label>
+              <Input
+                type="number"
+                value={editForm.dealValue || 0}
+                onChange={(e) => setEditForm((f) => f && { ...f, dealValue: Number(e.target.value) || 0 })}
+              />
+            </div>
+            <div>
+              <Label>Next action</Label>
+              <Input value={editForm.nextAction || ""} onChange={(e) => setEditForm((f) => f && { ...f, nextAction: e.target.value })} />
+            </div>
+            <div>
+              <Label>Follow-up date</Label>
+              <Input
+                type="date"
+                value={editForm.nextDueDate || ""}
+                onChange={(e) => setEditForm((f) => f && { ...f, nextDueDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Account</Label>
+              <Select
+                value={editForm.accountId || ""}
+                onChange={(e) => setEditForm((f) => f && { ...f, accountId: e.target.value || undefined, contactId: undefined })}
+              >
+                <option value="">— none —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Contact (on account)</Label>
+              <Select
+                value={editForm.contactId || ""}
+                disabled={!editForm.accountId}
+                onChange={(e) => setEditForm((f) => f && { ...f, contactId: e.target.value || undefined })}
+              >
+                <option value="">— none —</option>
+                {editContacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Win probability % (blank = stage default)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={editForm.probability ?? ""}
+                onChange={(e) =>
+                  setEditForm((f) => f && { ...f, probability: e.target.value === "" ? undefined : Number(e.target.value) })
+                }
+              />
+            </div>
+            <div>
+              <Label>Expected close date</Label>
+              <Input
+                type="date"
+                value={editForm.expectedCloseDate || ""}
+                onChange={(e) => setEditForm((f) => f && { ...f, expectedCloseDate: e.target.value })}
+              />
+            </div>
+            {editForm.status === "lost" ? (
+              <>
+                <div>
+                  <Label>Loss reason *</Label>
+                  <Select
+                    value={editForm.lossReasonCode || ""}
+                    onChange={(e) => setEditForm((f) => f && { ...f, lossReasonCode: e.target.value })}
+                  >
+                    <option value="">— select —</option>
+                    {LOSS_REASON_CODES.map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Label>Loss notes</Label>
+                  <Input
+                    value={editForm.lossReasonNotes || ""}
+                    onChange={(e) => setEditForm((f) => f && { ...f, lossReasonNotes: e.target.value })}
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setEditing(false);
+                setEditForm(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" disabled={busy} onClick={() => void saveLeadEdit()}>
+              Save lead
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      {selected && !editing ? (
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -538,13 +716,30 @@ export function PipelineView() {
                 {selected.lane || "No lane"} · {selected.mode || "—"} ·{" "}
                 {selected.dealValue ? formatCurrency(selected.dealValue, "INR") : "no value"}
               </p>
+              {selectedAccount ? (
+                <p className="mt-1 text-sm">
+                  Account: <span className="font-semibold">{selectedAccount.name}</span>
+                </p>
+              ) : null}
+              {selected.probability != null || selected.expectedCloseDate ? (
+                <p className="mt-1 text-sm">
+                  {selected.probability != null ? `${selected.probability}% probability` : null}
+                  {selected.probability != null && selected.expectedCloseDate ? " · " : null}
+                  {selected.expectedCloseDate ? `Expected close ${selected.expectedCloseDate}` : null}
+                </p>
+              ) : null}
               {selected.nextAction ? (
                 <p className="mt-1 text-sm">
                   Next: {selected.nextAction}
                   {selected.nextDueDate ? ` · ${selected.nextDueDate}` : ""}
                 </p>
               ) : null}
-              {selected.winLossReason ? (
+              {selected.status === "lost" && selected.lossReasonCode ? (
+                <p className="mt-1 text-sm text-slate-600">
+                  Lost: {lossReasonLabel(selected.lossReasonCode)}
+                  {selected.lossReasonNotes ? ` — ${selected.lossReasonNotes}` : ""}
+                </p>
+              ) : selected.winLossReason ? (
                 <p className="mt-1 text-sm text-slate-600">Win/loss: {selected.winLossReason}</p>
               ) : null}
             </div>
@@ -560,15 +755,46 @@ export function PipelineView() {
                   </option>
                 ))}
               </Select>
+              <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(selected)}>
+                Edit
+              </Button>
               <Button type="button" size="sm" onClick={() => quoteFromLead(selected)}>
                 Quote from lead
               </Button>
             </div>
           </div>
 
+          {selected.status === "lost" && !selected.lossReasonCode ? (
+            <p className="mt-2 text-xs font-semibold text-amber-800">
+              No loss reason on file —{" "}
+              <button type="button" className="underline" onClick={() => startEdit(selected)}>
+                add one
+              </button>
+              .
+            </p>
+          ) : null}
+
+          {linkedQuotes.length ? (
+            <div className="mt-3 rounded-lg bg-emerald-50 p-3">
+              <p className="text-xs font-extrabold uppercase text-emerald-900">Linked quotes</p>
+              <ul className="mt-1 space-y-1 text-sm">
+                {linkedQuotes.map((q) => (
+                  <li key={q.id}>
+                    <Link className="font-semibold text-sky-800" href={`/enquiries/?q=${encodeURIComponent(q.ref)}&select=${encodeURIComponent(q.id)}`}>
+                      {q.ref}
+                    </Link>{" "}
+                    · {q.mode.toUpperCase()} · {q.status}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           {relatedQuotes.length ? (
             <div className="mt-3 rounded-lg bg-slate-50 p-3">
-              <p className="text-xs font-extrabold uppercase text-[var(--color-text-muted)]">Quote history</p>
+              <p className="text-xs font-extrabold uppercase text-[var(--color-text-muted)]">
+                Possible matches (by company name)
+              </p>
               <ul className="mt-1 space-y-1 text-sm">
                 {relatedQuotes.map((q) => (
                   <li key={q.id}>
@@ -604,9 +830,6 @@ export function PipelineView() {
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log"}
             </Button>
           </div>
-          {(selected.status === "won" || selected.status === "lost") && !selected.winLossReason ? (
-            <p className="mt-2 text-xs text-amber-800">Add a win/loss reason when you edit this lead in Firestore or recreate it.</p>
-          ) : null}
           <ul className="mt-3 space-y-2 text-sm">
             {activities.length === 0 ? (
               <li className="text-[var(--color-text-muted)]">No activities yet.</li>

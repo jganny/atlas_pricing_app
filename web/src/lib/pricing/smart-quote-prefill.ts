@@ -11,6 +11,8 @@ export interface SmartQuotePrefill {
   seaTariff?: Pick<SeaTariff, "mode" | "lclRate" | "fclRates" | "currency" | "carrier">;
   currency?: string;
   createdAt: number;
+  /** Set when this prefill originated from a Sales lead — threaded through to the saved quote. */
+  leadId?: string;
 }
 
 export function storeSmartQuotePrefill(prefill: SmartQuotePrefill) {
