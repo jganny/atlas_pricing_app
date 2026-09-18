@@ -5,8 +5,9 @@ import { Briefcase } from "lucide-react";
 import { Tabs } from "@/components/ui";
 import { PipelineView } from "@/components/sales/PipelineView";
 import { AccountsView } from "@/components/sales/AccountsView";
+import { ForecastView } from "@/components/sales/ForecastView";
 
-type SalesTab = "pipeline" | "accounts";
+type SalesTab = "pipeline" | "accounts" | "forecast";
 
 export default function SalesPage() {
   const [tab, setTab] = useState<SalesTab>("pipeline");
@@ -25,10 +26,11 @@ export default function SalesPage() {
         items={[
           { value: "pipeline", label: "Pipeline" },
           { value: "accounts", label: "Accounts" },
+          { value: "forecast", label: "Forecast" },
         ]}
       />
 
-      {tab === "pipeline" ? <PipelineView /> : <AccountsView />}
+      {tab === "pipeline" ? <PipelineView /> : tab === "accounts" ? <AccountsView /> : <ForecastView />}
     </div>
   );
 }

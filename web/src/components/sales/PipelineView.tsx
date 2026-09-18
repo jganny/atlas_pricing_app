@@ -27,6 +27,7 @@ import {
   stashLeadDeskPrefill,
 } from "@/lib/sales/quote-from-lead";
 import { LOSS_REASON_CODES, lossReasonLabel } from "@/lib/sales/loss-reasons";
+import { computeLeadScore, scoreTone } from "@/lib/sales/lead-scoring";
 import type { LeadActivity, LeadStatus, SalesLead } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -46,6 +47,16 @@ const EMPTY_FORM = {
   owner: "",
   winLossReason: "",
 };
+
+function ScoreBadge({ lead }: { lead: SalesLead }) {
+  const score = computeLeadScore(lead);
+  const title = score.factors.map((f) => `${f.points > 0 ? "+" : ""}${f.points} ${f.label}`).join("\n");
+  return (
+    <span title={title || "No scoring factors yet"}>
+      <Badge tone={scoreTone(score.total)}>{score.total}</Badge>
+    </span>
+  );
+}
 
 /**
  * Lead pipeline — capture, board/list views, activity log, quote-from-lead.
@@ -463,6 +474,7 @@ export function PipelineView() {
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b bg-slate-50 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
               <tr>
+                <th className="px-3 py-2">Score</th>
                 <th className="px-3 py-2">Company</th>
                 <th className="px-3 py-2">Contact</th>
                 <th className="px-3 py-2">Status</th>
@@ -475,7 +487,7 @@ export function PipelineView() {
             <tbody>
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-[var(--color-text-muted)]">
+                  <td colSpan={8} className="px-3 py-6 text-center text-[var(--color-text-muted)]">
                     No leads in this view.
                   </td>
                 </tr>
@@ -489,6 +501,9 @@ export function PipelineView() {
                     )}
                     onClick={() => void openLead(lead)}
                   >
+                    <td className="px-3 py-2">
+                      <ScoreBadge lead={lead} />
+                    </td>
                     <td className="px-3 py-2 font-semibold">{lead.company}</td>
                     <td className="px-3 py-2">{lead.contactName || "—"}</td>
                     <td className="px-3 py-2">
@@ -549,7 +564,10 @@ export function PipelineView() {
                           : "border-[var(--color-border)]",
                       )}
                     >
-                      <div className="font-bold text-[var(--color-atlas-navy)]">{lead.company}</div>
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="font-bold text-[var(--color-atlas-navy)]">{lead.company}</div>
+                        <ScoreBadge lead={lead} />
+                      </div>
                       <div className="text-xs text-[var(--color-text-muted)]">
                         {lead.contactName || "—"} · {lead.mode || "—"}
                       </div>
