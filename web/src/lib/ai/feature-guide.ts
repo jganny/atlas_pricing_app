@@ -115,6 +115,33 @@ export const GUIDE: GuideEntry[] = [
     href: "/sales",
   },
   {
+    id: "sales-targets",
+    title: "Sales targets, quotas & territories",
+    path: "/sales",
+    where: "Sales → Targets",
+    summary: "Admins set a revenue (and optional win-count) target per rep, territory or the whole team for a calendar quarter. Progress counts leads marked won in that quarter.",
+    steps: [
+      "Sales → Targets, choose the quarter.",
+      "Admins: pick Who, enter the revenue goal, Save target (saving again for the same person and quarter updates it).",
+      "Add territories at the bottom, then pick one on an account and set a team target for it.",
+    ],
+    keywords: ["target", "targets", "quota", "quotas", "attainment", "goal", "territory", "territories", "quarter", "progress"],
+    href: "/sales",
+  },
+  {
+    id: "sales-permissions",
+    title: "Who can edit leads and accounts",
+    path: "/sales",
+    where: "Sales (all tabs)",
+    summary: "You can edit your own leads and accounts; admins can edit everything. Leads with no owner (from the old app) stay editable by anyone. Others' records show 'View only'.",
+    steps: [
+      "A 'View only — owned by …' label means the record belongs to someone else; ask them or an admin.",
+      "Admins can reassign an account's owner and manage targets and territories.",
+    ],
+    keywords: ["permission", "permissions", "view only", "cannot edit", "can't edit", "access", "owner", "reassign", "locked", "who can"],
+    href: "/sales",
+  },
+  {
     id: "sales-analytics",
     title: "Win rate, deal size, cycle time & rep leaderboard",
     path: "/analytics",

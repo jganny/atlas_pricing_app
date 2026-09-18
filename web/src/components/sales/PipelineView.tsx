@@ -10,6 +10,7 @@ import { toast } from "@/components/Toast";
 import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
+import { canEditLead } from "@/lib/auth/sales-access";
 import { useLiveData } from "@/lib/api";
 import {
   addLeadActivity,
@@ -94,6 +95,7 @@ export function PipelineView() {
     return quotesForCompany(enquiries, selected?.company).filter((q) => !linkedIds.has(q.id));
   }, [enquiries, selected?.company, linkedQuotes]);
   const selectedAccount = accounts.find((a) => a.id === selected?.accountId) ?? null;
+  const canEditSelected = selected ? canEditLead(user?.username, user?.role, selected) : false;
 
   const visible = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -135,6 +137,11 @@ export function PipelineView() {
   }
 
   async function moveLead(id: string, status: LeadStatus) {
+    const target = leads.find((l) => l.id === id);
+    if (target && !canEditLead(user?.username, user?.role, target)) {
+      toast(`Only ${TEAM_ROLES[target.owner || ""]?.name || target.owner} or an admin can move this lead`, "error");
+      return;
+    }
     setBusy(true);
     try {
       if (useLiveData) {
@@ -554,7 +561,7 @@ export function PipelineView() {
                     <button
                       key={lead.id}
                       type="button"
-                      draggable
+                      draggable={canEditLead(user?.username, user?.role, lead)}
                       onDragStart={(e) => e.dataTransfer.setData("text/lead-id", lead.id)}
                       onClick={() => void openLead(lead)}
                       className={cn(
@@ -765,6 +772,7 @@ export function PipelineView() {
               <Select
                 className="w-36"
                 value={selected.status}
+                disabled={!canEditSelected}
                 onChange={(e) => void moveLead(selected.id, e.target.value as LeadStatus)}
               >
                 {STAGES.map((s) => (
@@ -773,16 +781,22 @@ export function PipelineView() {
                   </option>
                 ))}
               </Select>
-              <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(selected)}>
-                Edit
-              </Button>
+              {canEditSelected ? (
+                <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(selected)}>
+                  Edit
+                </Button>
+              ) : (
+                <span className="self-center text-[11px] font-semibold text-[var(--color-text-muted)]">
+                  View only — owned by {TEAM_ROLES[selected.owner || ""]?.name || selected.owner}
+                </span>
+              )}
               <Button type="button" size="sm" onClick={() => quoteFromLead(selected)}>
                 Quote from lead
               </Button>
             </div>
           </div>
 
-          {selected.status === "lost" && !selected.lossReasonCode ? (
+          {selected.status === "lost" && !selected.lossReasonCode && canEditSelected ? (
             <p className="mt-2 text-xs font-semibold text-amber-800">
               No loss reason on file —{" "}
               <button type="button" className="underline" onClick={() => startEdit(selected)}>

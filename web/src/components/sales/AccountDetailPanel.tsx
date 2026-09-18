@@ -5,7 +5,8 @@ import { Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
-import { useSalesContacts } from "@/hooks/use-atlas-data";
+import { useSalesContacts, useSalesTerritories } from "@/hooks/use-atlas-data";
+import { canEditAccount } from "@/lib/auth/sales-access";
 import { deleteSalesContact, saveSalesContact } from "@/lib/firebase/sales-contacts";
 import { deleteAccount, saveAccount } from "@/lib/firebase/accounts";
 import { isAdminUser } from "@/lib/quotes/team-roles";
@@ -32,7 +33,9 @@ export function AccountDetailPanel({
   const [addingContact, setAddingContact] = useState(false);
   const [contactForm, setContactForm] = useState(EMPTY_CONTACT);
 
-  const canReassignOwner = isAdminUser(user?.username, user?.role) || account.owner === user?.username;
+  const { data: territories = [] } = useSalesTerritories();
+  const canEdit = canEditAccount(user?.username, user?.role, account);
+  const canReassignOwner = canEdit && (isAdminUser(user?.username, user?.role) || account.owner === user?.username);
 
   async function save() {
     setBusy(true);
@@ -101,6 +104,12 @@ export function AccountDetailPanel({
 
   return (
     <Card>
+      {!canEdit ? (
+        <p className="mb-2 rounded-md bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900">
+          View only — this account is owned by {TEAM_ROLES[account.owner]?.name || account.owner}. Only the owner or an admin can change it.
+        </p>
+      ) : null}
+      <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-[14rem] flex-1">
           <Label>Account name *</Label>
@@ -150,7 +159,16 @@ export function AccountDetailPanel({
         </div>
         <div>
           <Label>Territory</Label>
-          <Input value={edit.territory || ""} onChange={(e) => setEdit((a) => ({ ...a, territory: e.target.value }))} />
+          <Input
+            list="sales-territory-options"
+            value={edit.territory || ""}
+            onChange={(e) => setEdit((a) => ({ ...a, territory: e.target.value }))}
+          />
+          <datalist id="sales-territory-options">
+            {territories.map((t) => (
+              <option key={t.id} value={t.name} />
+            ))}
+          </datalist>
         </div>
         <div>
           <Label>Contract renewal date</Label>
@@ -243,6 +261,7 @@ export function AccountDetailPanel({
           Add contact
         </Button>
       )}
+      </fieldset>
     </Card>
   );
 }

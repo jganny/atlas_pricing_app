@@ -7,9 +7,10 @@ import { PipelineView } from "@/components/sales/PipelineView";
 import { AccountsView } from "@/components/sales/AccountsView";
 import { ForecastView } from "@/components/sales/ForecastView";
 import { RenewalsView } from "@/components/sales/RenewalsView";
+import { TargetsView } from "@/components/sales/TargetsView";
 import { GuideTipButton } from "@/components/GuideTipButton";
 
-type SalesTab = "pipeline" | "accounts" | "forecast" | "renewals";
+type SalesTab = "pipeline" | "accounts" | "forecast" | "renewals" | "targets";
 
 export default function SalesPage() {
   const [tab, setTab] = useState<SalesTab>("pipeline");
@@ -33,6 +34,7 @@ export default function SalesPage() {
           { value: "accounts", label: "Accounts" },
           { value: "forecast", label: "Forecast" },
           { value: "renewals", label: "Renewals" },
+          { value: "targets", label: "Targets" },
         ]}
       />
 
@@ -42,8 +44,10 @@ export default function SalesPage() {
         <AccountsView />
       ) : tab === "forecast" ? (
         <ForecastView />
-      ) : (
+      ) : tab === "renewals" ? (
         <RenewalsView />
+      ) : (
+        <TargetsView />
       )}
     </div>
   );
