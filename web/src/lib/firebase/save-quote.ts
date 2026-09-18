@@ -30,6 +30,8 @@ interface SaveMeta {
   quoteId?: string;
   quoteNumber?: string | number;
   status?: string;
+  /** Real link back to the SalesLead this quote was created from, when any. */
+  leadId?: string;
 }
 
 export interface SavedQuoteLane {
@@ -222,6 +224,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     creator: input.creator,
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
+    leadId: input.leadId,
     type: "air",
     route,
     amount,
@@ -381,6 +384,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     creator: input.creator,
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
+    leadId: input.leadId,
     type: "sea",
     route,
     amount,

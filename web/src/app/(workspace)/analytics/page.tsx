@@ -6,6 +6,8 @@ import { Badge, Card } from "@/components/ui";
 import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { formatCurrency } from "@/lib/utils";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
+import { SalesAnalyticsSection } from "@/components/sales/SalesAnalyticsSection";
+import { GuideTipButton } from "@/components/GuideTipButton";
 
 export default function AnalyticsPage() {
   const { data: enquiries = [] } = useEnquiries();
@@ -44,6 +46,9 @@ export default function AnalyticsPage() {
         <BarChart3 className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Analytics</h1>
         <Badge tone="info">Phase 13</Badge>
+        <span className="ml-auto">
+          <GuideTipButton query="win rate" />
+        </span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -99,6 +104,8 @@ export default function AnalyticsPage() {
           </ul>
         </Card>
       </div>
+
+      <SalesAnalyticsSection leads={leads} />
     </div>
   );
 }

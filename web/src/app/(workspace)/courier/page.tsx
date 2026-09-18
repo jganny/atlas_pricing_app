@@ -24,7 +24,6 @@ import {
   COURIER_TARIFF_MAX_KG,
   COURIER_TARIFF_MARKUP_PCT,
   applyCourierTariffMarkup,
-  courierTariffNeedsReupload,
   inferCourierCarrier,
   lookupCourierTariff,
 } from "@/lib/quotes/courier-tariff";
@@ -48,6 +47,7 @@ import {
 import { searchPostalCodes, type PostalHit } from "@/lib/locations/postal-search";
 import { searchLocations, type LocationHit } from "@/lib/locations/search";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 
 function isoFromAirport(hit: LocationHit): string | null {
   const c = (hit.country || "").trim();
@@ -122,6 +122,7 @@ function CourierDeskInner() {
   const queryClient = useQueryClient();
   const loader = useQuoteDeskLoader();
   const { data: tariffBooks = [] } = useCourierTariffs();
+  const customerFieldName = useAntiAutofillName("atlas-party-courier");
   const [tab, setTab] = useState<Tab>("shipment");
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
@@ -365,7 +366,6 @@ function CourierDeskInner() {
     const tax = gstEnabled ? sub * 0.18 : 0;
     return { uploaded, markupPct, markupAmount, base, fuel, extras, tax, total: sub + tax };
   }, [tariff, surcharges, gstEnabled]);
-  const tariffNeedsReupload = tariffBooks.some((b) => courierTariffNeedsReupload(b));
 
   function updatePkg(index: number, patch: Partial<CourierPackageLine>) {
     setPackages((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -455,7 +455,7 @@ function CourierDeskInner() {
         directoryCarrier,
         carrierQuotes: carrierSnaps(),
         chargeableWeight: result.chargeableKg,
-        zone: result.zone,
+        zone: tariff.status === "hit" ? tariff.lane.destinationLabel || tariff.lane.destination : result.zone,
         baseFreight: sell.base,
         gstAmount: sell.tax,
         validity,
@@ -511,7 +511,7 @@ function CourierDeskInner() {
           directoryCarrier,
           carrierQuotes: carrierSnaps(),
           chargeableWeight: result.chargeableKg,
-          zone: result.zone,
+          zone: tariff.status === "hit" ? tariff.lane.destinationLabel || tariff.lane.destination : result.zone,
           baseFreight: sell.base,
           gstAmount: sell.tax,
           validity,
@@ -745,8 +745,9 @@ function CourierDeskInner() {
                 Customer
                 <input
                   id="courier-customer"
-                  name="atlas-customer"
+                  name={customerFieldName}
                   autoComplete="off"
+                  data-1p-ignore="true"
                   className="mt-1 w-full rounded-lg border px-3 py-2"
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
@@ -1075,20 +1076,10 @@ function CourierDeskInner() {
             </p>
           ) : tariff.status === "missing" ? (
             <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              {tariffNeedsReupload ? (
-                <>
-                  The uploaded FedEx Excel was stored as rate numbers instead of zones. Re-upload{" "}
-                  <strong>EXPORT FEDEX RATES</strong> and <strong>IMPORTS RATES</strong> on Circulars,
-                  then select FedEx here with origin, destination, and cargo under {COURIER_TARIFF_MAX_KG}{" "}
-                  kg — the slab fills automatically at +{COURIER_TARIFF_MARKUP_PCT}% on the tariff.
-                </>
-              ) : (
-                <>
-                  No Circulars tariff matched {quotedCarrierName || "this carrier"} for{" "}
-                  {originCountry} → {destCountry} at {result.chargeableKg.toFixed(2)} kg. Select FedEx,
-                  fill cargo, and keep a Jan–Dec Excel (up to {COURIER_TARIFF_MAX_KG} kg) on Circulars.
-                </>
-              )}
+              No Circulars tariff matched {quotedCarrierName || "this carrier"} for{" "}
+              {originCountry} → {destCountry} at {result.chargeableKg.toFixed(2)} kg. Select FedEx,
+              fill cargo under {COURIER_TARIFF_MAX_KG} kg, and keep the Jan–Dec Excel on Circulars.
+              Duplicate uploads are collapsed to the latest file.
             </p>
           ) : (
             <dl className="space-y-2 text-sm">

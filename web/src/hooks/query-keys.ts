@@ -8,4 +8,8 @@ export const queryKeys = {
   circulars: ["circulars"] as const,
   leads: ["leads"] as const,
   credit: ["credit"] as const,
+  accounts: ["accounts"] as const,
+  salesContacts: (accountId: string) => ["salesContacts", accountId] as const,
+  salesTargets: ["salesTargets"] as const,
+  salesTerritories: ["salesTerritories"] as const,
 };

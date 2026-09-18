@@ -23,10 +23,34 @@ export const CARRIER_FACTORS = {
     dtdc: 0.72,
 };
 export const ZONE_TABLE = {
-    IN: { IN: 1, AE: 2, SG: 3, GB: 4, US: 5, DE: 4, AU: 5, CN: 3, HK: 3, default: 6 },
-    AE: { IN: 2, AE: 1, GB: 3, US: 4, DE: 3, SG: 3, default: 5 },
-    US: { US: 1, CA: 2, GB: 3, DE: 3, IN: 5, AE: 4, default: 6 },
-    GB: { GB: 1, DE: 2, FR: 2, US: 3, IN: 4, AE: 3, default: 5 },
+    IN: {
+        IN: 1,
+        AE: 2,
+        BH: 2,
+        QA: 2,
+        KW: 2,
+        OM: 2,
+        SA: 2,
+        SG: 3,
+        CN: 3,
+        HK: 3,
+        GB: 4,
+        DE: 4,
+        FR: 4,
+        NL: 4,
+        AU: 5,
+        US: 5,
+        CA: 5,
+        default: 6,
+    },
+    AE: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, DE: 3, SG: 3, default: 5 },
+    BH: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, DE: 3, default: 5 },
+    QA: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+    KW: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+    OM: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+    SA: { IN: 2, AE: 1, BH: 1, QA: 1, KW: 1, OM: 1, SA: 1, GB: 3, US: 4, default: 5 },
+    US: { US: 1, CA: 2, GB: 3, DE: 3, IN: 5, AE: 4, BH: 4, default: 6 },
+    GB: { GB: 1, DE: 2, FR: 2, US: 3, IN: 4, AE: 3, BH: 3, default: 5 },
     default: { default: 5 },
 };
 export const ZONE_RATES = {
@@ -77,9 +101,11 @@ export function summarizeCourierPackages(packages, dimUnit = "cm") {
         const w = p.w || 0;
         const h = p.h || 0;
         const volPerPiece = (l * w * h) / divisor;
-        const chargeablePerPiece = Math.max(gw, volPerPiece);
-        const chargeable = roundChargeableKg(chargeablePerPiece) * qty;
-        return { ...p, qty, volPerPiece, chargeable };
+        // GW is the line's actual weight (not per-piece). Volume weight uses qty.
+        // Chargeable is the higher of those two — never qty × GW.
+        const volumeWeight = volPerPiece * qty;
+        const chargeable = roundChargeableKg(Math.max(gw, volumeWeight));
+        return { ...p, qty, volPerPiece, volumeWeight, chargeable };
     });
     const total = roundChargeableKg(lines.reduce((s, p) => s + p.chargeable, 0));
     const oversized = lines.some((p) => Math.max(p.l || 0, p.w || 0, p.h || 0) > 120 || (p.l || 0) + (p.w || 0) + (p.h || 0) > 300);

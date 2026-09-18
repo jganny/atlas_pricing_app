@@ -67,6 +67,7 @@ export function stashLeadDeskPrefill(lead: SalesLead) {
       carrierLabel: "",
       tariffFound: false,
       createdAt: Date.now(),
+      leadId: lead.id,
     });
   }
 }

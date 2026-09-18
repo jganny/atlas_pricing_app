@@ -8,6 +8,19 @@ export interface AuthUser {
   email: string
 }
 
+export type EnquiryLegKind = 'airline' | 'coloader' | 'liner' | 'other'
+
+/** One quoted lane/carrier on a quote — multi-lane quotes carry one leg per lane. */
+export interface EnquiryLeg {
+  origin: string
+  destination: string
+  carrier: string
+  kind: EnquiryLegKind
+  laneLabel?: string
+  /** Quoted amount for this lane in the quote currency (multi-lane quotes only). */
+  amount?: number
+}
+
 export interface EnquiryRecord {
   id: string
   ref: string
@@ -38,6 +51,10 @@ export interface EnquiryRecord {
   usedBreak?: string
   billingWeight?: number
   billingUnit?: 'kg' | 'rt' | 'gw'
+  /** Real link back to the SalesLead this quote was created from, when any. */
+  leadId?: string
+  /** Per-lane origin/destination/carrier facts for reporting. */
+  legs?: EnquiryLeg[]
 }
 
 /** Full Firestore quote document (legacy-compatible shape) */
@@ -74,6 +91,8 @@ export interface SavedQuote {
   consigneeAddress?: string
   commodity?: string
   conversionDate?: string
+  /** Real link back to the SalesLead this quote was created from, when any. */
+  leadId?: string
 }
 
 export type QuoteFirestoreStatus = 'quoted' | 'converted' | 'lost' | 'cancelled'
@@ -186,6 +205,81 @@ export interface SalesLead {
   notes?: string
   updatedAt?: string
   createdAt?: string
+  /** Opportunity-pipeline enrichment — all additive/optional, never required. */
+  accountId?: string
+  contactId?: string
+  /** 0-100 override; falls back to STAGE_PROBABILITY[status] when unset. */
+  probability?: number
+  expectedCloseDate?: string
+  lossReasonCode?: string
+  lossReasonNotes?: string
+  wonAt?: string
+  lostAt?: string
+  /** Real relational link to quotes created from this lead. */
+  quoteIds?: string[]
+  territory?: string
+}
+
+/** A customer/prospect company — distinct from the agent/vendor DirectoryContact below. */
+export interface Account {
+  id: string
+  name: string
+  industry?: string
+  website?: string
+  billingAddress?: string
+  primaryContactId?: string
+  owner: string
+  territory?: string
+  accountType?: 'prospect' | 'customer' | 'churned'
+  contractRenewalDate?: string
+  /** Denormalized, refreshed when a linked lead is won. */
+  lastWonAt?: string
+  /** Denormalized, refreshed when a linked lead's quote is created. */
+  lastQuoteAt?: string
+  notes?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** A person at an Account — named to avoid colliding with the unrelated agent/vendor DirectoryContact. */
+export interface SalesContact {
+  id: string
+  accountId: string
+  name: string
+  title?: string
+  email?: string
+  phone?: string
+  isPrimary?: boolean
+  /** Denormalized from the owning Account at write time. */
+  owner: string
+  notes?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** A quota for a rep ("ganny") or a team ("team:air-export") for one period. */
+export interface SalesTarget {
+  id: string
+  owner: string
+  /** "2026-Q4" — quarterly only. */
+  period: string
+  targetRevenue: number
+  targetWinCount?: number
+  notes?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** Lightweight territory tag registry — not a rules engine. */
+export interface SalesTerritory {
+  id: string
+  name: string
+  description?: string
+  ownerUsernames?: string[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface LeadActivity {

@@ -2,6 +2,7 @@
 
 import {
   addDoc,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -44,6 +45,16 @@ function mapLead(id: string, data: Record<string, unknown>): SalesLead {
     notes: data.notes ? String(data.notes) : "",
     updatedAt,
     createdAt: typeof data.createdAt === "string" ? data.createdAt : updatedAt,
+    accountId: data.accountId ? String(data.accountId) : undefined,
+    contactId: data.contactId ? String(data.contactId) : undefined,
+    probability: typeof data.probability === "number" ? data.probability : undefined,
+    expectedCloseDate: data.expectedCloseDate ? String(data.expectedCloseDate) : undefined,
+    lossReasonCode: data.lossReasonCode ? String(data.lossReasonCode) : undefined,
+    lossReasonNotes: data.lossReasonNotes ? String(data.lossReasonNotes) : undefined,
+    wonAt: data.wonAt ? String(data.wonAt) : undefined,
+    lostAt: data.lostAt ? String(data.lostAt) : undefined,
+    quoteIds: Array.isArray(data.quoteIds) ? data.quoteIds.map((q) => String(q)) : undefined,
+    territory: data.territory ? String(data.territory) : undefined,
   };
 }
 
@@ -111,6 +122,16 @@ export async function saveLead(
     contactEmail: input.email?.trim() || "",
     contactPhone: input.phone?.trim() || "",
     notes: input.notes?.trim() || "",
+    accountId: input.accountId || "",
+    contactId: input.contactId || "",
+    probability: input.probability ?? null,
+    expectedCloseDate: input.expectedCloseDate || "",
+    lossReasonCode: input.lossReasonCode || "",
+    lossReasonNotes: input.lossReasonNotes?.trim() || "",
+    wonAt: input.wonAt || "",
+    lostAt: input.lostAt || "",
+    quoteIds: input.quoteIds ?? [],
+    territory: input.territory || "",
     updatedAt: serverTimestamp(),
   };
   if (input.id) {
@@ -126,12 +147,24 @@ export async function saveLead(
 
 export async function updateLeadStatus(id: string, status: LeadStatus): Promise<void> {
   const db = getFirebaseDb();
-  await updateDoc(doc(db, "leads", id), { status, updatedAt: serverTimestamp() });
+  const patch: Record<string, unknown> = { status, updatedAt: serverTimestamp() };
+  if (status === "won") patch.wonAt = new Date().toISOString();
+  if (status === "lost") patch.lostAt = new Date().toISOString();
+  await updateDoc(doc(db, "leads", id), patch);
 }
 
 export async function deleteLead(id: string): Promise<void> {
   const db = getFirebaseDb();
   await deleteDoc(doc(db, "leads", id));
+}
+
+/** Real relational link — appends a quote id without clobbering others already linked. */
+export async function linkQuoteToLead(leadId: string, quoteId: string): Promise<void> {
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, "leads", leadId), {
+    quoteIds: arrayUnion(quoteId),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function fetchLeadActivities(leadId: string): Promise<LeadActivity[]> {

@@ -320,6 +320,7 @@ export function EnquiryInspector({
           open={actionsOpen}
           anchorRef={actionsBtnRef}
           maxHeight={420}
+          fitContent
           backdrop
           onDismiss={() => setActionsOpen(false)}
           testId="edb-actions-overlay"

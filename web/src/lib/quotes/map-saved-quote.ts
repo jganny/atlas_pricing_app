@@ -1,4 +1,4 @@
-import type { EnquiryRecord, SavedQuote } from "@/lib/types";
+import type { EnquiryLeg, EnquiryLegKind, EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { allLanesRoute } from "@/lib/quotes/lanes";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
@@ -96,6 +96,38 @@ function carrierLabel(data: SavedQuote): string {
   return String(d.airline ?? d.shippingLine ?? d.carrierName ?? d.carrier ?? "").trim();
 }
 
+function legKind(opt: Record<string, unknown> | undefined, fallback: EnquiryLegKind): EnquiryLegKind {
+  return String(opt?.kind ?? "") === "coloader" ? "coloader" : fallback;
+}
+
+/** Per-lane reporting facts: multi-lane quotes yield one leg per quoted lane. */
+function buildLegs(data: SavedQuote, origin: string, destination: string, carrier: string): EnquiryLeg[] {
+  const d = data.details || {};
+  const type = (data.type || "").toLowerCase();
+  const fallback: EnquiryLegKind = type.includes("sea") ? "liner" : type.includes("air") ? "airline" : "other";
+  const options = (Array.isArray(d.airlines) ? d.airlines : Array.isArray(d.liners) ? d.liners : []).map(rec);
+  const quoted = Array.isArray(d.quotedLanes) ? d.quotedLanes.map(rec) : [];
+  if (quoted.length > 1) {
+    return quoted.map((q) => {
+      const laneId = String(q.laneId ?? "");
+      const name = String(q.airline ?? q.name ?? "");
+      const opt =
+        options.find((o) => Boolean(o.selected) && String(o.laneId ?? "") === laneId) ??
+        options.find((o) => String(o.name ?? "") === name);
+      return {
+        origin: String(q.origin ?? ""),
+        destination: String(q.destination ?? ""),
+        carrier: name || String(opt?.name ?? ""),
+        kind: legKind(opt, fallback),
+        laneLabel: String(q.laneLabel ?? "") || undefined,
+        amount: num(q.amount),
+      };
+    });
+  }
+  const opt = options.find((o) => Boolean(o.selected)) ?? options.find((o) => String(o.name ?? "") === carrier);
+  return [{ origin, destination, carrier, kind: legKind(opt, fallback) }];
+}
+
 export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
   const createdAt = data.date || String(data.timestamp ?? "");
   const open = isOpenQuoteStatus(data.status);
@@ -134,6 +166,7 @@ export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
     appliedBuyRate: num(data.details?.appliedBuyRate),
     usedBreak: data.details?.usedBreak ? String(data.details.usedBreak) : undefined,
     ...billingMeta(data),
+    legs: buildLegs(data, origin, destination, carrier),
   };
 }
 

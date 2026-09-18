@@ -7,6 +7,10 @@ import { subscribeLiveEnquiries } from "@/lib/firebase/quotes";
 import { subscribeInboxEnquiries } from "@/lib/firebase/inbox";
 import { subscribeDirectoryContacts } from "@/lib/firebase/directory";
 import { subscribeLeads } from "@/lib/firebase/sales";
+import { fetchAccounts, subscribeAccounts } from "@/lib/firebase/accounts";
+import { fetchSalesContacts, subscribeSalesContacts } from "@/lib/firebase/sales-contacts";
+import { fetchSalesTargets, subscribeSalesTargets } from "@/lib/firebase/sales-targets";
+import { fetchSalesTerritories, subscribeSalesTerritories } from "@/lib/firebase/sales-territories";
 import { mockApi } from "@/lib/mock/api";
 import { mergeLocalEnquiries } from "@/lib/quotes/local-enquiries";
 import { mergeCourierTariffBooks } from "@/lib/quotes/courier-tariff";
@@ -207,6 +211,95 @@ export function useLeads() {
   return useQuery({
     queryKey: queryKeys.leads,
     queryFn: () => atlasApi.fetchLeads(),
+    staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useAccounts() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeAccounts(
+      (rows) => queryClient.setQueryData(queryKeys.accounts, rows),
+      (err) => console.warn("Accounts sync:", err.message),
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.accounts,
+    queryFn: () => fetchAccounts(),
+    staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useSalesContacts(accountId: string | undefined) {
+  const enabled = useQueryEnabled() && Boolean(accountId);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData || !accountId) return;
+    const unsub = subscribeSalesContacts(
+      accountId,
+      (rows) => queryClient.setQueryData(queryKeys.salesContacts(accountId), rows),
+      (err) => console.warn("Sales contacts sync:", err.message),
+    );
+    return unsub;
+  }, [enabled, accountId, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.salesContacts(accountId || ""),
+    queryFn: () => fetchSalesContacts(accountId || ""),
+    staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useSalesTargets() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeSalesTargets(
+      (rows) => queryClient.setQueryData(queryKeys.salesTargets, rows),
+      (err) => console.warn("Sales targets sync:", err.message),
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.salesTargets,
+    queryFn: () => fetchSalesTargets(),
+    staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useSalesTerritories() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeSalesTerritories(
+      (rows) => queryClient.setQueryData(queryKeys.salesTerritories, rows),
+      (err) => console.warn("Sales territories sync:", err.message),
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.salesTerritories,
+    queryFn: () => fetchSalesTerritories(),
     staleTime: useLiveData ? Infinity : 60_000,
     retry: 1,
     enabled,

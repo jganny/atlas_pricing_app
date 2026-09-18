@@ -26,6 +26,7 @@ import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "
 import { linerSnapshot } from "@/lib/quotes/option-breakdown";
 import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
+import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariff } from "@/lib/firebase/tariffs";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
@@ -49,8 +50,11 @@ import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
-import { lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
 import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
@@ -82,6 +86,8 @@ function SeaDeskInner() {
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useSeaTariffs();
   const loader = useQuoteDeskLoader("sea");
+  const customerFieldName = useAntiAutofillName("atlas-party-sea");
+  const [leadId, setLeadId] = useState<string | undefined>(undefined);
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -110,6 +116,16 @@ function SeaDeskInner() {
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
   const [liners, setLiners] = useState<LinerOption[]>([createLinerOption({}, true)]);
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "sea",
+    origin,
+    destination,
+    incoterm,
+    currency,
+    module,
+    customer,
+    carrierNames: liners.map((l) => l.name),
+  });
   const [terms, setTerms] = useState(getDefaultFreightTerms("sea"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -121,6 +137,74 @@ function SeaDeskInner() {
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
   }, [activeLaneId, lanes]);
+
+  // Silently fill charge lines that have been consistent across this
+  // customer/route/incoterm/carrier's history — only fields still at their
+  // default (0, or an untouched 0/0 surcharge row) are ever written.
+  useEffect(() => {
+    if (!Object.keys(historicalAutofill.sea).length) return;
+    setLiners((prev) =>
+      prev.map((l) => {
+        if (!l.name.trim()) return l;
+        const result =
+          historicalAutofill.sea[normalizeCarrierName(l.name)] ?? historicalAutofill.sea[""];
+        if (!result) return l;
+
+        let changed = false;
+        const nextContainers = l.containers.map((row) => {
+          const cv = result.containers[normalizeSurchargeName(row.type)];
+          if (!cv) return row;
+          const nextRow = { ...row };
+          if (row.sellRate === 0 && cv.sell !== null) {
+            nextRow.sellRate = cv.sell;
+            changed = true;
+          }
+          if (row.buyRate === 0 && cv.buy !== null) {
+            nextRow.buyRate = cv.buy;
+            changed = true;
+          }
+          return nextRow;
+        });
+
+        let nextLclSell = l.lclSell;
+        let nextLclBuy = l.lclBuy;
+        if (l.lclSell === 0 && result.lcl.sell !== null) {
+          nextLclSell = result.lcl.sell;
+          changed = true;
+        }
+        if (l.lclBuy === 0 && result.lcl.buy !== null) {
+          nextLclBuy = result.lcl.buy;
+          changed = true;
+        }
+
+        const nextOrigin = l.originSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.originSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+        const nextDest = l.destSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.destSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+
+        if (!changed) return l;
+        return {
+          ...l,
+          containers: nextContainers,
+          lclSell: nextLclSell,
+          lclBuy: nextLclBuy,
+          originSurcharges: nextOrigin,
+          destSurcharges: nextDest,
+        };
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.sea]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -216,6 +300,7 @@ function SeaDeskInner() {
       seaTariff: loader.smartPrefill.seaTariff,
       message: "Prefill from Smart Quote / Inbox",
     });
+    if (loader.smartPrefill.leadId) setLeadId(loader.smartPrefill.leadId);
     clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
@@ -524,7 +609,9 @@ function SeaDeskInner() {
               lanes,
               quotedLanes,
               allLanesAmount: amount,
+              leadId,
             });
+            if (leadId) void linkQuoteToLead(leadId, quoteId);
             cloud = "live";
             cacheOfflineQuote({
               id: quoteId,
@@ -739,8 +826,9 @@ function SeaDeskInner() {
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-customer"
+                    name={customerFieldName}
                     autoComplete="off"
+                    data-1p-ignore="true"
                     value={customer}
                     onChange={(e) => setCustomer(e.target.value)}
                     placeholder="Customer name"
@@ -831,6 +919,18 @@ function SeaDeskInner() {
                     placeholder="Blank = 83.5"
                     onKeyDown={(e) => lastFieldTab(e, () => setStep("carrier"))}
                   />
+                  {currency !== "INR" ? (
+                    <span className="mt-1 block text-xs text-[var(--color-text-muted)]" data-testid="custom-fx-preview">
+                      Used only for the INR-equivalent figure saved with this quote (Enquiry DB
+                      reporting) — it doesn&apos;t change the {currency} total shown to the
+                      customer. ≈{" "}
+                      {formatCurrency(
+                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (customFx > 0 ? customFx : 83.5),
+                        "INR",
+                      )}{" "}
+                      at {customFx > 0 ? customFx.toFixed(2) : "83.5 (default)"}
+                    </span>
+                  ) : null}
                 </Label>
               </div>
               <div className="flex justify-end">
@@ -1162,7 +1262,20 @@ function SeaDeskInner() {
                 <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
                   Back
                 </Button>
-                <Button id="sea-next-terms" type="button" onClick={() => setStep("terms")}>
+                <Button
+                  id="sea-next-terms"
+                  type="button"
+                  onClick={() => {
+                    setStep("terms");
+                    focusById("sea-terms-textarea");
+                  }}
+                  onKeyDown={(e) =>
+                    lastFieldTab(e, () => {
+                      setStep("terms");
+                      focusById("sea-terms-textarea");
+                    })
+                  }
+                >
                   Next · Terms
                 </Button>
               </div>
@@ -1172,7 +1285,7 @@ function SeaDeskInner() {
           {step === "terms" ? (
             <Card className="space-y-4">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Terms & conditions</h2>
-              <Textarea className="min-h-56" value={terms} onChange={(e) => setTerms(e.target.value)} />
+              <Textarea id="sea-terms-textarea" className="min-h-56" value={terms} onChange={(e) => setTerms(e.target.value)} />
               <button
                 type="button"
                 className="text-xs font-semibold text-sky-700 hover:underline"

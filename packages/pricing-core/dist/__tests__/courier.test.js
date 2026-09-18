@@ -7,11 +7,30 @@ describe("courier zone & chargeable", () => {
     it("domestic IN lane is zone 1", () => {
         expect(getCourierZone("IN", "IN")).toBe(1);
     });
+    it("India → Bahrain is Gulf zone 2 (not default 6)", () => {
+        expect(getCourierZone("IN", "BH")).toBe(2);
+    });
     it("computes volumetric per piece with 5000 divisor", () => {
         const { chargeableKg } = summarizeCourierPackages([
             { qty: 1, gw: 2, l: 50, w: 40, h: 30 },
         ]);
         expect(chargeableKg).toBe(12);
+    });
+    it("CHW is max(GW, volume weight) and does not multiply GW by qty", () => {
+        // 5 pcs × 30×40×30 cm → VWT 36 kg; GW 50 kg → CHW 50, not 5×50=250
+        const { lines, chargeableKg } = summarizeCourierPackages([
+            { qty: 5, gw: 50, l: 30, w: 40, h: 30 },
+        ]);
+        expect(lines[0].volumeWeight).toBeCloseTo(36, 5);
+        expect(lines[0].chargeable).toBe(50);
+        expect(chargeableKg).toBe(50);
+    });
+    it("uses volume weight when it exceeds GW", () => {
+        const { chargeableKg } = summarizeCourierPackages([
+            { qty: 5, gw: 10, l: 50, w: 40, h: 30 },
+        ]);
+        // VWT = 5 × (50×40×30)/5000 = 60
+        expect(chargeableKg).toBe(60);
     });
 });
 describe("calculateCourierFreight", () => {

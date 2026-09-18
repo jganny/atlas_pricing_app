@@ -42,14 +42,18 @@ import {
 } from "@/lib/quotes/lanes";
 import { useLiveData } from "@/lib/api";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
+import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupAirTariff } from "@/lib/firebase/tariffs";
 import {
+  AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
   computeAirlineTotals,
   validateAirCargo,
   validateSelectedAirline,
   type AirCargoRow,
 } from "@/lib/pricing/air-desk";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
 import {
   createAirlineOption,
   type AirlineOption,
@@ -58,6 +62,8 @@ import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
 import { getDefaultFreightTerms } from "@/lib/pricing/terms";
 import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
+import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
@@ -85,6 +91,7 @@ function AirDeskInner() {
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useAirTariffs();
   const loader = useQuoteDeskLoader("air");
+  const customerFieldName = useAntiAutofillName("atlas-party-air");
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -110,6 +117,16 @@ function AirDeskInner() {
   const [customFx, setCustomFx] = useState(0);
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "air",
+    origin,
+    destination,
+    incoterm,
+    currency,
+    module,
+    customer,
+    carrierNames: airlines.map((a) => a.name),
+  });
   const [editorAirlineId, setEditorAirlineId] = useState<string | null>(null);
   const [showAllBreaksById, setShowAllBreaksById] = useState<Record<string, boolean>>({});
   const [terms, setTerms] = useState(getDefaultFreightTerms("air"));
@@ -120,6 +137,7 @@ function AirDeskInner() {
   const [confirmReset, setConfirmReset] = useState(false);
   const hideAgreement = shouldHideAgencyAgreement(user?.username);
   const [agreementName, setAgreementName] = useState<string | null>(null);
+  const [leadId, setLeadId] = useState<string | undefined>(undefined);
   const prefillApplied = useRef(false);
 
   useEffect(() => {
@@ -134,6 +152,76 @@ function AirDeskInner() {
       return prev.map((a) => (a.laneId ? a : { ...a, laneId: lid }));
     });
   }, [activeLane?.id, lanes]);
+
+  // Silently fill charge lines that have been consistent across this
+  // customer/route/incoterm/carrier's history — only fields still at their
+  // default (0, or an untouched 0/0 surcharge row) are ever written.
+  useEffect(() => {
+    if (!Object.keys(historicalAutofill.air).length) return;
+    setAirlines((prev) =>
+      prev.map((a) => {
+        if (!a.name.trim()) return a;
+        const result =
+          historicalAutofill.air[normalizeCarrierName(a.name)] ?? historicalAutofill.air[""];
+        if (!result) return a;
+
+        let changed = false;
+        const nextBreaks = { ...a.breaks };
+        for (const bn of AIR_WEIGHT_BREAKS) {
+          const cv = result.breaks[bn];
+          if (!cv) continue;
+          const pair = nextBreaks[bn] ?? { sell: 0, buy: 0 };
+          const nextPair = { ...pair };
+          if (pair.sell === 0 && cv.sell !== null) {
+            nextPair.sell = cv.sell;
+            changed = true;
+          }
+          if (pair.buy === 0 && cv.buy !== null) {
+            nextPair.buy = cv.buy;
+            changed = true;
+          }
+          nextBreaks[bn] = nextPair;
+        }
+
+        let nextAms = a.amsFee;
+        let nextAmsBuy = a.amsFeeBuy;
+        if (a.amsFee === 0 && result.ams.sell !== null) {
+          nextAms = result.ams.sell;
+          changed = true;
+        }
+        if (a.amsFeeBuy === 0 && result.ams.buy !== null) {
+          nextAmsBuy = result.ams.buy;
+          changed = true;
+        }
+
+        const nextOrigin = a.originSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.originSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+        const nextDest = a.destSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.destSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+
+        if (!changed) return a;
+        return {
+          ...a,
+          breaks: nextBreaks,
+          amsFee: nextAms,
+          amsFeeBuy: nextAmsBuy,
+          originSurcharges: nextOrigin,
+          destSurcharges: nextDest,
+        };
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.air]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -254,6 +342,7 @@ function AirDeskInner() {
       airBreaks: loader.smartPrefill.airBreaks,
       message: "Prefill from Smart Quote / Inbox",
     });
+    if (loader.smartPrefill.leadId) setLeadId(loader.smartPrefill.leadId);
     clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
@@ -615,7 +704,9 @@ function AirDeskInner() {
               lanes,
               quotedLanes,
               allLanesAmount: amount,
+              leadId,
             });
+            if (leadId) void linkQuoteToLead(leadId, quoteId);
             cloud = "live";
             cacheOfflineQuote({
               id: quoteId,
@@ -678,6 +769,26 @@ function AirDeskInner() {
       totalsById,
     ],
   );
+
+  function goToCarriers() {
+    if (!customer.trim()) {
+      toast("Enter customer name before carriers.", "error");
+      return;
+    }
+    if (!origin.trim() || !destination.trim()) {
+      toast("Enter origin and destination airports before carriers.", "error");
+      return;
+    }
+    const cargoErr = validateAirCargo(cargo);
+    if (cargoErr) {
+      toast(cargoErr, "error");
+      setSaveMsg(cargoErr);
+      return;
+    }
+    setSaveMsg(null);
+    setStep("carrier");
+    focusById("air-step-carrier-anchor");
+  }
 
   useDeskSaveShortcut(() => void handleSave(), !saving);
   useDeskStepKeys({
@@ -840,8 +951,9 @@ function AirDeskInner() {
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-quote-customer"
+                    name={customerFieldName}
                     autoComplete="off"
+                    data-1p-ignore="true"
                     autoCorrect="off"
                     spellCheck={false}
                     data-testid="air-customer"
@@ -896,6 +1008,18 @@ function AirDeskInner() {
                     onChange={(e) => setCustomFx(Number(e.target.value))}
                     placeholder="Leave blank for 83.5"
                   />
+                  {currency !== "INR" ? (
+                    <span className="mt-1 block text-xs text-[var(--color-text-muted)]" data-testid="custom-fx-preview">
+                      Used only for the INR-equivalent figure saved with this quote (Enquiry DB
+                      reporting) — it doesn&apos;t change the {currency} total shown to the
+                      customer. ≈{" "}
+                      {formatCurrency(
+                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (customFx > 0 ? customFx : 83.5),
+                        "INR",
+                      )}{" "}
+                      at {customFx > 0 ? customFx.toFixed(2) : "83.5 (default)"}
+                    </span>
+                  ) : null}
                 </Label>
               </div>
 
@@ -1025,24 +1149,8 @@ function AirDeskInner() {
                 <Button
                   id="air-next-carriers"
                   type="button"
-                  onClick={() => {
-                    if (!customer.trim()) {
-                      toast("Enter customer name before carriers.", "error");
-                      return;
-                    }
-                    if (!origin.trim() || !destination.trim()) {
-                      toast("Enter origin and destination airports before carriers.", "error");
-                      return;
-                    }
-                    const cargoErr = validateAirCargo(cargo);
-                    if (cargoErr) {
-                      toast(cargoErr, "error");
-                      setSaveMsg(cargoErr);
-                      return;
-                    }
-                    setSaveMsg(null);
-                    setStep("carrier");
-                  }}
+                  onClick={goToCarriers}
+                  onKeyDown={(e) => lastFieldTab(e, goToCarriers)}
                 >
                   Next · Carriers
                 </Button>
@@ -1078,7 +1186,11 @@ function AirDeskInner() {
                 />
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-bold text-[var(--color-atlas-navy)]">
+                <h2
+                  id="air-step-carrier-anchor"
+                  tabIndex={-1}
+                  className="font-bold text-[var(--color-atlas-navy)] outline-none"
+                >
                   Carriers on this lane ({laneAirlines.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
@@ -1189,7 +1301,20 @@ function AirDeskInner() {
                 <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
                   Back
                 </Button>
-                <Button id="air-next-terms" type="button" onClick={() => setStep("terms")}>
+                <Button
+                  id="air-next-terms"
+                  type="button"
+                  onClick={() => {
+                    setStep("terms");
+                    focusById("air-terms-textarea");
+                  }}
+                  onKeyDown={(e) =>
+                    lastFieldTab(e, () => {
+                      setStep("terms");
+                      focusById("air-terms-textarea");
+                    })
+                  }
+                >
                   Next · Terms
                 </Button>
               </div>
@@ -1200,6 +1325,7 @@ function AirDeskInner() {
             <Card className="space-y-4">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Terms & conditions</h2>
               <Textarea
+                id="air-terms-textarea"
                 className="min-h-56"
                 value={terms}
                 onChange={(e) => setTerms(e.target.value)}
