@@ -8,6 +8,19 @@ export interface AuthUser {
   email: string
 }
 
+export type EnquiryLegKind = 'airline' | 'coloader' | 'liner' | 'other'
+
+/** One quoted lane/carrier on a quote — multi-lane quotes carry one leg per lane. */
+export interface EnquiryLeg {
+  origin: string
+  destination: string
+  carrier: string
+  kind: EnquiryLegKind
+  laneLabel?: string
+  /** Quoted amount for this lane in the quote currency (multi-lane quotes only). */
+  amount?: number
+}
+
 export interface EnquiryRecord {
   id: string
   ref: string
@@ -40,6 +53,8 @@ export interface EnquiryRecord {
   billingUnit?: 'kg' | 'rt' | 'gw'
   /** Real link back to the SalesLead this quote was created from, when any. */
   leadId?: string
+  /** Per-lane origin/destination/carrier facts for reporting. */
+  legs?: EnquiryLeg[]
 }
 
 /** Full Firestore quote document (legacy-compatible shape) */

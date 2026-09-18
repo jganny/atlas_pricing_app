@@ -1,5 +1,7 @@
 "use client";
 
+import { ReportBuilderPanel } from "@/components/ReportBuilderPanel";
+import { GuideTipButton } from "@/components/GuideTipButton";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Archive, Columns3, Download, Loader2, Search } from "lucide-react";
@@ -107,6 +109,7 @@ function EnquiryDatabaseInner() {
   });
   const [showColumns, setShowColumns] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
   const [metricModes, setMetricModes] = useState<EdbMetricModes>(DEFAULT_EDB_METRIC_MODES);
   const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
@@ -303,6 +306,16 @@ function EnquiryDatabaseInner() {
           >
             {showReports ? "Hide FY" : "FY report"}
           </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="report-builder-toggle"
+            onClick={() => setShowBuilder((v) => !v)}
+          >
+            {showBuilder ? "Hide report builder" : "Report builder"}
+          </Button>
+          <GuideTipButton query="report builder" />
           {admin ? (
             <Button
               type="button"
@@ -383,6 +396,8 @@ function EnquiryDatabaseInner() {
           ))}
         </div>
       ) : null}
+
+      {showBuilder ? <ReportBuilderPanel rows={filtered} /> : null}
 
       {error ? (
         <Card className="border-red-200 bg-red-50">
