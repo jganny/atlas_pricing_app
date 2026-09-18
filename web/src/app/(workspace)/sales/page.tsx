@@ -6,9 +6,10 @@ import { Tabs } from "@/components/ui";
 import { PipelineView } from "@/components/sales/PipelineView";
 import { AccountsView } from "@/components/sales/AccountsView";
 import { ForecastView } from "@/components/sales/ForecastView";
+import { RenewalsView } from "@/components/sales/RenewalsView";
 import { GuideTipButton } from "@/components/GuideTipButton";
 
-type SalesTab = "pipeline" | "accounts" | "forecast";
+type SalesTab = "pipeline" | "accounts" | "forecast" | "renewals";
 
 export default function SalesPage() {
   const [tab, setTab] = useState<SalesTab>("pipeline");
@@ -31,10 +32,19 @@ export default function SalesPage() {
           { value: "pipeline", label: "Pipeline" },
           { value: "accounts", label: "Accounts" },
           { value: "forecast", label: "Forecast" },
+          { value: "renewals", label: "Renewals" },
         ]}
       />
 
-      {tab === "pipeline" ? <PipelineView /> : tab === "accounts" ? <AccountsView /> : <ForecastView />}
+      {tab === "pipeline" ? (
+        <PipelineView />
+      ) : tab === "accounts" ? (
+        <AccountsView />
+      ) : tab === "forecast" ? (
+        <ForecastView />
+      ) : (
+        <RenewalsView />
+      )}
     </div>
   );
 }

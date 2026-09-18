@@ -101,6 +101,20 @@ export const GUIDE: GuideEntry[] = [
     href: "/sales",
   },
   {
+    id: "sales-renewals",
+    title: "Renewals & upsell prompts",
+    path: "/sales",
+    where: "Sales → Renewals",
+    summary: "Lists accounts whose contract renewal is due within 60 days (or overdue) and customer accounts with no quote or win for 90+ days, with a one-click follow-up lead.",
+    steps: [
+      "Set a Contract renewal date and Account type = customer on the Accounts tab.",
+      "Open Sales → Renewals to see who needs attention and why.",
+      "Click Create follow-up lead to add a lead due today; accounts that already have an open lead show 'Open lead exists'.",
+    ],
+    keywords: ["renewal", "renewals", "renew", "upsell", "cross sell", "re-engage", "gone quiet", "inactive", "contract", "agreement expiry", "dormant", "repeat"],
+    href: "/sales",
+  },
+  {
     id: "sales-analytics",
     title: "Win rate, deal size, cycle time & rep leaderboard",
     path: "/analytics",

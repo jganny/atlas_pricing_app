@@ -14,6 +14,8 @@ assert.equal(top("whatsapp not sending pdf"), "share-whatsapp");
 assert.equal(top("charges filled automatically"), "autofill-history");
 assert.equal(top("what does lowest mean"), "multi-lane");
 assert.equal(top("refresh banner"), "refresh-banner");
+assert.equal(top("which customers are due for renewal"), "sales-renewals");
+assert.equal(top("customers who have gone quiet"), "sales-renewals");
 assert.deepEqual(searchGuide("   "), []);
 assert.deepEqual(searchGuide("zzzz qqqq"), []);
 
