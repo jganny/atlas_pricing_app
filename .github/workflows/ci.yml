@@ -1,0 +1,51 @@
+name: CI (test app)
+
+# Quality gate for the Next.js test app (web/ + packages/pricing-core).
+# Never deploys. The legacy app files are not part of this pipeline.
+on:
+  push:
+    paths: ["web/**", "packages/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["web/**", "packages/**", ".github/workflows/ci.yml"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            packages/pricing-core/package-lock.json
+
+      - name: Build pricing-core
+        working-directory: packages/pricing-core
+        run: npm ci && npm run build
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Type check
+        working-directory: web
+        run: npm run typecheck
+
+      - name: Unit tests
+        working-directory: web
+        run: npm test
+
+      - name: Production build
+        working-directory: web
+        run: npm run build
+
+      - name: Dependency audit (fail on critical)
+        working-directory: web
+        run: npm audit --omit=dev --audit-level=critical

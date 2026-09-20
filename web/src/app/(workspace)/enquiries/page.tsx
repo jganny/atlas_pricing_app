@@ -425,6 +425,7 @@ function EnquiryDatabaseInner() {
               Look up
             </Button>
             <select
+              aria-label="Filter by mode"
               className="rounded-md border px-2 py-1.5 text-sm"
               value={modeFilter}
               onChange={(e) => setModeFilter(e.target.value)}
@@ -437,6 +438,7 @@ function EnquiryDatabaseInner() {
               <option value="warehouse">Warehouse</option>
             </select>
             <select
+              aria-label="Filter by desk"
               className="rounded-md border px-2 py-1.5 text-sm"
               value={deskFilter}
               onChange={(e) => setDeskFilter(e.target.value)}

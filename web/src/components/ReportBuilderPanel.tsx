@@ -151,7 +151,12 @@ export function ReportBuilderPanel({ rows }: { rows: EnquiryRecord[] }) {
       {dims.length === 0 ? (
         <p className="text-sm text-[var(--color-text-muted)]">Pick at least one grouping above.</p>
       ) : (
-        <div className="max-h-[26rem] overflow-auto rounded-lg border border-[var(--color-border)]">
+        <div
+          className="max-h-[26rem] overflow-auto rounded-lg border border-[var(--color-border)]"
+          role="region"
+          aria-label="Report results"
+          tabIndex={0}
+        >
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="sticky top-0 border-b bg-slate-50 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
               <tr>

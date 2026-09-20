@@ -477,7 +477,12 @@ export function PipelineView() {
       {isLoading ? (
         <Card>Loading pipeline…</Card>
       ) : view === "list" ? (
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white">
+        <div
+          className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white"
+          role="region"
+          aria-label="Leads table"
+          tabIndex={0}
+        >
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b bg-slate-50 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
               <tr>
