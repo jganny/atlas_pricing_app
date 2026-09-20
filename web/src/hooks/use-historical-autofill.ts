@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useEnquiries } from "@/hooks/use-atlas-data";
+import type { EnquiryRecord } from "@/lib/types";
 import {
   extractAirCharges,
   extractSeaCharges,
@@ -25,6 +26,9 @@ export interface UseHistoricalAutofillInput {
 }
 
 const DEBOUNCE_MS = 500;
+// Stable empty list: `data: enquiries = []` made a NEW array every render while the
+// enquiries query was still loading, re-running the effect below on every render.
+const NO_ENQUIRIES: EnquiryRecord[] = [];
 
 /**
  * Silently, in the background, finds charge lines that have been
@@ -34,7 +38,8 @@ const DEBOUNCE_MS = 500;
  * See historical-autofill.ts for the matching/consistency rules.
  */
 export function useHistoricalAutofill(input: UseHistoricalAutofillInput) {
-  const { data: enquiries = [] } = useEnquiries();
+  const { data } = useEnquiries();
+  const enquiries = data ?? NO_ENQUIRIES;
   const [air, setAir] = useState<Record<string, AirAutofillResult>>({});
   const [sea, setSea] = useState<Record<string, SeaAutofillResult>>({});
   const [loading, setLoading] = useState(false);
@@ -46,8 +51,8 @@ export function useHistoricalAutofill(input: UseHistoricalAutofillInput) {
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (!input.origin.trim() || !input.destination.trim() || !input.incoterm.trim()) {
-      setAir({});
-      setSea({});
+      setAir((cur) => (Object.keys(cur).length ? {} : cur));
+      setSea((cur) => (Object.keys(cur).length ? {} : cur));
       return;
     }
     timer.current = setTimeout(() => {
