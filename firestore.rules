@@ -65,6 +65,25 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSalesAdmin();
     }
+    // Audit trail (test app). Append-only: entries can be created by any signed-in
+    // user but only as themselves (actor must equal the caller's username) and
+    // stamped with server time (no back-dating); nobody can edit or delete them;
+    // only admins can read them. The legacy app never touches this collection.
+    match /auditLog/{entryId} {
+      allow read: if isSalesAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.actor == ownerUsername()
+        && request.resource.data.at == request.time
+        && request.resource.data.keys().hasOnly(['at', 'atIso', 'actor', 'actorRole', 'action',
+             'entityType', 'entityId', 'entityLabel', 'summary', 'changes', 'app', 'version']);
+      allow update, delete: if false;
+    }
+    // Who currently sits in each desk seat (Free Hand, Air Nom, ...) — shared for
+    // everyone instead of living in one browser. Admin-managed; legacy app ignores it.
+    match /deskSeats/{seatId} {
+      allow read: if isSignedIn();
+      allow write: if isSalesAdmin();
+    }
     match /circularsLibrary/{circularId} { allow read, write: if isSignedIn(); }
     match /air_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
     match /sea_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
