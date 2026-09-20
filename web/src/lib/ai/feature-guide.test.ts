@@ -14,6 +14,7 @@ assert.equal(top("whatsapp not sending pdf"), "share-whatsapp");
 assert.equal(top("charges filled automatically"), "autofill-history");
 assert.equal(top("what does lowest mean"), "multi-lane");
 assert.equal(top("refresh banner"), "refresh-banner");
+assert.equal(top("how do I replace the free hand user with a new person"), "desk-seats");
 assert.equal(top("how do I set a quarterly quota for a rep"), "sales-targets");
 assert.equal(top("why is this lead view only"), "sales-permissions");
 assert.equal(top("which customers are due for renewal"), "sales-renewals");

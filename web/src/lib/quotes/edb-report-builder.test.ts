@@ -96,4 +96,12 @@ assert.deepEqual(carrierMonth.map((r) => r.keys.join("|")), ["EK|2026-08", "EK|2
 assert.deepEqual(buildReport(dated, ["fy"], "key").map((r) => r.keys[0]), ["FY 2026-27"]);
 assert.ok(reportToCsv(byMonth, ["month"]).startsWith("Period: Month,Quotes"));
 
+// seat rollup: quotes by the same desk seat group together (default login "kavya" -> Free Hand)
+const bySeat = buildReport(
+  [row({ id: "s1", creator: "kavya", grandTotal: 100 }), row({ id: "s2", creator: "jaya", grandTotal: 50 }), row({ id: "s3", creator: "shashank", grandTotal: 10 })],
+  ["seat"],
+  "key",
+);
+assert.deepEqual(bySeat.map((r) => [r.keys[0], r.quotes]), [["Air Nom", 1], ["Free Hand", 2]]);
+
 console.log("edb-report-builder.test.ts: all assertions passed");

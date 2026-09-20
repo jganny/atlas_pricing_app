@@ -1,12 +1,17 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { HelpFab } from "@/components/HelpFab";
 import { CommandPalette } from "@/components/CommandPalette";
 import { EscapeHandler } from "@/components/EscapeHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastContainer } from "@/components/Toast";
 import { UpdateBanner } from "@/components/UpdateBanner";
+import { subscribeDeskSeats } from "@/lib/firebase/desk-seats";
+import { applyRemoteOccupants } from "@/lib/auth/desk-seats";
+import { deskDisplayName } from "@/lib/quotes/team-roles";
+import { queryKeys } from "@/hooks/query-keys";
+import type { EnquiryRecord } from "@/lib/types";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
 import { initMonitoring } from "@/lib/monitoring/sentry";
 import { useLiveData } from "@/lib/api";
@@ -110,6 +115,25 @@ function AuthSync() {
   return null;
 }
 
+/** Keeps the shared desk-seat names in sync for everyone and refreshes names already on screen. */
+function SeatsSync() {
+  const user = useAuthStore((s) => s.user);
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!useLiveData || !user) return;
+    return subscribeDeskSeats(
+      (rows) => {
+        if (!applyRemoteOccupants(rows)) return;
+        qc.setQueryData<EnquiryRecord[]>(queryKeys.enquiries, (cur) =>
+          cur?.map((r) => ({ ...r, assignee: deskDisplayName(r.creator || "") })),
+        );
+      },
+      (err) => console.warn("Desk seats sync:", err.message),
+    );
+  }, [user, qc]);
+  return null;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -133,6 +157,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <AuthSync />
+        <SeatsSync />
         <EscapeHandler />
         <CommandPalette />
         <HelpFab />

@@ -241,6 +241,20 @@ export const GUIDE: GuideEntry[] = [
     keywords: ["refresh", "update", "banner", "new version", "stale", "cache", "version"],
   },
   {
+    id: "desk-seats",
+    title: "Change the person on a desk (Free Hand, Air Nom, Sea Nom, NRS)",
+    path: "/admin",
+    where: "Admin → Desk seats",
+    summary: "A desk seat is permanent; the person in it can change. Quotes store only the desk's login id, so renaming the person never changes saved quotes — old quotes simply show the new name under the same desk.",
+    steps: [
+      "Admin → Desk seats, find the seat (e.g. Free Hand).",
+      "Keep the Login id as it is (e.g. kavya) and type the new person's name, then Assign occupant.",
+      "Clear to default puts the original name back. Admins only; the change is recorded in the Audit trail.",
+    ],
+    keywords: ["change name", "rename", "replace", "new user", "new person", "occupant", "seat", "free hand", "freehand", "air nom", "sea nom", "nrs", "kavya", "replaced", "desk name"],
+    href: "/admin",
+  },
+  {
     id: "vertex-ask",
     title: "Ask Vertex (find quotes & open desks)",
     path: "/",

@@ -36,6 +36,7 @@ import {
   type AppRouteId,
 } from "@/lib/auth/rbac";
 import { signedInCaption } from "@/lib/auth/desk-seats";
+import { useSeatsVersion } from "@/hooks/use-seats-version";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
@@ -142,6 +143,7 @@ function NavLink({
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  useSeatsVersion();
   const pathname = usePathname() ?? "/";
   const normalized =
     pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;

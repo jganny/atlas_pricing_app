@@ -1,6 +1,7 @@
 import type { EnquiryLeg, EnquiryLegKind, EnquiryRecord } from "@/lib/types";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
+import { seatForLogin } from "@/lib/auth/desk-seats";
 import { PERIOD_GRANULARITIES, parseCreatedAt, periodKey, type PeriodGranularity } from "@/lib/quotes/report-periods";
 
 export type ReportDim =
@@ -14,6 +15,7 @@ export type ReportDim =
   | "status"
   | "customer"
   | "desk"
+  | "seat"
   | PeriodGranularity;
 
 export const REPORT_DIMS: Array<{ id: ReportDim; label: string }> = [
@@ -27,6 +29,7 @@ export const REPORT_DIMS: Array<{ id: ReportDim; label: string }> = [
   { id: "status", label: "Status" },
   { id: "customer", label: "Customer" },
   { id: "desk", label: "Desk / creator" },
+  { id: "seat", label: "Desk seat (Free Hand / Air Nom / Sea Nom / NRS…)" },
   ...PERIOD_GRANULARITIES.map((g) => ({ id: g.id as ReportDim, label: `Period: ${g.label}` })),
 ];
 
@@ -39,6 +42,8 @@ export interface ReportFact {
   status: EnquiryRecord["status"];
   customer: string;
   desk: string;
+  /** Stable desk seat (Free Hand, Air Nom…) — unchanged when the person in the seat changes. */
+  seat: string;
   /** Quote creation time (epoch ms), null when undated. */
   time: number | null;
   leg: EnquiryLeg;
@@ -101,6 +106,7 @@ export function explodeFacts(rows: EnquiryRecord[]): ReportFact[] {
         status: row.status,
         customer: row.customer || "—",
         desk: deskDisplayName(row.creator || row.assignee) || "—",
+        seat: seatForLogin(row.creator || row.assignee)?.label || deskDisplayName(row.creator || row.assignee) || "—",
         time: parseCreatedAt(row.createdAt),
         leg,
         sellInr: sell * share,
@@ -134,6 +140,8 @@ export function dimValue(f: ReportFact, dim: ReportDim): string {
       return f.customer;
     case "desk":
       return f.desk;
+    case "seat":
+      return f.seat;
     default:
       return PERIOD_IDS.has(dim) ? periodKey(f.time, dim as PeriodGranularity) : "—";
   }
