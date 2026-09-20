@@ -361,6 +361,13 @@ function AirDeskInner() {
         return `${block}\n\n${prev}`;
       });
     }
+    if (p.specialHandling?.length) {
+      setTerms((prev) => {
+        const block = `Special handling\n${p.specialHandling!.map((h) => `- ${h}`).join("\n")}`;
+        if (prev.includes(block)) return prev;
+        return `${block}\n\n${prev}`;
+      });
+    }
     if (p.packages.length) {
       setCargo(
         p.packages.map((pkg) => ({

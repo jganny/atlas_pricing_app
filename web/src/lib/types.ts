@@ -130,7 +130,11 @@ export interface ParsedEnquiry {
   commodity?: string
   incoterm?: string
   notes?: string
+  /** Handling requirements found in the enquiry (temperature range, odd size…) — goes into the quote's Terms. */
+  specialHandling?: string[]
   grossWeight?: number
+  /** Volumetric weight as stated by the customer, for cross-checking against the dimensions. */
+  volumetricWeight?: number
   volume?: number
   packages: Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>
   containers: Array<{ type: string; qty: number }>
