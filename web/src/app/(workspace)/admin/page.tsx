@@ -19,6 +19,7 @@ import {
   saveRuntimeFirebaseConfig,
 } from "@/lib/firebase/runtime-config";
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
+import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 import type { CreditControl } from "@/lib/types";
 
@@ -131,6 +132,8 @@ export default function AdminPage() {
       </div>
 
       <DeskSeatsAdmin />
+
+      {admin ? <AuditTrailPanel /> : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

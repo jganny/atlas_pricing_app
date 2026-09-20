@@ -15,6 +15,7 @@ import {
 } from "@/lib/pricing/terms";
 import { getFirebaseDb } from "./client";
 import { omitUndefinedDeep } from "./sanitize";
+import { logAudit } from "./audit-log";
 
 export const DEFAULT_COURIER_TERMS = ensureIncidentalTerm(
   "1. Rates are based on chargeable weight (max of actual vs volumetric per piece).\n" +
@@ -63,6 +64,14 @@ export interface SaveCourierInput extends SaveMeta {
 async function writeQuote(id: string, quoteData: Record<string, unknown>): Promise<string> {
   const db = getFirebaseDb();
   await setDoc(doc(db, "quotes", id), omitUndefinedDeep(quoteData));
+  const ref = String(quoteData.quoteNumber ?? id);
+  logAudit({
+    action: "quote.save",
+    entityType: "quote",
+    entityId: id,
+    entityLabel: `${ref} · ${String(quoteData.customer ?? "")}`,
+    summary: `Saved ${String(quoteData.type ?? "")} quote — ${String(quoteData.currency ?? "")} ${Math.round(Number(quoteData.amount) || 0)} (${String(quoteData.status ?? "quoted")})`,
+  });
   return id;
 }
 

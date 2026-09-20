@@ -9,6 +9,8 @@ import { useSalesContacts, useSalesTerritories } from "@/hooks/use-atlas-data";
 import { canEditAccount } from "@/lib/auth/sales-access";
 import { deleteSalesContact, saveSalesContact } from "@/lib/firebase/sales-contacts";
 import { deleteAccount, saveAccount } from "@/lib/firebase/accounts";
+import { logAudit } from "@/lib/firebase/audit-log";
+import { diffFields } from "@/lib/audit/audit-entry";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { TEAM_ROLES } from "@/lib/quotes/team-roles";
 import type { Account, SalesContact } from "@/lib/types";
@@ -41,6 +43,12 @@ export function AccountDetailPanel({
     setBusy(true);
     try {
       await saveAccount({ ...edit, id: account.id });
+      const changes = diffFields(account as unknown as Record<string, unknown>, edit as unknown as Record<string, unknown>, [
+        "name", "industry", "website", "accountType", "owner", "territory", "contractRenewalDate", "billingAddress", "notes",
+      ]);
+      if (Object.keys(changes).length) {
+        logAudit({ action: "account.update", entityType: "account", entityId: account.id, entityLabel: edit.name, changes });
+      }
       onSaved(edit);
       toast("Account saved", "success");
     } catch (e) {
@@ -55,6 +63,7 @@ export function AccountDetailPanel({
     setBusy(true);
     try {
       await deleteAccount(account.id);
+      logAudit({ action: "account.delete", entityType: "account", entityId: account.id, entityLabel: account.name, summary: `Deleted account ${account.name}` });
       onDeleted();
       toast("Account deleted", "success");
     } catch (e) {
@@ -80,6 +89,7 @@ export function AccountDetailPanel({
         isPrimary: contactForm.isPrimary,
         owner: account.owner,
       });
+      logAudit({ action: "contact.add", entityType: "contact", entityId: account.id, entityLabel: account.name, summary: `Added contact ${contactForm.name} to ${account.name}` });
       setContactForm(EMPTY_CONTACT);
       setAddingContact(false);
       toast("Contact added", "success");
@@ -94,6 +104,7 @@ export function AccountDetailPanel({
     if (!confirm(`Remove contact "${contact.name}"?`)) return;
     try {
       await deleteSalesContact(contact.id);
+      logAudit({ action: "contact.delete", entityType: "contact", entityId: contact.id, entityLabel: account.name, summary: `Removed contact ${contact.name} from ${account.name}` });
       toast("Contact removed", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Could not remove contact", "error");

@@ -6,6 +6,7 @@ import { toast } from "@/components/Toast";
 import { useAccounts, useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
 import { saveLead } from "@/lib/firebase/sales";
+import { logAudit } from "@/lib/firebase/audit-log";
 import {
   RENEWAL_LOOKAHEAD_DAYS,
   STALE_ACCOUNT_DAYS,
@@ -55,7 +56,7 @@ export function RenewalsView() {
     setBusyId(item.account.id);
     try {
       const renewal = item.reasons.some((r) => r !== "gone-quiet");
-      await saveLead({
+      const leadId = await saveLead({
         company: item.account.name,
         accountId: item.account.id,
         status: "new",
@@ -66,6 +67,7 @@ export function RenewalsView() {
         nextDueDate: new Date().toISOString().slice(0, 10),
         territory: item.account.territory,
       });
+      logAudit({ action: "lead.create", entityType: "lead", entityId: leadId, entityLabel: item.account.name, summary: `Follow-up lead from Renewals (${renewal ? "renewal check-in" : "re-engage"})` });
       setCreated((prev) => new Set(prev).add(item.account.id));
       toast(`Follow-up lead created for ${item.account.name}`, "success");
     } catch (e) {

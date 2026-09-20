@@ -6,6 +6,7 @@ import { Badge, Button, Card, Input, Label } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useAccounts } from "@/hooks/use-atlas-data";
 import { saveAccount } from "@/lib/firebase/accounts";
+import { logAudit } from "@/lib/firebase/audit-log";
 import { useAuthStore } from "@/store/auth";
 import type { Account } from "@/lib/types";
 import { AccountDetailPanel } from "./AccountDetailPanel";
@@ -47,6 +48,7 @@ export function AccountsView() {
         owner: user.username,
         accountType: "prospect",
       });
+      logAudit({ action: "account.create", entityType: "account", entityId: id, entityLabel: form.name, summary: `New account ${form.name}` });
       setSelectedId(id);
       setCreating(false);
       setForm(EMPTY_FORM);

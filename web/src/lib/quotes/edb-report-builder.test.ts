@@ -80,4 +80,20 @@ const csv = reportToCsv(byCarrier, ["carrier"]);
 assert.ok(csv.startsWith("Carrier,Quotes,Won,Win rate %,Sell (INR),GP (INR),Tonnes"));
 assert.ok(csv.includes("EK,2,1,50.0,1500"));
 
+// period dimensions: group by month / week, combine with carrier
+const at = (m: number, d: number) => new Date(2026, m - 1, d, 12).getTime();
+const dated = [
+  row({ id: "p1", createdAt: String(at(8, 30)), carrier: "EK", grandTotal: 100, legs: [{ origin: "BOM", destination: "LHR", carrier: "EK", kind: "airline" }] }),
+  row({ id: "p2", createdAt: String(at(9, 1)), carrier: "EK", grandTotal: 200, legs: [{ origin: "BOM", destination: "LHR", carrier: "EK", kind: "airline" }] }),
+  row({ id: "p3", createdAt: String(at(9, 2)), carrier: "TK", grandTotal: 400, legs: [{ origin: "BOM", destination: "IST", carrier: "TK", kind: "airline" }] }),
+];
+const byMonth = buildReport(dated, ["month"], "key");
+assert.deepEqual(byMonth.map((r) => [r.keys[0], r.quotes, Math.round(r.sellInr)]), [["2026-08", 1, 100], ["2026-09", 2, 600]]);
+const byWeek = buildReport(dated, ["week"], "key");
+assert.deepEqual(byWeek.map((r) => r.keys[0]), ["Week of 2026-08-24", "Week of 2026-08-31"]);
+const carrierMonth = buildReport(dated, ["carrier", "month"], "key");
+assert.deepEqual(carrierMonth.map((r) => r.keys.join("|")), ["EK|2026-08", "EK|2026-09", "TK|2026-09"]);
+assert.deepEqual(buildReport(dated, ["fy"], "key").map((r) => r.keys[0]), ["FY 2026-27"]);
+assert.ok(reportToCsv(byMonth, ["month"]).startsWith("Period: Month,Quotes"));
+
 console.log("edb-report-builder.test.ts: all assertions passed");

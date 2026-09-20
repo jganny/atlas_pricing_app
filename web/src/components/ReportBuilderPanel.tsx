@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
-import { Button, Card, Select } from "@/components/ui";
+import { Button, Card, Input, Select } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import {
   REPORT_DIMS,
@@ -11,6 +11,7 @@ import {
   type ReportDim,
   type ReportSort,
 } from "@/lib/quotes/edb-report-builder";
+import { RANGE_PRESETS, filterByRange, rangeForPreset, type RangePreset } from "@/lib/quotes/report-periods";
 import type { EnquiryLegKind, EnquiryRecord } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -26,16 +27,29 @@ const PRESETS: Array<{ label: string; dims: ReportDim[]; kind?: KindFilter }> = 
   { label: "Lane × Carrier", dims: ["lane", "carrier"] },
   { label: "Carrier × Tonnage", dims: ["carrier", "tonnage"] },
   { label: "Customer × Carrier", dims: ["customer", "carrier"] },
+  { label: "Daily", dims: ["day"] },
+  { label: "Weekly", dims: ["week"] },
+  { label: "Fortnightly", dims: ["fortnight"] },
+  { label: "Monthly", dims: ["month"] },
+  { label: "Quarterly", dims: ["quarter"] },
+  { label: "Financial year", dims: ["fy"] },
+  { label: "Yearly", dims: ["year"] },
+  { label: "Carrier × Month", dims: ["carrier", "month"] },
+  { label: "Lane × Month", dims: ["lane", "month"] },
 ];
 
 export function ReportBuilderPanel({ rows }: { rows: EnquiryRecord[] }) {
   const [dims, setDims] = useState<ReportDim[]>(["carrier"]);
   const [kind, setKind] = useState<KindFilter>("all");
   const [sort, setSort] = useState<ReportSort>("sell");
+  const [preset, setPreset] = useState<RangePreset>("all");
+  const [custom, setCustom] = useState({ from: "", to: "" });
 
+  const range = useMemo(() => rangeForPreset(preset, Date.now(), custom), [preset, custom]);
+  const scoped = useMemo(() => filterByRange(rows, range), [rows, range]);
   const report = useMemo(
-    () => buildReport(rows, dims, sort, { carrierKind: kind }),
-    [rows, dims, sort, kind],
+    () => buildReport(scoped, dims, sort, { carrierKind: kind }),
+    [scoped, dims, sort, kind],
   );
   const totals = useMemo(
     () =>
@@ -59,7 +73,8 @@ export function ReportBuilderPanel({ rows }: { rows: EnquiryRecord[] }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `atlas-report-${dims.join("-")}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const span = range ? `-${range.label.replace(/[^A-Za-z0-9-]+/g, "_")}` : "";
+    a.download = `atlas-report-${dims.join("-")}${span}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -72,8 +87,9 @@ export function ReportBuilderPanel({ rows }: { rows: EnquiryRecord[] }) {
       <div>
         <h2 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">Report builder</h2>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Groups the {rows.length} quotes in your current Enquiry DB view (filters above apply). Multi-lane quotes are
-          counted per lane, with revenue split by each lane&apos;s share. Sell/GP in INR.
+          Groups {scoped.length} of the {rows.length} quotes in your current Enquiry DB view
+          {range ? ` (${range.label})` : ""}. Filters above apply first. Multi-lane quotes are counted per lane, with
+          revenue split by each lane&apos;s share. Sell/GP in INR.
         </p>
       </div>
 
@@ -122,6 +138,28 @@ export function ReportBuilderPanel({ rows }: { rows: EnquiryRecord[] }) {
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs font-semibold">
+          Date range
+          <Select value={preset} onChange={(e) => setPreset(e.target.value as RangePreset)} className="w-60">
+            {RANGE_PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </Select>
+        </label>
+        {preset === "custom" ? (
+          <>
+            <label className="text-xs font-semibold">
+              From
+              <Input type="date" value={custom.from} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} className="w-40" />
+            </label>
+            <label className="text-xs font-semibold">
+              To
+              <Input type="date" value={custom.to} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} className="w-40" />
+            </label>
+          </>
+        ) : null}
         <label className="text-xs font-semibold">
           Carrier type
           <Select value={kind} onChange={(e) => setKind(e.target.value as KindFilter)} className="w-40">

@@ -1,6 +1,7 @@
 import type { EnquiryLeg, EnquiryLegKind, EnquiryRecord } from "@/lib/types";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
+import { PERIOD_GRANULARITIES, parseCreatedAt, periodKey, type PeriodGranularity } from "@/lib/quotes/report-periods";
 
 export type ReportDim =
   | "mode"
@@ -13,7 +14,7 @@ export type ReportDim =
   | "status"
   | "customer"
   | "desk"
-  | "month";
+  | PeriodGranularity;
 
 export const REPORT_DIMS: Array<{ id: ReportDim; label: string }> = [
   { id: "mode", label: "Mode" },
@@ -26,8 +27,10 @@ export const REPORT_DIMS: Array<{ id: ReportDim; label: string }> = [
   { id: "status", label: "Status" },
   { id: "customer", label: "Customer" },
   { id: "desk", label: "Desk / creator" },
-  { id: "month", label: "Month" },
+  ...PERIOD_GRANULARITIES.map((g) => ({ id: g.id as ReportDim, label: `Period: ${g.label}` })),
 ];
+
+const PERIOD_IDS = new Set<string>(PERIOD_GRANULARITIES.map((g) => g.id));
 
 /** One quoted lane of one quote — the unit reports group over. */
 export interface ReportFact {
@@ -36,7 +39,8 @@ export interface ReportFact {
   status: EnquiryRecord["status"];
   customer: string;
   desk: string;
-  month: string;
+  /** Quote creation time (epoch ms), null when undated. */
+  time: number | null;
   leg: EnquiryLeg;
   sellInr: number;
   gpInr: number;
@@ -65,13 +69,6 @@ export function tonnageBand(tonnes: number | null): string {
   if (tonnes < 5) return "1 – 5 t";
   if (tonnes < 20) return "5 – 20 t";
   return "20 t +";
-}
-
-function monthOf(createdAt: string): string {
-  const n = Number(createdAt);
-  const t = Number.isFinite(n) && n > 1e11 ? n : Date.parse(createdAt);
-  if (!Number.isFinite(t)) return "Undated";
-  return new Date(t).toISOString().slice(0, 7);
 }
 
 function portCode(v: string): string {
@@ -104,7 +101,7 @@ export function explodeFacts(rows: EnquiryRecord[]): ReportFact[] {
         status: row.status,
         customer: row.customer || "—",
         desk: deskDisplayName(row.creator || row.assignee) || "—",
-        month: monthOf(row.createdAt),
+        time: parseCreatedAt(row.createdAt),
         leg,
         sellInr: sell * share,
         gpInr: gp * share,
@@ -137,8 +134,8 @@ export function dimValue(f: ReportFact, dim: ReportDim): string {
       return f.customer;
     case "desk":
       return f.desk;
-    case "month":
-      return f.month;
+    default:
+      return PERIOD_IDS.has(dim) ? periodKey(f.time, dim as PeriodGranularity) : "—";
   }
 }
 

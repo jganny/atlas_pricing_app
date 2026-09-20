@@ -8,6 +8,7 @@ import { useLeads, useSalesTargets, useSalesTerritories } from "@/hooks/use-atla
 import { useAuthStore } from "@/store/auth";
 import { canManageSalesTargets, canManageTerritories } from "@/lib/auth/sales-access";
 import { deleteSalesTarget, saveSalesTarget } from "@/lib/firebase/sales-targets";
+import { logAudit } from "@/lib/firebase/audit-log";
 import { deleteSalesTerritory, saveSalesTerritory } from "@/lib/firebase/sales-territories";
 import { currentPeriod, periodLabel, periodOptions, quotaProgress } from "@/lib/sales/quota-progress";
 import { TEAM_ROLES } from "@/lib/quotes/team-roles";
@@ -78,6 +79,13 @@ export function TargetsView() {
         notes: form.notes,
         createdBy: user?.username,
       });
+      logAudit({
+        action: "target.save",
+        entityType: "target",
+        entityId: existing?.id || `${form.owner}:${period}`,
+        entityLabel: `${ownerLabel(form.owner)} · ${periodLabel(period)}`,
+        summary: `${existing ? "Updated" : "Set"} target: revenue ${form.targetRevenue}${form.targetWinCount ? `, wins ${form.targetWinCount}` : ""}${existing ? ` (was revenue ${existing.targetRevenue})` : ""}`,
+      });
       toast(existing ? "Target updated" : "Target added", "success");
       setForm({ owner: form.owner, targetRevenue: 0, targetWinCount: 0, notes: "" });
     } catch (e) {
@@ -91,6 +99,7 @@ export function TargetsView() {
     if (!confirm(`Delete the ${periodLabel(t.period)} target for ${ownerLabel(t.owner)}?`)) return;
     try {
       await deleteSalesTarget(t.id);
+      logAudit({ action: "target.delete", entityType: "target", entityId: t.id, entityLabel: `${ownerLabel(t.owner)} · ${periodLabel(t.period)}`, summary: `Deleted target (revenue ${t.targetRevenue})` });
       toast("Target deleted", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Could not delete target", "error");
@@ -113,6 +122,7 @@ export function TargetsView() {
         description: terrForm.description,
         ownerUsernames: terrForm.members,
       });
+      logAudit({ action: "territory.add", entityType: "territory", entityId: terrForm.name.trim().toLowerCase(), entityLabel: terrForm.name, summary: `Added territory ${terrForm.name} (${terrForm.members.length} members)` });
       setTerrForm({ name: "", description: "", members: [] });
       toast("Territory added", "success");
     } catch (e) {
@@ -261,7 +271,9 @@ export function TargetsView() {
                     aria-label={`Delete ${t.name}`}
                     onClick={() => {
                       if (confirm(`Delete territory "${t.name}"?`)) {
-                        void deleteSalesTerritory(t.id).catch((e) => toast(e instanceof Error ? e.message : "Could not delete", "error"));
+                        void deleteSalesTerritory(t.id)
+                          .then(() => logAudit({ action: "territory.delete", entityType: "territory", entityId: t.id, entityLabel: t.name, summary: `Deleted territory ${t.name}` }))
+                          .catch((e) => toast(e instanceof Error ? e.message : "Could not delete", "error"));
                       }
                     }}
                   >

@@ -11,6 +11,8 @@ import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/u
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { canEditLead } from "@/lib/auth/sales-access";
+import { logAudit } from "@/lib/firebase/audit-log";
+import { diffFields } from "@/lib/audit/audit-entry";
 import { useLiveData } from "@/lib/api";
 import {
   addLeadActivity,
@@ -160,6 +162,15 @@ export function PipelineView() {
           l.id === id ? { ...l, status, updatedAt: new Date().toISOString() } : l,
         ),
       );
+      if (target && target.status !== status) {
+        logAudit({
+          action: "lead.status",
+          entityType: "lead",
+          entityId: id,
+          entityLabel: target.company,
+          changes: { status: { from: target.status, to: status } },
+        });
+      }
       toast(`Moved to ${status}`, "success");
     } finally {
       setBusy(false);
@@ -206,6 +217,7 @@ export function PipelineView() {
         createdAt: new Date().toISOString(),
       };
       queryClient.setQueryData(queryKeys.leads, [row, ...leads]);
+      logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: `New lead ${row.company}` });
       setCreating(false);
       setForm({ ...EMPTY_FORM, owner: user?.username || "" });
       toast("Lead created", "success");
@@ -272,6 +284,16 @@ export function PipelineView() {
     try {
       const { id, updatedAt: _updatedAt, createdAt: _createdAt, ...rest } = editForm;
       await saveLead({ ...rest, id });
+      const before = leads.find((l) => l.id === id);
+      const changes = before
+        ? diffFields(before as unknown as Record<string, unknown>, editForm as unknown as Record<string, unknown>, [
+            "company", "contactName", "phone", "email", "dealValue", "nextAction", "nextDueDate",
+            "accountId", "contactId", "probability", "expectedCloseDate", "lossReasonCode", "lossReasonNotes",
+          ])
+        : {};
+      if (Object.keys(changes).length) {
+        logAudit({ action: "lead.update", entityType: "lead", entityId: id, entityLabel: editForm.company, changes });
+      }
       queryClient.setQueryData(
         queryKeys.leads,
         leads.map((l) => (l.id === id ? { ...editForm, updatedAt: new Date().toISOString() } : l)),
