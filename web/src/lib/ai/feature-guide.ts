@@ -255,6 +255,20 @@ export const GUIDE: GuideEntry[] = [
     href: "/admin",
   },
   {
+    id: "error-monitor",
+    title: "Error monitor & crash reference codes",
+    path: "/admin",
+    where: "Admin → Error monitor",
+    summary: "When the app crashes or hits an unexpected error for a signed-in user, it is recorded automatically and grouped into distinct problems. The crash screen shows a reference code that matches the code in the monitor.",
+    steps: [
+      "Admin → Error monitor shows problems by how often, who, which version and when last seen.",
+      "Click a row for the technical detail; Resolve removes it once fixed.",
+      "If a user reports a crash, ask for the reference code shown on their screen.",
+    ],
+    keywords: ["error", "errors", "crash", "crashed", "something went wrong", "bug", "monitor", "monitoring", "reference", "broken", "exception"],
+    href: "/admin",
+  },
+  {
     id: "vertex-ask",
     title: "Ask Vertex (find quotes & open desks)",
     path: "/",

@@ -20,6 +20,7 @@ import {
 } from "@/lib/firebase/runtime-config";
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
 import { AuditTrailPanel } from "@/components/AuditTrailPanel";
+import { ErrorMonitorPanel } from "@/components/ErrorMonitorPanel";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 import type { CreditControl } from "@/lib/types";
 
@@ -132,6 +133,8 @@ export default function AdminPage() {
       </div>
 
       <DeskSeatsAdmin />
+
+      {admin ? <ErrorMonitorPanel /> : null}
 
       {admin ? <AuditTrailPanel /> : null}
 
