@@ -245,9 +245,9 @@ export const GUIDE: GuideEntry[] = [
     title: "Ask Vertex (find quotes & open desks)",
     path: "/",
     where: "Sparkle button, bottom-right (or ⌘?)",
-    summary: "Type a customer, lane or 'new air quote BOM to LHR' and Vertex opens the right screen.",
+    summary: "Type a customer, lane or 'new air quote BOM to LHR' and Vertex opens the right screen. In the Vertex Guide box, type a how-do-I question and press Ask AI for a written answer (only your question and guide text are sent — never quote or customer data).",
     steps: ["Press ⌘? or click the sparkle button and type what you need."],
-    keywords: ["ask", "vertex", "search", "find quote", "assistant", "help", "open"],
+    keywords: ["ask", "vertex", "search", "find quote", "assistant", "help", "open", "ai", "ask ai", "chat"],
   },
 ];
 

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { HelpCircle, Sparkles } from "lucide-react";
+import { HelpCircle, Loader2, Sparkles } from "lucide-react";
+import { useAuthStore } from "@/store/auth";
+import { useLiveData } from "@/lib/api";
+import { askCopilot } from "@/lib/ai/copilot";
 import { GUIDE, searchGuide, tipsForPath, type GuideEntry } from "@/lib/ai/feature-guide";
 
 const SUGGESTIONS = [
@@ -59,12 +62,29 @@ export function FeatureGuide({
   initialQuery?: string;
   onNavigate: () => void;
 }) {
+  const user = useAuthStore((s) => s.user);
   const [query, setQuery] = useState(initialQuery);
+  const [ai, setAi] = useState<{ status: "idle" | "loading" | "done" | "error"; text: string }>({ status: "idle", text: "" });
   useEffect(() => setQuery(initialQuery), [initialQuery]);
+  // a new question invalidates the previous AI answer
+  useEffect(() => setAi({ status: "idle", text: "" }), [query]);
 
   const hits = searchGuide(query, pathname);
   const tips = tipsForPath(pathname);
   const asked = query.trim().length > 0;
+  const canAskAi = useLiveData && Boolean(user) && query.trim().length >= 4;
+
+  async function askAi() {
+    if (ai.status === "loading") return;
+    setAi({ status: "loading", text: "" });
+    try {
+      const entries = (hits.length ? hits.map((h) => h.entry) : tips).slice(0, 3);
+      const reply = await askCopilot({ question: query, entries, pathname, role: user?.role });
+      setAi({ status: "done", text: reply });
+    } catch (e) {
+      setAi({ status: "error", text: e instanceof Error ? e.message : "Could not reach the AI assistant." });
+    }
+  }
 
   return (
     <div className="space-y-2" data-testid="feature-guide">
@@ -79,6 +99,40 @@ export function FeatureGuide({
         aria-label="Ask the Vertex Guide"
         className="w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs"
       />
+
+      {canAskAi ? (
+        <button
+          type="button"
+          data-testid="guide-ask-ai"
+          disabled={ai.status === "loading"}
+          onClick={() => void askAi()}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--color-atlas-navy)] px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
+        >
+          {ai.status === "loading" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          {ai.status === "loading" ? "Thinking…" : "Ask AI"}
+        </button>
+      ) : null}
+
+      {ai.status === "done" || ai.status === "error" ? (
+        <div
+          data-testid="guide-ai-answer"
+          className={
+            ai.status === "error"
+              ? "rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800"
+              : "rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs"
+          }
+        >
+          {ai.status === "done" ? (
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-sky-900">AI answer</div>
+          ) : null}
+          <p className="whitespace-pre-wrap leading-relaxed">{ai.text}</p>
+          {ai.status === "done" ? (
+            <p className="mt-2 text-[10px] text-[var(--color-text-muted)]">
+              AI can be wrong — check the steps below or ask an admin. Only your question and the guide text were sent; none of your quotes, leads or customers.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {asked ? (
         hits.length ? (
