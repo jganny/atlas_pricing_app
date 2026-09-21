@@ -1180,8 +1180,22 @@ async function editSignInId(internalId) {
     return;
   }
   const reservedIds = ['admin', 'ganny', 'manager', 'mahendra'];
-  const otherLogin = next !== id && (TEAM_ROLES[next] || (window._firebaseUsers || []).some(u => u && String(u.username).toLowerCase() === next));
-  if (reservedIds.includes(next) || otherLogin) { alert(`"${next}" is already a login ID. Please choose another.`); return; }
+  if (reservedIds.includes(next)) { alert(`"${next}" is reserved. Please choose another.`); return; }
+  // "next" may already be some login's internal id. That is fine for a DESK seat
+  // that no longer signs in with it (its own sign-in ID was changed) — the seat
+  // keeps its data under the internal id and nobody types that name any more.
+  // It is not fine for an ordinary user login (e.g. a personal Free Hand
+  // account) or for a seat that still signs in with that very name.
+  const holderIsKnown = next !== id && (TEAM_ROLES[next] || (window._firebaseUsers || []).some(u => u && String(u.username).toLowerCase() === next));
+  if (holderIsKnown) {
+    const isDeskSeat = !!(TEAM_ROLES[next] && /NOMINATION|NRS|FREE HAND/i.test(String(TEAM_ROLES[next].category || '')) && (next in SEAT_LOGIN_ALIASES || ['shashank', 'shaheer', 'cathrina', 'kavya'].includes(next)));
+    const holderStillUsesIt = String(signInIdFor(next)).toLowerCase() === next;
+    if (!isDeskSeat) { alert(`"${next}" is an existing person's login. Please choose another ID.`); return; }
+    if (holderStillUsesIt) {
+      alert(`"${next}" is the current sign-in ID of the ${deskLabelWithPerson(next)} desk.\n\nGive that desk a different sign-in ID first (Edit ID on its row), then you can use "${next}" here.`);
+      return;
+    }
+  }
   if (next !== id && await isLoginIdTaken(next)) {
     const rec = await fetchLoginAlias(next);
     const owner = rec ? String(rec.target || '').toLowerCase() : SEAT_LOGIN_ALIASES[next];
