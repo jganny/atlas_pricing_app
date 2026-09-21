@@ -9979,3 +9979,80 @@ body:has(#courier-panel.active) .grid-overlay { display: none; }
 .atlas-sq-drop-label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--t1); }
 .atlas-sq-drop-hint { display: block; font-size: 0.65rem; color: var(--t3); margin-top: 0.15rem; }
 .atlas-sq-filename { display: block; font-size: 0.68rem; font-weight: 700; color: #0369a1; margin-top: 0.35rem; }
+
+/* ══════════════════════════════════════════════════
+   AIR + SEA DESK — RATES & FEES POPUP: UNCONGEST THE PILLS (v129.49)
+   Visual only — no calculation, data or save-path changes.
+   Inside the rates popups the Sell/Buy pills, surcharge names and billing
+   units were squeezed (the popup was capped at 720px and every input carried
+   the global 10px side padding), so numbers like 1234.56 and names like
+   "Terminal Handling Charges" were cut off. Fixes: a wider popup, roomier
+   fixed pill widths with slim padding, no number spinners eating the width,
+   and minimum widths on the surcharge table columns (it scrolls sideways
+   inside its own container instead of squashing on smaller screens).
+══════════════════════════════════════════════════ */
+.airline-rate-modal-dialog,
+.liner-rate-modal-dialog {
+  max-width: min(96vw, 960px) !important;
+}
+
+/* Weight-break Sell / Buy pills (Air) */
+.break-sell-rate-input,
+.break-buy-rate-input {
+  width: 96px !important;
+  padding: 0.25rem 0.45rem !important;
+  font-size: 0.8rem !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hide the tiny number spinners in the pills and rate columns — they took
+   ~15px of an already narrow box and hid the last digits. */
+.break-sell-rate-input,
+.break-buy-rate-input,
+.airline-rate-modal-dialog .chg-rate,
+.airline-rate-modal-dialog .chg-buy-rate,
+.liner-rate-modal-dialog .chg-rate,
+.liner-rate-modal-dialog .chg-buy-rate,
+.liner-rate-modal-dialog .fcl-qty,
+.liner-rate-modal-dialog .fcl-sell-rate,
+.liner-rate-modal-dialog .fcl-buy-rate {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.break-sell-rate-input::-webkit-outer-spin-button,
+.break-sell-rate-input::-webkit-inner-spin-button,
+.break-buy-rate-input::-webkit-outer-spin-button,
+.break-buy-rate-input::-webkit-inner-spin-button,
+.airline-rate-modal-dialog .chg-rate::-webkit-outer-spin-button,
+.airline-rate-modal-dialog .chg-rate::-webkit-inner-spin-button,
+.airline-rate-modal-dialog .chg-buy-rate::-webkit-outer-spin-button,
+.airline-rate-modal-dialog .chg-buy-rate::-webkit-inner-spin-button,
+.liner-rate-modal-dialog .chg-rate::-webkit-outer-spin-button,
+.liner-rate-modal-dialog .chg-rate::-webkit-inner-spin-button,
+.liner-rate-modal-dialog .chg-buy-rate::-webkit-outer-spin-button,
+.liner-rate-modal-dialog .chg-buy-rate::-webkit-inner-spin-button,
+.liner-rate-modal-dialog .fcl-qty::-webkit-outer-spin-button,
+.liner-rate-modal-dialog .fcl-qty::-webkit-inner-spin-button,
+.liner-rate-modal-dialog .fcl-sell-rate::-webkit-outer-spin-button,
+.liner-rate-modal-dialog .fcl-sell-rate::-webkit-inner-spin-button,
+.liner-rate-modal-dialog .fcl-buy-rate::-webkit-outer-spin-button,
+.liner-rate-modal-dialog .fcl-buy-rate::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Surcharge tables (Origin / Destination) in both popups: give every column
+   enough room for what is typed in it. */
+.airline-rate-modal-dialog .chg-name,
+.liner-rate-modal-dialog .chg-name { min-width: 210px; }
+.airline-rate-modal-dialog .chg-rate,
+.airline-rate-modal-dialog .chg-buy-rate,
+.liner-rate-modal-dialog .chg-rate,
+.liner-rate-modal-dialog .chg-buy-rate { min-width: 96px; text-align: right; font-variant-numeric: tabular-nums; }
+.airline-rate-modal-dialog .chg-unit,
+.liner-rate-modal-dialog .chg-unit { min-width: 108px; }
+.airline-rate-modal-dialog .chg-remarks,
+.liner-rate-modal-dialog .chg-remarks { min-width: 130px; }
+.airline-rate-modal-dialog .cargo-table,
+.liner-rate-modal-dialog .cargo-table { min-width: 860px; }

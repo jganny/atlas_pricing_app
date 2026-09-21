@@ -51,6 +51,20 @@ const TEAM_ROLES = {
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
 
+// Person renames on desk logins (display only). The login ids — and therefore
+// the `creator` saved on every quote — never change; only the name shown for
+// that login does, so all saved quotes stay exactly as they were.
+//   kavya    → Cathrina   (the person now on the kavya login)
+//   cathrina → Jabeena    (the person now on the cathrina login)
+// A single pass keyed by login id, so re-applying it is harmless (a name that
+// is already renamed stays put, and Kavya never chains on to Jabeena).
+function deskPersonDisplayName(loginId, name) {
+  const renames = { kavya: 'Cathrina', cathrina: 'Jabeena' };
+  const to = renames[String(loginId || '').toLowerCase()];
+  if (!to || typeof name !== 'string') return name;
+  return name.replace(/\b(kavya|cathrina)\b/gi, to);
+}
+
 // Resolves which desk role is currently active for terms purposes — same
 // "viewing as" resolution as updateCurrencyRules: ganny/manager can be
 // viewing a specific desk via the role switcher, so prefer that over the
@@ -89,7 +103,7 @@ if (savedNames) {
       TEAM_ROLES["shaheer"].name = (nameVal.toLowerCase() === 'shaheer') ? 'Sea Nomination' : nameVal;
     }
     if (parsed["jaya"]) TEAM_ROLES["jaya"].name = parsed["jaya"];
-    if (parsed["cathrina"]) TEAM_ROLES["cathrina"].name = parsed["cathrina"];
+    if (parsed["cathrina"]) TEAM_ROLES["cathrina"].name = deskPersonDisplayName("cathrina", parsed["cathrina"]);
   } catch (e) {
     console.error("Failed to load saved desk names", e);
   }
@@ -109,7 +123,7 @@ function loadCustomUsers() {
         const storedCategory = u.category || 'FREE HAND SALES (AIR/SEA)';
         const storedCurrency = u.currency || 'INR';
         // Strip legacy '(Free Hand)' suffix stored in older snapshots
-        const storedName = (u.fullName || lowerUser).replace(/\s*\(Free\s*Hand\)/i, '').trim();
+        const storedName = deskPersonDisplayName(lowerUser, (u.fullName || lowerUser).replace(/\s*\(Free\s*Hand\)/i, '').trim());
         TEAM_ROLES[lowerUser] = {
           name: storedName,
           type: u.role || 'member',
@@ -841,7 +855,7 @@ function loginSuccess(roleId) {
     const fbMatch = fbUsers.find(u => u && u.username && u.username.toLowerCase() === roleIdLower);
     if (fbMatch) {
       firestoreProfile = {
-        name: (fbMatch.fullName || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, '').trim(),
+        name: deskPersonDisplayName(roleIdLower, (fbMatch.fullName || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, '').trim()),
         type: fbMatch.role || 'member',
         category: fbMatch.category || 'FREE HAND SALES (AIR/SEA)',
         currency: fbMatch.currency || 'INR'
@@ -972,7 +986,7 @@ function renderUserCredentialsList() {
       }
       allUsersMap[usernameLower] = {
         username: u.username,
-        fullName: u.fullName || u.username,
+        fullName: deskPersonDisplayName(u.username, u.fullName || u.username),
         role: u.role || 'member',
         category: u.category || 'FREE HAND SALES (AIR/SEA)'
       };
@@ -1202,7 +1216,7 @@ function switchRole(role) {
       const fbUsers = window._firebaseUsers || [];
       const fbMatch = fbUsers.find(u => u && u.username && u.username.toLowerCase() === roleLower);
       TEAM_ROLES[roleLower] = fbMatch ? {
-        name: (fbMatch.fullName || roleLower).replace(/\s*\(Free\s*Hand\)/i, '').trim(),
+        name: deskPersonDisplayName(roleLower, (fbMatch.fullName || roleLower).replace(/\s*\(Free\s*Hand\)/i, '').trim()),
         type: 'member',
         category: fbMatch.category || 'FREE HAND SALES (AIR/SEA)',
         currency: fbMatch.currency || 'INR'
@@ -13402,7 +13416,7 @@ const DB = {
 
             // Update TEAM_ROLES dynamically with case-insensitive lowercase keys
             TEAM_ROLES[lowerUser] = {
-              name: u.fullName || u.username,
+              name: deskPersonDisplayName(lowerUser, u.fullName || u.username),
               type: u.role || 'member',
               category: u.category || 'FREE HAND SALES (AIR/SEA)',
               currency: u.currency || 'INR'
@@ -14490,7 +14504,7 @@ async function submitWonBookingDetails(e) {
       localStorage.setItem("gl_nrs_registry", JSON.stringify(offlineRegistry));
     }
 
-    // 3. Confirmation intimation alert to Cathrina (NRS)
+    // 3. Confirmation intimation alert to Jabeena (NRS)
     if (quote.creator === 'shashank' || quote.creator === 'shaheer') {
       let alerts = [];
       const stored = localStorage.getItem("nrs_alerts");
@@ -14528,7 +14542,7 @@ async function renderNrsRegistry() {
   if (!panel || !tbody) return;
 
   const currentUser = appState.currentUser;
-  // Show only to Cathrina (NRS) or custom NRS desk users
+  // Show only to Jabeena (NRS) or custom NRS desk users
   if (currentUser === 'cathrina' || (TEAM_ROLES[currentUser] && TEAM_ROLES[currentUser].category === 'NRS (AIR/SEA)')) {
     panel.style.display = "block";
   } else {
