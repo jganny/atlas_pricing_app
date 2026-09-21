@@ -96,6 +96,21 @@ function deskLabelWithPerson(id) {
   return `${name} (${tag})`;
 }
 
+// Retired logins: kept only so an old quote that carries the id (creator) can
+// still resolve a name and category, but never listed, filtered, switchable or
+// able to sign in. 'jaya' (the original Free Hand login) has no quotes and is
+// replaced by the Free Hand seat (sign-in ID "freehand"). Making the property
+// non-enumerable removes it from every Object.keys(TEAM_ROLES) list (desk
+// filters, officer dropdowns, leaderboards, credentials) in one place, while
+// direct lookups such as TEAM_ROLES['jaya'] keep working.
+const RETIRED_LOGINS = ['jaya'];
+RETIRED_LOGINS.forEach(id => {
+  if (TEAM_ROLES[id]) Object.defineProperty(TEAM_ROLES, id, { enumerable: false });
+});
+function isRetiredLogin(id) {
+  return RETIRED_LOGINS.includes(String(id || '').toLowerCase());
+}
+
 // Resolves which desk role is currently active for terms purposes — same
 // "viewing as" resolution as updateCurrencyRules: ganny/manager can be
 // viewing a specific desk via the role switcher, so prefer that over the
@@ -700,7 +715,7 @@ async function handleLogin(e) {
     }
 
     // Hardcoded defaults check (core team — no 'ganesh' alias, use 'ganny')
-    const validHardcoded = ["ganny", "shashank", "shaheer", "jaya", "cathrina"];
+    const validHardcoded = ["ganny", "shashank", "shaheer", "cathrina"];
     if (!matchedPass && validHardcoded.includes(user) && pass === "password") {
       matchedPass = true;
     }
@@ -769,7 +784,7 @@ async function handleLogin(e) {
     }
 
     const matched = dbUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === user);
-    const validHardcoded = ["ganny", "shashank", "shaheer", "jaya", "cathrina"];
+    const validHardcoded = ["ganny", "shashank", "shaheer", "cathrina"];
 
     if (matched) {
       if (pass === matched.password || (validHardcoded.includes(user) && pass === "password")) {
@@ -1008,7 +1023,6 @@ function renderUserCredentialsList() {
     { username: 'ganny', fullName: 'Pricing Team (Admin)', role: 'admin' },
     { username: 'shashank', fullName: 'Air Nomination', role: 'member', category: 'AIR - NOMINATION' },
     { username: 'shaheer', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION' },
-    { username: 'jaya', fullName: 'Free Hand Sales', role: 'member', category: 'FREE HAND SALES (AIR/SEA)' },
     { username: 'cathrina', fullName: 'NRS', role: 'member', category: 'NRS (AIR/SEA)' }
   ];
 
@@ -1019,7 +1033,7 @@ function renderUserCredentialsList() {
     if (u && u.username) {
       const usernameLower = u.username.toLowerCase();
       // Remove duplicate shaheer user credentials
-      if (usernameLower === 'shaheer' || usernameLower === 'mahendra') {
+      if (usernameLower === 'shaheer' || usernameLower === 'mahendra' || isRetiredLogin(usernameLower)) {
         return;
       }
       allUsersMap[usernameLower] = {
