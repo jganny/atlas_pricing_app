@@ -51,35 +51,82 @@ const TEAM_ROLES = {
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
 
-// ── Desk seats: generic sign-in IDs, people come and go ─────────────────────
-// A desk seat (Free Hand, NRS, ...) keeps ONE permanent internal login id —
-// that id is what every saved quote stores as its `creator`, so it must never
-// change. People who take over a seat sign in with the seat's generic ID
-// below (e.g. "freehand") instead of a former colleague's name, and the admin
-// changes the person's display name from Admin → User Profiles → Edit name.
-// Nothing saved under the seat is touched by either.
+// ── Desk seats: sign-in IDs are separate from the seat's data ────────────────
+// A desk seat (Air Nom, Free Hand, NRS, ...) keeps ONE permanent internal login
+// id — that id is what every saved quote stores as its `creator`, so it never
+// changes. What people TYPE at sign-in is a "sign-in ID" that maps onto the
+// seat; the admin can change it any time (Admin → User Profiles → Edit ID)
+// when someone new takes the seat. Nothing saved under the seat is touched.
+//
+// Sign-in IDs live in Firestore `loginAliases/{signInId}` = { target, retired,
+// updatedAt, updatedBy }. The two below are built-in defaults so Free Hand and
+// NRS work even before anything is stored; a stored record always wins over
+// them (retiring one writes { retired: true } so it stops working).
 //   sign-in ID  →  internal id (owner of the data)
 const SEAT_LOGIN_ALIASES = { freehand: 'kavya', nrs: 'cathrina' };
+window._loginAliases = window._loginAliases || null;   // admin cache: { id: {target, retired} }
+
+// One public read of a single alias record (allowed before sign-in by the
+// rules — only this exact document can be fetched, never the list).
+async function fetchLoginAlias(id) {
+  try {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return null;
+    const read = firebase.firestore().collection('loginAliases').doc(id).get();
+    const doc = await Promise.race([read, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3500))]);
+    return doc && doc.exists ? doc.data() : null;
+  } catch (e) {
+    return null; // offline / rules not deployed → fall back to the built-ins
+  }
+}
 
 // What the person typed at sign-in → the internal login id. IDs that are not
-// seat aliases (including the original internal ones) pass through unchanged,
+// sign-in IDs (including every original internal id) pass through unchanged,
 // so nobody is locked out by this.
-function resolveLoginId(typed) {
+async function resolveLoginIdAsync(typed) {
   const id = String(typed || '').toLowerCase().trim();
+  if (!id || id === 'ganny' || id === 'admin' || id === 'manager') return id;
+  const rec = await fetchLoginAlias(id);
+  if (rec) return rec.retired || !rec.target ? id : String(rec.target).toLowerCase();
   return SEAT_LOGIN_ALIASES[id] || id;
 }
 
-// Internal id → the sign-in ID shown to people (the alias when there is one).
+// The sign-in ID currently assigned to a seat (admin table, prompts).
 function signInIdFor(internalId) {
   const id = String(internalId || '').toLowerCase();
-  const alias = Object.keys(SEAT_LOGIN_ALIASES).find(a => SEAT_LOGIN_ALIASES[a] === id);
-  return alias || internalId;
+  const cache = window._loginAliases;
+  if (cache) {
+    const mine = Object.keys(cache).filter(a => !cache[a].retired && String(cache[a].target || '').toLowerCase() === id);
+    if (mine.length) return mine.sort((a, b) => (cache[b].updatedMs || 0) - (cache[a].updatedMs || 0))[0];
+  }
+  const builtIn = Object.keys(SEAT_LOGIN_ALIASES).find(a => SEAT_LOGIN_ALIASES[a] === id && !(cache && cache[a] && cache[a].retired));
+  return builtIn || internalId;
 }
 
-// Sign-in IDs nobody may register for themselves.
-function isReservedLoginId(id) {
-  return Object.prototype.hasOwnProperty.call(SEAT_LOGIN_ALIASES, String(id || '').toLowerCase().trim());
+// Is this ID already used as (or reserved for) a sign-in ID?
+async function isLoginIdTaken(id) {
+  const key = String(id || '').toLowerCase().trim();
+  if (!key) return false;
+  const rec = await fetchLoginAlias(key);
+  if (rec) return !rec.retired && !!rec.target;
+  return Object.prototype.hasOwnProperty.call(SEAT_LOGIN_ALIASES, key);
 }
+
+// Admin: load every alias record into the cache and refresh the table.
+async function loadLoginAliases() {
+  try {
+    const snap = await firebase.firestore().collection('loginAliases').get();
+    const cache = {};
+    snap.forEach(d => {
+      const v = d.data() || {};
+      cache[d.id] = { target: v.target || null, retired: !!v.retired, updatedMs: v.updatedAt && v.updatedAt.toMillis ? v.updatedAt.toMillis() : 0 };
+    });
+    window._loginAliases = cache;
+    if (typeof renderUserCredentialsList === 'function') renderUserCredentialsList();
+  } catch (e) {
+    console.warn('Could not load sign-in IDs:', e.message);
+  }
+}
+window.loadLoginAliases = loadLoginAliases;
 
 // "Cathrina (Free Hand)" — the person plus which desk they sit on, for places
 // (like the admin role switcher) where the desk matters as much as the name.
@@ -649,7 +696,7 @@ async function handleLogin(e) {
     user = 'ganny';
   }
   // Seat sign-in IDs ("freehand", "nrs") → the seat's permanent internal login.
-  user = resolveLoginId(user);
+  user = await resolveLoginIdAsync(user);
 
   if (DB.isCloud) {
     // ── PRIMARY: Try canonical @atlaspricing.com domain ──────────────────────
@@ -826,7 +873,7 @@ window.handleSignup = async function (e) {
     return;
   }
 
-  if (isReservedLoginId(user)) {
+  if (await isLoginIdTaken(user)) {
     alert(`⚠️ "${user}" is a shared desk sign-in ID and can't be registered as a new account. Please choose another username.`);
     return;
   }
@@ -1045,6 +1092,11 @@ function renderUserCredentialsList() {
     }
   });
 
+  if (typeof appState !== 'undefined' && appState.currentUser === 'ganny' && window._loginAliases === null && !window._loginAliasesLoading) {
+    window._loginAliasesLoading = true;
+    setTimeout(() => { loadLoginAliases().finally(() => { window._loginAliasesLoading = false; if (window._loginAliases === null) window._loginAliases = {}; }); }, 0);
+  }
+
   const allUsers = Object.values(allUsersMap);
   userCredsBody.innerHTML = allUsers.map(u => {
     // Display-only override: an admin account's Firestore record can end up
@@ -1058,7 +1110,7 @@ function renderUserCredentialsList() {
     const roleCat = isAdminAccount ? 'Admin' : (u.category || 'Member');
     return `
       <tr>
-        <td><strong>${signInIdFor(u.username)}</strong></td>
+        <td><strong>${escapeUserText(signInIdFor(u.username))}</strong>${(typeof appState !== 'undefined' && appState.currentUser === 'ganny' && !isAdminAccount) ? `<br><button type="button" onclick="editSignInId('${String(u.username).replace(/'/g, "\\'")}')" style="margin-top:4px; font-size:0.65rem; padding:2px 8px; border-radius:6px; border:1px solid var(--border-1); background:#fff; cursor:pointer; font-weight:700;">Edit ID</button>` : ''}</td>
         <td>${escapeUserText(u.fullName)}${(typeof appState !== 'undefined' && appState.currentUser === 'ganny' && !isAdminAccount) ? ` <button type="button" onclick="editUserFullName('${String(u.username).replace(/'/g, "\\'")}')" style="margin-left:6px; font-size:0.65rem; padding:2px 8px; border-radius:6px; border:1px solid var(--border-1); background:#fff; cursor:pointer; font-weight:700;">Edit name</button>` : ''}</td>
         <td><span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.1); color: var(--t1); font-weight: 600;">${roleCat}</span></td>
         <td><span style="color: var(--accent-success); font-family: monospace; font-size: 0.7rem;">Firebase Secure Auth</span></td>
@@ -1107,6 +1159,51 @@ async function editUserFullName(internalId) {
   }
 }
 window.editUserFullName = editUserFullName;
+
+// Admin: change the ID people type to sign in to a desk seat. The seat's
+// internal login, quotes, module data, category and password are untouched.
+async function editSignInId(internalId) {
+  if (appState.currentUser !== 'ganny') { alert("Only the admin account can change sign-in IDs."); return; }
+  if (!DB.firestoreRef) { alert("Not connected to the database — sign-in ID not changed."); return; }
+  const id = String(internalId || '').toLowerCase();
+  const desk = deskLabelWithPerson(id);
+  const current = signInIdFor(id);
+  const entered = prompt(
+    `New sign-in ID for this desk\n\nDesk: ${desk}\nCurrent sign-in ID: ${current}\n\nUse 3-20 letters, numbers, - or _. Quotes and data on this desk do not change.`,
+    current
+  );
+  if (entered === null) return;
+  const next = entered.toLowerCase().trim();
+  if (next === String(current).toLowerCase()) return;
+  if (!/^[a-z0-9][a-z0-9_-]{2,19}$/.test(next)) {
+    alert("Please use 3-20 characters: letters, numbers, - or _ (starting with a letter or number).");
+    return;
+  }
+  const reservedIds = ['admin', 'ganny', 'manager', 'mahendra'];
+  const otherLogin = next !== id && (TEAM_ROLES[next] || (window._firebaseUsers || []).some(u => u && String(u.username).toLowerCase() === next));
+  if (reservedIds.includes(next) || otherLogin) { alert(`"${next}" is already a login ID. Please choose another.`); return; }
+  if (next !== id && await isLoginIdTaken(next)) {
+    const rec = await fetchLoginAlias(next);
+    const owner = rec ? String(rec.target || '').toLowerCase() : SEAT_LOGIN_ALIASES[next];
+    if (owner !== id) { alert(`"${next}" is already the sign-in ID of another desk. Please choose another.`); return; }
+  }
+  if (!confirm(`Change the sign-in ID of "${desk}"?\n\n  ${current}  →  ${next}\n\nThe person on this desk must sign in with "${next}" from now on. Their password is not changed — use Force Reset Staff Password if they need a new one.`)) return;
+  try {
+    const col = firebase.firestore().collection('loginAliases');
+    const stamp = { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: 'ganny' };
+    // Stop the previous sign-in ID(s) of this seat from working.
+    const cache = window._loginAliases || {};
+    const olds = new Set(Object.keys(cache).filter(a => !cache[a].retired && String(cache[a].target || '').toLowerCase() === id));
+    Object.keys(SEAT_LOGIN_ALIASES).forEach(a => { if (SEAT_LOGIN_ALIASES[a] === id && !(cache[a] && cache[a].retired)) olds.add(a); });
+    for (const a of olds) { if (a !== next) await col.doc(a).set({ target: null, retired: true, ...stamp }); }
+    if (next !== id) await col.doc(next).set({ target: id, retired: false, ...stamp });
+    await loadLoginAliases();
+    alert(`Done. "${desk}" now signs in with "${next === id ? id : next}". No quotes or data were changed.\n\nRemember to give the person their password (Force Reset Staff Password).`);
+  } catch (err) {
+    alert("Could not save the sign-in ID: " + err.message + "\n\n(If this mentions permissions, the database rules for sign-in IDs have not been deployed yet.)");
+  }
+}
+window.editSignInId = editSignInId;
 
 
 // Load Airports & Airlines Data
@@ -11772,7 +11869,7 @@ async function registerNewUserProfile(e) {
   const username = document.getElementById("reg-username").value.trim().toLowerCase();
   const password = document.getElementById("reg-password").value;
 
-  if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username] || isReservedLoginId(username)) {
+  if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username] || await isLoginIdTaken(username)) {
     alert("This username is already taken. Please try another one.");
     return;
   }
@@ -16663,7 +16760,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e) e.preventDefault();
     const usernameInput = prompt("Enter your Username to request an administrative password reset:");
     if (!usernameInput) return;
-    const username = resolveLoginId(usernameInput);
+    const username = await resolveLoginIdAsync(usernameInput);
 
     try {
       if (db) {
@@ -16737,7 +16834,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const username = resolveLoginId(rawUser);
+    const username = await resolveLoginIdAsync(rawUser);
     const canonicalEmail = `${username}@atlaspricing.com`;
 
     const btnEl = document.getElementById("admin-force-reset-btn");
