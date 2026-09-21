@@ -51,18 +51,49 @@ const TEAM_ROLES = {
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
 
-// Person renames on desk logins (display only). The login ids — and therefore
-// the `creator` saved on every quote — never change; only the name shown for
-// that login does, so all saved quotes stay exactly as they were.
-//   kavya    → Cathrina   (the person now on the kavya login)
-//   cathrina → Jabeena    (the person now on the cathrina login)
-// A single pass keyed by login id, so re-applying it is harmless (a name that
-// is already renamed stays put, and Kavya never chains on to Jabeena).
-function deskPersonDisplayName(loginId, name) {
-  const renames = { kavya: 'Cathrina', cathrina: 'Jabeena' };
-  const to = renames[String(loginId || '').toLowerCase()];
-  if (!to || typeof name !== 'string') return name;
-  return name.replace(/\b(kavya|cathrina)\b/gi, to);
+// ── Desk seats: generic sign-in IDs, people come and go ─────────────────────
+// A desk seat (Free Hand, NRS, ...) keeps ONE permanent internal login id —
+// that id is what every saved quote stores as its `creator`, so it must never
+// change. People who take over a seat sign in with the seat's generic ID
+// below (e.g. "freehand") instead of a former colleague's name, and the admin
+// changes the person's display name from Admin → User Profiles → Edit name.
+// Nothing saved under the seat is touched by either.
+//   sign-in ID  →  internal id (owner of the data)
+const SEAT_LOGIN_ALIASES = { freehand: 'kavya', nrs: 'cathrina' };
+
+// What the person typed at sign-in → the internal login id. IDs that are not
+// seat aliases (including the original internal ones) pass through unchanged,
+// so nobody is locked out by this.
+function resolveLoginId(typed) {
+  const id = String(typed || '').toLowerCase().trim();
+  return SEAT_LOGIN_ALIASES[id] || id;
+}
+
+// Internal id → the sign-in ID shown to people (the alias when there is one).
+function signInIdFor(internalId) {
+  const id = String(internalId || '').toLowerCase();
+  const alias = Object.keys(SEAT_LOGIN_ALIASES).find(a => SEAT_LOGIN_ALIASES[a] === id);
+  return alias || internalId;
+}
+
+// Sign-in IDs nobody may register for themselves.
+function isReservedLoginId(id) {
+  return Object.prototype.hasOwnProperty.call(SEAT_LOGIN_ALIASES, String(id || '').toLowerCase().trim());
+}
+
+// "Cathrina (Free Hand)" — the person plus which desk they sit on, for places
+// (like the admin role switcher) where the desk matters as much as the name.
+function deskLabelWithPerson(id) {
+  const role = TEAM_ROLES[id];
+  const name = ((role && role.name) || id).replace(/\(Free Hand\)/g, '').trim();
+  const cat = String((role && role.category) || '').toUpperCase();
+  let tag = '';
+  if (cat.startsWith('FREE HAND')) tag = 'Free Hand';
+  else if (cat.startsWith('NRS')) tag = 'NRS';
+  else if (cat.startsWith('AIR')) tag = 'Air Nom';
+  else if (cat.startsWith('SEA')) tag = 'Sea Nom';
+  if (!tag || name.toLowerCase().includes(tag.toLowerCase())) return name;
+  return `${name} (${tag})`;
 }
 
 // Resolves which desk role is currently active for terms purposes — same
@@ -103,7 +134,7 @@ if (savedNames) {
       TEAM_ROLES["shaheer"].name = (nameVal.toLowerCase() === 'shaheer') ? 'Sea Nomination' : nameVal;
     }
     if (parsed["jaya"]) TEAM_ROLES["jaya"].name = parsed["jaya"];
-    if (parsed["cathrina"]) TEAM_ROLES["cathrina"].name = deskPersonDisplayName("cathrina", parsed["cathrina"]);
+    if (parsed["cathrina"]) TEAM_ROLES["cathrina"].name = parsed["cathrina"];
   } catch (e) {
     console.error("Failed to load saved desk names", e);
   }
@@ -123,7 +154,7 @@ function loadCustomUsers() {
         const storedCategory = u.category || 'FREE HAND SALES (AIR/SEA)';
         const storedCurrency = u.currency || 'INR';
         // Strip legacy '(Free Hand)' suffix stored in older snapshots
-        const storedName = deskPersonDisplayName(lowerUser, (u.fullName || lowerUser).replace(/\s*\(Free\s*Hand\)/i, '').trim());
+        const storedName = (u.fullName || lowerUser).replace(/\s*\(Free\s*Hand\)/i, '').trim();
         TEAM_ROLES[lowerUser] = {
           name: storedName,
           type: u.role || 'member',
@@ -602,6 +633,8 @@ async function handleLogin(e) {
   if (user === 'admin') {
     user = 'ganny';
   }
+  // Seat sign-in IDs ("freehand", "nrs") → the seat's permanent internal login.
+  user = resolveLoginId(user);
 
   if (DB.isCloud) {
     // ── PRIMARY: Try canonical @atlaspricing.com domain ──────────────────────
@@ -778,6 +811,11 @@ window.handleSignup = async function (e) {
     return;
   }
 
+  if (isReservedLoginId(user)) {
+    alert(`⚠️ "${user}" is a shared desk sign-in ID and can't be registered as a new account. Please choose another username.`);
+    return;
+  }
+
   const canonicalEmail = `${user}@atlaspricing.com`;
 
   if (!DB.isCloud) {
@@ -855,7 +893,7 @@ function loginSuccess(roleId) {
     const fbMatch = fbUsers.find(u => u && u.username && u.username.toLowerCase() === roleIdLower);
     if (fbMatch) {
       firestoreProfile = {
-        name: deskPersonDisplayName(roleIdLower, (fbMatch.fullName || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, '').trim()),
+        name: (fbMatch.fullName || roleIdLower).replace(/\s*\(Free\s*Hand\)/i, '').trim(),
         type: fbMatch.role || 'member',
         category: fbMatch.category || 'FREE HAND SALES (AIR/SEA)',
         currency: fbMatch.currency || 'INR'
@@ -986,7 +1024,7 @@ function renderUserCredentialsList() {
       }
       allUsersMap[usernameLower] = {
         username: u.username,
-        fullName: deskPersonDisplayName(u.username, u.fullName || u.username),
+        fullName: u.fullName || u.username,
         role: u.role || 'member',
         category: u.category || 'FREE HAND SALES (AIR/SEA)'
       };
@@ -1006,8 +1044,8 @@ function renderUserCredentialsList() {
     const roleCat = isAdminAccount ? 'Admin' : (u.category || 'Member');
     return `
       <tr>
-        <td><strong>${u.username}</strong></td>
-        <td>${u.fullName}</td>
+        <td><strong>${signInIdFor(u.username)}</strong></td>
+        <td>${escapeUserText(u.fullName)}${(typeof appState !== 'undefined' && appState.currentUser === 'ganny' && !isAdminAccount) ? ` <button type="button" onclick="editUserFullName('${String(u.username).replace(/'/g, "\\'")}')" style="margin-left:6px; font-size:0.65rem; padding:2px 8px; border-radius:6px; border:1px solid var(--border-1); background:#fff; cursor:pointer; font-weight:700;">Edit name</button>` : ''}</td>
         <td><span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.1); color: var(--t1); font-weight: 600;">${roleCat}</span></td>
         <td><span style="color: var(--accent-success); font-family: monospace; font-size: 0.7rem;">Firebase Secure Auth</span></td>
       </tr>
@@ -1015,6 +1053,47 @@ function renderUserCredentialsList() {
   }).join("");
 }
 window.renderUserCredentialsList = renderUserCredentialsList;
+
+function escapeUserText(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+// Admin: change the person's name on a login. Only the display name changes —
+// the login id, category, password and every saved quote stay exactly as they
+// are, so a desk's data never moves when someone new takes the seat.
+async function editUserFullName(internalId) {
+  if (appState.currentUser !== 'ganny') {
+    alert("Only the admin account can change names.");
+    return;
+  }
+  const id = String(internalId || '').toLowerCase();
+  const current = (TEAM_ROLES[id] && TEAM_ROLES[id].name) || id;
+  const desk = deskLabelWithPerson(id);
+  const entered = prompt(
+    `Who sits on this desk now?\n\nDesk: ${desk}\nSign-in ID: ${signInIdFor(id)}\n\nEnter the person's name. Their quotes and data stay exactly where they are.`,
+    current
+  );
+  if (entered === null) return;
+  const name = entered.replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!name) { alert("Please enter a name."); return; }
+  if (name === current) return;
+  if (!DB.firestoreRef) { alert("Not connected to the database — name not changed."); return; }
+  try {
+    await DB.firestoreRef.collection("users").doc(id).set({
+      fullName: name,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    if (TEAM_ROLES[id]) TEAM_ROLES[id].name = name;
+    if (typeof DB.syncUsers === 'function' && !DB.usersUnsubscribe) DB.syncUsers();
+    if (typeof renderUserCredentialsList === 'function') renderUserCredentialsList();
+    if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
+    alert(`Done. "${desk}" is now shown as "${name}". No quotes or data were changed.`);
+  } catch (err) {
+    alert("Could not save the name: " + err.message);
+  }
+}
+window.editUserFullName = editUserFullName;
+
 
 // Load Airports & Airlines Data
 async function loadData() {
@@ -1216,7 +1295,7 @@ function switchRole(role) {
       const fbUsers = window._firebaseUsers || [];
       const fbMatch = fbUsers.find(u => u && u.username && u.username.toLowerCase() === roleLower);
       TEAM_ROLES[roleLower] = fbMatch ? {
-        name: deskPersonDisplayName(roleLower, (fbMatch.fullName || roleLower).replace(/\s*\(Free\s*Hand\)/i, '').trim()),
+        name: (fbMatch.fullName || roleLower).replace(/\s*\(Free\s*Hand\)/i, '').trim(),
         type: 'member',
         category: fbMatch.category || 'FREE HAND SALES (AIR/SEA)',
         currency: fbMatch.currency || 'INR'
@@ -11488,14 +11567,14 @@ function applyDeskNames() {
     ];
 
     defaultUsers.forEach(u => {
-      let name = (TEAM_ROLES[u.id]?.name || u.defaultName).replace(/\(Free Hand\)/g, "");
-      if (u.id === 'shaheer') name = 'Sea Nomination';
+      let name = TEAM_ROLES[u.id] ? deskLabelWithPerson(u.id) : u.defaultName;
+      if (u.id === 'shaheer' && !/sea nom/i.test(name)) name = 'Sea Nomination';
       buttonsHtml += `<button class="role-btn${isRoleActive(u.id) ? ' active' : ''}" data-role="${u.id}">${u.icon}${name}</button>`;
     });
 
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (['ganny', 'shashank', 'shaheer', 'mahendra', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
-      const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\(Free Hand\)/g, "");
+      const name = deskLabelWithPerson(roleId);
       buttonsHtml += `<button class="role-btn${isRoleActive(roleId) ? ' active' : ''}" data-role="${roleId}">${name}</button>`;
     });
 
@@ -11679,7 +11758,7 @@ async function registerNewUserProfile(e) {
   const username = document.getElementById("reg-username").value.trim().toLowerCase();
   const password = document.getElementById("reg-password").value;
 
-  if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username]) {
+  if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username] || isReservedLoginId(username)) {
     alert("This username is already taken. Please try another one.");
     return;
   }
@@ -13416,7 +13495,7 @@ const DB = {
 
             // Update TEAM_ROLES dynamically with case-insensitive lowercase keys
             TEAM_ROLES[lowerUser] = {
-              name: deskPersonDisplayName(lowerUser, u.fullName || u.username),
+              name: u.fullName || u.username,
               type: u.role || 'member',
               category: u.category || 'FREE HAND SALES (AIR/SEA)',
               currency: u.currency || 'INR'
@@ -14504,7 +14583,7 @@ async function submitWonBookingDetails(e) {
       localStorage.setItem("gl_nrs_registry", JSON.stringify(offlineRegistry));
     }
 
-    // 3. Confirmation intimation alert to Jabeena (NRS)
+    // 3. Confirmation intimation alert to Cathrina (NRS)
     if (quote.creator === 'shashank' || quote.creator === 'shaheer') {
       let alerts = [];
       const stored = localStorage.getItem("nrs_alerts");
@@ -14542,7 +14621,7 @@ async function renderNrsRegistry() {
   if (!panel || !tbody) return;
 
   const currentUser = appState.currentUser;
-  // Show only to Jabeena (NRS) or custom NRS desk users
+  // Show only to Cathrina (NRS) or custom NRS desk users
   if (currentUser === 'cathrina' || (TEAM_ROLES[currentUser] && TEAM_ROLES[currentUser].category === 'NRS (AIR/SEA)')) {
     panel.style.display = "block";
   } else {
@@ -16570,7 +16649,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e) e.preventDefault();
     const usernameInput = prompt("Enter your Username to request an administrative password reset:");
     if (!usernameInput) return;
-    const username = usernameInput.toLowerCase().trim();
+    const username = resolveLoginId(usernameInput);
 
     try {
       if (db) {
@@ -16644,7 +16723,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const username = rawUser.trim().toLowerCase();
+    const username = resolveLoginId(rawUser);
     const canonicalEmail = `${username}@atlaspricing.com`;
 
     const btnEl = document.getElementById("admin-force-reset-btn");
