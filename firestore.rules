@@ -101,6 +101,20 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSalesAdmin();
     }
+    // Desk sign-in IDs (legacy + test app). Maps the ID people TYPE at sign-in to
+    // the desk seat's permanent internal login, so the admin can hand a desk to a
+    // new person without touching any quote or module data. A single record can be
+    // fetched before sign-in (login has to resolve the ID first) but the collection
+    // cannot be listed except by signed-in users; only the admin can write, and only
+    // the fixed fields below. Contains no credentials — just id -> id.
+    match /loginAliases/{aliasId} {
+      allow get: if true;
+      allow list: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['target', 'retired', 'updatedAt', 'updatedBy'])
+        && (request.resource.data.target == null || request.resource.data.target is string);
+      allow delete: if isAdmin();
+    }
     match /circularsLibrary/{circularId} { allow read, write: if isSignedIn(); }
     match /air_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
     match /sea_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
