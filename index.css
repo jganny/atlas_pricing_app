@@ -10060,3 +10060,45 @@ body:has(#courier-panel.active) .grid-overlay { display: none; }
 .liner-rate-modal-dialog .chg-remarks { min-width: 130px; }
 .airline-rate-modal-dialog .cargo-table,
 .liner-rate-modal-dialog .cargo-table { min-width: 860px; }
+
+/* ══════════════════════════════════════════════════
+   CARGO DIMENSIONS MATRIX — L / W / H / QTY COLUMNS (v129.56)
+   .cargo-len / .cargo-wid / .cargo-hei / .cargo-qty (Air) and their sea-
+   prefixed twins had no minimum width, so the table's auto column-sizing
+   gave nearly all the row's space to the "Total Gross Wt (Kg)" column and
+   squeezed these down to a few pixels — the typed number and even the
+   placeholder letter were cut off. Explicit min-widths stop that; the
+   container already scrolls sideways on its own if the table ever needs
+   more room than the screen has. CSS only — no calculation changes.
+══════════════════════════════════════════════════ */
+.cargo-len, .cargo-wid, .cargo-hei,
+.sea-cargo-len, .sea-cargo-wid, .sea-cargo-hei {
+  min-width: 68px !important;
+  text-align: center;
+}
+.cargo-qty, .sea-cargo-qty {
+  min-width: 60px !important;
+  text-align: center;
+}
+.cargo-gw {
+  min-width: 92px !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cargo-len, .cargo-wid, .cargo-hei, .cargo-qty, .cargo-gw,
+.sea-cargo-len, .sea-cargo-wid, .sea-cargo-hei, .sea-cargo-qty {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.cargo-len::-webkit-outer-spin-button, .cargo-len::-webkit-inner-spin-button,
+.cargo-wid::-webkit-outer-spin-button, .cargo-wid::-webkit-inner-spin-button,
+.cargo-hei::-webkit-outer-spin-button, .cargo-hei::-webkit-inner-spin-button,
+.cargo-qty::-webkit-outer-spin-button, .cargo-qty::-webkit-inner-spin-button,
+.cargo-gw::-webkit-outer-spin-button, .cargo-gw::-webkit-inner-spin-button,
+.sea-cargo-len::-webkit-outer-spin-button, .sea-cargo-len::-webkit-inner-spin-button,
+.sea-cargo-wid::-webkit-outer-spin-button, .sea-cargo-wid::-webkit-inner-spin-button,
+.sea-cargo-hei::-webkit-outer-spin-button, .sea-cargo-hei::-webkit-inner-spin-button,
+.sea-cargo-qty::-webkit-outer-spin-button, .sea-cargo-qty::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
