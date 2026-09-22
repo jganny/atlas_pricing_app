@@ -130,6 +130,20 @@ window.loadLoginAliases = loadLoginAliases;
 
 // "Cathrina (Free Hand)" — the person plus which desk they sit on, for places
 // (like the admin role switcher) where the desk matters as much as the name.
+// The desk's own name — "Air Nomination", "NRS", etc. — independent of
+// whoever currently sits on it. Never changes when Edit name changes a
+// person's display name, so the person (big) and the desk (small) don't get
+// tangled together in the header the way a single shared field used to.
+function deskCategoryLabel(id) {
+  if (String(id || '').toLowerCase() === 'ganny') return 'Admin';
+  const cat = String(TEAM_ROLES[id]?.category || '').toUpperCase();
+  if (cat.startsWith('AIR')) return 'Air Nomination';
+  if (cat.startsWith('SEA')) return 'Sea Nomination';
+  if (cat.startsWith('NRS')) return 'NRS';
+  if (cat.startsWith('FREE HAND')) return 'Free Hand Sales';
+  return (TEAM_ROLES[id]?.name || id).replace(/\s*\(Free\s*Hand\)/i, '').trim();
+}
+
 function deskLabelWithPerson(id) {
   const role = TEAM_ROLES[id];
   const name = ((role && role.name) || id).replace(/\(Free Hand\)/g, '').trim();
@@ -982,11 +996,11 @@ function loginSuccess(roleId) {
     .replace(/\s*\(Free\s*Hand\)/i, "");
 
   const headerUserNameEl = document.getElementById("header-user-name");
-  if (headerUserNameEl) headerUserNameEl.textContent = formatDisplayUsername(appState.currentUser || roleIdLower);
+  if (headerUserNameEl) headerUserNameEl.textContent = displayName || formatDisplayUsername(appState.currentUser || roleIdLower);
   const headerUserRoleEl = document.getElementById("header-user-role");
-  if (headerUserRoleEl) headerUserRoleEl.textContent = displayName;
+  if (headerUserRoleEl) headerUserRoleEl.textContent = deskCategoryLabel(roleIdLower);
   const headerUserAvatarEl = document.getElementById("header-user-avatar");
-  if (headerUserAvatarEl) headerUserAvatarEl.textContent = (appState.currentUser || roleIdLower).charAt(0).toUpperCase();
+  if (headerUserAvatarEl) headerUserAvatarEl.textContent = (displayName || appState.currentUser || roleIdLower).charAt(0).toUpperCase();
 
   const root = document.documentElement;
   const execDashBtn = document.getElementById("executive-dashboard-btn");
@@ -11721,11 +11735,11 @@ function applyDeskNames() {
     if (activeUser === 'shaheer') name = 'Sea Nomination';
     
     const headerUserNameEl = document.getElementById("header-user-name");
-    if (headerUserNameEl) headerUserNameEl.textContent = formatDisplayUsername(activeUser);
+    if (headerUserNameEl) headerUserNameEl.textContent = name || formatDisplayUsername(activeUser);
     const headerUserRoleEl = document.getElementById("header-user-role");
-    if (headerUserRoleEl) headerUserRoleEl.textContent = name;
+    if (headerUserRoleEl) headerUserRoleEl.textContent = deskCategoryLabel(activeUser);
     const headerUserAvatarEl = document.getElementById("header-user-avatar");
-    if (headerUserAvatarEl) headerUserAvatarEl.textContent = activeUser.charAt(0).toUpperCase();
+    if (headerUserAvatarEl) headerUserAvatarEl.textContent = (name || activeUser).charAt(0).toUpperCase();
   }
 
   // Update overview report user dropdown (distinct from Enquiry Database report-user)
