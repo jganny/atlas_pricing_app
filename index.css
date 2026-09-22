@@ -9996,11 +9996,15 @@ body:has(#courier-panel.active) .grid-overlay { display: none; }
   max-width: min(96vw, 960px) !important;
 }
 
-/* Weight-break Sell / Buy pills (Air) */
+/* Weight-break Sell / Buy pills (Air) — v129.49 widened these to 96px, but a
+   realistic 6-figure rate ("123456.78") left only ~4px of clearance, so a
+   slightly larger font (browser zoom, OS text-size settings) could still
+   clip it — an Air Nom user reported exactly this. Widened further with
+   real headroom; the breaks row already wraps, so there's room to spare. */
 .break-sell-rate-input,
 .break-buy-rate-input {
-  width: 96px !important;
-  padding: 0.25rem 0.45rem !important;
+  width: 132px !important;
+  padding: 0.25rem 0.5rem !important;
   font-size: 0.8rem !important;
   text-align: right;
   font-variant-numeric: tabular-nums;
