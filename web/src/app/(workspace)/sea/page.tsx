@@ -64,6 +64,7 @@ import {
   quotedLaneRows,
   quotedOnLane,
   selectWithinLane,
+  stampOntoFirstLane,
   usableLanes,
 } from "@/lib/quotes/lanes";
 
@@ -801,7 +802,10 @@ function SeaDeskInner() {
                   const lane = newLane();
                   setLanes((prev) => [...prev, lane]);
                   setActiveLaneId(lane.id);
-                  setLiners((prev) => [...prev, createLinerOption({ laneId: lane.id }, true)]);
+                  setLiners((prev) => [
+                    ...stampOntoFirstLane(prev, lanes[0]?.id || ""),
+                    createLinerOption({ laneId: lane.id }, true),
+                  ]);
                 }}
                 onRemove={(id) => {
                   setLanes((prev) => {

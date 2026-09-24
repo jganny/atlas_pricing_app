@@ -4,8 +4,12 @@ import type { AirCargoRow } from "@/lib/pricing/air-desk";
 import type { SeaContainerRow } from "@/lib/pricing/sea-desk";
 import {
   createAirlineOption,
+  createCourierOption,
   createLinerOption,
+  defaultCourierSurcharges,
   type AirlineOption,
+  type CourierOption,
+  type CourierSurcharges,
   type LinerOption,
 } from "@/lib/pricing/carrier-options";
 import {
@@ -187,9 +191,80 @@ export function loadSeaDeskFromQuote(quote: SavedQuote) {
   };
 }
 
+function surchargesFromRaw(raw: unknown): CourierSurcharges {
+  const s = (raw as Record<string, unknown>) ?? {};
+  const d = defaultCourierSurcharges();
+  return {
+    fuelPct: Number(s.fuelPct ?? d.fuelPct),
+    remote: Boolean(s.remote),
+    remoteAmount: Number(s.remoteAmount ?? d.remoteAmount),
+    residential: Boolean(s.residential),
+    residentialAmount: Number(s.residentialAmount ?? d.residentialAmount),
+    saturday: Boolean(s.saturday),
+    saturdayAmount: Number(s.saturdayAmount ?? d.saturdayAmount),
+    dg: Boolean(s.dg),
+    dgAmount: Number(s.dgAmount ?? d.dgAmount),
+    insurance: Boolean(s.insurance),
+    insurancePct: Number(s.insurancePct ?? d.insurancePct),
+    declaredValue: Number(s.declaredValue ?? d.declaredValue),
+    oversized: Boolean(s.oversized),
+    oversizedAmount: Number(s.oversizedAmount ?? d.oversizedAmount),
+  };
+}
+
 export function loadCourierDeskFromQuote(quote: SavedQuote) {
   const d = quote.details ?? {};
-  const surcharges = (d.surcharges as Record<string, unknown>) ?? {};
+
+  const savedLanes = Array.isArray(d.lanes)
+    ? (d.lanes as Array<{ id?: string; origin?: string; destination?: string }>).map((l, i) => ({
+        id: String(l.id || `lane_${i}`),
+        origin: String(l.origin ?? ""),
+        destination: String(l.destination ?? ""),
+      }))
+    : [];
+
+  let couriers: CourierOption[] = [];
+  const savedCouriers = d.carrierQuotes as Array<Record<string, unknown>> | undefined;
+  if (Array.isArray(savedCouriers) && savedCouriers.length) {
+    couriers = savedCouriers.map((c) =>
+      createCourierOption(
+        {
+          id: String(c.id ?? ""),
+          directoryCarrier: String(c.directoryCarrier ?? c.name ?? ""),
+          carrierId: String(c.carrierId ?? c.carrier ?? "dhl"),
+          service: String(c.service ?? d.service ?? "economy"),
+          marginPct: Number(c.marginPct ?? d.marginPct ?? 12),
+          surcharges: surchargesFromRaw(c.surcharges),
+          laneId: String(c.laneId ?? ""),
+        },
+        Boolean(c.selected),
+      ),
+    );
+  } else {
+    // Pre-feature quote: one flat carrier config, no comparison cards yet.
+    couriers = [
+      createCourierOption(
+        {
+          directoryCarrier: String(d.directoryCarrier ?? d.carrierName ?? ""),
+          carrierId: String(d.carrier ?? "dhl"),
+          service: String(d.service ?? "economy"),
+          marginPct: Number(d.marginPct ?? 12),
+          surcharges: surchargesFromRaw(d.surcharges),
+        },
+        true,
+      ),
+    ];
+  }
+
+  const fallbackLane = couriers[0]?.laneId || savedLanes[0]?.id || "";
+  const laneIds = new Set(couriers.map((c) => c.laneId || fallbackLane));
+  for (const laneId of laneIds) {
+    const onLane = couriers.filter((c) => (c.laneId || fallbackLane) === laneId);
+    if (!onLane.some((c) => c.selected) && onLane[0]) {
+      couriers = couriers.map((c) => (c.id === onLane[0].id ? { ...c, selected: true } : c));
+    }
+  }
+
   return {
     customer: quote.customer ?? "",
     originCity: String(d.originCity ?? ""),
@@ -199,31 +274,14 @@ export function loadCourierDeskFromQuote(quote: SavedQuote) {
     originPin: String(d.originPin ?? ""),
     destPin: String(d.destPin ?? ""),
     scope: (d.scope as "domestic" | "international") ?? "domestic",
-    service: String(d.service ?? "economy"),
     currency: quote.currency ?? "INR",
-    marginPct: Number(d.marginPct ?? 12),
-    selectedCarrier: String(d.carrier ?? "dhl"),
     gstEnabled: d.gstEnabled !== false,
     validity: String(d.validity ?? "15 days") || "15 days",
     packages: (d.packages as Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>) ?? [
       { qty: 1, gw: 5, l: 30, w: 20, h: 15 },
     ],
-    surcharges: {
-      fuelPct: Number(surcharges.fuelPct ?? 18),
-      remote: Boolean(surcharges.remote),
-      remoteAmount: Number(surcharges.remoteAmount ?? surcharges.remote ?? 450),
-      residential: Boolean(surcharges.residential),
-      residentialAmount: Number(surcharges.residentialAmount ?? surcharges.residential ?? 350),
-      saturday: Boolean(surcharges.saturday),
-      saturdayAmount: Number(surcharges.saturdayAmount ?? surcharges.saturday ?? 500),
-      dg: Boolean(surcharges.dg),
-      dgAmount: Number(surcharges.dgAmount ?? surcharges.dg ?? 1200),
-      insurance: Boolean(surcharges.insurance),
-      insurancePct: Number(surcharges.insurancePct ?? 1.5),
-      declaredValue: Number(surcharges.declaredValue ?? 0),
-      oversized: Boolean(surcharges.oversized),
-      oversizedAmount: Number(surcharges.oversized ?? 800),
-    },
+    lanes: savedLanes,
+    couriers,
     terms: String(d.termsAndConditions ?? ""),
   };
 }

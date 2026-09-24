@@ -36,11 +36,11 @@ function optionFlags(option: OptionBreakdown): string {
  * produces exactly one group with an empty label, so callers that only care
  * about "is this multi-lane" can check `groups.length > 1`.
  */
-export function groupOptionsByLane(
-  options: OptionBreakdown[],
-): Array<{ laneId: string; laneLabel: string; options: OptionBreakdown[] }> {
+export function groupOptionsByLane<T extends { laneId?: string; laneLabel?: string }>(
+  options: T[],
+): Array<{ laneId: string; laneLabel: string; options: T[] }> {
   const order: string[] = [];
-  const groups = new Map<string, { laneId: string; laneLabel: string; options: OptionBreakdown[] }>();
+  const groups = new Map<string, { laneId: string; laneLabel: string; options: T[] }>();
   for (const option of options) {
     const key = option.laneId || option.laneLabel || "";
     if (!groups.has(key)) {

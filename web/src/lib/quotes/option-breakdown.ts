@@ -1,7 +1,7 @@
 import type { SeaMode } from "@atlas/pricing-core";
 import type { SavedQuote } from "../types";
 import { formatCurrency } from "../utils";
-import type { AirlineOption, LinerOption } from "../pricing/carrier-options";
+import type { AirlineOption, CourierOption, LinerOption } from "../pricing/carrier-options";
 import {
   createAirlineOption,
   serializeAirlineOption,
@@ -154,29 +154,47 @@ export function linerSnapshot(
   };
 }
 
+/** Persistable comparison-card snapshot for one courier/vendor option — carries
+ * its own carrier/service/margin/surcharges so it can be reloaded and re-edited,
+ * plus its computed total for the compare list and print pack. */
 export function courierSnapshot(
-  q: {
-    id: string;
+  option: CourierOption,
+  computed: {
     name: string;
     sellLocal: number;
     ratePerKg?: number;
     transit?: string;
+    validity?: string;
+    chargeableKg?: number;
+    gstAmount?: number;
   },
-  selectedId: string,
-  extra: { validity?: string; chargeableKg?: number; gstAmount?: number },
+  lanes: QuoteLane[],
+  fallbackLaneId: string,
 ): Record<string, unknown> {
-  const selected = q.id === selectedId;
+  const laneIndex = Math.max(
+    0,
+    lanes.findIndex((l) => l.id === (option.laneId || fallbackLaneId)),
+  );
+  const lane = lanes[laneIndex] ?? lanes[0];
   return {
-    ...q,
+    id: option.id,
+    name: computed.name || "Untitled",
     kind: "courier",
-    quoteTotal: q.sellLocal,
-    selected,
-    tt: q.transit ?? "",
-    appliedRate: q.ratePerKg ?? 0,
-    baseFreight: q.sellLocal,
-    chargeableWeight: extra.chargeableKg ?? 0,
-    validity: extra.validity ?? "",
-    gst: selected ? extra.gstAmount ?? 0 : 0,
+    directoryCarrier: option.directoryCarrier,
+    carrierId: option.carrierId,
+    service: option.service,
+    marginPct: option.marginPct,
+    surcharges: option.surcharges,
+    selected: Boolean(option.selected),
+    quoteTotal: computed.sellLocal,
+    tt: computed.transit ?? "",
+    appliedRate: computed.ratePerKg ?? 0,
+    baseFreight: computed.sellLocal,
+    chargeableWeight: computed.chargeableKg ?? 0,
+    validity: computed.validity ?? "",
+    gst: option.selected ? computed.gstAmount ?? 0 : 0,
+    laneId: option.laneId || fallbackLaneId,
+    laneLabel: lane ? laneRouteLabel(lane, laneIndex) : "",
   };
 }
 
@@ -184,6 +202,7 @@ export function truckerSnapshot(
   t: {
     id: string;
     name: string;
+    laneId?: string;
     selected: boolean;
     freightBuy: number;
     freightSell: number;
@@ -191,8 +210,16 @@ export function truckerSnapshot(
     tolls: number;
   },
   validity: string,
+  lanes: QuoteLane[] = [],
+  fallbackLaneId = "",
+  laneLabelOf: (lane: QuoteLane, index: number) => string = laneRouteLabel,
 ): Record<string, unknown> {
   const quoteTotal = t.freightSell + t.detention + t.tolls;
+  const laneIndex = Math.max(
+    0,
+    lanes.findIndex((l) => l.id === (t.laneId || fallbackLaneId)),
+  );
+  const lane = lanes[laneIndex] ?? lanes[0];
   return {
     id: t.id,
     name: t.name || "Untitled",
@@ -205,6 +232,8 @@ export function truckerSnapshot(
     quoteTotal,
     baseFreight: t.freightSell,
     validity,
+    laneId: t.laneId || fallbackLaneId,
+    laneLabel: lane ? laneLabelOf(lane, laneIndex) : "",
   };
 }
 

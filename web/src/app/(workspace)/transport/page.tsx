@@ -32,6 +32,15 @@ import {
   type TruckerOption,
 } from "@/lib/pricing/carrier-options";
 import { truckerSnapshot } from "@/lib/quotes/option-breakdown";
+import {
+  optionsOnLane,
+  plainLaneLabel,
+  quotedLaneRows,
+  quotedOnLane,
+  selectWithinLane,
+  stampOntoFirstLane,
+  usableLanes,
+} from "@/lib/quotes/lanes";
 import type { SavedQuote } from "@/lib/types";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { queryKeys } from "@/hooks/query-keys";
@@ -115,7 +124,9 @@ export default function TransportDeskPage() {
     }
   }, [searchParams]);
 
-  const selectedTrucker = truckers.find((t) => t.selected) ?? truckers[0];
+  const fallbackLaneId = lanes[0]?.id || "";
+  const truckersOnLane = optionsOnLane(truckers, activeLaneId, fallbackLaneId);
+  const selectedTrucker = quotedOnLane(truckers, activeLaneId, fallbackLaneId);
   const freightBuy = selectedTrucker?.freightBuy ?? 0;
   const freightSell = selectedTrucker?.freightSell ?? 0;
   const detention = selectedTrucker?.detention ?? 0;
@@ -128,12 +139,25 @@ export default function TransportDeskPage() {
   }
 
   function selectTrucker(id: string) {
-    setTruckers((prev) => prev.map((t) => ({ ...t, selected: t.id === id })));
+    setTruckers((prev) => selectWithinLane(prev, id, fallbackLaneId));
   }
 
   function addTrucker() {
-    setTruckers((prev) => [...prev, createTruckerOption({ name: "" }, prev.length === 0)]);
+    const laneId = activeLane?.id || fallbackLaneId;
+    setTruckers((prev) => [
+      ...prev,
+      createTruckerOption({ name: "", laneId }, !optionsOnLane(prev, laneId, fallbackLaneId).length),
+    ]);
   }
+
+  const quotedLanes = useMemo(
+    () => quotedLaneRows(lanes, truckers, (t) => truckerQuoteTotal(t)),
+    [lanes, truckers],
+  );
+  const allLanesTotal = useMemo(
+    () => quotedLanes.reduce((sum, l) => sum + l.amount, 0),
+    [quotedLanes],
+  );
 
   function goTransportStep(next: TabId, focusId = TRANSPORT_FOCUS[next]) {
     setTab(next);
@@ -170,6 +194,11 @@ export default function TransportDeskPage() {
     [freightSell, detention, tolls],
   );
   const { gp, gpReady } = useMemo(() => computeGp(total, freightBuy), [total, freightBuy]);
+  const multiLane = usableLanes(lanes).length > 1;
+  const activeLaneLabel = activeLane ? plainLaneLabel(activeLane, lanes.indexOf(activeLane)) : "";
+  const routeText = multiLane
+    ? lanes.map((l) => `${l.origin} → ${l.destination}`.trim()).filter((s) => s !== "→").join(" · ")
+    : `${origin} → ${destination}`;
 
   function handlePreview() {
     if (!origin.trim() || !destination.trim()) {
@@ -177,7 +206,7 @@ export default function TransportDeskPage() {
       setTab("lane");
       return;
     }
-    const amount = total;
+    const amount = multiLane ? allLanesTotal : total;
     const q: SavedQuote = {
       id: "preview",
       customer: customer.trim() || "Draft",
@@ -189,7 +218,7 @@ export default function TransportDeskPage() {
       timestamp: Date.now(),
       amount,
       currency,
-      route: `${origin} → ${destination}`,
+      route: routeText,
       details: {
         origin,
         destination,
@@ -201,7 +230,10 @@ export default function TransportDeskPage() {
         tolls,
         truckerName: selectedTrucker?.name || vehicleType,
         validity,
-        truckers: truckers.map((t) => truckerSnapshot(t, validity)),
+        truckers: truckers.map((t) => truckerSnapshot(t, validity, lanes, fallbackLaneId, plainLaneLabel)),
+        lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+        quotedLanes,
+        allLanesTotal,
         termsAndConditions: terms,
         mode: "Transport",
         type: "transport",
@@ -213,6 +245,11 @@ export default function TransportDeskPage() {
   async function save() {
     if (!customer.trim() || !origin.trim() || !destination.trim()) {
       toast("Customer, origin and destination are required", "error");
+      setTab("lane");
+      return;
+    }
+    if (multiLane && usableLanes(lanes).length !== lanes.length) {
+      toast("Every lane needs both an origin and a destination before saving.", "error");
       setTab("lane");
       return;
     }
@@ -240,9 +277,13 @@ export default function TransportDeskPage() {
               invoiceValue,
               validity,
               truckerName: selectedTrucker?.name || "",
+              lanes,
+              quotedLanes,
+              allLanesAmount: multiLane ? allLanesTotal : undefined,
               truckers: truckers.map((t) => ({
                 id: t.id,
                 name: t.name,
+                laneId: t.laneId,
                 selected: t.selected,
                 freightBuy: t.freightBuy,
                 freightSell: t.freightSell,
@@ -320,15 +361,24 @@ export default function TransportDeskPage() {
                     const lane = newLane();
                     setLanes((prev) => [...prev, lane]);
                     setActiveLaneId(lane.id);
+                    setTruckers((prev) => [
+                      ...stampOntoFirstLane(prev, lanes[0]?.id || ""),
+                      createTruckerOption({ laneId: lane.id }, true),
+                    ]);
                   }}
                   onRemove={(id) => {
                     setLanes((prev) => {
                       const next = prev.filter((l) => l.id !== id);
                       return next.length ? next : prev;
                     });
+                    setTruckers((prev) => prev.filter((t) => t.laneId !== id));
                     if (activeLaneId === id && lanes[0]) setActiveLaneId(lanes[0].id);
                   }}
                 />
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Add a lane for extra origin → destination legs. Each lane compares its own
+                  truckers, independently of the others.
+                </p>
               </div>
               <div className="sm:col-span-2">
                 <Label>Customer *</Label>
@@ -447,18 +497,23 @@ export default function TransportDeskPage() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="font-bold text-[var(--color-atlas-navy)]">
-                  Truckers ({truckers.length})
+                  Truckers ({truckersOnLane.length})
+                  {multiLane && activeLane ? (
+                    <span className="ml-2 text-xs font-semibold text-[var(--color-text-muted)]">
+                      · {activeLaneLabel}
+                    </span>
+                  ) : null}
                 </h2>
                 <Button type="button" variant="secondary" onClick={addTrucker}>
                   <Plus className="mr-1 h-4 w-4" />
                   Trucker
                 </Button>
               </div>
-              {truckers.map((t, idx) => (
+              {truckersOnLane.map((t, idx) => (
                 <label key={t.id} className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
-                    name="selected-trucker"
+                    name={`selected-trucker-${activeLane?.id || "lane"}`}
                     checked={t.selected}
                     onChange={() => selectTrucker(t.id)}
                   />
@@ -537,10 +592,32 @@ export default function TransportDeskPage() {
 
         <div className="space-y-4">
           <Card>
-            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Quoted total</div>
+            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
+              {multiLane ? "This lane total" : "Quoted total"}
+            </div>
             <div className="mt-1 text-2xl font-extrabold text-[var(--color-atlas-navy)]">
               {formatCurrency(total, currency)}
             </div>
+            {multiLane ? (
+              <>
+                <div className="mt-3 space-y-1 border-t pt-2 text-xs">
+                  {quotedLanes.map((lane) => (
+                    <div key={lane.laneId} className="flex justify-between gap-2">
+                      <span className="text-[var(--color-text-muted)]">{lane.laneLabel}</span>
+                      <span className="text-right font-semibold">
+                        {lane.airline || "—"} · {formatCurrency(lane.amount, currency)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex justify-between border-t pt-2">
+                  <span className="text-sm font-bold">All lanes total</span>
+                  <span className="text-sm font-extrabold text-emerald-700">
+                    {formatCurrency(allLanesTotal, currency)}
+                  </span>
+                </div>
+              </>
+            ) : null}
             <div className="mt-3 text-sm">
               GP{" "}
               <span className="font-bold text-emerald-700">
@@ -549,11 +626,11 @@ export default function TransportDeskPage() {
             </div>
             <p className="mt-4 text-xs text-[var(--color-text-muted)]">⌘S to save</p>
           </Card>
-          {truckers.length > 1 ? (
+          {truckersOnLane.length > 1 ? (
             <Card>
               <VendorCompareList
                 vendors={vendorRowsFromEntries(
-                  truckers.map((t) => ({
+                  truckersOnLane.map((t) => ({
                     id: t.id,
                     name: t.name || "Untitled",
                     kind: "trucker",
@@ -562,7 +639,7 @@ export default function TransportDeskPage() {
                   })),
                 )}
                 currency={currency}
-                heading="Trucker options"
+                heading={multiLane ? `Trucker options · ${activeLaneLabel}` : "Trucker options"}
                 hint="Cheapest → highest. ★ marks the lowest total. Click a row to quote it."
                 onSelect={selectTrucker}
                 testId="transport-desk-compare"

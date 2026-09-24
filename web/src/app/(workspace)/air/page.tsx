@@ -38,6 +38,7 @@ import {
   quotedLaneRows,
   quotedOnLane,
   selectWithinLane,
+  stampOntoFirstLane,
   usableLanes,
 } from "@/lib/quotes/lanes";
 import { useLiveData } from "@/lib/api";
@@ -931,7 +932,7 @@ function AirDeskInner() {
                   setLanes((prev) => [...prev, lane]);
                   setActiveLaneId(lane.id);
                   setAirlines((prev) => [
-                    ...prev,
+                    ...stampOntoFirstLane(prev, lanes[0]?.id || ""),
                     createAirlineOption({ laneId: lane.id }, true),
                   ]);
                 }}
@@ -1178,7 +1179,7 @@ function AirDeskInner() {
                     setLanes((prev) => [...prev, lane]);
                     setActiveLaneId(lane.id);
                     setAirlines((prev) => [
-                      ...prev,
+                      ...stampOntoFirstLane(prev, lanes[0]?.id || ""),
                       createAirlineOption({ laneId: lane.id }, true),
                     ]);
                   }}
