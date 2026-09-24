@@ -18,6 +18,32 @@ function normalizeUsername(username: string): string {
   return user === "admin" ? "ganny" : user;
 }
 
+/**
+ * Desk-seat sign-in IDs ("freehand", "nrs", ...) — set by the admin in the
+ * legacy app (Admin → User Profiles → Edit ID) so a seat can change hands
+ * without the new person typing the old holder's real login. That mapping
+ * lives in Firestore (`loginAliases/{signInId}` → { target, retired }), the
+ * same collection the legacy app reads, so it works here with no separate
+ * setup. A single doc can be fetched before sign-in (the rule allows one
+ * `get`, never a `list`); on any failure (offline, doc missing, rules not
+ * deployed) this falls through to the typed value unchanged — an alias is a
+ * convenience, never a requirement to sign in.
+ */
+async function resolveLoginId(typed: string): Promise<string> {
+  if (!typed || typed === "ganny" || typed === "manager") return typed;
+  try {
+    const db = getFirebaseDb();
+    const snap = await getDoc(doc(db, "loginAliases", typed));
+    const data = snap.exists() ? snap.data() : null;
+    if (data && !data.retired && typeof data.target === "string" && data.target) {
+      return data.target.toLowerCase();
+    }
+  } catch {
+    // Offline or rules unavailable — sign in with what was typed.
+  }
+  return typed;
+}
+
 function usernameFromEmail(email: string | null | undefined): string {
   if (!email) return "";
   return email.split("@")[0]?.toLowerCase() ?? "";
@@ -47,7 +73,7 @@ async function fetchUserProfile(username: string, email: string, uid: string): P
 
 export async function firebaseLogin(username: string, password: string): Promise<AuthUser> {
   const auth = getFirebaseAuth();
-  const normalized = normalizeUsername(username);
+  const normalized = await resolveLoginId(normalizeUsername(username));
   const canonicalEmail = `${normalized}@${CANONICAL_DOMAIN}`;
   const legacyEmail = `${normalized}@${LEGACY_DOMAIN}`;
 
