@@ -1028,8 +1028,8 @@ function CourierDeskInner() {
                 </table>
               </div>
               <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
-                CHW is the higher of GW and volume weight (L × W × H × qty ÷ 5000). Qty does not
-                multiply GW. Shared by every carrier card below.
+                GW is per piece — the weight of one box. CHW per piece is the higher of that and
+                L × W × H ÷ 5000, then × Qty. Shared by every carrier card below.
               </p>
             </div>
           ) : null}

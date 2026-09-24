@@ -101,10 +101,15 @@ export function summarizeCourierPackages(packages, dimUnit = "cm") {
         const w = p.w || 0;
         const h = p.h || 0;
         const volPerPiece = (l * w * h) / divisor;
-        // GW is the line's actual weight (not per-piece). Volume weight uses qty.
-        // Chargeable is the higher of those two — never qty × GW.
+        // GW is per piece — what a desk user reads off one box's own scale — not
+        // the line's total. Compare it to the per-piece volumetric weight first,
+        // round that per-piece figure, then multiply by qty. Matches the live
+        // legacy courier desk exactly (courier-desk.js: chargeablePerPiece =
+        // max(gw, volPerPiece); round(chargeablePerPiece) * qty) — getting this
+        // backwards silently under-charges any line with qty > 1 where GW decides.
         const volumeWeight = volPerPiece * qty;
-        const chargeable = roundChargeableKg(Math.max(gw, volumeWeight));
+        const chargeablePerPiece = roundChargeableKg(Math.max(gw, volPerPiece));
+        const chargeable = chargeablePerPiece * qty;
         return { ...p, qty, volPerPiece, volumeWeight, chargeable };
     });
     const total = roundChargeableKg(lines.reduce((s, p) => s + p.chargeable, 0));
