@@ -18,6 +18,18 @@ service cloud.firestore {
     function isOwnUserDoc(userId) {
       return isSignedIn() && request.auth.token.email.split('@')[0] == userId;
     }
+    // Sales Module (test app) — accounts/salesContacts/salesTargets/
+    // salesTerritories only. Deliberately NOT applied to leads/activities:
+    // the legacy app also reads/writes those two collections directly, and
+    // tightening them risks breaking its live usage in ways that can't be
+    // verified without touching legacy code.
+    function ownerUsername() {
+      return isSignedIn() ? request.auth.token.email.split('@')[0] : null;
+    }
+    function isSalesAdmin() {
+      return isSignedIn() && request.auth.token.email in
+        ['ganny@atlaspricing.com', 'manager@atlaspricing.com', 'admin@atlaspricing.com'];
+    }
 
     match /quotes/{quoteId} { allow read, write: if isSignedIn(); }
     match /amendment_requests/{requestId} { allow read, write: if isSignedIn(); }
@@ -35,6 +47,74 @@ service cloud.firestore {
     match /resetRequests/{userId} { allow read, write: if isSignedIn(); }
     match /leads/{leadId} { allow read, write: if isSignedIn(); }
     match /activities/{activityId} { allow read, write: if isSignedIn(); }
+    match /accounts/{accountId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.owner == ownerUsername();
+      allow update, delete: if isSignedIn() && (isSalesAdmin() || resource.data.owner == ownerUsername());
+    }
+    match /salesContacts/{contactId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.owner == ownerUsername();
+      allow update, delete: if isSignedIn() && (isSalesAdmin() || resource.data.owner == ownerUsername());
+    }
+    match /salesTargets/{targetId} {
+      allow read: if isSignedIn();
+      allow write: if isSalesAdmin();
+    }
+    match /salesTerritories/{territoryId} {
+      allow read: if isSignedIn();
+      allow write: if isSalesAdmin();
+    }
+    // Audit trail (test app). Append-only: entries can be created by any signed-in
+    // user but only as themselves (actor must equal the caller's username) and
+    // stamped with server time (no back-dating); nobody can edit or delete them;
+    // only admins can read them. The legacy app never touches this collection.
+    match /auditLog/{entryId} {
+      allow read: if isSalesAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.actor == ownerUsername()
+        && request.resource.data.at == request.time
+        && request.resource.data.keys().hasOnly(['at', 'atIso', 'actor', 'actorRole', 'action',
+             'entityType', 'entityId', 'entityLabel', 'summary', 'changes', 'app', 'version']);
+      allow update, delete: if false;
+    }
+    // Error monitor (test app). Signed-in users can report an error only as
+    // themselves, stamped with server time, with a fixed set of size-limited
+    // text fields (so it can't be used to store arbitrary data or spoof another
+    // user). Only admins can read, and only admins can delete (mark resolved).
+    // Nobody can edit an entry. The legacy app never touches this collection.
+    match /clientErrors/{errorId} {
+      allow read, delete: if isSalesAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.actor == ownerUsername()
+        && request.resource.data.at == request.time
+        && request.resource.data.keys().hasOnly(['at', 'atIso', 'actor', 'fingerprint', 'message', 'stack',
+             'componentStack', 'source', 'path', 'version', 'userAgent'])
+        && request.resource.data.message is string && request.resource.data.message.size() <= 600
+        && request.resource.data.stack is string && request.resource.data.stack.size() <= 2000
+        && request.resource.data.componentStack is string && request.resource.data.componentStack.size() <= 1600;
+      allow update: if false;
+    }
+    // Who currently sits in each desk seat (Free Hand, Air Nom, ...) — shared for
+    // everyone instead of living in one browser. Admin-managed; legacy app ignores it.
+    match /deskSeats/{seatId} {
+      allow read: if isSignedIn();
+      allow write: if isSalesAdmin();
+    }
+    // Desk sign-in IDs (legacy + test app). Maps the ID people TYPE at sign-in to
+    // the desk seat's permanent internal login, so the admin can hand a desk to a
+    // new person without touching any quote or module data. A single record can be
+    // fetched before sign-in (login has to resolve the ID first) but the collection
+    // cannot be listed except by signed-in users; only the admin can write, and only
+    // the fixed fields below. Contains no credentials — just id -> id.
+    match /loginAliases/{aliasId} {
+      allow get: if true;
+      allow list: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['target', 'retired', 'updatedAt', 'updatedBy'])
+        && (request.resource.data.target == null || request.resource.data.target is string);
+      allow delete: if isAdmin();
+    }
     match /circularsLibrary/{circularId} { allow read, write: if isSignedIn(); }
     match /air_tariffs/{tariffId} { allow read, write: if isSignedIn(); }
     match /sea_tariffs/{tariffId} { allow read, write: if isSignedIn(); }

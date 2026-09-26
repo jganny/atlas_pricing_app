@@ -85,3 +85,27 @@ export function gpNumeric(row: EnquiryRecord): number | null {
   if (buy == null || row.grandTotal == null) return null;
   return row.grandTotal - buy;
 }
+
+const TONNAGE_UNIT_LABEL: Record<string, string> = { kg: "kg", rt: "RT", gw: "kg (GW)" };
+
+export function formatTonnageCell(row: EnquiryRecord): string {
+  if (row.billingWeight == null || !Number.isFinite(row.billingWeight)) return "—";
+  const unit = row.billingUnit ? (TONNAGE_UNIT_LABEL[row.billingUnit] ?? row.billingUnit) : "";
+  return `${row.billingWeight.toLocaleString(undefined, { maximumFractionDigits: 2 })}${unit ? ` ${unit}` : ""}`;
+}
+
+/** `createdAt` is a "YYYY-MM-DD" date string on most rows, an epoch-ms
+ * string on older/fallback ones — this reads either. */
+export function parseRowDate(createdAt: string | undefined): number {
+  if (!createdAt) return 0;
+  const parsed = Date.parse(createdAt);
+  if (!Number.isNaN(parsed)) return parsed;
+  const num = Number(createdAt);
+  return Number.isFinite(num) ? num : 0;
+}
+
+export function formatDateCell(row: EnquiryRecord): string {
+  const t = parseRowDate(row.createdAt);
+  if (!t) return "—";
+  return new Date(t).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+}

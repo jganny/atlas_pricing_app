@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEventHandler } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEventHandler } from "react";
 import { Input, Label } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +74,21 @@ export function ValidityField({
   const dateVal = asDateValue(value);
   const rootRef = useRef<HTMLDivElement>(null);
   const [calOpen, setCalOpen] = useState(false);
+  const calRef = useRef<HTMLDivElement>(null);
+  const [calUp, setCalUp] = useState(false);
+
+  // Keep the calendar inside the window: open above the field when it would run off the bottom.
+  useLayoutEffect(() => {
+    if (!calOpen) {
+      setCalUp(false);
+      return;
+    }
+    const el = calRef.current;
+    const root = rootRef.current;
+    if (!el || !root) return;
+    const r = el.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 8 && root.getBoundingClientRect().top - 8 > r.height) setCalUp(true);
+  }, [calOpen]);
   const [cursor, setCursor] = useState(dateVal || addDays(0));
 
   useEffect(() => {
@@ -190,10 +205,14 @@ export function ValidityField({
       </div>
       {calOpen ? (
         <div
+          ref={calRef}
           data-testid="validity-calendar"
           role="dialog"
           aria-label="Choose validity date"
-          className="absolute z-30 mt-1 w-[17.5rem] rounded-lg border border-[var(--color-border)] bg-white p-2 shadow-lg"
+          className={cn(
+            "absolute z-30 w-[17.5rem] rounded-lg border border-[var(--color-border)] bg-white p-2 shadow-lg",
+            calUp ? "bottom-full mb-1" : "mt-1",
+          )}
         >
           <div className="mb-2 flex items-center justify-between text-xs font-bold text-[var(--color-atlas-navy)]">
             <button

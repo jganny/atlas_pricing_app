@@ -10,10 +10,11 @@ import {
   downloadBlob,
   emailQuotePdf,
   htmlDocumentToPdfFile,
-  openWhatsApp,
   printHtmlDocument,
+  shareQuoteViaWhatsApp,
 } from "@/lib/quotes/quote-print";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
+import { identityRows, money, statusLabel } from "@/lib/quotes/quote-identity";
 import { Badge, Button } from "@/components/ui";
 import { BrandMark } from "@/components/BrandMark";
 import { formatCurrency } from "@/lib/utils";
@@ -34,97 +35,6 @@ import {
   type OptionBreakdown,
 } from "@/lib/quotes/option-breakdown";
 import { VendorCompareList } from "@/components/VendorCompareList";
-
-function statusLabel(status: string | undefined) {
-  const s = (status || "quoted").toLowerCase();
-  if (s === "converted") return "Won booking";
-  if (s === "lost") return "Lost";
-  if (s === "cancelled") return "Cancelled";
-  return "Quoted";
-}
-
-function money(n: unknown, currency: string) {
-  return formatCurrency(Number(n ?? 0), currency);
-}
-
-function identityRows(quote: SavedQuote): Array<[string, string]> {
-  const d = quote.details ?? {};
-  const type = (quote.type || "").toLowerCase();
-  const cur = quote.currency || "USD";
-  const rows: Array<[string, string]> = [
-    ["Customer", quote.customer || "—"],
-    ["Reference", getQuoteRefId(quote)],
-    ["Status", statusLabel(quote.status)],
-    ["Route", quote.route || "—"],
-    ["Creator", enquiryAssigneeLabel(quote.creator)],
-    ["Date", quote.date || "—"],
-  ];
-
-  const quotedLanes = Array.isArray(d.quotedLanes) ? d.quotedLanes : [];
-  if (quotedLanes.length > 1) {
-    rows.push(["Lanes", `${quotedLanes.length} origin → destination pairs`]);
-    quotedLanes.forEach((raw) => {
-      const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-      const label = String(lane.laneLabel ?? "Lane");
-      const name = String(lane.airline ?? "—");
-      const amt = money(lane.amount, cur);
-      const validity = String(lane.validity ?? "").trim();
-      rows.push([label, `${name} · ${amt}${validity ? ` · valid ${validity}` : ""}`]);
-    });
-    rows.push(["All lanes total", money(d.allLanesTotal ?? quote.amount, cur)]);
-  } else if (type === "air" || type === "sea" || type === "transport") {
-    rows.push(
-      ["Origin", String(d.origin ?? "—")],
-      ["Destination", String(d.destination ?? "—")],
-    );
-  }
-
-  if (type === "air") {
-    rows.push(
-      ["Incoterm", String(d.incoterm ?? "—")],
-      ["Commodity", String(d.commodity ?? "—")],
-      ["Chargeable weight", `${Number(d.chargeableWeight ?? 0).toFixed(2)} kg`],
-      ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
-      ["Volume weight", `${Number(d.volumeWeight ?? 0).toFixed(2)} kg`],
-    );
-  } else if (type === "sea") {
-    rows.push(
-      ["Mode", String(d.type ?? d.module ?? "—").toUpperCase()],
-      ["Incoterm", String(d.incoterm ?? "—")],
-      ["Gross weight", `${Number(d.grossWeight ?? 0).toFixed(2)} kg`],
-      ["Volume", `${Number(d.volumeCbm ?? d.volume ?? 0).toFixed(2)} CBM`],
-    );
-  } else if (type === "courier") {
-    rows.push(
-      ["Origin", `${d.originCity ?? d.origin ?? ""} (${d.originCountry ?? ""})`],
-      ["Destination", `${d.destCity ?? d.destination ?? ""} (${d.destCountry ?? ""})`],
-      ["Service", String(d.service ?? "—")],
-      ["Chargeable", `${Number(d.chargeableWeight ?? 0).toFixed(2)} kg`],
-      ["Zone", String(d.zone ?? "—")],
-    );
-  } else if (type === "transport") {
-    rows.push(
-      ["Vehicle", String(d.vehicleType ?? "—")],
-      ["Service", String(d.serviceType ?? "—")],
-    );
-  } else if (type === "warehouse") {
-    rows.push(
-      ["Location", String(d.location ?? quote.route ?? "—")],
-      ["Storage type", String(d.storageType ?? "—")],
-      ["CBM", String(d.cbm ?? "—")],
-      ["Days", String(d.days ?? "—")],
-    );
-  } else if (quotedLanes.length <= 1) {
-    rows.push(["Amount", money(quote.amount, cur)]);
-  }
-
-  if (quotedLanes.length <= 1 && String(d.validity ?? "").trim()) {
-    rows.push(["Validity", String(d.validity)]);
-  }
-
-  if (quote.notes) rows.push(["Notes", quote.notes]);
-  return rows;
-}
 
 function BreakdownPanel({
   option,
@@ -278,13 +188,22 @@ export function QuotePreviewModal({
   }
 
   async function handleWhatsApp() {
-    openWhatsApp(clientDoc.shareText);
     setShareBusy("Preparing PDF…");
     try {
       const file = await pdfFile();
-      downloadBlob(file.name, file);
-      toast("WhatsApp opened. Attach the Quote PDF that just downloaded.", "success");
+      const how = await shareQuoteViaWhatsApp({
+        file,
+        text: clientDoc.shareText,
+        title: clientDoc.shareSubject,
+      });
+      if (how === "shared") {
+        toast("Share sheet opened with the PDF attached — pick WhatsApp there.", "success");
+      } else {
+        downloadBlob(file.name, file);
+        toast("WhatsApp opened. Attach the Quote PDF that just downloaded.", "success");
+      }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       toast(err instanceof Error ? err.message : "Could not prepare the quotation PDF", "error");
     } finally {
       setShareBusy(null);
@@ -455,6 +374,12 @@ export function QuotePreviewModal({
                     <dd className="font-semibold">{money(d.amsFee, cur)}</dd>
                   </div>
                 ) : null}
+                {type === "air" && Number(d.dgFee ?? 0) > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt>DG</dt>
+                    <dd className="font-semibold">{money(d.dgFee, cur)}</dd>
+                  </div>
+                ) : null}
                 {Number(d.destFeesTotal ?? 0) > 0 ? (
                   <div className="flex justify-between gap-4">
                     <dt>Destination fees</dt>
@@ -492,42 +417,52 @@ export function QuotePreviewModal({
           ) : null}
 
           <div className="rounded-lg bg-slate-50 p-4">
-            <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
-              {multiLane
-                ? "Quoted total · all lanes"
-                : `Quoted total${quoted ? ` · ${quoted.name}` : ""}${quoted?.cheapest ? " ★" : ""}`}
-            </div>
-            <div className="text-2xl font-extrabold text-emerald-700" data-testid="quote-preview-total">
-              {formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), quote.currency)}
-            </div>
             {multiLane ? (
-              <ul className="mt-2 space-y-1 text-sm" data-testid="quote-preview-lanes">
-                {quotedLanes.map((raw, i) => {
-                  const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-                  const laneId = String(lane.laneId ?? i);
-                  const quotedOnLane = options.find((o) => o.selected && (o.laneId === laneId || o.laneLabel === String(lane.laneLabel ?? "")));
-                  return (
-                    <li key={laneId}>
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left hover:bg-white print:hover:bg-transparent"
-                        onClick={() => quotedOnLane && setInspectId(quotedOnLane.id)}
-                      >
-                        <span>
-                          {String(lane.laneLabel ?? `Lane ${i + 1}`)} · {String(lane.airline ?? "—")}
-                          {String(lane.validity ?? "").trim()
-                            ? ` · valid ${String(lane.validity)}`
-                            : quotedOnLane?.validity
-                              ? ` · valid ${quotedOnLane.validity}`
-                              : ""}
-                        </span>
-                        <span className="font-semibold">{money(lane.amount, cur)}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
+              <>
+                <div className="mb-1 text-xs font-bold uppercase text-[var(--color-text-muted)]">
+                  Quoted offer total per lane
+                </div>
+                <ul className="space-y-2" data-testid="quote-preview-lanes">
+                  {quotedLanes.map((raw, i) => {
+                    const lane = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+                    const laneId = String(lane.laneId ?? i);
+                    const quotedOnLane = options.find((o) => o.selected && (o.laneId === laneId || o.laneLabel === String(lane.laneLabel ?? "")));
+                    return (
+                      <li key={laneId}>
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left hover:bg-white print:hover:bg-transparent"
+                          onClick={() => quotedOnLane && setInspectId(quotedOnLane.id)}
+                        >
+                          <span className="text-sm">
+                            <span className="font-bold text-[var(--color-atlas-navy)]">
+                              {String(lane.laneLabel ?? `Lane ${i + 1}`)}
+                            </span>
+                            {" · "}
+                            {String(lane.airline ?? "—")}
+                            {String(lane.validity ?? "").trim()
+                              ? ` · valid ${String(lane.validity)}`
+                              : quotedOnLane?.validity
+                                ? ` · valid ${quotedOnLane.validity}`
+                                : ""}
+                          </span>
+                          <span className="text-lg font-extrabold text-emerald-700">{money(lane.amount, cur)}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <>
+                <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
+                  {`Quoted total${quoted ? ` · ${quoted.name}` : ""}${quoted?.cheapest ? " ★" : ""}`}
+                </div>
+                <div className="text-2xl font-extrabold text-emerald-700" data-testid="quote-preview-total">
+                  {formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), quote.currency)}
+                </div>
+              </>
+            )}
             {quotedIsNotCheapest && cheapest ? (
               <div className="mt-2 text-sm font-semibold text-emerald-800" data-testid="quote-preview-cheapest-note">
                 Cheapest option: {cheapest.name} ★ {money(cheapest.total, cur)} — click it above to

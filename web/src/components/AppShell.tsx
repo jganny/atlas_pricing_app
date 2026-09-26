@@ -36,6 +36,7 @@ import {
   type AppRouteId,
 } from "@/lib/auth/rbac";
 import { signedInCaption } from "@/lib/auth/desk-seats";
+import { useSeatsVersion } from "@/hooks/use-seats-version";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
@@ -142,6 +143,7 @@ function NavLink({
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  useSeatsVersion();
   const pathname = usePathname() ?? "/";
   const normalized =
     pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
@@ -189,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             className={
               opts.dark
-                ? "mt-3 px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-white/40 first:mt-0"
+                ? "mt-3 px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-white/65 first:mt-0"
                 : "bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-400"
             }
           >
@@ -240,7 +242,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ATLAS PRICING
             </div>
             <div className="mt-1 text-xs text-white/60">Quote · book · track · v{appVersion}</div>
-            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-gold-bright)]">
+            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c3d0dc]">
               {focus}
             </div>
             <Link
@@ -256,7 +258,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {renderNavGroups({ dark: true })}
           </nav>
           <div className="border-t border-white/10 p-4">
-            <div className="text-xs text-white/50">Signed in as</div>
+            <div className="text-xs text-white/70">Signed in as</div>
             <div className="text-sm font-semibold">
               {signedInCaption(user?.username, user?.displayName)}
             </div>

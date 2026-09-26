@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import type { SavedQuote } from "../types";
 import {
   optionBreakdownsFromQuote,
+  optionChargeLines,
   uniqueOptionBreakdowns,
   quotePreviewPanelCounts,
 } from "./option-breakdown";
@@ -150,6 +151,111 @@ assert.equal(ecu.baseFreight, 1900);
 assert.equal(ecu.appliedRate, 0, "sea coloader must not use air kg×rate");
 assert.equal(ecu.ams, 0);
 assert.equal(ecu.validity, "2026-09-20");
+
+// Multi-container FCL liner with named origin/dest surcharges — the output
+// must break these out per row instead of collapsing to one combined total.
+const fclSeaQuote: SavedQuote = {
+  id: "s2",
+  customer: "B",
+  creator: "ganny",
+  status: "quoted",
+  type: "sea",
+  amount: 1730,
+  currency: "USD",
+  details: {
+    type: "fcl",
+    grossWeight: 24000,
+    volumeCbm: 68,
+    liners: [
+      {
+        id: "cma",
+        name: "CMA CGM",
+        kind: "liner",
+        selected: true,
+        quoteTotal: 1730,
+        routing: "Nhava Sheva",
+        tt: "22",
+        validity: "2026-11-01",
+        containers: [
+          { type: "40'GP", qty: 2, sellRate: 500, buyRate: 420 },
+          { type: "20'GP", qty: 1, sellRate: 300, buyRate: 260 },
+        ],
+        originFeesEnabled: true,
+        destFeesEnabled: true,
+        originSurcharges: [
+          { id: "o1", name: "Origin THC", sell: 50, buy: 40, unit: "container", remarks: "" },
+          { id: "o2", name: "Documentation", sell: 100, buy: 80, unit: "flat", remarks: "" },
+        ],
+        destSurcharges: [
+          { id: "d1", name: "Destination THC", sell: 60, buy: 45, unit: "container", remarks: "" },
+        ],
+      },
+    ],
+  },
+};
+const fclRows = optionBreakdownsFromQuote(fclSeaQuote);
+const cma = fclRows.find((r) => r.id === "cma");
+assert.ok(cma);
+assert.equal(cma.containerLines.length, 2, "container-wise breakdown, not one collapsed total");
+assert.deepEqual(
+  cma.containerLines.map((c) => c.amount),
+  [1000, 300],
+  "each container type keeps its own qty x rate subtotal",
+);
+assert.equal(cma.originLines.length, 2, "origin charges broken out per surcharge row, not lumped with freight");
+assert.deepEqual(cma.originLines.map((o) => o.name), ["Origin THC", "Documentation"]);
+assert.deepEqual(cma.originLines.map((o) => o.amount), [150, 100]);
+assert.equal(cma.destLines.length, 1);
+assert.equal(cma.destLines[0].amount, 180);
+
+const fclLines = optionChargeLines(cma, "USD", 0);
+assert.ok(fclLines.some((l) => l.label === "40'GP × 2"), "container line rendered container-wise");
+assert.ok(fclLines.some((l) => l.label === "Origin THC"), "origin surcharge rendered as its own line");
+assert.ok(fclLines.some((l) => l.label === "Destination THC"), "destination surcharge rendered as its own line");
+assert.ok(!fclLines.some((l) => l.label === "Origin fees"), "collapsed combined origin-fees line must not also appear");
+assert.ok(!fclLines.some((l) => l.label === "Base freight"), "collapsed base-freight line must not also appear alongside container lines");
+
+// Two distinct container sizes (20' and 40') — each nominal size must get
+// its own "X' Total" line, not just one blended option total.
+const sizeTotal20 = fclLines.find((l) => l.label === "20' Total");
+const sizeTotal40 = fclLines.find((l) => l.label === "40' Total");
+assert.ok(sizeTotal20, "20' Total line must be shown separately from the 40' total");
+assert.ok(sizeTotal40, "40' Total line must be shown separately from the 20' total");
+assert.equal(sizeTotal20!.value, "$300.00", "20' Total sums only the 20' rows (1 × $300)");
+assert.equal(sizeTotal40!.value, "$1,000.00", "40' Total sums only the 40' rows (2 × $500)");
+
+// Two rows of the SAME nominal size at different rates — they must combine
+// into one "20' Total" rather than being left as two unsummed rows.
+const sameSizeQuote: SavedQuote = {
+  id: "s3",
+  customer: "C",
+  creator: "ganny",
+  status: "quoted",
+  type: "sea",
+  amount: 1050,
+  currency: "USD",
+  details: {
+    type: "fcl",
+    liners: [
+      {
+        id: "one",
+        name: "ONE",
+        kind: "liner",
+        selected: true,
+        quoteTotal: 1050,
+        containers: [
+          { type: "20'GP", qty: 1, sellRate: 450, buyRate: 400 },
+          { type: "20'RF", qty: 1, sellRate: 600, buyRate: 520 },
+        ],
+      },
+    ],
+  },
+};
+const oneRow = optionBreakdownsFromQuote(sameSizeQuote).find((r) => r.id === "one");
+assert.ok(oneRow);
+const oneLines = optionChargeLines(oneRow, "USD", 0);
+assert.equal(oneLines.filter((l) => l.label === "20' Total").length, 1, "same-size rows collapse into a single group total, not one per row");
+assert.equal(oneLines.find((l) => l.label === "20' Total")!.value, "$1,050.00", "20' Total sums 20'GP ($450) + 20'RF ($600)");
 
 const courierQuote: SavedQuote = {
   id: "c",

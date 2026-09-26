@@ -1,7 +1,10 @@
 "use client";
 
+import { ReportBuilderPanel } from "@/components/ReportBuilderPanel";
+import { GuideTipButton } from "@/components/GuideTipButton";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import type { SortingState } from "@tanstack/react-table";
 import { Archive, Columns3, Download, Loader2, Search } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
@@ -31,6 +34,8 @@ import {
 } from "@/lib/quotes/edb-reports";
 import {
   DEFAULT_EDB_METRIC_MODES,
+  gpNumeric,
+  parseRowDate,
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
 import {
@@ -47,6 +52,52 @@ const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryReco
   { key: "lost", label: "Lost", match: (e) => e.status === "lost" },
   { key: "cancelled", label: "Cancelled", match: (e) => e.status === "cancelled" },
 ];
+
+/** "Sort by" presets — the same sort state column-header clicks use, so
+ * picking one here and then clicking a header afterward never fights. */
+const SORT_PRESETS: Array<{ key: string; label: string; sorting: SortingState }> = [
+  { key: "date_desc", label: "Latest quoted first", sorting: [{ id: "date", desc: true }] },
+  { key: "date_asc", label: "Oldest first", sorting: [{ id: "date", desc: false }] },
+  { key: "tonnage_desc", label: "Tonnage: high → low", sorting: [{ id: "tonnage", desc: true }] },
+  { key: "tonnage_asc", label: "Tonnage: low → high", sorting: [{ id: "tonnage", desc: false }] },
+  { key: "sell_desc", label: "Billing: high → low", sorting: [{ id: "sell", desc: true }] },
+  { key: "sell_asc", label: "Billing: low → high", sorting: [{ id: "sell", desc: false }] },
+  { key: "gp_desc", label: "GP: high → low", sorting: [{ id: "gp", desc: true }] },
+  { key: "gp_asc", label: "GP: low → high", sorting: [{ id: "gp", desc: false }] },
+];
+
+/** Mirrors the table's own per-column sort for CSV export, which never runs
+ * through react-table — keeps "extract the data" always matching what the
+ * screen shows for the metrics the Sort-by control actually offers. */
+function sortKeyFor(row: EnquiryRecord, id: string): number | string {
+  switch (id) {
+    case "date":
+      return parseRowDate(row.createdAt);
+    case "tonnage":
+      return row.billingWeight ?? 0;
+    case "sell":
+      return row.grandTotal ?? 0;
+    case "gp":
+      return gpNumeric(row) ?? 0;
+    case "customer":
+      return (row.customer || "").toLowerCase();
+    default:
+      return row.ref || row.id;
+  }
+}
+
+function sortRowsForExport(rows: EnquiryRecord[], sorting: SortingState): EnquiryRecord[] {
+  const rule = sorting[0];
+  if (!rule) return rows;
+  const dir = rule.desc ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const va = sortKeyFor(a, rule.id);
+    const vb = sortKeyFor(b, rule.id);
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+}
 
 function MetricToggle<T extends string>({
   label,
@@ -96,6 +147,13 @@ function EnquiryDatabaseInner() {
   const [originFilter, setOriginFilter] = useState("");
   const [destFilter, setDestFilter] = useState("");
   const [carrierFilter, setCarrierFilter] = useState("");
+  const [customerFilter, setCustomerFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [tonnageMin, setTonnageMin] = useState("");
+  const [tonnageMax, setTonnageMax] = useState("");
+  const [sortKey, setSortKey] = useState<string>("date_desc");
+  const [sorting, setSorting] = useState<SortingState>(SORT_PRESETS[0].sorting);
   const [columns, setColumns] = useState({
     lane: true,
     desk: false,
@@ -104,9 +162,12 @@ function EnquiryDatabaseInner() {
     amount: true,
     gp: true,
     sla: false,
+    tonnage: false,
   });
   const [showColumns, setShowColumns] = useState(false);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
   const [metricModes, setMetricModes] = useState<EdbMetricModes>(DEFAULT_EDB_METRIC_MODES);
   const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
@@ -140,6 +201,19 @@ function EnquiryDatabaseInner() {
     [rows],
   );
 
+  // Counts the filters tucked behind "More filters" — shown as a badge so a
+  // hidden-but-active filter (e.g. a date range set earlier) is never invisible.
+  const moreFilterCount = [
+    originFilter,
+    destFilter,
+    carrierFilter,
+    customerFilter,
+    dateFrom,
+    dateTo,
+    tonnageMin,
+    tonnageMax,
+  ].filter(Boolean).length;
+
   const pipelineCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const chip of PIPELINE_CHIPS) {
@@ -168,6 +242,20 @@ function EnquiryDatabaseInner() {
       ) {
         return false;
       }
+      if (customerFilter && !(row.customer || "").toLowerCase().includes(customerFilter.toLowerCase())) {
+        return false;
+      }
+      if (dateFrom || dateTo) {
+        const rowTime = Date.parse(row.createdAt) || Number(row.createdAt) || 0;
+        if (dateFrom && rowTime < Date.parse(dateFrom)) return false;
+        if (dateTo && rowTime > Date.parse(`${dateTo}T23:59:59`)) return false;
+      }
+      if (tonnageMin || tonnageMax) {
+        const weight = row.billingWeight;
+        if (weight == null) return false;
+        if (tonnageMin && weight < Number(tonnageMin)) return false;
+        if (tonnageMax && weight > Number(tonnageMax)) return false;
+      }
       if (deskFilter === "mine") {
         const creator = (row.creator || "").toLowerCase();
         const assignee = (row.assignee || "").toLowerCase();
@@ -194,12 +282,47 @@ function EnquiryDatabaseInner() {
       if (pinned) return [pinned, ...out];
     }
     return out;
-  }, [rows, search, pipeline, modeFilter, deskFilter, user?.username, originFilter, destFilter, carrierFilter, selectedId, archiveHit]);
+  }, [
+    rows,
+    search,
+    pipeline,
+    modeFilter,
+    deskFilter,
+    user?.username,
+    originFilter,
+    destFilter,
+    carrierFilter,
+    customerFilter,
+    dateFrom,
+    dateTo,
+    tonnageMin,
+    tonnageMax,
+    selectedId,
+    archiveHit,
+  ]);
 
   const selected =
     filtered.find((r) => r.id === selectedId) ??
     rows.find((r) => r.id === selectedId) ??
     (archiveHit && archiveHit.id === selectedId ? archiveHit : null);
+
+  // Same order the table and CSV export show — a raw `filtered` array isn't
+  // resorted by the active "Sort by" choice, only the on-screen table is
+  // (via react-table's own sort), so Next/Previous must use this too or the
+  // step-through order silently disagrees with what's on screen.
+  const orderedRows = useMemo(() => sortRowsForExport(filtered, sorting), [filtered, sorting]);
+
+  // Step-through order follows the currently filtered/sorted list, so Next/Previous
+  // on the detail page matches whatever the user was looking at before they clicked in.
+  const selectedIndex = selected ? orderedRows.findIndex((r) => r.id === selected.id) : -1;
+  const hasPrev = selectedIndex > 0;
+  const hasNext = selectedIndex >= 0 && selectedIndex < orderedRows.length - 1;
+  const goPrev = () => {
+    if (hasPrev) setSelectedId(orderedRows[selectedIndex - 1].id);
+  };
+  const goNext = () => {
+    if (hasNext) setSelectedId(orderedRows[selectedIndex + 1].id);
+  };
 
   const stats = useMemo(() => {
     const open = filtered.filter((e) => e.status === "open" || e.status === "quoted").length;
@@ -272,6 +395,32 @@ function EnquiryDatabaseInner() {
     }
   }
 
+  if (selected) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedId(null)}>
+            ← Back to Enquiry DB
+          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[var(--color-text-muted)]">
+              {selectedIndex >= 0 ? `${selectedIndex + 1} of ${orderedRows.length}` : ""}
+            </span>
+            <Button type="button" variant="secondary" size="sm" disabled={!hasPrev} onClick={goPrev}>
+              ‹ Previous
+            </Button>
+            <Button type="button" variant="secondary" size="sm" disabled={!hasNext} onClick={goNext}>
+              Next ›
+            </Button>
+          </div>
+        </div>
+        <div className="mx-auto w-full max-w-2xl">
+          <EnquiryInspector row={selected} onClose={() => setSelectedId(null)} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -303,6 +452,16 @@ function EnquiryDatabaseInner() {
           >
             {showReports ? "Hide FY" : "FY report"}
           </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="report-builder-toggle"
+            onClick={() => setShowBuilder((v) => !v)}
+          >
+            {showBuilder ? "Hide report builder" : "Report builder"}
+          </Button>
+          <GuideTipButton query="report builder" />
           {admin ? (
             <Button
               type="button"
@@ -328,7 +487,7 @@ function EnquiryDatabaseInner() {
             size="sm"
             disabled={!filtered.length}
             onClick={() => {
-              downloadEnquiryCsv(filtered);
+              downloadEnquiryCsv(orderedRows);
               toast(`Exported ${filtered.length} rows`, "success");
             }}
           >
@@ -384,15 +543,17 @@ function EnquiryDatabaseInner() {
         </div>
       ) : null}
 
+      {showBuilder ? <ReportBuilderPanel rows={filtered} /> : null}
+
       {error ? (
         <Card className="border-red-200 bg-red-50">
           <p className="text-sm font-semibold text-red-800">Could not load enquiries.</p>
         </Card>
       ) : null}
 
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-2">
-          <Card className="flex flex-wrap items-center gap-2 p-2.5">
+      <div className="min-w-0 space-y-2">
+        <Card className="space-y-2.5 p-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <label className="flex min-w-[16rem] flex-1 items-center gap-2 text-sm">
               <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
               <input
@@ -410,6 +571,7 @@ function EnquiryDatabaseInner() {
               Look up
             </Button>
             <select
+              aria-label="Filter by mode"
               className="rounded-md border px-2 py-1.5 text-sm"
               value={modeFilter}
               onChange={(e) => setModeFilter(e.target.value)}
@@ -422,6 +584,7 @@ function EnquiryDatabaseInner() {
               <option value="warehouse">Warehouse</option>
             </select>
             <select
+              aria-label="Filter by desk"
               className="rounded-md border px-2 py-1.5 text-sm"
               value={deskFilter}
               onChange={(e) => setDeskFilter(e.target.value)}
@@ -434,24 +597,35 @@ function EnquiryDatabaseInner() {
                 </option>
               ))}
             </select>
-            <input
-              className="w-20 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="POL"
-              value={originFilter}
-              onChange={(e) => setOriginFilter(e.target.value)}
-            />
-            <input
-              className="w-20 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="POD"
-              value={destFilter}
-              onChange={(e) => setDestFilter(e.target.value)}
-            />
-            <input
-              className="w-24 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="Carrier"
-              value={carrierFilter}
-              onChange={(e) => setCarrierFilter(e.target.value)}
-            />
+            <select
+              aria-label="Sort by"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={sortKey}
+              onChange={(e) => {
+                const key = e.target.value;
+                setSortKey(key);
+                const preset = SORT_PRESETS.find((p) => p.key === key);
+                if (preset) setSorting(preset.sorting);
+              }}
+            >
+              {SORT_PRESETS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  Sort: {p.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
+              onClick={() => setShowMoreFilters((v) => !v)}
+            >
+              {showMoreFilters ? "Fewer filters" : "More filters"}
+              {moreFilterCount > 0 ? (
+                <span className="ml-0.5 rounded-full bg-[var(--color-atlas-navy)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {moreFilterCount}
+                </span>
+              ) : null}
+            </button>
             <button
               type="button"
               className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
@@ -460,6 +634,82 @@ function EnquiryDatabaseInner() {
               <Columns3 className="h-3.5 w-3.5" />
               Columns
             </button>
+          </div>
+
+          {showMoreFilters ? (
+            <div className="grid grid-cols-2 gap-2.5 border-t border-[var(--color-border)] pt-2.5 sm:grid-cols-4">
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Origin (POL)
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={originFilter}
+                  onChange={(e) => setOriginFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Destination (POD)
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={destFilter}
+                  onChange={(e) => setDestFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Carrier
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={carrierFilter}
+                  onChange={(e) => setCarrierFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Customer
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={customerFilter}
+                  onChange={(e) => setCustomerFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Date from
+                <input
+                  type="date"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Date to
+                <input
+                  type="date"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Tonnage, minimum
+                <input
+                  type="number"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={tonnageMin}
+                  onChange={(e) => setTonnageMin(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Tonnage, maximum
+                <input
+                  type="number"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={tonnageMax}
+                  onChange={(e) => setTonnageMax(e.target.value)}
+                />
+              </label>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-2.5">
             <MetricToggle
               label="Buy"
               value={metricModes.buy}
@@ -487,61 +737,54 @@ function EnquiryDatabaseInner() {
               ]}
               onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
             />
+          </div>
+        </Card>
+        {archiveNote ? (
+          <p className="px-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
+        ) : null}
+        {showColumns ? (
+          <Card className="flex flex-wrap gap-3 p-2 text-xs font-semibold">
+            {(
+              [
+                ["lane", "Lane"],
+                ["desk", "Desk"],
+                ["carrier", "Carrier"],
+                ["tonnage", "Tonnage"],
+                ["buy", "Buy"],
+                ["amount", "Sell"],
+                ["gp", "GP"],
+                ["sla", "SLA"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="inline-flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={columns[key]}
+                  onChange={(e) =>
+                    setColumns((c) => ({ ...c, [key]: e.target.checked }))
+                  }
+                />
+                {label}
+              </label>
+            ))}
           </Card>
-          {archiveNote ? (
-            <p className="px-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
-          ) : null}
-          {showColumns ? (
-            <Card className="flex flex-wrap gap-3 p-2 text-xs font-semibold">
-              {(
-                [
-                  ["lane", "Lane"],
-                  ["desk", "Desk"],
-                  ["carrier", "Carrier"],
-                  ["buy", "Buy"],
-                  ["amount", "Sell"],
-                  ["gp", "GP"],
-                  ["sla", "SLA"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="inline-flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={columns[key]}
-                    onChange={(e) =>
-                      setColumns((c) => ({ ...c, [key]: e.target.checked }))
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-            </Card>
-          ) : null}
+        ) : null}
 
-          <Card className="overflow-hidden p-0">
-            {isLoading ? (
-              <TableSkeleton rows={8} />
-            ) : (
-              <EnquiryTable
-                rows={filtered}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                metricModes={metricModes}
-                visibleColumns={columns}
-              />
-            )}
-          </Card>
-        </div>
-
-        <div className="lg:sticky lg:top-16">
-          {selected ? (
-            <EnquiryInspector row={selected} onClose={() => setSelectedId(null)} />
+        <Card className="overflow-hidden p-0">
+          {isLoading ? (
+            <TableSkeleton rows={8} />
           ) : (
-            <Card className="text-sm text-[var(--color-text-muted)]">
-              Select a quote. Look up searches live quotes and archive — no file name needed.
-            </Card>
+            <EnquiryTable
+              rows={filtered}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              metricModes={metricModes}
+              visibleColumns={columns}
+              sorting={sorting}
+              onSortingChange={setSorting}
+            />
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

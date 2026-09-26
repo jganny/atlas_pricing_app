@@ -41,6 +41,7 @@ export function AirlineOptionForm({
   onUpdateBreak: (name: WeightBreakName, field: "sell" | "buy", value: number) => void;
 }) {
   const amsId = `air-ams-fee-${opt.id}`;
+  const dgId = `air-dg-fee-${opt.id}`;
   const chw = tot?.freight.chargeableWeightKg ?? 0;
   const breaksToShow = visibleAirBreaks(chw, tot?.freight.usedBreak, showAllBreaks);
 
@@ -128,6 +129,37 @@ export function AirlineOptionForm({
                 step="0.01"
                 value={opt.amsFeeBuy || 0}
                 onValueChange={(n) => onUpdate({ amsFeeBuy: n })}
+              />
+            </Label>
+          </div>
+        </div>
+        <div className="md:col-span-2 space-y-2">
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input
+              id={dgId}
+              type="checkbox"
+              checked={opt.dgFeeEnabled}
+              onChange={(e) => onUpdate({ dgFeeEnabled: e.target.checked })}
+            />
+            DG fee
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Label>
+              DG sell
+              <NumberInput
+                disabled={!opt.dgFeeEnabled}
+                step="0.01"
+                value={opt.dgFee}
+                onValueChange={(n) => onUpdate({ dgFee: n })}
+              />
+            </Label>
+            <Label>
+              DG buy
+              <NumberInput
+                disabled={!opt.dgFeeEnabled}
+                step="0.01"
+                value={opt.dgFeeBuy || 0}
+                onValueChange={(n) => onUpdate({ dgFeeBuy: n })}
               />
             </Label>
           </div>
@@ -254,6 +286,11 @@ export function AirlineOptionForm({
             {tot.ams > 0 ? (
               <span>
                 AMS: <strong>{formatCurrency(tot.ams, currency)}</strong>
+              </span>
+            ) : null}
+            {tot.dg > 0 ? (
+              <span>
+                DG: <strong>{formatCurrency(tot.dg, currency)}</strong>
               </span>
             ) : null}
             <span>

@@ -2,6 +2,7 @@ import type { SavedQuote } from "../types";
 import { getQuoteRefId } from "./ref-id";
 import { formatCurrency } from "../utils";
 import { enquiryAssigneeLabel } from "../auth/desk-seats";
+import { identityRows } from "./quote-identity";
 import {
   formatRoutingPreview,
   formatTransitPreview,
@@ -27,21 +28,46 @@ function optionFlags(option: OptionBreakdown): string {
   const bits: string[] = [];
   if (option.selected) bits.push("quoted offer");
   if (option.cheapest) bits.push("lowest");
-  if (option.laneLabel) bits.push(option.laneLabel);
   return bits.join(" · ");
 }
 
-/** Quoted offer first, then the rest — client reads the pack top to bottom. */
+/**
+ * One row per distinct lane, in first-seen order — Lane 1's options grouped
+ * together, then Lane 2's, etc. A single-lane quote (the common case) always
+ * produces exactly one group with an empty label, so callers that only care
+ * about "is this multi-lane" can check `groups.length > 1`.
+ */
+export function groupOptionsByLane<T extends { laneId?: string; laneLabel?: string }>(
+  options: T[],
+): Array<{ laneId: string; laneLabel: string; options: T[] }> {
+  const order: string[] = [];
+  const groups = new Map<string, { laneId: string; laneLabel: string; options: T[] }>();
+  for (const option of options) {
+    const key = option.laneId || option.laneLabel || "";
+    if (!groups.has(key)) {
+      groups.set(key, { laneId: key, laneLabel: option.laneLabel || "", options: [] });
+      order.push(key);
+    }
+    groups.get(key)!.options.push(option);
+  }
+  return order.map((key) => groups.get(key)!);
+}
+
+/** Quoted offer first within each lane; lanes stay in first-seen order so the pack reads Lane 1 top to bottom, then Lane 2. */
 export function orderOptionsForPack(options: OptionBreakdown[]): OptionBreakdown[] {
-  return [...options].sort((a, b) => Number(b.selected) - Number(a.selected));
+  return groupOptionsByLane(options).flatMap((group) =>
+    [...group.options].sort((a, b) => Number(b.selected) - Number(a.selected)),
+  );
 }
 
 function optionListPlain(options: OptionBreakdown[], heading: string, cur: string): string[] {
   if (!options.length) return [];
+  const multiLane = groupOptionsByLane(options).length > 1;
   const lines = [heading];
   for (const option of options) {
     const flag = option.selected ? "quoted offer" : option.cheapest ? "lowest" : "alternative";
-    lines.push(`• ${option.name}: ${formatCurrency(option.total, cur)} (${flag})`);
+    const lanePrefix = multiLane && option.laneLabel ? `${option.laneLabel} · ` : "";
+    lines.push(`• ${lanePrefix}${option.name}: ${formatCurrency(option.total, cur)} (${flag})`);
   }
   return lines;
 }
@@ -101,43 +127,59 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
       : "PDF attached — official quotation with charge breakup.",
   ].join("\n");
 
+  const laneGroups = groupOptionsByLane(options);
+  const multiLanePack = laneGroups.length > 1;
+
   const compareRows = options
-    .map(
-      (option) => `<tr>
+    .map((option) => {
+      const flags = [optionFlags(option), multiLanePack ? option.laneLabel : ""].filter(Boolean).join(" · ");
+      return `<tr>
         <td><strong>${esc(option.name)}</strong></td>
-        <td>${esc(optionFlags(option) || option.kindLabel)}</td>
+        <td>${esc(flags || option.kindLabel)}</td>
         <td class="num">${esc(formatCurrency(option.total, cur))}</td>
-      </tr>`,
-    )
+      </tr>`;
+    })
     .join("");
 
-  const panels = options
-    .map((option, index) => {
-      const lines = optionChargeLines(option, cur, chw);
-      const dl = lines
-        .map((line, i) => {
-          const last = i === lines.length - 1;
-          return `<div class="row${last ? " total" : ""}"><span>${esc(line.label)}</span><strong>${esc(line.value)}</strong></div>`;
-        })
-        .join("");
-      const routing = formatRoutingPreview(option.routing || "") || "—";
-      const tt = formatTransitPreview(option.tt || "") || "—";
-      const role = option.selected ? "quoted offer" : "alternative";
-      return `<section class="panel${option.selected ? " quoted" : ""}">
-        <p class="panel-kicker">${index + 1} of ${options.length} · ${esc(role)}</p>
+  function renderPanel(option: OptionBreakdown, index: number, laneCount: number): string {
+    const lines = optionChargeLines(option, cur, chw);
+    const dl = lines
+      .map((line, i) => {
+        const last = i === lines.length - 1;
+        return `<div class="row${last ? " total" : ""}"><span>${esc(line.label)}</span><strong>${esc(line.value)}</strong></div>`;
+      })
+      .join("");
+    const routing = formatRoutingPreview(option.routing || "") || "—";
+    const tt = formatTransitPreview(option.tt || "") || "—";
+    const role = option.selected ? "quoted offer" : "alternative";
+    const laneTag = multiLanePack && option.laneLabel ? ` <span class="lane-tag">${esc(option.laneLabel)}</span>` : "";
+    return `<section class="panel${option.selected ? " quoted" : ""}">
+        <p class="panel-kicker">${index + 1} of ${laneCount} · ${esc(role)}${laneTag}</p>
         <h3>${esc(option.name)}${option.cheapest ? " ★ lowest" : ""}</h3>
         ${dl}
         <div class="row muted"><span>Routing</span><span>${esc(routing)}</span></div>
         <div class="row muted"><span>Transit time</span><span>${esc(tt)}</span></div>
         <div class="row muted"><span>Validity</span><span>${esc(option.validity || "—")}</span></div>
       </section>`;
-    })
-    .join("");
+  }
+
+  const panels = multiLanePack
+    ? laneGroups
+        .map(
+          (group) => `<h4 class="lane-heading">${esc(group.laneLabel || "Lane")}</h4>
+      ${group.options.map((option, i) => renderPanel(option, i, group.options.length)).join("")}`,
+        )
+        .join("")
+    : laneGroups[0]?.options.map((option, i) => renderPanel(option, i, options.length)).join("") || "";
 
   const packHint =
     options.length > 1
-      ? `<p class="hint">Every option below has its full breakup. Quoted offer is first. The client does not need our app to compare.</p>`
+      ? `<p class="hint"><strong>Quoted offer</strong> — the option we're recommending to the client, chosen on the desk; it prints first${multiLanePack ? " in each lane" : ""}. <strong>★ Lowest</strong> — the cheapest option${multiLanePack ? " on that lane" : ""}, shown for comparison even when it isn't the one we're recommending. The same option can be both, like it is here.</p>`
       : "";
+
+  const identityRowsHtml = identityRows(quote)
+    .map(([label, value]) => `<tr><td class="id-label">${esc(label)}</td><td>${esc(value)}</td></tr>`)
+    .join("");
 
   const terms = String(quote.details?.termsAndConditions ?? "").trim();
   const html = `<!DOCTYPE html>
@@ -161,10 +203,19 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
   th { font-size: 11px; text-transform: uppercase; color: #64748b; }
   .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .id-table { margin-bottom: 16px; }
+  .id-table td { border-bottom: 1px solid #f1f5f9; padding: 4px 6px; }
+  .id-label { width: 34%; color: #64748b; font-weight: 600; }
   .hint { font-size: 12px; color: #334155; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 12px; }
   .panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 12px 0; break-inside: avoid; page-break-inside: avoid; }
   .panel.quoted { border-color: #6ee7b7; background: #f0fdf4; }
   .panel-kicker { margin: 0 0 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; }
+  .lane-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-weight: 800; letter-spacing: 0.02em; }
+  .lane-heading { margin: 18px 0 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #323843; }
+  .lane-heading:first-of-type { margin-top: 4px; }
+  .lane-total-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #e2e8f0; }
+  .lane-total-row:last-child { border-bottom: none; }
+  .lane-total-row strong { color: #047857; }
   .panel h3 { margin: 0 0 10px; font-size: 1.05rem; }
   .row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 13px; }
   .row.total { border-top: 1px solid #e2e8f0; margin-top: 6px; padding-top: 8px; font-weight: 800; color: #047857; }
@@ -187,6 +238,7 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
       </div>
     </div>
   </header>
+  <table class="id-table"><tbody>${identityRowsHtml}</tbody></table>
   ${packHint}
   ${
     options.length
@@ -197,10 +249,22 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   ${panels}`
       : `<p>No carrier options on this quotation.</p>`
   }
-  <div class="total-box">
+  ${
+    multiLanePack
+      ? `<div class="total-box">
+    <div class="meta">Quoted offer total per lane (client may choose another option per lane above)</div>
+    ${laneGroups
+      .map((group) => {
+        const laneQuoted = group.options.find((o) => o.selected) ?? group.options[0];
+        return `<div class="lane-total-row"><span>${esc(group.laneLabel || "Lane")}${laneQuoted ? ` · ${esc(laneQuoted.name)}` : ""}</span><strong>${esc(formatCurrency(laneQuoted?.total ?? 0, cur))}</strong></div>`;
+      })
+      .join("")}
+  </div>`
+      : `<div class="total-box">
     <div class="meta">${options.length > 1 ? "Quoted offer total (client may choose another option above)" : "Quoted total"}</div>
     <strong>${esc(formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), cur))}</strong>
-  </div>
+  </div>`
+  }
   ${
     terms
       ? `<h2>Terms &amp; conditions</h2><pre>${esc(terms)}</pre>`

@@ -2,11 +2,12 @@
 
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult, SeaMode } from "@atlas/pricing-core";
-import type { AirlineOption, LinerOption } from "@/lib/pricing/carrier-options";
+import type { AirlineOption, CourierOption, LinerOption } from "@/lib/pricing/carrier-options";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { airlineSnapshot, courierSnapshot, linerSnapshot } from "@/lib/quotes/option-breakdown";
+import { allLanesRoute, type QuotedLaneRow, type QuoteLane } from "@/lib/quotes/lanes";
 import {
   ensureIncidentalTerm,
   formatRoutingPreview,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/pricing/terms";
 import { getFirebaseDb } from "./client";
 import { omitUndefinedDeep } from "./sanitize";
+import { logAudit } from "./audit-log";
 
 export const DEFAULT_COURIER_TERMS = ensureIncidentalTerm(
   "1. Rates are based on chargeable weight (max of actual vs volumetric per piece).\n" +
@@ -30,12 +32,26 @@ interface SaveMeta {
   quoteId?: string;
   quoteNumber?: string | number;
   status?: string;
+  /** Real link back to the SalesLead this quote was created from, when any. */
+  leadId?: string;
 }
 
 export interface SavedQuoteLane {
   id: string;
   origin: string;
   destination: string;
+}
+
+/** One priced comparison card — already run through calculateCourierFreight
+ * by the desk (only it has the tariff books), ready to snapshot as-is. */
+export interface CourierCardResult {
+  option: CourierOption;
+  name: string;
+  sellLocal: number;
+  ratePerKg?: number;
+  transit?: string;
+  chargeableKg?: number;
+  gstAmount?: number;
 }
 
 export interface SaveCourierInput extends SaveMeta {
@@ -53,7 +69,16 @@ export interface SaveCourierInput extends SaveMeta {
   marginPct: number;
   gstEnabled: boolean;
   packages: CourierFreightResult["packages"];
+  /** The overall quoted card's own calc — drives the top-level amount/GP/tax fields. */
   calc: CourierFreightResult;
+  lanes: QuoteLane[];
+  /** Every comparison card, every lane. */
+  cards: CourierCardResult[];
+  /** One row per lane — its quoted card's name/amount — for the printed pack's
+   * "Quoted offer total per lane" summary and the on-screen preview modal. */
+  quotedLanes: QuotedLaneRow[];
+  /** Sum of each lane's quoted card, when there's more than one lane. */
+  allLanesAmount?: number;
   termsAndConditions?: string;
   validity?: string;
 }
@@ -61,12 +86,29 @@ export interface SaveCourierInput extends SaveMeta {
 async function writeQuote(id: string, quoteData: Record<string, unknown>): Promise<string> {
   const db = getFirebaseDb();
   await setDoc(doc(db, "quotes", id), omitUndefinedDeep(quoteData));
+  const ref = String(quoteData.quoteNumber ?? id);
+  logAudit({
+    action: "quote.save",
+    entityType: "quote",
+    entityId: id,
+    entityLabel: `${ref} · ${String(quoteData.customer ?? "")}`,
+    summary: `Saved ${String(quoteData.type ?? "")} quote — ${String(quoteData.currency ?? "")} ${Math.round(Number(quoteData.amount) || 0)} (${String(quoteData.status ?? "quoted")})`,
+  });
   return id;
 }
 
 export async function saveCourierQuote(input: SaveCourierInput): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
-  const route = `${input.originCity || input.originCountry} → ${input.destCity || input.destCountry}`;
+  const lanes = input.lanes.length
+    ? input.lanes
+    : [{ id: "lane_0", origin: input.originCity, destination: input.destCity }];
+  const fallbackLaneId = lanes[0]?.id || "";
+  const route =
+    lanes.length > 1
+      ? allLanesRoute(lanes)
+      : `${input.originCity || input.originCountry} → ${input.destCity || input.destCountry}`;
+  const amount = input.allLanesAmount && input.allLanesAmount > 0 ? input.allLanesAmount : input.calc.total;
+  const primary = input.cards.find((c) => c.option.selected) ?? input.cards[0];
   const now = new Date();
   const quoteData = {
     id,
@@ -78,9 +120,9 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     mode: "Courier",
     type: "courier",
-    amount: input.calc.total,
+    amount,
     currency: input.currency,
-    amountINR: input.currency === "INR" ? input.calc.total : input.calc.total * 83,
+    amountINR: input.currency === "INR" ? amount : amount * 83,
     grossProfit: input.calc.grossProfit,
     grossProfitCurrency: input.currency,
     route,
@@ -101,9 +143,9 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
       shipmentType: "parcel",
       chargeableWeight: input.calc.chargeableKg,
       zone: input.calc.zone,
-      carrier: input.calc.chosen?.id ?? "",
-      carrierName: input.calc.chosen?.name ?? "",
-      transit: input.calc.chosen?.transit ?? "",
+      carrier: primary?.option.carrierId ?? "",
+      carrierName: primary?.name ?? "",
+      transit: primary?.transit ?? "",
       packages: input.packages,
       surcharges: input.calc.surcharges,
       baseFreight: input.calc.baseFreight,
@@ -115,16 +157,28 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
       marginPct: input.marginPct,
       declaredValue: input.calc.surcharges.declaredValue,
       validity: input.validity || "",
-      carrierQuotes: input.calc.quotes.map((q) =>
-        courierSnapshot(q, input.calc.chosen?.id ?? "", {
-          validity: input.validity || "",
-          chargeableKg: input.calc.chargeableKg,
-          gstAmount: input.calc.tax,
-        }),
+      lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+      quotedLanes: input.quotedLanes,
+      allLanesTotal: input.allLanesAmount ?? 0,
+      carrierQuotes: input.cards.map((c) =>
+        courierSnapshot(
+          c.option,
+          {
+            name: c.name,
+            sellLocal: c.sellLocal,
+            ratePerKg: c.ratePerKg,
+            transit: c.transit,
+            validity: input.validity || "",
+            chargeableKg: c.chargeableKg,
+            gstAmount: c.gstAmount,
+          },
+          lanes,
+          fallbackLaneId,
+        ),
       ),
       termsAndConditions: input.termsAndConditions ?? DEFAULT_COURIER_TERMS,
     },
-    notes: `Courier quote. CHW: ${input.calc.chargeableKg} kg, Zone ${input.calc.zone}, ${input.calc.chosen?.name ?? ""}`,
+    notes: `Courier quote. CHW: ${input.calc.chargeableKg} kg, Zone ${input.calc.zone}, ${primary?.name ?? ""}`,
   };
 
   return writeQuote(id, quoteData);
@@ -222,6 +276,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     creator: input.creator,
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
+    leadId: input.leadId,
     type: "air",
     route,
     amount,
@@ -381,6 +436,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     creator: input.creator,
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
+    leadId: input.leadId,
     type: "sea",
     route,
     amount,

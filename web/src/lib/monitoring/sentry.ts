@@ -1,23 +1,25 @@
-/** Optional Sentry hook — no-op unless NEXT_PUBLIC_SENTRY_DSN is set. */
+import { reloadOnceIfStale, reportError } from "./error-report";
 
+let started = false;
+
+/**
+ * Starts first-party error monitoring: uncaught errors and unhandled promise
+ * rejections are recorded to the admin "Error monitor" (see error-report.ts).
+ * Idempotent. (File name kept so existing imports don't change.)
+ */
 export function initMonitoring() {
-  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
-  if (!dsn || typeof window === "undefined") return;
-  // Lightweight beacon so production can wire @sentry/nextjs without blocking cutover.
+  if (started || typeof window === "undefined") return;
+  started = true;
   window.addEventListener("error", (ev) => {
-    try {
-      void fetch("https://sentry.io/api/0/envelope/", {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify({
-          dsn,
-          message: String(ev.message || "error"),
-          url: location.href,
-        }),
-      });
-    } catch {
-      /* ignore */
-    }
+    const message = ev.message || (ev.error instanceof Error ? ev.error.message : "");
+    if (reloadOnceIfStale(message)) return;
+    reportError({ message: message || ev.error, stack: ev.error instanceof Error ? ev.error.stack : undefined, source: "window" });
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    const r = ev.reason as { message?: unknown; stack?: unknown } | string | undefined;
+    const message = typeof r === "string" ? r : r?.message;
+    if (typeof message === "string" && reloadOnceIfStale(message)) return;
+    reportError({ message, stack: typeof r === "object" ? r?.stack : undefined, source: "promise" });
   });
 }
 

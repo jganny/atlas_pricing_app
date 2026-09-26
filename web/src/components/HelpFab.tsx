@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle,
@@ -12,12 +13,16 @@ import {
   X,
 } from "lucide-react";
 import { VertexAskBar } from "@/components/VertexAskBar";
+import { FeatureGuide } from "@/components/FeatureGuide";
+import { OPEN_GUIDE_EVENT } from "@/components/GuideTipButton";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { cn } from "@/lib/utils";
 
 export function HelpFab() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [guideQuery, setGuideQuery] = useState("");
+  const pathname = usePathname() || "/";
   const { data: rows = [] } = useEnquiries();
 
   const overdue = useMemo(
@@ -26,6 +31,15 @@ export function HelpFab() {
   );
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    function onGuide(e: Event) {
+      setGuideQuery(String((e as CustomEvent<{ query?: string }>).detail?.query ?? ""));
+      setOpen(true);
+    }
+    window.addEventListener(OPEN_GUIDE_EVENT, onGuide);
+    return () => window.removeEventListener(OPEN_GUIDE_EVENT, onGuide);
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -91,6 +105,8 @@ export function HelpFab() {
               <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
                 <VertexAskBar compact onNavigate={() => setOpen(false)} />
 
+                <FeatureGuide pathname={pathname} initialQuery={guideQuery} onNavigate={() => setOpen(false)} />
+
                 <div>
                   <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
                     I can do this now
@@ -150,7 +166,10 @@ export function HelpFab() {
         type="button"
         aria-label="Ask Vertex"
         data-testid="help-fab"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setGuideQuery("");
+          setOpen(true);
+        }}
         className={cn(
           "fixed bottom-20 right-4 z-[220] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(28,24,79,0.32)] transition hover:scale-[1.03] hover:bg-[var(--color-atlas-ink)] md:bottom-5 md:right-5",
         )}

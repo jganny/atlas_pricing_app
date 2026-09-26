@@ -10,6 +10,14 @@ describe("seaChargeableRt", () => {
     it("honours manual override", () => {
         expect(seaChargeableRt("lcl", 500, 2, 3.5)).toBe(3.5);
     });
+    it("does NOT floor Break Bulk to 1 CBM — that's an LCL-only rule, matching legacy", () => {
+        // Same inputs as the LCL 1-CBM-floor case above, but Break Bulk: true
+        // volume (0.3) wins if it's the max against weight tons, never bumped to 1.
+        expect(seaChargeableRt("bb", 200, 0.3)).toBeCloseTo(0.3, 5);
+    });
+    it("still uses weight tons for Break Bulk when it's the larger figure", () => {
+        expect(seaChargeableRt("bb", 2500, 0.3)).toBe(2.5);
+    });
 });
 describe("calculateSeaFreight", () => {
     it("sums FCL container lines", () => {

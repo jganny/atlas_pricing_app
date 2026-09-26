@@ -31,6 +31,14 @@ export function quotesForCompany(quotes: EnquiryRecord[], company?: string): Enq
   return quotes.filter((q) => (q.customer || "").toLowerCase().includes(c)).slice(0, 8);
 }
 
+/** A lead can carry more than one mode now (`modes`); old leads only ever
+ * had the single `mode` field. This is the one place that reconciles them —
+ * everything else should read effectiveLeadModes(), never `lead.mode` directly. */
+export function effectiveLeadModes(lead: Pick<SalesLead, "mode" | "modes">): NonNullable<SalesLead["modes"]> {
+  if (lead.modes?.length) return lead.modes;
+  return lead.mode ? [lead.mode] : [];
+}
+
 export function deskPathForLeadMode(mode?: SalesLead["mode"]): string {
   if (mode === "sea") return "/sea/";
   if (mode === "courier") return "/courier/";
@@ -39,20 +47,33 @@ export function deskPathForLeadMode(mode?: SalesLead["mode"]): string {
   return "/air/";
 }
 
-export function deskHrefForLead(lead: SalesLead): string {
-  const { origin, dest } = splitLane(lead.lane);
+/** For a multi-mode lead, "Create quote" needs one link per mode — a single
+ * href can't say which desk the client meant. Single-mode (or legacy,
+ * mode-less) leads still get exactly one link, same as before. */
+export function deskHrefsForLead(lead: SalesLead): Array<{ mode: SalesLead["mode"]; href: string }> {
+  const modes = effectiveLeadModes(lead);
+  const list = modes.length ? modes : [undefined];
   const q = new URLSearchParams();
   if (lead.company) q.set("customer", lead.company);
-  if (origin) q.set("origin", origin);
-  if (dest) q.set("dest", dest);
+  if (lead.lane) {
+    const { origin, dest } = splitLane(lead.lane);
+    if (origin) q.set("origin", origin);
+    if (dest) q.set("dest", dest);
+  }
   const qs = q.toString();
-  return `${deskPathForLeadMode(lead.mode)}${qs ? `?${qs}` : ""}`;
+  return list.map((mode) => ({ mode, href: `${deskPathForLeadMode(mode)}${qs ? `?${qs}` : ""}` }));
 }
 
-export function stashLeadDeskPrefill(lead: SalesLead) {
+/** Back-compat single-link helper — first effective mode only. */
+export function deskHrefForLead(lead: SalesLead): string {
+  return deskHrefsForLead(lead)[0]?.href ?? deskPathForLeadMode(undefined);
+}
+
+export function stashLeadDeskPrefill(lead: SalesLead, forMode?: SalesLead["mode"]) {
   const { origin, dest } = splitLane(lead.lane);
-  const mode = lead.mode === "sea" ? "sea" : "air";
-  if (lead.mode === "air" || lead.mode === "sea" || !lead.mode) {
+  const chosen = forMode ?? effectiveLeadModes(lead)[0];
+  const mode = chosen === "sea" ? "sea" : "air";
+  if (chosen === "air" || chosen === "sea" || !chosen) {
     storeSmartQuotePrefill({
       mode,
       parsed: {
@@ -67,6 +88,7 @@ export function stashLeadDeskPrefill(lead: SalesLead) {
       carrierLabel: "",
       tariffFound: false,
       createdAt: Date.now(),
+      leadId: lead.id,
     });
   }
 }

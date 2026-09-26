@@ -59,6 +59,7 @@ export declare function summarizeCourierPackages(packages: CourierPackageLine[],
     lines: {
         qty: number;
         volPerPiece: number;
+        volumeWeight: number;
         chargeable: number;
         gw?: number;
         l?: number;

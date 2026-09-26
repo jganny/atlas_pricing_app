@@ -18,9 +18,16 @@ export function shouldHideAgencyAgreement(username: string | undefined | null): 
   );
 }
 
+/**
+ * Starting currency only — every desk can still pick any of DESK_CURRENCIES
+ * (USD/EUR/GBP/INR) from the same dropdown, NRS and Free Hand included. This
+ * only decides which one is pre-selected when a fresh quote opens, matching
+ * legacy's own TEAM_ROLES currency field exactly: NRS quotes internationally
+ * (USD), Free Hand is domestic (INR) — they are not the same default.
+ */
 export function defaultDeskCurrency(username: string | undefined | null): string {
   const cat = deskCategory(username);
-  if (cat.includes("NRS") || cat.includes("FREE HAND")) return "INR";
+  if (cat.includes("FREE HAND")) return "INR";
   return "USD";
 }
 

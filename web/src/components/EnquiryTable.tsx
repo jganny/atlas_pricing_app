@@ -15,8 +15,11 @@ import { cn } from "@/lib/utils";
 import type { EnquiryRecord } from "@/lib/types";
 import {
   formatBuyCell,
+  formatDateCell,
   formatGpCell,
   formatSellCell,
+  formatTonnageCell,
+  parseRowDate,
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
 
@@ -34,6 +37,7 @@ export type EdbColumnVisibility = {
   amount: boolean;
   gp: boolean;
   sla: boolean;
+  tonnage?: boolean;
 };
 
 function moneyCellClass(empty: boolean, gp = false) {
@@ -49,14 +53,23 @@ export function EnquiryTable({
   onSelect,
   metricModes,
   visibleColumns,
+  sorting: controlledSorting,
+  onSortingChange: controlledOnSortingChange,
 }: {
   rows: EnquiryRecord[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   metricModes: EdbMetricModes;
   visibleColumns?: EdbColumnVisibility;
+  /** Lets a parent (e.g. a "Sort by" dropdown) drive the same sort state that
+   * column-header clicks use, so both stay in sync and CSV export can mirror
+   * it. Falls back to internal state when the caller doesn't need that. */
+  sorting?: SortingState;
+  onSortingChange?: (updater: SortingState | ((old: SortingState) => SortingState)) => void;
 }) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: "ref", desc: true }]);
+  const [internalSorting, setInternalSorting] = useState<SortingState>([{ id: "ref", desc: true }]);
+  const sorting = controlledSorting ?? internalSorting;
+  const setSorting = controlledOnSortingChange ?? setInternalSorting;
   const vis = visibleColumns ?? {
     lane: true,
     desk: true,
@@ -65,6 +78,7 @@ export function EnquiryTable({
     amount: true,
     gp: true,
     sla: true,
+    tonnage: false,
   };
   const showBuy = Boolean(vis.buy);
 
@@ -76,6 +90,14 @@ export function EnquiryTable({
           header: "Ref",
           cell: ({ row }) => (
             <span className="whitespace-nowrap font-semibold">{row.original.ref}</span>
+          ),
+        },
+        {
+          id: "date",
+          header: "Date",
+          accessorFn: (r) => parseRowDate(r.createdAt),
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap text-[var(--color-text-muted)]">{formatDateCell(row.original)}</span>
           ),
         },
         {
@@ -119,6 +141,16 @@ export function EnquiryTable({
           header: "Carrier",
           cell: ({ row }) => (
             <span className="whitespace-nowrap">{row.original.carrier || "—"}</span>
+          ),
+        });
+      }
+      if (vis.tonnage) {
+        defs.push({
+          id: "tonnage",
+          header: "Tonnage",
+          accessorFn: (r) => r.billingWeight ?? 0,
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap tabular-nums">{formatTonnageCell(row.original)}</span>
           ),
         });
       }
@@ -188,7 +220,7 @@ export function EnquiryTable({
       }
       return defs;
     },
-    [metricModes, showBuy, vis.amount, vis.carrier, vis.desk, vis.gp, vis.lane, vis.sla],
+    [metricModes, showBuy, vis.amount, vis.carrier, vis.desk, vis.gp, vis.lane, vis.sla, vis.tonnage],
   );
 
   const table = useReactTable({
@@ -220,7 +252,7 @@ export function EnquiryTable({
                     key={header.id}
                     className={cn(
                       "whitespace-nowrap px-3 py-2.5 font-bold",
-                      (id === "sell" || id === "gp" || id === "buy") && "text-right",
+                      (id === "sell" || id === "gp" || id === "buy" || id === "tonnage") && "text-right",
                     )}
                   >
                     {header.isPlaceholder ? null : (
@@ -270,7 +302,7 @@ export function EnquiryTable({
                       key={cell.id}
                       className={cn(
                         "px-3 py-2.5 align-middle",
-                        (id === "sell" || id === "gp" || id === "buy") && "text-right",
+                        (id === "sell" || id === "gp" || id === "buy" || id === "tonnage") && "text-right",
                       )}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

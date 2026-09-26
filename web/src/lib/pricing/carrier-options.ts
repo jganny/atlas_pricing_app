@@ -25,6 +25,10 @@ export interface AirlineOption {
   /** AMS buy/cost. Quote AMS uses sell when set, else buy. */
   amsFeeBuy: number;
   amsFeeEnabled: boolean;
+  dgFee: number;
+  /** DG buy/cost. Quote DG uses sell when set, else buy — same rule as AMS. */
+  dgFeeBuy: number;
+  dgFeeEnabled: boolean;
   laneId?: string;
   kind?: "airline" | "coloader";
   wbEnabled: boolean;
@@ -50,6 +54,9 @@ export function createAirlineOption(
     amsFee: partial.amsFee ?? 0,
     amsFeeBuy: partial.amsFeeBuy ?? 0,
     amsFeeEnabled: partial.amsFeeEnabled ?? true,
+    dgFee: partial.dgFee ?? 0,
+    dgFeeBuy: partial.dgFeeBuy ?? 0,
+    dgFeeEnabled: partial.dgFeeEnabled ?? true,
     laneId: partial.laneId ?? "",
     kind: partial.kind ?? "airline",
     wbEnabled: partial.wbEnabled ?? true,
@@ -85,6 +92,7 @@ export function copyAirBuyRatesToSell(option: AirlineOption): AirlineOption {
       sell: r.sell > 0 ? r.sell : r.buy || 0,
     })),
     amsFee: option.amsFee > 0 ? option.amsFee : option.amsFeeBuy || 0,
+    dgFee: option.dgFee > 0 ? option.dgFee : option.dgFeeBuy || 0,
   };
 }
 
@@ -134,6 +142,8 @@ export function createLinerOption(
 export interface TruckerOption {
   id: string;
   name: string;
+  /** Which lane (O/D pair) this trucker is being compared on — "" means the quote's only/first lane. */
+  laneId?: string;
   selected: boolean;
   freightBuy: number;
   freightSell: number;
@@ -154,11 +164,89 @@ export function createTruckerOption(
   return {
     id: partial.id ?? newCarrierId("trk"),
     name: partial.name ?? "",
+    laneId: partial.laneId ?? "",
     selected,
     freightBuy: partial.freightBuy ?? 0,
     freightSell: partial.freightSell ?? 0,
     detention: partial.detention ?? 0,
     tolls: partial.tolls ?? 0,
+  };
+}
+
+/** One courier/vendor comparison card — own carrier, service, margin and
+ * surcharges, so two vendors on the same lane can be priced independently.
+ * Cargo (packages) and the GST toggle stay shared at the quote level. */
+export interface CourierSurcharges {
+  fuelPct: number;
+  remote: boolean;
+  remoteAmount: number;
+  residential: boolean;
+  residentialAmount: number;
+  saturday: boolean;
+  saturdayAmount: number;
+  dg: boolean;
+  dgAmount: number;
+  insurance: boolean;
+  insurancePct: number;
+  declaredValue: number;
+  oversized: boolean;
+  oversizedAmount: number;
+}
+
+export function defaultCourierSurcharges(): CourierSurcharges {
+  return {
+    fuelPct: 0,
+    remote: false,
+    remoteAmount: 0,
+    residential: false,
+    residentialAmount: 0,
+    saturday: false,
+    saturdayAmount: 0,
+    dg: false,
+    dgAmount: 0,
+    insurance: false,
+    insurancePct: 0,
+    declaredValue: 0,
+    oversized: false,
+    oversizedAmount: 0,
+  };
+}
+
+export interface CourierOption {
+  id: string;
+  /** Free-text carrier as typed/picked in the directory combobox. */
+  directoryCarrier: string;
+  /** Tariff-engine carrier id (e.g. "dhl") inferred from directoryCarrier. */
+  carrierId: string;
+  service: string;
+  marginPct: number;
+  surcharges: CourierSurcharges;
+  /** When true, ignore the Circulars tariff lookup — freight comes from
+   * manualSell/manualBuy instead. For when the automated rate isn't right
+   * for the situation; fuel/other surcharges still layer on top as usual. */
+  manualOverride: boolean;
+  manualSell: number;
+  manualBuy: number;
+  laneId?: string;
+  selected: boolean;
+}
+
+export function createCourierOption(
+  partial: Partial<CourierOption> = {},
+  selected = false,
+): CourierOption {
+  return {
+    id: partial.id ?? newCarrierId("cou"),
+    directoryCarrier: partial.directoryCarrier ?? "",
+    carrierId: partial.carrierId ?? "dhl",
+    service: partial.service ?? "economy",
+    marginPct: partial.marginPct ?? 12,
+    surcharges: partial.surcharges ?? defaultCourierSurcharges(),
+    manualOverride: partial.manualOverride ?? false,
+    manualSell: partial.manualSell ?? 0,
+    manualBuy: partial.manualBuy ?? 0,
+    laneId: partial.laneId ?? "",
+    selected,
   };
 }
 
@@ -174,6 +262,9 @@ export function serializeAirlineOption(a: AirlineOption): Record<string, unknown
     amsFee: a.amsFee || 0,
     amsFeeBuy: a.amsFeeBuy || 0,
     amsFeeEnabled: a.amsFeeEnabled !== false,
+    dgFee: a.dgFee || 0,
+    dgFeeBuy: a.dgFeeBuy || 0,
+    dgFeeEnabled: a.dgFeeEnabled !== false,
     kind: a.kind || "airline",
     wbEnabled: a.wbEnabled !== false,
     originFeesEnabled: a.originFeesEnabled !== false,
