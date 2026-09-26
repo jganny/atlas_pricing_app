@@ -288,6 +288,24 @@ function EnquiryDatabaseInner() {
     rows.find((r) => r.id === selectedId) ??
     (archiveHit && archiveHit.id === selectedId ? archiveHit : null);
 
+  // Same order the table and CSV export show — a raw `filtered` array isn't
+  // resorted by the active "Sort by" choice, only the on-screen table is
+  // (via react-table's own sort), so Next/Previous must use this too or the
+  // step-through order silently disagrees with what's on screen.
+  const orderedRows = useMemo(() => sortRowsForExport(filtered, sorting), [filtered, sorting]);
+
+  // Step-through order follows the currently filtered/sorted list, so Next/Previous
+  // on the detail page matches whatever the user was looking at before they clicked in.
+  const selectedIndex = selected ? orderedRows.findIndex((r) => r.id === selected.id) : -1;
+  const hasPrev = selectedIndex > 0;
+  const hasNext = selectedIndex >= 0 && selectedIndex < orderedRows.length - 1;
+  const goPrev = () => {
+    if (hasPrev) setSelectedId(orderedRows[selectedIndex - 1].id);
+  };
+  const goNext = () => {
+    if (hasNext) setSelectedId(orderedRows[selectedIndex + 1].id);
+  };
+
   const stats = useMemo(() => {
     const open = filtered.filter((e) => e.status === "open" || e.status === "quoted").length;
     const overdue = filtered.filter((e) => e.slaHoursOpen > 8).length;
@@ -359,6 +377,32 @@ function EnquiryDatabaseInner() {
     }
   }
 
+  if (selected) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedId(null)}>
+            ← Back to Enquiry DB
+          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[var(--color-text-muted)]">
+              {selectedIndex >= 0 ? `${selectedIndex + 1} of ${orderedRows.length}` : ""}
+            </span>
+            <Button type="button" variant="secondary" size="sm" disabled={!hasPrev} onClick={goPrev}>
+              ‹ Previous
+            </Button>
+            <Button type="button" variant="secondary" size="sm" disabled={!hasNext} onClick={goNext}>
+              Next ›
+            </Button>
+          </div>
+        </div>
+        <div className="mx-auto w-full max-w-2xl">
+          <EnquiryInspector row={selected} onClose={() => setSelectedId(null)} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -425,7 +469,7 @@ function EnquiryDatabaseInner() {
             size="sm"
             disabled={!filtered.length}
             onClick={() => {
-              downloadEnquiryCsv(sortRowsForExport(filtered, sorting));
+              downloadEnquiryCsv(orderedRows);
               toast(`Exported ${filtered.length} rows`, "success");
             }}
           >
@@ -489,222 +533,210 @@ function EnquiryDatabaseInner() {
         </Card>
       ) : null}
 
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-2">
-          <Card className="flex flex-wrap items-center gap-2 p-2.5">
-            <label className="flex min-w-[16rem] flex-1 items-center gap-2 text-sm">
-              <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
-              <input
-                className="w-full rounded-md border border-[var(--color-border)] px-2.5 py-1.5"
-                placeholder="Customer, city, carrier, or quote no."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void findArchived();
-                }}
-              />
-            </label>
-            <Button type="button" size="sm" disabled={archiveBusy} onClick={() => void findArchived()}>
-              {archiveBusy ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-              Look up
-            </Button>
-            <select
-              aria-label="Filter by mode"
-              className="rounded-md border px-2 py-1.5 text-sm"
-              value={modeFilter}
-              onChange={(e) => setModeFilter(e.target.value)}
-            >
-              <option value="all">All modes</option>
-              <option value="air">Air</option>
-              <option value="sea">Sea</option>
-              <option value="courier">Courier</option>
-              <option value="transport">Transport</option>
-              <option value="warehouse">Warehouse</option>
-            </select>
-            <select
-              aria-label="Filter by desk"
-              className="rounded-md border px-2 py-1.5 text-sm"
-              value={deskFilter}
-              onChange={(e) => setDeskFilter(e.target.value)}
-            >
-              {admin ? <option value="all">All desks</option> : null}
-              <option value="mine">My desk</option>
-              {deskOptions.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
+      <div className="min-w-0 space-y-2">
+        <Card className="flex flex-wrap items-center gap-2 p-2.5">
+          <label className="flex min-w-[16rem] flex-1 items-center gap-2 text-sm">
+            <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
             <input
-              className="w-20 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="POL"
-              value={originFilter}
-              onChange={(e) => setOriginFilter(e.target.value)}
-            />
-            <input
-              className="w-20 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="POD"
-              value={destFilter}
-              onChange={(e) => setDestFilter(e.target.value)}
-            />
-            <input
-              className="w-24 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="Carrier"
-              value={carrierFilter}
-              onChange={(e) => setCarrierFilter(e.target.value)}
-            />
-            <input
-              className="w-28 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="Customer"
-              value={customerFilter}
-              onChange={(e) => setCustomerFilter(e.target.value)}
-            />
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-              From
-              <input
-                type="date"
-                aria-label="Date from"
-                className="rounded-md border px-2 py-1.5 text-sm"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </label>
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-              To
-              <input
-                type="date"
-                aria-label="Date to"
-                className="rounded-md border px-2 py-1.5 text-sm"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-            </label>
-            <input
-              type="number"
-              className="w-20 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="Tonnage ≥"
-              aria-label="Minimum tonnage"
-              value={tonnageMin}
-              onChange={(e) => setTonnageMin(e.target.value)}
-            />
-            <input
-              type="number"
-              className="w-20 rounded-md border px-2 py-1.5 text-sm"
-              placeholder="Tonnage ≤"
-              aria-label="Maximum tonnage"
-              value={tonnageMax}
-              onChange={(e) => setTonnageMax(e.target.value)}
-            />
-            <select
-              aria-label="Sort by"
-              className="rounded-md border px-2 py-1.5 text-sm"
-              value={sortKey}
-              onChange={(e) => {
-                const key = e.target.value;
-                setSortKey(key);
-                const preset = SORT_PRESETS.find((p) => p.key === key);
-                if (preset) setSorting(preset.sorting);
+              className="w-full rounded-md border border-[var(--color-border)] px-2.5 py-1.5"
+              placeholder="Customer, city, carrier, or quote no."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void findArchived();
               }}
-            >
-              {SORT_PRESETS.map((p) => (
-                <option key={p.key} value={p.key}>
-                  Sort: {p.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
-              onClick={() => setShowColumns((v) => !v)}
-            >
-              <Columns3 className="h-3.5 w-3.5" />
-              Columns
-            </button>
-            <MetricToggle
-              label="Buy"
-              value={metricModes.buy}
-              options={[
-                { value: "total", label: "Total" },
-                { value: "perkg", label: "/kg" },
-              ]}
-              onChange={(buy) => setMetricModes((m) => ({ ...m, buy }))}
             />
-            <MetricToggle
-              label="Sell"
-              value={metricModes.sell}
-              options={[
-                { value: "total", label: "Total" },
-                { value: "perkg", label: "/kg" },
-              ]}
-              onChange={(sell) => setMetricModes((m) => ({ ...m, sell }))}
+          </label>
+          <Button type="button" size="sm" disabled={archiveBusy} onClick={() => void findArchived()}>
+            {archiveBusy ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+            Look up
+          </Button>
+          <select
+            aria-label="Filter by mode"
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={modeFilter}
+            onChange={(e) => setModeFilter(e.target.value)}
+          >
+            <option value="all">All modes</option>
+            <option value="air">Air</option>
+            <option value="sea">Sea</option>
+            <option value="courier">Courier</option>
+            <option value="transport">Transport</option>
+            <option value="warehouse">Warehouse</option>
+          </select>
+          <select
+            aria-label="Filter by desk"
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={deskFilter}
+            onChange={(e) => setDeskFilter(e.target.value)}
+          >
+            {admin ? <option value="all">All desks</option> : null}
+            <option value="mine">My desk</option>
+            {deskOptions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+          <input
+            className="w-20 rounded-md border px-2 py-1.5 text-sm"
+            placeholder="POL"
+            value={originFilter}
+            onChange={(e) => setOriginFilter(e.target.value)}
+          />
+          <input
+            className="w-20 rounded-md border px-2 py-1.5 text-sm"
+            placeholder="POD"
+            value={destFilter}
+            onChange={(e) => setDestFilter(e.target.value)}
+          />
+          <input
+            className="w-24 rounded-md border px-2 py-1.5 text-sm"
+            placeholder="Carrier"
+            value={carrierFilter}
+            onChange={(e) => setCarrierFilter(e.target.value)}
+          />
+          <input
+            className="w-28 rounded-md border px-2 py-1.5 text-sm"
+            placeholder="Customer"
+            value={customerFilter}
+            onChange={(e) => setCustomerFilter(e.target.value)}
+          />
+          <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+            From
+            <input
+              type="date"
+              aria-label="Date from"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
             />
-            <MetricToggle
-              label="GP"
-              value={metricModes.gp}
-              options={[
-                { value: "amount", label: "Amt" },
-                { value: "percent", label: "%" },
-              ]}
-              onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
+          </label>
+          <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+            To
+            <input
+              type="date"
+              aria-label="Date to"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
             />
+          </label>
+          <input
+            type="number"
+            className="w-20 rounded-md border px-2 py-1.5 text-sm"
+            placeholder="Tonnage ≥"
+            aria-label="Minimum tonnage"
+            value={tonnageMin}
+            onChange={(e) => setTonnageMin(e.target.value)}
+          />
+          <input
+            type="number"
+            className="w-20 rounded-md border px-2 py-1.5 text-sm"
+            placeholder="Tonnage ≤"
+            aria-label="Maximum tonnage"
+            value={tonnageMax}
+            onChange={(e) => setTonnageMax(e.target.value)}
+          />
+          <select
+            aria-label="Sort by"
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={sortKey}
+            onChange={(e) => {
+              const key = e.target.value;
+              setSortKey(key);
+              const preset = SORT_PRESETS.find((p) => p.key === key);
+              if (preset) setSorting(preset.sorting);
+            }}
+          >
+            {SORT_PRESETS.map((p) => (
+              <option key={p.key} value={p.key}>
+                Sort: {p.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
+            onClick={() => setShowColumns((v) => !v)}
+          >
+            <Columns3 className="h-3.5 w-3.5" />
+            Columns
+          </button>
+          <MetricToggle
+            label="Buy"
+            value={metricModes.buy}
+            options={[
+              { value: "total", label: "Total" },
+              { value: "perkg", label: "/kg" },
+            ]}
+            onChange={(buy) => setMetricModes((m) => ({ ...m, buy }))}
+          />
+          <MetricToggle
+            label="Sell"
+            value={metricModes.sell}
+            options={[
+              { value: "total", label: "Total" },
+              { value: "perkg", label: "/kg" },
+            ]}
+            onChange={(sell) => setMetricModes((m) => ({ ...m, sell }))}
+          />
+          <MetricToggle
+            label="GP"
+            value={metricModes.gp}
+            options={[
+              { value: "amount", label: "Amt" },
+              { value: "percent", label: "%" },
+            ]}
+            onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
+          />
+        </Card>
+        {archiveNote ? (
+          <p className="px-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
+        ) : null}
+        {showColumns ? (
+          <Card className="flex flex-wrap gap-3 p-2 text-xs font-semibold">
+            {(
+              [
+                ["lane", "Lane"],
+                ["desk", "Desk"],
+                ["carrier", "Carrier"],
+                ["tonnage", "Tonnage"],
+                ["buy", "Buy"],
+                ["amount", "Sell"],
+                ["gp", "GP"],
+                ["sla", "SLA"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="inline-flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={columns[key]}
+                  onChange={(e) =>
+                    setColumns((c) => ({ ...c, [key]: e.target.checked }))
+                  }
+                />
+                {label}
+              </label>
+            ))}
           </Card>
-          {archiveNote ? (
-            <p className="px-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
-          ) : null}
-          {showColumns ? (
-            <Card className="flex flex-wrap gap-3 p-2 text-xs font-semibold">
-              {(
-                [
-                  ["lane", "Lane"],
-                  ["desk", "Desk"],
-                  ["carrier", "Carrier"],
-                  ["tonnage", "Tonnage"],
-                  ["buy", "Buy"],
-                  ["amount", "Sell"],
-                  ["gp", "GP"],
-                  ["sla", "SLA"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="inline-flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={columns[key]}
-                    onChange={(e) =>
-                      setColumns((c) => ({ ...c, [key]: e.target.checked }))
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-            </Card>
-          ) : null}
+        ) : null}
 
-          <Card className="overflow-hidden p-0">
-            {isLoading ? (
-              <TableSkeleton rows={8} />
-            ) : (
-              <EnquiryTable
-                rows={filtered}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                metricModes={metricModes}
-                visibleColumns={columns}
-                sorting={sorting}
-                onSortingChange={setSorting}
-              />
-            )}
-          </Card>
-        </div>
-
-        <div className="lg:sticky lg:top-16">
-          {selected ? (
-            <EnquiryInspector row={selected} onClose={() => setSelectedId(null)} />
+        <Card className="overflow-hidden p-0">
+          {isLoading ? (
+            <TableSkeleton rows={8} />
           ) : (
-            <Card className="text-sm text-[var(--color-text-muted)]">
-              Select a quote. Look up searches live quotes and archive — no file name needed.
-            </Card>
+            <EnquiryTable
+              rows={filtered}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              metricModes={metricModes}
+              visibleColumns={columns}
+              sorting={sorting}
+              onSortingChange={setSorting}
+            />
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );
