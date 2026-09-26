@@ -25,6 +25,10 @@ export interface AirlineOption {
   /** AMS buy/cost. Quote AMS uses sell when set, else buy. */
   amsFeeBuy: number;
   amsFeeEnabled: boolean;
+  dgFee: number;
+  /** DG buy/cost. Quote DG uses sell when set, else buy — same rule as AMS. */
+  dgFeeBuy: number;
+  dgFeeEnabled: boolean;
   laneId?: string;
   kind?: "airline" | "coloader";
   wbEnabled: boolean;
@@ -50,6 +54,9 @@ export function createAirlineOption(
     amsFee: partial.amsFee ?? 0,
     amsFeeBuy: partial.amsFeeBuy ?? 0,
     amsFeeEnabled: partial.amsFeeEnabled ?? true,
+    dgFee: partial.dgFee ?? 0,
+    dgFeeBuy: partial.dgFeeBuy ?? 0,
+    dgFeeEnabled: partial.dgFeeEnabled ?? true,
     laneId: partial.laneId ?? "",
     kind: partial.kind ?? "airline",
     wbEnabled: partial.wbEnabled ?? true,
@@ -85,6 +92,7 @@ export function copyAirBuyRatesToSell(option: AirlineOption): AirlineOption {
       sell: r.sell > 0 ? r.sell : r.buy || 0,
     })),
     amsFee: option.amsFee > 0 ? option.amsFee : option.amsFeeBuy || 0,
+    dgFee: option.dgFee > 0 ? option.dgFee : option.dgFeeBuy || 0,
   };
 }
 
@@ -213,6 +221,12 @@ export interface CourierOption {
   service: string;
   marginPct: number;
   surcharges: CourierSurcharges;
+  /** When true, ignore the Circulars tariff lookup — freight comes from
+   * manualSell/manualBuy instead. For when the automated rate isn't right
+   * for the situation; fuel/other surcharges still layer on top as usual. */
+  manualOverride: boolean;
+  manualSell: number;
+  manualBuy: number;
   laneId?: string;
   selected: boolean;
 }
@@ -228,6 +242,9 @@ export function createCourierOption(
     service: partial.service ?? "economy",
     marginPct: partial.marginPct ?? 12,
     surcharges: partial.surcharges ?? defaultCourierSurcharges(),
+    manualOverride: partial.manualOverride ?? false,
+    manualSell: partial.manualSell ?? 0,
+    manualBuy: partial.manualBuy ?? 0,
     laneId: partial.laneId ?? "",
     selected,
   };
@@ -245,6 +262,9 @@ export function serializeAirlineOption(a: AirlineOption): Record<string, unknown
     amsFee: a.amsFee || 0,
     amsFeeBuy: a.amsFeeBuy || 0,
     amsFeeEnabled: a.amsFeeEnabled !== false,
+    dgFee: a.dgFee || 0,
+    dgFeeBuy: a.dgFeeBuy || 0,
+    dgFeeEnabled: a.dgFeeEnabled !== false,
     kind: a.kind || "airline",
     wbEnabled: a.wbEnabled !== false,
     originFeesEnabled: a.originFeesEnabled !== false,

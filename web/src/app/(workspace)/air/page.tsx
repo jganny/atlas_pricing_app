@@ -554,6 +554,7 @@ function AirDeskInner() {
         originFeesTotal: selectedTotals.originTotal,
         destFeesTotal: selectedTotals.destTotal,
         amsFee: selectedTotals.ams,
+        dgFee: selectedTotals.dg,
         routing: quoted.routing,
         tt: quoted.tt,
         validity: quoted.validity,
@@ -671,6 +672,7 @@ function AirDeskInner() {
           originFeesTotal: selectedTotals.originTotal,
           destFeesTotal: selectedTotals.destTotal,
           amsFee: selectedTotals.ams,
+          dgFee: selectedTotals.dg,
           routing: selected.routing,
           tt: selected.tt,
           validity: selected.validity,
@@ -779,19 +781,16 @@ function AirDeskInner() {
   );
 
   function goToCarriers() {
+    // A nudge, not a gate — the Carriers tab itself lets you jump here with
+    // anything (or nothing) filled in, so Next has to match that or it just
+    // looks broken next to the tab that already works. Warn, don't block.
     if (!customer.trim()) {
-      toast("Enter customer name before carriers.", "error");
-      return;
-    }
-    if (!origin.trim() || !destination.trim()) {
-      toast("Enter origin and destination airports before carriers.", "error");
-      return;
-    }
-    const cargoErr = validateAirCargo(cargo);
-    if (cargoErr) {
-      toast(cargoErr, "error");
-      setSaveMsg(cargoErr);
-      return;
+      toast("Customer name is still blank.", "info");
+    } else if (!origin.trim() || !destination.trim()) {
+      toast("Origin/destination are still blank.", "info");
+    } else {
+      const cargoErr = validateAirCargo(cargo);
+      if (cargoErr) toast(cargoErr, "info");
     }
     setSaveMsg(null);
     setStep("carrier");

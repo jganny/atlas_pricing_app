@@ -20,6 +20,7 @@ export type OptionBreakdown = VendorPreviewRow & {
   originFees: number;
   destFees: number;
   ams: number;
+  dg: number;
   appliedRate: number;
   chargeableWeight: number;
   validity: string;
@@ -70,6 +71,9 @@ function asAirline(raw: Record<string, unknown>): AirlineOption {
       amsFee: num(raw.amsFee),
       amsFeeBuy: num(raw.amsFeeBuy),
       amsFeeEnabled: raw.amsFeeEnabled !== false,
+      dgFee: num(raw.dgFee),
+      dgFeeBuy: num(raw.dgFeeBuy),
+      dgFeeEnabled: raw.dgFeeEnabled !== false,
       laneId: String(raw.laneId ?? ""),
       kind: raw.kind === "coloader" ? "coloader" : "airline",
       wbEnabled: raw.wbEnabled !== false,
@@ -117,6 +121,7 @@ export function airlineSnapshot(
     originFeesTotal: t.originTotal,
     destFeesTotal: t.destTotal,
     ams: t.ams,
+    dg: t.dg,
     appliedRate: t.freight.activeRate || t.freight.activeBuyRate || 0,
     chargeableWeight: t.freight.chargeableWeightKg,
     quoteUsingBuyFreight: t.quoteUsingBuyFreight,
@@ -185,6 +190,9 @@ export function courierSnapshot(
     service: option.service,
     marginPct: option.marginPct,
     surcharges: option.surcharges,
+    manualOverride: Boolean(option.manualOverride),
+    manualSell: option.manualSell || 0,
+    manualBuy: option.manualBuy || 0,
     selected: Boolean(option.selected),
     quoteTotal: computed.sellLocal,
     tt: computed.transit ?? "",
@@ -287,6 +295,9 @@ function totalsFromRaw(
     ams: computeAir
       ? pick(raw.ams ?? raw.amsFee, computed?.ams ?? 0, selectedFallback.ams, selected)
       : 0,
+    dg: computeAir
+      ? pick(raw.dg ?? raw.dgFee, computed?.dg ?? 0, selectedFallback.dg, selected)
+      : 0,
     appliedRate: pick(
       raw.appliedRate ?? raw.ratePerKg,
       computed ? computed.freight.activeRate || computed.freight.activeBuyRate : 0,
@@ -352,6 +363,7 @@ export function optionChargeLines(
     });
     if (option.originFees > 0) lines.push({ label: "Origin fees", value: money(option.originFees) });
     if (option.ams > 0) lines.push({ label: "AMS", value: money(option.ams) });
+    if (option.dg > 0) lines.push({ label: "DG", value: money(option.dg) });
     if (option.destFees > 0) lines.push({ label: "Destination fees", value: money(option.destFees) });
     if (option.gst > 0) lines.push({ label: "GST", value: money(option.gst) });
   }
@@ -391,6 +403,7 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
     originFees: num(d.originFeesTotal),
     destFees: num(d.destFeesTotal),
     ams: num(d.amsFee ?? d.ams),
+    dg: num(d.dgFee ?? d.dg),
     appliedRate: num(d.appliedRate),
     chargeableWeight: num(d.chargeableWeight),
     validity: String(d.validity ?? ""),

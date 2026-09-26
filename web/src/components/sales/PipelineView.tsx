@@ -24,7 +24,8 @@ import { mockApi } from "@/lib/mock/api";
 import { TEAM_ROLES } from "@/lib/quotes/team-roles";
 import {
   LEAD_SOURCES,
-  deskHrefForLead,
+  deskHrefsForLead,
+  effectiveLeadModes,
   isFollowUpDue,
   quotesForCompany,
   stashLeadDeskPrefill,
@@ -42,8 +43,7 @@ const EMPTY_FORM = {
   email: "",
   phone: "",
   source: "",
-  mode: "air" as SalesLead["mode"],
-  lane: "",
+  modes: ["air"] as NonNullable<SalesLead["modes"]>,
   dealValue: 0,
   nextAction: "",
   nextDueDate: "",
@@ -86,6 +86,29 @@ export function PipelineView() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<SalesLead | null>(null);
   const { data: editContacts = [] } = useSalesContacts(editForm?.accountId);
+  const [collapsedCols, setCollapsedCols] = useState<Set<LeadStatus>>(() => {
+    try {
+      const raw = localStorage.getItem("atlas_pipeline_collapsed_cols");
+      return raw ? new Set(JSON.parse(raw) as LeadStatus[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  function toggleColumnCollapsed(status: LeadStatus) {
+    setCollapsedCols((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      try {
+        localStorage.setItem("atlas_pipeline_collapsed_cols", JSON.stringify([...next]));
+      } catch {
+        // per-browser convenience only — a failed write just means the
+        // collapsed state won't be remembered next visit
+      }
+      return next;
+    });
+  }
 
   const selected = leads.find((l) => l.id === selectedId) ?? null;
   const linkedQuotes = useMemo(
@@ -104,7 +127,7 @@ export function PipelineView() {
     return leads.filter((lead) => {
       if (statusFilter !== "all" && lead.status !== statusFilter) return false;
       if (!q) return true;
-      const hay = `${lead.company} ${lead.contactName || ""} ${lead.lane || ""} ${lead.owner || ""} ${lead.mode || ""}`.toLowerCase();
+      const hay = `${lead.company} ${lead.contactName || ""} ${lead.owner || ""} ${effectiveLeadModes(lead).join(" ")}`.toLowerCase();
       return hay.includes(q);
     });
   }, [leads, query, statusFilter]);
@@ -191,8 +214,7 @@ export function PipelineView() {
         phone: form.phone,
         source: form.source,
         status: "new" as LeadStatus,
-        mode: form.mode,
-        lane: form.lane,
+        modes: form.modes,
         dealValue: form.dealValue,
         nextAction: form.nextAction,
         nextDueDate: form.nextDueDate,
@@ -259,10 +281,12 @@ export function PipelineView() {
     }
   }
 
-  function quoteFromLead(lead: SalesLead) {
-    stashLeadDeskPrefill(lead);
-    const href = deskHrefForLead(lead);
-    router.push(lead.mode === "air" || lead.mode === "sea" || !lead.mode ? `${href}${href.includes("?") ? "&" : "?"}smart=1` : href);
+  function quoteFromLead(lead: SalesLead, mode?: SalesLead["mode"]) {
+    stashLeadDeskPrefill(lead, mode);
+    const chosen = mode ?? effectiveLeadModes(lead)[0];
+    const links = deskHrefsForLead(lead);
+    const href = links.find((d) => d.mode === chosen)?.href ?? links[0]?.href ?? "/air/";
+    router.push(chosen === "air" || chosen === "sea" || !chosen ? `${href}${href.includes("?") ? "&" : "?"}smart=1` : href);
   }
 
   function startEdit(lead: SalesLead) {
@@ -402,26 +426,27 @@ export function PipelineView() {
                 ))}
               </Select>
             </div>
-            <div>
-              <Label>Mode</Label>
-              <Select
-                value={form.mode}
-                onChange={(e) => setForm((f) => ({ ...f, mode: e.target.value as SalesLead["mode"] }))}
-              >
-                <option value="air">Air</option>
-                <option value="sea">Sea</option>
-                <option value="courier">Courier</option>
-                <option value="transport">Transport</option>
-                <option value="warehouse">Warehouse</option>
-              </Select>
-            </div>
-            <div>
-              <Label>Lane</Label>
-              <Input
-                placeholder="LHR → BLR"
-                value={form.lane}
-                onChange={(e) => setForm((f) => ({ ...f, lane: e.target.value }))}
-              />
+            <div className="sm:col-span-2">
+              <Label>Mode — pick every mode this enquiry could quote as</Label>
+              <div className="mt-1 flex flex-wrap gap-3">
+                {(["air", "sea", "courier", "transport", "warehouse"] as const).map((m) => (
+                  <label key={m} className="flex items-center gap-1.5 text-sm font-medium capitalize">
+                    <input
+                      type="checkbox"
+                      checked={form.modes.includes(m)}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          modes: e.target.checked
+                            ? [...f.modes, m]
+                            : f.modes.filter((x) => x !== m),
+                        }))
+                      }
+                    />
+                    {m}
+                  </label>
+                ))}
+              </div>
             </div>
             <div>
               <Label>Deal value (INR)</Label>
@@ -474,7 +499,7 @@ export function PipelineView() {
         </div>
         <input
           className="min-w-[12rem] flex-1 rounded-md border px-2.5 py-1.5 text-sm"
-          placeholder="Search company, contact, lane, owner…"
+          placeholder="Search company, contact, mode, owner…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -546,7 +571,7 @@ export function PipelineView() {
                       </Badge>
                     </td>
                     <td className="px-3 py-2 text-xs">
-                      {[lead.lane, lead.mode?.toUpperCase()].filter(Boolean).join(" · ") || "—"}
+                      {effectiveLeadModes(lead).map((m) => m.toUpperCase()).join(" · ") || "—"}
                     </td>
                     <td className="px-3 py-2 tabular-nums">
                       {lead.dealValue ? formatCurrency(lead.dealValue, "INR") : "—"}
@@ -580,10 +605,18 @@ export function PipelineView() {
                 }}
               >
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-600">{status}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleColumnCollapsed(status)}
+                    className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-slate-600"
+                    title={collapsedCols.has(status) ? "Expand column" : "Collapse column"}
+                  >
+                    <span className="inline-block w-3 text-slate-400">{collapsedCols.has(status) ? "▸" : "▾"}</span>
+                    {status}
+                  </button>
                   <Badge tone="neutral">{col.length}</Badge>
                 </div>
-                <div className="space-y-2">
+                <div className={cn("space-y-2", collapsedCols.has(status) && "hidden")}>
                   {col.map((lead) => (
                     <button
                       key={lead.id}
@@ -603,7 +636,7 @@ export function PipelineView() {
                         <ScoreBadge lead={lead} />
                       </div>
                       <div className="text-xs text-[var(--color-text-muted)]">
-                        {lead.contactName || "—"} · {lead.mode || "—"}
+                        {lead.contactName || "—"} · {effectiveLeadModes(lead).join(", ") || "—"}
                       </div>
                       {lead.dealValue ? (
                         <div className="mt-1 text-xs font-semibold">{formatCurrency(lead.dealValue, "INR")}</div>
@@ -765,7 +798,7 @@ export function PipelineView() {
                 {selected.source ? ` · ${selected.source}` : ""}
               </p>
               <p className="mt-1 text-sm">
-                {selected.lane || "No lane"} · {selected.mode || "—"} ·{" "}
+                {effectiveLeadModes(selected).join(", ") || "—"} ·{" "}
                 {selected.dealValue ? formatCurrency(selected.dealValue, "INR") : "no value"}
               </p>
               {selectedAccount ? (
@@ -817,9 +850,17 @@ export function PipelineView() {
                   View only — owned by {TEAM_ROLES[selected.owner || ""]?.name || selected.owner}
                 </span>
               )}
-              <Button type="button" size="sm" onClick={() => quoteFromLead(selected)}>
-                Quote from lead
-              </Button>
+              {effectiveLeadModes(selected).length > 1 ? (
+                effectiveLeadModes(selected).map((m) => (
+                  <Button key={m} type="button" size="sm" onClick={() => quoteFromLead(selected, m)}>
+                    Quote ({m})
+                  </Button>
+                ))
+              ) : (
+                <Button type="button" size="sm" onClick={() => quoteFromLead(selected)}>
+                  Quote from lead
+                </Button>
+              )}
             </div>
           </div>
 

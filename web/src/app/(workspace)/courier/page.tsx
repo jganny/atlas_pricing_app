@@ -103,30 +103,36 @@ function priceCourierCard(
   },
 ): {
   tariff: CourierTariffLookup;
+  manual: boolean;
   name: string;
   uploaded: number;
   markupPct: number;
   markupAmount: number;
   base: number;
+  buy: number;
   fuel: number;
   extras: number;
   tax: number;
   total: number;
 } {
-  const tariff = lookupCourierTariff(ctx.tariffBooks, {
-    carrierId: option.carrierId,
-    directoryCarrier: option.directoryCarrier,
-    originCountry: ctx.originCountry,
-    destCountry: ctx.destCountry,
-    originText: `${ctx.originCity} ${ctx.originPin}`,
-    destText: `${ctx.destCity} ${ctx.destPin}`,
-    weightKg: ctx.chargeableKg,
-    scope: ctx.scope,
-  });
-  const uploaded = tariff.status === "hit" ? tariff.rate : 0;
-  const base = uploaded > 0 ? applyCourierTariffMarkup(uploaded) : 0;
-  const markupPct = uploaded > 0 ? COURIER_TARIFF_MARKUP_PCT : 0;
-  const markupAmount = Math.max(0, base - uploaded);
+  const manual = option.manualOverride;
+  const tariff: CourierTariffLookup = manual
+    ? { status: "missing" }
+    : lookupCourierTariff(ctx.tariffBooks, {
+        carrierId: option.carrierId,
+        directoryCarrier: option.directoryCarrier,
+        originCountry: ctx.originCountry,
+        destCountry: ctx.destCountry,
+        originText: `${ctx.originCity} ${ctx.originPin}`,
+        destText: `${ctx.destCity} ${ctx.destPin}`,
+        weightKg: ctx.chargeableKg,
+        scope: ctx.scope,
+      });
+  const uploaded = !manual && tariff.status === "hit" ? tariff.rate : 0;
+  const base = manual ? option.manualSell || 0 : uploaded > 0 ? applyCourierTariffMarkup(uploaded) : 0;
+  const buy = manual ? option.manualBuy || 0 : uploaded;
+  const markupPct = manual ? 0 : uploaded > 0 ? COURIER_TARIFF_MARKUP_PCT : 0;
+  const markupAmount = manual ? 0 : Math.max(0, base - uploaded);
   const s = option.surcharges;
   const fuel = base * ((s.fuelPct || 0) / 100);
   const extras =
@@ -139,8 +145,22 @@ function priceCourierCard(
   const sub = base + fuel + extras;
   const tax = ctx.gstEnabled ? sub * 0.18 : 0;
   const name =
-    option.directoryCarrier.trim() || (tariff.status === "hit" ? tariff.book.carrier : "");
-  return { tariff, name, uploaded, markupPct, markupAmount, base, fuel, extras, tax, total: sub + tax };
+    option.directoryCarrier.trim() ||
+    (!manual && tariff.status === "hit" ? tariff.book.carrier : "");
+  return {
+    tariff,
+    manual,
+    name,
+    uploaded,
+    markupPct,
+    markupAmount,
+    base,
+    buy,
+    fuel,
+    extras,
+    tax,
+    total: sub + tax,
+  };
 }
 
 function CourierDeskInner() {
@@ -589,7 +609,11 @@ function CourierDeskInner() {
               ...cargo,
               quotes: [],
               baseFreight: primaryPriced.base,
-              buyFreight: primaryPriced.base,
+              // Buy is the true cost — the uploaded pre-markup tariff rate,
+              // or the manual buy figure — never the sell-side base. Fixes a
+              // latent bug found while adding manual override: GP was always
+              // computing near-zero because buy and sell were the same number.
+              buyFreight: primaryPriced.buy,
               subtotal: primaryPriced.base + primaryPriced.fuel + primaryPriced.extras,
               tax: primaryPriced.tax,
               total: primaryPriced.total,
@@ -1092,38 +1116,76 @@ function CourierDeskInner() {
                     kind="airline+courier"
                     placeholder="Blue Dart, DHL, FedEx, UL…"
                   />
-                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                    Select FedEx after cargo is filled and the yearly Circulars tariff fills
-                    automatically (sell = uploaded rate + {COURIER_TARIFF_MARKUP_PCT}%). Fuel is extra.
-                  </p>
+                  {!activeCourier?.manualOverride ? (
+                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                      Select FedEx after cargo is filled and the yearly Circulars tariff fills
+                      automatically (sell = uploaded rate + {COURIER_TARIFF_MARKUP_PCT}%). Fuel is extra.
+                    </p>
+                  ) : null}
                 </div>
-                <label className="text-sm font-semibold">
-                  Service
-                  <select
-                    className="mt-1 w-full rounded-lg border px-3 py-2"
-                    value={activeCourier?.service ?? "economy"}
-                    onChange={(e) => updateSelectedCourier({ service: e.target.value })}
-                  >
-                    {Object.entries(SERVICE_LEVELS).map(([k, v]) => (
-                      <option key={k} value={k} disabled={k === "same_day" && scope !== "domestic"}>
-                        {v.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-sm font-semibold">
-                  Margin %
+                <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
                   <input
-                    id="courier-margin"
-                    type="number"
-                    className="mt-1 w-full rounded-lg border px-3 py-2"
-                    value={activeCourier?.marginPct ?? 12}
-                    onChange={(e) => updateSelectedCourier({ marginPct: Number(e.target.value) })}
+                    type="checkbox"
+                    checked={activeCourier?.manualOverride ?? false}
+                    onChange={(e) => updateSelectedCourier({ manualOverride: e.target.checked })}
                   />
-                  <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
-                    Estimated cards only. Circulars FedEx tariff always sells at +{COURIER_TARIFF_MARKUP_PCT}% on the uploaded rate.
-                  </span>
+                  Enter freight manually — skip the automated tariff for this carrier
                 </label>
+                {activeCourier?.manualOverride ? (
+                  <>
+                    <label className="text-sm font-semibold">
+                      Manual sell (freight)
+                      <input
+                        type="number"
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                        value={activeCourier.manualSell || ""}
+                        onChange={(e) => updateSelectedCourier({ manualSell: Number(e.target.value) })}
+                      />
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Manual buy (cost, for GP)
+                      <input
+                        type="number"
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                        value={activeCourier.manualBuy || ""}
+                        onChange={(e) => updateSelectedCourier({ manualBuy: Number(e.target.value) })}
+                      />
+                      <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
+                        Fuel and other surcharges below still apply on top of this.
+                      </span>
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label className="text-sm font-semibold">
+                      Service
+                      <select
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                        value={activeCourier?.service ?? "economy"}
+                        onChange={(e) => updateSelectedCourier({ service: e.target.value })}
+                      >
+                        {Object.entries(SERVICE_LEVELS).map(([k, v]) => (
+                          <option key={k} value={k} disabled={k === "same_day" && scope !== "domestic"}>
+                            {v.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Margin %
+                      <input
+                        id="courier-margin"
+                        type="number"
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                        value={activeCourier?.marginPct ?? 12}
+                        onChange={(e) => updateSelectedCourier({ marginPct: Number(e.target.value) })}
+                      />
+                      <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
+                        Estimated cards only. Circulars FedEx tariff always sells at +{COURIER_TARIFF_MARKUP_PCT}% on the uploaded rate.
+                      </span>
+                    </label>
+                  </>
+                )}
               </div>
 
               {activeCourier ? (
@@ -1270,7 +1332,44 @@ function CourierDeskInner() {
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
                 Enter package weight and dimensions first. Totals stay blank until chargeable kg &gt; 0.
               </p>
-            ) : !activeCourier || !activePriced ? null : activePriced.tariff.status === "over-max" ? (
+            ) : !activeCourier || !activePriced ? null : activePriced.manual ? (
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Chargeable</dt>
+                  <dd className="font-bold">{cargo.chargeableKg.toFixed(2)} kg</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Carrier</dt>
+                  <dd className="font-bold">{activePriced.name || "Manual entry"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Manual sell (freight)</dt>
+                  <dd className="font-bold">{formatCurrency(activePriced.base, currency)}</dd>
+                </div>
+                {activeCourier.manualBuy > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Manual buy (cost)</dt>
+                    <dd>{formatCurrency(activeCourier.manualBuy, currency)}</dd>
+                  </div>
+                ) : null}
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Fuel + extras</dt>
+                  <dd>{formatCurrency(activePriced.fuel + activePriced.extras, currency)}</dd>
+                </div>
+                {gstEnabled ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">GST (18%)</dt>
+                    <dd>{formatCurrency(activePriced.tax, currency)}</dd>
+                  </div>
+                ) : null}
+                <div className="flex justify-between border-t pt-2 text-base">
+                  <dt className="font-bold">{multiLane ? "This lane total" : "Grand total"}</dt>
+                  <dd className="font-extrabold text-emerald-700">
+                    {formatCurrency(activePriced.total, currency)}
+                  </dd>
+                </div>
+              </dl>
+            ) : activePriced.tariff.status === "over-max" ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
                 Chargeable {cargo.chargeableKg.toFixed(2)} kg is above {COURIER_TARIFF_MAX_KG} kg.
                 Rate this shipment case-by-case with the carrier by email — the uploaded tariff stops

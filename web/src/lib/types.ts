@@ -198,7 +198,11 @@ export interface SalesLead {
   email?: string
   phone?: string
   status: LeadStatus
+  /** Kept for old leads saved with one mode — new leads use `modes` instead; see effectiveLeadModes(). */
   mode?: 'air' | 'sea' | 'transport' | 'warehouse' | 'courier'
+  /** A lead can span more than one mode (e.g. quoting both Air and Sea for the same enquiry). */
+  modes?: Array<'air' | 'sea' | 'transport' | 'warehouse' | 'courier'>
+  /** Deprecated — no longer collected on new leads; old leads keep whatever was saved here. */
   lane?: string
   dealValue?: number
   nextAction?: string

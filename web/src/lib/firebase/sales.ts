@@ -110,8 +110,13 @@ export async function saveLead(
     email: input.email?.trim() || "",
     phone: input.phone?.trim() || "",
     status: input.status || "new",
-    mode: input.mode || "air",
-    lane: input.lane?.trim() || "",
+    // mode (singular) kept only so older readers of this doc never see a
+    // hole; modes is the real field going forward. Never write lane on new
+    // saves — a lead already carrying one from before keeps it untouched
+    // (this payload simply omits the key, and Firestore updateDoc/addDoc
+    // leave any field not listed here alone).
+    mode: input.modes?.[0] || input.mode || "air",
+    modes: input.modes?.length ? input.modes : input.mode ? [input.mode] : ["air"],
     dealValue: input.dealValue ?? 0,
     nextAction: input.nextAction?.trim() || "",
     nextDueDate: input.nextDueDate || "",

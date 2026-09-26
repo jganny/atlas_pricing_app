@@ -60,6 +60,7 @@ export interface AirlineTotals {
   originBuy: number;
   destBuy: number;
   ams: number;
+  dg: number;
   /** Quote total: sell preferred, buy fallback per line while drafting. */
   grandSell: number;
   grandBuy: number;
@@ -105,13 +106,16 @@ export function computeAirlineTotals(
   const amsSell = option.amsFeeEnabled ? Number(option.amsFee) || 0 : 0;
   const amsBuy = option.amsFeeEnabled ? Number(option.amsFeeBuy) || 0 : 0;
   const ams = quoteSideRate(amsSell, amsBuy);
+  const dgSell = option.dgFeeEnabled ? Number(option.dgFee) || 0 : 0;
+  const dgBuy = option.dgFeeEnabled ? Number(option.dgFeeBuy) || 0 : 0;
+  const dg = quoteSideRate(dgSell, dgBuy);
   const baseSell = option.wbEnabled ? freight.baseFreightSell : 0;
   const baseBuy = option.wbEnabled ? freight.baseFreightBuy : 0;
   const baseFreightQuote = quoteSideRate(baseSell, baseBuy);
   const quoteUsingBuyFreight = baseSell <= 0 && baseBuy > 0;
 
-  const grandSell = baseFreightQuote + originSum.quote + destSum.quote + ams;
-  const grandBuy = baseBuy + originSum.buy + destSum.buy + amsBuy;
+  const grandSell = baseFreightQuote + originSum.quote + destSum.quote + ams + dg;
+  const grandBuy = baseBuy + originSum.buy + destSum.buy + amsBuy + dgBuy;
   const freightSellReady = baseSell > 0;
   const freightBuyReady = baseBuy > 0;
   const gpReady = freightSellReady && freightBuyReady;
@@ -125,6 +129,7 @@ export function computeAirlineTotals(
     originBuy: originSum.buy,
     destBuy: destSum.buy,
     ams,
+    dg,
     grandSell: grandSell > 0 ? grandSell : 0,
     grandBuy,
     gp: gpReady ? grandSell - grandBuy : 0,

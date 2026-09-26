@@ -464,6 +464,12 @@ export function QuotePreviewModal({
                     <dd className="font-semibold">{money(d.amsFee, cur)}</dd>
                   </div>
                 ) : null}
+                {type === "air" && Number(d.dgFee ?? 0) > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt>DG</dt>
+                    <dd className="font-semibold">{money(d.dgFee, cur)}</dd>
+                  </div>
+                ) : null}
                 {Number(d.destFeesTotal ?? 0) > 0 ? (
                   <div className="flex justify-between gap-4">
                     <dt>Destination fees</dt>
