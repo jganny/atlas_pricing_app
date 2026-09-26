@@ -15,9 +15,11 @@ import { cn } from "@/lib/utils";
 import type { EnquiryRecord } from "@/lib/types";
 import {
   formatBuyCell,
+  formatDateCell,
   formatGpCell,
   formatSellCell,
   formatTonnageCell,
+  parseRowDate,
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
 
@@ -88,6 +90,14 @@ export function EnquiryTable({
           header: "Ref",
           cell: ({ row }) => (
             <span className="whitespace-nowrap font-semibold">{row.original.ref}</span>
+          ),
+        },
+        {
+          id: "date",
+          header: "Date",
+          accessorFn: (r) => parseRowDate(r.createdAt),
+          cell: ({ row }) => (
+            <span className="whitespace-nowrap text-[var(--color-text-muted)]">{formatDateCell(row.original)}</span>
           ),
         },
         {

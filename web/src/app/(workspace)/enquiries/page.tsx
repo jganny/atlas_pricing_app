@@ -35,6 +35,7 @@ import {
 import {
   DEFAULT_EDB_METRIC_MODES,
   gpNumeric,
+  parseRowDate,
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
 import {
@@ -55,7 +56,8 @@ const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryReco
 /** "Sort by" presets — the same sort state column-header clicks use, so
  * picking one here and then clicking a header afterward never fights. */
 const SORT_PRESETS: Array<{ key: string; label: string; sorting: SortingState }> = [
-  { key: "ref_desc", label: "Newest first", sorting: [{ id: "ref", desc: true }] },
+  { key: "date_desc", label: "Latest quoted first", sorting: [{ id: "date", desc: true }] },
+  { key: "date_asc", label: "Oldest first", sorting: [{ id: "date", desc: false }] },
   { key: "tonnage_desc", label: "Tonnage: high → low", sorting: [{ id: "tonnage", desc: true }] },
   { key: "tonnage_asc", label: "Tonnage: low → high", sorting: [{ id: "tonnage", desc: false }] },
   { key: "sell_desc", label: "Billing: high → low", sorting: [{ id: "sell", desc: true }] },
@@ -69,6 +71,8 @@ const SORT_PRESETS: Array<{ key: string; label: string; sorting: SortingState }>
  * screen shows for the metrics the Sort-by control actually offers. */
 function sortKeyFor(row: EnquiryRecord, id: string): number | string {
   switch (id) {
+    case "date":
+      return parseRowDate(row.createdAt);
     case "tonnage":
       return row.billingWeight ?? 0;
     case "sell":
@@ -148,7 +152,7 @@ function EnquiryDatabaseInner() {
   const [dateTo, setDateTo] = useState("");
   const [tonnageMin, setTonnageMin] = useState("");
   const [tonnageMax, setTonnageMax] = useState("");
-  const [sortKey, setSortKey] = useState<string>("ref_desc");
+  const [sortKey, setSortKey] = useState<string>("date_desc");
   const [sorting, setSorting] = useState<SortingState>(SORT_PRESETS[0].sorting);
   const [columns, setColumns] = useState({
     lane: true,
@@ -161,6 +165,7 @@ function EnquiryDatabaseInner() {
     tonnage: false,
   });
   const [showColumns, setShowColumns] = useState(false);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
@@ -195,6 +200,19 @@ function EnquiryDatabaseInner() {
     () => listDeskFilterOptions(rows.map((r) => r.creator).filter(Boolean)),
     [rows],
   );
+
+  // Counts the filters tucked behind "More filters" — shown as a badge so a
+  // hidden-but-active filter (e.g. a date range set earlier) is never invisible.
+  const moreFilterCount = [
+    originFilter,
+    destFilter,
+    carrierFilter,
+    customerFilter,
+    dateFrom,
+    dateTo,
+    tonnageMin,
+    tonnageMax,
+  ].filter(Boolean).length;
 
   const pipelineCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -534,162 +552,192 @@ function EnquiryDatabaseInner() {
       ) : null}
 
       <div className="min-w-0 space-y-2">
-        <Card className="flex flex-wrap items-center gap-2 p-2.5">
-          <label className="flex min-w-[16rem] flex-1 items-center gap-2 text-sm">
-            <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
-            <input
-              className="w-full rounded-md border border-[var(--color-border)] px-2.5 py-1.5"
-              placeholder="Customer, city, carrier, or quote no."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void findArchived();
+        <Card className="space-y-2.5 p-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex min-w-[16rem] flex-1 items-center gap-2 text-sm">
+              <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
+              <input
+                className="w-full rounded-md border border-[var(--color-border)] px-2.5 py-1.5"
+                placeholder="Customer, city, carrier, or quote no."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void findArchived();
+                }}
+              />
+            </label>
+            <Button type="button" size="sm" disabled={archiveBusy} onClick={() => void findArchived()}>
+              {archiveBusy ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+              Look up
+            </Button>
+            <select
+              aria-label="Filter by mode"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={modeFilter}
+              onChange={(e) => setModeFilter(e.target.value)}
+            >
+              <option value="all">All modes</option>
+              <option value="air">Air</option>
+              <option value="sea">Sea</option>
+              <option value="courier">Courier</option>
+              <option value="transport">Transport</option>
+              <option value="warehouse">Warehouse</option>
+            </select>
+            <select
+              aria-label="Filter by desk"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={deskFilter}
+              onChange={(e) => setDeskFilter(e.target.value)}
+            >
+              {admin ? <option value="all">All desks</option> : null}
+              <option value="mine">My desk</option>
+              {deskOptions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Sort by"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={sortKey}
+              onChange={(e) => {
+                const key = e.target.value;
+                setSortKey(key);
+                const preset = SORT_PRESETS.find((p) => p.key === key);
+                if (preset) setSorting(preset.sorting);
               }}
+            >
+              {SORT_PRESETS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  Sort: {p.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
+              onClick={() => setShowMoreFilters((v) => !v)}
+            >
+              {showMoreFilters ? "Fewer filters" : "More filters"}
+              {moreFilterCount > 0 ? (
+                <span className="ml-0.5 rounded-full bg-[var(--color-atlas-navy)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {moreFilterCount}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
+              onClick={() => setShowColumns((v) => !v)}
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+              Columns
+            </button>
+          </div>
+
+          {showMoreFilters ? (
+            <div className="grid grid-cols-2 gap-2.5 border-t border-[var(--color-border)] pt-2.5 sm:grid-cols-4">
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Origin (POL)
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={originFilter}
+                  onChange={(e) => setOriginFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Destination (POD)
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={destFilter}
+                  onChange={(e) => setDestFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Carrier
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={carrierFilter}
+                  onChange={(e) => setCarrierFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Customer
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={customerFilter}
+                  onChange={(e) => setCustomerFilter(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Date from
+                <input
+                  type="date"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Date to
+                <input
+                  type="date"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Tonnage, minimum
+                <input
+                  type="number"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={tonnageMin}
+                  onChange={(e) => setTonnageMin(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                Tonnage, maximum
+                <input
+                  type="number"
+                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
+                  value={tonnageMax}
+                  onChange={(e) => setTonnageMax(e.target.value)}
+                />
+              </label>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-2.5">
+            <MetricToggle
+              label="Buy"
+              value={metricModes.buy}
+              options={[
+                { value: "total", label: "Total" },
+                { value: "perkg", label: "/kg" },
+              ]}
+              onChange={(buy) => setMetricModes((m) => ({ ...m, buy }))}
             />
-          </label>
-          <Button type="button" size="sm" disabled={archiveBusy} onClick={() => void findArchived()}>
-            {archiveBusy ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-            Look up
-          </Button>
-          <select
-            aria-label="Filter by mode"
-            className="rounded-md border px-2 py-1.5 text-sm"
-            value={modeFilter}
-            onChange={(e) => setModeFilter(e.target.value)}
-          >
-            <option value="all">All modes</option>
-            <option value="air">Air</option>
-            <option value="sea">Sea</option>
-            <option value="courier">Courier</option>
-            <option value="transport">Transport</option>
-            <option value="warehouse">Warehouse</option>
-          </select>
-          <select
-            aria-label="Filter by desk"
-            className="rounded-md border px-2 py-1.5 text-sm"
-            value={deskFilter}
-            onChange={(e) => setDeskFilter(e.target.value)}
-          >
-            {admin ? <option value="all">All desks</option> : null}
-            <option value="mine">My desk</option>
-            {deskOptions.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-          <input
-            className="w-20 rounded-md border px-2 py-1.5 text-sm"
-            placeholder="POL"
-            value={originFilter}
-            onChange={(e) => setOriginFilter(e.target.value)}
-          />
-          <input
-            className="w-20 rounded-md border px-2 py-1.5 text-sm"
-            placeholder="POD"
-            value={destFilter}
-            onChange={(e) => setDestFilter(e.target.value)}
-          />
-          <input
-            className="w-24 rounded-md border px-2 py-1.5 text-sm"
-            placeholder="Carrier"
-            value={carrierFilter}
-            onChange={(e) => setCarrierFilter(e.target.value)}
-          />
-          <input
-            className="w-28 rounded-md border px-2 py-1.5 text-sm"
-            placeholder="Customer"
-            value={customerFilter}
-            onChange={(e) => setCustomerFilter(e.target.value)}
-          />
-          <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-            From
-            <input
-              type="date"
-              aria-label="Date from"
-              className="rounded-md border px-2 py-1.5 text-sm"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+            <MetricToggle
+              label="Sell"
+              value={metricModes.sell}
+              options={[
+                { value: "total", label: "Total" },
+                { value: "perkg", label: "/kg" },
+              ]}
+              onChange={(sell) => setMetricModes((m) => ({ ...m, sell }))}
             />
-          </label>
-          <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-            To
-            <input
-              type="date"
-              aria-label="Date to"
-              className="rounded-md border px-2 py-1.5 text-sm"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+            <MetricToggle
+              label="GP"
+              value={metricModes.gp}
+              options={[
+                { value: "amount", label: "Amt" },
+                { value: "percent", label: "%" },
+              ]}
+              onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
             />
-          </label>
-          <input
-            type="number"
-            className="w-20 rounded-md border px-2 py-1.5 text-sm"
-            placeholder="Tonnage ≥"
-            aria-label="Minimum tonnage"
-            value={tonnageMin}
-            onChange={(e) => setTonnageMin(e.target.value)}
-          />
-          <input
-            type="number"
-            className="w-20 rounded-md border px-2 py-1.5 text-sm"
-            placeholder="Tonnage ≤"
-            aria-label="Maximum tonnage"
-            value={tonnageMax}
-            onChange={(e) => setTonnageMax(e.target.value)}
-          />
-          <select
-            aria-label="Sort by"
-            className="rounded-md border px-2 py-1.5 text-sm"
-            value={sortKey}
-            onChange={(e) => {
-              const key = e.target.value;
-              setSortKey(key);
-              const preset = SORT_PRESETS.find((p) => p.key === key);
-              if (preset) setSorting(preset.sorting);
-            }}
-          >
-            {SORT_PRESETS.map((p) => (
-              <option key={p.key} value={p.key}>
-                Sort: {p.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
-            onClick={() => setShowColumns((v) => !v)}
-          >
-            <Columns3 className="h-3.5 w-3.5" />
-            Columns
-          </button>
-          <MetricToggle
-            label="Buy"
-            value={metricModes.buy}
-            options={[
-              { value: "total", label: "Total" },
-              { value: "perkg", label: "/kg" },
-            ]}
-            onChange={(buy) => setMetricModes((m) => ({ ...m, buy }))}
-          />
-          <MetricToggle
-            label="Sell"
-            value={metricModes.sell}
-            options={[
-              { value: "total", label: "Total" },
-              { value: "perkg", label: "/kg" },
-            ]}
-            onChange={(sell) => setMetricModes((m) => ({ ...m, sell }))}
-          />
-          <MetricToggle
-            label="GP"
-            value={metricModes.gp}
-            options={[
-              { value: "amount", label: "Amt" },
-              { value: "percent", label: "%" },
-            ]}
-            onChange={(gp) => setMetricModes((m) => ({ ...m, gp }))}
-          />
+          </div>
         </Card>
         {archiveNote ? (
           <p className="px-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
