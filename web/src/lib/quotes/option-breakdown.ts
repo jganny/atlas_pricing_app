@@ -145,6 +145,31 @@ function containerLinesFromRaw(raw: Record<string, unknown>): ContainerBreakdown
     .map((c) => ({ ...c, amount: c.qty * c.rate }));
 }
 
+/** "20'GP"/"20'RF" → "20'", "40'HC"/"40'RF" → "40'" — the nominal size a
+ * customer actually negotiates on, regardless of the exact sub-type. */
+function nominalContainerSize(type: string): string {
+  const m = /^(\d+)/.exec(type.trim());
+  return m ? `${m[1]}'` : type.trim() || "Container";
+}
+
+/** Groups container rows by nominal size and sums each group — e.g. two
+ * 20'GP rows plus one 40'HC row becomes one "20' Total" and one "40' Total",
+ * shown alongside the per-row lines so a size's combined cost is never only
+ * implicit in the option grand total. */
+function containerSizeTotals(lines: ContainerBreakdownLine[]): SurchargeBreakdownLine[] {
+  const order: string[] = [];
+  const totals = new Map<string, number>();
+  for (const c of lines) {
+    const size = nominalContainerSize(c.type);
+    if (!totals.has(size)) {
+      totals.set(size, 0);
+      order.push(size);
+    }
+    totals.set(size, totals.get(size)! + c.amount);
+  }
+  return order.map((size) => ({ name: `${size} Total`, amount: totals.get(size)! }));
+}
+
 function shouldComputeAirline(kind: string, quoteType: string): boolean {
   const t = quoteType.toLowerCase();
   const k = kind.toLowerCase();
@@ -433,6 +458,11 @@ export function optionChargeLines(
           label: `${c.type} × ${c.qty}`,
           value: c.rate > 0 ? `${money(c.rate)} × ${c.qty} = ${money(c.amount)}` : money(c.amount),
         });
+      }
+      if (option.containerLines.length > 1) {
+        for (const t of containerSizeTotals(option.containerLines)) {
+          lines.push({ label: t.name, value: money(t.amount) });
+        }
       }
     } else {
       lines.push({

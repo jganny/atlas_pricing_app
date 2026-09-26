@@ -4,6 +4,7 @@ import { ReportBuilderPanel } from "@/components/ReportBuilderPanel";
 import { GuideTipButton } from "@/components/GuideTipButton";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import type { SortingState } from "@tanstack/react-table";
 import { Archive, Columns3, Download, Loader2, Search } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
@@ -33,6 +34,7 @@ import {
 } from "@/lib/quotes/edb-reports";
 import {
   DEFAULT_EDB_METRIC_MODES,
+  gpNumeric,
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
 import {
@@ -49,6 +51,49 @@ const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryReco
   { key: "lost", label: "Lost", match: (e) => e.status === "lost" },
   { key: "cancelled", label: "Cancelled", match: (e) => e.status === "cancelled" },
 ];
+
+/** "Sort by" presets — the same sort state column-header clicks use, so
+ * picking one here and then clicking a header afterward never fights. */
+const SORT_PRESETS: Array<{ key: string; label: string; sorting: SortingState }> = [
+  { key: "ref_desc", label: "Newest first", sorting: [{ id: "ref", desc: true }] },
+  { key: "tonnage_desc", label: "Tonnage: high → low", sorting: [{ id: "tonnage", desc: true }] },
+  { key: "tonnage_asc", label: "Tonnage: low → high", sorting: [{ id: "tonnage", desc: false }] },
+  { key: "sell_desc", label: "Billing: high → low", sorting: [{ id: "sell", desc: true }] },
+  { key: "sell_asc", label: "Billing: low → high", sorting: [{ id: "sell", desc: false }] },
+  { key: "gp_desc", label: "GP: high → low", sorting: [{ id: "gp", desc: true }] },
+  { key: "gp_asc", label: "GP: low → high", sorting: [{ id: "gp", desc: false }] },
+];
+
+/** Mirrors the table's own per-column sort for CSV export, which never runs
+ * through react-table — keeps "extract the data" always matching what the
+ * screen shows for the metrics the Sort-by control actually offers. */
+function sortKeyFor(row: EnquiryRecord, id: string): number | string {
+  switch (id) {
+    case "tonnage":
+      return row.billingWeight ?? 0;
+    case "sell":
+      return row.grandTotal ?? 0;
+    case "gp":
+      return gpNumeric(row) ?? 0;
+    case "customer":
+      return (row.customer || "").toLowerCase();
+    default:
+      return row.ref || row.id;
+  }
+}
+
+function sortRowsForExport(rows: EnquiryRecord[], sorting: SortingState): EnquiryRecord[] {
+  const rule = sorting[0];
+  if (!rule) return rows;
+  const dir = rule.desc ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const va = sortKeyFor(a, rule.id);
+    const vb = sortKeyFor(b, rule.id);
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+}
 
 function MetricToggle<T extends string>({
   label,
@@ -98,6 +143,13 @@ function EnquiryDatabaseInner() {
   const [originFilter, setOriginFilter] = useState("");
   const [destFilter, setDestFilter] = useState("");
   const [carrierFilter, setCarrierFilter] = useState("");
+  const [customerFilter, setCustomerFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [tonnageMin, setTonnageMin] = useState("");
+  const [tonnageMax, setTonnageMax] = useState("");
+  const [sortKey, setSortKey] = useState<string>("ref_desc");
+  const [sorting, setSorting] = useState<SortingState>(SORT_PRESETS[0].sorting);
   const [columns, setColumns] = useState({
     lane: true,
     desk: false,
@@ -106,6 +158,7 @@ function EnquiryDatabaseInner() {
     amount: true,
     gp: true,
     sla: false,
+    tonnage: false,
   });
   const [showColumns, setShowColumns] = useState(false);
   const [showReports, setShowReports] = useState(false);
@@ -171,6 +224,20 @@ function EnquiryDatabaseInner() {
       ) {
         return false;
       }
+      if (customerFilter && !(row.customer || "").toLowerCase().includes(customerFilter.toLowerCase())) {
+        return false;
+      }
+      if (dateFrom || dateTo) {
+        const rowTime = Date.parse(row.createdAt) || Number(row.createdAt) || 0;
+        if (dateFrom && rowTime < Date.parse(dateFrom)) return false;
+        if (dateTo && rowTime > Date.parse(`${dateTo}T23:59:59`)) return false;
+      }
+      if (tonnageMin || tonnageMax) {
+        const weight = row.billingWeight;
+        if (weight == null) return false;
+        if (tonnageMin && weight < Number(tonnageMin)) return false;
+        if (tonnageMax && weight > Number(tonnageMax)) return false;
+      }
       if (deskFilter === "mine") {
         const creator = (row.creator || "").toLowerCase();
         const assignee = (row.assignee || "").toLowerCase();
@@ -197,7 +264,24 @@ function EnquiryDatabaseInner() {
       if (pinned) return [pinned, ...out];
     }
     return out;
-  }, [rows, search, pipeline, modeFilter, deskFilter, user?.username, originFilter, destFilter, carrierFilter, selectedId, archiveHit]);
+  }, [
+    rows,
+    search,
+    pipeline,
+    modeFilter,
+    deskFilter,
+    user?.username,
+    originFilter,
+    destFilter,
+    carrierFilter,
+    customerFilter,
+    dateFrom,
+    dateTo,
+    tonnageMin,
+    tonnageMax,
+    selectedId,
+    archiveHit,
+  ]);
 
   const selected =
     filtered.find((r) => r.id === selectedId) ??
@@ -341,7 +425,7 @@ function EnquiryDatabaseInner() {
             size="sm"
             disabled={!filtered.length}
             onClick={() => {
-              downloadEnquiryCsv(filtered);
+              downloadEnquiryCsv(sortRowsForExport(filtered, sorting));
               toast(`Exported ${filtered.length} rows`, "success");
             }}
           >
@@ -469,6 +553,65 @@ function EnquiryDatabaseInner() {
               value={carrierFilter}
               onChange={(e) => setCarrierFilter(e.target.value)}
             />
+            <input
+              className="w-28 rounded-md border px-2 py-1.5 text-sm"
+              placeholder="Customer"
+              value={customerFilter}
+              onChange={(e) => setCustomerFilter(e.target.value)}
+            />
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+              From
+              <input
+                type="date"
+                aria-label="Date from"
+                className="rounded-md border px-2 py-1.5 text-sm"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </label>
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+              To
+              <input
+                type="date"
+                aria-label="Date to"
+                className="rounded-md border px-2 py-1.5 text-sm"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </label>
+            <input
+              type="number"
+              className="w-20 rounded-md border px-2 py-1.5 text-sm"
+              placeholder="Tonnage ≥"
+              aria-label="Minimum tonnage"
+              value={tonnageMin}
+              onChange={(e) => setTonnageMin(e.target.value)}
+            />
+            <input
+              type="number"
+              className="w-20 rounded-md border px-2 py-1.5 text-sm"
+              placeholder="Tonnage ≤"
+              aria-label="Maximum tonnage"
+              value={tonnageMax}
+              onChange={(e) => setTonnageMax(e.target.value)}
+            />
+            <select
+              aria-label="Sort by"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={sortKey}
+              onChange={(e) => {
+                const key = e.target.value;
+                setSortKey(key);
+                const preset = SORT_PRESETS.find((p) => p.key === key);
+                if (preset) setSorting(preset.sorting);
+              }}
+            >
+              {SORT_PRESETS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  Sort: {p.label}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               className="inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-bold"
@@ -515,6 +658,7 @@ function EnquiryDatabaseInner() {
                   ["lane", "Lane"],
                   ["desk", "Desk"],
                   ["carrier", "Carrier"],
+                  ["tonnage", "Tonnage"],
                   ["buy", "Buy"],
                   ["amount", "Sell"],
                   ["gp", "GP"],
@@ -545,6 +689,8 @@ function EnquiryDatabaseInner() {
                 onSelect={setSelectedId}
                 metricModes={metricModes}
                 visibleColumns={columns}
+                sorting={sorting}
+                onSortingChange={setSorting}
               />
             )}
           </Card>

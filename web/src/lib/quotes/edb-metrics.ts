@@ -85,3 +85,11 @@ export function gpNumeric(row: EnquiryRecord): number | null {
   if (buy == null || row.grandTotal == null) return null;
   return row.grandTotal - buy;
 }
+
+const TONNAGE_UNIT_LABEL: Record<string, string> = { kg: "kg", rt: "RT", gw: "kg (GW)" };
+
+export function formatTonnageCell(row: EnquiryRecord): string {
+  if (row.billingWeight == null || !Number.isFinite(row.billingWeight)) return "—";
+  const unit = row.billingUnit ? (TONNAGE_UNIT_LABEL[row.billingUnit] ?? row.billingUnit) : "";
+  return `${row.billingWeight.toLocaleString(undefined, { maximumFractionDigits: 2 })}${unit ? ` ${unit}` : ""}`;
+}

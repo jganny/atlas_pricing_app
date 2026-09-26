@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { EnquiryRecord } from "../types";
-import { formatBuyCell, formatGpCell, formatSellCell } from "./edb-metrics";
+import { formatBuyCell, formatGpCell, formatSellCell, formatTonnageCell } from "./edb-metrics";
 
 function row(partial: Partial<EnquiryRecord>): EnquiryRecord {
   return {
@@ -43,6 +43,13 @@ function row(partial: Partial<EnquiryRecord>): EnquiryRecord {
   assert.equal(formatSellCell(withGp, "total"), "$820.00");
   assert.equal(formatGpCell(withGp, "amount"), "$40.00");
   assert.equal(formatBuyCell(withGp, "total"), "$780.00");
+}
+
+{
+  assert.equal(formatTonnageCell(row({ billingWeight: undefined })), "—");
+  assert.equal(formatTonnageCell(row({ billingWeight: 1250, billingUnit: "kg" })), "1,250 kg");
+  assert.equal(formatTonnageCell(row({ billingWeight: 8.5, billingUnit: "rt" })), "8.5 RT");
+  assert.equal(formatTonnageCell(row({ billingWeight: 400, billingUnit: "gw" })), "400 kg (GW)");
 }
 
 console.log("edb-metrics tests passed");
