@@ -4,6 +4,7 @@ import { formatCurrency } from "../utils";
 import type { AirlineOption, CourierOption, LinerOption } from "../pricing/carrier-options";
 import {
   createAirlineOption,
+  createLinerOption,
   serializeAirlineOption,
   serializeLinerOption,
 } from "../pricing/carrier-options";
@@ -12,8 +13,14 @@ import {
   type AirCargoRow,
 } from "../pricing/air-desk";
 import { computeLinerTotals } from "../pricing/sea-desk";
+import { quoteSideRate } from "../pricing/quote-rate";
 import { laneRouteLabel, type QuoteLane } from "./lanes";
 import { vendorRowsFromQuote, type VendorPreviewRow } from "./vendor-preview";
+
+/** One named surcharge row's own quoted amount — e.g. "Origin THC" → 4500. */
+export type SurchargeBreakdownLine = { name: string; amount: number };
+/** One FCL container-type row's own quoted amount — e.g. 2 × 40'GP @ 500 → 1000. */
+export type ContainerBreakdownLine = { type: string; qty: number; rate: number; amount: number };
 
 export type OptionBreakdown = VendorPreviewRow & {
   baseFreight: number;
@@ -31,6 +38,11 @@ export type OptionBreakdown = VendorPreviewRow & {
   storage: number;
   handling: number;
   freightSell: number;
+  /** Per-surcharge-row breakup — empty when the saved quote predates this or has none. */
+  originLines: SurchargeBreakdownLine[];
+  destLines: SurchargeBreakdownLine[];
+  /** Sea FCL only — one row per container type/qty on the option. */
+  containerLines: ContainerBreakdownLine[];
 };
 
 type FeeFields = Omit<OptionBreakdown, keyof VendorPreviewRow>;
@@ -89,6 +101,48 @@ function asAirline(raw: Record<string, unknown>): AirlineOption {
     },
     Boolean(raw.selected),
   );
+}
+
+function asLiner(raw: Record<string, unknown>): LinerOption {
+  return createLinerOption(
+    {
+      id: String(raw.id ?? ""),
+      name: String(raw.name ?? ""),
+      routing: String(raw.routing ?? ""),
+      tt: String(raw.tt ?? ""),
+      validity: String(raw.validity ?? ""),
+      laneId: String(raw.laneId ?? ""),
+      kind: raw.kind === "coloader" ? "coloader" : "liner",
+      originFeesEnabled: raw.originFeesEnabled !== false,
+      destFeesEnabled: raw.destFeesEnabled !== false,
+      containers: Array.isArray(raw.containers)
+        ? (raw.containers as LinerOption["containers"])
+        : undefined,
+      lclSell: num(raw.lclSell),
+      lclBuy: num(raw.lclBuy),
+      originSurcharges: Array.isArray(raw.originSurcharges)
+        ? (raw.originSurcharges as LinerOption["originSurcharges"])
+        : undefined,
+      destSurcharges: Array.isArray(raw.destSurcharges)
+        ? (raw.destSurcharges as LinerOption["destSurcharges"])
+        : undefined,
+    },
+    Boolean(raw.selected),
+  );
+}
+
+/** One line per container type/qty on a saved FCL option — mirrors legacy's
+ * per-row container entry instead of collapsing straight to one total. */
+function containerLinesFromRaw(raw: Record<string, unknown>): ContainerBreakdownLine[] {
+  const list = Array.isArray(raw.containers) ? raw.containers.map(rec) : [];
+  return list
+    .map((c) => ({
+      type: String(c.type ?? "Container"),
+      qty: Math.max(0, num(c.qty)),
+      rate: quoteSideRate(num(c.sellRate), num(c.buyRate)),
+    }))
+    .filter((c) => c.qty > 0)
+    .map((c) => ({ ...c, amount: c.qty * c.rate }));
 }
 
 function shouldComputeAirline(kind: string, quoteType: string): boolean {
@@ -259,12 +313,19 @@ function totalsFromRaw(
   selected: boolean,
   kind: string,
   quoteType: string,
+  seaCtx: { mode: SeaMode; grossWeightKg: number; volumeCbm: number; chargeableCbmOverride: number },
 ): FeeFields {
   const k = kind.toLowerCase();
   const computeAir = shouldComputeAirline(kind, quoteType);
   const computed =
     computeAir && (cargo.length || Array.isArray(raw.originSurcharges) || raw.breaks)
       ? computeAirlineTotals(cargo.length ? cargo : [{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }], asAirline(raw))
+      : null;
+
+  const computeSea = !computeAir && quoteType.toLowerCase().includes("sea") && (k === "liner" || k === "coloader");
+  const seaComputed =
+    computeSea && (Array.isArray(raw.containers) || Array.isArray(raw.originSurcharges) || raw.lclSell || raw.lclBuy)
+      ? computeLinerTotals(seaCtx.mode, seaCtx.grossWeightKg, seaCtx.volumeCbm, seaCtx.chargeableCbmOverride, asLiner(raw))
       : null;
 
   const freightSell = pick(raw.freightSell, 0, selectedFallback.freightSell, selected);
@@ -274,24 +335,35 @@ function totalsFromRaw(
   const handling = pick(raw.handling, 0, selectedFallback.handling, selected);
   const gst = pick(raw.gst ?? raw.gstAmount, 0, selectedFallback.gst, selected);
 
-  let baseFreight = pick(raw.baseFreight ?? raw.sellLocal, computed?.baseFreightQuote ?? 0, selectedFallback.baseFreight, selected);
+  let baseFreight = pick(
+    raw.baseFreight ?? raw.sellLocal,
+    computed?.baseFreightQuote ?? seaComputed?.baseFreightQuote ?? 0,
+    selectedFallback.baseFreight,
+    selected,
+  );
   if (k === "trucker" && baseFreight <= 0) baseFreight = freightSell;
   if (k === "warehouse" && baseFreight <= 0) baseFreight = storage;
+
+  const originArr = computed?.origin ?? seaComputed?.origin ?? [];
+  const destArr = computed?.dest ?? seaComputed?.dest ?? [];
 
   return {
     baseFreight,
     originFees: pick(
       raw.originFeesTotal ?? raw.originTotal,
-      computed?.originTotal ?? 0,
+      computed?.originTotal ?? seaComputed?.originTotal ?? 0,
       selectedFallback.originFees,
       selected,
     ),
     destFees: pick(
       raw.destFeesTotal ?? raw.destTotal,
-      computed?.destTotal ?? 0,
+      computed?.destTotal ?? seaComputed?.destTotal ?? 0,
       selectedFallback.destFees,
       selected,
     ),
+    originLines: originArr.filter((r) => r.calculatedCost > 0).map((r) => ({ name: r.name, amount: r.calculatedCost })),
+    destLines: destArr.filter((r) => r.calculatedCost > 0).map((r) => ({ name: r.name, amount: r.calculatedCost })),
+    containerLines: computeSea && seaCtx.mode === "fcl" ? containerLinesFromRaw(raw) : [],
     ams: computeAir
       ? pick(raw.ams ?? raw.amsFee, computed?.ams ?? 0, selectedFallback.ams, selected)
       : 0,
@@ -355,16 +427,33 @@ export function optionChargeLines(
     lines.push({ label: "Storage", value: money(option.storage || base) });
     if (option.handling > 0) lines.push({ label: "Handling", value: money(option.handling) });
   } else {
-    lines.push({
-      label: "Base freight",
-      value: showKgRate
-        ? `${chw.toFixed(2)} kg × ${money(rate)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base)}`
-        : money(base),
-    });
-    if (option.originFees > 0) lines.push({ label: "Origin fees", value: money(option.originFees) });
+    if (isSea && option.containerLines.length) {
+      for (const c of option.containerLines) {
+        lines.push({
+          label: `${c.type} × ${c.qty}`,
+          value: c.rate > 0 ? `${money(c.rate)} × ${c.qty} = ${money(c.amount)}` : money(c.amount),
+        });
+      }
+    } else {
+      lines.push({
+        label: "Base freight",
+        value: showKgRate
+          ? `${chw.toFixed(2)} kg × ${money(rate)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base)}`
+          : money(base),
+      });
+    }
+    if (option.originLines.length) {
+      for (const o of option.originLines) lines.push({ label: o.name, value: money(o.amount) });
+    } else if (option.originFees > 0) {
+      lines.push({ label: "Origin fees", value: money(option.originFees) });
+    }
     if (option.ams > 0) lines.push({ label: "AMS", value: money(option.ams) });
     if (option.dg > 0) lines.push({ label: "DG", value: money(option.dg) });
-    if (option.destFees > 0) lines.push({ label: "Destination fees", value: money(option.destFees) });
+    if (option.destLines.length) {
+      for (const o of option.destLines) lines.push({ label: o.name, value: money(o.amount) });
+    } else if (option.destFees > 0) {
+      lines.push({ label: "Destination fees", value: money(option.destFees) });
+    }
     if (option.gst > 0) lines.push({ label: "GST", value: money(option.gst) });
   }
   lines.push({ label: "Option total", value: money(option.total) });
@@ -414,6 +503,15 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
     storage: num(d.storage) || num(d.ratePerCbm) * num(d.cbm) * days,
     handling: num(d.handling),
     freightSell: num(d.freightSell),
+    originLines: [],
+    destLines: [],
+    containerLines: [],
+  };
+  const seaCtx = {
+    mode: (String(d.type || "fcl") as SeaMode),
+    grossWeightKg: num(d.grossWeight),
+    volumeCbm: num(d.volumeCbm),
+    chargeableCbmOverride: num(d.chargeableCbmOverride),
   };
   const options = rawOptions(d);
 
@@ -422,7 +520,7 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
       options.find((o) => String(o.id ?? "") === v.id) ||
       options.find((o) => String(o.name ?? "").trim().toLowerCase() === v.name.trim().toLowerCase()) ||
       {};
-    const fees = totalsFromRaw(raw, cargo, selectedFallback, v.selected, v.kind, quoteType);
+    const fees = totalsFromRaw(raw, cargo, selectedFallback, v.selected, v.kind, quoteType, seaCtx);
     return {
       ...v,
       routing: v.routing || String(raw.routing ?? ""),
