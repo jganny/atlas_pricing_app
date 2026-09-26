@@ -68,6 +68,47 @@ const quotedAt = doc.html.indexOf("quoted offer");
 const altAt = doc.html.indexOf("alternative");
 assert.ok(quotedAt >= 0 && altAt > quotedAt, "quoted offer must appear before alternatives in the pack");
 
+// The printed/downloaded/emailed document must show the same shipment
+// details as the on-screen preview — not just a compact header line.
+assert.match(doc.html, /Chargeable weight/, "on-screen identity rows must also appear in the printed/PDF document");
+assert.match(doc.html, /Reference/);
+assert.match(doc.html, /BLR → GRU via TK/);
+
+const seaDoc = buildClientQuoteDocument({
+  id: "sea-share",
+  customer: "Zenith Sea",
+  creator: "ganny",
+  status: "quoted",
+  type: "sea",
+  amount: 1730,
+  currency: "USD",
+  route: "INNSA → NLRTM",
+  date: "2026-09-26",
+  details: {
+    type: "fcl",
+    origin: "INNSA",
+    destination: "NLRTM",
+    incoterm: "CIF",
+    grossWeight: 24000,
+    volumeCbm: 68,
+    liners: [
+      {
+        id: "cma",
+        name: "CMA CGM",
+        kind: "liner",
+        selected: true,
+        quoteTotal: 1730,
+        routing: "Nhava Sheva",
+        tt: "22",
+        validity: "2026-11-01",
+      },
+    ],
+  },
+});
+assert.match(seaDoc.html, /Gross weight/, "sea-specific identity rows (gross weight, CBM, mode) must reach the printed document too");
+assert.match(seaDoc.html, /24000\.00 kg/);
+assert.match(seaDoc.html, /68\.00 CBM/);
+
 const injected: SavedQuote = {
   ...quote,
   customer: `<img src=x onerror=alert(1)>`,

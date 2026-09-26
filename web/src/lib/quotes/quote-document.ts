@@ -2,6 +2,7 @@ import type { SavedQuote } from "../types";
 import { getQuoteRefId } from "./ref-id";
 import { formatCurrency } from "../utils";
 import { enquiryAssigneeLabel } from "../auth/desk-seats";
+import { identityRows } from "./quote-identity";
 import {
   formatRoutingPreview,
   formatTransitPreview,
@@ -176,6 +177,10 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
       ? `<p class="hint"><strong>Quoted offer</strong> — the option we're recommending to the client, chosen on the desk; it prints first${multiLanePack ? " in each lane" : ""}. <strong>★ Lowest</strong> — the cheapest option${multiLanePack ? " on that lane" : ""}, shown for comparison even when it isn't the one we're recommending. The same option can be both, like it is here.</p>`
       : "";
 
+  const identityRowsHtml = identityRows(quote)
+    .map(([label, value]) => `<tr><td class="id-label">${esc(label)}</td><td>${esc(value)}</td></tr>`)
+    .join("");
+
   const terms = String(quote.details?.termsAndConditions ?? "").trim();
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -198,6 +203,9 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
   th { font-size: 11px; text-transform: uppercase; color: #64748b; }
   .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .id-table { margin-bottom: 16px; }
+  .id-table td { border-bottom: 1px solid #f1f5f9; padding: 4px 6px; }
+  .id-label { width: 34%; color: #64748b; font-weight: 600; }
   .hint { font-size: 12px; color: #334155; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 12px; }
   .panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 12px 0; break-inside: avoid; page-break-inside: avoid; }
   .panel.quoted { border-color: #6ee7b7; background: #f0fdf4; }
@@ -230,6 +238,7 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
       </div>
     </div>
   </header>
+  <table class="id-table"><tbody>${identityRowsHtml}</tbody></table>
   ${packHint}
   ${
     options.length
