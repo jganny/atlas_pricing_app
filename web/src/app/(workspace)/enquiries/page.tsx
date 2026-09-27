@@ -8,6 +8,7 @@ import type { SortingState } from "@tanstack/react-table";
 import { Archive, Columns3, Download, Loader2, Search } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
+import { DatePickerField } from "@/components/DatePickerField";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
 import { EnquiryTable } from "@/components/EnquiryTable";
 import { toast } from "@/components/Toast";
@@ -670,24 +671,8 @@ function EnquiryDatabaseInner() {
                   onChange={(e) => setCustomerFilter(e.target.value)}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-                Date from
-                <input
-                  type="date"
-                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-                Date to
-                <input
-                  type="date"
-                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                />
-              </label>
+              <DatePickerField label="Date from" ariaLabel="Date from" value={dateFrom} onChange={setDateFrom} />
+              <DatePickerField label="Date to" ariaLabel="Date to" value={dateTo} onChange={setDateTo} />
               <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
                 Tonnage, minimum
                 <input

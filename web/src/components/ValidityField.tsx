@@ -3,59 +3,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEventHandler } from "react";
 import { Input, Label } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { addDays, asDateValue, monthCells, parseIso, toIso, WEEKDAYS } from "@/lib/date-cells";
 
 const PRESETS = [
   { label: "+7d", days: 7 },
   { label: "+15d", days: 15 },
   { label: "+30d", days: 30 },
 ] as const;
-
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
-
-function addDays(n: number, from = new Date()): string {
-  const d = new Date(from);
-  d.setDate(d.getDate() + n);
-  return toIso(d);
-}
-
-function toIso(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function parseIso(value: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return null;
-  const d = new Date(`${value.trim()}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function asDateValue(value: string): string {
-  return parseIso(value) ? value.trim() : "";
-}
-
-function monthCells(cursor: string): Array<{ iso: string; inMonth: boolean }> {
-  const d = parseIso(cursor) ?? new Date();
-  const year = d.getFullYear();
-  const month = d.getMonth();
-  const first = new Date(year, month, 1);
-  const startPad = first.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells: Array<{ iso: string; inMonth: boolean }> = [];
-  for (let i = 0; i < startPad; i++) {
-    const prev = new Date(year, month, 1 - (startPad - i));
-    cells.push({ iso: toIso(prev), inMonth: false });
-  }
-  for (let day = 1; day <= daysInMonth; day++) {
-    cells.push({ iso: toIso(new Date(year, month, day)), inMonth: true });
-  }
-  while (cells.length % 7 !== 0) {
-    const trailing = cells.length - startPad - daysInMonth + 1;
-    cells.push({ iso: toIso(new Date(year, month, daysInMonth + trailing)), inMonth: false });
-  }
-  return cells;
-}
 
 /** Validity: mini calendar + day presets + free text (“15 days”). */
 export function ValidityField({
