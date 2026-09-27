@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import type { AirTariff, SeaTariff } from "@/lib/types";
-import { lookupAirTariff, lookupSeaTariff } from "./tariffs";
+import {
+  lookupAirTariff,
+  lookupAirTariffForCarrier,
+  lookupSeaTariff,
+  lookupSeaTariffForCarrier,
+} from "./tariffs";
 
 // More than one tariff can exist for the same lane/carrier (e.g. a
 // republished, corrected circular) — lookup must prefer the newer one
@@ -44,5 +49,36 @@ const freshSea: SeaTariff = {
   createdAt: "2026-09-01T00:00:00.000Z",
 };
 assert.equal(lookupSeaTariff([staleSea, freshSea], "INNSA", "NLRTM", "fcl")?.id, "new");
+
+// lookupAirTariffForCarrier must never silently substitute a different
+// carrier's tariff — that's the exact imprecision the desk complained about.
+const qatarBomDxb: AirTariff = { ...stale, id: "qatar", carrier: "Qatar Airways Cargo", carrierCode: "QR" };
+const laneWithTwoCarriers = [fresh, qatarBomDxb];
+
+const matched = lookupAirTariffForCarrier(laneWithTwoCarriers, "BOM", "DXB", "Emirates");
+assert.equal(matched.status, "matched");
+assert.equal(matched.status === "matched" && matched.tariff.id, "new");
+
+// Typed carrier isn't on file for this lane, but another one is — must
+// report the mismatch, never silently return the wrong carrier's rate.
+const mismatch = lookupAirTariffForCarrier(laneWithTwoCarriers, "BOM", "DXB", "Cathay Pacific");
+assert.equal(mismatch.status, "carrier-mismatch");
+assert.deepEqual(
+  mismatch.status === "carrier-mismatch" && [...mismatch.otherCarriers].sort(),
+  ["Emirates", "Qatar Airways Cargo"],
+);
+
+// Nothing at all on file for the lane.
+assert.equal(lookupAirTariffForCarrier([fresh], "DEL", "LHR", "Emirates").status, "none");
+
+// Same rules for Sea, scoped by mode too.
+const mscInnsaNlrtm: SeaTariff = freshSea;
+const cmaInnsaNlrtm: SeaTariff = { ...staleSea, id: "cma", carrier: "CMA CGM", carrierCode: "CM" };
+const seaMatched = lookupSeaTariffForCarrier([mscInnsaNlrtm, cmaInnsaNlrtm], "INNSA", "NLRTM", "MSC", "fcl");
+assert.equal(seaMatched.status, "matched");
+assert.equal(seaMatched.status === "matched" && seaMatched.tariff.id, "new");
+
+const seaMismatch = lookupSeaTariffForCarrier([mscInnsaNlrtm, cmaInnsaNlrtm], "INNSA", "NLRTM", "Hapag-Lloyd", "fcl");
+assert.equal(seaMismatch.status, "carrier-mismatch");
 
 console.log("tariffs tests passed");

@@ -44,7 +44,7 @@ import {
 import { useLiveData } from "@/lib/api";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
-import { lookupAirTariff } from "@/lib/firebase/tariffs";
+import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import {
   AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
@@ -71,7 +71,7 @@ import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
-import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
+import type { AirTariff, SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
@@ -223,6 +223,69 @@ function AirDeskInner() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historicalAutofill.air]);
+
+  // Identity key, not the airlines array itself — changes only when an id or
+  // a typed carrier name actually changes, never when the autofill effect
+  // below writes a break rate. Depending on `airlines` directly here would
+  // feed back into that effect's own setAirlines call and loop forever.
+  const airlineIdentityKey = airlines.map((a) => `${a.id}:${normalizeCarrierName(a.name)}`).join("|");
+
+  // Circulars tariff match per airline — carrier-specific, never a different
+  // carrier's rate on the same lane. Drives both the silent break-field
+  // autofill below and the "no tariff" / "wrong carrier" hints shown on the
+  // card.
+  const tariffMatchById = useMemo(() => {
+    const map: Record<string, CarrierTariffMatch<AirTariff>> = {};
+    const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
+    const destCode = destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
+    if (!originCode || !destCode) return map;
+    for (const a of airlines) {
+      if (!a.name.trim()) continue;
+      map[a.id] = lookupAirTariffForCarrier(tariffs, originCode, destCode, a.name);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [airlineIdentityKey, origin, destination, tariffs]);
+
+  // Silently fill weight-break fields still at 0 once a Circulars tariff
+  // matches the exact carrier typed on the card — never a different
+  // carrier's rate, and never a field the desk has already entered. Only
+  // calls setAirlines when something actually changed — prev.map() always
+  // returns a new array reference, so an unconditional call here would
+  // re-trigger the identity-key-based memo above on every render.
+  useEffect(() => {
+    if (!Object.keys(tariffMatchById).length) return;
+    setAirlines((prev) => {
+      let anyChanged = false;
+      const next = prev.map((a) => {
+        const match = tariffMatchById[a.id];
+        if (!match || match.status !== "matched") return a;
+        const tariff = match.tariff;
+        let changed = false;
+        const nextBreaks = { ...a.breaks };
+        for (const bn of AIR_WEIGHT_BREAKS) {
+          const cv = tariff.breaks[bn];
+          if (!cv) continue;
+          const pair = nextBreaks[bn] ?? { sell: 0, buy: 0 };
+          const nextPair = { ...pair };
+          if (pair.sell === 0 && cv.sell > 0) {
+            nextPair.sell = cv.sell;
+            changed = true;
+          }
+          if (pair.buy === 0 && cv.buy > 0) {
+            nextPair.buy = cv.buy;
+            changed = true;
+          }
+          nextBreaks[bn] = nextPair;
+        }
+        if (!changed) return a;
+        anyChanged = true;
+        return { ...a, breaks: nextBreaks };
+      });
+      return anyChanged ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tariffMatchById]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -475,17 +538,27 @@ function AirDeskInner() {
       toast("Enter origin and destination airport codes first.", "error");
       return;
     }
-    const tariff = lookupAirTariff(tariffs, originCode, destCode);
-    if (!tariff) {
-      toast(`No Circulars tariff for ${originCode} → ${destCode}.`, "info");
+    if (!selected.name.trim()) {
+      toast("Enter the carrier / airline on the selected option first.", "error");
+      return;
+    }
+    const match = lookupAirTariffForCarrier(tariffs, originCode, destCode, selected.name);
+    if (match.status === "none") {
+      toast(`No Circulars tariff on file for ${originCode} → ${destCode}.`, "info");
+      return;
+    }
+    if (match.status === "carrier-mismatch") {
+      toast(
+        `Circulars has ${originCode} → ${destCode} rates for ${match.otherCarriers.join(", ")} — not ${selected.name}. Check the carrier name.`,
+        "info",
+      );
       return;
     }
     updateAirline(selected.id, {
-      breaks: { ...EMPTY_AIR_BREAKS, ...tariff.breaks },
-      name: selected.name || tariff.carrier,
+      breaks: { ...EMPTY_AIR_BREAKS, ...match.tariff.breaks },
     });
-    setCurrency(tariff.currency);
-    toast(`Loaded ${tariff.carrier} rates onto selected airline.`, "success");
+    setCurrency(match.tariff.currency);
+    toast(`Loaded ${match.tariff.carrier} rates onto selected airline.`, "success");
   }
 
   const laneAirlines = airlines.filter(
@@ -1282,6 +1355,7 @@ function AirDeskInner() {
                         opt={opt}
                         tot={tot}
                         currency={currency}
+                        tariffMatch={tariffMatchById[opt.id]}
                         showAllBreaks={Boolean(showAllBreaksById[opt.id])}
                         onToggleAllBreaks={() =>
                           setShowAllBreaksById((prev) => ({
@@ -1528,6 +1602,7 @@ function AirDeskInner() {
                   opt={opt}
                   tot={tot}
                   currency={currency}
+                  tariffMatch={tariffMatchById[opt.id]}
                   showAllBreaks={Boolean(showAllBreaksById[opt.id])}
                   onToggleAllBreaks={() =>
                     setShowAllBreaksById((prev) => ({

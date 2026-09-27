@@ -27,7 +27,7 @@ import { linerSnapshot } from "@/lib/quotes/option-breakdown";
 import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
-import { lookupSeaTariff } from "@/lib/firebase/tariffs";
+import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
@@ -55,7 +55,7 @@ import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
 import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
-import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
+import type { SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import {
@@ -71,6 +71,13 @@ import {
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
 type Step = "shipment" | "carrier" | "terms";
+
+function linerRatesAreEmpty(opt: LinerOption, mode: SeaMode): boolean {
+  if (mode === "fcl") {
+    return opt.containers.every((c) => c.sellRate === 0 && c.buyRate === 0);
+  }
+  return opt.lclSell === 0 && opt.lclBuy === 0;
+}
 const SEA_STEPS = ["shipment", "carrier", "terms"] as const;
 
 export default function SeaDeskPage() {
@@ -206,6 +213,79 @@ function SeaDeskInner() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historicalAutofill.sea]);
+
+  // Identity key, not the liners array itself — changes only when an id or a
+  // typed carrier name actually changes, never when the autofill effect
+  // below writes a rate. Depending on `liners` directly here would feed back
+  // into that effect's own setLiners call and loop forever.
+  const linerIdentityKey = liners.map((l) => `${l.id}:${normalizeCarrierName(l.name)}`).join("|");
+
+  // Circulars tariff match per liner — carrier-specific, never a different
+  // carrier's rate on the same lane. Drives both the silent rate autofill
+  // below and the "no tariff" / "wrong carrier" hints shown on the card.
+  const tariffMatchById = useMemo(() => {
+    const map: Record<string, CarrierTariffMatch<SeaTariff>> = {};
+    const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
+    const destCode = destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
+    if (!originCode || !destCode) return map;
+    for (const l of liners) {
+      if (!l.name.trim()) continue;
+      map[l.id] = lookupSeaTariffForCarrier(tariffs, originCode, destCode, l.name, mode);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linerIdentityKey, origin, destination, tariffs, mode]);
+
+  // Silently fill FCL container / LCL rate fields still at 0 once a
+  // Circulars tariff matches the exact carrier typed on the card — never a
+  // different carrier's rate, and never a field the desk has already
+  // entered. Only calls setLiners when something actually changed —
+  // prev.map() always returns a new array reference, so an unconditional
+  // call here would re-trigger the identity-key-based memo above forever.
+  useEffect(() => {
+    if (!Object.keys(tariffMatchById).length) return;
+    setLiners((prev) => {
+      let anyChanged = false;
+      const next = prev.map((l) => {
+        const match = tariffMatchById[l.id];
+        if (!match || match.status !== "matched") return l;
+        const tariff = match.tariff;
+        let changed = false;
+
+        const nextContainers = l.containers.map((row) => {
+          const cv = tariff.fclRates[row.type];
+          if (!cv) return row;
+          const nextRow = { ...row };
+          if (row.sellRate === 0 && cv.sell > 0) {
+            nextRow.sellRate = cv.sell;
+            changed = true;
+          }
+          if (row.buyRate === 0 && cv.buy > 0) {
+            nextRow.buyRate = cv.buy;
+            changed = true;
+          }
+          return nextRow;
+        });
+
+        let nextLclSell = l.lclSell;
+        let nextLclBuy = l.lclBuy;
+        if (l.lclSell === 0 && tariff.lclRate.sell > 0) {
+          nextLclSell = tariff.lclRate.sell;
+          changed = true;
+        }
+        if (l.lclBuy === 0 && tariff.lclRate.buy > 0) {
+          nextLclBuy = tariff.lclRate.buy;
+          changed = true;
+        }
+
+        if (!changed) return l;
+        anyChanged = true;
+        return { ...l, containers: nextContainers, lclSell: nextLclSell, lclBuy: nextLclBuy };
+      });
+      return anyChanged ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tariffMatchById]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -401,11 +481,23 @@ function SeaDeskInner() {
       toast("Enter port of loading and discharge first.", "error");
       return;
     }
-    const tariff = lookupSeaTariff(tariffs, originCode, destCode, mode);
-    if (!tariff) {
-      toast(`No Circulars ${mode.toUpperCase()} tariff for ${originCode} → ${destCode}.`, "info");
+    if (!selected.name.trim()) {
+      toast("Enter the carrier / liner on the selected option first.", "error");
       return;
     }
+    const match = lookupSeaTariffForCarrier(tariffs, originCode, destCode, selected.name, mode);
+    if (match.status === "none") {
+      toast(`No Circulars ${mode.toUpperCase()} tariff on file for ${originCode} → ${destCode}.`, "info");
+      return;
+    }
+    if (match.status === "carrier-mismatch") {
+      toast(
+        `Circulars has ${mode.toUpperCase()} rates for ${originCode} → ${destCode} under ${match.otherCarriers.join(", ")} — not ${selected.name}. Check the carrier name.`,
+        "info",
+      );
+      return;
+    }
+    const tariff = match.tariff;
     setCurrency(tariff.currency);
     if (mode === "fcl") {
       const rows = Object.entries(tariff.fclRates).map(([type, rates]) => ({
@@ -415,12 +507,10 @@ function SeaDeskInner() {
         buyRate: rates.buy,
       }));
       updateLiner(selected.id, {
-        name: selected.name || tariff.carrier,
         containers: rows.length ? rows : selected.containers,
       });
     } else {
       updateLiner(selected.id, {
-        name: selected.name || tariff.carrier,
         lclSell: tariff.lclRate.sell,
         lclBuy: tariff.lclRate.buy,
       });
@@ -1094,6 +1184,29 @@ function SeaDeskInner() {
                         />
                       </div>
                     </div>
+
+                    {(() => {
+                      const match = tariffMatchById[opt.id];
+                      if (!linerRatesAreEmpty(opt, mode) || !match) return null;
+                      if (match.status === "none") {
+                        return (
+                          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                            No Circulars {mode.toUpperCase()} tariff on file yet for {opt.name || "this carrier"} on
+                            this route.
+                          </p>
+                        );
+                      }
+                      if (match.status === "carrier-mismatch") {
+                        return (
+                          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                            Circulars has a {mode.toUpperCase()} tariff for this route under{" "}
+                            {match.otherCarriers.join(", ")} — not {opt.name}. Check the carrier name, or enter
+                            rates manually below.
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     {mode === "fcl" ? (
                       <div>

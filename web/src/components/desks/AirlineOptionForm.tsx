@@ -1,6 +1,6 @@
 "use client";
 
-import type { WeightBreakName } from "@atlas/pricing-core";
+import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { Badge, Input, Label, NumberInput } from "@/components/ui";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
@@ -8,8 +8,14 @@ import { ValidityField } from "@/components/ValidityField";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import { computeAdjacentBreakComparison, visibleAirBreaks } from "@/lib/pricing/air-desk";
 import type { AirlineOption } from "@/lib/pricing/carrier-options";
+import type { CarrierTariffMatch } from "@/lib/firebase/tariffs";
+import type { AirTariff } from "@/lib/types";
 import { formatRoutingPreview, formatTransitPreview, normalizeRouting } from "@/lib/pricing/terms";
 import { formatCurrency } from "@/lib/utils";
+
+function breaksAreEmpty(breaks: WeightBreaks): boolean {
+  return Object.values(breaks).every((b) => (b?.sell || 0) === 0 && (b?.buy || 0) === 0);
+}
 
 const BREAK_LABELS: Record<WeightBreakName, string> = {
   min: "Minimum",
@@ -25,6 +31,7 @@ export function AirlineOptionForm({
   opt,
   tot,
   currency,
+  tariffMatch,
   showAllBreaks,
   onToggleAllBreaks,
   lastDestTabTarget,
@@ -34,6 +41,7 @@ export function AirlineOptionForm({
   opt: AirlineOption;
   tot: AirlineTotals | undefined;
   currency: string;
+  tariffMatch?: CarrierTariffMatch<AirTariff>;
   showAllBreaks: boolean;
   onToggleAllBreaks: () => void;
   lastDestTabTarget?: string;
@@ -175,6 +183,18 @@ export function AirlineOptionForm({
         />
         Weight-break tariffs included
       </label>
+
+      {opt.wbEnabled && breaksAreEmpty(opt.breaks) && tariffMatch?.status === "none" ? (
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          No Circulars tariff on file yet for {opt.name || "this carrier"} on this route.
+        </p>
+      ) : null}
+      {opt.wbEnabled && breaksAreEmpty(opt.breaks) && tariffMatch?.status === "carrier-mismatch" ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          Circulars has a tariff for this route under {tariffMatch.otherCarriers.join(", ")} — not{" "}
+          {opt.name}. Check the carrier name, or enter rates manually below.
+        </p>
+      ) : null}
 
       {opt.wbEnabled ? (
         <div className="space-y-2">
