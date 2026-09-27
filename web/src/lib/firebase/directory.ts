@@ -112,35 +112,52 @@ export async function deleteDirectoryContact(id: string): Promise<void> {
 
 /**
  * Writes a bulk Excel import as one dated batch. When `replacePrevious` is
- * true, every existing "agency" contact that itself came from an earlier
- * import (has an `importBatchId`) is deleted first — so this week's file
- * replaces last week's imported rows instead of piling on top of them.
- * Contacts added by hand (no `importBatchId`) are never touched.
+ * true:
+ *  - every existing "agency" contact that itself came from an earlier
+ *    import (has an `importBatchId`) is deleted first — so this week's
+ *    file replaces last week's imported rows instead of piling on top of
+ *    them.
+ *  - a contact added BY HAND (no `importBatchId`) is left alone UNLESS
+ *    this week's file contains a row with the exact same name, in which
+ *    case the uploaded row's data takes over that same document — the
+ *    manual entry is "absorbed" into the tracked batch instead of leaving
+ *    two records for the same agent, and from then on it's a normal
+ *    import-managed row (replaceable by a future upload the same way).
+ *    A hand-added contact with no name match in the new file is untouched.
  */
 export async function importDirectoryContacts(
   contacts: DirectoryContactInput[],
   opts: { updatedBy: string; replacePrevious: boolean },
-): Promise<{ added: number; replaced: number }> {
+): Promise<{ added: number; replaced: number; absorbed: number }> {
   const db = getFirebaseDb();
   const batchId = `import-${Date.now()}`;
 
   let toDelete: string[] = [];
+  const manualIdByName = new Map<string, string>();
   if (opts.replacePrevious) {
     const existing = await fetchDirectoryContacts();
-    toDelete = existing
-      .filter((c) => (c.category || "").toLowerCase() === "agency" && c.importBatchId)
-      .map((c) => c.id);
+    const isAgency = (c: DirectoryContact) => (c.category || "").toLowerCase() === "agency";
+    toDelete = existing.filter((c) => isAgency(c) && c.importBatchId).map((c) => c.id);
+    for (const c of existing) {
+      if (isAgency(c) && !c.importBatchId) {
+        manualIdByName.set(c.name.trim().toLowerCase(), c.id);
+      }
+    }
   }
 
   type Write =
     | { kind: "delete"; id: string }
-    | { kind: "set"; data: Record<string, unknown> };
+    | { kind: "set"; id?: string; data: Record<string, unknown> };
 
+  let absorbed = 0;
   const writes: Write[] = [
     ...toDelete.map((id): Write => ({ kind: "delete", id })),
-    ...contacts.map(
-      (c): Write => ({
+    ...contacts.map((c): Write => {
+      const absorbId = manualIdByName.get(c.name.trim().toLowerCase());
+      if (absorbId) absorbed += 1;
+      return {
         kind: "set",
+        id: absorbId,
         data: {
           name: c.name.trim(),
           category: c.category || "agency",
@@ -158,8 +175,8 @@ export async function importDirectoryContacts(
           updatedBy: opts.updatedBy,
           updatedAt: serverTimestamp(),
         },
-      }),
-    ),
+      };
+    }),
   ];
 
   // Firestore batched writes cap at 500 ops — chunk with headroom to spare.
@@ -169,10 +186,10 @@ export async function importDirectoryContacts(
     const batch = writeBatch(db);
     for (const w of slice) {
       if (w.kind === "delete") batch.delete(doc(db, "contactsDirectory", w.id));
-      else batch.set(doc(collection(db, "contactsDirectory")), w.data);
+      else batch.set(w.id ? doc(db, "contactsDirectory", w.id) : doc(collection(db, "contactsDirectory")), w.data);
     }
     await batch.commit();
   }
 
-  return { added: contacts.length, replaced: toDelete.length };
+  return { added: contacts.length - absorbed, replaced: toDelete.length, absorbed };
 }

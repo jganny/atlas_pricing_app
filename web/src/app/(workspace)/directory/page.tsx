@@ -319,7 +319,9 @@ export default function DirectoryPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
       toast(
         replacePrevious
-          ? `This week's list is live — ${result.added} agents added, ${result.replaced} from last week's import removed`
+          ? `This week's list is live — ${result.added} agents added${
+              result.absorbed ? `, ${result.absorbed} matched to a hand-added agent` : ""
+            }, ${result.replaced} from last week's import removed`
           : `Imported ${result.added} contacts`,
         "success",
       );
