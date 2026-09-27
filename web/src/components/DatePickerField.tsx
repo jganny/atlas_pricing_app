@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { asDateValue, monthCells, parseIso, toIso, WEEKDAYS } from "@/lib/date-cells";
+import { PortalDropdown } from "@/components/PortalDropdown";
 import { cn } from "@/lib/utils";
 
 /** A small, branded calendar dropdown for picking one date — built so the
  * OS's own date-picker popup (which floats wherever the browser wants, and
- * can land on top of unrelated controls) never has to be shown at all. */
+ * can land on top of unrelated controls) never has to be shown at all.
+ *
+ * Renders through PortalDropdown (into document.body), not a plain
+ * `absolute` div — a `Card` in this app applies `backdrop-blur`, which
+ * creates its own CSS stacking context, so a locally-positioned dropdown's
+ * z-index only wins against other elements *inside that same Card*: a later
+ * sibling card (e.g. the results table) still painted over the bottom of
+ * the calendar, hiding the day grid. Portaling to document.body is the
+ * fix this codebase already uses for every other floating panel (the
+ * Actions menu, every combobox). */
 export function DatePickerField({
   value,
   onChange,
@@ -21,32 +31,21 @@ export function DatePickerField({
   placeholder?: string;
 }) {
   const dateVal = asDateValue(value);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const calRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [openUp, setOpenUp] = useState(false);
   const [cursor, setCursor] = useState(dateVal || toIso(new Date()));
 
   useEffect(() => {
     if (dateVal) setCursor(dateVal);
   }, [dateVal]);
 
-  useLayoutEffect(() => {
-    if (!open) {
-      setOpenUp(false);
-      return;
-    }
-    const el = calRef.current;
-    const root = rootRef.current;
-    if (!el || !root) return;
-    const r = el.getBoundingClientRect();
-    if (r.bottom > window.innerHeight - 8 && root.getBoundingClientRect().top - 8 > r.height) setOpenUp(true);
-  }, [open]);
-
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const node = e.target as Node | null;
+      if (triggerRef.current?.contains(node)) return;
+      if (node instanceof Element && node.closest("[data-portal-dropdown]")) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -66,12 +65,13 @@ export function DatePickerField({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div>
       {label ? (
         <span className="mb-1 block text-[11px] font-semibold text-[var(--color-text-muted)]">{label}</span>
       ) : null}
       <div className="flex items-center gap-1">
         <button
+          ref={triggerRef}
           type="button"
           aria-label={ariaLabel ?? label ?? "Choose date"}
           aria-expanded={open}
@@ -95,16 +95,8 @@ export function DatePickerField({
           </button>
         ) : null}
       </div>
-      {open ? (
-        <div
-          ref={calRef}
-          role="dialog"
-          aria-label="Choose date"
-          className={cn(
-            "absolute z-30 w-[17.5rem] rounded-lg border border-[var(--color-border)] bg-white p-2 shadow-lg",
-            openUp ? "bottom-full mb-1" : "mt-1",
-          )}
-        >
+      <PortalDropdown open={open} anchorRef={triggerRef} fitContent maxHeight={320} onDismiss={() => setOpen(false)}>
+        <div role="dialog" aria-label="Choose date" className="p-2">
           <div className="mb-2 flex items-center justify-between text-xs font-bold text-[var(--color-atlas-navy)]">
             <button
               type="button"
@@ -168,7 +160,7 @@ export function DatePickerField({
             ) : null}
           </div>
         </div>
-      ) : null}
+      </PortalDropdown>
     </div>
   );
 }
