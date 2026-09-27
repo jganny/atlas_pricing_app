@@ -7,14 +7,8 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { Button, Card } from "@/components/ui";
 import { useAuthStore } from "@/store/auth";
 import { preferredHomePath } from "@/lib/auth/rbac";
-import {
-  DESK_SEATS,
-  occupantLoginForSeat,
-  personDisplayName,
-} from "@/lib/auth/desk-seats";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useLiveData } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/BrandMark";
 
 export default function LoginPage() {
@@ -34,7 +28,6 @@ export default function LoginPage() {
   const [forgotMsg, setForgotMsg] = useState<string | null>(null);
   const [signupMsg, setSignupMsg] = useState<string | null>(null);
   const [signupBusy, setSignupBusy] = useState(false);
-  const [hint, setHint] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) router.replace(preferredHomePath(user.username, user.role));
@@ -107,8 +100,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface)] p-4">
-      <div className="grid w-full max-w-4xl gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <Card className="order-2 lg:order-1">
+      <div className="w-full max-w-md">
+        <Card>
           <div className="mb-5">
             <div className="flex items-center gap-2.5">
               <BrandMark size={44} />
@@ -174,7 +167,6 @@ export default function LoginPage() {
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
               />
             </label>
-            {hint ? <p className="text-xs text-[var(--color-text-muted)]">{hint}</p> : null}
             {error && mode === "signin" ? (
               <p className="text-sm font-semibold text-red-600">{error}</p>
             ) : null}
@@ -249,48 +241,6 @@ export default function LoginPage() {
             ) : null}
           </div>
         </Card>
-
-        <div className="order-1 space-y-3 lg:order-2">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
-              Stable desks
-            </p>
-            <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">Pick a seat to fill your login</h2>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Seats never rename. Occupants can be swapped in Admin.
-            </p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            {DESK_SEATS.filter((s) => s.id !== "admin" && s.id !== "manager").map((seat) => {
-              const login = occupantLoginForSeat(seat.id);
-              const occupant = personDisplayName(login);
-              return (
-                <button
-                  key={seat.id}
-                  type="button"
-                  onClick={() => {
-                    setUsername(login);
-                    setHint(
-                      `${seat.label} is currently ${occupant} (${login}). Sign in with that person’s password, or ask Admin to assign you.`,
-                    );
-                  }}
-                  className={cn(
-                    "rounded-xl border bg-white px-3 py-3 text-left transition hover:border-[var(--color-atlas-gold)] hover:shadow-sm",
-                    username.toLowerCase() === login.toLowerCase()
-                      ? "border-[var(--color-atlas-gold)] ring-1 ring-[var(--color-atlas-gold-soft)]"
-                      : "border-[var(--color-border)]",
-                  )}
-                >
-                  <div className="text-sm font-extrabold text-[var(--color-atlas-navy)]">{seat.label}</div>
-                  <div className="text-[11px] text-[var(--color-text-muted)]">{seat.blurb}</div>
-                  <div className="mt-1 text-xs font-semibold text-[var(--color-atlas-navy)]">
-                    Occupant · {occupant}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
   );

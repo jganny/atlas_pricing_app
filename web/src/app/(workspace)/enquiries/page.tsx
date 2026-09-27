@@ -159,7 +159,6 @@ function EnquiryDatabaseInner() {
   const [columns, setColumns] = useState({
     lane: true,
     desk: false,
-    carrier: false,
     buy: false,
     amount: true,
     gp: true,
@@ -725,7 +724,6 @@ function EnquiryDatabaseInner() {
               [
                 ["lane", "Lane"],
                 ["desk", "Desk"],
-                ["carrier", "Carrier"],
                 ["tonnage", "Tonnage"],
                 ["buy", "Buy"],
                 ["amount", "Sell"],

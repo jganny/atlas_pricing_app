@@ -139,6 +139,74 @@ export function computeAirlineTotals(
   };
 }
 
+const NEXT_BREAK: Partial<Record<WeightBreakName, WeightBreakName>> = {
+  minus45: "plus45",
+  plus45: "plus100",
+  plus100: "plus300",
+  plus300: "plus500",
+  plus500: "plus1000",
+};
+
+const AIR_BREAK_MIN_KG: Record<WeightBreakName, number> = {
+  min: 0,
+  minus45: 0,
+  plus45: 45,
+  plus100: 100,
+  plus300: 300,
+  plus500: 500,
+  plus1000: 1000,
+};
+
+export interface AdjacentBreakOption {
+  breakName: WeightBreakName;
+  rate: number;
+  weightUsedKg: number;
+  total: number;
+}
+
+export interface AdjacentBreakComparison {
+  current: AdjacentBreakOption;
+  next: AdjacentBreakOption;
+  cheaper: "current" | "next" | "equal";
+}
+
+/**
+ * A shipment near a bracket boundary (e.g. 90kg, inside the +45kg bracket)
+ * can sometimes cost LESS if quoted at the next bracket's rate for its
+ * minimum weight instead — real air-cargo "weight-break advantage" pricing.
+ * Returns null unless both the current and next bracket have a rate entered,
+ * so nothing is ever guessed.
+ */
+export function computeAdjacentBreakComparison(
+  chargeableWeightKg: number,
+  breaks: WeightBreaks,
+): AdjacentBreakComparison | null {
+  if (!(chargeableWeightKg > 0)) return null;
+  const currentBreak = getWeightBreakBracket(chargeableWeightKg);
+  const nextBreak = NEXT_BREAK[currentBreak];
+  if (!nextBreak) return null;
+
+  const currentRate = quoteSideRate(breaks[currentBreak]?.sell || 0, breaks[currentBreak]?.buy || 0);
+  const nextRate = quoteSideRate(breaks[nextBreak]?.sell || 0, breaks[nextBreak]?.buy || 0);
+  if (currentRate <= 0 || nextRate <= 0) return null;
+
+  const nextWeightUsedKg = Math.max(chargeableWeightKg, AIR_BREAK_MIN_KG[nextBreak]);
+  const current: AdjacentBreakOption = {
+    breakName: currentBreak,
+    rate: currentRate,
+    weightUsedKg: chargeableWeightKg,
+    total: chargeableWeightKg * currentRate,
+  };
+  const next: AdjacentBreakOption = {
+    breakName: nextBreak,
+    rate: nextRate,
+    weightUsedKg: nextWeightUsedKg,
+    total: nextWeightUsedKg * nextRate,
+  };
+  const cheaper = current.total < next.total ? "current" : current.total > next.total ? "next" : "equal";
+  return { current, next, cheaper };
+}
+
 /** One active break for the chargeable kg — full tariff card is opt-in. */
 export function visibleAirBreaks(
   chargeableWeightKg: number,

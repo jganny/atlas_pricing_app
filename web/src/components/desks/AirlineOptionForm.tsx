@@ -6,7 +6,7 @@ import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { ValidityField } from "@/components/ValidityField";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
-import { visibleAirBreaks } from "@/lib/pricing/air-desk";
+import { computeAdjacentBreakComparison, visibleAirBreaks } from "@/lib/pricing/air-desk";
 import type { AirlineOption } from "@/lib/pricing/carrier-options";
 import { formatRoutingPreview, formatTransitPreview, normalizeRouting } from "@/lib/pricing/terms";
 import { formatCurrency } from "@/lib/utils";
@@ -44,6 +44,7 @@ export function AirlineOptionForm({
   const dgId = `air-dg-fee-${opt.id}`;
   const chw = tot?.freight.chargeableWeightKg ?? 0;
   const breaksToShow = visibleAirBreaks(chw, tot?.freight.usedBreak, showAllBreaks);
+  const breakComparison = opt.wbEnabled ? computeAdjacentBreakComparison(chw, opt.breaks) : null;
 
   return (
     <div className="space-y-3">
@@ -242,6 +243,54 @@ export function AirlineOptionForm({
               {tot.quoteUsingBuyFreight ? " (from Buy)" : ""} ={" "}
               <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
             </p>
+          ) : null}
+          {breakComparison ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div
+                className={`rounded-lg border p-3 ${
+                  breakComparison.cheaper === "current"
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-[var(--color-border)] bg-white"
+                }`}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {BREAK_LABELS[breakComparison.current.breakName]} — literal
+                </p>
+                <p className="mt-0.5 text-lg font-bold text-[var(--color-atlas-navy)]">
+                  {formatCurrency(breakComparison.current.total, currency)}
+                </p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  {breakComparison.current.weightUsedKg.toFixed(0)} kg × ${breakComparison.current.rate.toFixed(2)}
+                </p>
+              </div>
+              <div
+                className={`rounded-lg border p-3 ${
+                  breakComparison.cheaper === "next"
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-[var(--color-border)] bg-white"
+                }`}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {BREAK_LABELS[breakComparison.next.breakName]} — next tier
+                </p>
+                <p className="mt-0.5 text-lg font-bold text-[var(--color-atlas-navy)]">
+                  {formatCurrency(breakComparison.next.total, currency)}
+                </p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  {breakComparison.next.weightUsedKg.toFixed(0)} kg (rounded up) × ${breakComparison.next.rate.toFixed(2)}
+                </p>
+              </div>
+              {breakComparison.cheaper !== "equal" ? (
+                <p className="sm:col-span-2 text-[11px] font-semibold text-emerald-700">
+                  {breakComparison.cheaper === "current"
+                    ? `The ${BREAK_LABELS[breakComparison.current.breakName]} rate is cheaper here — quoting at the next tier would cost more.`
+                    : `Quoting at ${BREAK_LABELS[breakComparison.next.breakName]} instead would save ${formatCurrency(
+                        Math.abs(breakComparison.current.total - breakComparison.next.total),
+                        currency,
+                      )}.`}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

@@ -32,7 +32,6 @@ function slaTone(hours: number) {
 export type EdbColumnVisibility = {
   lane: boolean;
   desk: boolean;
-  carrier: boolean;
   buy?: boolean;
   amount: boolean;
   gp: boolean;
@@ -73,7 +72,6 @@ export function EnquiryTable({
   const vis = visibleColumns ?? {
     lane: true,
     desk: true,
-    carrier: true,
     buy: false,
     amount: true,
     gp: true,
@@ -103,8 +101,15 @@ export function EnquiryTable({
         {
           accessorKey: "customer",
           header: "Customer",
-          cell: ({ getValue }) => (
-            <span className="whitespace-nowrap">{String(getValue() ?? "—")}</span>
+          cell: ({ row }) => (
+            <div className="min-w-0">
+              <div className="whitespace-nowrap">{row.original.customer || "—"}</div>
+              {row.original.carrier ? (
+                <div className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">
+                  {row.original.carrier}
+                </div>
+              ) : null}
+            </div>
           ),
         },
         {
@@ -132,15 +137,6 @@ export function EnquiryTable({
           header: "Desk",
           cell: ({ getValue }) => (
             <span className="whitespace-nowrap">{String(getValue() ?? "—")}</span>
-          ),
-        });
-      }
-      if (vis.carrier) {
-        defs.push({
-          accessorKey: "carrier",
-          header: "Carrier",
-          cell: ({ row }) => (
-            <span className="whitespace-nowrap">{row.original.carrier || "—"}</span>
           ),
         });
       }
@@ -220,7 +216,7 @@ export function EnquiryTable({
       }
       return defs;
     },
-    [metricModes, showBuy, vis.amount, vis.carrier, vis.desk, vis.gp, vis.lane, vis.sla, vis.tonnage],
+    [metricModes, showBuy, vis.amount, vis.desk, vis.gp, vis.lane, vis.sla, vis.tonnage],
   );
 
   const table = useReactTable({
