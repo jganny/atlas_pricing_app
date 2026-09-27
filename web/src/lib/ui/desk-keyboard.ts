@@ -37,6 +37,30 @@ export function focusById(id: string | undefined) {
   });
 }
 
+/**
+ * Synchronous focus-by-id used to intercept Tab mid-step (e.g. jump from a
+ * surcharge table's last Delete button to the next table's first Name
+ * field) — unlike focusById above, this returns whether the target was
+ * actually focused, so a caller only preventDefault()s the Tab when the
+ * jump succeeds and otherwise falls through to normal DOM tab order.
+ */
+export function focusByIdNow(id: string | undefined): boolean {
+  if (!id || typeof document === "undefined") return false;
+  const el = document.getElementById(id);
+  if (!(el instanceof HTMLElement)) return false;
+  if (
+    (el instanceof HTMLButtonElement ||
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLSelectElement ||
+      el instanceof HTMLTextAreaElement) &&
+    el.disabled
+  ) {
+    return false;
+  }
+  el.focus();
+  return document.activeElement === el;
+}
+
 export function lastFieldTab(
   e: { key: string; shiftKey: boolean; altKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; preventDefault: () => void },
   go: () => void,

@@ -11,6 +11,7 @@ import {
   type CarrierRecord,
 } from "@/lib/carriers/directory";
 import { closeAllComboboxes, useCloseComboboxes } from "@/lib/ui/close-comboboxes";
+import { useComboboxKeyNav } from "@/hooks/use-combobox-key-nav";
 
 const COLOADERS: CarrierRecord[] = [
   { code: "VANGUARD", name: "Vanguard Logistics", kind: "ocean", country: "IN" },
@@ -100,27 +101,7 @@ export function CarrierCombobox({
     commit(formatCarrierLabel(hit));
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp") && hits.length > 0) {
-      setOpen(true);
-      e.preventDefault();
-      return;
-    }
-    if (!open || hits.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((i) => (i + 1) % hits.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => (i - 1 + hits.length) % hits.length);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const hit = hits[active];
-      if (hit) pick(hit);
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
-  }
+  const onKeyDown = useComboboxKeyNav({ hits, open, setOpen, active, setActive, onPick: pick });
 
   return (
     <div ref={boxRef} className="relative">
