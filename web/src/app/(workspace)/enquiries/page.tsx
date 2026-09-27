@@ -9,6 +9,7 @@ import { Archive, Columns3, Download, Loader2, Search } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { DatePickerField } from "@/components/DatePickerField";
+import { RangeNumberField } from "@/components/RangeNumberField";
 import { EnquiryInspector } from "@/components/EnquiryInspector";
 import { EnquiryTable } from "@/components/EnquiryTable";
 import { toast } from "@/components/Toast";
@@ -673,24 +674,15 @@ function EnquiryDatabaseInner() {
               </label>
               <DatePickerField label="Date from" ariaLabel="Date from" value={dateFrom} onChange={setDateFrom} />
               <DatePickerField label="Date to" ariaLabel="Date to" value={dateTo} onChange={setDateTo} />
-              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-                Tonnage, minimum
-                <input
-                  type="number"
-                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
-                  value={tonnageMin}
-                  onChange={(e) => setTonnageMin(e.target.value)}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
-                Tonnage, maximum
-                <input
-                  type="number"
-                  className="rounded-md border px-2 py-1.5 text-sm font-normal text-[var(--color-text)]"
-                  value={tonnageMax}
-                  onChange={(e) => setTonnageMax(e.target.value)}
-                />
-              </label>
+              <RangeNumberField
+                label="Tonnage"
+                minValue={tonnageMin}
+                maxValue={tonnageMax}
+                onMinChange={setTonnageMin}
+                onMaxChange={setTonnageMax}
+                minAriaLabel="Minimum tonnage"
+                maxAriaLabel="Maximum tonnage"
+              />
             </div>
           ) : null}
 
