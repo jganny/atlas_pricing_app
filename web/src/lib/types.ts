@@ -105,6 +105,8 @@ export interface AirTariff {
   destination: string
   breaks: Record<string, { sell: number; buy: number }>
   currency: string
+  /** When this tariff was published — used to prefer the most recent one when more than one exists for the same lane/carrier. */
+  createdAt?: string
 }
 
 export interface SeaTariff {
@@ -117,6 +119,8 @@ export interface SeaTariff {
   lclRate: { sell: number; buy: number }
   fclRates: Record<string, { sell: number; buy: number }>
   currency: string
+  /** When this tariff was published — used to prefer the most recent one when more than one exists for the same lane/carrier. */
+  createdAt?: string
 }
 
 export interface ParsedEnquiry {
@@ -187,6 +191,10 @@ export interface DirectoryContact {
   suspended?: boolean
   updatedBy?: string
   updatedAt?: string
+  /** Set only on rows written by a weekly Excel import — undefined on rows
+   * added by hand. Lets a new import replace the previous week's imported
+   * rows without touching manually-added contacts. */
+  importBatchId?: string
 }
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'quoted' | 'won' | 'lost'
