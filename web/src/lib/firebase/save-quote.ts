@@ -48,6 +48,8 @@ export interface CourierCardResult {
   option: CourierOption;
   name: string;
   sellLocal: number;
+  /** Quoted freight column: sheet tariff + 5% + fuel (GST stays on the total). */
+  baseFreight?: number;
   ratePerKg?: number;
   transit?: string;
   chargeableKg?: number;
@@ -166,6 +168,7 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
           {
             name: c.name,
             sellLocal: c.sellLocal,
+            baseFreight: c.baseFreight,
             ratePerKg: c.ratePerKg,
             transit: c.transit,
             validity: input.validity || "",

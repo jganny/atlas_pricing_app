@@ -5,6 +5,8 @@ import {
   parseCourierTariffSheets,
   pickTariffSlab,
   applyCourierTariffMarkup,
+  applyCourierTariffFuel,
+  buildCourierTariffSell,
   courierTariffNeedsReupload,
   repairCourierTariffBook,
   dedupeCourierTariffBooks,
@@ -173,6 +175,18 @@ if (zoneHit.status === "hit") {
 assert.equal(COURIER_TARIFF_MARKUP_PCT, 5);
 assert.equal(applyCourierTariffMarkup(1331), 1397.55);
 assert.equal(applyCourierTariffMarkup(1600), 1680);
+assert.equal(applyCourierTariffMarkup(28146), 29553.3, "London 50 kg sheet tariff + 5%");
+assert.equal(applyCourierTariffFuel(29553.3, 40), 11821.32);
+assert.equal(applyCourierTariffFuel(29553.3, 50), 14776.65);
+assert.equal(applyCourierTariffFuel(29553.3, 0), 0);
+
+const londonSell = buildCourierTariffSell(28146, 40);
+assert.equal(londonSell.uploaded, 28146);
+assert.equal(londonSell.afterMarkup, 29553.3);
+assert.equal(londonSell.fuel, 11821.32);
+assert.equal(londonSell.quotedFreight, 41374.62, "quoted freight column is tariff + 5% + fuel");
+assert.equal(buildCourierTariffSell(28146, 50).quotedFreight, 44329.95);
+assert.equal(buildCourierTariffSell(0, 40).quotedFreight, 0);
 
 const numericHeaderBook = parseCourierTariffSheets(
   [

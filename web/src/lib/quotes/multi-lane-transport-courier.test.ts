@@ -83,7 +83,17 @@ const lanes = [
   assert.equal(row.service, "express");
   assert.equal(row.marginPct, 15);
   assert.equal(row.quoteTotal, 2400);
+  assert.equal(row.baseFreight, 2400, "baseFreight falls back to sellLocal");
   assert.equal(row.gst, 366, "GST only carried for the selected card");
+
+  const freightCol = courierSnapshot(
+    c,
+    { name: "FedEx", sellLocal: 2400, baseFreight: 1800, gstAmount: 366 },
+    courierLanes,
+    "l1",
+  );
+  assert.equal(freightCol.quoteTotal, 2400);
+  assert.equal(freightCol.baseFreight, 1800, "quoted freight column can differ from grand total");
 
   const notSelected = courierSnapshot(
     createCourierOption({}, false),

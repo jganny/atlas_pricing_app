@@ -246,6 +246,8 @@ export function courierSnapshot(
   computed: {
     name: string;
     sellLocal: number;
+    /** Freight column: sheet tariff + 5% + fuel. Falls back to sellLocal. */
+    baseFreight?: number;
     ratePerKg?: number;
     transit?: string;
     validity?: string;
@@ -276,7 +278,7 @@ export function courierSnapshot(
     quoteTotal: computed.sellLocal,
     tt: computed.transit ?? "",
     appliedRate: computed.ratePerKg ?? 0,
-    baseFreight: computed.sellLocal,
+    baseFreight: computed.baseFreight ?? computed.sellLocal,
     chargeableWeight: computed.chargeableKg ?? 0,
     validity: computed.validity ?? "",
     gst: option.selected ? computed.gstAmount ?? 0 : 0,

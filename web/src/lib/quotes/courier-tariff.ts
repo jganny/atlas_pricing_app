@@ -80,6 +80,41 @@ export function applyCourierTariffMarkup(
   return Math.round(uploadedRate * (1 + markupPct / 100) * 100) / 100;
 }
 
+export function applyCourierTariffFuel(freightAfterMarkup: number, fuelPct: number): number {
+  if (!(freightAfterMarkup > 0) || !(fuelPct > 0)) return 0;
+  return Math.round(freightAfterMarkup * (fuelPct / 100) * 100) / 100;
+}
+
+/** Sheet tariff → freight after +5% → plus the desk fuel % → the quoted freight column. */
+export type CourierTariffSell = {
+  uploaded: number;
+  markupPct: number;
+  markupAmount: number;
+  afterMarkup: number;
+  fuelPct: number;
+  fuel: number;
+  quotedFreight: number;
+};
+
+export function buildCourierTariffSell(
+  uploadedRate: number,
+  fuelPct = 0,
+  markupPct = COURIER_TARIFF_MARKUP_PCT,
+): CourierTariffSell {
+  const uploaded = uploadedRate > 0 ? uploadedRate : 0;
+  const afterMarkup = uploaded > 0 ? applyCourierTariffMarkup(uploaded, markupPct) : 0;
+  const fuel = applyCourierTariffFuel(afterMarkup, fuelPct);
+  return {
+    uploaded,
+    markupPct: uploaded > 0 ? markupPct : 0,
+    markupAmount: Math.max(0, afterMarkup - uploaded),
+    afterMarkup,
+    fuelPct: fuelPct > 0 ? fuelPct : 0,
+    fuel,
+    quotedFreight: Math.round((afterMarkup + fuel) * 100) / 100,
+  };
+}
+
 function lanePlace(lane: CourierTariffLane): string {
   return lane.direction === "import" ? lane.origin : lane.destination;
 }
