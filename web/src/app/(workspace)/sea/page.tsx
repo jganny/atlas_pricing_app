@@ -767,6 +767,26 @@ function SeaDeskInner() {
     ],
   );
 
+  function goToCarriers() {
+    if (!customer.trim()) {
+      toast("Enter customer name before liners.", "error");
+      return;
+    }
+    if (!origin.trim() || !destination.trim()) {
+      toast("Enter origin and destination before liners.", "error");
+      return;
+    }
+    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
+    if (cargoErr) {
+      toast(cargoErr, "error");
+      setSaveMsg(cargoErr);
+      return;
+    }
+    setSaveMsg(null);
+    setStep("carrier");
+    focusById("sea-step-carrier-anchor");
+  }
+
   useDeskSaveShortcut(() => void handleSave(), !saving);
   useDeskStepKeys({
     steps: SEA_STEPS,
@@ -1011,7 +1031,7 @@ function SeaDeskInner() {
                     value={customFx || ""}
                     onChange={(e) => setCustomFx(Number(e.target.value))}
                     placeholder="Blank = 83.5"
-                    onKeyDown={(e) => lastFieldTab(e, () => setStep("carrier"))}
+                    onKeyDown={(e) => lastFieldTab(e, goToCarriers)}
                   />
                   {currency !== "INR" ? (
                     <span className="mt-1 block text-xs text-[var(--color-text-muted)]" data-testid="custom-fx-preview">
@@ -1028,28 +1048,7 @@ function SeaDeskInner() {
                 </Label>
               </div>
               <div className="flex justify-end">
-                <Button
-                  type="button"
-                  className="h-9"
-                  onClick={() => {
-                    if (!customer.trim()) {
-                      toast("Enter customer name before liners.", "error");
-                      return;
-                    }
-                    if (!origin.trim() || !destination.trim()) {
-                      toast("Enter origin and destination before liners.", "error");
-                      return;
-                    }
-                    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
-                    if (cargoErr) {
-                      toast(cargoErr, "error");
-                      setSaveMsg(cargoErr);
-                      return;
-                    }
-                    setSaveMsg(null);
-                    setStep("carrier");
-                  }}
-                >
+                <Button type="button" className="h-9" onClick={goToCarriers}>
                   Next · Liners
                 </Button>
               </div>
@@ -1059,7 +1058,11 @@ function SeaDeskInner() {
           {step === "carrier" ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-bold text-[var(--color-atlas-navy)]">
+                <h2
+                  id="sea-step-carrier-anchor"
+                  tabIndex={-1}
+                  className="font-bold text-[var(--color-atlas-navy)] outline-none"
+                >
                   Carriers on this lane ({laneLiners.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">

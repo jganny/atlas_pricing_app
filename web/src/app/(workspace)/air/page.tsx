@@ -1199,8 +1199,7 @@ function AirDeskInner() {
                               onChange={(e) => updateCargo(i, { gw: Number(e.target.value) })}
                               onKeyDown={(e) => {
                                 if (e.key === "Tab" && !e.shiftKey && i === cargo.length - 1) {
-                                  e.preventDefault();
-                                  setStep("carrier");
+                                  lastFieldTab(e, goToCarriers);
                                 }
                               }}
                             />
