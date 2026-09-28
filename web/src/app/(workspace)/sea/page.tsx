@@ -34,9 +34,12 @@ import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { seaShipmentSchema } from "@/lib/pricing/desk-schemas";
 import {
   computeLinerTotals,
+  seaCargoHasData,
   seaHeavyWeightWarning,
+  summarizeSeaCargo,
   validateSeaCargoBasics,
   validateSelectedLiner,
+  type SeaCargoRow,
   type SeaContainerRow,
 } from "@/lib/pricing/sea-desk";
 import {
@@ -56,7 +59,7 @@ import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
 import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
 import type { SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import {
   allLanesRoute,
@@ -121,6 +124,8 @@ function SeaDeskInner() {
   const [mode, setMode] = useState<SeaMode>("fcl");
   const [grossWeightKg, setGrossWeightKg] = useState(0);
   const [volumeCbm, setVolumeCbm] = useState(0);
+  const [cargo, setCargo] = useState<SeaCargoRow[]>([]);
+  const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
   const [liners, setLiners] = useState<LinerOption[]>([createLinerOption({}, true)]);
@@ -141,6 +146,19 @@ function SeaDeskInner() {
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const prefillApplied = useRef(false);
+
+  // Per-package L×W×H rows are the primary way to enter cargo (mirrors Air
+  // Desk) — once any row has real data, Gross weight/Volume become computed
+  // from them and the plain fields below turn read-only. A quote with no
+  // rows (a fresh one before "+ Add row" is used, or a quote saved before
+  // this feature existed) keeps those fields directly editable, unchanged
+  // from today's behavior.
+  useEffect(() => {
+    if (!seaCargoHasData(cargo)) return;
+    const summary = summarizeSeaCargo(cargo, dimUnit);
+    setGrossWeightKg(summary.grossWeightKg);
+    setVolumeCbm(summary.volumeCbm);
+  }, [cargo, dimUnit]);
 
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
@@ -362,6 +380,8 @@ function SeaDeskInner() {
     setMode(loaded.mode);
     setGrossWeightKg(loaded.grossWeightKg);
     setVolumeCbm(loaded.volumeCbm);
+    setCargo(loaded.cargo);
+    setDimUnit(loaded.dimUnit);
     setChargeableCbmOverride(loaded.chargeableCbmOverride);
     setCustomFx(loaded.customExchangeRate);
     setLiners(loaded.liners);
@@ -435,6 +455,8 @@ function SeaDeskInner() {
     setMode("fcl");
     setGrossWeightKg(0);
     setVolumeCbm(0);
+    setCargo([]);
+    setDimUnit("cms");
     setChargeableCbmOverride(0);
     setCustomFx(0);
     setLiners([createLinerOption({ laneId: lane.id }, true)]);
@@ -575,6 +597,8 @@ function SeaDeskInner() {
         chargeableRt: selectedTotals.freight.chargeableRt,
         grossWeight: grossWeightKg,
         volumeCbm,
+        seaCargoItems: cargo,
+        dimUnit,
         baseFreight: selectedTotals.baseFreightQuote,
         originFeesTotal: selectedTotals.originTotal,
         destFeesTotal: selectedTotals.destTotal,
@@ -688,6 +712,8 @@ function SeaDeskInner() {
               mode,
               grossWeightKg,
               volumeCbm,
+              cargo,
+              dimUnit,
               chargeableCbmOverride,
               selected,
               totals: selectedTotals,
@@ -993,24 +1019,154 @@ function SeaDeskInner() {
                 <div className="md:col-span-2">
                   <CommodityCombobox value={commodity} onChange={setCommodity} />
                 </div>
+                {mode !== "fcl" ? (
+                  <div className="md:col-span-2 space-y-2 rounded-lg border border-[var(--color-border)] bg-slate-50/60 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-bold">Cargo dimensions</h3>
+                      <div className="flex items-center gap-2">
+                        <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-0.5 text-xs font-bold">
+                          <button
+                            type="button"
+                            className={cn(
+                              "rounded-md px-2.5 py-1",
+                              dimUnit === "cms" ? "bg-[var(--color-atlas-navy)] text-white" : "text-[var(--color-text-muted)]",
+                            )}
+                            onClick={() => setDimUnit("cms")}
+                          >
+                            cm
+                          </button>
+                          <button
+                            type="button"
+                            className={cn(
+                              "rounded-md px-2.5 py-1",
+                              dimUnit === "inches" ? "bg-[var(--color-atlas-navy)] text-white" : "text-[var(--color-text-muted)]",
+                            )}
+                            onClick={() => setDimUnit("inches")}
+                          >
+                            inches
+                          </button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setCargo((rows) => [...rows, { l: 0, w: 0, h: 0, qty: 1, gw: 0 }])}
+                        >
+                          <Plus className="mr-1 h-4 w-4" /> Add row
+                        </Button>
+                      </div>
+                    </div>
+                    {cargo.length ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-white text-xs uppercase text-[var(--color-text-muted)]">
+                            <tr>
+                              <th className="px-2 py-2">L ({dimUnit === "cms" ? "cm" : "in"})</th>
+                              <th className="px-2 py-2">W ({dimUnit === "cms" ? "cm" : "in"})</th>
+                              <th className="px-2 py-2">H ({dimUnit === "cms" ? "cm" : "in"})</th>
+                              <th className="px-2 py-2">Qty</th>
+                              <th className="px-2 py-2">GW kg</th>
+                              <th className="px-2 py-2" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cargo.map((row, i) => (
+                              <tr key={i} className="border-t border-[var(--color-border)]">
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.1"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.l}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, l: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.1"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.w}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, w: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.1"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.h}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, h: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    autoComplete="off"
+                                    className="w-14 rounded border px-1 py-1"
+                                    value={row.qty}
+                                    onChange={(e) =>
+                                      setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, qty: Number(e.target.value) } : r)))
+                                    }
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.01"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.gw}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, gw: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <button
+                                    type="button"
+                                    className="text-red-600"
+                                    onClick={() => setCargo((rows) => rows.filter((_, j) => j !== i))}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        No package rows yet — Gross weight and Volume below stay directly editable. Add a row to
+                        switch to per-package entry (Volume computes automatically).
+                      </p>
+                    )}
+                  </div>
+                ) : null}
                 <Label>
                   Gross weight (kg)
                   <Input
                     type="number"
+                    disabled={seaCargoHasData(cargo)}
                     value={grossWeightKg || ""}
                     onChange={(e) => setGrossWeightKg(Number(e.target.value))}
                     placeholder="0"
                   />
+                  {seaCargoHasData(cargo) ? (
+                    <span className="mt-1 block text-[11px] text-[var(--color-text-muted)]">
+                      Computed from the rows above (sum of qty × GW).
+                    </span>
+                  ) : null}
                 </Label>
                 <Label>
                   Volume (CBM)
                   <Input
                     type="number"
                     step="0.01"
+                    disabled={seaCargoHasData(cargo)}
                     value={volumeCbm || ""}
                     onChange={(e) => setVolumeCbm(Number(e.target.value))}
                     placeholder="0"
                   />
+                  {seaCargoHasData(cargo) ? (
+                    <span className="mt-1 block text-[11px] text-[var(--color-text-muted)]">
+                      Computed from L×W×H×qty above.
+                    </span>
+                  ) : null}
                 </Label>
                 {mode !== "fcl" ? (
                   <Label className="md:col-span-2">

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Input, Label, Select, Tabs, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Input, Label, NumberInput, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
 import { AirlineEditorOverlay, AirlineOptionForm } from "@/components/desks/AirlineOptionForm";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
@@ -72,7 +72,7 @@ import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { AirTariff, SavedQuote, SmartQuoteDraft } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
@@ -117,6 +117,7 @@ function AirDeskInner() {
   const [module, setModule] = useState<"export" | "import">("export");
   const [customFx, setCustomFx] = useState(0);
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
+  const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
   const historicalAutofill = useHistoricalAutofill({
     deskType: "air",
@@ -329,9 +330,9 @@ function AirDeskInner() {
 
   const totalsById = useMemo(() => {
     const map: Record<string, ReturnType<typeof computeAirlineTotals>> = {};
-    for (const a of airlines) map[a.id] = computeAirlineTotals(cargo, a);
+    for (const a of airlines) map[a.id] = computeAirlineTotals(cargo, a, dimUnit);
     return map;
-  }, [airlines, cargo]);
+  }, [airlines, cargo, dimUnit]);
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
 
@@ -382,6 +383,7 @@ function AirDeskInner() {
     setIncoterm(loaded.incoterm);
     setCommodity(loaded.commodity);
     setModule(loaded.module);
+    setDimUnit(loaded.dimUnit);
     setCustomFx(loaded.customExchangeRate);
     setCargo(loaded.cargo);
     setAirlines(loaded.airlines);
@@ -619,6 +621,7 @@ function AirDeskInner() {
         airline: airlineLabel,
         incoterm,
         module,
+        dimUnit,
         commodity,
         chargeableWeight: selectedTotals.freight.chargeableWeightKg,
         grossWeight: selectedTotals.freight.cargo.grossWeightKg,
@@ -775,6 +778,7 @@ function AirDeskInner() {
               incoterm,
               commodity,
               module,
+              dimUnit,
               cargo,
               selected,
               totals: selectedTotals,
@@ -1104,23 +1108,47 @@ function AirDeskInner() {
               </div>
 
               <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="font-bold">Cargo dimensions (cm)</h3>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setCargo((rows) => [...rows, { l: 0, w: 0, h: 0, qty: 1, gw: 0 }])}
-                  >
-                    <Plus className="mr-1 h-4 w-4" /> Add row
-                  </Button>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-bold">Cargo dimensions</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-0.5 text-xs font-bold">
+                      <button
+                        type="button"
+                        className={cn(
+                          "rounded-md px-2.5 py-1",
+                          dimUnit === "cms" ? "bg-[var(--color-atlas-navy)] text-white" : "text-[var(--color-text-muted)]",
+                        )}
+                        onClick={() => setDimUnit("cms")}
+                      >
+                        cm
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(
+                          "rounded-md px-2.5 py-1",
+                          dimUnit === "inches" ? "bg-[var(--color-atlas-navy)] text-white" : "text-[var(--color-text-muted)]",
+                        )}
+                        onClick={() => setDimUnit("inches")}
+                      >
+                        inches
+                      </button>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setCargo((rows) => [...rows, { l: 0, w: 0, h: 0, qty: 1, gw: 0 }])}
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> Add row
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-50 text-xs uppercase text-[var(--color-text-muted)]">
                       <tr>
-                        <th className="px-2 py-2">L</th>
-                        <th className="px-2 py-2">W</th>
-                        <th className="px-2 py-2">H</th>
+                        <th className="px-2 py-2">L ({dimUnit === "cms" ? "cm" : "in"})</th>
+                        <th className="px-2 py-2">W ({dimUnit === "cms" ? "cm" : "in"})</th>
+                        <th className="px-2 py-2">H ({dimUnit === "cms" ? "cm" : "in"})</th>
                         <th className="px-2 py-2">Qty</th>
                         <th className="px-2 py-2">GW kg</th>
                         <th className="px-2 py-2" />
@@ -1130,45 +1158,33 @@ function AirDeskInner() {
                       {cargo.map((row, i) => (
                         <tr key={i} className="border-t">
                           <td className="p-1">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              autoComplete="off"
-                              autoCorrect="off"
-                              spellCheck={false}
+                            <NumberInput
+                              step="0.1"
                               name={`atlas-cargo-l-${i}`}
-                              className="w-16 rounded border px-1 py-1"
-                              value={row.l || ""}
+                              className="mt-0 w-16 px-1 py-1"
+                              value={row.l}
                               onFocus={() => closeAllComboboxes()}
-                              onChange={(e) => updateCargo(i, { l: Number(e.target.value) })}
+                              onValueChange={(n) => updateCargo(i, { l: n })}
                             />
                           </td>
                           <td className="p-1">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              autoComplete="off"
-                              autoCorrect="off"
-                              spellCheck={false}
+                            <NumberInput
+                              step="0.1"
                               name={`atlas-cargo-w-${i}`}
-                              className="w-16 rounded border px-1 py-1"
-                              value={row.w || ""}
+                              className="mt-0 w-16 px-1 py-1"
+                              value={row.w}
                               onFocus={() => closeAllComboboxes()}
-                              onChange={(e) => updateCargo(i, { w: Number(e.target.value) })}
+                              onValueChange={(n) => updateCargo(i, { w: n })}
                             />
                           </td>
                           <td className="p-1">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              autoComplete="off"
-                              autoCorrect="off"
-                              spellCheck={false}
+                            <NumberInput
+                              step="0.1"
                               name={`atlas-cargo-h-${i}`}
-                              className="w-16 rounded border px-1 py-1"
-                              value={row.h || ""}
+                              className="mt-0 w-16 px-1 py-1"
+                              value={row.h}
                               onFocus={() => closeAllComboboxes()}
-                              onChange={(e) => updateCargo(i, { h: Number(e.target.value) })}
+                              onValueChange={(n) => updateCargo(i, { h: n })}
                             />
                           </td>
                           <td className="p-1">
@@ -1186,17 +1202,13 @@ function AirDeskInner() {
                             />
                           </td>
                           <td className="p-1">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              autoComplete="off"
-                              autoCorrect="off"
-                              spellCheck={false}
+                            <NumberInput
+                              step="0.01"
                               name={`atlas-cargo-gw-${i}`}
-                              className="w-16 rounded border px-1 py-1"
-                              value={row.gw || ""}
+                              className="mt-0 w-16 px-1 py-1"
+                              value={row.gw}
                               onFocus={() => closeAllComboboxes()}
-                              onChange={(e) => updateCargo(i, { gw: Number(e.target.value) })}
+                              onValueChange={(n) => updateCargo(i, { gw: n })}
                               onKeyDown={(e) => {
                                 if (e.key === "Tab" && !e.shiftKey && i === cargo.length - 1) {
                                   lastFieldTab(e, goToCarriers);
@@ -1221,8 +1233,9 @@ function AirDeskInner() {
                 </div>
               </div>
               <p className="text-xs text-[var(--color-text-muted)]">
-                Enter L × W × H (cm), qty, and gross kg for every line. Chargeable weight = max(gross,
-                volumetric). Rates (Sell/Buy), AMS, and local fees are on the next step.
+                Enter L × W × H ({dimUnit === "cms" ? "cm" : "inches"}), qty, and gross kg for every line.
+                Chargeable weight = max(gross, volumetric). Switch cm/inches before entering values — values
+                already typed are not converted. Rates (Sell/Buy), AMS, and local fees are on the next step.
               </p>
               <div className="flex justify-end">
                 <Button

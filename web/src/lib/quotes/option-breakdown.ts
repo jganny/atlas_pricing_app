@@ -1,4 +1,4 @@
-import type { SeaMode } from "@atlas/pricing-core";
+import type { DimUnit, SeaMode } from "@atlas/pricing-core";
 import type { SavedQuote } from "../types";
 import { formatCurrency } from "../utils";
 import type { AirlineOption, CourierOption, LinerOption } from "../pricing/carrier-options";
@@ -186,8 +186,9 @@ export function airlineSnapshot(
   cargo: AirCargoRow[],
   lanes: QuoteLane[],
   fallbackLaneId: string,
+  dimUnit: DimUnit = "cms",
 ): Record<string, unknown> {
-  const t = computeAirlineTotals(cargo, a);
+  const t = computeAirlineTotals(cargo, a, dimUnit);
   const laneIndex = Math.max(
     0,
     lanes.findIndex((l) => l.id === (a.laneId || fallbackLaneId)),
@@ -339,12 +340,13 @@ function totalsFromRaw(
   kind: string,
   quoteType: string,
   seaCtx: { mode: SeaMode; grossWeightKg: number; volumeCbm: number; chargeableCbmOverride: number },
+  dimUnit: DimUnit = "cms",
 ): FeeFields {
   const k = kind.toLowerCase();
   const computeAir = shouldComputeAirline(kind, quoteType);
   const computed =
     computeAir && (cargo.length || Array.isArray(raw.originSurcharges) || raw.breaks)
-      ? computeAirlineTotals(cargo.length ? cargo : [{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }], asAirline(raw))
+      ? computeAirlineTotals(cargo.length ? cargo : [{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }], asAirline(raw), dimUnit)
       : null;
 
   const computeSea = !computeAir && quoteType.toLowerCase().includes("sea") && (k === "liner" || k === "coloader");
@@ -528,6 +530,7 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
   const quoteType = String(quote.type || d.type || d.mode || "");
   const vendors = vendorRowsFromQuote(quote);
   const cargo = cargoFromDetails(d);
+  const dimUnit: DimUnit = d.dimUnit === "inches" ? "inches" : "cms";
   const days = Math.max(1, num(d.days) || 1);
   const selectedFallback: FeeFields = {
     baseFreight: num(d.baseFreight),
@@ -562,7 +565,7 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
       options.find((o) => String(o.id ?? "") === v.id) ||
       options.find((o) => String(o.name ?? "").trim().toLowerCase() === v.name.trim().toLowerCase()) ||
       {};
-    const fees = totalsFromRaw(raw, cargo, selectedFallback, v.selected, v.kind, quoteType, seaCtx);
+    const fees = totalsFromRaw(raw, cargo, selectedFallback, v.selected, v.kind, quoteType, seaCtx, dimUnit);
     return {
       ...v,
       routing: v.routing || String(raw.routing ?? ""),

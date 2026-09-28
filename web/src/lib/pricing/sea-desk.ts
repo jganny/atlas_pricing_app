@@ -18,6 +18,44 @@ export interface SeaContainerRow {
   buyRate: number;
 }
 
+export interface SeaCargoRow {
+  l: number;
+  w: number;
+  h: number;
+  qty: number;
+  gw: number;
+}
+
+export interface SeaCargoSummary {
+  grossWeightKg: number;
+  volumeCbm: number;
+}
+
+/**
+ * Sums per-package L×W×H×qty into CBM and qty×gw into gross weight — same
+ * per-package entry Air Desk already has, now for LCL/break-bulk. Standard
+ * conversions: cm³ → m³ divides by 1,000,000; in³ → m³ multiplies by
+ * 0.0000163871 (1 cubic inch).
+ */
+export function summarizeSeaCargo(rows: SeaCargoRow[], dimUnit: "cms" | "inches"): SeaCargoSummary {
+  const cm3ToM3 = 1_000_000;
+  const in3ToM3 = 1 / 0.0000163871; // == 61023.744...
+  const divisor = dimUnit === "inches" ? in3ToM3 : cm3ToM3;
+  let grossWeightKg = 0;
+  let volumeCbm = 0;
+  for (const r of rows) {
+    const qty = Math.max(0, r.qty) || 0;
+    grossWeightKg += Math.max(0, r.gw) * qty;
+    volumeCbm += (Math.max(0, r.l) * Math.max(0, r.w) * Math.max(0, r.h) * qty) / divisor;
+  }
+  return { grossWeightKg, volumeCbm };
+}
+
+/** True once at least one cargo row has any real value entered. */
+export function seaCargoHasData(rows: SeaCargoRow[]): boolean {
+  return rows.some((r) => r.l > 0 || r.w > 0 || r.h > 0 || r.gw > 0);
+}
+
 export interface SeaDeskInput {
   customer: string;
   origin: string;

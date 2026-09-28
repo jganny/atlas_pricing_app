@@ -1,7 +1,7 @@
 "use client";
 
 import { doc, setDoc } from "firebase/firestore";
-import type { CourierFreightResult, SeaMode } from "@atlas/pricing-core";
+import type { CourierFreightResult, DimUnit, SeaMode } from "@atlas/pricing-core";
 import type { AirlineOption, CourierOption, LinerOption } from "@/lib/pricing/carrier-options";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
@@ -193,6 +193,7 @@ export interface SaveAirInput extends SaveMeta {
   incoterm: string;
   commodity: string;
   module: "export" | "import";
+  dimUnit?: DimUnit;
   cargo: Array<{ l: number; w: number; h: number; qty: number; gw: number }>;
   selected: AirlineOption;
   totals: AirlineTotals;
@@ -242,7 +243,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const gpReady = input.totals.gpReady;
   const fallbackLane = (input.lanes ?? [])[0]?.id || "";
   const airlines = input.airlines.map((a) =>
-    airlineSnapshot(a, input.cargo, input.lanes ?? [], fallbackLane),
+    airlineSnapshot(a, input.cargo, input.lanes ?? [], fallbackLane, input.dimUnit),
   );
   const lanes = (input.lanes ?? []).map((l) => ({
     id: l.id,
@@ -296,6 +297,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       airline,
       incoterm: input.incoterm,
       module: input.module,
+      dimUnit: input.dimUnit || "cms",
       commodity: input.commodity,
       chargeableWeight: input.totals.freight.chargeableWeightKg,
       grossWeight: input.totals.freight.cargo.grossWeightKg,
@@ -357,6 +359,8 @@ export interface SaveSeaInput extends SaveMeta {
   mode: string;
   grossWeightKg: number;
   volumeCbm: number;
+  cargo?: Array<{ l: number; w: number; h: number; qty: number; gw: number }>;
+  dimUnit?: DimUnit;
   chargeableCbmOverride?: number;
   selected: LinerOption;
   totals: LinerTotals;
@@ -468,6 +472,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       grossWeight: input.grossWeightKg,
       volume: input.volumeCbm,
       volumeCbm: input.volumeCbm,
+      seaCargoItems: input.cargo ?? [],
+      dimUnit: input.dimUnit || "cms",
       chargeableCbmOverride: chargeableCbmOverride > 0 ? chargeableCbmOverride : null,
       chargeableRt: input.totals.freight.chargeableRt,
       baseFreight: input.totals.baseFreightQuote,

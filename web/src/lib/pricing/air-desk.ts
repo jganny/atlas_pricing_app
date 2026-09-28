@@ -2,6 +2,7 @@ import {
   calculateAirFreight,
   getWeightBreakBracket,
   type CargoLine,
+  type DimUnit,
   type WeightBreakName,
   type WeightBreaks,
 } from "@atlas/pricing-core";
@@ -82,9 +83,11 @@ export interface AirlineTotals {
 export function computeAirlineTotals(
   cargo: AirCargoRow[],
   option: AirlineOption,
+  dimUnit: DimUnit = "cms",
 ): AirlineTotals {
   const freight = calculateAirFreight({
     cargo: cargoRowsToLines(cargo),
+    dimUnit,
     breaks: option.wbEnabled ? option.breaks : EMPTY_AIR_BREAKS,
     pivotWeightKg: option.pivotWeightKg,
   });

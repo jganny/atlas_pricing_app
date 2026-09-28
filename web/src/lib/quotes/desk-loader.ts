@@ -1,7 +1,7 @@
 import type { WeightBreaks } from "@atlas/pricing-core";
 import type { SavedQuote } from "@/lib/types";
 import type { AirCargoRow } from "@/lib/pricing/air-desk";
-import type { SeaContainerRow } from "@/lib/pricing/sea-desk";
+import type { SeaCargoRow, SeaContainerRow } from "@/lib/pricing/sea-desk";
 import {
   createAirlineOption,
   createCourierOption,
@@ -120,6 +120,7 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
     incoterm: String(d.incoterm ?? "FOB"),
     commodity: String(d.commodity ?? "GENERAL"),
     module,
+    dimUnit: d.dimUnit === "inches" ? ("inches" as const) : ("cms" as const),
     customExchangeRate: Number(d.customExchangeRate ?? 0),
     cargo: cargoItems.length
       ? cargoItems
@@ -191,6 +192,8 @@ export function loadSeaDeskFromQuote(quote: SavedQuote) {
     mode,
     grossWeightKg: Number(d.grossWeight ?? 0),
     volumeCbm: Number(d.volumeCbm ?? d.volume ?? 0),
+    cargo: (d.seaCargoItems as SeaCargoRow[] | undefined) ?? [],
+    dimUnit: d.dimUnit === "inches" ? ("inches" as const) : ("cms" as const),
     chargeableCbmOverride: Number(d.chargeableCbmOverride ?? 0),
     customExchangeRate: Number(d.customExchangeRate ?? 0),
     liners,
