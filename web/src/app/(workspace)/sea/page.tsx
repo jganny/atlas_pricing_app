@@ -71,7 +71,7 @@ import {
   usableLanes,
 } from "@/lib/quotes/lanes";
 
-const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
+const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
 const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
 type Step = "shipment" | "carrier" | "terms";
 

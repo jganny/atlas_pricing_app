@@ -74,7 +74,7 @@ import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { AirTariff, SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
-const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
+const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
 const AIR_STEPS = ["shipment", "carrier", "terms"] as const;
 
