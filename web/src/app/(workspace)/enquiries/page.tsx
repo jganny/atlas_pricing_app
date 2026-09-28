@@ -325,6 +325,33 @@ function EnquiryDatabaseInner() {
     if (hasNext) setSelectedId(orderedRows[selectedIndex + 1].id);
   };
 
+  // Keyboard-first detail view: ← / → step through it, matching the
+  // on-screen Prev/Next buttons (Escape-to-close is handled by the app's
+  // existing global EscapeHandler via the data-modal-close buttons below —
+  // a second Escape listener here would race it and can lose, since
+  // EscapeHandler mounts first and checks e.defaultPrevented before this
+  // effect ever runs). Skipped while focus is in a text field so normal
+  // cursor movement still works there.
+  useEffect(() => {
+    if (!selected) return;
+    function isEditable(el: Element | null): boolean {
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el as HTMLElement).isContentEditable;
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (isEditable(document.activeElement)) return;
+      if (e.key === "ArrowLeft" && hasPrev) {
+        goPrev();
+      } else if (e.key === "ArrowRight" && hasNext) {
+        goNext();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, hasPrev, hasNext, selectedIndex]);
+
   const stats = useMemo(() => {
     const open = filtered.filter((e) => e.status === "open" || e.status === "quoted").length;
     const overdue = filtered.filter((e) => e.slaHoursOpen > 8).length;
@@ -400,7 +427,13 @@ function EnquiryDatabaseInner() {
     return (
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedId(null)}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-modal-close
+            onClick={() => setSelectedId(null)}
+          >
             ← Back to Enquiry DB
           </Button>
           <div className="flex items-center gap-2">

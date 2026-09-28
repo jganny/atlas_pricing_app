@@ -18,7 +18,7 @@ import { laneRouteLabel, type QuoteLane } from "./lanes";
 import { vendorRowsFromQuote, type VendorPreviewRow } from "./vendor-preview";
 
 /** One named surcharge row's own quoted amount — e.g. "Origin THC" → 4500. */
-export type SurchargeBreakdownLine = { name: string; amount: number };
+export type SurchargeBreakdownLine = { name: string; amount: number; remarks?: string };
 /** One FCL container-type row's own quoted amount — e.g. 2 × 40'GP @ 500 → 1000. */
 export type ContainerBreakdownLine = { type: string; qty: number; rate: number; amount: number };
 
@@ -386,8 +386,14 @@ function totalsFromRaw(
       selectedFallback.destFees,
       selected,
     ),
-    originLines: originArr.filter((r) => r.calculatedCost > 0).map((r) => ({ name: r.name, amount: r.calculatedCost })),
-    destLines: destArr.filter((r) => r.calculatedCost > 0).map((r) => ({ name: r.name, amount: r.calculatedCost })),
+    // Keep a row that only carries remarks (no sell/buy entered) — it was
+    // previously dropped here even though it saved to Firestore fine.
+    originLines: originArr
+      .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
+      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
+    destLines: destArr
+      .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
+      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
     containerLines: computeSea && seaCtx.mode === "fcl" ? containerLinesFromRaw(raw) : [],
     ams: computeAir
       ? pick(raw.ams ?? raw.amsFee, computed?.ams ?? 0, selectedFallback.ams, selected)
@@ -427,6 +433,12 @@ function rawOptions(d: Record<string, unknown>): Record<string, unknown>[] {
 }
 
 export type ChargeLine = { label: string; value: string };
+
+/** A remarks-only row (no sell/buy entered) shows its note instead of $0.00. */
+function surchargeLineValue(o: SurchargeBreakdownLine, money: (n: number) => string): string {
+  if (o.amount > 0) return o.remarks ? `${money(o.amount)} (${o.remarks})` : money(o.amount);
+  return o.remarks || money(o.amount);
+}
 
 /** Sell-side lines for on-screen inspect, print pack, and the client quote file. */
 export function optionChargeLines(
@@ -473,14 +485,14 @@ export function optionChargeLines(
       });
     }
     if (option.originLines.length) {
-      for (const o of option.originLines) lines.push({ label: o.name, value: money(o.amount) });
+      for (const o of option.originLines) lines.push({ label: o.name, value: surchargeLineValue(o, money) });
     } else if (option.originFees > 0) {
       lines.push({ label: "Origin fees", value: money(option.originFees) });
     }
     if (option.ams > 0) lines.push({ label: "AMS", value: money(option.ams) });
     if (option.dg > 0) lines.push({ label: "DG", value: money(option.dg) });
     if (option.destLines.length) {
-      for (const o of option.destLines) lines.push({ label: o.name, value: money(o.amount) });
+      for (const o of option.destLines) lines.push({ label: o.name, value: surchargeLineValue(o, money) });
     } else if (option.destFees > 0) {
       lines.push({ label: "Destination fees", value: money(option.destFees) });
     }

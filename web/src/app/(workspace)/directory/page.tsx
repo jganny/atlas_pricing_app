@@ -18,6 +18,7 @@ import * as XLSX from "xlsx";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useDirectory } from "@/hooks/use-atlas-data";
+import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
@@ -425,6 +426,8 @@ export default function DirectoryPage() {
       setBusy(false);
     }
   }
+
+  useDeskSaveShortcut(() => void handleSave(), editorOpen && !busy);
 
   async function handleDelete(c: DirectoryContact) {
     if (!canEdit) return;

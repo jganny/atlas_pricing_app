@@ -188,6 +188,7 @@ const fclSeaQuote: SavedQuote = {
         ],
         destSurcharges: [
           { id: "d1", name: "Destination THC", sell: 60, buy: 45, unit: "container", remarks: "" },
+          { id: "d2", name: "Delivery order", sell: 0, buy: 0, unit: "flat", remarks: "Waived per customer agreement" },
         ],
       },
     ],
@@ -205,13 +206,28 @@ assert.deepEqual(
 assert.equal(cma.originLines.length, 2, "origin charges broken out per surcharge row, not lumped with freight");
 assert.deepEqual(cma.originLines.map((o) => o.name), ["Origin THC", "Documentation"]);
 assert.deepEqual(cma.originLines.map((o) => o.amount), [150, 100]);
-assert.equal(cma.destLines.length, 1);
+assert.equal(
+  cma.destLines.length,
+  2,
+  "a remarks-only row (no sell/buy entered) must still show up, not be dropped",
+);
 assert.equal(cma.destLines[0].amount, 180);
+const waivedLine = cma.destLines.find((l) => l.name === "Delivery order");
+assert.ok(waivedLine, "remarks-only row kept by name");
+assert.equal(waivedLine!.amount, 0);
+assert.equal(waivedLine!.remarks, "Waived per customer agreement");
 
 const fclLines = optionChargeLines(cma, "USD", 0);
 assert.ok(fclLines.some((l) => l.label === "40'GP × 2"), "container line rendered container-wise");
 assert.ok(fclLines.some((l) => l.label === "Origin THC"), "origin surcharge rendered as its own line");
 assert.ok(fclLines.some((l) => l.label === "Destination THC"), "destination surcharge rendered as its own line");
+const waivedChargeLine = fclLines.find((l) => l.label === "Delivery order");
+assert.ok(waivedChargeLine, "remarks-only line rendered as its own charge line");
+assert.equal(
+  waivedChargeLine!.value,
+  "Waived per customer agreement",
+  "a $0 remarks-only line shows the note instead of a blank $0.00",
+);
 assert.ok(!fclLines.some((l) => l.label === "Origin fees"), "collapsed combined origin-fees line must not also appear");
 assert.ok(!fclLines.some((l) => l.label === "Base freight"), "collapsed base-freight line must not also appear alongside container lines");
 

@@ -9,6 +9,7 @@ import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
+import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useAuthStore } from "@/store/auth";
 import { canEditLead } from "@/lib/auth/sales-access";
 import { logAudit } from "@/lib/firebase/audit-log";
@@ -331,6 +332,8 @@ export function PipelineView() {
       setBusy(false);
     }
   }
+
+  useDeskSaveShortcut(() => void saveLeadEdit(), editing && !busy);
 
   const owners = Object.keys(TEAM_ROLES).filter((k) => k !== "ganny");
 
