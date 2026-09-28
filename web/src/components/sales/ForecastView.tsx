@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { Badge, Card } from "@/components/ui";
 import { useLeads } from "@/hooks/use-atlas-data";
+import { useAuthStore } from "@/store/auth";
+import { visibleToUser } from "@/lib/auth/sales-access";
 import {
   UNSCHEDULED,
   effectiveProbability,
@@ -23,7 +25,14 @@ function monthLabel(key: string): string {
 }
 
 export function ForecastView() {
-  const { data: leads = [], isLoading } = useLeads();
+  const user = useAuthStore((s) => s.user);
+  const { data: rawLeads = [], isLoading } = useLeads();
+  // Same visibility rule as Pipeline — a rep sees only their own forecast,
+  // an admin sees the whole team's.
+  const leads = useMemo(
+    () => visibleToUser(rawLeads, user?.username, user?.role),
+    [rawLeads, user?.username, user?.role],
+  );
 
   const open = useMemo(() => leads.filter(isOpenLead), [leads]);
   const byStage = useMemo(() => forecastByStage(leads), [leads]);

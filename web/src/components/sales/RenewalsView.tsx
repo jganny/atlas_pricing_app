@@ -5,6 +5,7 @@ import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useAccounts, useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
+import { visibleToUser } from "@/lib/auth/sales-access";
 import { saveLead } from "@/lib/firebase/sales";
 import { logAudit } from "@/lib/firebase/audit-log";
 import {
@@ -35,7 +36,17 @@ function reasonBadges(item: AttentionItem) {
 
 export function RenewalsView() {
   const user = useAuthStore((s) => s.user);
-  const { data: accounts = [], isLoading } = useAccounts();
+  const { data: rawAccounts = [], isLoading } = useAccounts();
+  // Only my own accounts need my attention here (plus ownerless legacy
+  // ones) — an admin sees every rep's. `leads` stays UNFILTERED below: it's
+  // only used internally to check "does this account already have an open
+  // lead" (a boolean, not the lead's own details) — hiding another rep's
+  // lead from that check would risk a duplicate follow-up lead being
+  // created for an account that's already being worked.
+  const accounts = useMemo(
+    () => visibleToUser(rawAccounts, user?.username, user?.role),
+    [rawAccounts, user?.username, user?.role],
+  );
   const { data: leads = [] } = useLeads();
   const { data: enquiries = [] } = useEnquiries();
   const [busyId, setBusyId] = useState<string | null>(null);

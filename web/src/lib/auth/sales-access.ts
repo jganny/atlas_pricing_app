@@ -51,3 +51,31 @@ export function canManageSalesTargets(username: string | undefined | null, role?
 export function canManageTerritories(username: string | undefined | null, role?: string): boolean {
   return isAdminUser(username, role);
 }
+
+/**
+ * Visibility (not edit) rule for owned Sales records — admins see
+ * everything; everyone else sees only their own records, plus any record
+ * with no owner set (mirrors canEditLead's "never lock out existing data"
+ * rule, since an ownerless record predates this being enforced at all).
+ * Used to scope what a rep sees in Pipeline/Forecast/Accounts so one rep's
+ * leads and accounts aren't visible to the rest of the team.
+ */
+export function canViewOwned(
+  username: string | undefined | null,
+  role: string | undefined,
+  owner: string | undefined,
+): boolean {
+  if (!username) return false;
+  if (isAdminUser(username, role)) return true;
+  const o = norm(owner);
+  return !o || o === norm(username);
+}
+
+/** Filters an array of owned records down to what this signed-in user may see. */
+export function visibleToUser<T extends { owner?: string }>(
+  rows: T[],
+  username: string | undefined | null,
+  role: string | undefined,
+): T[] {
+  return rows.filter((r) => canViewOwned(username, role, r.owner));
+}

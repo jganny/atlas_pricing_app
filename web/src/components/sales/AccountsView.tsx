@@ -8,6 +8,7 @@ import { useAccounts } from "@/hooks/use-atlas-data";
 import { saveAccount } from "@/lib/firebase/accounts";
 import { logAudit } from "@/lib/firebase/audit-log";
 import { useAuthStore } from "@/store/auth";
+import { visibleToUser } from "@/lib/auth/sales-access";
 import type { Account } from "@/lib/types";
 import { AccountDetailPanel } from "./AccountDetailPanel";
 
@@ -15,7 +16,13 @@ const EMPTY_FORM = { name: "", industry: "", website: "" };
 
 export function AccountsView() {
   const user = useAuthStore((s) => s.user);
-  const { data: accounts = [], isLoading } = useAccounts();
+  const { data: rawAccounts = [], isLoading } = useAccounts();
+  // Only my own accounts (plus any ownerless legacy ones) — an admin sees
+  // every rep's.
+  const accounts = useMemo(
+    () => visibleToUser(rawAccounts, user?.username, user?.role),
+    [rawAccounts, user?.username, user?.role],
+  );
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);

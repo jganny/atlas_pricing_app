@@ -11,7 +11,7 @@ import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/u
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useAuthStore } from "@/store/auth";
-import { canEditLead } from "@/lib/auth/sales-access";
+import { canEditLead, visibleToUser } from "@/lib/auth/sales-access";
 import { logAudit } from "@/lib/firebase/audit-log";
 import { diffFields } from "@/lib/audit/audit-entry";
 import { useLiveData } from "@/lib/api";
@@ -71,7 +71,13 @@ export function PipelineView() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const { data: leads = [], isLoading } = useLeads();
+  const { data: rawLeads = [], isLoading } = useLeads();
+  // Only my own leads (plus any legacy, ownerless ones) — an admin sees
+  // every rep's pipeline, a rep sees only their own.
+  const leads = useMemo(
+    () => visibleToUser(rawLeads, user?.username, user?.role),
+    [rawLeads, user?.username, user?.role],
+  );
   const { data: enquiries = [] } = useEnquiries();
   const { data: accounts = [] } = useAccounts();
   const [view, setView] = useState<"list" | "board">("list");
@@ -182,7 +188,7 @@ export function PipelineView() {
       }
       queryClient.setQueryData(
         queryKeys.leads,
-        leads.map((l) =>
+        rawLeads.map((l) =>
           l.id === id ? { ...l, status, updatedAt: new Date().toISOString() } : l,
         ),
       );
@@ -239,7 +245,7 @@ export function PipelineView() {
         updatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
-      queryClient.setQueryData(queryKeys.leads, [row, ...leads]);
+      queryClient.setQueryData(queryKeys.leads, [row, ...rawLeads]);
       logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: `New lead ${row.company}` });
       setCreating(false);
       setForm({ ...EMPTY_FORM, owner: user?.username || "" });
@@ -309,7 +315,7 @@ export function PipelineView() {
     try {
       const { id, updatedAt: _updatedAt, createdAt: _createdAt, ...rest } = editForm;
       await saveLead({ ...rest, id });
-      const before = leads.find((l) => l.id === id);
+      const before = rawLeads.find((l) => l.id === id);
       const changes = before
         ? diffFields(before as unknown as Record<string, unknown>, editForm as unknown as Record<string, unknown>, [
             "company", "contactName", "phone", "email", "dealValue", "nextAction", "nextDueDate",
@@ -321,7 +327,7 @@ export function PipelineView() {
       }
       queryClient.setQueryData(
         queryKeys.leads,
-        leads.map((l) => (l.id === id ? { ...editForm, updatedAt: new Date().toISOString() } : l)),
+        rawLeads.map((l) => (l.id === id ? { ...editForm, updatedAt: new Date().toISOString() } : l)),
       );
       setEditing(false);
       setEditForm(null);
