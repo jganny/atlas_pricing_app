@@ -6,11 +6,13 @@ import {
   createAirlineOption,
   createCourierOption,
   createLinerOption,
+  createTruckerOption,
   defaultCourierSurcharges,
   type AirlineOption,
   type CourierOption,
   type CourierSurcharges,
   type LinerOption,
+  type TruckerOption,
 } from "@/lib/pricing/carrier-options";
 import {
   createSurchargeRow,
@@ -22,6 +24,8 @@ export function deskPathForQuote(quote: SavedQuote): string | null {
   if (type === "air") return "/air";
   if (type === "sea") return "/sea";
   if (type === "courier") return "/courier";
+  if (type === "transport") return "/transport";
+  if (type === "warehouse") return "/warehouse";
   return null;
 }
 
@@ -288,6 +292,97 @@ export function loadCourierDeskFromQuote(quote: SavedQuote) {
     ],
     lanes: savedLanes,
     couriers,
+    terms: String(d.termsAndConditions ?? ""),
+  };
+}
+
+export function loadTransportDeskFromQuote(quote: SavedQuote) {
+  const d = quote.details ?? {};
+
+  const savedLanes = Array.isArray(d.lanes)
+    ? (d.lanes as Array<{ id?: string; origin?: string; destination?: string }>).map((l, i) => ({
+        id: String(l.id || `lane_${i}`),
+        origin: String(l.origin ?? ""),
+        destination: String(l.destination ?? ""),
+      }))
+    : [];
+
+  let truckers: TruckerOption[] = [];
+  const savedTruckers = d.truckers as Array<Record<string, unknown>> | undefined;
+  if (Array.isArray(savedTruckers) && savedTruckers.length) {
+    truckers = savedTruckers.map((t) =>
+      createTruckerOption(
+        {
+          id: String(t.id ?? ""),
+          name: String(t.name ?? ""),
+          laneId: String(t.laneId ?? ""),
+          freightBuy: Number(t.freightBuy ?? 0),
+          freightSell: Number(t.freightSell ?? 0),
+          detention: Number(t.detention ?? 0),
+          tolls: Number(t.tolls ?? 0),
+        },
+        Boolean(t.selected),
+      ),
+    );
+  } else {
+    // Pre-feature quote: one flat trucker config, no comparison cards yet.
+    truckers = [
+      createTruckerOption(
+        {
+          name: String(d.truckerName ?? ""),
+          freightBuy: Number(d.freightBuy ?? 0),
+          freightSell: Number(d.freightSell ?? 0),
+          detention: Number(d.detention ?? 0),
+          tolls: Number(d.tolls ?? 0),
+        },
+        true,
+      ),
+    ];
+  }
+
+  const fallbackLane = truckers[0]?.laneId || savedLanes[0]?.id || "";
+  const laneIds = new Set(truckers.map((t) => t.laneId || fallbackLane));
+  for (const laneId of laneIds) {
+    const onLane = truckers.filter((t) => (t.laneId || fallbackLane) === laneId);
+    if (!onLane.some((t) => t.selected) && onLane[0]) {
+      truckers = truckers.map((t) => (t.id === onLane[0].id ? { ...t, selected: true } : t));
+    }
+  }
+
+  return {
+    customer: quote.customer ?? "",
+    lanes: savedLanes,
+    vehicleType: String(d.vehicleType ?? ""),
+    serviceType: String(d.serviceType ?? ""),
+    currency: quote.currency ?? "INR",
+    commodity: String(d.commodity ?? ""),
+    ewayBillNo: String(d.ewayBillNo ?? ""),
+    ewayRequired: Boolean(d.ewayRequired),
+    gstin: String(d.gstin ?? ""),
+    invoiceValue: Number(d.invoiceValue ?? 0),
+    validity: String(d.validity ?? "15 days") || "15 days",
+    truckers,
+    notes: String(quote.notes ?? ""),
+    terms: String(d.termsAndConditions ?? ""),
+  };
+}
+
+export function loadWarehouseDeskFromQuote(quote: SavedQuote) {
+  const d = quote.details ?? {};
+
+  return {
+    customer: quote.customer ?? "",
+    location: String(d.location ?? ""),
+    otherDescription: String(d.otherDescription ?? ""),
+    storageType: String(d.storageType ?? "General cargo"),
+    currency: quote.currency ?? "INR",
+    ratePerCbm: Number(d.ratePerCbm ?? 0),
+    cbm: Number(d.cbm ?? 0),
+    handling: Number(d.handling ?? 0),
+    days: Number(d.days ?? 1),
+    buyTotal: Number(d.buyTotal ?? 0),
+    validity: String(d.validity ?? "15 days") || "15 days",
+    notes: String(quote.notes ?? ""),
     terms: String(d.termsAndConditions ?? ""),
   };
 }

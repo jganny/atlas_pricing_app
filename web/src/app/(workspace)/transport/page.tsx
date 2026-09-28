@@ -23,6 +23,8 @@ import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { saveTransportQuote } from "@/lib/firebase/save-transport-warehouse";
+import { loadTransportDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { VendorCompareList } from "@/components/VendorCompareList";
 import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
@@ -76,6 +78,7 @@ export default function TransportDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const loader = useQuoteDeskLoader();
   const customerFieldName = useAntiAutofillName("atlas-party-transport");
   const [tab, setTab] = useState<TabId>("lane");
   const [customer, setCustomer] = useState("");
@@ -189,6 +192,28 @@ export default function TransportDeskPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!loader.sourceQuote) return;
+    const loaded = loadTransportDeskFromQuote(loader.sourceQuote);
+    setCustomer(loaded.customer);
+    setVehicleType(loaded.vehicleType);
+    setServiceType(loaded.serviceType);
+    setCurrency(loaded.currency);
+    setCommodity(loaded.commodity);
+    setEwayBillNo(loaded.ewayBillNo);
+    setEwayRequired(loaded.ewayRequired);
+    setGstin(loaded.gstin);
+    setInvoiceValue(loaded.invoiceValue);
+    setValidity(loaded.validity);
+    setTruckers(loaded.truckers);
+    setNotes(loaded.notes);
+    setTerms(loaded.terms);
+    if (loaded.lanes.length) {
+      setLanes(loaded.lanes.map((l) => newLane(l)));
+      setActiveLaneId(loaded.lanes[0]?.id || "");
+    }
+  }, [loader.sourceQuote]);
+
   const total = useMemo(
     () => freightSell + detention + tolls,
     [freightSell, detention, tolls],
@@ -208,12 +233,12 @@ export default function TransportDeskPage() {
     }
     const amount = multiLane ? allLanesTotal : total;
     const q: SavedQuote = {
-      id: "preview",
+      id: loader.editingQuoteId || "preview",
       customer: customer.trim() || "Draft",
       creator: user?.username || "",
-      status: "quoted",
+      status: loader.editingStatus || "quoted",
       type: "transport",
-      quoteNumber: nextQuoteNumber(),
+      quoteNumber: loader.editingQuoteNumber ?? nextQuoteNumber(),
       date: new Date().toISOString().split("T")[0],
       timestamp: Date.now(),
       amount,
@@ -259,6 +284,7 @@ export default function TransportDeskPage() {
         try {
           await Promise.race([
             saveTransportQuote({
+              quoteId: loader.editingQuoteId ?? undefined,
               customer,
               creator: user?.username || "desk",
               origin,
@@ -313,6 +339,16 @@ export default function TransportDeskPage() {
 
   return (
     <div className="space-y-4">
+      {loader.banner ? (
+        <Card className="border-sky-200 bg-sky-50 py-2">
+          <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
+        </Card>
+      ) : null}
+      {loader.loadError ? (
+        <Card className="border-amber-200 bg-amber-50 py-2">
+          <p className="text-sm font-semibold text-amber-900">{loader.loadError}</p>
+        </Card>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Truck className="h-5 w-5 text-[var(--color-atlas-sky)]" />
