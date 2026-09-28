@@ -26,7 +26,8 @@ import { useCourierTariffs } from "@/hooks/use-atlas-data";
 import {
   COURIER_TARIFF_MAX_KG,
   COURIER_TARIFF_MARKUP_PCT,
-  applyCourierTariffMarkup,
+  applyCourierTariffFuel,
+  buildCourierTariffSell,
   inferCourierCarrier,
   lookupCourierTariff,
   type CourierTariffBook,
@@ -109,7 +110,9 @@ function priceCourierCard(
   markupPct: number;
   markupAmount: number;
   base: number;
+  quotedFreight: number;
   buy: number;
+  fuelPct: number;
   fuel: number;
   extras: number;
   tax: number;
@@ -129,12 +132,23 @@ function priceCourierCard(
         scope: ctx.scope,
       });
   const uploaded = !manual && tariff.status === "hit" ? tariff.rate : 0;
-  const base = manual ? option.manualSell || 0 : uploaded > 0 ? applyCourierTariffMarkup(uploaded) : 0;
-  const buy = manual ? option.manualBuy || 0 : uploaded;
-  const markupPct = manual ? 0 : uploaded > 0 ? COURIER_TARIFF_MARKUP_PCT : 0;
-  const markupAmount = manual ? 0 : Math.max(0, base - uploaded);
   const s = option.surcharges;
-  const fuel = base * ((s.fuelPct || 0) / 100);
+  const sell = manual
+    ? (() => {
+        const afterMarkup = option.manualSell || 0;
+        const fuel = applyCourierTariffFuel(afterMarkup, s.fuelPct || 0);
+        return {
+          uploaded: 0,
+          markupPct: 0,
+          markupAmount: 0,
+          afterMarkup,
+          fuelPct: s.fuelPct || 0,
+          fuel,
+          quotedFreight: Math.round((afterMarkup + fuel) * 100) / 100,
+        };
+      })()
+    : buildCourierTariffSell(uploaded, s.fuelPct || 0);
+  const buy = manual ? option.manualBuy || 0 : uploaded;
   const extras =
     (s.remote ? s.remoteAmount : 0) +
     (s.residential ? s.residentialAmount : 0) +
@@ -142,7 +156,7 @@ function priceCourierCard(
     (s.dg ? s.dgAmount : 0) +
     (s.oversized ? s.oversizedAmount : 0) +
     (s.insurance ? Math.max((s.declaredValue * s.insurancePct) / 100, 0) : 0);
-  const sub = base + fuel + extras;
+  const sub = sell.quotedFreight + extras;
   const tax = ctx.gstEnabled ? sub * 0.18 : 0;
   const name =
     option.directoryCarrier.trim() ||
@@ -151,12 +165,14 @@ function priceCourierCard(
     tariff,
     manual,
     name,
-    uploaded,
-    markupPct,
-    markupAmount,
-    base,
+    uploaded: sell.uploaded,
+    markupPct: sell.markupPct,
+    markupAmount: sell.markupAmount,
+    base: sell.afterMarkup,
+    quotedFreight: sell.quotedFreight,
     buy,
-    fuel,
+    fuelPct: sell.fuelPct,
+    fuel: sell.fuel,
     extras,
     tax,
     total: sub + tax,
@@ -482,7 +498,8 @@ function CourierDeskInner() {
       option: p.option,
       name: p.name || p.option.directoryCarrier || "Untitled",
       sellLocal: p.total,
-      ratePerKg: cargo.chargeableKg ? p.base / cargo.chargeableKg : 0,
+      baseFreight: p.quotedFreight,
+      ratePerKg: cargo.chargeableKg ? p.quotedFreight / cargo.chargeableKg : 0,
       transit: SERVICE_LEVELS[p.option.service as CourierServiceKey]?.transit,
       chargeableKg: cargo.chargeableKg,
       gstAmount: p.tax,
@@ -497,6 +514,7 @@ function CourierDeskInner() {
     }
     const cards = cardResults();
     const primary = cards.find((c) => c.option.selected) ?? cards[0];
+    const previewPriced = priced.find((p) => p.option.id === primary?.option.id);
     const amount = multiLane ? allLanesTotal : primary?.sellLocal ?? 0;
     const q: SavedQuote = {
       id: loader.editingQuoteId || "preview",
@@ -521,7 +539,11 @@ function CourierDeskInner() {
         directoryCarrier: primary?.option.directoryCarrier,
         carrierQuotes: cards.map((c) => courierSnapshot(c.option, c, lanes, fallbackLaneId)),
         chargeableWeight: cargo.chargeableKg,
-        zone: cargo.zone,
+        zone:
+          previewPriced?.tariff.status === "hit"
+            ? previewPriced.tariff.lane.destinationLabel || previewPriced.tariff.lane.destination
+            : cargo.zone,
+        baseFreight: primary?.baseFreight ?? 0,
         gstAmount: primary?.gstAmount ?? 0,
         validity,
         originCity,
@@ -587,7 +609,11 @@ function CourierDeskInner() {
           directoryCarrier: primary?.option.directoryCarrier,
           carrierQuotes: cards.map((c) => courierSnapshot(c.option, c, lanes, fallbackLaneId)),
           chargeableWeight: cargo.chargeableKg,
-          zone: cargo.zone,
+          zone:
+            primaryPriced?.tariff.status === "hit"
+              ? primaryPriced.tariff.lane.destinationLabel || primaryPriced.tariff.lane.destination
+              : cargo.zone,
+          baseFreight: primary?.baseFreight ?? 0,
           gstAmount: primary?.gstAmount ?? 0,
           validity,
           originCity,
@@ -608,19 +634,20 @@ function CourierDeskInner() {
             const calc: CourierFreightResult = {
               ...cargo,
               quotes: [],
-              baseFreight: primaryPriced.base,
+              baseFreight: primaryPriced.quotedFreight,
               // Buy is the true cost — the uploaded pre-markup tariff rate,
               // or the manual buy figure — never the sell-side base. Fixes a
               // latent bug found while adding manual override: GP was always
               // computing near-zero because buy and sell were the same number.
               buyFreight: primaryPriced.buy,
-              subtotal: primaryPriced.base + primaryPriced.fuel + primaryPriced.extras,
+              subtotal: primaryPriced.quotedFreight + primaryPriced.extras,
               tax: primaryPriced.tax,
               total: primaryPriced.total,
               grossProfit: 0,
               surcharges: {
                 ...cargo.surcharges,
                 fuel: primaryPriced.fuel,
+                fuelPct: primary.option.surcharges.fuelPct,
                 total: primaryPriced.fuel + primaryPriced.extras,
                 declaredValue: primary.option.surcharges.declaredValue,
               },
@@ -1118,8 +1145,8 @@ function CourierDeskInner() {
                   />
                   {!activeCourier?.manualOverride ? (
                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      Select FedEx after cargo is filled and the yearly Circulars tariff fills
-                      automatically (sell = uploaded rate + {COURIER_TARIFF_MARKUP_PCT}%). Fuel is extra.
+                      Select FedEx after cargo is filled. The uploaded sheet tariff fills the boxes at
+                      +{COURIER_TARIFF_MARKUP_PCT}%, plus the fuel % on this card, into Quoted freight.
                     </p>
                   ) : null}
                 </div>
@@ -1181,12 +1208,34 @@ function CourierDeskInner() {
                         onChange={(e) => updateSelectedCourier({ marginPct: Number(e.target.value) })}
                       />
                       <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
-                        Estimated cards only. Circulars FedEx tariff always sells at +{COURIER_TARIFF_MARKUP_PCT}% on the uploaded rate.
+                        Estimated cards only. Circulars FedEx tariff always sells at +{COURIER_TARIFF_MARKUP_PCT}% on the uploaded rate, then plus this card's fuel %.
                       </span>
                     </label>
                   </>
                 )}
               </div>
+
+              {activePriced && !activePriced.manual && activePriced.tariff.status === "hit" ? (
+                <div className="grid gap-2 sm:grid-cols-2" data-testid="courier-tariff-fill">
+                  <FillStat
+                    label="Sheet tariff"
+                    value={formatCurrency(activePriced.uploaded, activePriced.tariff.book.currency || currency)}
+                  />
+                  <FillStat
+                    label={`After +${activePriced.markupPct}%`}
+                    value={formatCurrency(activePriced.base, activePriced.tariff.book.currency || currency)}
+                  />
+                  <FillStat
+                    label={activePriced.fuelPct > 0 ? `Fuel ${activePriced.fuelPct}%` : "Fuel (enter % below)"}
+                    value={formatCurrency(activePriced.fuel, currency)}
+                  />
+                  <FillStat
+                    label="Quoted freight"
+                    value={formatCurrency(activePriced.quotedFreight, activePriced.tariff.book.currency || currency)}
+                    highlight
+                  />
+                </div>
+              ) : null}
 
               {activeCourier ? (
                 <div className="space-y-3 rounded-lg border border-[var(--color-border)] p-3">
@@ -1196,12 +1245,16 @@ function CourierDeskInner() {
                   <label className="text-sm font-semibold">
                     Fuel surcharge %
                     <EmptyNumberInput
+                      id="courier-fuel"
                       className="mt-1 w-full"
                       value={activeCourier.surcharges.fuelPct}
                       onChange={(fuelPct) =>
                         updateSelectedCourier({ surcharges: { ...activeCourier.surcharges, fuelPct } })
                       }
                     />
+                    <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
+                      Added on the freight after +{COURIER_TARIFF_MARKUP_PCT}% (40, 50, or whatever is current).
+                    </span>
                   </label>
                   <SurchargeToggle
                     label="Remote area"
@@ -1353,9 +1406,21 @@ function CourierDeskInner() {
                   </div>
                 ) : null}
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Fuel + extras</dt>
-                  <dd>{formatCurrency(activePriced.fuel + activePriced.extras, currency)}</dd>
+                  <dt className="text-[var(--color-text-muted)]">
+                    Fuel{activePriced.fuelPct > 0 ? ` (${activePriced.fuelPct}%)` : ""}
+                  </dt>
+                  <dd>{formatCurrency(activePriced.fuel, currency)}</dd>
                 </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-text-muted)]">Quoted freight</dt>
+                  <dd className="font-bold">{formatCurrency(activePriced.quotedFreight, currency)}</dd>
+                </div>
+                {activePriced.extras > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Extras</dt>
+                    <dd>{formatCurrency(activePriced.extras, currency)}</dd>
+                  </div>
+                ) : null}
                 {gstEnabled ? (
                   <div className="flex justify-between">
                     <dt className="text-[var(--color-text-muted)]">GST (18%)</dt>
@@ -1409,17 +1474,27 @@ function CourierDeskInner() {
                   <dd>{formatCurrency(activePriced.uploaded, activePriced.tariff.book.currency || currency)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Sell +{activePriced.markupPct}%</dt>
-                  <dd>{formatCurrency(activePriced.markupAmount, activePriced.tariff.book.currency || currency)}</dd>
+                  <dt className="text-[var(--color-text-muted)]">After +{activePriced.markupPct}%</dt>
+                  <dd>{formatCurrency(activePriced.base, activePriced.tariff.book.currency || currency)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Freight after {activePriced.markupPct}%</dt>
-                  <dd className="font-bold">{formatCurrency(activePriced.base, activePriced.tariff.book.currency || currency)}</dd>
+                  <dt className="text-[var(--color-text-muted)]">
+                    Fuel{activePriced.fuelPct > 0 ? ` (${activePriced.fuelPct}%)` : ""}
+                  </dt>
+                  <dd>{formatCurrency(activePriced.fuel, currency)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-text-muted)]">Fuel + extras</dt>
-                  <dd>{formatCurrency(activePriced.fuel + activePriced.extras, currency)}</dd>
+                  <dt className="text-[var(--color-text-muted)]">Quoted freight</dt>
+                  <dd className="font-bold">
+                    {formatCurrency(activePriced.quotedFreight, activePriced.tariff.book.currency || currency)}
+                  </dd>
                 </div>
+                {activePriced.extras > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Extras</dt>
+                    <dd>{formatCurrency(activePriced.extras, currency)}</dd>
+                  </div>
+                ) : null}
                 {gstEnabled ? (
                   <div className="flex justify-between">
                     <dt className="text-[var(--color-text-muted)]">GST (18%)</dt>
@@ -1481,6 +1556,31 @@ function CourierDeskInner() {
       {previewQuote ? (
         <QuotePreviewModal quote={previewQuote} onClose={() => setPreviewQuote(null)} />
       ) : null}
+    </div>
+  );
+}
+
+function FillStat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-lg border px-3 py-2 ${
+        highlight ? "border-emerald-300 bg-emerald-50" : "border-[var(--color-border)] bg-slate-50"
+      }`}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+        {label}
+      </div>
+      <div className={`mt-0.5 text-base font-bold tabular-nums ${highlight ? "text-emerald-800" : ""}`}>
+        {value}
+      </div>
     </div>
   );
 }
