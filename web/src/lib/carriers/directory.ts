@@ -80,6 +80,7 @@ export const CURATED_CARRIERS: CarrierRecord[] = [
   { code: "Y8", name: "Suparna / Yangtze River Express", kind: "airline", country: "CN" },
   { code: "RU", name: "AirBridgeCargo", kind: "airline", country: "RU" },
   { code: "QY", name: "European Air Transport / DHL", kind: "airline", country: "DE" },
+  { code: "X6", name: "Challenge Airlines", kind: "airline", country: "LU", website: "https://www.challenge-group.com" },
   { code: "MAEU", name: "Maersk", kind: "ocean", country: "DK", website: "https://www.maersk.com", trackingUrl: "https://www.maersk.com/tracking/" },
   { code: "MSCU", name: "MSC", kind: "ocean", country: "CH", website: "https://www.msc.com", trackingUrl: "https://www.msc.com/track-a-shipment" },
   { code: "CMDU", name: "CMA CGM", kind: "ocean", country: "FR", website: "https://www.cma-cgm.com", trackingUrl: "https://www.cma-cgm.com/ebusiness/tracking" },
