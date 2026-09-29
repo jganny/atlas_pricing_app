@@ -72,7 +72,24 @@ import {
 } from "@/lib/quotes/lanes";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
-const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
+const CONTAINER_TYPES = [
+  "20'GP",
+  "40'GP",
+  "40'HC",
+  "45'HC",
+  "20'RF",
+  "40'RF",
+  "20'FR",
+  "40'FR",
+  "20'FR OOG",
+  "40'FR OOG",
+  "20'OT",
+  "40'OT",
+  "20'OT OOG",
+  "40'OT OOG",
+  "20'TANK",
+  "20'FLEXI",
+];
 type Step = "shipment" | "carrier" | "terms";
 
 function linerRatesAreEmpty(opt: LinerOption, mode: SeaMode): boolean {
