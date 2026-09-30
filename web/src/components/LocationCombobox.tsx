@@ -66,9 +66,11 @@ export function LocationCombobox({
   }, []);
 
   function pick(hit: LocationHit) {
-    const next = `${hit.code} — ${hit.name}${hit.city ? `, ${hit.city}` : ""}`;
+    // " - " (not an em dash) matches the split(" - ")[0] convention every
+    // origin/destination call site uses to pull the bare code back out.
+    const next = `${hit.code} - ${hit.name}${hit.city ? `, ${hit.city}` : ""}`;
     onPick?.(hit);
-    onChange(hit.code);
+    onChange(next);
     setQ(next);
     setOpen(false);
   }
