@@ -12,4 +12,5 @@ export const queryKeys = {
   salesContacts: (accountId: string) => ["salesContacts", accountId] as const,
   salesTargets: ["salesTargets"] as const,
   salesTerritories: ["salesTerritories"] as const,
+  wonFollowUps: ["wonFollowUps"] as const,
 };

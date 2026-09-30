@@ -17,7 +17,8 @@ import { PerformanceReportPanel } from "@/components/PerformanceReportPanel";
 import { VertexAskBar } from "@/components/VertexAskBar";
 import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
+import { useEnquiries, useLeads, useWonFollowUps } from "@/hooks/use-atlas-data";
+import { missingWonFields } from "@/lib/quotes/won-followups";
 import { useAuthStore } from "@/store/auth";
 import { canAccessRoute, deskFocusLabel } from "@/lib/auth/rbac";
 import {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { data: enquiries = [], isLoading, error, refetch } = useEnquiries();
   const { data: leads = [] } = useLeads();
+  const { data: wonFollowUps = [] } = useWonFollowUps();
   const focus = deskFocusLabel(user?.username);
   const admin = isAdminUser(user?.username, user?.role);
   const username = (user?.username || "").toLowerCase();
@@ -106,6 +108,7 @@ export default function DashboardPage() {
     .reduce((s, e) => s + sellAmountInr(e), 0);
   const conversion =
     scope.length > 0 ? Math.round((won / Math.max(1, scope.length)) * 100) : 0;
+  const pendingWon = wonFollowUps.filter((r) => missingWonFields(r).length > 0).length;
 
   const byDesk = useMemo(() => {
     const m: Record<string, number> = {};
@@ -274,6 +277,33 @@ export default function DashboardPage() {
               </div>
               <div className="mt-1 text-2xl font-extrabold tabular-nums text-red-600">{overdue}</div>
             </div>
+            <Link
+              href="/won-followups"
+              className={
+                pendingWon > 0
+                  ? "atlas-metric-cell block border-2 border-red-500 bg-red-50/70 transition-colors hover:bg-red-50"
+                  : "atlas-metric-cell block transition-colors hover:bg-slate-50"
+              }
+            >
+              <div
+                className={
+                  pendingWon > 0
+                    ? "text-[10px] font-bold uppercase tracking-wide text-red-700"
+                    : "text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]"
+                }
+              >
+                Won · incomplete
+              </div>
+              <div
+                className={
+                  pendingWon > 0
+                    ? "mt-1 text-2xl font-extrabold tabular-nums text-red-600"
+                    : "mt-1 text-2xl font-extrabold tabular-nums text-[var(--color-atlas-navy)]"
+                }
+              >
+                {pendingWon}
+              </div>
+            </Link>
           </div>
 
           <div className="atlas-workbench">

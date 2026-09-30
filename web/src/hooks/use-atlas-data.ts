@@ -11,6 +11,7 @@ import { fetchAccounts, subscribeAccounts } from "@/lib/firebase/accounts";
 import { fetchSalesContacts, subscribeSalesContacts } from "@/lib/firebase/sales-contacts";
 import { fetchSalesTargets, subscribeSalesTargets } from "@/lib/firebase/sales-targets";
 import { fetchSalesTerritories, subscribeSalesTerritories } from "@/lib/firebase/sales-territories";
+import { fetchWonFollowUps, subscribeWonFollowUps } from "@/lib/firebase/won-followups";
 import { mockApi } from "@/lib/mock/api";
 import { mergeLocalEnquiries } from "@/lib/quotes/local-enquiries";
 import { mergeCourierTariffBooks } from "@/lib/quotes/courier-tariff";
@@ -211,6 +212,28 @@ export function useLeads() {
   return useQuery({
     queryKey: queryKeys.leads,
     queryFn: () => atlasApi.fetchLeads(),
+    staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useWonFollowUps() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeWonFollowUps(
+      (rows) => queryClient.setQueryData(queryKeys.wonFollowUps, rows),
+      (err) => console.warn("Won follow-ups sync:", err.message),
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.wonFollowUps,
+    queryFn: () => fetchWonFollowUps(),
     staleTime: useLiveData ? Infinity : 60_000,
     retry: 1,
     enabled,

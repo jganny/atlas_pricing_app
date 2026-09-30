@@ -25,7 +25,8 @@ export type AppRouteId =
   | "hr"
   | "feature-parity"
   | "smart-quote"
-  | "nrs";
+  | "nrs"
+  | "won-followups";
 
 /** Full admin surface — excludes NRS follow-ups (Cathrina-only queue). */
 const ALL: AppRouteId[] = [
@@ -48,6 +49,7 @@ const ALL: AppRouteId[] = [
   "hr",
   "feature-parity",
   "smart-quote",
+  "won-followups",
 ];
 
 const CORE: AppRouteId[] = [
@@ -64,6 +66,7 @@ const CORE: AppRouteId[] = [
   "directory",
   "sales",
   "docs",
+  "won-followups",
 ];
 
 /** Per-login allowed surfaces (admins bypass). */
@@ -80,6 +83,7 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
     "directory",
     "sales",
     "docs",
+    "won-followups",
   ],
   shaheer: [
     "dashboard",
@@ -93,6 +97,7 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
     "directory",
     "sales",
     "docs",
+    "won-followups",
   ],
   kavya: [...CORE],
   jaya: [...CORE],
@@ -108,6 +113,7 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
     "circulars",
     "directory",
     "docs",
+    "won-followups",
   ],
   preview: ALL,
 };
@@ -180,6 +186,7 @@ export function routeIdFromPath(pathname: string): AppRouteId | null {
   if (p.startsWith("/feature-parity")) return "feature-parity";
   if (p.startsWith("/smart-quote") || p.startsWith("/quote")) return "smart-quote";
   if (p.startsWith("/nrs")) return "nrs";
+  if (p.startsWith("/won-followups")) return "won-followups";
   if (p.startsWith("/carriers") || p.startsWith("/integrations")) return "directory";
   if (p === "/m" || p.startsWith("/m/")) return "dashboard";
   return null;

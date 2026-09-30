@@ -25,6 +25,8 @@ import {
   setQuoteStatus,
 } from "@/lib/firebase/quote-lifecycle";
 import { pushNrsAlert, pushNrsFollowUp } from "@/lib/quotes/nrs-alerts";
+import { upsertWonFollowUp } from "@/lib/firebase/won-followups";
+import { missingWonFields } from "@/lib/quotes/won-followups";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { deskPathForQuote } from "@/lib/quotes/desk-loader";
 import { useLiveData } from "@/lib/api";
@@ -169,14 +171,9 @@ export function EnquiryInspector({
         full?.buyRate ?? full?.confirmedBuyRate ?? row.buyRate ?? row.buyTotal ?? 0,
       );
       const sell = Number(full?.amount ?? row.grandTotal ?? 0);
-      if (!(buy > 0) || !(sell > 0)) {
-        const err =
-          "Buy rate and sell amount must both be greater than 0 before converting to Won.";
-        setMsg(err);
-        toast(err, "error");
-        return;
-      }
 
+      // No blocking rule: Won always succeeds. Whatever's still blank
+      // becomes a tracked follow-up instead of stopping the desk user here.
       await convertQuoteToWon(row.id, {
         shipperName: shipperName.trim() || undefined,
         consigneeName: consigneeName.trim() || undefined,
@@ -184,6 +181,19 @@ export function EnquiryInspector({
       });
 
       const ref = full ? getQuoteRefId(full) : row.ref;
+      const followUpValues = {
+        shipperName: shipperName.trim(),
+        consigneeName: consigneeName.trim(),
+        commodity: commodity.trim() || String(full?.commodity ?? ""),
+        buyRate: buy,
+        sellAmount: sell,
+      };
+      await upsertWonFollowUp(
+        { quoteId: row.id, ref, customer: row.customer, wonAt: new Date().toISOString(), ...followUpValues },
+        user?.username || "",
+      );
+      const missing = missingWonFields(followUpValues);
+
       pushNrsFollowUp({
         quoteId: row.id,
         ref,
@@ -203,8 +213,14 @@ export function EnquiryInspector({
       );
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.wonFollowUps });
       setShowWon(false);
-      toast("Converted to Won. NRS follow-up queued for Cathrina.", "success");
+      toast(
+        missing.length
+          ? `Converted to Won. ${missing.length} detail${missing.length > 1 ? "s" : ""} still need filling in — tracked in Won follow-ups.`
+          : "Converted to Won.",
+        "success",
+      );
       onClose();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Conversion failed";
