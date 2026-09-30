@@ -59,6 +59,8 @@ import {
   createAirlineOption,
   type AirlineOption,
 } from "@/lib/pricing/carrier-options";
+import { SurchargeTable } from "@/components/desks/SurchargeTable";
+import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
 import { getDefaultFreightTerms } from "@/lib/pricing/terms";
@@ -119,6 +121,8 @@ function AirDeskInner() {
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
+  const [localOriginCharges, setLocalOriginCharges] = useState<SurchargeRow[]>([]);
+  const [destClearanceCharges, setDestClearanceCharges] = useState<SurchargeRow[]>([]);
   const historicalAutofill = useHistoricalAutofill({
     deskType: "air",
     origin,
@@ -330,9 +334,10 @@ function AirDeskInner() {
 
   const totalsById = useMemo(() => {
     const map: Record<string, ReturnType<typeof computeAirlineTotals>> = {};
-    for (const a of airlines) map[a.id] = computeAirlineTotals(cargo, a, dimUnit);
+    for (const a of airlines)
+      map[a.id] = computeAirlineTotals(cargo, a, dimUnit, localOriginCharges, destClearanceCharges);
     return map;
-  }, [airlines, cargo, dimUnit]);
+  }, [airlines, cargo, dimUnit, localOriginCharges, destClearanceCharges]);
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
 
@@ -387,6 +392,8 @@ function AirDeskInner() {
     setCustomFx(loaded.customExchangeRate);
     setCargo(loaded.cargo);
     setAirlines(loaded.airlines);
+    setLocalOriginCharges(loaded.localOriginCharges);
+    setDestClearanceCharges(loaded.destClearanceCharges);
     if (loaded.lanes.length) {
       setLanes(loaded.lanes.map((l) => newLane(l)));
       setActiveLaneId(loaded.lanes[0]?.id || "");
@@ -478,6 +485,8 @@ function AirDeskInner() {
     setCustomFx(0);
     setCargo([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
     setAirlines([createAirlineOption({ laneId: lane.id }, true)]);
+    setLocalOriginCharges([]);
+    setDestClearanceCharges([]);
     prefillApplied.current = false;
     setTerms(getDefaultFreightTerms("air"));
     setSaveMsg(null);
@@ -638,7 +647,11 @@ function AirDeskInner() {
         lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
         quotedLanes,
         allLanesTotal: amount,
-        airlines: airlines.map((a) => airlineSnapshot(a, cargo, lanes, fallback)),
+        airlines: airlines.map((a) =>
+          airlineSnapshot(a, cargo, lanes, fallback, dimUnit, localOriginCharges, destClearanceCharges),
+        ),
+        localOriginCharges,
+        destClearanceCharges,
         termsAndConditions: terms,
         type: "air",
         mode: "Air",
@@ -740,6 +753,7 @@ function AirDeskInner() {
               : selected.name,
           incoterm,
           module,
+          dimUnit,
           commodity,
           chargeableWeight: selectedTotals.freight.chargeableWeightKg,
           grossWeight: selectedTotals.freight.cargo.grossWeightKg,
@@ -756,7 +770,11 @@ function AirDeskInner() {
           lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
           quotedLanes,
           allLanesTotal: amount,
-          airlines: airlines.map((a) => airlineSnapshot(a, cargo, lanes, fallback)),
+          airlines: airlines.map((a) =>
+            airlineSnapshot(a, cargo, lanes, fallback, dimUnit, localOriginCharges, destClearanceCharges),
+          ),
+          localOriginCharges,
+          destClearanceCharges,
           termsAndConditions: terms,
           type: "air",
           mode: "Air",
@@ -783,6 +801,8 @@ function AirDeskInner() {
               selected,
               totals: selectedTotals,
               airlines,
+              localOriginCharges,
+              destClearanceCharges,
               termsAndConditions: terms,
               customExchangeRate: customFx || undefined,
               quoteId,
@@ -854,6 +874,9 @@ function AirDeskInner() {
       quotedLanes,
       allLanesQuotedTotal,
       totalsById,
+      dimUnit,
+      localOriginCharges,
+      destClearanceCharges,
     ],
   );
 
@@ -1277,6 +1300,31 @@ function AirDeskInner() {
                   }}
                 />
               ) : null}
+
+              <div className="space-y-3 rounded-xl border-2 border-[var(--color-atlas-navy)]/20 bg-[var(--color-atlas-gold-soft)]/40 p-3">
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  <strong>Local charges — once per quote, not per carrier.</strong> These apply
+                  the same way no matter which airline/coloader you end up quoting, so they're
+                  entered here once and added automatically into every carrier's total below.
+                </p>
+                <SurchargeTable
+                  title="Local Origin Charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={localOriginCharges}
+                  onChange={setLocalOriginCharges}
+                  units={["kg", "flat"]}
+                />
+                <SurchargeTable
+                  title="Destination Clearance Charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={destClearanceCharges}
+                  onChange={setDestClearanceCharges}
+                  units={["kg", "flat"]}
+                />
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2
                   id="air-step-carrier-anchor"

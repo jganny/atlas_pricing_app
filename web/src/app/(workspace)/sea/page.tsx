@@ -29,6 +29,7 @@ import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
+import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { seaShipmentSchema } from "@/lib/pricing/desk-schemas";
@@ -146,6 +147,8 @@ function SeaDeskInner() {
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
   const [liners, setLiners] = useState<LinerOption[]>([createLinerOption({}, true)]);
+  const [localOriginCharges, setLocalOriginCharges] = useState<SurchargeRow[]>([]);
+  const [destClearanceCharges, setDestClearanceCharges] = useState<SurchargeRow[]>([]);
   const historicalAutofill = useHistoricalAutofill({
     deskType: "sea",
     origin,
@@ -359,10 +362,26 @@ function SeaDeskInner() {
   const totalsById = useMemo(() => {
     const map: Record<string, ReturnType<typeof computeLinerTotals>> = {};
     for (const l of liners) {
-      map[l.id] = computeLinerTotals(mode, grossWeightKg, volumeCbm, chargeableCbmOverride, l);
+      map[l.id] = computeLinerTotals(
+        mode,
+        grossWeightKg,
+        volumeCbm,
+        chargeableCbmOverride,
+        l,
+        localOriginCharges,
+        destClearanceCharges,
+      );
     }
     return map;
-  }, [liners, mode, grossWeightKg, volumeCbm, chargeableCbmOverride]);
+  }, [
+    liners,
+    mode,
+    grossWeightKg,
+    volumeCbm,
+    chargeableCbmOverride,
+    localOriginCharges,
+    destClearanceCharges,
+  ]);
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
   const quotedLanes = useMemo(
@@ -402,6 +421,8 @@ function SeaDeskInner() {
     setChargeableCbmOverride(loaded.chargeableCbmOverride);
     setCustomFx(loaded.customExchangeRate);
     setLiners(loaded.liners);
+    setLocalOriginCharges(loaded.localOriginCharges);
+    setDestClearanceCharges(loaded.destClearanceCharges);
     const lane = newLane({ origin: loaded.origin, destination: loaded.destination });
     setLanes([lane]);
     setActiveLaneId(lane.id);
@@ -477,6 +498,8 @@ function SeaDeskInner() {
     setChargeableCbmOverride(0);
     setCustomFx(0);
     setLiners([createLinerOption({ laneId: lane.id }, true)]);
+    setLocalOriginCharges([]);
+    setDestClearanceCharges([]);
     setTerms(getDefaultFreightTerms("sea"));
     setSaveMsg(null);
     setPreviewQuote(null);
@@ -626,8 +649,20 @@ function SeaDeskInner() {
         quotedLanes,
         allLanesTotal: amount,
         liners: liners.map((l) =>
-          linerSnapshot(l, mode, grossWeightKg, volumeCbm, chargeableCbmOverride, lanes, fallback),
+          linerSnapshot(
+            l,
+            mode,
+            grossWeightKg,
+            volumeCbm,
+            chargeableCbmOverride,
+            lanes,
+            fallback,
+            localOriginCharges,
+            destClearanceCharges,
+          ),
         ),
+        localOriginCharges,
+        destClearanceCharges,
         termsAndConditions: terms,
         mode: "Sea",
       },
@@ -675,7 +710,17 @@ function SeaDeskInner() {
       const fx = customFx > 0 ? customFx : 83.5;
       const fallback = lanes[0]?.id || "";
       const linerSnaps = liners.map((l) =>
-        linerSnapshot(l, mode, grossWeightKg, volumeCbm, chargeableCbmOverride, lanes, fallback),
+        linerSnapshot(
+          l,
+          mode,
+          grossWeightKg,
+          volumeCbm,
+          chargeableCbmOverride,
+          lanes,
+          fallback,
+          localOriginCharges,
+          destClearanceCharges,
+        ),
       );
       const localQuote: SavedQuote = {
         id: quoteId,
@@ -706,6 +751,8 @@ function SeaDeskInner() {
           quotedLanes,
           allLanesTotal: amount,
           liners: linerSnaps,
+          localOriginCharges,
+          destClearanceCharges,
           termsAndConditions: terms,
           mode: "Sea",
         },
@@ -735,6 +782,8 @@ function SeaDeskInner() {
               selected,
               totals: selectedTotals,
               liners,
+              localOriginCharges,
+              destClearanceCharges,
               termsAndConditions: terms,
               customExchangeRate: customFx || undefined,
               quoteId,
@@ -807,6 +856,9 @@ function SeaDeskInner() {
       quotedLanes,
       allLanesQuotedTotal,
       totalsById,
+      dimUnit,
+      localOriginCharges,
+      destClearanceCharges,
     ],
   );
 
@@ -1230,6 +1282,30 @@ function SeaDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
+              <div className="space-y-3 rounded-xl border-2 border-[var(--color-atlas-navy)]/20 bg-[var(--color-atlas-gold-soft)]/40 p-3">
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  <strong>Local charges — once per quote, not per carrier.</strong> These apply
+                  the same way no matter which liner/coloader you end up quoting, so they're
+                  entered here once and added automatically into every carrier's total below.
+                </p>
+                <SurchargeTable
+                  title="Local Origin Charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={localOriginCharges}
+                  onChange={setLocalOriginCharges}
+                  units={["flat", "cbm", "container"]}
+                />
+                <SurchargeTable
+                  title="Destination Clearance Charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={destClearanceCharges}
+                  onChange={setDestClearanceCharges}
+                  units={["flat", "cbm", "container"]}
+                />
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2
                   id="sea-step-carrier-anchor"

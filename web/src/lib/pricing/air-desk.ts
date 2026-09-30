@@ -12,6 +12,7 @@ import {
   calcSurchargeCost,
   sumSurcharges,
   type CalculatedSurcharge,
+  type SurchargeRow,
 } from "@/lib/pricing/surcharges";
 
 export const AIR_WEIGHT_BREAKS: WeightBreakName[] = [
@@ -62,6 +63,13 @@ export interface AirlineTotals {
   destBuy: number;
   ams: number;
   dg: number;
+  /** Local Origin Charges / Destination Clearance Charges — quote-wide, not carrier-specific. */
+  localOrigin: CalculatedSurcharge[];
+  destClearance: CalculatedSurcharge[];
+  localOriginTotal: number;
+  destClearanceTotal: number;
+  localOriginBuy: number;
+  destClearanceBuy: number;
   /** Quote total: sell preferred, buy fallback per line while drafting. */
   grandSell: number;
   grandBuy: number;
@@ -84,6 +92,8 @@ export function computeAirlineTotals(
   cargo: AirCargoRow[],
   option: AirlineOption,
   dimUnit: DimUnit = "cms",
+  localOriginCharges: SurchargeRow[] = [],
+  destClearanceCharges: SurchargeRow[] = [],
 ): AirlineTotals {
   const freight = calculateAirFreight({
     cargo: cargoRowsToLines(cargo),
@@ -103,9 +113,17 @@ export function computeAirlineTotals(
         .filter((r) => r.name.trim() && !/^ams(\s+fee)?$/i.test(r.name.trim()))
         .map((r) => calcSurchargeCost(r, bases))
     : [];
+  const localOrigin = localOriginCharges
+    .filter((r) => r.name.trim())
+    .map((r) => calcSurchargeCost(r, bases));
+  const destClearance = destClearanceCharges
+    .filter((r) => r.name.trim())
+    .map((r) => calcSurchargeCost(r, bases));
 
   const originSum = sumSurcharges(origin);
   const destSum = sumSurcharges(dest);
+  const localOriginSum = sumSurcharges(localOrigin);
+  const destClearanceSum = sumSurcharges(destClearance);
   const amsSell = option.amsFeeEnabled ? Number(option.amsFee) || 0 : 0;
   const amsBuy = option.amsFeeEnabled ? Number(option.amsFeeBuy) || 0 : 0;
   const ams = quoteSideRate(amsSell, amsBuy);
@@ -117,8 +135,10 @@ export function computeAirlineTotals(
   const baseFreightQuote = quoteSideRate(baseSell, baseBuy);
   const quoteUsingBuyFreight = baseSell <= 0 && baseBuy > 0;
 
-  const grandSell = baseFreightQuote + originSum.quote + destSum.quote + ams + dg;
-  const grandBuy = baseBuy + originSum.buy + destSum.buy + amsBuy + dgBuy;
+  const grandSell =
+    baseFreightQuote + originSum.quote + destSum.quote + ams + dg + localOriginSum.quote + destClearanceSum.quote;
+  const grandBuy =
+    baseBuy + originSum.buy + destSum.buy + amsBuy + dgBuy + localOriginSum.buy + destClearanceSum.buy;
   const freightSellReady = baseSell > 0;
   const freightBuyReady = baseBuy > 0;
   const gpReady = freightSellReady && freightBuyReady;
@@ -133,6 +153,12 @@ export function computeAirlineTotals(
     destBuy: destSum.buy,
     ams,
     dg,
+    localOrigin,
+    destClearance,
+    localOriginTotal: localOriginSum.quote,
+    destClearanceTotal: destClearanceSum.quote,
+    localOriginBuy: localOriginSum.buy,
+    destClearanceBuy: destClearanceSum.buy,
     grandSell: grandSell > 0 ? grandSell : 0,
     grandBuy,
     gp: gpReady ? grandSell - grandBuy : 0,

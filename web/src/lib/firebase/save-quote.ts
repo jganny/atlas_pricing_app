@@ -3,6 +3,7 @@
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult, DimUnit, SeaMode } from "@atlas/pricing-core";
 import type { AirlineOption, CourierOption, LinerOption } from "@/lib/pricing/carrier-options";
+import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
@@ -198,6 +199,8 @@ export interface SaveAirInput extends SaveMeta {
   selected: AirlineOption;
   totals: AirlineTotals;
   airlines: AirlineOption[];
+  localOriginCharges?: SurchargeRow[];
+  destClearanceCharges?: SurchargeRow[];
   termsAndConditions: string;
   customExchangeRate?: number;
   lanes?: SavedQuoteLane[];
@@ -242,8 +245,10 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const gp = input.totals.gp;
   const gpReady = input.totals.gpReady;
   const fallbackLane = (input.lanes ?? [])[0]?.id || "";
+  const localOriginCharges = input.localOriginCharges ?? [];
+  const destClearanceCharges = input.destClearanceCharges ?? [];
   const airlines = input.airlines.map((a) =>
-    airlineSnapshot(a, input.cargo, input.lanes ?? [], fallbackLane, input.dimUnit),
+    airlineSnapshot(a, input.cargo, input.lanes ?? [], fallbackLane, input.dimUnit, localOriginCharges, destClearanceCharges),
   );
   const lanes = (input.lanes ?? []).map((l) => ({
     id: l.id,
@@ -336,6 +341,10 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       allLanesTotal: amount,
       airlines,
       alternatives,
+      localOriginCharges,
+      destClearanceCharges,
+      localOriginFeesTotal: input.totals.localOriginTotal,
+      destClearanceFeesTotal: input.totals.destClearanceTotal,
       termsAndConditions: input.termsAndConditions,
       customExchangeRate: input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : null,
       type: "air",
@@ -365,6 +374,8 @@ export interface SaveSeaInput extends SaveMeta {
   selected: LinerOption;
   totals: LinerTotals;
   liners: LinerOption[];
+  localOriginCharges?: SurchargeRow[];
+  destClearanceCharges?: SurchargeRow[];
   termsAndConditions: string;
   customExchangeRate?: number;
   lanes?: SavedQuoteLane[];
@@ -399,6 +410,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     destination: l.destination,
   }));
   const fallbackLaneId = laneRows[0]?.id ?? "";
+  const localOriginCharges = input.localOriginCharges ?? [];
+  const destClearanceCharges = input.destClearanceCharges ?? [];
   const liners = input.liners.map((l) =>
     linerSnapshot(
       l,
@@ -408,6 +421,8 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       chargeableCbmOverride,
       laneRows,
       fallbackLaneId,
+      localOriginCharges,
+      destClearanceCharges,
     ),
   );
   const quotedLanes = input.quotedLanes ?? [];
@@ -492,6 +507,10 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       surchargeTotal: input.totals.originTotal + input.totals.destTotal,
       liners,
       alternatives,
+      localOriginCharges,
+      destClearanceCharges,
+      localOriginFeesTotal: input.totals.localOriginTotal,
+      destClearanceFeesTotal: input.totals.destClearanceTotal,
       termsAndConditions: input.termsAndConditions,
       customExchangeRate: input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : null,
     },

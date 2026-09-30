@@ -29,7 +29,7 @@ export function deskPathForQuote(quote: SavedQuote): string | null {
   return null;
 }
 
-function mapSurcharges(raw: unknown): SurchargeRow[] | undefined {
+export function mapSurcharges(raw: unknown): SurchargeRow[] | undefined {
   if (!Array.isArray(raw) || !raw.length) return undefined;
   return raw
     .map((s) => {
@@ -126,6 +126,8 @@ export function loadAirDeskFromQuote(quote: SavedQuote) {
       ? cargoItems
       : [{ l: 120, w: 80, h: 90, qty: 1, gw: 150 }],
     airlines,
+    localOriginCharges: mapSurcharges(d.localOriginCharges) ?? [],
+    destClearanceCharges: mapSurcharges(d.destClearanceCharges) ?? [],
     terms: String(d.termsAndConditions ?? ""),
   };
 }
@@ -197,6 +199,8 @@ export function loadSeaDeskFromQuote(quote: SavedQuote) {
     chargeableCbmOverride: Number(d.chargeableCbmOverride ?? 0),
     customExchangeRate: Number(d.customExchangeRate ?? 0),
     liners,
+    localOriginCharges: mapSurcharges(d.localOriginCharges) ?? [],
+    destClearanceCharges: mapSurcharges(d.destClearanceCharges) ?? [],
     terms: String(d.termsAndConditions ?? ""),
   };
 }

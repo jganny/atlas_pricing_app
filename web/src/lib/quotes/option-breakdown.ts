@@ -14,8 +14,10 @@ import {
 } from "../pricing/air-desk";
 import { computeLinerTotals } from "../pricing/sea-desk";
 import { quoteSideRate } from "../pricing/quote-rate";
+import type { SurchargeRow } from "../pricing/surcharges";
 import { laneRouteLabel, type QuoteLane } from "./lanes";
 import { vendorRowsFromQuote, type VendorPreviewRow } from "./vendor-preview";
+import { mapSurcharges } from "./desk-loader";
 
 /** One named surcharge row's own quoted amount — e.g. "Origin THC" → 4500. */
 export type SurchargeBreakdownLine = { name: string; amount: number; remarks?: string };
@@ -43,6 +45,11 @@ export type OptionBreakdown = VendorPreviewRow & {
   destLines: SurchargeBreakdownLine[];
   /** Sea FCL only — one row per container type/qty on the option. */
   containerLines: ContainerBreakdownLine[];
+  /** Quote-wide, not carrier-specific — same for every option on the quote. */
+  localOriginFees: number;
+  destClearanceFees: number;
+  localOriginLines: SurchargeBreakdownLine[];
+  destClearanceLines: SurchargeBreakdownLine[];
 };
 
 type FeeFields = Omit<OptionBreakdown, keyof VendorPreviewRow>;
@@ -187,8 +194,10 @@ export function airlineSnapshot(
   lanes: QuoteLane[],
   fallbackLaneId: string,
   dimUnit: DimUnit = "cms",
+  localOriginCharges: SurchargeRow[] = [],
+  destClearanceCharges: SurchargeRow[] = [],
 ): Record<string, unknown> {
-  const t = computeAirlineTotals(cargo, a, dimUnit);
+  const t = computeAirlineTotals(cargo, a, dimUnit, localOriginCharges, destClearanceCharges);
   const laneIndex = Math.max(
     0,
     lanes.findIndex((l) => l.id === (a.laneId || fallbackLaneId)),
@@ -202,6 +211,8 @@ export function airlineSnapshot(
     destFeesTotal: t.destTotal,
     ams: t.ams,
     dg: t.dg,
+    localOriginTotal: t.localOriginTotal,
+    destClearanceTotal: t.destClearanceTotal,
     appliedRate: t.freight.activeRate || t.freight.activeBuyRate || 0,
     chargeableWeight: t.freight.chargeableWeightKg,
     quoteUsingBuyFreight: t.quoteUsingBuyFreight,
@@ -219,8 +230,18 @@ export function linerSnapshot(
   chargeableCbmOverride: number,
   lanes: QuoteLane[],
   fallbackLaneId: string,
+  localOriginCharges: SurchargeRow[] = [],
+  destClearanceCharges: SurchargeRow[] = [],
 ): Record<string, unknown> {
-  const t = computeLinerTotals(mode, grossWeightKg, volumeCbm, chargeableCbmOverride, liner);
+  const t = computeLinerTotals(
+    mode,
+    grossWeightKg,
+    volumeCbm,
+    chargeableCbmOverride,
+    liner,
+    localOriginCharges,
+    destClearanceCharges,
+  );
   const laneIndex = Math.max(
     0,
     lanes.findIndex((l) => l.id === (liner.laneId || fallbackLaneId)),
@@ -232,6 +253,8 @@ export function linerSnapshot(
     baseFreight: t.baseFreightQuote,
     originFeesTotal: t.originTotal,
     destFeesTotal: t.destTotal,
+    localOriginTotal: t.localOriginTotal,
+    destClearanceTotal: t.destClearanceTotal,
     quoteUsingBuyFreight: t.quoteUsingBuyFreight,
     chargeableRt: t.freight.chargeableRt,
     laneId: liner.laneId || fallbackLaneId,
@@ -341,18 +364,34 @@ function totalsFromRaw(
   quoteType: string,
   seaCtx: { mode: SeaMode; grossWeightKg: number; volumeCbm: number; chargeableCbmOverride: number },
   dimUnit: DimUnit = "cms",
+  localOriginCharges: SurchargeRow[] = [],
+  destClearanceCharges: SurchargeRow[] = [],
 ): FeeFields {
   const k = kind.toLowerCase();
   const computeAir = shouldComputeAirline(kind, quoteType);
   const computed =
     computeAir && (cargo.length || Array.isArray(raw.originSurcharges) || raw.breaks)
-      ? computeAirlineTotals(cargo.length ? cargo : [{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }], asAirline(raw), dimUnit)
+      ? computeAirlineTotals(
+          cargo.length ? cargo : [{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }],
+          asAirline(raw),
+          dimUnit,
+          localOriginCharges,
+          destClearanceCharges,
+        )
       : null;
 
   const computeSea = !computeAir && quoteType.toLowerCase().includes("sea") && (k === "liner" || k === "coloader");
   const seaComputed =
     computeSea && (Array.isArray(raw.containers) || Array.isArray(raw.originSurcharges) || raw.lclSell || raw.lclBuy)
-      ? computeLinerTotals(seaCtx.mode, seaCtx.grossWeightKg, seaCtx.volumeCbm, seaCtx.chargeableCbmOverride, asLiner(raw))
+      ? computeLinerTotals(
+          seaCtx.mode,
+          seaCtx.grossWeightKg,
+          seaCtx.volumeCbm,
+          seaCtx.chargeableCbmOverride,
+          asLiner(raw),
+          localOriginCharges,
+          destClearanceCharges,
+        )
       : null;
 
   const freightSell = pick(raw.freightSell, 0, selectedFallback.freightSell, selected);
@@ -373,6 +412,8 @@ function totalsFromRaw(
 
   const originArr = computed?.origin ?? seaComputed?.origin ?? [];
   const destArr = computed?.dest ?? seaComputed?.dest ?? [];
+  const localOriginArr = computed?.localOrigin ?? seaComputed?.localOrigin ?? [];
+  const destClearanceArr = computed?.destClearance ?? seaComputed?.destClearance ?? [];
 
   return {
     baseFreight,
@@ -394,6 +435,24 @@ function totalsFromRaw(
       .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
       .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
     destLines: destArr
+      .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
+      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
+    localOriginFees: pick(
+      raw.localOriginTotal,
+      computed?.localOriginTotal ?? seaComputed?.localOriginTotal ?? 0,
+      selectedFallback.localOriginFees,
+      selected,
+    ),
+    destClearanceFees: pick(
+      raw.destClearanceTotal,
+      computed?.destClearanceTotal ?? seaComputed?.destClearanceTotal ?? 0,
+      selectedFallback.destClearanceFees,
+      selected,
+    ),
+    localOriginLines: localOriginArr
+      .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
+      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
+    destClearanceLines: destClearanceArr
       .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
       .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
     containerLines: computeSea && seaCtx.mode === "fcl" ? containerLinesFromRaw(raw) : [],
@@ -493,10 +552,20 @@ export function optionChargeLines(
     }
     if (option.ams > 0) lines.push({ label: "AMS", value: money(option.ams) });
     if (option.dg > 0) lines.push({ label: "DG", value: money(option.dg) });
+    if (option.localOriginLines.length) {
+      for (const o of option.localOriginLines) lines.push({ label: o.name, value: surchargeLineValue(o, money) });
+    } else if (option.localOriginFees > 0) {
+      lines.push({ label: "Local Origin Charges", value: money(option.localOriginFees) });
+    }
     if (option.destLines.length) {
       for (const o of option.destLines) lines.push({ label: o.name, value: surchargeLineValue(o, money) });
     } else if (option.destFees > 0) {
       lines.push({ label: "Destination fees", value: money(option.destFees) });
+    }
+    if (option.destClearanceLines.length) {
+      for (const o of option.destClearanceLines) lines.push({ label: o.name, value: surchargeLineValue(o, money) });
+    } else if (option.destClearanceFees > 0) {
+      lines.push({ label: "Destination Clearance Charges", value: money(option.destClearanceFees) });
     }
     if (option.gst > 0) lines.push({ label: "GST", value: money(option.gst) });
   }
@@ -551,6 +620,10 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
     originLines: [],
     destLines: [],
     containerLines: [],
+    localOriginFees: 0,
+    destClearanceFees: 0,
+    localOriginLines: [],
+    destClearanceLines: [],
   };
   const seaCtx = {
     mode: (String(d.type || "fcl") as SeaMode),
@@ -559,13 +632,26 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
     chargeableCbmOverride: num(d.chargeableCbmOverride),
   };
   const options = rawOptions(d);
+  const localOriginCharges = mapSurcharges(d.localOriginCharges) ?? [];
+  const destClearanceCharges = mapSurcharges(d.destClearanceCharges) ?? [];
 
   return vendors.map((v) => {
     const raw =
       options.find((o) => String(o.id ?? "") === v.id) ||
       options.find((o) => String(o.name ?? "").trim().toLowerCase() === v.name.trim().toLowerCase()) ||
       {};
-    const fees = totalsFromRaw(raw, cargo, selectedFallback, v.selected, v.kind, quoteType, seaCtx, dimUnit);
+    const fees = totalsFromRaw(
+      raw,
+      cargo,
+      selectedFallback,
+      v.selected,
+      v.kind,
+      quoteType,
+      seaCtx,
+      dimUnit,
+      localOriginCharges,
+      destClearanceCharges,
+    );
     return {
       ...v,
       routing: v.routing || String(raw.routing ?? ""),
