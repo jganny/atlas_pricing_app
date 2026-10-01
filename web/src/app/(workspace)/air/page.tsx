@@ -24,6 +24,7 @@ import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
+import { CustomsHolidayBanner } from "@/components/CustomsHolidayBanner";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm, shouldHideAgencyAgreement } from "@/lib/auth/desk-rules";
@@ -1054,6 +1055,7 @@ function AirDeskInner() {
                 destination={destination}
                 tariffCount={tariffs.length}
               />
+              <CustomsHolidayBanner origin={origin} destination={destination} />
               <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer

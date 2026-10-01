@@ -48,6 +48,7 @@ service cloud.firestore {
     match /leads/{leadId} { allow read, write: if isSignedIn(); }
     match /activities/{activityId} { allow read, write: if isSignedIn(); }
     match /wonFollowUps/{quoteId} { allow read, write: if isSignedIn(); }
+    match /customsHolidays/{holidayId} { allow read, write: if isSignedIn(); }
     match /accounts/{accountId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.owner == ownerUsername();

@@ -12,6 +12,7 @@ import { fetchSalesContacts, subscribeSalesContacts } from "@/lib/firebase/sales
 import { fetchSalesTargets, subscribeSalesTargets } from "@/lib/firebase/sales-targets";
 import { fetchSalesTerritories, subscribeSalesTerritories } from "@/lib/firebase/sales-territories";
 import { fetchWonFollowUps, subscribeWonFollowUps } from "@/lib/firebase/won-followups";
+import { fetchCustomsHolidays, subscribeCustomsHolidays } from "@/lib/firebase/customs-holidays";
 import { mockApi } from "@/lib/mock/api";
 import { mergeLocalEnquiries } from "@/lib/quotes/local-enquiries";
 import { mergeCourierTariffBooks } from "@/lib/quotes/courier-tariff";
@@ -234,6 +235,28 @@ export function useWonFollowUps() {
   return useQuery({
     queryKey: queryKeys.wonFollowUps,
     queryFn: () => fetchWonFollowUps(),
+    staleTime: useLiveData ? Infinity : 60_000,
+    retry: 1,
+    enabled,
+  });
+}
+
+export function useCustomsHolidays() {
+  const enabled = useQueryEnabled();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !useLiveData) return;
+    const unsub = subscribeCustomsHolidays(
+      (rows) => queryClient.setQueryData(queryKeys.customsHolidays, rows),
+      (err) => console.warn("Customs holidays sync:", err.message),
+    );
+    return unsub;
+  }, [enabled, queryClient]);
+
+  return useQuery({
+    queryKey: queryKeys.customsHolidays,
+    queryFn: () => fetchCustomsHolidays(),
     staleTime: useLiveData ? Infinity : 60_000,
     retry: 1,
     enabled,

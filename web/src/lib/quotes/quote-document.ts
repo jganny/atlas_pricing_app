@@ -14,6 +14,7 @@ import {
   type OptionBreakdown,
 } from "./option-breakdown";
 import { compareHeading } from "./vendor-preview";
+import { holidayAdvisoryText, upcomingHolidaysForLocations, type CustomsHoliday } from "./customs-holidays";
 
 function esc(value: unknown): string {
   return String(value ?? "")
@@ -84,8 +85,16 @@ export interface ClientQuoteDocument {
   optionCount: number;
 }
 
-export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument {
+export function buildClientQuoteDocument(
+  quote: SavedQuote,
+  holidays: CustomsHoliday[] = [],
+): ClientQuoteDocument {
   const ref = getQuoteRefId(quote);
+  const upcomingHolidays = upcomingHolidaysForLocations(
+    [String(quote.details?.origin ?? ""), String(quote.details?.destination ?? "")],
+    holidays,
+  );
+  const holidayNotices = upcomingHolidays.map((h) => holidayAdvisoryText(h));
   const options = orderOptionsForPack(uniqueOptionBreakdowns(optionBreakdownsFromQuote(quote)));
   const cur = quote.currency || "USD";
   const chw = Number(quote.details?.chargeableWeight ?? 0);
@@ -108,6 +117,7 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
     `Date: ${quote.date || "—"}`,
     `Prepared by: ${prepared}`,
     "",
+    ...(holidayNotices.length ? [...holidayNotices, ""] : []),
     ...(list.length ? [...list, ""] : []),
     options.length > 1
       ? "The attached PDF matches this quotation. It lists every airline option and the full charge breakup for each one."
@@ -120,6 +130,7 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
     `Route: ${quote.route || "—"}`,
     `Date: ${quote.date || "—"}`,
     "",
+    ...(holidayNotices.length ? [...holidayNotices, ""] : []),
     ...list,
     "",
     options.length > 1
@@ -207,6 +218,8 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
   .id-table td { border-bottom: 1px solid #f1f5f9; padding: 4px 6px; }
   .id-label { width: 34%; color: #64748b; font-weight: 600; }
   .hint { font-size: 12px; color: #334155; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 12px; }
+  .holiday-notice { font-size: 12px; color: #78350f; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .holiday-notice strong { display: block; margin-bottom: 2px; }
   .panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 12px 0; break-inside: avoid; page-break-inside: avoid; }
   .panel.quoted { border-color: #6ee7b7; background: #f0fdf4; }
   .panel-kicker { margin: 0 0 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #047857; }
@@ -239,6 +252,11 @@ export function buildClientQuoteDocument(quote: SavedQuote): ClientQuoteDocument
     </div>
   </header>
   <table class="id-table"><tbody>${identityRowsHtml}</tbody></table>
+  ${
+    holidayNotices.length
+      ? `<div class="holiday-notice"><strong>Customs/branch holiday advisory</strong>${holidayNotices.map((n) => `<div>${esc(n)}</div>`).join("")}</div>`
+      : ""
+  }
   ${packHint}
   ${
     options.length

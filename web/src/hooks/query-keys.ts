@@ -13,4 +13,5 @@ export const queryKeys = {
   salesTargets: ["salesTargets"] as const,
   salesTerritories: ["salesTerritories"] as const,
   wonFollowUps: ["wonFollowUps"] as const,
+  customsHolidays: ["customsHolidays"] as const,
 };

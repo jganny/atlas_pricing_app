@@ -17,6 +17,7 @@ import { LocationCombobox } from "@/components/LocationCombobox";
 import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
+import { CustomsHolidayBanner } from "@/components/CustomsHolidayBanner";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
@@ -1031,6 +1032,7 @@ function SeaDeskInner() {
                 destination={destination}
                 tariffCount={tariffs.length}
               />
+              <CustomsHolidayBanner origin={origin} destination={destination} />
               <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer

@@ -35,6 +35,8 @@ import {
   type OptionBreakdown,
 } from "@/lib/quotes/option-breakdown";
 import { VendorCompareList } from "@/components/VendorCompareList";
+import { useCustomsHolidays } from "@/hooks/use-atlas-data";
+import { holidayAdvisoryText, upcomingHolidaysForLocations } from "@/lib/quotes/customs-holidays";
 
 function BreakdownPanel({
   option,
@@ -134,7 +136,19 @@ export function QuotePreviewModal({
   const cur = quote.currency || "USD";
   const chw = Number(d.chargeableWeight ?? 0);
   const inspectable = type === "air" || type === "sea" || options.length > 0;
-  const clientDoc = useMemo(() => buildClientQuoteDocument(quote), [quote]);
+  const { data: customsHolidays = [] } = useCustomsHolidays();
+  const upcomingHolidays = useMemo(
+    () =>
+      upcomingHolidaysForLocations(
+        [String(d.origin ?? ""), String(d.destination ?? "")],
+        customsHolidays,
+      ),
+    [d.origin, d.destination, customsHolidays],
+  );
+  const clientDoc = useMemo(
+    () => buildClientQuoteDocument(quote, customsHolidays),
+    [quote, customsHolidays],
+  );
   const [shareBusy, setShareBusy] = useState<string | null>(null);
 
   async function handlePrint() {
@@ -325,6 +339,18 @@ export function QuotePreviewModal({
                 activeId={inspectId}
                 testId="quote-preview-vendors"
               />
+            </div>
+          ) : null}
+
+          {upcomingHolidays.length > 0 ? (
+            <div
+              className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              data-testid="quote-holiday-advisory"
+            >
+              <strong className="mb-1 block">Customs/branch holiday advisory</strong>
+              {upcomingHolidays.map((h) => (
+                <div key={h.id}>{holidayAdvisoryText(h)}</div>
+              ))}
             </div>
           ) : null}
 
