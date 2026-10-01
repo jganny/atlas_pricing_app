@@ -33,6 +33,7 @@ import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboa
 import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import type { SavedQuote } from "@/lib/types";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
 
 const DEFAULT_TERMS = ensureIncidentalTerm(
   "1. Storage billed per CBM per day (or part thereof).\n" +
@@ -75,6 +76,27 @@ export default function WarehouseDeskPage() {
     const c = searchParams?.get("customer");
     if (c) setCustomer(c);
   }, [searchParams]);
+
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "warehouse",
+    origin: location,
+    destination: "",
+    currency,
+    customer,
+    carrierNames: [],
+  });
+
+  // Silently fill rate/handling/buy-total that have been consistent across
+  // this location's history — only fields still at their untouched default
+  // (0) are ever written.
+  useEffect(() => {
+    const result = historicalAutofill.warehouse;
+    if (!result) return;
+    if (ratePerCbm === 0 && result.ratePerCbm !== null) setRatePerCbm(result.ratePerCbm);
+    if (handling === 0 && result.handling !== null) setHandling(result.handling);
+    if (buyTotal === 0 && result.buyTotal !== null) setBuyTotal(result.buyTotal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.warehouse]);
 
   useEffect(() => {
     if (!loader.sourceQuote) return;

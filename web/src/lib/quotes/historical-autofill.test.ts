@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import {
+  extractCourierCharges,
+  extractTransportCharges,
+  extractWarehouseCharges,
   normalizeSurchargeName,
   pickConsistentValue,
   selectCandidateIds,
   withinLookbackDays,
   type HistoricalMatchFilter,
 } from "./historical-autofill";
-import type { EnquiryRecord } from "../types";
+import type { EnquiryRecord, SavedQuote } from "../types";
 
 // pickConsistentValue — n=2 requires exact agreement
 assert.equal(pickConsistentValue([{ value: 50, timestamp: 1 }, { value: 50, timestamp: 2 }]), 50);
@@ -100,5 +103,160 @@ const candidates = selectCandidateIds(
   now,
 );
 assert.deepEqual(candidates, ["same-customer", "other-customer"]);
+
+// selectCandidateIds — Courier/Transport/Warehouse don't require an incoterm
+const courierCandidates = selectCandidateIds(
+  [enquiry({ id: "courier-1", mode: "courier" })],
+  { deskType: "courier", origin: "BOM", destination: "LHR", currency: "USD" },
+  365,
+  25,
+  now,
+);
+assert.deepEqual(courierCandidates, ["courier-1"]);
+
+// selectCandidateIds — Warehouse matches with an empty destination
+const warehouseCandidates = selectCandidateIds(
+  [enquiry({ id: "wh-1", mode: "warehouse", origin: "Chennai", destination: "", currency: "INR" })],
+  { deskType: "warehouse", origin: "Chennai", destination: "", currency: "INR" },
+  365,
+  25,
+  now,
+);
+assert.deepEqual(warehouseCandidates, ["wh-1"]);
+
+function savedQuote(partial: Partial<SavedQuote> & { details: Record<string, unknown> }): SavedQuote {
+  return {
+    id: "q",
+    customer: "Acme",
+    creator: "u",
+    status: "quoted",
+    type: "quote",
+    currency: "INR",
+    timestamp: now,
+    ...partial,
+  };
+}
+
+// extractCourierCharges — Tier-1-only (same directoryCarrier), amounts only fill when consistent
+const courierFilter: HistoricalMatchFilter = {
+  deskType: "courier",
+  origin: "Mumbai",
+  destination: "Delhi",
+  currency: "INR",
+  scope: "domestic",
+  carrierName: "DHL",
+};
+function courierQuote(): SavedQuote {
+  return savedQuote({
+    details: {
+      originCity: "Mumbai",
+      destCity: "Delhi",
+      scope: "domestic",
+      carrierQuotes: [
+        {
+          directoryCarrier: "DHL",
+          manualSell: 1000,
+          manualBuy: 800,
+          surcharges: { fuelPct: 12, remoteAmount: 150 },
+        },
+      ],
+    },
+  });
+}
+const courierResult = extractCourierCharges([courierQuote(), courierQuote()], courierFilter);
+assert.equal(courierResult.manualSell, 1000);
+assert.equal(courierResult.manualBuy, 800);
+assert.equal(courierResult.fuelPct, 12);
+assert.equal(courierResult.remoteAmount, 150);
+assert.equal(courierResult.residentialAmount, null); // never set — no samples
+
+// extractCourierCharges — a different carrier's rate is never blended in
+const courierMixed = extractCourierCharges(
+  [courierQuote(), savedQuote({
+    details: {
+      originCity: "Mumbai",
+      destCity: "Delhi",
+      scope: "domestic",
+      carrierQuotes: [{ directoryCarrier: "FedEx", manualSell: 1500, manualBuy: 1200, surcharges: {} }],
+    },
+  })],
+  courierFilter,
+);
+assert.equal(courierMixed.manualSell, null); // only 1 DHL sample — below MIN_SAMPLES
+
+// extractCourierCharges — a scope mismatch (domestic vs international) is excluded
+const courierWrongScope = extractCourierCharges(
+  [courierQuote(), savedQuote({
+    details: {
+      originCity: "Mumbai",
+      destCity: "Delhi",
+      scope: "international",
+      carrierQuotes: [{ directoryCarrier: "DHL", manualSell: 1000, manualBuy: 800, surcharges: {} }],
+    },
+  })],
+  courierFilter,
+);
+assert.equal(courierWrongScope.manualSell, null); // only 1 domestic sample
+
+// extractTransportCharges — route lives on details.lanes[0], Tier-1-only by trucker name
+const transportFilter: HistoricalMatchFilter = {
+  deskType: "transport",
+  origin: "Chennai",
+  destination: "Bengaluru",
+  currency: "INR",
+  carrierName: "Sri Balaji Transport",
+};
+function transportQuote(freightSell: number): SavedQuote {
+  return savedQuote({
+    details: {
+      lanes: [{ id: "lane_0", origin: "Chennai", destination: "Bengaluru" }],
+      truckers: [
+        { name: "Sri Balaji Transport", freightSell, freightBuy: freightSell - 500, detention: 200, tolls: 100 },
+      ],
+    },
+  });
+}
+const transportResult = extractTransportCharges([transportQuote(5000), transportQuote(5000)], transportFilter);
+assert.equal(transportResult.freightSell, 5000);
+assert.equal(transportResult.freightBuy, 4500);
+assert.equal(transportResult.detention, 200);
+assert.equal(transportResult.tolls, 100);
+
+// extractTransportCharges — a different lane is excluded
+const transportWrongLane = extractTransportCharges(
+  [transportQuote(5000), savedQuote({
+    details: {
+      lanes: [{ id: "lane_0", origin: "Mumbai", destination: "Pune" }],
+      truckers: [{ name: "Sri Balaji Transport", freightSell: 5000, freightBuy: 4500, detention: 200, tolls: 100 }],
+    },
+  })],
+  transportFilter,
+);
+assert.equal(transportWrongLane.freightSell, null); // only 1 Chennai->Bengaluru sample
+
+// extractWarehouseCharges — matched purely by location, no carrier concept
+const warehouseFilter: HistoricalMatchFilter = {
+  deskType: "warehouse",
+  origin: "Chennai",
+  destination: "",
+  currency: "INR",
+};
+function warehouseQuote(ratePerCbm: number): SavedQuote {
+  return savedQuote({ details: { location: "Chennai", ratePerCbm, handling: 500, buyTotal: 4000 } });
+}
+const warehouseResult = extractWarehouseCharges(
+  [warehouseQuote(120), warehouseQuote(120)],
+  warehouseFilter,
+);
+assert.equal(warehouseResult.ratePerCbm, 120);
+assert.equal(warehouseResult.handling, 500);
+assert.equal(warehouseResult.buyTotal, 4000);
+
+// extractWarehouseCharges — a different location is excluded
+const warehouseWrongLocation = extractWarehouseCharges(
+  [warehouseQuote(120), savedQuote({ details: { location: "Mumbai", ratePerCbm: 90, handling: 300, buyTotal: 2000 } })],
+  warehouseFilter,
+);
+assert.equal(warehouseWrongLocation.ratePerCbm, null); // only 1 Chennai sample
 
 console.log("historical-autofill.test.ts: all assertions passed");

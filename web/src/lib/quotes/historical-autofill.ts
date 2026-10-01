@@ -101,12 +101,16 @@ function parseCreatedAt(createdAt: string): number {
 }
 
 export interface HistoricalMatchFilter {
-  deskType: "air" | "sea";
+  deskType: "air" | "sea" | "courier" | "transport" | "warehouse";
   origin: string;
   destination: string;
-  incoterm: string;
+  /** Air/Sea only — Courier/Transport/Warehouse don't have an incoterm. */
+  incoterm?: string;
   currency: string;
-  module: "export" | "import";
+  /** Air/Sea only. */
+  module?: "export" | "import";
+  /** Courier only — domestic vs. international rates don't mix. */
+  scope?: "domestic" | "international";
   carrierName?: string;
   customer?: string;
 }
@@ -131,7 +135,8 @@ export function selectCandidateIds(
   const currency = filter.currency.trim().toUpperCase();
   const customer = filter.customer ? normalizeCarrierName(filter.customer) : "";
 
-  if (!origin || !destination || !filter.incoterm.trim()) return [];
+  const needsIncoterm = filter.deskType === "air" || filter.deskType === "sea";
+  if (!origin || (needsIncoterm && !filter.incoterm?.trim())) return [];
 
   return enquiries
     .filter((e) => e.mode === filter.deskType)
@@ -181,7 +186,7 @@ export interface AirAutofillResult {
 export function extractAirCharges(quotes: SavedQuote[], filter: HistoricalMatchFilter): AirAutofillResult {
   const targetOrigin = normalizeCarrierName(filter.origin);
   const targetDest = normalizeCarrierName(filter.destination);
-  const targetIncoterm = filter.incoterm.trim().toUpperCase();
+  const targetIncoterm = (filter.incoterm ?? "").trim().toUpperCase();
   const targetCurrency = filter.currency.trim().toUpperCase();
   const targetCarrier = filter.carrierName ? normalizeCarrierName(filter.carrierName) : "";
 
@@ -308,7 +313,7 @@ export interface SeaAutofillResult {
 export function extractSeaCharges(quotes: SavedQuote[], filter: HistoricalMatchFilter): SeaAutofillResult {
   const targetOrigin = normalizeCarrierName(filter.origin);
   const targetDest = normalizeCarrierName(filter.destination);
-  const targetIncoterm = filter.incoterm.trim().toUpperCase();
+  const targetIncoterm = (filter.incoterm ?? "").trim().toUpperCase();
   const targetCurrency = filter.currency.trim().toUpperCase();
   const targetCarrier = filter.carrierName ? normalizeCarrierName(filter.carrierName) : "";
 
@@ -416,5 +421,179 @@ export function extractSeaCharges(quotes: SavedQuote[], filter: HistoricalMatchF
     lcl: { sell: pickConsistentValue(lclSell1), buy: pickConsistentValue(lclBuy1) },
     originSurcharges,
     destSurcharges,
+  };
+}
+
+export interface CourierAutofillResult {
+  marginPct: number | null;
+  manualSell: number | null;
+  manualBuy: number | null;
+  fuelPct: number | null;
+  remoteAmount: number | null;
+  residentialAmount: number | null;
+  saturdayAmount: number | null;
+  dgAmount: number | null;
+  insurancePct: number | null;
+  declaredValue: number | null;
+  oversizedAmount: number | null;
+}
+
+/**
+ * Courier surcharges are single scalars (no sell/buy split) and are
+ * genuinely carrier-specific — fuel %, remote fee etc. vary a lot between
+ * courier companies, so (unlike Air/Sea local surcharges) there is no
+ * Tier-2 any-carrier fallback: a value only fills in when the same
+ * directory carrier was used before.
+ */
+export function extractCourierCharges(quotes: SavedQuote[], filter: HistoricalMatchFilter): CourierAutofillResult {
+  const targetOrigin = normalizeCarrierName(filter.origin);
+  const targetDest = normalizeCarrierName(filter.destination);
+  const targetCurrency = filter.currency.trim().toUpperCase();
+  const targetCarrier = filter.carrierName ? normalizeCarrierName(filter.carrierName) : "";
+
+  const marginS: Sample[] = [];
+  const manualSellS: Sample[] = [];
+  const manualBuyS: Sample[] = [];
+  const fuelPctS: Sample[] = [];
+  const remoteAmountS: Sample[] = [];
+  const residentialAmountS: Sample[] = [];
+  const saturdayAmountS: Sample[] = [];
+  const dgAmountS: Sample[] = [];
+  const insurancePctS: Sample[] = [];
+  const declaredValueS: Sample[] = [];
+  const oversizedAmountS: Sample[] = [];
+
+  for (const quote of quotes) {
+    const d = quote.details ?? {};
+    if (filter.scope && String(d.scope ?? "") !== filter.scope) continue;
+    if (normalizeCarrierName(String(d.originCity ?? "")) !== targetOrigin) continue;
+    if (normalizeCarrierName(String(d.destCity ?? "")) !== targetDest) continue;
+    if ((quote.currency || "").trim().toUpperCase() !== targetCurrency) continue;
+    if (!targetCarrier) continue;
+
+    const timestamp = typeof quote.timestamp === "number" ? quote.timestamp : parseCreatedAt(quote.date || "");
+    const cards = Array.isArray(d.carrierQuotes) ? (d.carrierQuotes as Record<string, unknown>[]) : [];
+
+    for (const raw of cards) {
+      const name = normalizeCarrierName(String(raw.directoryCarrier ?? ""));
+      if (name !== targetCarrier) continue;
+      if (raw.marginPct) marginS.push({ value: Number(raw.marginPct), timestamp });
+      if (raw.manualSell) manualSellS.push({ value: Number(raw.manualSell), timestamp });
+      if (raw.manualBuy) manualBuyS.push({ value: Number(raw.manualBuy), timestamp });
+      const s = (raw.surcharges ?? {}) as Record<string, unknown>;
+      if (s.fuelPct) fuelPctS.push({ value: Number(s.fuelPct), timestamp });
+      if (s.remoteAmount) remoteAmountS.push({ value: Number(s.remoteAmount), timestamp });
+      if (s.residentialAmount) residentialAmountS.push({ value: Number(s.residentialAmount), timestamp });
+      if (s.saturdayAmount) saturdayAmountS.push({ value: Number(s.saturdayAmount), timestamp });
+      if (s.dgAmount) dgAmountS.push({ value: Number(s.dgAmount), timestamp });
+      if (s.insurancePct) insurancePctS.push({ value: Number(s.insurancePct), timestamp });
+      if (s.declaredValue) declaredValueS.push({ value: Number(s.declaredValue), timestamp });
+      if (s.oversizedAmount) oversizedAmountS.push({ value: Number(s.oversizedAmount), timestamp });
+    }
+  }
+
+  return {
+    marginPct: pickConsistentValue(marginS),
+    manualSell: pickConsistentValue(manualSellS),
+    manualBuy: pickConsistentValue(manualBuyS),
+    fuelPct: pickConsistentValue(fuelPctS),
+    remoteAmount: pickConsistentValue(remoteAmountS),
+    residentialAmount: pickConsistentValue(residentialAmountS),
+    saturdayAmount: pickConsistentValue(saturdayAmountS),
+    dgAmount: pickConsistentValue(dgAmountS),
+    insurancePct: pickConsistentValue(insurancePctS),
+    declaredValue: pickConsistentValue(declaredValueS),
+    oversizedAmount: pickConsistentValue(oversizedAmountS),
+  };
+}
+
+export interface TransportAutofillResult {
+  freightSell: number | null;
+  freightBuy: number | null;
+  detention: number | null;
+  tolls: number | null;
+}
+
+/**
+ * Transport quotes don't carry a flat origin/destination on `details` —
+ * the route lives on the first lane — so matching reads `d.lanes[0]`
+ * instead. Freight/detention/tolls are vendor-specific, so (like Courier)
+ * this is Tier-1-only: no any-carrier fallback.
+ */
+export function extractTransportCharges(quotes: SavedQuote[], filter: HistoricalMatchFilter): TransportAutofillResult {
+  const targetOrigin = normalizeCarrierName(filter.origin);
+  const targetDest = normalizeCarrierName(filter.destination);
+  const targetCurrency = filter.currency.trim().toUpperCase();
+  const targetCarrier = filter.carrierName ? normalizeCarrierName(filter.carrierName) : "";
+
+  const freightSellS: Sample[] = [];
+  const freightBuyS: Sample[] = [];
+  const detentionS: Sample[] = [];
+  const tollsS: Sample[] = [];
+
+  for (const quote of quotes) {
+    const d = quote.details ?? {};
+    const lanes = Array.isArray(d.lanes) ? (d.lanes as Record<string, unknown>[]) : [];
+    const firstLane = (lanes[0] ?? {}) as Record<string, unknown>;
+    const qOrigin = normalizeCarrierName(String(firstLane.origin ?? d.origin ?? ""));
+    const qDest = normalizeCarrierName(String(firstLane.destination ?? d.destination ?? ""));
+    if (qOrigin !== targetOrigin || qDest !== targetDest) continue;
+    if ((quote.currency || "").trim().toUpperCase() !== targetCurrency) continue;
+    if (!targetCarrier) continue;
+
+    const timestamp = typeof quote.timestamp === "number" ? quote.timestamp : parseCreatedAt(quote.date || "");
+    const truckers = Array.isArray(d.truckers) ? (d.truckers as Record<string, unknown>[]) : [];
+    for (const raw of truckers) {
+      const name = normalizeCarrierName(String(raw.name ?? ""));
+      if (name !== targetCarrier) continue;
+      if (raw.freightSell) freightSellS.push({ value: Number(raw.freightSell), timestamp });
+      if (raw.freightBuy) freightBuyS.push({ value: Number(raw.freightBuy), timestamp });
+      if (raw.detention) detentionS.push({ value: Number(raw.detention), timestamp });
+      if (raw.tolls) tollsS.push({ value: Number(raw.tolls), timestamp });
+    }
+  }
+
+  return {
+    freightSell: pickConsistentValue(freightSellS),
+    freightBuy: pickConsistentValue(freightBuyS),
+    detention: pickConsistentValue(detentionS),
+    tolls: pickConsistentValue(tollsS),
+  };
+}
+
+export interface WarehouseAutofillResult {
+  ratePerCbm: number | null;
+  handling: number | null;
+  buyTotal: number | null;
+}
+
+/**
+ * Warehouse has no carrier concept at all — just a storage location — so
+ * this matches purely on `details.location` (passed in as filter.origin by
+ * the caller) with a single consistent value per field, no Tier-1/2 split.
+ */
+export function extractWarehouseCharges(quotes: SavedQuote[], filter: HistoricalMatchFilter): WarehouseAutofillResult {
+  const targetLocation = normalizeCarrierName(filter.origin);
+  const targetCurrency = filter.currency.trim().toUpperCase();
+
+  const rateS: Sample[] = [];
+  const handlingS: Sample[] = [];
+  const buyTotalS: Sample[] = [];
+
+  for (const quote of quotes) {
+    const d = quote.details ?? {};
+    if (normalizeCarrierName(String(d.location ?? "")) !== targetLocation) continue;
+    if ((quote.currency || "").trim().toUpperCase() !== targetCurrency) continue;
+
+    const timestamp = typeof quote.timestamp === "number" ? quote.timestamp : parseCreatedAt(quote.date || "");
+    if (d.ratePerCbm) rateS.push({ value: Number(d.ratePerCbm), timestamp });
+    if (d.handling) handlingS.push({ value: Number(d.handling), timestamp });
+    if (d.buyTotal) buyTotalS.push({ value: Number(d.buyTotal), timestamp });
+  }
+
+  return {
+    ratePerCbm: pickConsistentValue(rateS),
+    handling: pickConsistentValue(handlingS),
+    buyTotal: pickConsistentValue(buyTotalS),
   };
 }

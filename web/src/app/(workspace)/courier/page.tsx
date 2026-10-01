@@ -65,6 +65,8 @@ import { searchPostalCodes, type PostalHit } from "@/lib/locations/postal-search
 import { searchLocations, type LocationHit } from "@/lib/locations/search";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { normalizeCarrierName } from "@/lib/quotes/historical-autofill";
 
 function isoFromAirport(hit: LocationHit): string | null {
   const c = (hit.country || "").trim();
@@ -212,6 +214,76 @@ function CourierDeskInner() {
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
   }, [activeLaneId, lanes]);
+
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "courier",
+    origin: originCity,
+    destination: destCity,
+    currency,
+    scope,
+    customer,
+    carrierNames: couriers.map((c) => c.directoryCarrier),
+  });
+
+  // Silently fill surcharge amounts (never the on/off toggle) and the manual
+  // sell/buy pair that have been consistent across this lane/scope/carrier's
+  // history — only fields still at their untouched default (0) are written.
+  useEffect(() => {
+    if (!Object.keys(historicalAutofill.courier).length) return;
+    setCouriers((prev) =>
+      prev.map((c) => {
+        if (!c.directoryCarrier.trim()) return c;
+        const result = historicalAutofill.courier[normalizeCarrierName(c.directoryCarrier)];
+        if (!result) return c;
+
+        let changed = false;
+        if (c.manualSell === 0 && result.manualSell !== null) changed = true;
+        if (c.manualBuy === 0 && result.manualBuy !== null) changed = true;
+        const nextSurcharges = { ...c.surcharges };
+        if (c.surcharges.fuelPct === 0 && result.fuelPct !== null) {
+          nextSurcharges.fuelPct = result.fuelPct;
+          changed = true;
+        }
+        if (c.surcharges.remoteAmount === 0 && result.remoteAmount !== null) {
+          nextSurcharges.remoteAmount = result.remoteAmount;
+          changed = true;
+        }
+        if (c.surcharges.residentialAmount === 0 && result.residentialAmount !== null) {
+          nextSurcharges.residentialAmount = result.residentialAmount;
+          changed = true;
+        }
+        if (c.surcharges.saturdayAmount === 0 && result.saturdayAmount !== null) {
+          nextSurcharges.saturdayAmount = result.saturdayAmount;
+          changed = true;
+        }
+        if (c.surcharges.dgAmount === 0 && result.dgAmount !== null) {
+          nextSurcharges.dgAmount = result.dgAmount;
+          changed = true;
+        }
+        if (c.surcharges.insurancePct === 0 && result.insurancePct !== null) {
+          nextSurcharges.insurancePct = result.insurancePct;
+          changed = true;
+        }
+        if (c.surcharges.declaredValue === 0 && result.declaredValue !== null) {
+          nextSurcharges.declaredValue = result.declaredValue;
+          changed = true;
+        }
+        if (c.surcharges.oversizedAmount === 0 && result.oversizedAmount !== null) {
+          nextSurcharges.oversizedAmount = result.oversizedAmount;
+          changed = true;
+        }
+
+        if (!changed) return c;
+        return {
+          ...c,
+          manualSell: c.manualSell === 0 && result.manualSell !== null ? result.manualSell : c.manualSell,
+          manualBuy: c.manualBuy === 0 && result.manualBuy !== null ? result.manualBuy : c.manualBuy,
+          surcharges: nextSurcharges,
+        };
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.courier]);
 
   function updateSelectedCourier(patch: Partial<CourierOption>) {
     const id = activeCourier?.id;

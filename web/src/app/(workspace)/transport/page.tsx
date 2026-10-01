@@ -57,6 +57,8 @@ import {
 } from "@/lib/desk/constants";
 import { computeGp, ensureIncidentalTerm } from "@/lib/pricing/quote-display";
 import { formatCurrency } from "@/lib/utils";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { normalizeCarrierName } from "@/lib/quotes/historical-autofill";
 
 const DEFAULT_TERMS = ensureIncidentalTerm(
   "1. Rates exclude detention beyond free hours unless stated.\n" +
@@ -134,6 +136,50 @@ export default function TransportDeskPage() {
   const freightSell = selectedTrucker?.freightSell ?? 0;
   const detention = selectedTrucker?.detention ?? 0;
   const tolls = selectedTrucker?.tolls ?? 0;
+
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "transport",
+    origin,
+    destination,
+    currency,
+    customer,
+    carrierNames: truckers.map((t) => t.name),
+  });
+
+  // Silently fill freight/detention/tolls that have been consistent across
+  // this lane/trucker's history — only fields still at their untouched
+  // default (0) are ever written.
+  useEffect(() => {
+    if (!Object.keys(historicalAutofill.transport).length) return;
+    setTruckers((prev) =>
+      prev.map((t) => {
+        if (!t.name.trim()) return t;
+        const result = historicalAutofill.transport[normalizeCarrierName(t.name)];
+        if (!result) return t;
+
+        let changed = false;
+        const next = { ...t };
+        if (t.freightSell === 0 && result.freightSell !== null) {
+          next.freightSell = result.freightSell;
+          changed = true;
+        }
+        if (t.freightBuy === 0 && result.freightBuy !== null) {
+          next.freightBuy = result.freightBuy;
+          changed = true;
+        }
+        if (t.detention === 0 && result.detention !== null) {
+          next.detention = result.detention;
+          changed = true;
+        }
+        if (t.tolls === 0 && result.tolls !== null) {
+          next.tolls = result.tolls;
+          changed = true;
+        }
+        return changed ? next : t;
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.transport]);
 
   function updateSelectedTrucker(patch: Partial<TruckerOption>) {
     const id = selectedTrucker?.id;
