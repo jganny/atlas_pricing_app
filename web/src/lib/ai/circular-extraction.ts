@@ -3,6 +3,7 @@
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getFirebaseApp } from "@/lib/firebase/client";
 import type { WeightBreakName } from "@atlas/pricing-core";
+import type { CourierExtractionResult } from "@/lib/quotes/courier-tariff";
 
 export class ExtractionError extends Error {
   constructor(
@@ -82,6 +83,26 @@ export async function extractSeaTariffFromCircular(
   const call = httpsCallable<{ storagePath: string; carrierHint?: string }, ExtractedSeaTariff>(
     getFunctions(getFirebaseApp(), "us-central1"),
     "extractSeaTariffFromCircular",
+  );
+  try {
+    const res = await call({ storagePath, carrierHint });
+    return res.data;
+  } catch (e) {
+    rethrowAsExtractionError(e);
+  }
+}
+
+/** Same idea, for courier rate cards — reads the circular's PDF server-side and
+ * returns a weight×zone grid draft only; nothing is published until the desk
+ * reviews it and calls publishCourierTariffBook via
+ * buildCourierTariffBookFromExtraction. */
+export async function extractCourierTariffFromCircular(
+  storagePath: string,
+  carrierHint?: string,
+): Promise<CourierExtractionResult> {
+  const call = httpsCallable<{ storagePath: string; carrierHint?: string }, CourierExtractionResult>(
+    getFunctions(getFirebaseApp(), "us-central1"),
+    "extractCourierTariffFromCircular",
   );
   try {
     const res = await call({ storagePath, carrierHint });

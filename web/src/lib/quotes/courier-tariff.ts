@@ -823,3 +823,93 @@ export function mergeCourierTariffBooks(live: CourierTariffBook[]): CourierTarif
   const extra = local.filter((b) => b.id && !seen.has(b.id));
   return dedupeCourierTariffBooks([...extra, ...live].map(repairCourierTariffBook));
 }
+
+export type CourierExtractionColumn = { label: string; confidence: "high" | "needs_check"; note: string };
+
+export type CourierExtractionResult = {
+  carrier: string;
+  carrierCode: string;
+  direction: CourierTariffDirection;
+  currency: string;
+  sourcePage: number | null;
+  weights: number[];
+  columns: CourierExtractionColumn[];
+  grid: Array<Array<number | null>>;
+  zoneLegend: Record<string, string> | null;
+};
+
+/**
+ * Turns an AI-extracted weight×zone grid into the same CourierTariffBook
+ * shape parseCourierTariffSheets builds from an Excel upload — reusing the
+ * same column-label resolution (placeKey: zone, then country, then a
+ * generic fallback) and the same zone-legend resolution (countryPlace +
+ * zoneToken) so both paths feed lookupCourierTariff identically.
+ */
+export function buildCourierTariffBookFromExtraction(
+  result: CourierExtractionResult,
+  uploadedAt: string,
+  fileName?: string,
+): CourierTariffBook {
+  const direction = result.direction;
+  const warnings: string[] = [];
+
+  const zoneMap = new Map<string, string>();
+  if (result.zoneLegend) {
+    for (const [countryText, zoneText] of Object.entries(result.zoneLegend)) {
+      const place = countryPlace(countryText);
+      const zone = zoneToken(zoneText) || zoneToken(`Zone ${zoneText}`);
+      if (place && zone) zoneMap.set(place.code, zone.code);
+    }
+  }
+
+  const lanes: CourierTariffLane[] = [];
+  result.columns.forEach((col, colIdx) => {
+    const place = placeKey(col.label);
+    if (!place) {
+      warnings.push(`Couldn't recognize column "${col.label}" as a zone or country — left out.`);
+      return;
+    }
+    const breaks: CourierTariffBreak[] = [];
+    result.weights.forEach((kg, rowIdx) => {
+      const rate = result.grid[rowIdx]?.[colIdx];
+      if (typeof rate === "number" && rate > 0) breaks.push({ kg, rate });
+    });
+    if (!breaks.length) return;
+    const originCode = direction === "import" ? place.code : "IN";
+    const destCode = direction === "import" ? "IN" : place.code;
+    lanes.push({
+      origin: originCode,
+      destination: destCode,
+      destinationLabel: place.label,
+      direction,
+      breaks: uniqueBreaks(breaks),
+    });
+    if (col.confidence === "needs_check") {
+      warnings.push(`${place.label}${col.note ? `: ${col.note}` : " — needs a check"}.`);
+    }
+  });
+
+  if (!zoneMap.size && lanes.some((l) => /^ZONE-/.test(l.origin) || /^ZONE-/.test(l.destination))) {
+    warnings.push("This book prices by zone but no country→zone legend was found — add one via the Excel importer so lookups match automatically.");
+  }
+
+  const carrierInfo = inferCourierCarrier(result.carrier || "");
+  const year = new Date().getFullYear();
+
+  return {
+    id: `courier_${carrierInfo.id}_${Date.now()}`,
+    carrier: result.carrier || carrierInfo.name,
+    carrierCode: result.carrierCode || carrierInfo.code,
+    carrierId: carrierInfo.id,
+    year,
+    validFrom: `${year}-01`,
+    validTo: `${year}-12`,
+    currency: result.currency || "INR",
+    maxKg: COURIER_TARIFF_MAX_KG,
+    lanes,
+    zoneMap: zoneMap.size ? Object.fromEntries(zoneMap) : undefined,
+    warnings: warnings.length ? warnings : undefined,
+    fileName,
+    uploadedAt,
+  };
+}

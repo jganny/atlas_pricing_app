@@ -937,7 +937,7 @@ async function downloadCircularPdfBase64(storagePath, logLabel) {
   }
 }
 
-async function askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, logLabel) {
+async function askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, logLabel, maxTokens = 2000) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -947,7 +947,7 @@ async function askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, log
     },
     body: JSON.stringify({
       model: "claude-sonnet-5-5",
-      max_tokens: 2000,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages: [
         {
@@ -1117,6 +1117,106 @@ exports.extractSeaTariffFromCircular = functions
     } catch (err) {
       if (err instanceof functions.https.HttpsError) throw err;
       functions.logger.warn("extractSeaTariffFromCircular error", { message: err.message });
+      throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
+    }
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// extractCourierTariffFromCircular
+//
+// Courier rate cards are a weight × zone/country grid, not a flat list, so
+// unlike Air/Sea this returns a grid shape: ascending weight breaks (rows),
+// zone or country columns, and the rate at each intersection. Confidence is
+// per COLUMN (not per cell) to keep a large grid's output manageable. A
+// country→zone legend is extracted too when the circular prints one, so the
+// desk doesn't have to supply it separately. Draft only — the review screen
+// builds a CourierTariffBook client-side and calls the existing
+// publishCourierTariffBook once confirmed.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.extractCourierTariffFromCircular = functions
+  .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 150, memory: "512MB" })
+  .https.onCall(async (data, context) => {
+    const { storagePath, carrierHint, apiKey } = requireCircularInput(data, context);
+    const pdfBase64 = await downloadCircularPdfBase64(storagePath, "extractCourierTariffFromCircular");
+
+    const systemPrompt =
+      "You read courier/parcel rate circulars (PDF) for a freight-forwarding pricing tool and extract the real " +
+      "weight-break × zone (or country) rate grid — never invent or estimate a number that isn't on the page.\n\n" +
+      "Work out the direction: \"export\" (India outbound to other countries), \"import\" (inbound to India), or " +
+      "\"domestic\" (within India) — from the document's title/context.\n\n" +
+      "List every weight break (in kg) that has its own row, ascending, at most 20. List every zone or country " +
+      "column exactly as labelled in the circular (e.g. \"Zone A\", \"USA\", \"UK\"), at most 16 — if there are more, " +
+      "include only the first 16 and say so in a column note. If the circular ALSO prints a country→zone legend " +
+      "table (e.g. \"Zone A: USA, Canada\"), extract it into zoneLegend; otherwise set zoneLegend to null.\n\n" +
+      "Respond with ONLY a single JSON object, no markdown fences, no prose, matching exactly:\n" +
+      '{"carrier":"<courier company name>","carrierCode":"<short code, e.g. FDX/DHL/UPS/BD>",' +
+      '"direction":"export"|"import"|"domestic","currency":"<3-letter currency code>",' +
+      '"sourcePage":<page number the rate table is on>,"weights":[<kg numbers, ascending>],' +
+      '"columns":[{"label":"<zone or country as printed>","confidence":"high"|"needs_check",' +
+      '"note":"<short reason, only when needs_check>"}],' +
+      '"grid":[[<rate or null for each column, one row per weight, in the same order as weights/columns>]],' +
+      '"zoneLegend":{"<country as printed>":"<zone as printed>", ...}|null}\n\n' +
+      "Use null (never 0 or a guess) for any grid cell not clearly printed on the page. " +
+      "If the circular covers more than one carrier or service level, extract only the first one and say so in a note on the first column.";
+
+    try {
+      const userText = carrierHint
+        ? `This circular is from ${carrierHint}. Extract its weight/zone rate grid as instructed.`
+        : "Extract this circular's weight/zone rate grid as instructed.";
+      const parsed = await askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, "extractCourierTariffFromCircular", 5000);
+
+      const weights = Array.isArray(parsed?.weights)
+        ? parsed.weights.map((w) => Number(w)).filter((w) => Number.isFinite(w) && w > 0).slice(0, 20)
+        : [];
+      const columnsIn = Array.isArray(parsed?.columns) ? parsed.columns : [];
+      const columns = columnsIn
+        .map((c) => {
+          const label = typeof c?.label === "string" ? c.label.trim() : "";
+          if (!label) return null;
+          return {
+            label,
+            confidence: c?.confidence === "needs_check" ? "needs_check" : "high",
+            note: typeof c?.note === "string" ? c.note.slice(0, 300) : "",
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 16);
+
+      const gridIn = Array.isArray(parsed?.grid) ? parsed.grid : [];
+      const grid = weights.map((_, rowIdx) => {
+        const rowIn = Array.isArray(gridIn[rowIdx]) ? gridIn[rowIdx] : [];
+        return columns.map((_, colIdx) => {
+          const v = Number(rowIn[colIdx]);
+          return Number.isFinite(v) && v > 0 ? v : null;
+        });
+      });
+
+      const zoneLegendIn = parsed?.zoneLegend && typeof parsed.zoneLegend === "object" ? parsed.zoneLegend : null;
+      let zoneLegend = null;
+      if (zoneLegendIn) {
+        zoneLegend = {};
+        for (const [country, zone] of Object.entries(zoneLegendIn)) {
+          if (typeof country === "string" && typeof zone === "string" && country.trim() && zone.trim()) {
+            zoneLegend[country.trim().slice(0, 80)] = zone.trim().slice(0, 40);
+          }
+        }
+        if (!Object.keys(zoneLegend).length) zoneLegend = null;
+      }
+
+      return {
+        carrier: typeof parsed?.carrier === "string" ? parsed.carrier.slice(0, 120) : (carrierHint || ""),
+        carrierCode: typeof parsed?.carrierCode === "string" ? parsed.carrierCode.slice(0, 10).toUpperCase() : "",
+        direction: ["export", "import", "domestic"].includes(parsed?.direction) ? parsed.direction : "export",
+        currency: typeof parsed?.currency === "string" ? parsed.currency.slice(0, 6).toUpperCase() : "INR",
+        sourcePage: Number.isFinite(Number(parsed?.sourcePage)) ? Number(parsed.sourcePage) : null,
+        weights,
+        columns,
+        grid,
+        zoneLegend,
+      };
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      functions.logger.warn("extractCourierTariffFromCircular error", { message: err.message });
       throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
     }
   });

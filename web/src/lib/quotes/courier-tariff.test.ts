@@ -8,8 +8,10 @@ import {
   courierTariffNeedsReupload,
   repairCourierTariffBook,
   dedupeCourierTariffBooks,
+  buildCourierTariffBookFromExtraction,
   COURIER_TARIFF_MAX_KG,
   COURIER_TARIFF_MARKUP_PCT,
+  type CourierExtractionResult,
   type CourierTariffBook,
 } from "./courier-tariff";
 
@@ -314,5 +316,56 @@ const dup = dedupeCourierTariffBooks([
 ]);
 assert.equal(dup.length, 1);
 assert.equal(dup[0].id, "export-dup");
+
+// buildCourierTariffBookFromExtraction — AI-extracted grid → CourierTariffBook
+const extraction: CourierExtractionResult = {
+  carrier: "FedEx",
+  carrierCode: "FDX",
+  direction: "export",
+  currency: "INR",
+  sourcePage: 2,
+  weights: [0.5, 1, 2],
+  columns: [
+    { label: "Zone A", confidence: "high", note: "" },
+    { label: "USA", confidence: "needs_check", note: "smudged print" },
+    { label: "???", confidence: "high", note: "" },
+  ],
+  grid: [
+    [2450, 2600, null],
+    [2800, 2950, null],
+    [3400, 3600, null],
+  ],
+  zoneLegend: { USA: "Zone A", Canada: "Zone A" },
+};
+const extracted = buildCourierTariffBookFromExtraction(extraction, "2026-09-16T00:00:00.000Z", "circular.pdf");
+assert.equal(extracted.carrierId, "fedex");
+assert.equal(extracted.currency, "INR");
+// Unrecognized "???" column is dropped, not published as a lane.
+assert.equal(extracted.lanes.length, 2);
+const zoneALane = extracted.lanes.find((l) => l.destinationLabel === "Zone A");
+assert.ok(zoneALane, "Zone A lane");
+assert.equal(zoneALane!.origin, "IN");
+assert.equal(zoneALane!.destination, "ZONE-A");
+assert.deepEqual(zoneALane!.breaks, [
+  { kg: 0.5, rate: 2450 },
+  { kg: 1, rate: 2800 },
+  { kg: 2, rate: 3400 },
+]);
+// Zone legend resolves USA → ZONE-A.
+assert.equal(extracted.zoneMap?.US, "ZONE-A");
+// A flagged column surfaces as a warning rather than silently publishing.
+assert.ok(extracted.warnings?.some((w) => w.includes("USA")));
+assert.ok(extracted.warnings?.some((w) => w.includes("???")));
+
+// import direction swaps origin/destination
+const importExtraction: CourierExtractionResult = {
+  ...extraction,
+  direction: "import",
+  columns: [{ label: "Zone A", confidence: "high", note: "" }],
+  grid: [[2450], [2800], [3400]],
+};
+const imported = buildCourierTariffBookFromExtraction(importExtraction, "2026-09-16T00:00:00.000Z");
+assert.equal(imported.lanes[0].origin, "ZONE-A");
+assert.equal(imported.lanes[0].destination, "IN");
 
 console.log("courier-tariff tests passed");

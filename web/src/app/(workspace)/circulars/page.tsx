@@ -31,6 +31,7 @@ import {
 import { canAccessVendorsDirectory } from "@/lib/auth/directory-access";
 import { AirTariffExtractionReview } from "@/components/AirTariffExtractionReview";
 import { SeaTariffExtractionReview } from "@/components/SeaTariffExtractionReview";
+import { CourierTariffExtractionReview } from "@/components/CourierTariffExtractionReview";
 import type { CircularRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +61,7 @@ export default function CircularsPage() {
     Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number }>
   >([]);
   const [courierBook, setCourierBook] = useState<CourierTariffBook | null>(null);
-  const [extractCircular, setExtractCircular] = useState<{ circular: CircularRecord; kind: "air" | "sea" } | null>(null);
+  const [extractCircular, setExtractCircular] = useState<{ circular: CircularRecord; kind: "air" | "sea" | "courier" } | null>(null);
   const tariffYear = new Date().getFullYear();
 
   const filtered = useMemo(() => {
@@ -525,7 +526,7 @@ export default function CircularsPage() {
                       Open
                     </a>
                   ) : null}
-                  {canManage && c.category === "airline_tariff" && c.storagePath ? (
+                  {canManage && c.category === "airline_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
                     <Button
                       type="button"
                       variant="secondary"
@@ -536,12 +537,23 @@ export default function CircularsPage() {
                       Extract rates with AI
                     </Button>
                   ) : null}
-                  {canManage && c.category === "sea_tariff" && c.storagePath ? (
+                  {canManage && c.category === "sea_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
                       onClick={() => setExtractCircular({ circular: c, kind: "sea" })}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Extract rates with AI
+                    </Button>
+                  ) : null}
+                  {canManage && c.category === "courier_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setExtractCircular({ circular: c, kind: "courier" })}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                       Extract rates with AI
@@ -652,6 +664,17 @@ export default function CircularsPage() {
           uploadedBy={user?.username || "unknown"}
           onClose={() => setExtractCircular(null)}
           onPublished={() => void queryClient.invalidateQueries({ queryKey: queryKeys.seaTariffs })}
+        />
+      ) : null}
+      {extractCircular?.kind === "courier" ? (
+        <CourierTariffExtractionReview
+          circular={extractCircular.circular}
+          uploadedBy={user?.username || "unknown"}
+          onClose={() => setExtractCircular(null)}
+          onPublished={() => {
+            queryClient.setQueryData(queryKeys.courierTariffs, mergeCourierTariffBooks(courierBooks));
+            void queryClient.invalidateQueries({ queryKey: queryKeys.courierTariffs });
+          }}
         />
       ) : null}
     </div>
