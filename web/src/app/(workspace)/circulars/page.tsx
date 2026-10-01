@@ -30,6 +30,7 @@ import {
 } from "@/lib/quotes/courier-tariff";
 import { canAccessVendorsDirectory } from "@/lib/auth/directory-access";
 import { AirTariffExtractionReview } from "@/components/AirTariffExtractionReview";
+import { SeaTariffExtractionReview } from "@/components/SeaTariffExtractionReview";
 import type { CircularRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +60,7 @@ export default function CircularsPage() {
     Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number }>
   >([]);
   const [courierBook, setCourierBook] = useState<CourierTariffBook | null>(null);
-  const [extractCircular, setExtractCircular] = useState<CircularRecord | null>(null);
+  const [extractCircular, setExtractCircular] = useState<{ circular: CircularRecord; kind: "air" | "sea" } | null>(null);
   const tariffYear = new Date().getFullYear();
 
   const filtered = useMemo(() => {
@@ -529,7 +530,18 @@ export default function CircularsPage() {
                       type="button"
                       variant="secondary"
                       size="sm"
-                      onClick={() => setExtractCircular(c)}
+                      onClick={() => setExtractCircular({ circular: c, kind: "air" })}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Extract rates with AI
+                    </Button>
+                  ) : null}
+                  {canManage && c.category === "sea_tariff" && c.storagePath ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setExtractCircular({ circular: c, kind: "sea" })}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                       Extract rates with AI
@@ -626,12 +638,20 @@ export default function CircularsPage() {
         </Card>
       </div>
 
-      {extractCircular ? (
+      {extractCircular?.kind === "air" ? (
         <AirTariffExtractionReview
-          circular={extractCircular}
+          circular={extractCircular.circular}
           uploadedBy={user?.username || "unknown"}
           onClose={() => setExtractCircular(null)}
           onPublished={() => void queryClient.invalidateQueries({ queryKey: queryKeys.airTariffs })}
+        />
+      ) : null}
+      {extractCircular?.kind === "sea" ? (
+        <SeaTariffExtractionReview
+          circular={extractCircular.circular}
+          uploadedBy={user?.username || "unknown"}
+          onClose={() => setExtractCircular(null)}
+          onPublished={() => void queryClient.invalidateQueries({ queryKey: queryKeys.seaTariffs })}
         />
       ) : null}
     </div>

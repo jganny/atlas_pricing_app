@@ -903,39 +903,85 @@ exports.atlasCopilotStream = functions
 // ─────────────────────────────────────────────────────────────────────────────
 const AIR_BREAK_KEYS = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
 
+/** Shared by every "read a circular PDF, ask Claude to extract rates" function below. */
+function requireCircularInput(data, context) {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+  }
+  const storagePath = typeof data?.storagePath === "string" ? data.storagePath.trim() : "";
+  if (!storagePath || !storagePath.startsWith("circulars/")) {
+    throw new functions.https.HttpsError("invalid-argument", "A valid circular storage path is required.");
+  }
+  const carrierHint = typeof data?.carrierHint === "string" ? data.carrierHint.slice(0, 80) : "";
+  const apiKey = anthropicApiKey.value();
+  if (!apiKey) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "AI rate extraction is not configured yet. Ask your admin to set ANTHROPIC_API_KEY."
+    );
+  }
+  return { storagePath, carrierHint, apiKey };
+}
+
+async function downloadCircularPdfBase64(storagePath, logLabel) {
+  try {
+    const [buffer] = await admin.storage().bucket().file(storagePath).download();
+    if (buffer.length > 28 * 1024 * 1024) {
+      throw new functions.https.HttpsError("invalid-argument", "This PDF is too large to read (28MB limit).");
+    }
+    return buffer.toString("base64");
+  } catch (err) {
+    if (err instanceof functions.https.HttpsError) throw err;
+    functions.logger.warn(`${logLabel}: download failed`, { message: err.message, storagePath });
+    throw new functions.https.HttpsError("not-found", "Could not read that circular from storage.");
+  }
+}
+
+async function askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, logLabel) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-5-5",
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfBase64 } },
+            { type: "text", text: userText },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    functions.logger.warn(`${logLabel}: API request failed`, { status: response.status });
+    throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
+  }
+
+  const payload = await response.json();
+  const raw = (payload?.content?.[0]?.text || "").trim();
+  const jsonText = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  try {
+    return JSON.parse(jsonText);
+  } catch {
+    functions.logger.warn(`${logLabel}: non-JSON reply`, { raw: raw.slice(0, 500) });
+    throw new functions.https.HttpsError("internal", "The AI's reply wasn't in the expected format. Try again.");
+  }
+}
+
 exports.extractAirTariffFromCircular = functions
   .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 120, memory: "512MB" })
   .https.onCall(async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
-    }
-
-    const storagePath = typeof data?.storagePath === "string" ? data.storagePath.trim() : "";
-    if (!storagePath || !storagePath.startsWith("circulars/")) {
-      throw new functions.https.HttpsError("invalid-argument", "A valid circular storage path is required.");
-    }
-    const carrierHint = typeof data?.carrierHint === "string" ? data.carrierHint.slice(0, 80) : "";
-
-    const apiKey = anthropicApiKey.value();
-    if (!apiKey) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "AI rate extraction is not configured yet. Ask your admin to set ANTHROPIC_API_KEY."
-      );
-    }
-
-    let pdfBase64;
-    try {
-      const [buffer] = await admin.storage().bucket().file(storagePath).download();
-      if (buffer.length > 28 * 1024 * 1024) {
-        throw new functions.https.HttpsError("invalid-argument", "This PDF is too large to read (28MB limit).");
-      }
-      pdfBase64 = buffer.toString("base64");
-    } catch (err) {
-      if (err instanceof functions.https.HttpsError) throw err;
-      functions.logger.warn("extractAirTariffFromCircular: download failed", { message: err.message, storagePath });
-      throw new functions.https.HttpsError("not-found", "Could not read that circular from storage.");
-    }
+    const { storagePath, carrierHint, apiKey } = requireCircularInput(data, context);
+    const pdfBase64 = await downloadCircularPdfBase64(storagePath, "extractAirTariffFromCircular");
 
     const systemPrompt =
       "You read airline general cargo rate circulars (PDF) for a freight-forwarding pricing tool and extract " +
@@ -954,50 +1000,10 @@ exports.extractAirTariffFromCircular = functions
       "If the circular covers more than one lane or carrier, extract only the first lane's rates and say so in a note.";
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-5-5",
-          max_tokens: 2000,
-          system: systemPrompt,
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfBase64 } },
-                {
-                  type: "text",
-                  text: carrierHint
-                    ? `This circular is from ${carrierHint}. Extract its weight-break sell/buy rates as instructed.`
-                    : "Extract this circular's weight-break sell/buy rates as instructed.",
-                },
-              ],
-            },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        functions.logger.warn("extractAirTariffFromCircular: API request failed", { status: response.status });
-        throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
-      }
-
-      const payload = await response.json();
-      const raw = (payload?.content?.[0]?.text || "").trim();
-      const jsonText = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-
-      let parsed;
-      try {
-        parsed = JSON.parse(jsonText);
-      } catch {
-        functions.logger.warn("extractAirTariffFromCircular: non-JSON reply", { raw: raw.slice(0, 500) });
-        throw new functions.https.HttpsError("internal", "The AI's reply wasn't in the expected format. Try again.");
-      }
+      const userText = carrierHint
+        ? `This circular is from ${carrierHint}. Extract its weight-break sell/buy rates as instructed.`
+        : "Extract this circular's weight-break sell/buy rates as instructed.";
+      const parsed = await askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, "extractAirTariffFromCircular");
 
       const breaksIn = parsed?.breaks && typeof parsed.breaks === "object" ? parsed.breaks : {};
       const breaks = {};
@@ -1025,6 +1031,92 @@ exports.extractAirTariffFromCircular = functions
     } catch (err) {
       if (err instanceof functions.https.HttpsError) throw err;
       functions.logger.warn("extractAirTariffFromCircular error", { message: err.message });
+      throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
+    }
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// extractSeaTariffFromCircular
+//
+// Same idea as extractAirTariffFromCircular, for sea freight tariffs. Unlike
+// Air's fixed set of 7 weight breaks, a sea circular's container mix varies
+// (20'GP/40'GP/40'HC are universal, reefer/flat-rack/open-top are not), so
+// Claude returns whatever container rows the PDF actually prices, plus one
+// LCL rate when the circular quotes LCL. Returns a draft only — the review
+// screen calls publishSeaTariffRow once confirmed.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.extractSeaTariffFromCircular = functions
+  .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 120, memory: "512MB" })
+  .https.onCall(async (data, context) => {
+    const { storagePath, carrierHint, apiKey } = requireCircularInput(data, context);
+    const pdfBase64 = await downloadCircularPdfBase64(storagePath, "extractSeaTariffFromCircular");
+
+    const systemPrompt =
+      "You read ocean freight rate circulars (PDF) for a freight-forwarding pricing tool and extract the real " +
+      "per-container sell and buy (cost) rates, plus LCL if quoted — never invent or estimate a number that isn't on the page.\n\n" +
+      "Container types use this exact notation: 20'GP, 40'GP, 40'HC, 45'HC, 20'RF, 40'RF, 20'FR, 40'FR, 20'OT, 40'OT. " +
+      "Only include a container row for a type the circular actually prices.\n\n" +
+      "Respond with ONLY a single JSON object, no markdown fences, no prose, matching exactly:\n" +
+      '{"carrier":"<shipping line name>","carrierCode":"<2-4 letter SCAC/line code if shown, else best guess>",' +
+      '"origin":"<origin port, 5-letter UN/LOCODE if shown else port name>",' +
+      '"destination":"<destination port, same format>","currency":"<3-letter currency code>",' +
+      '"sourcePage":<page number the rate table is on>,' +
+      '"containers":[{"type":"<container type from the list above>","sell":<number or null>,"buy":<number or null>,' +
+      '"confidence":"high"|"needs_check","note":"<short reason, only when needs_check>"}],' +
+      '"lclRate":{"sell":<number or null>,"buy":<number or null>,"confidence":"high"|"needs_check","note":"<reason>"}|null}\n\n' +
+      "Use null (never 0 or a guess) and \"confidence\":\"needs_check\" with a short note for any value that is not " +
+      'clearly printed on the page. Set "lclRate" to null (not a zeroed object) when the circular has no LCL rate at all. ' +
+      "If the circular covers more than one lane or carrier, extract only the first lane's rates and say so in a note.";
+
+    try {
+      const userText = carrierHint
+        ? `This circular is from ${carrierHint}. Extract its container and LCL sell/buy rates as instructed.`
+        : "Extract this circular's container and LCL sell/buy rates as instructed.";
+      const parsed = await askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, "extractSeaTariffFromCircular");
+
+      const containersIn = Array.isArray(parsed?.containers) ? parsed.containers : [];
+      const containers = containersIn
+        .map((c) => {
+          const type = typeof c?.type === "string" ? c.type.trim() : "";
+          if (!type) return null;
+          const sell = Number(c?.sell);
+          const buy = Number(c?.buy);
+          return {
+            type,
+            sell: Number.isFinite(sell) ? sell : null,
+            buy: Number.isFinite(buy) ? buy : null,
+            confidence: c?.confidence === "needs_check" ? "needs_check" : "high",
+            note: typeof c?.note === "string" ? c.note.slice(0, 300) : "",
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 12);
+
+      const lclIn = parsed?.lclRate && typeof parsed.lclRate === "object" ? parsed.lclRate : null;
+      const lclSell = Number(lclIn?.sell);
+      const lclBuy = Number(lclIn?.buy);
+      const lclRate = lclIn
+        ? {
+            sell: Number.isFinite(lclSell) ? lclSell : null,
+            buy: Number.isFinite(lclBuy) ? lclBuy : null,
+            confidence: lclIn.confidence === "needs_check" ? "needs_check" : "high",
+            note: typeof lclIn.note === "string" ? lclIn.note.slice(0, 300) : "",
+          }
+        : null;
+
+      return {
+        carrier: typeof parsed?.carrier === "string" ? parsed.carrier.slice(0, 120) : (carrierHint || ""),
+        carrierCode: typeof parsed?.carrierCode === "string" ? parsed.carrierCode.slice(0, 10).toUpperCase() : "",
+        origin: typeof parsed?.origin === "string" ? parsed.origin.slice(0, 40).toUpperCase() : "",
+        destination: typeof parsed?.destination === "string" ? parsed.destination.slice(0, 40).toUpperCase() : "",
+        currency: typeof parsed?.currency === "string" ? parsed.currency.slice(0, 6).toUpperCase() : "USD",
+        sourcePage: Number.isFinite(Number(parsed?.sourcePage)) ? Number(parsed.sourcePage) : null,
+        containers,
+        lclRate,
+      };
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      functions.logger.warn("extractSeaTariffFromCircular error", { message: err.message });
       throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
     }
   });

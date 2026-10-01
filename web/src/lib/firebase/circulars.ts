@@ -259,3 +259,65 @@ export async function publishAirTariffBreaks(
     await addDoc(collection(db, "air_tariffs"), payload);
   }
 }
+
+/**
+ * Publishes a lane/carrier's sea freight rates (per-container + LCL) read
+ * from the line's own circular by AI extraction and confirmed by the desk.
+ * sea_tariffs had no writer at all before this — fetchLiveSeaTariffs/
+ * lookupSeaTariff* already expected this exact shape, they just had nothing
+ * populating it. Same replace-matching-lane/carrier rule as air tariffs.
+ */
+export async function publishSeaTariffRow(
+  row: {
+    origin: string;
+    destination: string;
+    carrier: string;
+    carrierCode?: string;
+    currency: string;
+    containers: Array<{ type: string; sell: number | null; buy: number | null }>;
+    lclRate: { sell: number | null; buy: number | null } | null;
+  },
+  uploadedBy: string,
+): Promise<void> {
+  const db = getFirebaseDb();
+  const origin = row.origin.trim().toUpperCase();
+  const destination = row.destination.trim().toUpperCase();
+  const carrierCode = (row.carrierCode || row.carrier.slice(0, 2)).trim().toUpperCase();
+
+  const existing = await getDocs(
+    query(
+      collection(db, "sea_tariffs"),
+      where("origin", "==", origin),
+      where("destination", "==", destination),
+      where("carrierCode", "==", carrierCode),
+    ),
+  );
+
+  const fclRates: Record<string, { sell: number; buy: number }> = {};
+  for (const c of row.containers) {
+    if (!c.type.trim()) continue;
+    if (!(c.sell ?? 0) && !(c.buy ?? 0)) continue; // skip untouched/blank rows
+    fclRates[c.type] = { sell: c.sell ?? 0, buy: c.buy ?? 0 };
+  }
+
+  const payload = {
+    carrier: row.carrier,
+    carrierCode,
+    origin,
+    destination,
+    currency: row.currency,
+    mode: Object.keys(fclRates).length ? "fcl" : "lcl",
+    fclRates,
+    lclRate: { sell: row.lclRate?.sell ?? 0, buy: row.lclRate?.buy ?? 0 },
+    source: "ai_extraction",
+    uploadedBy,
+    published: true,
+    createdAt: serverTimestamp(),
+  };
+
+  if (!existing.empty) {
+    await updateDoc(doc(db, "sea_tariffs", existing.docs[0].id), payload);
+  } else {
+    await addDoc(collection(db, "sea_tariffs"), payload);
+  }
+}
