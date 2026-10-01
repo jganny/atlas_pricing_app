@@ -70,6 +70,81 @@ const CITY_TO_IATA: Record<string, string> = {
   ghaziabad: 'DEL',
   'new delhi': 'DEL',
   okhla: 'DEL',
+  // colloquial / alternate names used in enquiries
+  mum: 'BOM',
+  bombay: 'BOM',
+  madras: 'MAA',
+  bengalore: 'BLR',
+  blore: 'BLR',
+  trivandrum: 'TRV',
+  thiruvananthapuram: 'TRV',
+  guwahati: 'GAU',
+  amritsar: 'ATQ',
+  // international cargo cities
+  istanbul: 'IST',
+  doha: 'DOH',
+  'abu dhabi': 'AUH',
+  sharjah: 'SHJ',
+  riyadh: 'RUH',
+  jeddah: 'JED',
+  dammam: 'DMM',
+  kuwait: 'KWI',
+  muscat: 'MCT',
+  bahrain: 'BAH',
+  karachi: 'KHI',
+  lahore: 'LHE',
+  dhaka: 'DAC',
+  colombo: 'CMB',
+  kathmandu: 'KTM',
+  bangkok: 'BKK',
+  'kuala lumpur': 'KUL',
+  jakarta: 'CGK',
+  manila: 'MNL',
+  hanoi: 'HAN',
+  'ho chi minh': 'SGN',
+  seoul: 'ICN',
+  incheon: 'ICN',
+  osaka: 'KIX',
+  beijing: 'PEK',
+  guangzhou: 'CAN',
+  shenzhen: 'SZX',
+  taipei: 'TPE',
+  toronto: 'YYZ',
+  vancouver: 'YVR',
+  miami: 'MIA',
+  atlanta: 'ATL',
+  dallas: 'DFW',
+  houston: 'IAH',
+  boston: 'BOS',
+  washington: 'IAD',
+  'san francisco': 'SFO',
+  seattle: 'SEA',
+  brussels: 'BRU',
+  liege: 'LGG',
+  milan: 'MXP',
+  madrid: 'MAD',
+  barcelona: 'BCN',
+  rome: 'FCO',
+  zurich: 'ZRH',
+  vienna: 'VIE',
+  copenhagen: 'CPH',
+  stockholm: 'ARN',
+  oslo: 'OSL',
+  helsinki: 'HEL',
+  dublin: 'DUB',
+  manchester: 'MAN',
+  moscow: 'SVO',
+  cairo: 'CAI',
+  nairobi: 'NBO',
+  johannesburg: 'JNB',
+  lagos: 'LOS',
+  'addis ababa': 'ADD',
+  casablanca: 'CMN',
+  'tel aviv': 'TLV',
+  amman: 'AMM',
+  baku: 'GYD',
+  melbourne: 'MEL',
+  auckland: 'AKL',
 }
 
 /**
@@ -392,6 +467,63 @@ function resolvePort(token: string): string {
   return CITY_TO_UNLOCODE[key] || CITY_TO_UNLOCODE[key.replace(/\s/g, '')] || extractPortCode(t)
 }
 
+const QTY_WORDS =
+  'pcs?|pieces?|pkgs?|packages?|cartons?|ctns?|boxes|box|pallets?|plts?|crates?|drums?|skids?|cases?|bags?|rolls?|units?|nos'
+
+const COMMODITY_HINT =
+  /\b(pharma\w*|medicines?|drugs?|vaccines?|api\b|garments?|apparel|textiles?|machinery|spare\s*parts?|auto\s*parts?|electronics?|electrical|perishables?|flowers?|vegetables?|fruits?|fish|seafood|chemicals?|cosmetics?|leather|furniture|batteries|lithium|food|handicrafts?|jewell?ery|documents?|samples?|equipment|instruments?|medical\s*devices?|reagents?|diagnostic\w*)\b/i
+
+function toNumber(raw: string): number {
+  return parseFloat(raw.replace(/,/g, ''))
+}
+
+/** "GW is 8473Kg", "Gross wt: 8,473 kg", or — failing a label — the first "<n> kg" that isn't the volumetric figure. */
+function extractGrossKg(t: string): number | undefined {
+  const labeled = t.match(
+    /\b(?:gw|g\.w\.?|gross\s*(?:wt|weight))\b\s*(?:is|=|:|-)?\s*(\d[\d,]*(?:\.\d+)?)\s*(?:kgs?|kilos?)?/i,
+  )
+  if (labeled) return toNumber(labeled[1])
+  const noVw = t.replace(/\b(?:vw|v\.w\.?|vol(?:umetric)?\s*(?:wt|weight))\b[^\n]*/gi, ' ')
+  const bare = noVw.match(/(\d[\d,]*(?:\.\d+)?)\s*(?:kgs?|kilos?)\b/i)
+  return bare ? toNumber(bare[1]) : undefined
+}
+
+function extractVolumetricKg(t: string): number | undefined {
+  const m = t.match(
+    /\b(?:vw|v\.w\.?|vol(?:umetric)?\s*(?:wt|weight))\b\s*(?:is|=|:|-)?\s*(\d[\d,]*(?:\.\d+)?)\s*(?:kgs?|kilos?)?/i,
+  )
+  return m ? toNumber(m[1]) : undefined
+}
+
+/** Temperature range ("15-25", "2-8 °C") only when the enquiry talks about temperature, and odd/out-of-gauge cargo. */
+function extractSpecialHandling(t: string): string[] {
+  const out: string[] = []
+  if (/\btemp(?:erature)?\b|cold\s*chain|reefer|controlled|°\s*c\b|\bdeg(?:rees?)?\b|\bcool\b|\bchilled\b/i.test(t)) {
+    const range = t.match(/(?<![\d.])(-?\d{1,2})\s*(?:-|–|to)\s*(-?\d{1,2})(?![\d.]|\s*(?:kg|kgs|cm|mm|m\b|x|\*|pcs|pallets?))/i)
+    if (range) {
+      const a = parseInt(range[1], 10)
+      const b = parseInt(range[2], 10)
+      if (a >= -80 && b <= 60 && a < b) out.push(`Temperature-controlled ${a} to ${b} °C`)
+    }
+    if (!out.length) out.push('Temperature-controlled cargo (range to be confirmed)')
+  }
+  if (/\bodd\b|\bodc\b|out\s*of\s*gauge|\boog\b|over\s*-?\s*size|over\s*dimension|non[-\s]?standard/i.test(t)) {
+    out.push('Odd-size / out-of-gauge cargo — confirm aircraft type and door dimensions')
+  }
+  if (/\bdg\b|dangerous\s*goods|hazardous|\bimo\b|un\s*\d{4}/i.test(t)) out.push('Dangerous goods — declaration required')
+  return out
+}
+
+function extractCommodityLine(t: string): string {
+  const lines = t.split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean)
+  for (const line of lines) {
+    if (line.length > 80) continue
+    if (/^(pls|please|kindly|dear|hi|hello|regards|thanks)\b/i.test(line)) continue
+    if (COMMODITY_HINT.test(line) && !/\d\s*(?:kg|cm)\b/i.test(line)) return line.replace(/^(?:commodity|goods|cargo)\s*[:\-]\s*/i, '')
+  }
+  return ''
+}
+
 export function parseAirEnquiry(text: string): ParsedEnquiry {
   const t = text.replace(/\r/g, '')
   const result: ParsedEnquiry = {
@@ -506,16 +638,21 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
 
   if (!result.packages.length) {
     const gwMatches: number[] = []
+    const explicitGw = extractGrossKg(t)
+    if (explicitGw != null) gwMatches.push(explicitGw)
     const gwRe = /(?:gross|total)?\s*weight[:\s]*(\d+(?:\.\d+)?)\s*(?:kg|kgs)?/gi
     let gwm: RegExpExecArray | null
     while ((gwm = gwRe.exec(t)) !== null) gwMatches.push(parseFloat(gwm[1]))
 
     const dimWithQty =
-      /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(?:cm)?\s*[x×*]?\s*(\d+)\s*(?:pcs|pieces|pkgs|cartons|boxes)?/gi
+      new RegExp(
+        `(\\d+(?:\\.\\d+)?)\\s*[x×*]\\s*(\\d+(?:\\.\\d+)?)\\s*[x×*]\\s*(\\d+(?:\\.\\d+)?)\\s*(?:cm)?(?:\\s*[x×*]\\s*(\\d+)\\b|[ \\t]+(\\d+)\\s*(?:${QTY_WORDS})\\b)`,
+        'gi',
+      )
     let dimQty: RegExpExecArray | null
     while ((dimQty = dimWithQty.exec(t)) !== null) {
       result.packages.push({
-        qty: parseInt(dimQty[4], 10) || 1,
+        qty: parseInt(dimQty[4] ?? dimQty[5], 10) || 1,
         gw: 0,
         l: parseFloat(dimQty[1]),
         w: parseFloat(dimQty[2]),
@@ -524,9 +661,9 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
     }
 
     if (!result.packages.length) {
-      const dimGlobal = /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/gi
+      const dimGlobal = /(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)/gi
       let dimMatch: RegExpExecArray | null
-      const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons|boxes)/i)
+      const qtyM = t.match(new RegExp(`(\\d+)\\s*(?:${QTY_WORDS})\\b`, 'i'))
       const qtyDefault = qtyM ? parseInt(qtyM[1], 10) : 1
       while ((dimMatch = dimGlobal.exec(t)) !== null) {
         result.packages.push({
@@ -548,7 +685,7 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
         gw: Math.round(((totalGw * (p.qty || 1)) / totalQty) * 100) / 100,
       }))
     } else if (!result.packages.length && gwMatches.length) {
-      const qtyM = t.match(/(\d+)\s*(?:pcs|pieces|pkgs|cartons|boxes)/i)
+      const qtyM = t.match(new RegExp(`(\\d+)\\s*(?:${QTY_WORDS})\\b`, 'i'))
       result.packages.push({ qty: qtyM ? parseInt(qtyM[1], 10) : 1, gw: gwMatches[0] })
     }
   }
@@ -563,6 +700,15 @@ export function parseAirEnquiry(text: string): ParsedEnquiry {
   const commodity = labeledValue(t, ['commodity', 'goods', 'description of goods']) ||
     (t.match(/(?:commodity|goods|description)[:\s]+([^\n;]+)/i)?.[1] || '').trim()
   if (commodity && !/^as per/i.test(commodity)) result.commodity = commodity.trim()
+  if (!result.commodity) {
+    const line = extractCommodityLine(t)
+    if (line) result.commodity = line
+  }
+
+  const handling = extractSpecialHandling(t)
+  if (handling.length) result.specialHandling = handling
+  const vw = extractVolumetricKg(t)
+  if (vw != null) result.volumetricWeight = vw
 
   result.confidence = scoreAir(result)
   return result

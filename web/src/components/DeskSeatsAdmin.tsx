@@ -13,11 +13,18 @@ import {
   type DeskSeatId,
 } from "@/lib/auth/desk-seats";
 import { TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { useAuthStore } from "@/store/auth";
+import { useLiveData } from "@/lib/api";
+import { deleteDeskSeat, saveDeskSeat } from "@/lib/firebase/desk-seats";
+import { logAudit } from "@/lib/firebase/audit-log";
+import { useSeatsVersion } from "@/hooks/use-seats-version";
 
 /**
  * Seats stay (Air Nom, Sea Nom, NRS, Free Hand). Occupants are people who can change.
  */
 export function DeskSeatsAdmin() {
+  const adminUser = useAuthStore((s) => s.user);
+  useSeatsVersion();
   const [tick, setTick] = useState(0);
   const occupants = useMemo(() => {
     void tick;
@@ -135,18 +142,33 @@ export function DeskSeatsAdmin() {
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
                     const loginId = draft.loginId.trim().toLowerCase();
                     if (!loginId) {
                       toast("Login id required", "error");
                       return;
                     }
-                    upsertOccupant({
+                    const next = {
                       seatId: seat.id as DeskSeatId,
                       loginId,
                       personName: draft.personName.trim() || loginId,
+                    };
+                    const before = occ?.personName || personDisplayName(occupantLoginForSeat(seat.id));
+                    try {
+                      if (useLiveData) await saveDeskSeat(next, adminUser?.username || "admin");
+                    } catch (e) {
+                      toast(e instanceof Error ? `Not saved for everyone: ${e.message}` : "Could not save for everyone", "error");
+                      return;
+                    }
+                    upsertOccupant(next);
+                    logAudit({
+                      action: "seat.assign",
+                      entityType: "seat",
+                      entityId: seat.id,
+                      entityLabel: seat.label,
+                      summary: `${seat.label}: ${before} → ${next.personName} (login ${loginId})`,
                     });
-                    toast(`${seat.label} → ${draft.personName || loginId}`, "success");
+                    toast(`${seat.label} → ${next.personName}`, "success");
                     refresh();
                   }}
                 >
@@ -156,8 +178,15 @@ export function DeskSeatsAdmin() {
                   type="button"
                   size="sm"
                   variant="secondary"
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      if (useLiveData) await deleteDeskSeat(seat.id as DeskSeatId);
+                    } catch (e) {
+                      toast(e instanceof Error ? `Not reset for everyone: ${e.message}` : "Could not reset for everyone", "error");
+                      return;
+                    }
                     removeOccupant(seat.id);
+                    logAudit({ action: "seat.reset", entityType: "seat", entityId: seat.id, entityLabel: seat.label, summary: `${seat.label} restored to default occupant` });
                     toast(`${seat.label} restored to default`, "success");
                     refresh();
                   }}

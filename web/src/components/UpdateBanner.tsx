@@ -50,7 +50,7 @@ export function UpdateBanner() {
         type="button"
         size="sm"
         data-testid="update-banner-refresh"
-        className="gap-1.5 bg-amber-600 hover:bg-amber-700"
+        className="gap-1.5 bg-amber-700 hover:bg-amber-800"
         onClick={() => {
           void applyRefreshNow();
         }}

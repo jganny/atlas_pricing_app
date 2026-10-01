@@ -19,6 +19,15 @@ export const TEAM_ROLES: Record<string, TeamRole> = {
   cathrina: { name: "NRS", type: "member", category: "NRS (AIR/SEA)" },
   manager: { name: "Manager", type: "admin" },
   pricing: { name: "Pricing Agent", type: "member" },
+  // Individual Free Hand desk users — same category as kavya's seat, but each
+  // is their own login with their own name and quote history, not a shared
+  // seat. Hardcoded here for now, same as the rest of this map; a new Free
+  // Hand starter still needs an entry added here to show their real name.
+  sunil: { name: "Sunil Kumar", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  ramesh: { name: "M Ramesh", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  goutham: { name: "Goutham", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  spoorthi: { name: "Spoorthi N S", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  linson: { name: "Linson Ittyera", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
 };
 
 /** Shared company mailboxes → who works that inbox (login ids). */

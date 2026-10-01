@@ -199,11 +199,20 @@ export default function CircularsPage() {
     }
     rememberCourierTariffBook(book);
     setCourierBook(book);
+    if (useLiveData && user) {
+      try {
+        const id = await publishCourierTariffBook(book, user.username || "unknown");
+        rememberCourierTariffBook({ ...book, id });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.courierTariffs });
+      } catch {
+        toast("Saved on this computer — live publish failed, try Keep live.", "info");
+      }
+    }
     queryClient.setQueryData(queryKeys.courierTariffs, mergeCourierTariffBooks(courierBooks));
     const extra = book.warnings?.length ? ` ${book.warnings[0]}` : "";
     const mapped = book.zoneMap ? ` · ${Object.keys(book.zoneMap).length} countries mapped to zones` : "";
     toast(
-      `Loaded ${book.carrier} ${book.year}: ${book.lanes.length} lanes up to ${book.maxKg} kg${mapped}.${extra}`,
+      `Loaded ${book.carrier} ${book.year}: ${book.lanes.length} lanes up to ${book.maxKg} kg${mapped}. Courier desk fills +5% on this tariff.${extra}`,
       book.warnings?.length ? "info" : "success",
     );
   }

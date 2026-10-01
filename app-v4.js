@@ -51,6 +51,127 @@ const TEAM_ROLES = {
   'cathrina': { name: 'NRS', type: 'member', category: 'NRS (AIR/SEA)', currency: 'USD' }
 };
 
+// ── Desk seats: sign-in IDs are separate from the seat's data ────────────────
+// A desk seat (Air Nom, Free Hand, NRS, ...) keeps ONE permanent internal login
+// id — that id is what every saved quote stores as its `creator`, so it never
+// changes. What people TYPE at sign-in is a "sign-in ID" that maps onto the
+// seat; the admin can change it any time (Admin → User Profiles → Edit ID)
+// when someone new takes the seat. Nothing saved under the seat is touched.
+//
+// Sign-in IDs live in Firestore `loginAliases/{signInId}` = { target, retired,
+// updatedAt, updatedBy }. The two below are built-in defaults so Free Hand and
+// NRS work even before anything is stored; a stored record always wins over
+// them (retiring one writes { retired: true } so it stops working).
+//   sign-in ID  →  internal id (owner of the data)
+const SEAT_LOGIN_ALIASES = { freehand: 'kavya', nrs: 'cathrina' };
+window._loginAliases = window._loginAliases || null;   // admin cache: { id: {target, retired} }
+
+// One public read of a single alias record (allowed before sign-in by the
+// rules — only this exact document can be fetched, never the list).
+async function fetchLoginAlias(id) {
+  try {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return null;
+    const read = firebase.firestore().collection('loginAliases').doc(id).get();
+    const doc = await Promise.race([read, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3500))]);
+    return doc && doc.exists ? doc.data() : null;
+  } catch (e) {
+    return null; // offline / rules not deployed → fall back to the built-ins
+  }
+}
+
+// What the person typed at sign-in → the internal login id. IDs that are not
+// sign-in IDs (including every original internal id) pass through unchanged,
+// so nobody is locked out by this.
+async function resolveLoginIdAsync(typed) {
+  const id = String(typed || '').toLowerCase().trim();
+  if (!id || id === 'ganny' || id === 'admin' || id === 'manager') return id;
+  const rec = await fetchLoginAlias(id);
+  if (rec) return rec.retired || !rec.target ? id : String(rec.target).toLowerCase();
+  return SEAT_LOGIN_ALIASES[id] || id;
+}
+
+// The sign-in ID currently assigned to a seat (admin table, prompts).
+function signInIdFor(internalId) {
+  const id = String(internalId || '').toLowerCase();
+  const cache = window._loginAliases;
+  if (cache) {
+    const mine = Object.keys(cache).filter(a => !cache[a].retired && String(cache[a].target || '').toLowerCase() === id);
+    if (mine.length) return mine.sort((a, b) => (cache[b].updatedMs || 0) - (cache[a].updatedMs || 0))[0];
+  }
+  const builtIn = Object.keys(SEAT_LOGIN_ALIASES).find(a => SEAT_LOGIN_ALIASES[a] === id && !(cache && cache[a] && cache[a].retired));
+  return builtIn || internalId;
+}
+
+// Is this ID already used as (or reserved for) a sign-in ID?
+async function isLoginIdTaken(id) {
+  const key = String(id || '').toLowerCase().trim();
+  if (!key) return false;
+  const rec = await fetchLoginAlias(key);
+  if (rec) return !rec.retired && !!rec.target;
+  return Object.prototype.hasOwnProperty.call(SEAT_LOGIN_ALIASES, key);
+}
+
+// Admin: load every alias record into the cache and refresh the table.
+async function loadLoginAliases() {
+  try {
+    const snap = await firebase.firestore().collection('loginAliases').get();
+    const cache = {};
+    snap.forEach(d => {
+      const v = d.data() || {};
+      cache[d.id] = { target: v.target || null, retired: !!v.retired, updatedMs: v.updatedAt && v.updatedAt.toMillis ? v.updatedAt.toMillis() : 0 };
+    });
+    window._loginAliases = cache;
+    if (typeof renderUserCredentialsList === 'function') renderUserCredentialsList();
+  } catch (e) {
+    console.warn('Could not load sign-in IDs:', e.message);
+  }
+}
+window.loadLoginAliases = loadLoginAliases;
+
+// "Cathrina (Free Hand)" — the person plus which desk they sit on, for places
+// (like the admin role switcher) where the desk matters as much as the name.
+// The desk's own name — "Air Nomination", "NRS", etc. — independent of
+// whoever currently sits on it. Never changes when Edit name changes a
+// person's display name, so the person (big) and the desk (small) don't get
+// tangled together in the header the way a single shared field used to.
+function deskCategoryLabel(id) {
+  if (String(id || '').toLowerCase() === 'ganny') return 'Admin';
+  const cat = String(TEAM_ROLES[id]?.category || '').toUpperCase();
+  if (cat.startsWith('AIR')) return 'Air Nomination';
+  if (cat.startsWith('SEA')) return 'Sea Nomination';
+  if (cat.startsWith('NRS')) return 'NRS';
+  if (cat.startsWith('FREE HAND')) return 'Free Hand Sales';
+  return (TEAM_ROLES[id]?.name || id).replace(/\s*\(Free\s*Hand\)/i, '').trim();
+}
+
+function deskLabelWithPerson(id) {
+  const role = TEAM_ROLES[id];
+  const name = ((role && role.name) || id).replace(/\(Free Hand\)/g, '').trim();
+  const cat = String((role && role.category) || '').toUpperCase();
+  let tag = '';
+  if (cat.startsWith('FREE HAND')) tag = 'Free Hand';
+  else if (cat.startsWith('NRS')) tag = 'NRS';
+  else if (cat.startsWith('AIR')) tag = 'Air Nom';
+  else if (cat.startsWith('SEA')) tag = 'Sea Nom';
+  if (!tag || name.toLowerCase().includes(tag.toLowerCase())) return name;
+  return `${name} (${tag})`;
+}
+
+// Retired logins: kept only so an old quote that carries the id (creator) can
+// still resolve a name and category, but never listed, filtered, switchable or
+// able to sign in. 'jaya' (the original Free Hand login) has no quotes and is
+// replaced by the Free Hand seat (sign-in ID "freehand"). Making the property
+// non-enumerable removes it from every Object.keys(TEAM_ROLES) list (desk
+// filters, officer dropdowns, leaderboards, credentials) in one place, while
+// direct lookups such as TEAM_ROLES['jaya'] keep working.
+const RETIRED_LOGINS = ['jaya'];
+RETIRED_LOGINS.forEach(id => {
+  if (TEAM_ROLES[id]) Object.defineProperty(TEAM_ROLES, id, { enumerable: false });
+});
+function isRetiredLogin(id) {
+  return RETIRED_LOGINS.includes(String(id || '').toLowerCase());
+}
+
 // Resolves which desk role is currently active for terms purposes — same
 // "viewing as" resolution as updateCurrencyRules: ganny/manager can be
 // viewing a specific desk via the role switcher, so prefer that over the
@@ -566,9 +687,16 @@ async function handleLogin(e) {
   let user = document.getElementById("login-username").value.toLowerCase().trim();
   let pass = document.getElementById("login-password").value;
 
+  // A blank submit (both fields empty — e.g. a stray Enter/click that fires
+  // before typing or autofill has registered) used to silently log the
+  // person in as admin "ganny" with the hardcoded fallback password. That
+  // shortcut was input-independent: it could fire regardless of whose
+  // credentials someone actually meant to type, landing real desk users on
+  // the admin account without any error. Treat a blank submit like any
+  // other incomplete one instead.
   if (!user && !pass) {
-    user = "ganny";
-    pass = "password";
+    alert("Please enter your desk username and password.");
+    return;
   } else if (!user) {
     alert("Please enter a desk username.");
     return;
@@ -581,6 +709,8 @@ async function handleLogin(e) {
   if (user === 'admin') {
     user = 'ganny';
   }
+  // Seat sign-in IDs ("freehand", "nrs") → the seat's permanent internal login.
+  user = await resolveLoginIdAsync(user);
 
   if (DB.isCloud) {
     // ── PRIMARY: Try canonical @atlaspricing.com domain ──────────────────────
@@ -646,7 +776,7 @@ async function handleLogin(e) {
     }
 
     // Hardcoded defaults check (core team — no 'ganesh' alias, use 'ganny')
-    const validHardcoded = ["ganny", "shashank", "shaheer", "jaya", "cathrina"];
+    const validHardcoded = ["ganny", "shashank", "shaheer", "cathrina"];
     if (!matchedPass && validHardcoded.includes(user) && pass === "password") {
       matchedPass = true;
     }
@@ -715,7 +845,7 @@ async function handleLogin(e) {
     }
 
     const matched = dbUsers.find(u => u && u.username && typeof u.username === 'string' && u.username.toLowerCase() === user);
-    const validHardcoded = ["ganny", "shashank", "shaheer", "jaya", "cathrina"];
+    const validHardcoded = ["ganny", "shashank", "shaheer", "cathrina"];
 
     if (matched) {
       if (pass === matched.password || (validHardcoded.includes(user) && pass === "password")) {
@@ -754,6 +884,11 @@ window.handleSignup = async function (e) {
   }
   if (!pass || pass.length < 6) {
     alert("Please enter a Password of at least 6 characters to sign up.");
+    return;
+  }
+
+  if (await isLoginIdTaken(user)) {
+    alert(`⚠️ "${user}" is a shared desk sign-in ID and can't be registered as a new account. Please choose another username.`);
     return;
   }
 
@@ -861,11 +996,11 @@ function loginSuccess(roleId) {
     .replace(/\s*\(Free\s*Hand\)/i, "");
 
   const headerUserNameEl = document.getElementById("header-user-name");
-  if (headerUserNameEl) headerUserNameEl.textContent = formatDisplayUsername(appState.currentUser || roleIdLower);
+  if (headerUserNameEl) headerUserNameEl.textContent = displayName || formatDisplayUsername(appState.currentUser || roleIdLower);
   const headerUserRoleEl = document.getElementById("header-user-role");
-  if (headerUserRoleEl) headerUserRoleEl.textContent = displayName;
+  if (headerUserRoleEl) headerUserRoleEl.textContent = deskCategoryLabel(roleIdLower);
   const headerUserAvatarEl = document.getElementById("header-user-avatar");
-  if (headerUserAvatarEl) headerUserAvatarEl.textContent = (appState.currentUser || roleIdLower).charAt(0).toUpperCase();
+  if (headerUserAvatarEl) headerUserAvatarEl.textContent = (displayName || appState.currentUser || roleIdLower).charAt(0).toUpperCase();
 
   const root = document.documentElement;
   const execDashBtn = document.getElementById("executive-dashboard-btn");
@@ -949,7 +1084,6 @@ function renderUserCredentialsList() {
     { username: 'ganny', fullName: 'Pricing Team (Admin)', role: 'admin' },
     { username: 'shashank', fullName: 'Air Nomination', role: 'member', category: 'AIR - NOMINATION' },
     { username: 'shaheer', fullName: 'Sea Nomination', role: 'member', category: 'SEA - NOMINATION' },
-    { username: 'jaya', fullName: 'Free Hand Sales', role: 'member', category: 'FREE HAND SALES (AIR/SEA)' },
     { username: 'cathrina', fullName: 'NRS', role: 'member', category: 'NRS (AIR/SEA)' }
   ];
 
@@ -960,7 +1094,7 @@ function renderUserCredentialsList() {
     if (u && u.username) {
       const usernameLower = u.username.toLowerCase();
       // Remove duplicate shaheer user credentials
-      if (usernameLower === 'shaheer' || usernameLower === 'mahendra') {
+      if (usernameLower === 'shaheer' || usernameLower === 'mahendra' || isRetiredLogin(usernameLower)) {
         return;
       }
       allUsersMap[usernameLower] = {
@@ -971,6 +1105,11 @@ function renderUserCredentialsList() {
       };
     }
   });
+
+  if (typeof appState !== 'undefined' && appState.currentUser === 'ganny' && window._loginAliases === null && !window._loginAliasesLoading) {
+    window._loginAliasesLoading = true;
+    setTimeout(() => { loadLoginAliases().finally(() => { window._loginAliasesLoading = false; if (window._loginAliases === null) window._loginAliases = {}; }); }, 0);
+  }
 
   const allUsers = Object.values(allUsersMap);
   userCredsBody.innerHTML = allUsers.map(u => {
@@ -985,8 +1124,8 @@ function renderUserCredentialsList() {
     const roleCat = isAdminAccount ? 'Admin' : (u.category || 'Member');
     return `
       <tr>
-        <td><strong>${u.username}</strong></td>
-        <td>${u.fullName}</td>
+        <td><strong>${escapeUserText(signInIdFor(u.username))}</strong>${(typeof appState !== 'undefined' && appState.currentUser === 'ganny' && !isAdminAccount) ? `<br><button type="button" onclick="editSignInId('${String(u.username).replace(/'/g, "\\'")}')" style="margin-top:4px; font-size:0.65rem; padding:2px 8px; border-radius:6px; border:1px solid var(--border-1); background:#fff; cursor:pointer; font-weight:700;">Edit ID</button>` : ''}</td>
+        <td>${escapeUserText(u.fullName)}${(typeof appState !== 'undefined' && appState.currentUser === 'ganny' && !isAdminAccount) ? ` <button type="button" onclick="editUserFullName('${String(u.username).replace(/'/g, "\\'")}')" style="margin-left:6px; font-size:0.65rem; padding:2px 8px; border-radius:6px; border:1px solid var(--border-1); background:#fff; cursor:pointer; font-weight:700;">Edit name</button>` : ''}</td>
         <td><span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.1); color: var(--t1); font-weight: 600;">${roleCat}</span></td>
         <td><span style="color: var(--accent-success); font-family: monospace; font-size: 0.7rem;">Firebase Secure Auth</span></td>
       </tr>
@@ -994,6 +1133,106 @@ function renderUserCredentialsList() {
   }).join("");
 }
 window.renderUserCredentialsList = renderUserCredentialsList;
+
+function escapeUserText(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+// Admin: change the person's name on a login. Only the display name changes —
+// the login id, category, password and every saved quote stay exactly as they
+// are, so a desk's data never moves when someone new takes the seat.
+async function editUserFullName(internalId) {
+  if (appState.currentUser !== 'ganny') {
+    alert("Only the admin account can change names.");
+    return;
+  }
+  const id = String(internalId || '').toLowerCase();
+  const current = (TEAM_ROLES[id] && TEAM_ROLES[id].name) || id;
+  const desk = deskLabelWithPerson(id);
+  const entered = prompt(
+    `Who sits on this desk now?\n\nDesk: ${desk}\nSign-in ID: ${signInIdFor(id)}\n\nEnter the person's name. Their quotes and data stay exactly where they are.`,
+    current
+  );
+  if (entered === null) return;
+  const name = entered.replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!name) { alert("Please enter a name."); return; }
+  if (name === current) return;
+  if (!DB.firestoreRef) { alert("Not connected to the database — name not changed."); return; }
+  try {
+    await DB.firestoreRef.collection("users").doc(id).set({
+      fullName: name,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    if (TEAM_ROLES[id]) TEAM_ROLES[id].name = name;
+    if (typeof DB.syncUsers === 'function' && !DB.usersUnsubscribe) DB.syncUsers();
+    if (typeof renderUserCredentialsList === 'function') renderUserCredentialsList();
+    if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
+    alert(`Done. "${desk}" is now shown as "${name}". No quotes or data were changed.`);
+  } catch (err) {
+    alert("Could not save the name: " + err.message);
+  }
+}
+window.editUserFullName = editUserFullName;
+
+// Admin: change the ID people type to sign in to a desk seat. The seat's
+// internal login, quotes, module data, category and password are untouched.
+async function editSignInId(internalId) {
+  if (appState.currentUser !== 'ganny') { alert("Only the admin account can change sign-in IDs."); return; }
+  if (!DB.firestoreRef) { alert("Not connected to the database — sign-in ID not changed."); return; }
+  const id = String(internalId || '').toLowerCase();
+  const desk = deskLabelWithPerson(id);
+  const current = signInIdFor(id);
+  const entered = prompt(
+    `New sign-in ID for this desk\n\nDesk: ${desk}\nCurrent sign-in ID: ${current}\n\nUse 3-20 letters, numbers, - or _. Quotes and data on this desk do not change.`,
+    current
+  );
+  if (entered === null) return;
+  const next = entered.toLowerCase().trim();
+  if (next === String(current).toLowerCase()) return;
+  if (!/^[a-z0-9][a-z0-9_-]{2,19}$/.test(next)) {
+    alert("Please use 3-20 characters: letters, numbers, - or _ (starting with a letter or number).");
+    return;
+  }
+  const reservedIds = ['admin', 'ganny', 'manager', 'mahendra'];
+  if (reservedIds.includes(next)) { alert(`"${next}" is reserved. Please choose another.`); return; }
+  // "next" may already be some login's internal id. That is fine for a DESK seat
+  // that no longer signs in with it (its own sign-in ID was changed) — the seat
+  // keeps its data under the internal id and nobody types that name any more.
+  // It is not fine for an ordinary user login (e.g. a personal Free Hand
+  // account) or for a seat that still signs in with that very name.
+  const holderIsKnown = next !== id && (TEAM_ROLES[next] || (window._firebaseUsers || []).some(u => u && String(u.username).toLowerCase() === next));
+  if (holderIsKnown) {
+    const isDeskSeat = !!(TEAM_ROLES[next] && /NOMINATION|NRS|FREE HAND/i.test(String(TEAM_ROLES[next].category || '')) && (next in SEAT_LOGIN_ALIASES || ['shashank', 'shaheer', 'cathrina', 'kavya'].includes(next)));
+    const holderStillUsesIt = String(signInIdFor(next)).toLowerCase() === next;
+    if (!isDeskSeat) { alert(`"${next}" is an existing person's login. Please choose another ID.`); return; }
+    if (holderStillUsesIt) {
+      alert(`"${next}" is the current sign-in ID of the ${deskLabelWithPerson(next)} desk.\n\nGive that desk a different sign-in ID first (Edit ID on its row), then you can use "${next}" here.`);
+      return;
+    }
+  }
+  if (next !== id && await isLoginIdTaken(next)) {
+    const rec = await fetchLoginAlias(next);
+    const owner = rec ? String(rec.target || '').toLowerCase() : SEAT_LOGIN_ALIASES[next];
+    if (owner !== id) { alert(`"${next}" is already the sign-in ID of another desk. Please choose another.`); return; }
+  }
+  if (!confirm(`Change the sign-in ID of "${desk}"?\n\n  ${current}  →  ${next}\n\nThe person on this desk must sign in with "${next}" from now on. Their password is not changed — use Force Reset Staff Password if they need a new one.`)) return;
+  try {
+    const col = firebase.firestore().collection('loginAliases');
+    const stamp = { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: 'ganny' };
+    // Stop the previous sign-in ID(s) of this seat from working.
+    const cache = window._loginAliases || {};
+    const olds = new Set(Object.keys(cache).filter(a => !cache[a].retired && String(cache[a].target || '').toLowerCase() === id));
+    Object.keys(SEAT_LOGIN_ALIASES).forEach(a => { if (SEAT_LOGIN_ALIASES[a] === id && !(cache[a] && cache[a].retired)) olds.add(a); });
+    for (const a of olds) { if (a !== next) await col.doc(a).set({ target: null, retired: true, ...stamp }); }
+    if (next !== id) await col.doc(next).set({ target: id, retired: false, ...stamp });
+    await loadLoginAliases();
+    alert(`Done. "${desk}" now signs in with "${next === id ? id : next}". No quotes or data were changed.\n\nRemember to give the person their password (Force Reset Staff Password).`);
+  } catch (err) {
+    alert("Could not save the sign-in ID: " + err.message + "\n\n(If this mentions permissions, the database rules for sign-in IDs have not been deployed yet.)");
+  }
+}
+window.editSignInId = editSignInId;
+
 
 // Load Airports & Airlines Data
 async function loadData() {
@@ -11467,14 +11706,14 @@ function applyDeskNames() {
     ];
 
     defaultUsers.forEach(u => {
-      let name = (TEAM_ROLES[u.id]?.name || u.defaultName).replace(/\(Free Hand\)/g, "");
-      if (u.id === 'shaheer') name = 'Sea Nomination';
+      let name = TEAM_ROLES[u.id] ? deskLabelWithPerson(u.id) : u.defaultName;
+      if (u.id === 'shaheer' && !/sea nom/i.test(name)) name = 'Sea Nomination';
       buttonsHtml += `<button class="role-btn${isRoleActive(u.id) ? ' active' : ''}" data-role="${u.id}">${u.icon}${name}</button>`;
     });
 
     Object.keys(TEAM_ROLES).forEach(roleId => {
       if (['ganny', 'shashank', 'shaheer', 'mahendra', 'jaya', 'cathrina', 'manager'].includes(roleId)) return;
-      const name = (TEAM_ROLES[roleId]?.name || roleId).replace(/\(Free Hand\)/g, "");
+      const name = deskLabelWithPerson(roleId);
       buttonsHtml += `<button class="role-btn${isRoleActive(roleId) ? ' active' : ''}" data-role="${roleId}">${name}</button>`;
     });
 
@@ -11496,11 +11735,11 @@ function applyDeskNames() {
     if (activeUser === 'shaheer') name = 'Sea Nomination';
     
     const headerUserNameEl = document.getElementById("header-user-name");
-    if (headerUserNameEl) headerUserNameEl.textContent = formatDisplayUsername(activeUser);
+    if (headerUserNameEl) headerUserNameEl.textContent = name || formatDisplayUsername(activeUser);
     const headerUserRoleEl = document.getElementById("header-user-role");
-    if (headerUserRoleEl) headerUserRoleEl.textContent = name;
+    if (headerUserRoleEl) headerUserRoleEl.textContent = deskCategoryLabel(activeUser);
     const headerUserAvatarEl = document.getElementById("header-user-avatar");
-    if (headerUserAvatarEl) headerUserAvatarEl.textContent = activeUser.charAt(0).toUpperCase();
+    if (headerUserAvatarEl) headerUserAvatarEl.textContent = (name || activeUser).charAt(0).toUpperCase();
   }
 
   // Update overview report user dropdown (distinct from Enquiry Database report-user)
@@ -11658,7 +11897,7 @@ async function registerNewUserProfile(e) {
   const username = document.getElementById("reg-username").value.trim().toLowerCase();
   const password = document.getElementById("reg-password").value;
 
-  if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username]) {
+  if (username === 'admin' || username === 'ganny' || TEAM_ROLES[username] || await isLoginIdTaken(username)) {
     alert("This username is already taken. Please try another one.");
     return;
   }
@@ -16549,7 +16788,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e) e.preventDefault();
     const usernameInput = prompt("Enter your Username to request an administrative password reset:");
     if (!usernameInput) return;
-    const username = usernameInput.toLowerCase().trim();
+    const username = await resolveLoginIdAsync(usernameInput);
 
     try {
       if (db) {
@@ -16623,7 +16862,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const username = rawUser.trim().toLowerCase();
+    const username = await resolveLoginIdAsync(rawUser);
     const canonicalEmail = `${username}@atlaspricing.com`;
 
     const btnEl = document.getElementById("admin-force-reset-btn");

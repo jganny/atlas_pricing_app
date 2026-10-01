@@ -6,7 +6,9 @@
     "dev": "next dev -p 43221 -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 43221",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs"
   },
   "dependencies": {
     "@atlas/pricing-core": "file:../packages/pricing-core",
@@ -40,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

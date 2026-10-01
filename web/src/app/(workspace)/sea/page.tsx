@@ -17,6 +17,7 @@ import { LocationCombobox } from "@/components/LocationCombobox";
 import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
+import { CustomsHolidayBanner } from "@/components/CustomsHolidayBanner";
 import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { defaultDeskCurrency, defaultIncoterm } from "@/lib/auth/desk-rules";
@@ -26,16 +27,21 @@ import { persistQuoteToEnquiryDb, savedEnquiryHref, savedEnquiryMessage } from "
 import { linerSnapshot } from "@/lib/quotes/option-breakdown";
 import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
-import { lookupSeaTariff } from "@/lib/firebase/tariffs";
+import { linkQuoteToLead } from "@/lib/firebase/sales";
+import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
+import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { seaShipmentSchema } from "@/lib/pricing/desk-schemas";
 import {
   computeLinerTotals,
+  seaCargoHasData,
   seaHeavyWeightWarning,
+  summarizeSeaCargo,
   validateSeaCargoBasics,
   validateSelectedLiner,
+  type SeaCargoRow,
   type SeaContainerRow,
 } from "@/lib/pricing/sea-desk";
 import {
@@ -49,10 +55,13 @@ import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
-import { lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
-import type { SavedQuote, SmartQuoteDraft } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
+import type { SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
+import { cn, formatCurrency } from "@/lib/utils";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import {
   allLanesRoute,
@@ -60,12 +69,37 @@ import {
   quotedLaneRows,
   quotedOnLane,
   selectWithinLane,
+  stampOntoFirstLane,
   usableLanes,
 } from "@/lib/quotes/lanes";
 
-const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
-const CONTAINER_TYPES = ["20'GP", "40'GP", "40'HC", "45'HC", "20'RF", "40'RF"];
+const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
+const CONTAINER_TYPES = [
+  "20'GP",
+  "40'GP",
+  "40'HC",
+  "45'HC",
+  "20'RF",
+  "40'RF",
+  "20'FR",
+  "40'FR",
+  "20'FR OOG",
+  "40'FR OOG",
+  "20'OT",
+  "40'OT",
+  "20'OT OOG",
+  "40'OT OOG",
+  "20'TANK",
+  "20'FLEXI",
+];
 type Step = "shipment" | "carrier" | "terms";
+
+function linerRatesAreEmpty(opt: LinerOption, mode: SeaMode): boolean {
+  if (mode === "fcl") {
+    return opt.containers.every((c) => c.sellRate === 0 && c.buyRate === 0);
+  }
+  return opt.lclSell === 0 && opt.lclBuy === 0;
+}
 const SEA_STEPS = ["shipment", "carrier", "terms"] as const;
 
 export default function SeaDeskPage() {
@@ -82,6 +116,8 @@ function SeaDeskInner() {
   const queryClient = useQueryClient();
   const { data: tariffs = [] } = useSeaTariffs();
   const loader = useQuoteDeskLoader("sea");
+  const customerFieldName = useAntiAutofillName("atlas-party-sea");
+  const [leadId, setLeadId] = useState<string | undefined>(undefined);
 
   const [step, setStep] = useState<Step>("shipment");
   const [customer, setCustomer] = useState("");
@@ -107,9 +143,23 @@ function SeaDeskInner() {
   const [mode, setMode] = useState<SeaMode>("fcl");
   const [grossWeightKg, setGrossWeightKg] = useState(0);
   const [volumeCbm, setVolumeCbm] = useState(0);
+  const [cargo, setCargo] = useState<SeaCargoRow[]>([]);
+  const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
   const [liners, setLiners] = useState<LinerOption[]>([createLinerOption({}, true)]);
+  const [localOriginCharges, setLocalOriginCharges] = useState<SurchargeRow[]>([]);
+  const [destClearanceCharges, setDestClearanceCharges] = useState<SurchargeRow[]>([]);
+  const historicalAutofill = useHistoricalAutofill({
+    deskType: "sea",
+    origin,
+    destination,
+    incoterm,
+    currency,
+    module,
+    customer,
+    carrierNames: liners.map((l) => l.name),
+  });
   const [terms, setTerms] = useState(getDefaultFreightTerms("sea"));
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -118,9 +168,163 @@ function SeaDeskInner() {
   const [confirmReset, setConfirmReset] = useState(false);
   const prefillApplied = useRef(false);
 
+  // Per-package L×W×H rows are the primary way to enter cargo (mirrors Air
+  // Desk) — once any row has real data, Gross weight/Volume become computed
+  // from them and the plain fields below turn read-only. A quote with no
+  // rows (a fresh one before "+ Add row" is used, or a quote saved before
+  // this feature existed) keeps those fields directly editable, unchanged
+  // from today's behavior.
+  useEffect(() => {
+    if (!seaCargoHasData(cargo)) return;
+    const summary = summarizeSeaCargo(cargo, dimUnit);
+    setGrossWeightKg(summary.grossWeightKg);
+    setVolumeCbm(summary.volumeCbm);
+  }, [cargo, dimUnit]);
+
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
   }, [activeLaneId, lanes]);
+
+  // Silently fill charge lines that have been consistent across this
+  // customer/route/incoterm/carrier's history — only fields still at their
+  // default (0, or an untouched 0/0 surcharge row) are ever written.
+  useEffect(() => {
+    if (!Object.keys(historicalAutofill.sea).length) return;
+    setLiners((prev) =>
+      prev.map((l) => {
+        if (!l.name.trim()) return l;
+        const result =
+          historicalAutofill.sea[normalizeCarrierName(l.name)] ?? historicalAutofill.sea[""];
+        if (!result) return l;
+
+        let changed = false;
+        const nextContainers = l.containers.map((row) => {
+          const cv = result.containers[normalizeSurchargeName(row.type)];
+          if (!cv) return row;
+          const nextRow = { ...row };
+          if (row.sellRate === 0 && cv.sell !== null) {
+            nextRow.sellRate = cv.sell;
+            changed = true;
+          }
+          if (row.buyRate === 0 && cv.buy !== null) {
+            nextRow.buyRate = cv.buy;
+            changed = true;
+          }
+          return nextRow;
+        });
+
+        let nextLclSell = l.lclSell;
+        let nextLclBuy = l.lclBuy;
+        if (l.lclSell === 0 && result.lcl.sell !== null) {
+          nextLclSell = result.lcl.sell;
+          changed = true;
+        }
+        if (l.lclBuy === 0 && result.lcl.buy !== null) {
+          nextLclBuy = result.lcl.buy;
+          changed = true;
+        }
+
+        const nextOrigin = l.originSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.originSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+        const nextDest = l.destSurcharges.map((row) => {
+          if (!(row.sell === 0 && row.buy === 0)) return row;
+          const cv = result.destSurcharges[normalizeSurchargeName(row.name)];
+          if (!cv || (cv.sell === null && cv.buy === null)) return row;
+          changed = true;
+          return { ...row, sell: cv.sell ?? row.sell, buy: cv.buy ?? row.buy };
+        });
+
+        if (!changed) return l;
+        return {
+          ...l,
+          containers: nextContainers,
+          lclSell: nextLclSell,
+          lclBuy: nextLclBuy,
+          originSurcharges: nextOrigin,
+          destSurcharges: nextDest,
+        };
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historicalAutofill.sea]);
+
+  // Identity key, not the liners array itself — changes only when an id or a
+  // typed carrier name actually changes, never when the autofill effect
+  // below writes a rate. Depending on `liners` directly here would feed back
+  // into that effect's own setLiners call and loop forever.
+  const linerIdentityKey = liners.map((l) => `${l.id}:${normalizeCarrierName(l.name)}`).join("|");
+
+  // Circulars tariff match per liner — carrier-specific, never a different
+  // carrier's rate on the same lane. Drives both the silent rate autofill
+  // below and the "no tariff" / "wrong carrier" hints shown on the card.
+  const tariffMatchById = useMemo(() => {
+    const map: Record<string, CarrierTariffMatch<SeaTariff>> = {};
+    const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
+    const destCode = destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
+    if (!originCode || !destCode) return map;
+    for (const l of liners) {
+      if (!l.name.trim()) continue;
+      map[l.id] = lookupSeaTariffForCarrier(tariffs, originCode, destCode, l.name, mode);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linerIdentityKey, origin, destination, tariffs, mode]);
+
+  // Silently fill FCL container / LCL rate fields still at 0 once a
+  // Circulars tariff matches the exact carrier typed on the card — never a
+  // different carrier's rate, and never a field the desk has already
+  // entered. Only calls setLiners when something actually changed —
+  // prev.map() always returns a new array reference, so an unconditional
+  // call here would re-trigger the identity-key-based memo above forever.
+  useEffect(() => {
+    if (!Object.keys(tariffMatchById).length) return;
+    setLiners((prev) => {
+      let anyChanged = false;
+      const next = prev.map((l) => {
+        const match = tariffMatchById[l.id];
+        if (!match || match.status !== "matched") return l;
+        const tariff = match.tariff;
+        let changed = false;
+
+        const nextContainers = l.containers.map((row) => {
+          const cv = tariff.fclRates[row.type];
+          if (!cv) return row;
+          const nextRow = { ...row };
+          if (row.sellRate === 0 && cv.sell > 0) {
+            nextRow.sellRate = cv.sell;
+            changed = true;
+          }
+          if (row.buyRate === 0 && cv.buy > 0) {
+            nextRow.buyRate = cv.buy;
+            changed = true;
+          }
+          return nextRow;
+        });
+
+        let nextLclSell = l.lclSell;
+        let nextLclBuy = l.lclBuy;
+        if (l.lclSell === 0 && tariff.lclRate.sell > 0) {
+          nextLclSell = tariff.lclRate.sell;
+          changed = true;
+        }
+        if (l.lclBuy === 0 && tariff.lclRate.buy > 0) {
+          nextLclBuy = tariff.lclRate.buy;
+          changed = true;
+        }
+
+        if (!changed) return l;
+        anyChanged = true;
+        return { ...l, containers: nextContainers, lclSell: nextLclSell, lclBuy: nextLclBuy };
+      });
+      return anyChanged ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tariffMatchById]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -159,10 +363,26 @@ function SeaDeskInner() {
   const totalsById = useMemo(() => {
     const map: Record<string, ReturnType<typeof computeLinerTotals>> = {};
     for (const l of liners) {
-      map[l.id] = computeLinerTotals(mode, grossWeightKg, volumeCbm, chargeableCbmOverride, l);
+      map[l.id] = computeLinerTotals(
+        mode,
+        grossWeightKg,
+        volumeCbm,
+        chargeableCbmOverride,
+        l,
+        localOriginCharges,
+        destClearanceCharges,
+      );
     }
     return map;
-  }, [liners, mode, grossWeightKg, volumeCbm, chargeableCbmOverride]);
+  }, [
+    liners,
+    mode,
+    grossWeightKg,
+    volumeCbm,
+    chargeableCbmOverride,
+    localOriginCharges,
+    destClearanceCharges,
+  ]);
 
   const selectedTotals = selected ? totalsById[selected.id] : null;
   const quotedLanes = useMemo(
@@ -197,9 +417,13 @@ function SeaDeskInner() {
     setMode(loaded.mode);
     setGrossWeightKg(loaded.grossWeightKg);
     setVolumeCbm(loaded.volumeCbm);
+    setCargo(loaded.cargo);
+    setDimUnit(loaded.dimUnit);
     setChargeableCbmOverride(loaded.chargeableCbmOverride);
     setCustomFx(loaded.customExchangeRate);
     setLiners(loaded.liners);
+    setLocalOriginCharges(loaded.localOriginCharges);
+    setDestClearanceCharges(loaded.destClearanceCharges);
     const lane = newLane({ origin: loaded.origin, destination: loaded.destination });
     setLanes([lane]);
     setActiveLaneId(lane.id);
@@ -216,6 +440,7 @@ function SeaDeskInner() {
       seaTariff: loader.smartPrefill.seaTariff,
       message: "Prefill from Smart Quote / Inbox",
     });
+    if (loader.smartPrefill.leadId) setLeadId(loader.smartPrefill.leadId);
     clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
@@ -269,9 +494,13 @@ function SeaDeskInner() {
     setMode("fcl");
     setGrossWeightKg(0);
     setVolumeCbm(0);
+    setCargo([]);
+    setDimUnit("cms");
     setChargeableCbmOverride(0);
     setCustomFx(0);
     setLiners([createLinerOption({ laneId: lane.id }, true)]);
+    setLocalOriginCharges([]);
+    setDestClearanceCharges([]);
     setTerms(getDefaultFreightTerms("sea"));
     setSaveMsg(null);
     setPreviewQuote(null);
@@ -315,11 +544,23 @@ function SeaDeskInner() {
       toast("Enter port of loading and discharge first.", "error");
       return;
     }
-    const tariff = lookupSeaTariff(tariffs, originCode, destCode, mode);
-    if (!tariff) {
-      toast(`No Circulars ${mode.toUpperCase()} tariff for ${originCode} → ${destCode}.`, "info");
+    if (!selected.name.trim()) {
+      toast("Enter the carrier / liner on the selected option first.", "error");
       return;
     }
+    const match = lookupSeaTariffForCarrier(tariffs, originCode, destCode, selected.name, mode);
+    if (match.status === "none") {
+      toast(`No Circulars ${mode.toUpperCase()} tariff on file for ${originCode} → ${destCode}.`, "info");
+      return;
+    }
+    if (match.status === "carrier-mismatch") {
+      toast(
+        `Circulars has ${mode.toUpperCase()} rates for ${originCode} → ${destCode} under ${match.otherCarriers.join(", ")} — not ${selected.name}. Check the carrier name.`,
+        "info",
+      );
+      return;
+    }
+    const tariff = match.tariff;
     setCurrency(tariff.currency);
     if (mode === "fcl") {
       const rows = Object.entries(tariff.fclRates).map(([type, rates]) => ({
@@ -329,12 +570,10 @@ function SeaDeskInner() {
         buyRate: rates.buy,
       }));
       updateLiner(selected.id, {
-        name: selected.name || tariff.carrier,
         containers: rows.length ? rows : selected.containers,
       });
     } else {
       updateLiner(selected.id, {
-        name: selected.name || tariff.carrier,
         lclSell: tariff.lclRate.sell,
         lclBuy: tariff.lclRate.buy,
       });
@@ -394,11 +633,14 @@ function SeaDeskInner() {
         shippingLine: selected.name,
         incoterm,
         module,
+        creatorBranch: user?.branch || "Bangalore",
         commodity,
         type: mode,
         chargeableRt: selectedTotals.freight.chargeableRt,
         grossWeight: grossWeightKg,
         volumeCbm,
+        seaCargoItems: cargo,
+        dimUnit,
         baseFreight: selectedTotals.baseFreightQuote,
         originFeesTotal: selectedTotals.originTotal,
         destFeesTotal: selectedTotals.destTotal,
@@ -409,8 +651,20 @@ function SeaDeskInner() {
         quotedLanes,
         allLanesTotal: amount,
         liners: liners.map((l) =>
-          linerSnapshot(l, mode, grossWeightKg, volumeCbm, chargeableCbmOverride, lanes, fallback),
+          linerSnapshot(
+            l,
+            mode,
+            grossWeightKg,
+            volumeCbm,
+            chargeableCbmOverride,
+            lanes,
+            fallback,
+            localOriginCharges,
+            destClearanceCharges,
+          ),
         ),
+        localOriginCharges,
+        destClearanceCharges,
         termsAndConditions: terms,
         mode: "Sea",
       },
@@ -458,7 +712,17 @@ function SeaDeskInner() {
       const fx = customFx > 0 ? customFx : 83.5;
       const fallback = lanes[0]?.id || "";
       const linerSnaps = liners.map((l) =>
-        linerSnapshot(l, mode, grossWeightKg, volumeCbm, chargeableCbmOverride, lanes, fallback),
+        linerSnapshot(
+          l,
+          mode,
+          grossWeightKg,
+          volumeCbm,
+          chargeableCbmOverride,
+          lanes,
+          fallback,
+          localOriginCharges,
+          destClearanceCharges,
+        ),
       );
       const localQuote: SavedQuote = {
         id: quoteId,
@@ -483,12 +747,15 @@ function SeaDeskInner() {
           shippingLine: selected.name,
           incoterm,
           module,
+          creatorBranch: user?.branch || "Bangalore",
           commodity,
           type: mode,
           lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
           quotedLanes,
           allLanesTotal: amount,
           liners: linerSnaps,
+          localOriginCharges,
+          destClearanceCharges,
           termsAndConditions: terms,
           mode: "Sea",
         },
@@ -503,6 +770,7 @@ function SeaDeskInner() {
             await saveSeaQuote({
               customer: customer.trim(),
               creator: user.username,
+              creatorBranch: user.branch,
               origin,
               destination,
               currency,
@@ -512,10 +780,14 @@ function SeaDeskInner() {
               mode,
               grossWeightKg,
               volumeCbm,
+              cargo,
+              dimUnit,
               chargeableCbmOverride,
               selected,
               totals: selectedTotals,
               liners,
+              localOriginCharges,
+              destClearanceCharges,
               termsAndConditions: terms,
               customExchangeRate: customFx || undefined,
               quoteId,
@@ -524,7 +796,9 @@ function SeaDeskInner() {
               lanes,
               quotedLanes,
               allLanesAmount: amount,
+              leadId,
             });
+            if (leadId) void linkQuoteToLead(leadId, quoteId);
             cloud = "live";
             cacheOfflineQuote({
               id: quoteId,
@@ -586,8 +860,31 @@ function SeaDeskInner() {
       quotedLanes,
       allLanesQuotedTotal,
       totalsById,
+      dimUnit,
+      localOriginCharges,
+      destClearanceCharges,
     ],
   );
+
+  function goToCarriers() {
+    if (!customer.trim()) {
+      toast("Enter customer name before liners.", "error");
+      return;
+    }
+    if (!origin.trim() || !destination.trim()) {
+      toast("Enter origin and destination before liners.", "error");
+      return;
+    }
+    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
+    if (cargoErr) {
+      toast(cargoErr, "error");
+      setSaveMsg(cargoErr);
+      return;
+    }
+    setSaveMsg(null);
+    setStep("carrier");
+    focusById("sea-step-carrier-anchor");
+  }
 
   useDeskSaveShortcut(() => void handleSave(), !saving);
   useDeskStepKeys({
@@ -714,7 +1011,10 @@ function SeaDeskInner() {
                   const lane = newLane();
                   setLanes((prev) => [...prev, lane]);
                   setActiveLaneId(lane.id);
-                  setLiners((prev) => [...prev, createLinerOption({ laneId: lane.id }, true)]);
+                  setLiners((prev) => [
+                    ...stampOntoFirstLane(prev, lanes[0]?.id || ""),
+                    createLinerOption({ laneId: lane.id }, true),
+                  ]);
                 }}
                 onRemove={(id) => {
                   setLanes((prev) => {
@@ -735,12 +1035,14 @@ function SeaDeskInner() {
                 destination={destination}
                 tariffCount={tariffs.length}
               />
+              <CustomsHolidayBanner />
               <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer
                   <Input
-                    name="atlas-customer"
+                    name={customerFieldName}
                     autoComplete="off"
+                    data-1p-ignore="true"
                     value={customer}
                     onChange={(e) => setCustomer(e.target.value)}
                     placeholder="Customer name"
@@ -791,24 +1093,154 @@ function SeaDeskInner() {
                 <div className="md:col-span-2">
                   <CommodityCombobox value={commodity} onChange={setCommodity} />
                 </div>
+                {mode !== "fcl" ? (
+                  <div className="md:col-span-2 space-y-2 rounded-lg border border-[var(--color-border)] bg-slate-50/60 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-bold">Cargo dimensions</h3>
+                      <div className="flex items-center gap-2">
+                        <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-white p-0.5 text-xs font-bold">
+                          <button
+                            type="button"
+                            className={cn(
+                              "rounded-md px-2.5 py-1",
+                              dimUnit === "cms" ? "bg-[var(--color-atlas-navy)] text-white" : "text-[var(--color-text-muted)]",
+                            )}
+                            onClick={() => setDimUnit("cms")}
+                          >
+                            cm
+                          </button>
+                          <button
+                            type="button"
+                            className={cn(
+                              "rounded-md px-2.5 py-1",
+                              dimUnit === "inches" ? "bg-[var(--color-atlas-navy)] text-white" : "text-[var(--color-text-muted)]",
+                            )}
+                            onClick={() => setDimUnit("inches")}
+                          >
+                            inches
+                          </button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setCargo((rows) => [...rows, { l: 0, w: 0, h: 0, qty: 1, gw: 0 }])}
+                        >
+                          <Plus className="mr-1 h-4 w-4" /> Add row
+                        </Button>
+                      </div>
+                    </div>
+                    {cargo.length ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-white text-xs uppercase text-[var(--color-text-muted)]">
+                            <tr>
+                              <th className="px-2 py-2">L ({dimUnit === "cms" ? "cm" : "in"})</th>
+                              <th className="px-2 py-2">W ({dimUnit === "cms" ? "cm" : "in"})</th>
+                              <th className="px-2 py-2">H ({dimUnit === "cms" ? "cm" : "in"})</th>
+                              <th className="px-2 py-2">Qty</th>
+                              <th className="px-2 py-2">GW kg</th>
+                              <th className="px-2 py-2" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cargo.map((row, i) => (
+                              <tr key={i} className="border-t border-[var(--color-border)]">
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.1"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.l}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, l: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.1"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.w}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, w: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.1"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.h}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, h: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    autoComplete="off"
+                                    className="w-14 rounded border px-1 py-1"
+                                    value={row.qty}
+                                    onChange={(e) =>
+                                      setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, qty: Number(e.target.value) } : r)))
+                                    }
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <NumberInput
+                                    step="0.01"
+                                    className="mt-0 w-16 bg-white px-1 py-1"
+                                    value={row.gw}
+                                    onValueChange={(n) => setCargo((rows) => rows.map((r, j) => (j === i ? { ...r, gw: n } : r)))}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <button
+                                    type="button"
+                                    className="text-red-600"
+                                    onClick={() => setCargo((rows) => rows.filter((_, j) => j !== i))}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        No package rows yet — Gross weight and Volume below stay directly editable. Add a row to
+                        switch to per-package entry (Volume computes automatically).
+                      </p>
+                    )}
+                  </div>
+                ) : null}
                 <Label>
                   Gross weight (kg)
                   <Input
                     type="number"
+                    disabled={seaCargoHasData(cargo)}
                     value={grossWeightKg || ""}
                     onChange={(e) => setGrossWeightKg(Number(e.target.value))}
                     placeholder="0"
                   />
+                  {seaCargoHasData(cargo) ? (
+                    <span className="mt-1 block text-[11px] text-[var(--color-text-muted)]">
+                      Computed from the rows above (sum of qty × GW).
+                    </span>
+                  ) : null}
                 </Label>
                 <Label>
                   Volume (CBM)
                   <Input
                     type="number"
                     step="0.01"
+                    disabled={seaCargoHasData(cargo)}
                     value={volumeCbm || ""}
                     onChange={(e) => setVolumeCbm(Number(e.target.value))}
                     placeholder="0"
                   />
+                  {seaCargoHasData(cargo) ? (
+                    <span className="mt-1 block text-[11px] text-[var(--color-text-muted)]">
+                      Computed from L×W×H×qty above.
+                    </span>
+                  ) : null}
                 </Label>
                 {mode !== "fcl" ? (
                   <Label className="md:col-span-2">
@@ -829,33 +1261,24 @@ function SeaDeskInner() {
                     value={customFx || ""}
                     onChange={(e) => setCustomFx(Number(e.target.value))}
                     placeholder="Blank = 83.5"
-                    onKeyDown={(e) => lastFieldTab(e, () => setStep("carrier"))}
+                    onKeyDown={(e) => lastFieldTab(e, goToCarriers)}
                   />
+                  {currency !== "INR" ? (
+                    <span className="mt-1 block text-xs text-[var(--color-text-muted)]" data-testid="custom-fx-preview">
+                      Used only for the INR-equivalent figure saved with this quote (Enquiry DB
+                      reporting) — it doesn&apos;t change the {currency} total shown to the
+                      customer. ≈{" "}
+                      {formatCurrency(
+                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (customFx > 0 ? customFx : 83.5),
+                        "INR",
+                      )}{" "}
+                      at {customFx > 0 ? customFx.toFixed(2) : "83.5 (default)"}
+                    </span>
+                  ) : null}
                 </Label>
               </div>
               <div className="flex justify-end">
-                <Button
-                  type="button"
-                  className="h-9"
-                  onClick={() => {
-                    if (!customer.trim()) {
-                      toast("Enter customer name before liners.", "error");
-                      return;
-                    }
-                    if (!origin.trim() || !destination.trim()) {
-                      toast("Enter origin and destination before liners.", "error");
-                      return;
-                    }
-                    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
-                    if (cargoErr) {
-                      toast(cargoErr, "error");
-                      setSaveMsg(cargoErr);
-                      return;
-                    }
-                    setSaveMsg(null);
-                    setStep("carrier");
-                  }}
-                >
+                <Button type="button" className="h-9" onClick={goToCarriers}>
                   Next · Liners
                 </Button>
               </div>
@@ -864,8 +1287,36 @@ function SeaDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
+              <div className="space-y-3 rounded-xl border-2 border-[var(--color-atlas-navy)]/20 bg-[var(--color-atlas-gold-soft)]/40 p-3">
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  <strong>Local charges — once per quote, not per carrier.</strong> These apply
+                  the same way no matter which liner/coloader you end up quoting, so they're
+                  entered here once and added automatically into every carrier's total below.
+                </p>
+                <SurchargeTable
+                  title="Local Origin Charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={localOriginCharges}
+                  onChange={setLocalOriginCharges}
+                  units={["flat", "cbm", "container"]}
+                />
+                <SurchargeTable
+                  title="Destination Clearance Charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={destClearanceCharges}
+                  onChange={setDestClearanceCharges}
+                  units={["flat", "cbm", "container"]}
+                />
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-bold text-[var(--color-atlas-navy)]">
+                <h2
+                  id="sea-step-carrier-anchor"
+                  tabIndex={-1}
+                  className="font-bold text-[var(--color-atlas-navy)] outline-none"
+                >
                   Carriers on this lane ({laneLiners.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
@@ -990,6 +1441,29 @@ function SeaDeskInner() {
                         />
                       </div>
                     </div>
+
+                    {(() => {
+                      const match = tariffMatchById[opt.id];
+                      if (!linerRatesAreEmpty(opt, mode) || !match) return null;
+                      if (match.status === "none") {
+                        return (
+                          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                            No Circulars {mode.toUpperCase()} tariff on file yet for {opt.name || "this carrier"} on
+                            this route.
+                          </p>
+                        );
+                      }
+                      if (match.status === "carrier-mismatch") {
+                        return (
+                          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                            Circulars has a {mode.toUpperCase()} tariff for this route under{" "}
+                            {match.otherCarriers.join(", ")} — not {opt.name}. Check the carrier name, or enter
+                            rates manually below.
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     {mode === "fcl" ? (
                       <div>
@@ -1162,7 +1636,20 @@ function SeaDeskInner() {
                 <Button type="button" variant="secondary" onClick={() => setStep("shipment")}>
                   Back
                 </Button>
-                <Button id="sea-next-terms" type="button" onClick={() => setStep("terms")}>
+                <Button
+                  id="sea-next-terms"
+                  type="button"
+                  onClick={() => {
+                    setStep("terms");
+                    focusById("sea-terms-textarea");
+                  }}
+                  onKeyDown={(e) =>
+                    lastFieldTab(e, () => {
+                      setStep("terms");
+                      focusById("sea-terms-textarea");
+                    })
+                  }
+                >
                   Next · Terms
                 </Button>
               </div>
@@ -1172,7 +1659,7 @@ function SeaDeskInner() {
           {step === "terms" ? (
             <Card className="space-y-4">
               <h2 className="font-bold text-[var(--color-atlas-navy)]">Terms & conditions</h2>
-              <Textarea className="min-h-56" value={terms} onChange={(e) => setTerms(e.target.value)} />
+              <Textarea id="sea-terms-textarea" className="min-h-56" value={terms} onChange={(e) => setTerms(e.target.value)} />
               <button
                 type="button"
                 className="text-xs font-semibold text-sky-700 hover:underline"

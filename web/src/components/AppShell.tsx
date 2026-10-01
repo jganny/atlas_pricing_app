@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
+  BellRing,
   Briefcase,
   ClipboardList,
   Database,
@@ -29,6 +30,9 @@ import {
 import { cn } from "@/lib/utils";
 import { appVersion } from "@/lib/env";
 import { useAuthStore } from "@/store/auth";
+import { useWonFollowUps } from "@/hooks/use-atlas-data";
+import { escalationTier, missingWonFields } from "@/lib/quotes/won-followups";
+import { toast } from "@/components/Toast";
 import {
   canAccessRoute,
   deskFocusLabel,
@@ -36,6 +40,7 @@ import {
   type AppRouteId,
 } from "@/lib/auth/rbac";
 import { signedInCaption } from "@/lib/auth/desk-seats";
+import { useSeatsVersion } from "@/hooks/use-seats-version";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
@@ -68,6 +73,7 @@ const workNav: NavItem[] = [
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
   // NRS follow-ups: visible only when RBAC grants `nrs` (Cathrina). Not Admin.
   { href: "/nrs", label: "NRS follow-ups", icon: ClipboardList, route: "nrs" },
+  { href: "/won-followups", label: "Won follow-ups", icon: BellRing, route: "won-followups" },
 ];
 
 const officeNav: NavItem[] = [
@@ -101,11 +107,13 @@ function NavLink({
   pathname,
   onNavigate,
   dark,
+  badgeCount,
 }: {
   item: NavItem;
   pathname: string;
   onNavigate?: () => void;
   dark?: boolean;
+  badgeCount?: number;
 }) {
   const active = pathActive(pathname, item.href, item.exact);
   return (
@@ -136,12 +144,18 @@ function NavLink({
         />
       ) : null}
       <item.icon className="h-4 w-4" />
-      {item.label}
+      <span className="flex-1">{item.label}</span>
+      {badgeCount ? (
+        <span className="rounded-full bg-[var(--color-atlas-error)] px-1.5 py-0.5 text-[10px] font-extrabold text-white">
+          {badgeCount}
+        </span>
+      ) : null}
     </Link>
   );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  useSeatsVersion();
   const pathname = usePathname() ?? "/";
   const normalized =
     pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
@@ -150,6 +164,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pipOpen, setPipOpen] = useState(false);
   const admin = isAdminUser(user?.username, user?.role);
+  const { data: wonFollowUps = [] } = useWonFollowUps();
+  const pendingRows = useMemo(
+    () => wonFollowUps.filter((r) => missingWonFields(r).length > 0),
+    [wonFollowUps],
+  );
+  const pendingWonCount = pendingRows.length;
+
+  // Once per browser session, not once per page: a single quiet summary,
+  // never repeated while the user is actively working.
+  useEffect(() => {
+    if (pendingWonCount === 0) return;
+    let already = false;
+    try {
+      already = sessionStorage.getItem("atlas_won_followup_nudge_shown") === "1";
+    } catch {
+      /* private mode — just skip the nudge this session */
+      return;
+    }
+    if (already) return;
+    try {
+      sessionStorage.setItem("atlas_won_followup_nudge_shown", "1");
+    } catch {
+      return;
+    }
+    const overdueCount = pendingRows.filter((r) => escalationTier(r.wonAt) === "red").length;
+    toast(
+      `${pendingWonCount} Won quote${pendingWonCount > 1 ? "s are" : " is"} still missing details` +
+        (overdueCount ? ` — ${overdueCount} overdue` : ""),
+      "info",
+    );
+  }, [pendingWonCount, pendingRows]);
 
   const visibleDesks = useMemo(
     () => filterNav(desksNav, user?.username, user?.role),
@@ -189,7 +234,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             className={
               opts.dark
-                ? "mt-3 px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-white/40 first:mt-0"
+                ? "mt-3 px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-white/65 first:mt-0"
                 : "bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-400"
             }
           >
@@ -202,6 +247,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               pathname={normalized}
               dark={opts.dark}
               onNavigate={opts.onNavigate}
+              badgeCount={item.href === "/won-followups" ? pendingWonCount : undefined}
             />
           ))}
         </div>
@@ -240,7 +286,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ATLAS PRICING
             </div>
             <div className="mt-1 text-xs text-white/60">Quote · book · track · v{appVersion}</div>
-            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-gold-bright)]">
+            <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c3d0dc]">
               {focus}
             </div>
             <Link
@@ -256,7 +302,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {renderNavGroups({ dark: true })}
           </nav>
           <div className="border-t border-white/10 p-4">
-            <div className="text-xs text-white/50">Signed in as</div>
+            <div className="text-xs text-white/70">Signed in as</div>
             <div className="text-sm font-semibold">
               {signedInCaption(user?.username, user?.displayName)}
             </div>

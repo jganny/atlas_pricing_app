@@ -26,14 +26,17 @@ describe("courier zone & chargeable", () => {
     expect(chargeableKg).toBe(12);
   });
 
-  it("CHW is max(GW, volume weight) and does not multiply GW by qty", () => {
-    // 5 pcs × 30×40×30 cm → VWT 36 kg; GW 50 kg → CHW 50, not 5×50=250
+  it("GW is per piece, matching the live legacy courier desk — CHW = max(GW, volumetric) per piece, then × qty", () => {
+    // 5 pcs × 30×40×30 cm → volumetric 7.2 kg/piece; GW 50 kg/piece (weighed
+    // on the box's own scale) → per-piece chargeable 50, × 5 pcs = 250, not
+    // a flat 50 for the whole line. (courier-desk.js: chargeablePerPiece =
+    // max(gw, volPerPiece); round(chargeablePerPiece) * qty.)
     const { lines, chargeableKg } = summarizeCourierPackages([
       { qty: 5, gw: 50, l: 30, w: 40, h: 30 },
     ]);
-    expect(lines[0].volumeWeight).toBeCloseTo(36, 5);
-    expect(lines[0].chargeable).toBe(50);
-    expect(chargeableKg).toBe(50);
+    expect(lines[0].volPerPiece).toBeCloseTo(7.2, 5);
+    expect(lines[0].chargeable).toBe(250);
+    expect(chargeableKg).toBe(250);
   });
 
   it("uses volume weight when it exceeds GW", () => {

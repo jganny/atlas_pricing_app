@@ -744,5 +744,152 @@ exports.atlasCopilot = functions
     }
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// atlasCopilotStream
+//
+// Same assistant as atlasCopilot, streamed: the reply is written to the
+// response as it's generated, instead of waiting for the full answer.
+// A plain HTTP function (not onCall) because Callable Functions can't stream —
+// so auth is verified by hand from the Authorization header, and CORS is
+// handled by hand too. Reuses atlasCopilot's own validation and system prompt
+// so both stay in lockstep by inspection.
+// ─────────────────────────────────────────────────────────────────────────────
+const ALLOWED_STREAM_ORIGINS = [/^https:\/\/vertex-35d95\.web\.app$/, /^http:\/\/localhost:\d+$/];
+
+function applyStreamCors(req, res) {
+  const origin = req.headers.origin || "";
+  if (ALLOWED_STREAM_ORIGINS.some((re) => re.test(origin))) {
+    res.set("Access-Control-Allow-Origin", origin);
+  }
+  res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+}
+
+exports.atlasCopilotStream = functions
+  .runWith({ secrets: [anthropicApiKey] })
+  .https.onRequest(async (req, res) => {
+    applyStreamCors(req, res);
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Use POST." });
+      return;
+    }
+
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!token) {
+      res.status(401).json({ error: "Sign in is required." });
+      return;
+    }
+    try {
+      await admin.auth().verifyIdToken(token);
+    } catch {
+      res.status(401).json({ error: "Sign in is required." });
+      return;
+    }
+
+    const data = req.body || {};
+    const message = typeof data.message === "string" ? data.message.trim() : "";
+    if (!message || message.length > 4000) {
+      res.status(400).json({ error: "Message must be 1–4000 characters." });
+      return;
+    }
+
+    const apiKey = anthropicApiKey.value();
+    if (!apiKey) {
+      res.status(412).json({ error: "Atlas Copilot is not configured yet. Ask your admin to set ANTHROPIC_API_KEY." });
+      return;
+    }
+
+    const workspace = typeof data.workspace === "string" ? data.workspace.slice(0, 80) : "Dashboard";
+    const role = typeof data.role === "string" ? data.role.slice(0, 40) : "user";
+    const quoteContext = data.quoteContext && typeof data.quoteContext === "object"
+      ? JSON.stringify(data.quoteContext).slice(0, 6000)
+      : null;
+
+    const systemPrompt =
+      "You are Atlas Copilot inside Atlas Pricing — a freight-forwarding operational pricing workspace " +
+      "(Air, Sea, Transportation, Warehousing desks; enquiry database; agent directory; circulars).\n\n" +
+      "STRICT RULES — never break these:\n" +
+      "1. NEVER calculate, estimate, or invent freight rates, chargeable weights, GP, surcharges, or currency amounts.\n" +
+      "2. NEVER output data that should be saved as a quote. You assist; the desk calculators compute.\n" +
+      "3. If asked for pricing, direct the user to the correct desk and explain which fields to complete.\n" +
+      "4. You may: explain workflows, summarize read-only quote metadata supplied by the client, " +
+      "draft follow-up emails, suggest navigation, and clarify freight terminology.\n" +
+      "5. Be concise, professional, and operational — this is a live business tool.\n\n" +
+      `Current user role: ${role}. Active workspace: ${workspace}.`;
+
+    let userContent = message;
+    if (quoteContext) {
+      userContent += "\n\n--- READ-ONLY QUOTE CONTEXT (do not modify; summarize or explain only) ---\n" + quoteContext;
+    }
+
+    let upstream;
+    try {
+      upstream = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1200,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userContent }],
+          stream: true,
+        }),
+      });
+    } catch (err) {
+      functions.logger.warn("atlasCopilotStream: request failed", { message: err.message });
+      res.status(502).json({ error: "Atlas Copilot is temporarily unavailable." });
+      return;
+    }
+
+    if (!upstream.ok || !upstream.body) {
+      functions.logger.warn("atlasCopilotStream: API request failed", { status: upstream.status });
+      res.status(502).json({ error: "Atlas Copilot is temporarily unavailable." });
+      return;
+    }
+
+    res.status(200);
+    res.set("Content-Type", "text/plain; charset=utf-8");
+    res.set("Cache-Control", "no-cache");
+    res.flushHeaders?.();
+
+    // Anthropic's stream is Server-Sent Events (event:/data: lines, one JSON
+    // payload per data: line). Only content_block_delta.delta.text is prose —
+    // everything else (message_start, ping, message_stop, …) is bookkeeping.
+    let buffer = "";
+    try {
+      for await (const chunk of upstream.body) {
+        // Node's built-in fetch yields plain Uint8Array chunks, which have no
+        // encoding-aware toString — go through Buffer.from to decode safely.
+        buffer += Buffer.from(chunk).toString("utf8");
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(payload);
+            const text = evt?.delta?.text;
+            if (typeof text === "string" && text) res.write(text);
+          } catch {
+            /* a partial/non-JSON data line — skip it, next chunk completes it */
+          }
+        }
+      }
+    } catch (err) {
+      functions.logger.warn("atlasCopilotStream: stream read failed", { message: err.message });
+    }
+    res.end();
+  });
+
 const inboxPoll = require("./inbox-poll");
 exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;

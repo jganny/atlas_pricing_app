@@ -1,3 +1,4 @@
+import { getCourierZone } from "@atlas/pricing-core";
 import { inferCountryFromText } from "@/lib/locations/country-aliases";
 
 export const COURIER_TARIFF_MAX_KG = 70;
@@ -79,15 +80,66 @@ export function applyCourierTariffMarkup(
   return Math.round(uploadedRate * (1 + markupPct / 100) * 100) / 100;
 }
 
+function lanePlace(lane: CourierTariffLane): string {
+  return lane.direction === "import" ? lane.origin : lane.destination;
+}
+
+function isRateCode(raw: string): boolean {
+  return /^\d{3,5}(\.\d+)?$/.test(String(raw || "").trim());
+}
+
 export function courierTariffNeedsReupload(book: CourierTariffBook | null | undefined): boolean {
   if (!book?.lanes?.length) return false;
-  const dests = book.lanes.map((l) => String(l.destination || ""));
-  const numeric = dests.filter((d) => /^\d+(\.\d+)?$/.test(d)).length;
-  if (numeric / dests.length > 0.4) return true;
-  const zones = dests.filter((d) => /^ZONE-/.test(d)).length;
-  const mapped = Object.keys(book.zoneMap || {}).length;
-  if (zones / dests.length > 0.5 && mapped === 0) return true;
-  return false;
+  const places = book.lanes.map((l) => String(lanePlace(l) || ""));
+  const numeric = places.filter(isRateCode).length;
+  return numeric / places.length > 0.4;
+}
+
+/** Older publishes stored the 0.5 kg price as the destination (1331, 1443…). Recover Zone A–N. */
+export function repairCourierTariffBook(book: CourierTariffBook): CourierTariffBook {
+  const lanes = book.lanes || [];
+  if (!lanes.length) return book;
+  const places = lanes.map((l) => String(lanePlace(l) || ""));
+  if (places.filter(isRateCode).length / places.length <= 0.4) return book;
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const repaired = lanes.map((lane, i) => {
+    const letter = letters[i] || String(i + 1);
+    const code = `ZONE-${letter}`;
+    const raw = lanePlace(lane);
+    const half = Number(raw);
+    const extra =
+      Number.isFinite(half) && half >= 80 ? ([{ kg: 0.5, rate: half }] as CourierTariffBreak[]) : [];
+    const breaks = uniqueBreaks([...extra, ...lane.breaks]);
+    if (lane.direction === "import") {
+      return {
+        ...lane,
+        origin: code,
+        destination: "IN",
+        destinationLabel: `Zone ${letter}`,
+        breaks,
+      };
+    }
+    return {
+      ...lane,
+      origin: lane.origin && !isRateCode(lane.origin) ? lane.origin : "IN",
+      destination: code,
+      destinationLabel: `Zone ${letter}`,
+      breaks,
+    };
+  });
+  return { ...book, lanes: repaired, warnings: undefined };
+}
+
+export function dedupeCourierTariffBooks(books: CourierTariffBook[]): CourierTariffBook[] {
+  const best = new Map<string, CourierTariffBook>();
+  for (const raw of books) {
+    const b = repairCourierTariffBook(raw);
+    const dirs = [...new Set(b.lanes.map((l) => l.direction))].sort().join("+");
+    const key = `${(b.carrierId || "fedex").toLowerCase()}::${dirs}::${(b.fileName || "").toLowerCase()}::${b.year}`;
+    const prev = best.get(key);
+    if (!prev || (b.uploadedAt || "") > (prev.uploadedAt || "")) best.set(key, b);
+  }
+  return [...best.values()].sort((a, b) => (b.uploadedAt || "").localeCompare(a.uploadedAt || ""));
 }
 
 function cellStr(v: unknown): string {
@@ -654,6 +706,14 @@ function inferLookupDirection(
   return "export";
 }
 
+function fallbackZoneCodes(origin: string, dest: string): string[] {
+  if (!origin || !dest || origin === dest) return [];
+  const n = getCourierZone(origin, dest);
+  if (!(n >= 1 && n <= 26)) return [];
+  const letter = String.fromCharCode(64 + n);
+  return [`ZONE-${letter}`, `ZONE-${n}`];
+}
+
 function zoneForCountry(book: CourierTariffBook, iso: string): string | null {
   if (!iso) return null;
   const raw = book.zoneMap?.[iso] || book.zoneMap?.[iso.toUpperCase()];
@@ -662,18 +722,21 @@ function zoneForCountry(book: CourierTariffBook, iso: string): string | null {
 }
 
 function laneMatchesPlace(
-  lanePlace: string,
+  lanePlaceCode: string,
   laneLabel: string,
   queryIso: string,
   book: CourierTariffBook,
+  fallbackCodes: string[] = [],
 ): boolean {
   if (!queryIso) return false;
-  const lp = (lanePlace || "").toUpperCase();
+  const lp = (lanePlaceCode || "").toUpperCase();
   if (lp === queryIso) return true;
-  const zl = zoneToken(lanePlace)?.code || zoneToken(laneLabel)?.code;
+  const zl = zoneToken(lanePlaceCode)?.code || zoneToken(laneLabel)?.code;
   const zq = zoneForCountry(book, queryIso);
   if (zq && zl && zq === zl) return true;
   if (zq && lp === zq) return true;
+  if (zl && fallbackCodes.includes(zl)) return true;
+  if (lp && fallbackCodes.includes(lp)) return true;
   if (laneLabel && queryIso && laneLabel.toUpperCase().includes(queryIso)) return true;
   return false;
 }
@@ -684,13 +747,15 @@ function laneMatchesQuery(
   dest: string,
   book: CourierTariffBook,
 ): boolean {
+  const fallback =
+    lane.direction === "import" ? fallbackZoneCodes(origin, dest) : fallbackZoneCodes(origin, dest);
   if (lane.direction === "import") {
     const destOk = lane.destination === "IN" || lane.destination === dest || dest === "IN";
-    const originOk = laneMatchesPlace(lane.origin, lane.destinationLabel, origin, book);
+    const originOk = laneMatchesPlace(lane.origin, lane.destinationLabel, origin, book, fallback);
     return Boolean(destOk && originOk);
   }
   const originOk = !origin || lane.origin === origin || (lane.origin === "IN" && origin === "IN");
-  const destOk = laneMatchesPlace(lane.destination, lane.destinationLabel, dest, book);
+  const destOk = laneMatchesPlace(lane.destination, lane.destinationLabel, dest, book, fallback);
   return Boolean(destOk && originOk);
 }
 
@@ -714,12 +779,15 @@ export function lookupCourierTariff(
   const origin = resolveIso(q.originCountry, q.originText || "");
   const dest = resolveIso(q.destCountry, q.destText || "");
   const direction = inferLookupDirection(origin, dest, q.scope);
-  const ranked = [...books]
-    .filter((b) => b.lanes?.length && carrierMatches(b, q.carrierId || "", q.directoryCarrier || ""))
-    .sort((a, b) => (b.uploadedAt || "").localeCompare(a.uploadedAt || ""));
+  const prepared = dedupeCourierTariffBooks(books);
+  const matched = prepared.filter((b) =>
+    b.lanes?.length && carrierMatches(b, q.carrierId || "", q.directoryCarrier || ""),
+  );
+  const ranked = (matched.length ? matched : prepared.filter((b) => b.lanes?.length)).sort((a, b) =>
+    (b.uploadedAt || "").localeCompare(a.uploadedAt || ""),
+  );
 
   for (const book of ranked) {
-    if (courierTariffNeedsReupload(book) && !book.zoneMap) continue;
     const lanes = book.lanes.filter((l) => l.direction === direction);
     const hit = lanes.find((l) => laneMatchesQuery(l, origin, dest, book));
     if (!hit) continue;
@@ -733,7 +801,7 @@ export function lookupCourierTariff(
 export function listLocalCourierTariffBooks(): CourierTariffBook[] {
   try {
     const raw = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]") as CourierTariffBook[];
-    return Array.isArray(raw) ? raw : [];
+    return Array.isArray(raw) ? dedupeCourierTariffBooks(raw.map(repairCourierTariffBook)) : [];
   } catch {
     return [];
   }
@@ -753,5 +821,5 @@ export function mergeCourierTariffBooks(live: CourierTariffBook[]): CourierTarif
   const local = listLocalCourierTariffBooks();
   const seen = new Set(live.map((b) => b.id));
   const extra = local.filter((b) => b.id && !seen.has(b.id));
-  return [...extra, ...live];
+  return dedupeCourierTariffBooks([...extra, ...live].map(repairCourierTariffBook));
 }

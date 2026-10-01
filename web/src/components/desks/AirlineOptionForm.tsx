@@ -1,15 +1,21 @@
 "use client";
 
-import type { WeightBreakName } from "@atlas/pricing-core";
+import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { Badge, Input, Label, NumberInput } from "@/components/ui";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { ValidityField } from "@/components/ValidityField";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
-import { visibleAirBreaks } from "@/lib/pricing/air-desk";
+import { computeAdjacentBreakComparison, visibleAirBreaks } from "@/lib/pricing/air-desk";
 import type { AirlineOption } from "@/lib/pricing/carrier-options";
+import type { CarrierTariffMatch } from "@/lib/firebase/tariffs";
+import type { AirTariff } from "@/lib/types";
 import { formatRoutingPreview, formatTransitPreview, normalizeRouting } from "@/lib/pricing/terms";
 import { formatCurrency } from "@/lib/utils";
+
+function breaksAreEmpty(breaks: WeightBreaks): boolean {
+  return Object.values(breaks).every((b) => (b?.sell || 0) === 0 && (b?.buy || 0) === 0);
+}
 
 const BREAK_LABELS: Record<WeightBreakName, string> = {
   min: "Minimum",
@@ -25,6 +31,7 @@ export function AirlineOptionForm({
   opt,
   tot,
   currency,
+  tariffMatch,
   showAllBreaks,
   onToggleAllBreaks,
   lastDestTabTarget,
@@ -34,6 +41,7 @@ export function AirlineOptionForm({
   opt: AirlineOption;
   tot: AirlineTotals | undefined;
   currency: string;
+  tariffMatch?: CarrierTariffMatch<AirTariff>;
   showAllBreaks: boolean;
   onToggleAllBreaks: () => void;
   lastDestTabTarget?: string;
@@ -41,8 +49,10 @@ export function AirlineOptionForm({
   onUpdateBreak: (name: WeightBreakName, field: "sell" | "buy", value: number) => void;
 }) {
   const amsId = `air-ams-fee-${opt.id}`;
+  const dgId = `air-dg-fee-${opt.id}`;
   const chw = tot?.freight.chargeableWeightKg ?? 0;
   const breaksToShow = visibleAirBreaks(chw, tot?.freight.usedBreak, showAllBreaks);
+  const breakComparison = opt.wbEnabled ? computeAdjacentBreakComparison(chw, opt.breaks) : null;
 
   return (
     <div className="space-y-3">
@@ -132,6 +142,37 @@ export function AirlineOptionForm({
             </Label>
           </div>
         </div>
+        <div className="md:col-span-2 space-y-2">
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input
+              id={dgId}
+              type="checkbox"
+              checked={opt.dgFeeEnabled}
+              onChange={(e) => onUpdate({ dgFeeEnabled: e.target.checked })}
+            />
+            DG fee
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Label>
+              DG sell
+              <NumberInput
+                disabled={!opt.dgFeeEnabled}
+                step="0.01"
+                value={opt.dgFee}
+                onValueChange={(n) => onUpdate({ dgFee: n })}
+              />
+            </Label>
+            <Label>
+              DG buy
+              <NumberInput
+                disabled={!opt.dgFeeEnabled}
+                step="0.01"
+                value={opt.dgFeeBuy || 0}
+                onValueChange={(n) => onUpdate({ dgFeeBuy: n })}
+              />
+            </Label>
+          </div>
+        </div>
       </div>
 
       <label className="flex items-center gap-2 text-sm font-semibold">
@@ -142,6 +183,18 @@ export function AirlineOptionForm({
         />
         Weight-break tariffs included
       </label>
+
+      {opt.wbEnabled && breaksAreEmpty(opt.breaks) && tariffMatch?.status === "none" ? (
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          No Circulars tariff on file yet for {opt.name || "this carrier"} on this route.
+        </p>
+      ) : null}
+      {opt.wbEnabled && breaksAreEmpty(opt.breaks) && tariffMatch?.status === "carrier-mismatch" ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          Circulars has a tariff for this route under {tariffMatch.otherCarriers.join(", ")} — not{" "}
+          {opt.name}. Check the carrier name, or enter rates manually below.
+        </p>
+      ) : null}
 
       {opt.wbEnabled ? (
         <div className="space-y-2">
@@ -211,6 +264,54 @@ export function AirlineOptionForm({
               <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
             </p>
           ) : null}
+          {breakComparison ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div
+                className={`rounded-lg border p-3 ${
+                  breakComparison.cheaper === "current"
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-[var(--color-border)] bg-white"
+                }`}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {BREAK_LABELS[breakComparison.current.breakName]} — literal
+                </p>
+                <p className="mt-0.5 text-lg font-bold text-[var(--color-atlas-navy)]">
+                  {formatCurrency(breakComparison.current.total, currency)}
+                </p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  {breakComparison.current.weightUsedKg.toFixed(0)} kg × ${breakComparison.current.rate.toFixed(2)}
+                </p>
+              </div>
+              <div
+                className={`rounded-lg border p-3 ${
+                  breakComparison.cheaper === "next"
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-[var(--color-border)] bg-white"
+                }`}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {BREAK_LABELS[breakComparison.next.breakName]} — next tier
+                </p>
+                <p className="mt-0.5 text-lg font-bold text-[var(--color-atlas-navy)]">
+                  {formatCurrency(breakComparison.next.total, currency)}
+                </p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  {breakComparison.next.weightUsedKg.toFixed(0)} kg (rounded up) × ${breakComparison.next.rate.toFixed(2)}
+                </p>
+              </div>
+              {breakComparison.cheaper !== "equal" ? (
+                <p className="sm:col-span-2 text-[11px] font-semibold text-emerald-700">
+                  {breakComparison.cheaper === "current"
+                    ? `The ${BREAK_LABELS[breakComparison.current.breakName]} rate is cheaper here — quoting at the next tier would cost more.`
+                    : `Quoting at ${BREAK_LABELS[breakComparison.next.breakName]} instead would save ${formatCurrency(
+                        Math.abs(breakComparison.current.total - breakComparison.next.total),
+                        currency,
+                      )}.`}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -254,6 +355,11 @@ export function AirlineOptionForm({
             {tot.ams > 0 ? (
               <span>
                 AMS: <strong>{formatCurrency(tot.ams, currency)}</strong>
+              </span>
+            ) : null}
+            {tot.dg > 0 ? (
+              <span>
+                DG: <strong>{formatCurrency(tot.dg, currency)}</strong>
               </span>
             ) : null}
             <span>

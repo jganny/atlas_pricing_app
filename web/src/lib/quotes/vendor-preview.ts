@@ -217,28 +217,30 @@ export function vendorRowsFromQuote(quote: SavedQuote): VendorPreviewRow[] {
 
   if (type.includes("courier") && Array.isArray(d.carrierQuotes) && d.carrierQuotes.length > 0) {
     const chosen = String(d.carrier ?? d.carrierName ?? "");
-    return markCheapest(
+    const rows = attachLaneLabels(
       d.carrierQuotes.map((raw, i) => {
-        const a = rec(raw);
-        const id = String(a.id ?? i);
-        const name = String(a.name || "Carrier");
-        return {
-          id,
-          name,
-          kind: "courier",
-          kindLabel: kindLabel("courier"),
-          total: num(a.sellLocal ?? a.sellUsd ?? a.total),
-          selected: id === chosen || name === chosen,
-          routing: "",
-          tt: String(a.transit ?? d.transit ?? ""),
-        };
+        const row = rowFromRaw(raw, i, "courier");
+        // Older single-carrier quotes never wrote `selected` on the row itself —
+        // fall back to matching the quote's own chosen carrier id/name.
+        if (!row.selected && (row.id === chosen || row.name === chosen)) {
+          return { ...row, selected: true };
+        }
+        return row;
       }),
+      d,
     );
+    const multi = rows.some((r) => r.laneId);
+    return markCheapest(rows, multi);
   }
 
   if (type.includes("transport")) {
     if (Array.isArray(d.truckers) && d.truckers.length > 0) {
-      return markCheapest(d.truckers.map((raw, i) => rowFromRaw(raw, i, "trucker")));
+      const rows = attachLaneLabels(
+        d.truckers.map((raw, i) => rowFromRaw(raw, i, "trucker")),
+        d,
+      );
+      const multi = rows.some((r) => r.laneId);
+      return markCheapest(rows, multi);
     }
     const single = num(d.freightSell) + num(d.detention) + num(d.tolls);
     if (single > 0 || String(d.truckerName ?? d.vehicleType ?? "")) {

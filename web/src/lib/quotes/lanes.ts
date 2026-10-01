@@ -15,6 +15,19 @@ export function laneRouteLabel(lane: Pick<QuoteLane, "origin" | "destination">, 
   return `Lane ${index + 1}`;
 }
 
+/**
+ * Same "Lane N · origin → destination" label, but for desks whose lane fields
+ * are free text (a ZIP/place string, e.g. Transport) rather than an airport
+ * code — `airportCode()` keeps only the first word of a value, which would
+ * silently drop the city name from a "560001 Bangalore"-style field.
+ */
+export function plainLaneLabel(lane: Pick<QuoteLane, "origin" | "destination">, index: number): string {
+  const o = lane.origin.trim();
+  const d = lane.destination.trim();
+  if (o && d) return `Lane ${index + 1} · ${o} → ${d}`;
+  return `Lane ${index + 1}`;
+}
+
 export function allLanesRoute(lanes: QuoteLane[]): string {
   const parts = lanes
     .map((l) => {
@@ -24,6 +37,22 @@ export function allLanesRoute(lanes: QuoteLane[]): string {
     })
     .filter(Boolean);
   return parts.join(" · ") || "—";
+}
+
+/**
+ * When a second lane is added, any existing item with no lane of its own
+ * (laneId falsy — it predates lanes existing at all) would otherwise match
+ * EVERY lane's filter (see optionsOnLane below: `!item.laneId` is true for
+ * all of them), so it silently appears to "belong" to the new lane too.
+ * Call this right before adding a lane, so the new lane starts genuinely
+ * empty instead of inheriting the first lane's cards.
+ */
+export function stampOntoFirstLane<T extends { laneId?: string }>(
+  items: T[],
+  firstLaneId: string,
+): T[] {
+  if (!firstLaneId) return items;
+  return items.map((item) => (item.laneId ? item : { ...item, laneId: firstLaneId }));
 }
 
 export function optionsOnLane<T extends { laneId?: string }>(

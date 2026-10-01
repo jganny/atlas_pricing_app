@@ -15,6 +15,7 @@ import {
 } from "@/lib/quotes/local-enquiries";
 import { hideQuoteFromAsk, unhideQuoteFromAsk } from "@/lib/quotes/hidden-ask";
 import { removeOfflineQuote } from "@/lib/quotes/offline-cache";
+import { logAudit } from "@/lib/firebase/audit-log";
 
 export async function fetchQuoteById(id: string): Promise<SavedQuote | null> {
   const local = getLocalQuote(id);
@@ -37,6 +38,19 @@ export async function saveQuoteDocument(quote: SavedQuote): Promise<string> {
 export async function patchQuote(id: string, patch: Partial<SavedQuote>): Promise<void> {
   const db = getFirebaseDb();
   await updateDoc(doc(db, "quotes", id), omitUndefinedDeep(patch) as Record<string, unknown>);
+  logAudit({
+    action: "quote.update",
+    entityType: "quote",
+    entityId: id,
+    entityLabel: localRefFor(id),
+    summary: patch.status ? `Status set to ${patch.status === "converted" ? "won" : patch.status}` : `Updated: ${Object.keys(patch).join(", ")}`,
+    changes: patch.status ? { status: { to: String(patch.status) } } : undefined,
+  });
+}
+
+function localRefFor(id: string): string {
+  const row = listLocalEnquiries().find((r) => r.id === id);
+  return row ? `${row.ref} · ${row.customer}` : id;
 }
 
 export async function deleteQuoteById(id: string): Promise<void> {
@@ -52,6 +66,13 @@ export async function deleteQuoteById(id: string): Promise<void> {
   try {
     const db = getFirebaseDb();
     await deleteDoc(doc(db, "quotes", id));
+    logAudit({
+      action: "quote.delete",
+      entityType: "quote",
+      entityId: id,
+      entityLabel: localRow ? `${localRow.ref} · ${localRow.customer}` : id,
+      summary: "Quote deleted",
+    });
   } catch (err) {
     const code = typeof err === "object" && err && "code" in err ? String((err as { code: unknown }).code) : "";
     const msg = err instanceof Error ? err.message : String(err);

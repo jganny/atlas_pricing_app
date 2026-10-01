@@ -69,18 +69,55 @@ export function occupantLoginForSeat(seatId: DeskSeatId): string {
   return DESK_SEATS.find((s) => s.id === seatId)?.defaultLoginIds[0] || seatId;
 }
 
+let cache: SeatOccupant[] | null = null;
+let version = 0;
+const listeners = new Set<() => void>();
+
+function emit() {
+  version += 1;
+  listeners.forEach((l) => l());
+}
+
 export function listOccupants(): SeatOccupant[] {
   if (typeof window === "undefined") return [];
+  if (cache) return cache;
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as SeatOccupant[];
-    return Array.isArray(raw) ? raw : [];
+    cache = Array.isArray(raw) ? raw : [];
   } catch {
-    return [];
+    cache = [];
   }
+  return cache;
 }
 
 export function saveOccupants(rows: SeatOccupant[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+  cache = rows;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+  } catch {
+    /* private mode — the in-memory copy still works */
+  }
+  emit();
+}
+
+/** Applies the shared (Firestore) seat list; returns true when it actually changed anything. */
+export function applyRemoteOccupants(rows: SeatOccupant[]): boolean {
+  const norm = (r: SeatOccupant[]) =>
+    JSON.stringify([...r].sort((a, b) => a.seatId.localeCompare(b.seatId)).map((o) => [o.seatId, o.loginId.toLowerCase(), o.personName]));
+  if (norm(rows) === norm(listOccupants())) return false;
+  saveOccupants(rows);
+  return true;
+}
+
+/** For useSyncExternalStore — lets name-displaying components re-render when seats change. */
+export function subscribeSeats(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+export function getSeatsVersion(): number {
+  return version;
 }
 
 export function upsertOccupant(next: SeatOccupant): void {

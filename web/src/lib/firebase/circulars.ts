@@ -10,6 +10,7 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import type { CircularRecord } from "@/lib/types";
@@ -157,21 +158,47 @@ export async function publishAirTariffRows(
   const db = getFirebaseDb();
   let n = 0;
   for (const row of rows) {
-    await addDoc(collection(db, "air_tariffs"), {
+    const carrierCode = row.carrier.slice(0, 2).toUpperCase();
+    // One row per lane+carrier, not one per import — replace whichever
+    // tariff already covers this exact lane/carrier instead of adding a
+    // second one the app then has no rule for choosing between.
+    const existing = await getDocs(
+      query(
+        collection(db, "air_tariffs"),
+        where("origin", "==", row.origin),
+        where("destination", "==", row.destination),
+        where("carrierCode", "==", carrierCode),
+      ),
+    );
+    const payload = {
       carrier: row.carrier,
-      carrierCode: row.carrier.slice(0, 2).toUpperCase(),
+      carrierCode,
       origin: row.origin,
       destination: row.destination,
       currency: "USD",
+      // The uploaded sheet only carries one sell/buy pair, not the airline's
+      // real per-break rates, so the higher brackets are estimated at a
+      // declining discount off it — real bracket-name keys this time
+      // (AIR_WEIGHT_BREAKS in lib/pricing/air-desk.ts), not the old
+      // "45"/"100"/"300" strings nothing in the app actually reads.
       breaks: {
         min: { sell: row.sell, buy: row.buy },
-        "45": { sell: row.sell, buy: row.buy },
-        "100": { sell: row.sell * 0.95, buy: row.buy * 0.95 },
-        "300": { sell: row.sell * 0.9, buy: row.buy * 0.9 },
+        minus45: { sell: row.sell, buy: row.buy },
+        plus45: { sell: row.sell * 0.95, buy: row.buy * 0.95 },
+        plus100: { sell: row.sell * 0.9, buy: row.buy * 0.9 },
+        plus300: { sell: row.sell * 0.85, buy: row.buy * 0.85 },
+        plus500: { sell: row.sell * 0.8, buy: row.buy * 0.8 },
+        plus1000: { sell: row.sell * 0.75, buy: row.buy * 0.75 },
       },
       uploadedBy,
+      published: true,
       createdAt: serverTimestamp(),
-    });
+    };
+    if (!existing.empty) {
+      await updateDoc(doc(db, "air_tariffs", existing.docs[0].id), payload);
+    } else {
+      await addDoc(collection(db, "air_tariffs"), payload);
+    }
     n += 1;
   }
   return n;

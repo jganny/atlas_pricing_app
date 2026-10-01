@@ -18,11 +18,13 @@ import * as XLSX from "xlsx";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useDirectory } from "@/hooks/use-atlas-data";
+import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import {
   deleteDirectoryContact,
+  importDirectoryContacts,
   saveDirectoryContact,
   type DirectoryContactInput,
 } from "@/lib/firebase/directory";
@@ -266,36 +268,69 @@ export default function DirectoryPage() {
     const wb = XLSX.read(buf, { type: "array" });
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
-    const mapped: DirectoryContact[] = raw.map((r, i) => {
-      const get = (...names: string[]) => {
-        const keys = Object.keys(r);
-        for (const n of names) {
-          const k = keys.find((x) => x.toLowerCase().replace(/\s/g, "") === n.toLowerCase());
-          if (k != null) return String(r[k] ?? "").trim();
-        }
-        return "";
-      };
-      return {
-        id: `dir-import-${Date.now()}-${i}`,
-        name: get("name", "company", "agent"),
-        category: get("category") || (effectiveParent === "agents" ? "agency" : "vendor"),
-        contactPerson: get("contactperson", "contact"),
-        email: get("email"),
-        phone: get("phone"),
-        location: get("location", "city", "country"),
-        notes: get("notes"),
-        sheetGroup: get("sheetgroup", "group") || get("category") || "agency",
-        agreement: get("agreement"),
-        suspended: /^y|true|1/i.test(get("suspended")),
-        updatedAt: new Date().toISOString(),
-      };
-    }).filter((c) => c.name);
+    const mapped: DirectoryContactInput[] = raw
+      .map((r) => {
+        const get = (...names: string[]) => {
+          const keys = Object.keys(r);
+          for (const n of names) {
+            const k = keys.find((x) => x.toLowerCase().replace(/\s/g, "") === n.toLowerCase());
+            if (k != null) return String(r[k] ?? "").trim();
+          }
+          return "";
+        };
+        return {
+          name: get("name", "company", "agent"),
+          category: get("category") || (effectiveParent === "agents" ? "agency" : "vendor"),
+          contactPerson: get("contactperson", "contact"),
+          email: get("email"),
+          phone: get("phone"),
+          location: get("location", "city", "country"),
+          notes: get("notes"),
+          sheetGroup: get("sheetgroup", "group") || get("category") || "agency",
+          agreement: get("agreement"),
+          suspended: /^y|true|1/i.test(get("suspended")),
+        };
+      })
+      .filter((c) => c.name);
     if (!mapped.length) {
       toast("No contacts found in file", "error");
       return;
     }
-    queryClient.setQueryData(queryKeys.directory, [...mapped, ...rows]);
-    toast(`Imported ${mapped.length} contacts (session)`, "success");
+
+    if (!useLiveData) {
+      // Mock/offline mode has no Firestore to write to — keep the old
+      // session-only preview so local dev still shows something.
+      const withIds: DirectoryContact[] = mapped.map((c, i) => ({
+        ...c,
+        id: `dir-import-${Date.now()}-${i}`,
+        updatedAt: new Date().toISOString(),
+      }));
+      queryClient.setQueryData(queryKeys.directory, [...withIds, ...rows]);
+      toast(`Imported ${withIds.length} contacts (session — mock mode)`, "success");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const replacePrevious = effectiveParent === "agents";
+      const result = await importDirectoryContacts(mapped, {
+        updatedBy: user?.username || "unknown",
+        replacePrevious,
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
+      toast(
+        replacePrevious
+          ? `This week's list is live — ${result.added} agents added${
+              result.absorbed ? `, ${result.absorbed} matched to a hand-added agent` : ""
+            }, ${result.replaced} from last week's import removed`
+          : `Imported ${result.added} contacts`,
+        "success",
+      );
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Import failed", "error");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function saveWeekly() {
@@ -391,6 +426,8 @@ export default function DirectoryPage() {
       setBusy(false);
     }
   }
+
+  useDeskSaveShortcut(() => void handleSave(), editorOpen && !busy);
 
   async function handleDelete(c: DirectoryContact) {
     if (!canEdit) return;

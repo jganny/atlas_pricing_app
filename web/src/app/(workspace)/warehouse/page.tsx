@@ -21,6 +21,8 @@ import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { saveWarehouseQuote } from "@/lib/firebase/save-transport-warehouse";
+import { loadWarehouseDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
@@ -28,6 +30,7 @@ import { DESK_CURRENCIES, WAREHOUSE_LOCATIONS } from "@/lib/desk/constants";
 import { computeGp, ensureIncidentalTerm } from "@/lib/pricing/quote-display";
 import { formatCurrency } from "@/lib/utils";
 import { firstFieldBackTab, focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
+import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import type { SavedQuote } from "@/lib/types";
 
@@ -49,6 +52,8 @@ export default function WarehouseDeskPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const loader = useQuoteDeskLoader();
+  const customerFieldName = useAntiAutofillName("atlas-party-warehouse");
   const [tab, setTab] = useState<WhTab>("details");
   const [customer, setCustomer] = useState("");
   const [location, setLocation] = useState<string>(WAREHOUSE_LOCATIONS[0]);
@@ -71,6 +76,24 @@ export default function WarehouseDeskPage() {
     if (c) setCustomer(c);
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!loader.sourceQuote) return;
+    const loaded = loadWarehouseDeskFromQuote(loader.sourceQuote);
+    setCustomer(loaded.customer);
+    setLocation(loaded.location);
+    setOtherDescription(loaded.otherDescription);
+    setStorageType(loaded.storageType);
+    setCurrency(loaded.currency);
+    setRatePerCbm(loaded.ratePerCbm);
+    setCbm(loaded.cbm);
+    setHandling(loaded.handling);
+    setDays(loaded.days);
+    setBuyTotal(loaded.buyTotal);
+    setValidity(loaded.validity);
+    setNotes(loaded.notes);
+    setTerms(loaded.terms);
+  }, [loader.sourceQuote]);
+
   const storage = ratePerCbm * cbm * Math.max(1, days);
   const total = useMemo(() => storage + handling, [storage, handling]);
   const { gp, gpReady } = useMemo(() => computeGp(total, buyTotal), [total, buyTotal]);
@@ -90,12 +113,12 @@ export default function WarehouseDeskPage() {
       return;
     }
     const q: SavedQuote = {
-      id: "preview",
+      id: loader.editingQuoteId || "preview",
       customer: customer.trim() || "Draft",
       creator: user?.username || "",
-      status: "quoted",
+      status: loader.editingStatus || "quoted",
       type: "warehouse",
-      quoteNumber: nextQuoteNumber(),
+      quoteNumber: loader.editingQuoteNumber ?? nextQuoteNumber(),
       date: new Date().toISOString().split("T")[0],
       timestamp: Date.now(),
       amount: total,
@@ -134,6 +157,7 @@ export default function WarehouseDeskPage() {
         try {
           await Promise.race([
             saveWarehouseQuote({
+              quoteId: loader.editingQuoteId ?? undefined,
               customer,
               creator: user?.username || "desk",
               location,
@@ -180,6 +204,16 @@ export default function WarehouseDeskPage() {
 
   return (
     <div className="space-y-4">
+      {loader.banner ? (
+        <Card className="border-sky-200 bg-sky-50 py-2">
+          <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
+        </Card>
+      ) : null}
+      {loader.loadError ? (
+        <Card className="border-amber-200 bg-amber-50 py-2">
+          <p className="text-sm font-semibold text-amber-900">{loader.loadError}</p>
+        </Card>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Warehouse className="h-5 w-5 text-[var(--color-atlas-sky)]" />
@@ -222,8 +256,9 @@ export default function WarehouseDeskPage() {
                 <Label>Customer *</Label>
                 <Input
                   id="warehouse-customer"
-                  name="atlas-customer"
+                  name={customerFieldName}
                   autoComplete="off"
+                  data-1p-ignore="true"
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
                 />

@@ -1,5 +1,5 @@
 import type { EnquiryRecord } from "@/lib/types";
-import { computeBuyTotal, gpNumeric } from "@/lib/quotes/edb-metrics";
+import { computeBuyTotal, formatTonnageCell, gpNumeric } from "@/lib/quotes/edb-metrics";
 import { summarizeInr } from "@/lib/quotes/money";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 
@@ -11,6 +11,7 @@ const CSV_HEADERS = [
   "Route",
   "Creator",
   "Carrier",
+  "Tonnage",
   "Buy Rate",
   "Sell Rate",
   "GP",
@@ -41,6 +42,7 @@ export function buildEnquiryCsv(rows: EnquiryRecord[]): string {
         csvEscape(route),
         csvEscape(deskDisplayName(row.creator || row.assignee)),
         csvEscape((row.carrier || "").replace(/,/g, " ")),
+        csvEscape(formatTonnageCell(row)),
         csvEscape(buy),
         csvEscape(sell),
         csvEscape(gp),

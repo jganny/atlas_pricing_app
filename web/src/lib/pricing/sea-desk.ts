@@ -9,6 +9,7 @@ import {
   calcSurchargeCost,
   sumSurcharges,
   type CalculatedSurcharge,
+  type SurchargeRow,
 } from "@/lib/pricing/surcharges";
 
 export interface SeaContainerRow {
@@ -16,6 +17,44 @@ export interface SeaContainerRow {
   qty: number;
   sellRate: number;
   buyRate: number;
+}
+
+export interface SeaCargoRow {
+  l: number;
+  w: number;
+  h: number;
+  qty: number;
+  gw: number;
+}
+
+export interface SeaCargoSummary {
+  grossWeightKg: number;
+  volumeCbm: number;
+}
+
+/**
+ * Sums per-package L×W×H×qty into CBM and qty×gw into gross weight — same
+ * per-package entry Air Desk already has, now for LCL/break-bulk. Standard
+ * conversions: cm³ → m³ divides by 1,000,000; in³ → m³ multiplies by
+ * 0.0000163871 (1 cubic inch).
+ */
+export function summarizeSeaCargo(rows: SeaCargoRow[], dimUnit: "cms" | "inches"): SeaCargoSummary {
+  const cm3ToM3 = 1_000_000;
+  const in3ToM3 = 1 / 0.0000163871; // == 61023.744...
+  const divisor = dimUnit === "inches" ? in3ToM3 : cm3ToM3;
+  let grossWeightKg = 0;
+  let volumeCbm = 0;
+  for (const r of rows) {
+    const qty = Math.max(0, r.qty) || 0;
+    grossWeightKg += Math.max(0, r.gw) * qty;
+    volumeCbm += (Math.max(0, r.l) * Math.max(0, r.w) * Math.max(0, r.h) * qty) / divisor;
+  }
+  return { grossWeightKg, volumeCbm };
+}
+
+/** True once at least one cargo row has any real value entered. */
+export function seaCargoHasData(rows: SeaCargoRow[]): boolean {
+  return rows.some((r) => r.l > 0 || r.w > 0 || r.h > 0 || r.gw > 0);
 }
 
 export interface SeaDeskInput {
@@ -62,6 +101,13 @@ export interface LinerTotals {
   dest: CalculatedSurcharge[];
   originTotal: number;
   destTotal: number;
+  /** Local Origin Charges / Destination Clearance Charges — quote-wide, not carrier-specific. */
+  localOrigin: CalculatedSurcharge[];
+  destClearance: CalculatedSurcharge[];
+  localOriginTotal: number;
+  destClearanceTotal: number;
+  localOriginBuy: number;
+  destClearanceBuy: number;
   grandSell: number;
   grandBuy: number;
   gp: number;
@@ -76,6 +122,8 @@ export function computeLinerTotals(
   volumeCbm: number,
   chargeableCbmOverride: number,
   option: LinerOption,
+  localOriginCharges: SurchargeRow[] = [],
+  destClearanceCharges: SurchargeRow[] = [],
 ): LinerTotals {
   const freight = calculateSeaFreight({
     mode,
@@ -120,15 +168,24 @@ export function computeLinerTotals(
         .filter((r) => r.name.trim())
         .map((r) => calcSurchargeCost(r, bases))
     : [];
+  const localOrigin = localOriginCharges
+    .filter((r) => r.name.trim())
+    .map((r) => calcSurchargeCost(r, bases));
+  const destClearance = destClearanceCharges
+    .filter((r) => r.name.trim())
+    .map((r) => calcSurchargeCost(r, bases));
 
   const originSum = sumSurcharges(origin);
   const destSum = sumSurcharges(dest);
+  const localOriginSum = sumSurcharges(localOrigin);
+  const destClearanceSum = sumSurcharges(destClearance);
   const baseSell = freight.baseFreightSell;
   const baseBuy = freight.baseFreightBuy;
   const baseFreightQuote = quoteSideRate(baseSell, baseBuy);
   const quoteUsingBuyFreight = baseSell <= 0 && baseBuy > 0;
-  const grandSell = baseFreightQuote + originSum.quote + destSum.quote;
-  const grandBuy = baseBuy + originSum.buy + destSum.buy;
+  const grandSell =
+    baseFreightQuote + originSum.quote + destSum.quote + localOriginSum.quote + destClearanceSum.quote;
+  const grandBuy = baseBuy + originSum.buy + destSum.buy + localOriginSum.buy + destClearanceSum.buy;
   const gpReady = baseSell > 0 && baseBuy > 0;
 
   return {
@@ -137,6 +194,12 @@ export function computeLinerTotals(
     dest,
     originTotal: originSum.quote,
     destTotal: destSum.quote,
+    localOrigin,
+    destClearance,
+    localOriginTotal: localOriginSum.quote,
+    destClearanceTotal: destClearanceSum.quote,
+    localOriginBuy: localOriginSum.buy,
+    destClearanceBuy: destClearanceSum.buy,
     grandSell: grandSell > 0 ? grandSell : 0,
     grandBuy,
     gp: gpReady ? grandSell - grandBuy : 0,

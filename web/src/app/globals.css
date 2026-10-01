@@ -113,7 +113,7 @@
 
   .atlas-metric-strip {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.75rem;
     background: transparent;
   }
@@ -219,6 +219,16 @@
 
 .atlas-ticker-item:hover {
   text-decoration: underline;
+}
+
+/* Pinch-zoom is allowed (WCAG 1.4.4). iOS zooms into focused fields below 16px,
+   so touch devices get 16px form controls instead of a zoom lock. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

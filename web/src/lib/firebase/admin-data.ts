@@ -3,6 +3,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
   setDoc,
@@ -82,6 +83,28 @@ export async function saveAgencyListRecipients(emails: string[]): Promise<void> 
       emails: emails.map((e) => e.trim()).filter(Boolean),
       updatedAt: serverTimestamp(),
     },
+    { merge: true },
+  );
+}
+
+/** Which branch a login quotes from — drives which holiday calendar they
+ * see. Stored on the same `users/{username}` doc the login already reads
+ * fullName/role from, so no new collection is needed. */
+export async function fetchUserBranch(username: string): Promise<string> {
+  const db = getFirebaseDb();
+  const snap = await getDoc(doc(db, "users", username.toLowerCase().trim()));
+  return (snap.data()?.branch as string) || "Bangalore";
+}
+
+export async function saveUserBranch(
+  username: string,
+  branch: string,
+  updatedBy: string,
+): Promise<void> {
+  const db = getFirebaseDb();
+  await setDoc(
+    doc(db, "users", username.toLowerCase().trim()),
+    { branch, branchUpdatedBy: updatedBy, branchUpdatedAt: serverTimestamp() },
     { merge: true },
   );
 }

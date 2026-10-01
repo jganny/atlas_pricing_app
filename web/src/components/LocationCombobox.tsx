@@ -5,6 +5,7 @@ import { Input, Label } from "@/components/ui";
 import { PortalDropdown } from "@/components/PortalDropdown";
 import { searchLocations, type LocationHit } from "@/lib/locations/search";
 import { closeAllComboboxes, useCloseComboboxes } from "@/lib/ui/close-comboboxes";
+import { useComboboxKeyNav } from "@/hooks/use-combobox-key-nav";
 
 type Kind = "airport" | "seaport" | "all";
 
@@ -65,36 +66,24 @@ export function LocationCombobox({
   }, []);
 
   function pick(hit: LocationHit) {
-    const next = `${hit.code} — ${hit.name}${hit.city ? `, ${hit.city}` : ""}`;
+    // " - " (not an em dash) matches the split(" - ")[0] convention every
+    // origin/destination call site uses to pull the bare code back out.
+    const next = `${hit.code} - ${hit.name}${hit.city ? `, ${hit.city}` : ""}`;
     onPick?.(hit);
-    onChange(hit.code);
+    onChange(next);
     setQ(next);
     setOpen(false);
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    onInputKeyDown?.(e);
-    if (e.defaultPrevented) return;
-    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp") && hits.length > 0) {
-      setOpen(true);
-      e.preventDefault();
-      return;
-    }
-    if (!open || hits.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((i) => (i + 1) % hits.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => (i - 1 + hits.length) % hits.length);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const hit = hits[active];
-      if (hit) pick(hit);
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
-  }
+  const onKeyDown = useComboboxKeyNav({
+    hits,
+    open,
+    setOpen,
+    active,
+    setActive,
+    onPick: pick,
+    onInputKeyDown,
+  });
 
   return (
     <div ref={boxRef} className="relative">

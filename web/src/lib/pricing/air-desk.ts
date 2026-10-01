@@ -2,6 +2,7 @@ import {
   calculateAirFreight,
   getWeightBreakBracket,
   type CargoLine,
+  type DimUnit,
   type WeightBreakName,
   type WeightBreaks,
 } from "@atlas/pricing-core";
@@ -11,6 +12,7 @@ import {
   calcSurchargeCost,
   sumSurcharges,
   type CalculatedSurcharge,
+  type SurchargeRow,
 } from "@/lib/pricing/surcharges";
 
 export const AIR_WEIGHT_BREAKS: WeightBreakName[] = [
@@ -60,6 +62,14 @@ export interface AirlineTotals {
   originBuy: number;
   destBuy: number;
   ams: number;
+  dg: number;
+  /** Local Origin Charges / Destination Clearance Charges — quote-wide, not carrier-specific. */
+  localOrigin: CalculatedSurcharge[];
+  destClearance: CalculatedSurcharge[];
+  localOriginTotal: number;
+  destClearanceTotal: number;
+  localOriginBuy: number;
+  destClearanceBuy: number;
   /** Quote total: sell preferred, buy fallback per line while drafting. */
   grandSell: number;
   grandBuy: number;
@@ -81,9 +91,13 @@ export interface AirlineTotals {
 export function computeAirlineTotals(
   cargo: AirCargoRow[],
   option: AirlineOption,
+  dimUnit: DimUnit = "cms",
+  localOriginCharges: SurchargeRow[] = [],
+  destClearanceCharges: SurchargeRow[] = [],
 ): AirlineTotals {
   const freight = calculateAirFreight({
     cargo: cargoRowsToLines(cargo),
+    dimUnit,
     breaks: option.wbEnabled ? option.breaks : EMPTY_AIR_BREAKS,
     pivotWeightKg: option.pivotWeightKg,
   });
@@ -99,19 +113,32 @@ export function computeAirlineTotals(
         .filter((r) => r.name.trim() && !/^ams(\s+fee)?$/i.test(r.name.trim()))
         .map((r) => calcSurchargeCost(r, bases))
     : [];
+  const localOrigin = localOriginCharges
+    .filter((r) => r.name.trim())
+    .map((r) => calcSurchargeCost(r, bases));
+  const destClearance = destClearanceCharges
+    .filter((r) => r.name.trim())
+    .map((r) => calcSurchargeCost(r, bases));
 
   const originSum = sumSurcharges(origin);
   const destSum = sumSurcharges(dest);
+  const localOriginSum = sumSurcharges(localOrigin);
+  const destClearanceSum = sumSurcharges(destClearance);
   const amsSell = option.amsFeeEnabled ? Number(option.amsFee) || 0 : 0;
   const amsBuy = option.amsFeeEnabled ? Number(option.amsFeeBuy) || 0 : 0;
   const ams = quoteSideRate(amsSell, amsBuy);
+  const dgSell = option.dgFeeEnabled ? Number(option.dgFee) || 0 : 0;
+  const dgBuy = option.dgFeeEnabled ? Number(option.dgFeeBuy) || 0 : 0;
+  const dg = quoteSideRate(dgSell, dgBuy);
   const baseSell = option.wbEnabled ? freight.baseFreightSell : 0;
   const baseBuy = option.wbEnabled ? freight.baseFreightBuy : 0;
   const baseFreightQuote = quoteSideRate(baseSell, baseBuy);
   const quoteUsingBuyFreight = baseSell <= 0 && baseBuy > 0;
 
-  const grandSell = baseFreightQuote + originSum.quote + destSum.quote + ams;
-  const grandBuy = baseBuy + originSum.buy + destSum.buy + amsBuy;
+  const grandSell =
+    baseFreightQuote + originSum.quote + destSum.quote + ams + dg + localOriginSum.quote + destClearanceSum.quote;
+  const grandBuy =
+    baseBuy + originSum.buy + destSum.buy + amsBuy + dgBuy + localOriginSum.buy + destClearanceSum.buy;
   const freightSellReady = baseSell > 0;
   const freightBuyReady = baseBuy > 0;
   const gpReady = freightSellReady && freightBuyReady;
@@ -125,6 +152,13 @@ export function computeAirlineTotals(
     originBuy: originSum.buy,
     destBuy: destSum.buy,
     ams,
+    dg,
+    localOrigin,
+    destClearance,
+    localOriginTotal: localOriginSum.quote,
+    destClearanceTotal: destClearanceSum.quote,
+    localOriginBuy: localOriginSum.buy,
+    destClearanceBuy: destClearanceSum.buy,
     grandSell: grandSell > 0 ? grandSell : 0,
     grandBuy,
     gp: gpReady ? grandSell - grandBuy : 0,
@@ -132,6 +166,74 @@ export function computeAirlineTotals(
     quoteUsingBuyFreight,
     baseFreightQuote,
   };
+}
+
+const NEXT_BREAK: Partial<Record<WeightBreakName, WeightBreakName>> = {
+  minus45: "plus45",
+  plus45: "plus100",
+  plus100: "plus300",
+  plus300: "plus500",
+  plus500: "plus1000",
+};
+
+const AIR_BREAK_MIN_KG: Record<WeightBreakName, number> = {
+  min: 0,
+  minus45: 0,
+  plus45: 45,
+  plus100: 100,
+  plus300: 300,
+  plus500: 500,
+  plus1000: 1000,
+};
+
+export interface AdjacentBreakOption {
+  breakName: WeightBreakName;
+  rate: number;
+  weightUsedKg: number;
+  total: number;
+}
+
+export interface AdjacentBreakComparison {
+  current: AdjacentBreakOption;
+  next: AdjacentBreakOption;
+  cheaper: "current" | "next" | "equal";
+}
+
+/**
+ * A shipment near a bracket boundary (e.g. 90kg, inside the +45kg bracket)
+ * can sometimes cost LESS if quoted at the next bracket's rate for its
+ * minimum weight instead — real air-cargo "weight-break advantage" pricing.
+ * Returns null unless both the current and next bracket have a rate entered,
+ * so nothing is ever guessed.
+ */
+export function computeAdjacentBreakComparison(
+  chargeableWeightKg: number,
+  breaks: WeightBreaks,
+): AdjacentBreakComparison | null {
+  if (!(chargeableWeightKg > 0)) return null;
+  const currentBreak = getWeightBreakBracket(chargeableWeightKg);
+  const nextBreak = NEXT_BREAK[currentBreak];
+  if (!nextBreak) return null;
+
+  const currentRate = quoteSideRate(breaks[currentBreak]?.sell || 0, breaks[currentBreak]?.buy || 0);
+  const nextRate = quoteSideRate(breaks[nextBreak]?.sell || 0, breaks[nextBreak]?.buy || 0);
+  if (currentRate <= 0 || nextRate <= 0) return null;
+
+  const nextWeightUsedKg = Math.max(chargeableWeightKg, AIR_BREAK_MIN_KG[nextBreak]);
+  const current: AdjacentBreakOption = {
+    breakName: currentBreak,
+    rate: currentRate,
+    weightUsedKg: chargeableWeightKg,
+    total: chargeableWeightKg * currentRate,
+  };
+  const next: AdjacentBreakOption = {
+    breakName: nextBreak,
+    rate: nextRate,
+    weightUsedKg: nextWeightUsedKg,
+    total: nextWeightUsedKg * nextRate,
+  };
+  const cheaper = current.total < next.total ? "current" : current.total > next.total ? "next" : "equal";
+  return { current, next, cheaper };
 }
 
 /** One active break for the chargeable kg — full tariff card is opt-in. */

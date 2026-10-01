@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Input, Label } from "@/components/ui";
 import { PortalDropdown } from "@/components/PortalDropdown";
 import { searchPostalCodes, type PostalHit } from "@/lib/locations/postal-search";
+import { closeAllComboboxes, useCloseComboboxes } from "@/lib/ui/close-comboboxes";
+import { useComboboxKeyNav } from "@/hooks/use-combobox-key-nav";
 
 /**
  * Global postal / ZIP / PIN combobox.
@@ -34,6 +36,8 @@ export function PincodeCombobox({
   const [err, setErr] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputWrapRef = useRef<HTMLDivElement>(null);
+
+  useCloseComboboxes(() => setOpen(false));
 
   useEffect(() => setQ(value), [value]);
 
@@ -72,29 +76,15 @@ export function PincodeCombobox({
     setOpen(false);
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    onInputKeyDown?.(e);
-    if (e.defaultPrevented) return;
-    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp") && hits.length > 0) {
-      setOpen(true);
-      e.preventDefault();
-      return;
-    }
-    if (!open || hits.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((i) => (i + 1) % hits.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => (i - 1 + hits.length) % hits.length);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const hit = hits[active];
-      if (hit) pick(hit);
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
-  }
+  const onKeyDown = useComboboxKeyNav({
+    hits,
+    open,
+    setOpen,
+    active,
+    setActive,
+    onPick: pick,
+    onInputKeyDown,
+  });
 
   return (
     <div ref={boxRef} className="relative">
@@ -109,7 +99,10 @@ export function PincodeCombobox({
           aria-expanded={open}
           aria-autocomplete="list"
           role="combobox"
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            closeAllComboboxes();
+            setOpen(true);
+          }}
           onKeyDown={onKeyDown}
           onChange={(e) => {
             setQ(e.target.value);

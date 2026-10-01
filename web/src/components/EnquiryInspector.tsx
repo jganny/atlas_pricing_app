@@ -24,8 +24,9 @@ import {
   fetchQuoteById,
   setQuoteStatus,
 } from "@/lib/firebase/quote-lifecycle";
-import { isAmendmentGrantActive, requestAmendment } from "@/lib/firebase/amendments";
 import { pushNrsAlert, pushNrsFollowUp } from "@/lib/quotes/nrs-alerts";
+import { upsertWonFollowUp } from "@/lib/firebase/won-followups";
+import { missingWonFields } from "@/lib/quotes/won-followups";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { deskPathForQuote } from "@/lib/quotes/desk-loader";
 import { useLiveData } from "@/lib/api";
@@ -33,7 +34,6 @@ import { queryKeys } from "@/hooks/query-keys";
 import { useAuthStore } from "@/store/auth";
 import { toast } from "@/components/Toast";
 import { formatQuoteGp, formatQuoteSell } from "@/lib/quotes/money";
-import { isAdminUser } from "@/lib/quotes/team-roles";
 import { getLocalQuote } from "@/lib/quotes/local-enquiries";
 
 function stubQuoteFromEnquiry(row: EnquiryRecord): SavedQuote {
@@ -73,11 +73,8 @@ export function EnquiryInspector({
   const [shipperName, setShipperName] = useState("");
   const [consigneeName, setConsigneeName] = useState("");
   const [commodity, setCommodity] = useState("");
-  const [amdReason, setAmdReason] = useState("");
-  const [showAmd, setShowAmd] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsBtnRef = useRef<HTMLButtonElement>(null);
-  const admin = isAdminUser(user?.username, user?.role);
 
   async function loadFullQuote(): Promise<SavedQuote | null> {
     if (quote) return quote;
@@ -99,14 +96,6 @@ export function EnquiryInspector({
   async function goToDesk(mode: "edit" | "duplicate") {
     const q = await loadFullQuote();
     if (!q) return;
-    if (mode === "edit" && !admin) {
-      const unlocked = isAmendmentGrantActive(q.id, user?.username || "");
-      if (!unlocked && (q.status === "quoted" || q.status === "won" || row.status === "quoted" || row.status === "won")) {
-        toast("Request amendment unlock — an admin must approve before you can amend.", "info");
-        setShowAmd(true);
-        return;
-      }
-    }
     const path = deskPathForQuote(q);
     if (!path) {
       const msg = `Desk not available in React for ${q.type} — use legacy app.`;
@@ -182,14 +171,9 @@ export function EnquiryInspector({
         full?.buyRate ?? full?.confirmedBuyRate ?? row.buyRate ?? row.buyTotal ?? 0,
       );
       const sell = Number(full?.amount ?? row.grandTotal ?? 0);
-      if (!(buy > 0) || !(sell > 0)) {
-        const err =
-          "Buy rate and sell amount must both be greater than 0 before converting to Won.";
-        setMsg(err);
-        toast(err, "error");
-        return;
-      }
 
+      // No blocking rule: Won always succeeds. Whatever's still blank
+      // becomes a tracked follow-up instead of stopping the desk user here.
       await convertQuoteToWon(row.id, {
         shipperName: shipperName.trim() || undefined,
         consigneeName: consigneeName.trim() || undefined,
@@ -197,6 +181,19 @@ export function EnquiryInspector({
       });
 
       const ref = full ? getQuoteRefId(full) : row.ref;
+      const followUpValues = {
+        shipperName: shipperName.trim(),
+        consigneeName: consigneeName.trim(),
+        commodity: commodity.trim() || String(full?.commodity ?? ""),
+        buyRate: buy,
+        sellAmount: sell,
+      };
+      await upsertWonFollowUp(
+        { quoteId: row.id, ref, customer: row.customer, wonAt: new Date().toISOString(), ...followUpValues },
+        user?.username || "",
+      );
+      const missing = missingWonFields(followUpValues);
+
       pushNrsFollowUp({
         quoteId: row.id,
         ref,
@@ -216,8 +213,14 @@ export function EnquiryInspector({
       );
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.wonFollowUps });
       setShowWon(false);
-      toast("Converted to Won. NRS follow-up queued for Cathrina.", "success");
+      toast(
+        missing.length
+          ? `Converted to Won. ${missing.length} detail${missing.length > 1 ? "s" : ""} still need filling in — tracked in Won follow-ups.`
+          : "Converted to Won.",
+        "success",
+      );
       onClose();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Conversion failed";
@@ -228,7 +231,11 @@ export function EnquiryInspector({
     }
   }
 
-  const canAct = row.status === "quoted" || row.status === "open";
+  // Amend/duplicate stay available regardless of status — editing a saved
+  // quote must always be possible. Only the status-TRANSITION actions
+  // (Won/Lost/Cancel) stay scoped to an active quote, since converting an
+  // already-won or already-cancelled quote doesn't make sense.
+  const canTransitionStatus = row.status === "quoted" || row.status === "open";
 
   return (
     <>
@@ -238,7 +245,12 @@ export function EnquiryInspector({
             <h2 className="font-bold text-[var(--color-atlas-navy)]">Enquiry inspector</h2>
             <p className="text-xs text-[var(--color-text-muted)]">#{row.ref} · {row.customer}</p>
           </div>
-          <button type="button" onClick={onClose} className="text-[var(--color-text-muted)] hover:text-slate-800">
+          <button
+            type="button"
+            data-modal-close
+            onClick={onClose}
+            className="text-[var(--color-text-muted)] hover:text-slate-800"
+          >
             ✕
           </button>
         </div>
@@ -320,6 +332,7 @@ export function EnquiryInspector({
           open={actionsOpen}
           anchorRef={actionsBtnRef}
           maxHeight={420}
+          fitContent
           backdrop
           onDismiss={() => setActionsOpen(false)}
           testId="edb-actions-overlay"
@@ -338,46 +351,34 @@ export function EnquiryInspector({
               <Eye className="mr-2 h-4 w-4" />
               View / Print
             </Button>
-            {canAct ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full justify-start"
+              disabled={loading}
+              onClick={() => {
+                setActionsOpen(false);
+                void goToDesk("edit");
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Amend on desk
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full justify-start"
+              disabled={loading}
+              onClick={() => {
+                setActionsOpen(false);
+                void goToDesk("duplicate");
+              }}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Duplicate to desk
+            </Button>
+            {canTransitionStatus ? (
               <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full justify-start"
-                  disabled={loading}
-                  onClick={() => {
-                    setActionsOpen(false);
-                    void goToDesk("edit");
-                  }}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Amend on desk
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full justify-start"
-                  disabled={loading}
-                  onClick={() => {
-                    setActionsOpen(false);
-                    setShowAmd(true);
-                  }}
-                >
-                  Request amendment unlock
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full justify-start"
-                  disabled={loading}
-                  onClick={() => {
-                    setActionsOpen(false);
-                    void goToDesk("duplicate");
-                  }}
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Duplicate to desk
-                </Button>
                 <Button
                   type="button"
                   className="w-full justify-start"
@@ -433,50 +434,6 @@ export function EnquiryInspector({
             </Button>
           </div>
         </PortalDropdown>
-
-        {showAmd ? (
-          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-            <p className="text-sm font-bold text-amber-950">Request amendment unlock</p>
-            <input
-              className="w-full rounded border px-2 py-1.5 text-sm"
-              placeholder="Reason (optional)"
-              value={amdReason}
-              onChange={(e) => setAmdReason(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  void (async () => {
-                    setLoading(true);
-                    try {
-                      await requestAmendment({
-                        quoteId: row.id,
-                        quoteRef: row.ref,
-                        customer: row.customer,
-                        requestedBy: user?.username || "desk",
-                        reason: amdReason,
-                      });
-                      toast("Amendment request sent to admins", "success");
-                      setShowAmd(false);
-                      setAmdReason("");
-                    } catch (e) {
-                      toast(e instanceof Error ? e.message : "Request failed", "error");
-                    } finally {
-                      setLoading(false);
-                    }
-                  })();
-                }}
-              >
-                Submit request
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => setShowAmd(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : null}
 
         {showWon ? (
           <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">

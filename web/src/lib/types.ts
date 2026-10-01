@@ -6,6 +6,22 @@ export interface AuthUser {
   displayName: string
   role: UserRole
   email: string
+  /** Which office this login quotes from — drives which branch holiday
+   * calendar they see. Defaults to Bangalore (every existing user today). */
+  branch?: string
+}
+
+export type EnquiryLegKind = 'airline' | 'coloader' | 'liner' | 'other'
+
+/** One quoted lane/carrier on a quote — multi-lane quotes carry one leg per lane. */
+export interface EnquiryLeg {
+  origin: string
+  destination: string
+  carrier: string
+  kind: EnquiryLegKind
+  laneLabel?: string
+  /** Quoted amount for this lane in the quote currency (multi-lane quotes only). */
+  amount?: number
 }
 
 export interface EnquiryRecord {
@@ -38,6 +54,10 @@ export interface EnquiryRecord {
   usedBreak?: string
   billingWeight?: number
   billingUnit?: 'kg' | 'rt' | 'gw'
+  /** Real link back to the SalesLead this quote was created from, when any. */
+  leadId?: string
+  /** Per-lane origin/destination/carrier facts for reporting. */
+  legs?: EnquiryLeg[]
 }
 
 /** Full Firestore quote document (legacy-compatible shape) */
@@ -74,6 +94,8 @@ export interface SavedQuote {
   consigneeAddress?: string
   commodity?: string
   conversionDate?: string
+  /** Real link back to the SalesLead this quote was created from, when any. */
+  leadId?: string
 }
 
 export type QuoteFirestoreStatus = 'quoted' | 'converted' | 'lost' | 'cancelled'
@@ -86,6 +108,8 @@ export interface AirTariff {
   destination: string
   breaks: Record<string, { sell: number; buy: number }>
   currency: string
+  /** When this tariff was published — used to prefer the most recent one when more than one exists for the same lane/carrier. */
+  createdAt?: string
 }
 
 export interface SeaTariff {
@@ -98,6 +122,8 @@ export interface SeaTariff {
   lclRate: { sell: number; buy: number }
   fclRates: Record<string, { sell: number; buy: number }>
   currency: string
+  /** When this tariff was published — used to prefer the most recent one when more than one exists for the same lane/carrier. */
+  createdAt?: string
 }
 
 export interface ParsedEnquiry {
@@ -111,7 +137,11 @@ export interface ParsedEnquiry {
   commodity?: string
   incoterm?: string
   notes?: string
+  /** Handling requirements found in the enquiry (temperature range, odd size…) — goes into the quote's Terms. */
+  specialHandling?: string[]
   grossWeight?: number
+  /** Volumetric weight as stated by the customer, for cross-checking against the dimensions. */
+  volumetricWeight?: number
   volume?: number
   packages: Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>
   containers: Array<{ type: string; qty: number }>
@@ -164,6 +194,10 @@ export interface DirectoryContact {
   suspended?: boolean
   updatedBy?: string
   updatedAt?: string
+  /** Set only on rows written by a weekly Excel import — undefined on rows
+   * added by hand. Lets a new import replace the previous week's imported
+   * rows without touching manually-added contacts. */
+  importBatchId?: string
 }
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'quoted' | 'won' | 'lost'
@@ -175,7 +209,11 @@ export interface SalesLead {
   email?: string
   phone?: string
   status: LeadStatus
+  /** Kept for old leads saved with one mode — new leads use `modes` instead; see effectiveLeadModes(). */
   mode?: 'air' | 'sea' | 'transport' | 'warehouse' | 'courier'
+  /** A lead can span more than one mode (e.g. quoting both Air and Sea for the same enquiry). */
+  modes?: Array<'air' | 'sea' | 'transport' | 'warehouse' | 'courier'>
+  /** Deprecated — no longer collected on new leads; old leads keep whatever was saved here. */
   lane?: string
   dealValue?: number
   nextAction?: string
@@ -186,6 +224,81 @@ export interface SalesLead {
   notes?: string
   updatedAt?: string
   createdAt?: string
+  /** Opportunity-pipeline enrichment — all additive/optional, never required. */
+  accountId?: string
+  contactId?: string
+  /** 0-100 override; falls back to STAGE_PROBABILITY[status] when unset. */
+  probability?: number
+  expectedCloseDate?: string
+  lossReasonCode?: string
+  lossReasonNotes?: string
+  wonAt?: string
+  lostAt?: string
+  /** Real relational link to quotes created from this lead. */
+  quoteIds?: string[]
+  territory?: string
+}
+
+/** A customer/prospect company — distinct from the agent/vendor DirectoryContact below. */
+export interface Account {
+  id: string
+  name: string
+  industry?: string
+  website?: string
+  billingAddress?: string
+  primaryContactId?: string
+  owner: string
+  territory?: string
+  accountType?: 'prospect' | 'customer' | 'churned'
+  contractRenewalDate?: string
+  /** Denormalized, refreshed when a linked lead is won. */
+  lastWonAt?: string
+  /** Denormalized, refreshed when a linked lead's quote is created. */
+  lastQuoteAt?: string
+  notes?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** A person at an Account — named to avoid colliding with the unrelated agent/vendor DirectoryContact. */
+export interface SalesContact {
+  id: string
+  accountId: string
+  name: string
+  title?: string
+  email?: string
+  phone?: string
+  isPrimary?: boolean
+  /** Denormalized from the owning Account at write time. */
+  owner: string
+  notes?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** A quota for a rep ("ganny") or a team ("team:air-export") for one period. */
+export interface SalesTarget {
+  id: string
+  owner: string
+  /** "2026-Q4" — quarterly only. */
+  period: string
+  targetRevenue: number
+  targetWinCount?: number
+  notes?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** Lightweight territory tag registry — not a rules engine. */
+export interface SalesTerritory {
+  id: string
+  name: string
+  description?: string
+  ownerUsernames?: string[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface LeadActivity {

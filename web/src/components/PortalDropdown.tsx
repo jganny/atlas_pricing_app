@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
 export function PortalDropdown({
@@ -10,6 +10,7 @@ export function PortalDropdown({
   maxHeight = 240,
   minWidth,
   backdrop = false,
+  fitContent = false,
   onDismiss,
   testId,
 }: {
@@ -19,6 +20,13 @@ export function PortalDropdown({
   maxHeight?: number;
   minWidth?: number;
   backdrop?: boolean;
+  /**
+   * For action menus: measure the real content height and open on whichever
+   * side (below, else above) shows every option without scrolling; only when
+   * neither side fits does it use the roomier side and scroll. Autocomplete
+   * lists leave this off and keep their "prefer below" behaviour.
+   */
+  fitContent?: boolean;
   onDismiss?: () => void;
   testId?: string;
 }) {
@@ -28,6 +36,18 @@ export function PortalDropdown({
     width: number;
     height: number;
   } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [contentH, setContentH] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setContentH(null);
+      return;
+    }
+    if (!fitContent || !panelRef.current) return;
+    const h = panelRef.current.scrollHeight + 2;
+    if (contentH !== h) setContentH(h);
+  }, [open, box, fitContent, contentH, children]);
 
   useLayoutEffect(() => {
     if (!open || !anchorRef.current) {
@@ -49,9 +69,32 @@ export function PortalDropdown({
 
       const spaceBelow = window.innerHeight - r.bottom - pad;
       const spaceAbove = r.top - pad;
-      const openUp = spaceBelow < maxHeight && spaceAbove > spaceBelow;
-      const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
-      const height = Math.min(maxHeight, available);
+      // Only flip the dropdown above the field when there's genuinely too
+      // little room below to show a useful list (roughly 2-3 rows) — not
+      // simply whenever it's less than the full maxHeight. Comparing
+      // against maxHeight meant a perfectly usable ~190px below (plenty
+      // for several results) still flipped the dropdown all the way above
+      // the field, sometimes far from it, on any page where the field
+      // wasn't near the very top of the viewport.
+      const minUsable = 140;
+      let openUp = spaceBelow < minUsable && spaceAbove > spaceBelow;
+      let height: number;
+      if (fitContent) {
+        const need = Math.min(maxHeight, contentH ?? maxHeight);
+        if (spaceBelow >= need) {
+          openUp = false;
+          height = need;
+        } else if (spaceAbove >= need) {
+          openUp = true;
+          height = need;
+        } else {
+          openUp = spaceAbove > spaceBelow;
+          height = Math.max(120, openUp ? spaceAbove : spaceBelow);
+        }
+      } else {
+        const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
+        height = Math.min(maxHeight, available);
+      }
       const top = openUp ? Math.max(pad, r.top - height - 4) : Math.min(r.bottom + 4, window.innerHeight - height - pad);
       setBox({ top, left, width, height });
     }
@@ -62,7 +105,7 @@ export function PortalDropdown({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
     };
-  }, [open, anchorRef, maxHeight, minWidth]);
+  }, [open, anchorRef, maxHeight, minWidth, fitContent, contentH]);
 
   useEffect(() => {
     if (!open || !onDismiss) return;
@@ -87,6 +130,7 @@ export function PortalDropdown({
         />
       ) : null}
       <div
+        ref={panelRef}
         data-portal-dropdown
         data-testid={testId}
         className="z-[400] overflow-y-auto rounded-lg border border-[var(--color-border)] bg-white py-1 shadow-xl"

@@ -3,6 +3,8 @@
 import { doc, setDoc } from "firebase/firestore";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { computeGp } from "@/lib/pricing/quote-display";
+import { truckerSnapshot } from "@/lib/quotes/option-breakdown";
+import { plainLaneLabel, type QuotedLaneRow, type QuoteLane } from "@/lib/quotes/lanes";
 import { getFirebaseDb } from "./client";
 import { omitUndefinedDeep } from "./sanitize";
 
@@ -23,12 +25,16 @@ export async function saveTransportQuote(input: {
   truckers?: Array<{
     id: string;
     name: string;
+    laneId?: string;
     selected: boolean;
     freightBuy: number;
     freightSell: number;
     detention: number;
     tolls: number;
   }>;
+  lanes?: QuoteLane[];
+  quotedLanes?: QuotedLaneRow[];
+  allLanesAmount?: number;
   commodity?: string;
   ewayBillNo?: string;
   ewayRequired?: boolean;
@@ -39,10 +45,17 @@ export async function saveTransportQuote(input: {
   terms?: string;
 }): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
-  const total = input.freightSell + input.detention + input.tolls;
+  const singleLaneTotal = input.freightSell + input.detention + input.tolls;
+  const total = input.allLanesAmount && input.allLanesAmount > 0 ? input.allLanesAmount : singleLaneTotal;
   const buy = input.freightBuy;
-  const { gp, gpReady } = computeGp(total, buy);
-  const route = `${input.origin} → ${input.destination}`;
+  // GP compares the currently-focused trucker's own sell vs buy, never the
+  // all-lanes aggregate against one lane's buy figure.
+  const { gp, gpReady } = computeGp(singleLaneTotal, buy);
+  const lanes = input.lanes?.length ? input.lanes : [{ id: "lane_0", origin: input.origin, destination: input.destination }];
+  const route = lanes.length > 1
+    ? lanes.map((l) => `${l.origin} → ${l.destination}`.trim()).filter((s) => s !== "→").join(" · ")
+    : `${input.origin} → ${input.destination}`;
+  const fallbackLaneId = lanes[0]?.id || "";
   const now = new Date();
   await setDoc(doc(getFirebaseDb(), "quotes", id), omitUndefinedDeep({
     id,
@@ -84,19 +97,12 @@ export async function saveTransportQuote(input: {
       invoiceValue: input.invoiceValue ?? 0,
       validity: input.validity || "",
       truckerName: input.truckerName || "",
-      truckers: (input.truckers ?? []).map((t) => ({
-        id: t.id,
-        name: t.name,
-        kind: "trucker",
-        selected: Boolean(t.selected),
-        freightBuy: t.freightBuy,
-        freightSell: t.freightSell,
-        detention: t.detention,
-        tolls: t.tolls,
-        quoteTotal: t.freightSell + t.detention + t.tolls,
-        baseFreight: t.freightSell,
-        validity: input.validity || "",
-      })),
+      truckers: (input.truckers ?? []).map((t) =>
+        truckerSnapshot(t, input.validity || "", lanes, fallbackLaneId, plainLaneLabel),
+      ),
+      lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
+      quotedLanes: input.quotedLanes ?? [],
+      allLanesTotal: input.allLanesAmount ?? 0,
       termsAndConditions: input.terms || "",
     },
   }));

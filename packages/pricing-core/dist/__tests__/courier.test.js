@@ -7,11 +7,33 @@ describe("courier zone & chargeable", () => {
     it("domestic IN lane is zone 1", () => {
         expect(getCourierZone("IN", "IN")).toBe(1);
     });
+    it("India → Bahrain is Gulf zone 2 (not default 6)", () => {
+        expect(getCourierZone("IN", "BH")).toBe(2);
+    });
     it("computes volumetric per piece with 5000 divisor", () => {
         const { chargeableKg } = summarizeCourierPackages([
             { qty: 1, gw: 2, l: 50, w: 40, h: 30 },
         ]);
         expect(chargeableKg).toBe(12);
+    });
+    it("GW is per piece, matching the live legacy courier desk — CHW = max(GW, volumetric) per piece, then × qty", () => {
+        // 5 pcs × 30×40×30 cm → volumetric 7.2 kg/piece; GW 50 kg/piece (weighed
+        // on the box's own scale) → per-piece chargeable 50, × 5 pcs = 250, not
+        // a flat 50 for the whole line. (courier-desk.js: chargeablePerPiece =
+        // max(gw, volPerPiece); round(chargeablePerPiece) * qty.)
+        const { lines, chargeableKg } = summarizeCourierPackages([
+            { qty: 5, gw: 50, l: 30, w: 40, h: 30 },
+        ]);
+        expect(lines[0].volPerPiece).toBeCloseTo(7.2, 5);
+        expect(lines[0].chargeable).toBe(250);
+        expect(chargeableKg).toBe(250);
+    });
+    it("uses volume weight when it exceeds GW", () => {
+        const { chargeableKg } = summarizeCourierPackages([
+            { qty: 5, gw: 10, l: 50, w: 40, h: 30 },
+        ]);
+        // VWT = 5 × (50×40×30)/5000 = 60
+        expect(chargeableKg).toBe(60);
     });
 });
 describe("calculateCourierFreight", () => {

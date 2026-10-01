@@ -7,6 +7,7 @@ import {
   type BillingUnit,
   type SurchargeRow,
 } from "@/lib/pricing/surcharges";
+import { focusByIdNow } from "@/lib/ui/desk-keyboard";
 
 const UNIT_OPTIONS: Array<{ value: BillingUnit; label: string }> = [
   { value: "kg", label: "Per kg" },
@@ -14,23 +15,6 @@ const UNIT_OPTIONS: Array<{ value: BillingUnit; label: string }> = [
   { value: "cbm", label: "Per CBM/RT" },
   { value: "container", label: "Per container" },
 ];
-
-function focusTabTarget(id: string | undefined): boolean {
-  if (!id) return false;
-  const el = document.getElementById(id);
-  if (!(el instanceof HTMLElement)) return false;
-  if (
-    (el instanceof HTMLButtonElement ||
-      el instanceof HTMLInputElement ||
-      el instanceof HTMLSelectElement ||
-      el instanceof HTMLTextAreaElement) &&
-    el.disabled
-  ) {
-    return false;
-  }
-  el.focus();
-  return document.activeElement === el;
-}
 
 export function SurchargeTable({
   title,
@@ -133,7 +117,7 @@ export function SurchargeTable({
                     value={row.name}
                     onChange={(e) => update(i, { name: e.target.value })}
                     onKeyDown={(e) => {
-                      if (e.key === "Tab" && e.shiftKey && i === 0 && focusTabTarget(prevFieldTabTarget)) {
+                      if (e.key === "Tab" && e.shiftKey && i === 0 && focusByIdNow(prevFieldTabTarget)) {
                         e.preventDefault();
                       }
                     }}
@@ -181,7 +165,7 @@ export function SurchargeTable({
                     onChange={(e) => update(i, { remarks: e.target.value })}
                     placeholder="Optional"
                     onKeyDown={(e) => {
-                      if (e.key === "Tab" && !e.shiftKey && focusTabTarget(`surcharge-del-${row.id}`)) {
+                      if (e.key === "Tab" && !e.shiftKey && focusByIdNow(`surcharge-del-${row.id}`)) {
                         e.preventDefault();
                       }
                     }}
@@ -202,7 +186,7 @@ export function SurchargeTable({
                         e.key === "Tab" &&
                         !e.shiftKey &&
                         i === rows.length - 1 &&
-                        focusTabTarget(lastFieldTabTarget)
+                        focusByIdNow(lastFieldTabTarget)
                       ) {
                         e.preventDefault();
                       }
