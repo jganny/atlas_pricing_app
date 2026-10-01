@@ -632,6 +632,7 @@ function AirDeskInner() {
         incoterm,
         module,
         dimUnit,
+        creatorBranch: user?.branch || "Bangalore",
         commodity,
         chargeableWeight: selectedTotals.freight.chargeableWeightKg,
         grossWeight: selectedTotals.freight.cargo.grossWeightKg,
@@ -755,6 +756,7 @@ function AirDeskInner() {
           incoterm,
           module,
           dimUnit,
+          creatorBranch: user?.branch || "Bangalore",
           commodity,
           chargeableWeight: selectedTotals.freight.chargeableWeightKg,
           grossWeight: selectedTotals.freight.cargo.grossWeightKg,
@@ -791,6 +793,7 @@ function AirDeskInner() {
             await saveAirQuote({
               customer: customer.trim(),
               creator: user.username,
+              creatorBranch: user.branch,
               origin,
               destination,
               currency,
@@ -1055,7 +1058,7 @@ function AirDeskInner() {
                 destination={destination}
                 tariffCount={tariffs.length}
               />
-              <CustomsHolidayBanner origin={origin} destination={destination} />
+              <CustomsHolidayBanner />
               <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer

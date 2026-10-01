@@ -6,6 +6,9 @@ export interface AuthUser {
   displayName: string
   role: UserRole
   email: string
+  /** Which office this login quotes from — drives which branch holiday
+   * calendar they see. Defaults to Bangalore (every existing user today). */
+  branch?: string
 }
 
 export type EnquiryLegKind = 'airline' | 'coloader' | 'liner' | 'other'

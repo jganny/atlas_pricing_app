@@ -80,6 +80,10 @@ const NAME_BY_MONTH_DAY: Record<string, string> = {
   "12-25": "Christmas",
 };
 
+/** The 18 known branch offices — for the "which branch is this login based
+ * at" admin picker, so it offers real options instead of free text. */
+export const BRANCH_NAMES: string[] = Object.keys(BRANCH_DAYS_2026).sort();
+
 export function buildCustomsHolidays2026(): Array<Omit<CustomsHoliday, "id">> {
   const rows: Array<Omit<CustomsHoliday, "id">> = [];
   for (const [branch, months] of Object.entries(BRANCH_DAYS_2026)) {

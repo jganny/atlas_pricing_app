@@ -26,6 +26,7 @@ const DEV_PREVIEW_USER: AuthUser = {
   email: "preview@atlaspricing.com",
   displayName: "Preview desk",
   role: "ganny",
+  branch: "Bangalore",
 };
 
 function AuthSync() {

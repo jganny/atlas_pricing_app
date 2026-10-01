@@ -188,6 +188,10 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
 export interface SaveAirInput extends SaveMeta {
   customer: string;
   creator: string;
+  /** Which branch the quoting user is based at — drives the holiday
+   * advisory shown on this quote later, independent of the shipment's
+   * own origin/destination. */
+  creatorBranch?: string;
   origin: string;
   destination: string;
   currency: string;
@@ -303,6 +307,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       incoterm: input.incoterm,
       module: input.module,
       dimUnit: input.dimUnit || "cms",
+      creatorBranch: input.creatorBranch || "Bangalore",
       commodity: input.commodity,
       chargeableWeight: input.totals.freight.chargeableWeightKg,
       grossWeight: input.totals.freight.cargo.grossWeightKg,
@@ -359,6 +364,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
 export interface SaveSeaInput extends SaveMeta {
   customer: string;
   creator: string;
+  creatorBranch?: string;
   origin: string;
   destination: string;
   currency: string;
@@ -489,6 +495,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       volumeCbm: input.volumeCbm,
       seaCargoItems: input.cargo ?? [],
       dimUnit: input.dimUnit || "cms",
+      creatorBranch: input.creatorBranch || "Bangalore",
       chargeableCbmOverride: chargeableCbmOverride > 0 ? chargeableCbmOverride : null,
       chargeableRt: input.totals.freight.chargeableRt,
       baseFreight: input.totals.baseFreightQuote,

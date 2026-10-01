@@ -633,6 +633,7 @@ function SeaDeskInner() {
         shippingLine: selected.name,
         incoterm,
         module,
+        creatorBranch: user?.branch || "Bangalore",
         commodity,
         type: mode,
         chargeableRt: selectedTotals.freight.chargeableRt,
@@ -746,6 +747,7 @@ function SeaDeskInner() {
           shippingLine: selected.name,
           incoterm,
           module,
+          creatorBranch: user?.branch || "Bangalore",
           commodity,
           type: mode,
           lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
@@ -768,6 +770,7 @@ function SeaDeskInner() {
             await saveSeaQuote({
               customer: customer.trim(),
               creator: user.username,
+              creatorBranch: user.branch,
               origin,
               destination,
               currency,
@@ -1032,7 +1035,7 @@ function SeaDeskInner() {
                 destination={destination}
                 tariffCount={tariffs.length}
               />
-              <CustomsHolidayBanner origin={origin} destination={destination} />
+              <CustomsHolidayBanner />
               <div className="grid gap-2 md:grid-cols-2">
                 <Label className="md:col-span-2">
                   Customer

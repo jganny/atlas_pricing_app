@@ -11,6 +11,12 @@ export interface CustomsHoliday {
 
 export const DEFAULT_LEAD_DAYS = 14;
 
+/** Every existing user quotes from Bangalore today. A Bangalore login sees a
+ * single consolidated "is this date a holiday anywhere" notice — not which
+ * branch — since they're quoting broadly, not for one specific office. A
+ * user based at any other branch sees only that branch's own calendar. */
+export const HUB_BRANCH = "Bangalore";
+
 /** A branch name matches a quote's origin/destination text as a loose,
  * case-insensitive substring — "BOM - Mumbai, Chhatrapati..." matches "Mumbai". */
 export function locationMatchesBranch(location: string, branch: string): boolean {
@@ -66,8 +72,57 @@ export function upcomingHolidaysForLocations(
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** Every holiday across every branch, within the lead window, collapsed to
+ * one entry per date — the Bangalore/hub view. Two branches sharing a date
+ * with the same name show once; different names on the same date are
+ * joined, so nothing is silently dropped. */
+function consolidatedUpcomingHolidays(
+  holidays: CustomsHoliday[],
+  leadDays: number,
+  now: Date,
+): CustomsHoliday[] {
+  const byDate = new Map<string, Set<string>>();
+  for (const h of holidays) {
+    const d = daysUntil(h.date, now);
+    if (d < 0 || d > leadDays) continue;
+    const names = byDate.get(h.date) ?? new Set<string>();
+    names.add(h.name);
+    byDate.set(h.date, names);
+  }
+  return Array.from(byDate.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, names]) => ({
+      id: `all_${date}`,
+      branch: "All branches",
+      date,
+      name: Array.from(names).join(" / "),
+    }));
+}
+
+/**
+ * The holidays relevant to whoever is quoting, based on their OWN branch —
+ * never the shipment's origin/destination. A Bangalore user gets one
+ * consolidated "this date is a holiday somewhere" list; anyone else gets
+ * only their own branch's calendar.
+ */
+export function relevantHolidaysForUserBranch(
+  userBranch: string | undefined,
+  holidays: CustomsHoliday[],
+  leadDays: number = DEFAULT_LEAD_DAYS,
+  now: Date = new Date(),
+): CustomsHoliday[] {
+  const branch = (userBranch || HUB_BRANCH).trim();
+  if (branch.toLowerCase() === HUB_BRANCH.toLowerCase()) {
+    return consolidatedUpcomingHolidays(holidays, leadDays, now);
+  }
+  return upcomingHolidaysForBranch(branch, holidays, leadDays, now);
+}
+
 export function holidayAdvisoryText(h: CustomsHoliday): string {
   const d = new Date(`${h.date}T00:00:00`);
   const formatted = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  if (h.branch === "All branches") {
+    return `${formatted} is a holiday (${h.name}) — please plan accordingly.`;
+  }
   return `${h.branch} is closed for ${h.name} on ${formatted}.`;
 }

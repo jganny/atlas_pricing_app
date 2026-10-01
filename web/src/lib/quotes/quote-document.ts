@@ -14,7 +14,7 @@ import {
   type OptionBreakdown,
 } from "./option-breakdown";
 import { compareHeading } from "./vendor-preview";
-import { holidayAdvisoryText, upcomingHolidaysForLocations, type CustomsHoliday } from "./customs-holidays";
+import { holidayAdvisoryText, relevantHolidaysForUserBranch, type CustomsHoliday } from "./customs-holidays";
 
 function esc(value: unknown): string {
   return String(value ?? "")
@@ -90,8 +90,8 @@ export function buildClientQuoteDocument(
   holidays: CustomsHoliday[] = [],
 ): ClientQuoteDocument {
   const ref = getQuoteRefId(quote);
-  const upcomingHolidays = upcomingHolidaysForLocations(
-    [String(quote.details?.origin ?? ""), String(quote.details?.destination ?? "")],
+  const upcomingHolidays = relevantHolidaysForUserBranch(
+    String(quote.details?.creatorBranch ?? ""),
     holidays,
   );
   const holidayNotices = upcomingHolidays.map((h) => holidayAdvisoryText(h));

@@ -36,7 +36,7 @@ import {
 } from "@/lib/quotes/option-breakdown";
 import { VendorCompareList } from "@/components/VendorCompareList";
 import { useCustomsHolidays } from "@/hooks/use-atlas-data";
-import { holidayAdvisoryText, upcomingHolidaysForLocations } from "@/lib/quotes/customs-holidays";
+import { holidayAdvisoryText, relevantHolidaysForUserBranch } from "@/lib/quotes/customs-holidays";
 
 function BreakdownPanel({
   option,
@@ -138,12 +138,8 @@ export function QuotePreviewModal({
   const inspectable = type === "air" || type === "sea" || options.length > 0;
   const { data: customsHolidays = [] } = useCustomsHolidays();
   const upcomingHolidays = useMemo(
-    () =>
-      upcomingHolidaysForLocations(
-        [String(d.origin ?? ""), String(d.destination ?? "")],
-        customsHolidays,
-      ),
-    [d.origin, d.destination, customsHolidays],
+    () => relevantHolidaysForUserBranch(String(d.creatorBranch ?? ""), customsHolidays),
+    [d.creatorBranch, customsHolidays],
   );
   const clientDoc = useMemo(
     () => buildClientQuoteDocument(quote, customsHolidays),

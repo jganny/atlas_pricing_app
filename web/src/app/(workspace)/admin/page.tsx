@@ -20,6 +20,7 @@ import {
 } from "@/lib/firebase/runtime-config";
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
 import { CustomsHolidaysAdmin } from "@/components/CustomsHolidaysAdmin";
+import { UserBranchAdmin } from "@/components/UserBranchAdmin";
 import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { ErrorMonitorPanel } from "@/components/ErrorMonitorPanel";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
@@ -136,6 +137,8 @@ export default function AdminPage() {
       <DeskSeatsAdmin />
 
       <CustomsHolidaysAdmin />
+
+      {admin ? <UserBranchAdmin /> : null}
 
       {admin ? <ErrorMonitorPanel /> : null}
 

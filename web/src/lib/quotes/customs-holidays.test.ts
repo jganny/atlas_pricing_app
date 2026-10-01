@@ -3,6 +3,7 @@ import {
   daysUntil,
   holidayAdvisoryText,
   locationMatchesBranch,
+  relevantHolidaysForUserBranch,
   upcomingHolidaysForBranch,
   upcomingHolidaysForLocations,
   type CustomsHoliday,
@@ -41,5 +42,38 @@ assert.equal(
   holidayAdvisoryText({ id: "x", branch: "Mumbai", date: "2026-08-15", name: "Independence Day" }),
   "Mumbai is closed for Independence Day on 15 Aug 2026.",
 );
+
+// Bangalore (the hub) sees one consolidated entry per date, across every
+// branch — never attributed to a single branch.
+const multiCity: CustomsHoliday[] = [
+  { id: "a1", branch: "Mumbai", date: "2026-08-15", name: "Independence Day" },
+  { id: "a2", branch: "Delhi", date: "2026-08-15", name: "Independence Day" },
+  { id: "a3", branch: "Ahmedabad", date: "2026-08-10", name: "Local Fair" },
+  { id: "a4", branch: "Mumbai", date: "2026-09-01", name: "Too far out" }, // 31 days, outside window
+];
+const bangaloreView = relevantHolidaysForUserBranch("Bangalore", multiCity, 14, now);
+assert.deepEqual(
+  bangaloreView.map((h) => h.date),
+  ["2026-08-10", "2026-08-15"],
+  "consolidated by date, sorted, ignoring anything past the lead window",
+);
+assert.equal(bangaloreView[1].name, "Independence Day", "same name on the same date collapses to one");
+assert.equal(bangaloreView[1].branch, "All branches", "never attributed to a single branch for the hub");
+
+// A different name on the same date (two different festivals) gets joined, not dropped.
+const clashing: CustomsHoliday[] = [
+  { id: "c1", branch: "Mumbai", date: "2026-08-15", name: "Independence Day" },
+  { id: "c2", branch: "Kerala", date: "2026-08-15", name: "Some Other Festival" },
+];
+const clashingView = relevantHolidaysForUserBranch("Bangalore", clashing, 14, now);
+assert.equal(clashingView[0].name, "Independence Day / Some Other Festival");
+
+// A non-hub branch user sees only their own branch, same as before.
+const mumbaiUser = relevantHolidaysForUserBranch("Mumbai", multiCity, 14, now);
+assert.deepEqual(mumbaiUser.map((h) => h.id), ["a1"], "only Mumbai's own holiday, not Delhi's or Ahmedabad's");
+
+// No branch set at all (legacy user) defaults to the Bangalore hub view.
+const noBranch = relevantHolidaysForUserBranch(undefined, multiCity, 14, now);
+assert.equal(noBranch.length, 2, "defaults to the consolidated hub view when unset");
 
 console.log("customs-holidays.test.ts: all assertions passed");

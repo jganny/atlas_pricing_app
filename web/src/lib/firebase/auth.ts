@@ -68,6 +68,9 @@ async function fetchUserProfile(username: string, email: string, uid: string): P
     email,
     displayName: (data?.fullName as string) || username,
     role: mapRole(data?.role as string | undefined),
+    // Every existing login is Bangalore-based today — a new branch hire gets
+    // their own value set once, in Admin, by whoever onboards them.
+    branch: (data?.branch as string) || "Bangalore",
   };
 }
 
