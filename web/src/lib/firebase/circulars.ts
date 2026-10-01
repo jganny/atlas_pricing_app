@@ -203,3 +203,59 @@ export async function publishAirTariffRows(
   }
   return n;
 }
+
+/**
+ * Publishes a single lane/carrier's REAL per-weight-break rates — as read
+ * from the airline's own circular by AI extraction, reviewed and confirmed
+ * by the desk — rather than publishAirTariffRows' single-sell/buy-pair
+ * estimate. Same replace-matching-lane/carrier rule as publishAirTariffRows.
+ */
+export async function publishAirTariffBreaks(
+  row: {
+    origin: string;
+    destination: string;
+    carrier: string;
+    carrierCode?: string;
+    currency: string;
+    breaks: Record<string, { sell: number | null; buy: number | null }>;
+  },
+  uploadedBy: string,
+): Promise<void> {
+  const db = getFirebaseDb();
+  const origin = row.origin.trim().toUpperCase();
+  const destination = row.destination.trim().toUpperCase();
+  const carrierCode = (row.carrierCode || row.carrier.slice(0, 2)).trim().toUpperCase();
+
+  const existing = await getDocs(
+    query(
+      collection(db, "air_tariffs"),
+      where("origin", "==", origin),
+      where("destination", "==", destination),
+      where("carrierCode", "==", carrierCode),
+    ),
+  );
+
+  const breaks: Record<string, { sell: number; buy: number }> = {};
+  for (const [key, value] of Object.entries(row.breaks)) {
+    breaks[key] = { sell: value.sell ?? 0, buy: value.buy ?? 0 };
+  }
+
+  const payload = {
+    carrier: row.carrier,
+    carrierCode,
+    origin,
+    destination,
+    currency: row.currency,
+    breaks,
+    source: "ai_extraction",
+    uploadedBy,
+    published: true,
+    createdAt: serverTimestamp(),
+  };
+
+  if (!existing.empty) {
+    await updateDoc(doc(db, "air_tariffs", existing.docs[0].id), payload);
+  } else {
+    await addDoc(collection(db, "air_tariffs"), payload);
+  }
+}

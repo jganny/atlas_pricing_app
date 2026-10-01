@@ -891,5 +891,143 @@ exports.atlasCopilotStream = functions
     res.end();
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// extractAirTariffFromCircular
+//
+// Reads an already-uploaded airline rate circular (PDF, in Firebase Storage)
+// and asks Claude to pull out the real per-weight-break sell/buy rates, so
+// the desk doesn't have to retype them from the PDF by hand. Returns a
+// structured draft only — nothing is written to air_tariffs here; the
+// Circulars page shows the draft for review and calls the existing
+// publishAirTariffBreaks path once the desk confirms it.
+// ─────────────────────────────────────────────────────────────────────────────
+const AIR_BREAK_KEYS = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+
+exports.extractAirTariffFromCircular = functions
+  .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 120, memory: "512MB" })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+    }
+
+    const storagePath = typeof data?.storagePath === "string" ? data.storagePath.trim() : "";
+    if (!storagePath || !storagePath.startsWith("circulars/")) {
+      throw new functions.https.HttpsError("invalid-argument", "A valid circular storage path is required.");
+    }
+    const carrierHint = typeof data?.carrierHint === "string" ? data.carrierHint.slice(0, 80) : "";
+
+    const apiKey = anthropicApiKey.value();
+    if (!apiKey) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "AI rate extraction is not configured yet. Ask your admin to set ANTHROPIC_API_KEY."
+      );
+    }
+
+    let pdfBase64;
+    try {
+      const [buffer] = await admin.storage().bucket().file(storagePath).download();
+      if (buffer.length > 28 * 1024 * 1024) {
+        throw new functions.https.HttpsError("invalid-argument", "This PDF is too large to read (28MB limit).");
+      }
+      pdfBase64 = buffer.toString("base64");
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      functions.logger.warn("extractAirTariffFromCircular: download failed", { message: err.message, storagePath });
+      throw new functions.https.HttpsError("not-found", "Could not read that circular from storage.");
+    }
+
+    const systemPrompt =
+      "You read airline general cargo rate circulars (PDF) for a freight-forwarding pricing tool and extract " +
+      "the real per-weight-break sell and buy (cost) rates — never invent or estimate a number that isn't on the page.\n\n" +
+      "Weight breaks, in this exact order: min (minimum charge), minus45 (under 45kg), plus45 (45kg+), " +
+      "plus100 (100kg+), plus300 (300kg+), plus500 (500kg+), plus1000 (1000kg+). A circular may label these " +
+      "differently (e.g. 'N', 'Q', '+45', '+100') — map them onto this set by weight threshold, not by label text.\n\n" +
+      "Respond with ONLY a single JSON object, no markdown fences, no prose, matching exactly:\n" +
+      '{"carrier":"<airline name>","carrierCode":"<2-letter IATA code if shown, else best guess>",' +
+      '"origin":"<3-letter origin airport code>","destination":"<3-letter destination airport code>",' +
+      '"currency":"<3-letter currency code>","sourcePage":<page number the rate table is on>,' +
+      '"breaks":{"<break key>":{"sell":<number or null>,"buy":<number or null>,' +
+      '"confidence":"high"|"needs_check","note":"<short reason, only when needs_check>"}, ...}}\n\n' +
+      "Include all 7 break keys even if a value is missing. Use null (never 0 or a guess) and " +
+      '"confidence":"needs_check" with a short note for any value that is not clearly printed on the page. ' +
+      "If the circular covers more than one lane or carrier, extract only the first lane's rates and say so in a note.";
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-5-5",
+          max_tokens: 2000,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfBase64 } },
+                {
+                  type: "text",
+                  text: carrierHint
+                    ? `This circular is from ${carrierHint}. Extract its weight-break sell/buy rates as instructed.`
+                    : "Extract this circular's weight-break sell/buy rates as instructed.",
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        functions.logger.warn("extractAirTariffFromCircular: API request failed", { status: response.status });
+        throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
+      }
+
+      const payload = await response.json();
+      const raw = (payload?.content?.[0]?.text || "").trim();
+      const jsonText = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch {
+        functions.logger.warn("extractAirTariffFromCircular: non-JSON reply", { raw: raw.slice(0, 500) });
+        throw new functions.https.HttpsError("internal", "The AI's reply wasn't in the expected format. Try again.");
+      }
+
+      const breaksIn = parsed?.breaks && typeof parsed.breaks === "object" ? parsed.breaks : {};
+      const breaks = {};
+      for (const key of AIR_BREAK_KEYS) {
+        const b = breaksIn[key] && typeof breaksIn[key] === "object" ? breaksIn[key] : {};
+        const sell = Number(b.sell);
+        const buy = Number(b.buy);
+        breaks[key] = {
+          sell: Number.isFinite(sell) ? sell : null,
+          buy: Number.isFinite(buy) ? buy : null,
+          confidence: b.confidence === "needs_check" ? "needs_check" : "high",
+          note: typeof b.note === "string" ? b.note.slice(0, 300) : "",
+        };
+      }
+
+      return {
+        carrier: typeof parsed?.carrier === "string" ? parsed.carrier.slice(0, 120) : (carrierHint || ""),
+        carrierCode: typeof parsed?.carrierCode === "string" ? parsed.carrierCode.slice(0, 10).toUpperCase() : "",
+        origin: typeof parsed?.origin === "string" ? parsed.origin.slice(0, 10).toUpperCase() : "",
+        destination: typeof parsed?.destination === "string" ? parsed.destination.slice(0, 10).toUpperCase() : "",
+        currency: typeof parsed?.currency === "string" ? parsed.currency.slice(0, 6).toUpperCase() : "USD",
+        sourcePage: Number.isFinite(Number(parsed?.sourcePage)) ? Number(parsed.sourcePage) : null,
+        breaks,
+      };
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      functions.logger.warn("extractAirTariffFromCircular error", { message: err.message });
+      throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
+    }
+  });
+
 const inboxPoll = require("./inbox-poll");
 exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;

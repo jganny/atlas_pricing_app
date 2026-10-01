@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { FileText, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
@@ -29,6 +29,7 @@ import {
   type CourierTariffBook,
 } from "@/lib/quotes/courier-tariff";
 import { canAccessVendorsDirectory } from "@/lib/auth/directory-access";
+import { AirTariffExtractionReview } from "@/components/AirTariffExtractionReview";
 import type { CircularRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,7 @@ export default function CircularsPage() {
     Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number }>
   >([]);
   const [courierBook, setCourierBook] = useState<CourierTariffBook | null>(null);
+  const [extractCircular, setExtractCircular] = useState<CircularRecord | null>(null);
   const tariffYear = new Date().getFullYear();
 
   const filtered = useMemo(() => {
@@ -522,6 +524,17 @@ export default function CircularsPage() {
                       Open
                     </a>
                   ) : null}
+                  {canManage && c.category === "airline_tariff" && c.storagePath ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setExtractCircular(c)}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Extract rates with AI
+                    </Button>
+                  ) : null}
                   {canManage ? (
                     <Button
                       type="button"
@@ -612,6 +625,15 @@ export default function CircularsPage() {
           </ul>
         </Card>
       </div>
+
+      {extractCircular ? (
+        <AirTariffExtractionReview
+          circular={extractCircular}
+          uploadedBy={user?.username || "unknown"}
+          onClose={() => setExtractCircular(null)}
+          onPublished={() => void queryClient.invalidateQueries({ queryKey: queryKeys.airTariffs })}
+        />
+      ) : null}
     </div>
   );
 }
