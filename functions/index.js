@@ -1221,5 +1221,108 @@ exports.extractCourierTariffFromCircular = functions
     }
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// extractVendorRateFromDocument
+//
+// Transport and Warehouse have no published-tariff concept at all — those
+// rates are negotiated per vendor/per shipment, not printed in a standing
+// circular — so unlike Air/Sea/Courier this reads a one-off vendor rate
+// sheet the desk just uploaded (sent as base64 directly from the browser,
+// no Storage round-trip or circular-library entry) and fills the CURRENT
+// quote's fields only. Nothing is published anywhere; the desk reviews the
+// filled numbers in the normal form before saving, same as it would for
+// numbers it typed in by hand.
+// ─────────────────────────────────────────────────────────────────────────────
+function requireVendorRateInput(data, context) {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+  }
+  const pdfBase64 = typeof data?.pdfBase64 === "string" ? data.pdfBase64 : "";
+  if (!pdfBase64 || pdfBase64.length > 9 * 1024 * 1024) {
+    throw new functions.https.HttpsError("invalid-argument", "A PDF under 6MB is required.");
+  }
+  const deskType = data?.deskType === "warehouse" ? "warehouse" : "transport";
+  const vendorHint = typeof data?.vendorHint === "string" ? data.vendorHint.slice(0, 80) : "";
+  const apiKey = anthropicApiKey.value();
+  if (!apiKey) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "AI rate extraction is not configured yet. Ask your admin to set ANTHROPIC_API_KEY."
+    );
+  }
+  return { pdfBase64, deskType, vendorHint, apiKey };
+}
+
+function numOrNull(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+exports.extractVendorRateFromDocument = functions
+  .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 90, memory: "512MB" })
+  .https.onCall(async (data, context) => {
+    const { pdfBase64, deskType, vendorHint, apiKey } = requireVendorRateInput(data, context);
+
+    const systemPrompt =
+      deskType === "warehouse"
+        ? "You read warehouse/storage rate sheets (PDF) for a freight-forwarding pricing tool and extract the " +
+          "real storage rate — never invent or estimate a number that isn't on the page.\n\n" +
+          "Respond with ONLY a single JSON object, no markdown fences, no prose, matching exactly:\n" +
+          '{"location":"<city/facility named in the sheet>","ratePerCbm":<rate per CBM per day, number or null>,' +
+          '"handling":<handling/admin fee, number or null>,"currency":"<3-letter currency code>",' +
+          '"validity":"<validity period as printed, e.g. \\"Jan-Dec 2026\\", or empty string>",' +
+          '"confidence":"high"|"needs_check","note":"<short reason, only when needs_check>"}'
+        : "You read trucking/transport rate sheets (PDF) for a freight-forwarding pricing tool and extract the " +
+          "real freight rate — never invent or estimate a number that isn't on the page.\n\n" +
+          "Respond with ONLY a single JSON object, no markdown fences, no prose, matching exactly:\n" +
+          '{"vendorName":"<trucking company name>","origin":"<origin city/place as printed>",' +
+          '"destination":"<destination city/place as printed>","freightBuy":<the quoted rate, number or null>,' +
+          '"detention":<detention charge if shown, number or null>,"tolls":<tolls/permits if shown, number or null>,' +
+          '"currency":"<3-letter currency code>","validity":"<validity period as printed, or empty string>",' +
+          '"confidence":"high"|"needs_check","note":"<short reason, only when needs_check>"}';
+
+    try {
+      const userText = vendorHint
+        ? `This rate sheet is from ${vendorHint}. Extract it as instructed.`
+        : "Extract this rate sheet as instructed.";
+      const parsed = await askClaudeToExtract(apiKey, systemPrompt, pdfBase64, userText, "extractVendorRateFromDocument", 1200);
+
+      const confidence = parsed?.confidence === "needs_check" ? "needs_check" : "high";
+      const note = typeof parsed?.note === "string" ? parsed.note.slice(0, 300) : "";
+      const currency = typeof parsed?.currency === "string" ? parsed.currency.slice(0, 6).toUpperCase() : "INR";
+      const validity = typeof parsed?.validity === "string" ? parsed.validity.slice(0, 60) : "";
+
+      if (deskType === "warehouse") {
+        return {
+          deskType,
+          location: typeof parsed?.location === "string" ? parsed.location.slice(0, 120) : "",
+          ratePerCbm: numOrNull(parsed?.ratePerCbm),
+          handling: numOrNull(parsed?.handling),
+          currency,
+          validity,
+          confidence,
+          note,
+        };
+      }
+      return {
+        deskType,
+        vendorName: typeof parsed?.vendorName === "string" ? parsed.vendorName.slice(0, 120) : (vendorHint || ""),
+        origin: typeof parsed?.origin === "string" ? parsed.origin.slice(0, 80) : "",
+        destination: typeof parsed?.destination === "string" ? parsed.destination.slice(0, 80) : "",
+        freightBuy: numOrNull(parsed?.freightBuy),
+        detention: numOrNull(parsed?.detention),
+        tolls: numOrNull(parsed?.tolls),
+        currency,
+        validity,
+        confidence,
+        note,
+      };
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      functions.logger.warn("extractVendorRateFromDocument error", { message: err.message });
+      throw new functions.https.HttpsError("unavailable", "AI rate extraction is temporarily unavailable.");
+    }
+  });
+
 const inboxPoll = require("./inbox-poll");
 exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;

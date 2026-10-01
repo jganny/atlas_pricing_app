@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, Plus, Save, Truck } from "lucide-react";
+import { Eye, Plus, Save, Sparkles, Truck } from "lucide-react";
 import {
   Badge,
   Button,
@@ -59,6 +59,8 @@ import { computeGp, ensureIncidentalTerm } from "@/lib/pricing/quote-display";
 import { formatCurrency } from "@/lib/utils";
 import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
 import { normalizeCarrierName } from "@/lib/quotes/historical-autofill";
+import { extractVendorRateFromDocument } from "@/lib/ai/vendor-rate-extraction";
+import { ExtractionError } from "@/lib/ai/circular-extraction";
 
 const DEFAULT_TERMS = ensureIncidentalTerm(
   "1. Rates exclude detention beyond free hours unless stated.\n" +
@@ -185,6 +187,38 @@ export default function TransportDeskPage() {
     const id = selectedTrucker?.id;
     if (!id) return;
     setTruckers((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  const [extractingRate, setExtractingRate] = useState(false);
+
+  async function handleExtractVendorRate(file: File) {
+    setExtractingRate(true);
+    try {
+      const result = await extractVendorRateFromDocument(file, "transport");
+      if (result.deskType !== "transport") return;
+      const patch: Partial<TruckerOption> = {};
+      if (!selectedTrucker?.name.trim() && result.vendorName) patch.name = result.vendorName;
+      if (freightBuy === 0 && result.freightBuy !== null) patch.freightBuy = result.freightBuy;
+      if (detention === 0 && result.detention !== null) patch.detention = result.detention;
+      if (tolls === 0 && result.tolls !== null) patch.tolls = result.tolls;
+      if (Object.keys(patch).length) updateSelectedTrucker(patch);
+
+      const laneNote =
+        result.origin && result.destination && `${result.origin} → ${result.destination}` !== `${origin} → ${destination}`
+          ? ` (sheet shows ${result.origin} → ${result.destination} — check it matches this lane)`
+          : "";
+      const noteText = result.confidence === "needs_check" && result.note ? ` ${result.note}` : "";
+      toast(
+        Object.keys(patch).length
+          ? `Filled from ${result.vendorName || "the rate sheet"}.${laneNote}${noteText}`
+          : `Nothing new to fill — those fields already have values.${laneNote}${noteText}`,
+        result.confidence === "needs_check" ? "info" : "success",
+      );
+    } catch (e) {
+      toast(e instanceof ExtractionError ? e.message : "Couldn't read that file. Try again.", "error");
+    } finally {
+      setExtractingRate(false);
+    }
   }
 
   function selectTrucker(id: string) {
@@ -586,10 +620,27 @@ export default function TransportDeskPage() {
                     </span>
                   ) : null}
                 </h2>
-                <Button type="button" variant="secondary" onClick={addTrucker}>
-                  <Plus className="mr-1 h-4 w-4" />
-                  Trucker
-                </Button>
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-atlas-navy)] hover:bg-[var(--color-atlas-gold-soft)]">
+                    <Sparkles className="h-4 w-4" />
+                    {extractingRate ? "Reading…" : "Extract rates with AI"}
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      disabled={extractingRate}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (f) void handleExtractVendorRate(f);
+                      }}
+                    />
+                  </label>
+                  <Button type="button" variant="secondary" onClick={addTrucker}>
+                    <Plus className="mr-1 h-4 w-4" />
+                    Trucker
+                  </Button>
+                </div>
               </div>
               {truckersOnLane.map((t, idx) => (
                 <label key={t.id} className="flex items-center gap-2 text-sm">

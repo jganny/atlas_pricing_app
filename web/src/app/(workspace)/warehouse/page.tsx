@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, Save, Warehouse } from "lucide-react";
+import { Eye, Save, Sparkles, Warehouse } from "lucide-react";
 import {
   Badge,
   Button,
@@ -34,6 +34,8 @@ import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import type { SavedQuote } from "@/lib/types";
 import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
+import { extractVendorRateFromDocument } from "@/lib/ai/vendor-rate-extraction";
+import { ExtractionError } from "@/lib/ai/circular-extraction";
 
 const DEFAULT_TERMS = ensureIncidentalTerm(
   "1. Storage billed per CBM per day (or part thereof).\n" +
@@ -97,6 +99,38 @@ export default function WarehouseDeskPage() {
     if (buyTotal === 0 && result.buyTotal !== null) setBuyTotal(result.buyTotal);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historicalAutofill.warehouse]);
+
+  const [extractingRate, setExtractingRate] = useState(false);
+
+  async function handleExtractVendorRate(file: File) {
+    setExtractingRate(true);
+    try {
+      const result = await extractVendorRateFromDocument(file, "warehouse");
+      if (result.deskType !== "warehouse") return;
+      let filledSomething = false;
+      if (ratePerCbm === 0 && result.ratePerCbm !== null) {
+        setRatePerCbm(result.ratePerCbm);
+        filledSomething = true;
+      }
+      if (handling === 0 && result.handling !== null) {
+        setHandling(result.handling);
+        filledSomething = true;
+      }
+
+      const locationNote = result.location && result.location !== location ? ` (sheet is for ${result.location})` : "";
+      const noteText = result.confidence === "needs_check" && result.note ? ` ${result.note}` : "";
+      toast(
+        filledSomething
+          ? `Filled from the rate sheet.${locationNote}${noteText}`
+          : `Nothing new to fill — those fields already have values.${locationNote}${noteText}`,
+        result.confidence === "needs_check" ? "info" : "success",
+      );
+    } catch (e) {
+      toast(e instanceof ExtractionError ? e.message : "Couldn't read that file. Try again.", "error");
+    } finally {
+      setExtractingRate(false);
+    }
+  }
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
@@ -342,7 +376,25 @@ export default function WarehouseDeskPage() {
           ) : null}
 
           {tab === "storage" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-atlas-navy)] hover:bg-[var(--color-atlas-gold-soft)]">
+                  <Sparkles className="h-4 w-4" />
+                  {extractingRate ? "Reading…" : "Extract rates with AI"}
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    disabled={extractingRate}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void handleExtractVendorRate(f);
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>Rate / CBM / day</Label>
                 <NumberInput
@@ -389,6 +441,7 @@ export default function WarehouseDeskPage() {
                 textInputId="warehouse-validity"
                 onTextKeyDown={(e) => lastFieldTab(e, () => goWhStep("terms"))}
               />
+              </div>
             </div>
           ) : null}
 
