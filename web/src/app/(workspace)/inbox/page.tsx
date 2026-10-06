@@ -7,6 +7,8 @@ import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useInbox } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
+import { EnquiryReplyDrafter } from "@/components/EnquiryReplyDrafter";
+import { IS_DEMO_BUILD } from "@/lib/demo-mode";
 import { useLiveData } from "@/lib/api";
 import { patchInboxEnquiry } from "@/lib/firebase/inbox";
 import { canSeeInboxItem, detectEnquiryMode } from "@/lib/mail/inbox-assign";
@@ -345,6 +347,12 @@ export default function EnquiryInboxPage() {
                   Ignore
                 </Button>
               </div>
+              <EnquiryReplyDrafter
+                key={selected.id}
+                item={deskParsed ? { ...selected, parsed: deskParsed } : selected}
+                mode={resolvedMode === "sea" ? "sea" : "air"}
+                signOff={user?.displayName && !IS_DEMO_BUILD ? user.displayName : "Pricing Team"}
+              />
             </>
           )}
         </Card>

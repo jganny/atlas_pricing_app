@@ -17,11 +17,11 @@ assert.equal(pkg.dependencies["@babylonjs/core"], undefined, "do not add Babylon
 assert.match(hub, /HubHero/);
 assert.match(hub, /Dump the job\. Vertex routes it/);
 assert.match(hub, /atlas-frost/);
-assert.match(home, /CartonTokens/);
+assert.doesNotMatch(home, /CartonTokens/, "the decorative carton box was replaced by the Sea desk container view");
 assert.match(home, /VertexAskBar/);
 assert.doesNotMatch(home, /motion-sample/);
 assert.match(shell, /normalized === "\/quote"/);
 assert.match(css, /atlas-frost/);
 assert.match(intake, /frosted/);
 
-console.log("home + quote hub: L3 Three.js hero, carton tokens, frost cards");
+console.log("home + quote hub: L3 Three.js hero, frost cards");

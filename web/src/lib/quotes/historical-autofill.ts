@@ -93,7 +93,7 @@ function reduceMap(map: Map<string, Sample[]>): Map<string, number> {
   return out;
 }
 
-function parseCreatedAt(createdAt: string): number {
+export function parseCreatedAt(createdAt: string): number {
   const asNumber = Number(createdAt);
   if (Number.isFinite(asNumber) && asNumber > 1e11) return asNumber;
   const parsed = Date.parse(createdAt);

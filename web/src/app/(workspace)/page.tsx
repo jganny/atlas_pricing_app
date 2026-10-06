@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -39,11 +38,6 @@ import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-role
 import { sellAmountInr } from "@/lib/quotes/money";
 import { formatCurrency } from "@/lib/utils";
 import { demoLabel } from "@/lib/demo-mode";
-
-const CartonTokens = dynamic(
-  () => import("@/components/three/CartonTokens").then((m) => m.CartonTokens),
-  { ssr: false, loading: () => <div className="h-[8.5rem] rounded-2xl bg-[var(--color-surface-muted)]" /> },
-);
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -225,9 +219,6 @@ export default function DashboardPage() {
       <div className="flex items-end gap-4">
         <div className="min-w-0 flex-1">
           <VertexAskBar />
-        </div>
-        <div className="hidden w-44 shrink-0 pb-1 lg:block">
-          <CartonTokens />
         </div>
       </div>
 

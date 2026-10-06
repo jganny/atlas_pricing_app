@@ -77,6 +77,7 @@ import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { AirTariff, SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import { demoLabel } from "@/lib/demo-mode";
+import { WinLossPanel } from "@/components/WinLossPanel";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
@@ -1636,6 +1637,18 @@ function AirDeskInner() {
               <p className="text-sm text-[var(--color-text-muted)]">Select an airline option.</p>
             )}
           </Card>
+
+          <WinLossPanel
+            mode="air"
+            origin={origin}
+            destination={destination}
+            currency={currency}
+            currentRate={
+              selectedTotals && selectedTotals.freight.activeRate > 0
+                ? selectedTotals.freight.activeRate
+                : null
+            }
+          />
 
           {airlines.length > 1 || lanes.length > 1 ? (
             <Card>

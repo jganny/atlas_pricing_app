@@ -62,6 +62,8 @@ import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
 import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
 import type { SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
+import { WinLossPanel } from "@/components/WinLossPanel";
+import { ContainerLoadView } from "@/components/ContainerLoadView";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import {
   allLanesRoute,
@@ -1723,6 +1725,10 @@ function SeaDeskInner() {
               </dl>
             ) : null}
           </Card>
+
+          <ContainerLoadView cargo={cargo} dimUnit={dimUnit} preferredType={selected?.containers?.[0]?.type} />
+
+          <WinLossPanel mode="sea" origin={origin} destination={destination} currency={currency} />
 
           {liners.length > 1 ? (
             <Card>
