@@ -76,6 +76,7 @@ import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import type { AirTariff, SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
+import { demoLabel } from "@/lib/demo-mode";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
@@ -1521,7 +1522,10 @@ function AirDeskInner() {
                 </div>
               ) : (
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  NRS / Free Hand — agency agreement upload is hidden for this desk category.
+                  {demoLabel(
+                    "NRS / Free Hand — agency agreement upload is hidden for this desk category.",
+                    "Agency agreement upload is hidden for this desk category.",
+                  )}
                 </p>
               )}
               <div className="flex justify-between">

@@ -17,6 +17,7 @@ import { initMonitoring } from "@/lib/monitoring/sentry";
 import { useLiveData } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import type { AuthUser } from "@/lib/types";
+import { IS_DEMO_BUILD } from "@/lib/demo-mode";
 import { useEffect } from "react";
 
 /** Used only in local/dev preview when Firebase auth never responds. */
@@ -25,6 +26,19 @@ const DEV_PREVIEW_USER: AuthUser = {
   username: "preview",
   email: "preview@atlaspricing.com",
   displayName: "Preview desk",
+  role: "ganny",
+  branch: "Bangalore",
+};
+
+/** Auto-signs in the public demo build — no login screen, no credentials to
+ * hand out, nothing it does can touch real data (mock mode is always on
+ * alongside this). role: "ganny" gives it admin-level visibility so every
+ * feature shows in the demo. */
+const DEMO_USER: AuthUser = {
+  id: "demo",
+  username: "demo",
+  email: "demo@example.com",
+  displayName: "Demo Workspace",
   role: "ganny",
   branch: "Bangalore",
 };
@@ -44,7 +58,7 @@ function AuthSync() {
     }
 
     if (!useLiveData) {
-      finish();
+      finish(IS_DEMO_BUILD ? DEMO_USER : undefined);
       return;
     }
 

@@ -12,12 +12,13 @@ import {
   upsertOccupant,
   type DeskSeatId,
 } from "@/lib/auth/desk-seats";
-import { TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { TEAM_ROLES, demoSafeId } from "@/lib/quotes/team-roles";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
 import { deleteDeskSeat, saveDeskSeat } from "@/lib/firebase/desk-seats";
 import { logAudit } from "@/lib/firebase/audit-log";
 import { useSeatsVersion } from "@/hooks/use-seats-version";
+import { demoLabel } from "@/lib/demo-mode";
 
 /**
  * Seats stay (Air Nom, Sea Nom, NRS, Free Hand). Occupants are people who can change.
@@ -51,8 +52,10 @@ export function DeskSeatsAdmin() {
     <Card>
       <h2 className="mb-1 font-bold text-[var(--color-atlas-navy)]">Desk seats</h2>
       <p className="mb-4 text-xs text-[var(--color-text-muted)]">
-        Seat names never change. Assign or remove the person sitting in Air Nom, Sea Nom, NRS, or
-        Free Hand. Named logins (Goutham, …) keep their own username and password.
+        {demoLabel(
+          "Seat names never change. Assign or remove the person sitting in Air Nom, Sea Nom, NRS, or Free Hand. Named logins (Goutham, …) keep their own username and password.",
+          "Seat names never change. Assign or remove the person sitting in each desk seat. Named logins keep their own username and password.",
+        )}
       </p>
       <ul className="space-y-3">
         {DESK_SEATS.map((seat) => {
@@ -89,7 +92,7 @@ export function DeskSeatsAdmin() {
                         [seat.id]: { ...draft, loginId: e.target.value },
                       }))
                     }
-                    placeholder="goutham"
+                    placeholder="login id"
                   />
                 </div>
                 <div>
@@ -102,7 +105,7 @@ export function DeskSeatsAdmin() {
                         [seat.id]: { ...draft, personName: e.target.value },
                       }))
                     }
-                    placeholder="Goutham"
+                    placeholder="Person name"
                   />
                 </div>
               </div>
@@ -132,7 +135,7 @@ export function DeskSeatsAdmin() {
                     ))}
                     {Object.keys(TEAM_ROLES).map((id) => (
                       <option key={`role-${id}`} value={id}>
-                        {TEAM_ROLES[id].name} ({id})
+                        {TEAM_ROLES[id].name} ({demoSafeId(id)})
                       </option>
                     ))}
                   </Select>

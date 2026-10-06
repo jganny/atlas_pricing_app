@@ -4,10 +4,19 @@ import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import { Badge, Button, Card, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { TEAM_ROLES, demoSafeId } from "@/lib/quotes/team-roles";
 import { useAuthStore } from "@/store/auth";
 
 const NOTES_KEY = "atlas_hr_notes";
+
+/** The HR card also shows the category string — TEAM_ROLES only swaps the
+ * display name for the demo build, so this gets its own demo-safe stand-in. */
+const DEMO_CATEGORIES: Record<string, string> = {
+  "AIR - NOMINATION": "Air Desk",
+  "SEA - NOMINATION": "Sea Desk",
+  "FREE HAND SALES (AIR/SEA)": "Independent Sales",
+  "NRS (AIR/SEA)": "Priority Follow-ups",
+};
 
 export default function HrPage() {
   const user = useAuthStore((s) => s.user);
@@ -61,8 +70,12 @@ export default function HrPage() {
         {members.map(([id, role]) => (
           <Card key={id}>
             <div className="font-bold text-[var(--color-atlas-navy)]">{role.name}</div>
-            <div className="text-xs text-[var(--color-text-muted)]">{id}</div>
-            <div className="mt-2 text-sm">{role.category || "General"}</div>
+            <div className="text-xs text-[var(--color-text-muted)]">
+              {demoSafeId(id)}
+            </div>
+            <div className="mt-2 text-sm">
+              {role.category ? DEMO_CATEGORIES[role.category] ?? role.category : "General"}
+            </div>
           </Card>
         ))}
       </div>

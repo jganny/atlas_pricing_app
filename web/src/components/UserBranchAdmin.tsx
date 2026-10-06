@@ -72,7 +72,7 @@ export function UserBranchAdmin() {
             list="known-logins"
             value={username}
             onChange={(e) => void lookup(e.target.value)}
-            placeholder="e.g. goutham"
+            placeholder="login id"
           />
           <datalist id="known-logins">
             {knownLogins.map((u) => (

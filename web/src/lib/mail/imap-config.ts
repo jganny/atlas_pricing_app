@@ -17,6 +17,7 @@
  */
 
 import { MAILBOX_TEAMS } from "@/lib/quotes/team-roles";
+import { demoLabel } from "@/lib/demo-mode";
 
 export type ImapMailboxId = "pricing" | "pricingsales";
 
@@ -36,14 +37,14 @@ export function getImapMailboxStatus(): ImapMailboxStatus[] {
       label: "Pricing mailbox",
       email: MAILBOX_TEAMS.pricing.email,
       secretName: "IMAP_PRICING_PASSWORD",
-      note: "Polled every 2 min → Air/Sea nomination desks (Shashank / Shaheer)",
+      note: demoLabel("Polled every 2 min → Air/Sea nomination desks (Shashank / Shaheer)", "Polled every 2 min → Air and Sea desks"),
     },
     {
       id: "pricingsales",
       label: "Pricing sales mailbox",
       email: MAILBOX_TEAMS.pricingsales.email,
       secretName: "IMAP_PRICINGSALES_PASSWORD",
-      note: "Polled every 2 min → Free-hand / NRS desks (Kavya / Cathrina)",
+      note: demoLabel("Polled every 2 min → Free-hand / NRS desks (Kavya / Cathrina)", "Polled every 2 min → Sales and Priority desks"),
     },
   ];
 }

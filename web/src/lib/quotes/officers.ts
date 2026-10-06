@@ -1,5 +1,5 @@
 import type { EnquiryRecord } from "@/lib/types";
-import { TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
+import { TEAM_ROLES, deskDisplayName, demoSafeId } from "@/lib/quotes/team-roles";
 
 export interface OfficerOption {
   id: string;
@@ -28,6 +28,6 @@ export function listOfficersFromQuotes(rows: EnquiryRecord[]): OfficerOption[] {
 }
 
 export function officerLabel(o: OfficerOption): string {
-  const base = o.name && o.name.toLowerCase() !== o.id ? `${o.name} (${o.id})` : o.id;
+  const base = o.name && o.name.toLowerCase() !== o.id ? `${o.name} (${demoSafeId(o.id)})` : demoSafeId(o.id);
   return o.quoteCount > 0 ? `${base} · ${o.quoteCount}` : `${base} · none in view`;
 }

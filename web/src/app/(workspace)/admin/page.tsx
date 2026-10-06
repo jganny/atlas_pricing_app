@@ -23,7 +23,8 @@ import { CustomsHolidaysAdmin } from "@/components/CustomsHolidaysAdmin";
 import { UserBranchAdmin } from "@/components/UserBranchAdmin";
 import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { ErrorMonitorPanel } from "@/components/ErrorMonitorPanel";
-import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { isAdminUser, TEAM_ROLES, demoSafeId } from "@/lib/quotes/team-roles";
+import { demoLabel } from "@/lib/demo-mode";
 import type { CreditControl } from "@/lib/types";
 
 type ResetRequest = { username: string; at: number; status: string };
@@ -177,7 +178,7 @@ export default function AdminPage() {
               >
                 {Object.keys(TEAM_ROLES).map((id) => (
                   <option key={id} value={id}>
-                    {TEAM_ROLES[id].name} ({id})
+                    {TEAM_ROLES[id].name} ({demoSafeId(id)})
                   </option>
                 ))}
               </Select>
@@ -272,9 +273,12 @@ export default function AdminPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-2 font-bold">NRS convert capture</h2>
+          <h2 className="mb-2 font-bold">{demoLabel("NRS convert capture", "Priority convert capture")}</h2>
           <p className="mb-3 text-xs text-[var(--color-text-muted)]">
-            Shipper / consignee registry for NRS conversion (mirrors nrs_registry).
+            {demoLabel(
+              "Shipper / consignee registry for NRS conversion (mirrors nrs_registry).",
+              "Shipper / consignee registry for priority conversions.",
+            )}
           </p>
           <div className="space-y-2">
             <div>
@@ -310,14 +314,14 @@ export default function AdminPage() {
                   const prev = JSON.parse(localStorage.getItem(key) || "[]");
                   prev.push({ ...nrs, by: user?.username, at: Date.now() });
                   localStorage.setItem(key, JSON.stringify(prev));
-                  toast("NRS parties captured", "success");
+                  toast(demoLabel("NRS parties captured", "Parties captured"), "success");
                   setNrs({ shipper: "", consignee: "", quoteRef: "" });
                 } catch {
                   toast("Could not save", "error");
                 }
               }}
             >
-              Save NRS parties
+              {demoLabel("Save NRS parties", "Save parties")}
             </Button>
           </div>
         </Card>

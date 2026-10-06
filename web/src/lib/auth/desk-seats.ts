@@ -3,6 +3,9 @@
  * Seats (Air Nom, Sea Nom, NRS, Free Hand, …) stay. Occupants can be swapped.
  */
 
+import { IS_DEMO_BUILD } from "@/lib/demo-mode";
+import { REAL_SEAT_LABELS, REAL_PERSON_NAMES } from "@/lib/auth/desk-seats-real-names";
+
 export type DeskSeatId =
   | "admin"
   | "manager"
@@ -20,15 +23,60 @@ export interface DeskSeat {
   defaultLoginIds: string[];
 }
 
-export const DESK_SEATS: DeskSeat[] = [
-  { id: "admin", label: "Pricing Team", blurb: "Full workspace", defaultLoginIds: ["ganny"] },
-  { id: "manager", label: "Manager", blurb: "Approvals & reports", defaultLoginIds: ["manager"] },
-  { id: "air-nom", label: "Air Nom", blurb: "Air nomination desk", defaultLoginIds: ["shashank"] },
-  { id: "sea-nom", label: "Sea Nom", blurb: "Sea nomination desk", defaultLoginIds: ["shaheer"] },
-  { id: "nrs", label: "NRS", blurb: "Nomination / NRS", defaultLoginIds: ["cathrina"] },
-  { id: "freehand", label: "Free Hand", blurb: "Free-hand air & sea", defaultLoginIds: ["kavya", "jaya"] },
-  { id: "pricing", label: "Pricing agent", blurb: "Shared quoting login", defaultLoginIds: ["pricing"] },
+interface SeatShape {
+  id: DeskSeatId;
+  blurb: string;
+  defaultLoginIds: string[];
+}
+
+const SEAT_SHAPES: SeatShape[] = [
+  { id: "admin", blurb: "Full workspace", defaultLoginIds: ["ganny"] },
+  { id: "manager", blurb: "Approvals & reports", defaultLoginIds: ["manager"] },
+  { id: "air-nom", blurb: "Air nomination desk", defaultLoginIds: ["shashank"] },
+  { id: "sea-nom", blurb: "Sea nomination desk", defaultLoginIds: ["shaheer"] },
+  { id: "nrs", blurb: IS_DEMO_BUILD ? "Priority follow-ups" : "Nomination / NRS", defaultLoginIds: ["cathrina"] },
+  { id: "freehand", blurb: IS_DEMO_BUILD ? "Independent air & sea sales" : "Free-hand air & sea", defaultLoginIds: ["kavya", "jaya"] },
+  { id: "pricing", blurb: "Shared quoting login", defaultLoginIds: ["pricing"] },
 ];
+
+// Real labels live in the sibling desk-seats-real-names.ts file, which
+// scripts/build-demo.sh physically replaces with a demo-safe stub before
+// compiling — so the demo build never has the real labels in its source at
+// all, not just unreferenced at runtime (see that file for why).
+const DEMO_SEAT_LABELS: Record<DeskSeatId, string> = {
+  admin: "Admin",
+  manager: "Manager",
+  "air-nom": "Air Desk",
+  "sea-nom": "Sea Desk",
+  nrs: "Priority Desk",
+  freehand: "Independent Sales",
+  pricing: "Pricing Agent",
+};
+
+const SEAT_LABELS: Record<DeskSeatId, string> = IS_DEMO_BUILD ? DEMO_SEAT_LABELS : REAL_SEAT_LABELS;
+
+export const DESK_SEATS: DeskSeat[] = SEAT_SHAPES.map((s) => ({ ...s, label: SEAT_LABELS[s.id] }));
+
+// Same source-level split for the generic "turn any login id into a shown
+// name" fallback personDisplayName() uses below when no occupant overrides it.
+const DEMO_PERSON_NAMES: Record<string, string> = {
+  ganny: "Admin",
+  manager: "Manager",
+  shashank: "Air Desk",
+  shaheer: "Sea Desk",
+  kavya: "Sales Rep",
+  jaya: "Sales Rep",
+  cathrina: "Priority Desk",
+  pricing: "Pricing Agent",
+  sunil: "Sales Rep A",
+  ramesh: "Sales Rep B",
+  goutham: "Sales Rep C",
+  spoorthi: "Sales Rep D",
+  linson: "Sales Rep E",
+};
+
+const PERSON_NAMES: Record<string, string> = IS_DEMO_BUILD ? DEMO_PERSON_NAMES : REAL_PERSON_NAMES;
+const DEMO_FALLBACK_NAME = "Team Member";
 
 export interface SeatOccupant {
   seatId: DeskSeatId;
@@ -50,9 +98,9 @@ function titleCase(value: string): string {
 export function personDisplayName(loginId: string | undefined | null, fallback?: string): string {
   if (!loginId) return fallback || "—";
   const occ = listOccupants().find((o) => o.loginId.toLowerCase() === loginId.toLowerCase());
-  if (occ?.personName) return occ.personName;
+  if (occ?.personName) return IS_DEMO_BUILD ? DEMO_FALLBACK_NAME : occ.personName;
   if (fallback && fallback !== loginId) return fallback;
-  return titleCase(loginId);
+  return PERSON_NAMES[loginId.toLowerCase()] ?? (IS_DEMO_BUILD ? DEMO_FALLBACK_NAME : titleCase(loginId));
 }
 
 export function seatForLogin(loginId: string | undefined | null): DeskSeat | null {

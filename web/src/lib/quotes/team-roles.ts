@@ -1,6 +1,8 @@
 /** Desk roles — mirrors legacy TEAM_ROLES for ownership labels/filters. */
 
 import { enquiryAssigneeLabel, seatForLogin } from "@/lib/auth/desk-seats";
+import { IS_DEMO_BUILD } from "@/lib/demo-mode";
+import { REAL_NAMES, REAL_MAILBOX_EMAILS, REAL_IMAP_HOST } from "@/lib/quotes/team-roles-real-names";
 
 export interface TeamRole {
   name: string;
@@ -8,31 +10,69 @@ export interface TeamRole {
   category?: string;
 }
 
-export const TEAM_ROLES: Record<string, TeamRole> = {
-  ganny: { name: "Pricing Team", type: "admin" },
-  shashank: { name: "Air Nom", type: "member", category: "AIR - NOMINATION" },
-  shaheer: { name: "Sea Nomination", type: "member", category: "SEA - NOMINATION" },
-  /** Current Free Hand desk holder. */
-  kavya: { name: "Free Hand", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
-  /** Historical creator id — old quotes still resolve to Free Hand. */
-  jaya: { name: "Free Hand", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
-  cathrina: { name: "NRS", type: "member", category: "NRS (AIR/SEA)" },
-  manager: { name: "Manager", type: "admin" },
-  pricing: { name: "Pricing Agent", type: "member" },
-  // Individual Free Hand desk users — same category as kavya's seat, but each
-  // is their own login with their own name and quote history, not a shared
-  // seat. Hardcoded here for now, same as the rest of this map; a new Free
-  // Hand starter still needs an entry added here to show their real name.
-  sunil: { name: "Sunil Kumar", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
-  ramesh: { name: "M Ramesh", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
-  goutham: { name: "Goutham", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
-  spoorthi: { name: "Spoorthi N S", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
-  linson: { name: "Linson Ittyera", type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+// Role metadata lives here; real display names live in the sibling
+// team-roles-real-names.ts file, which scripts/build-demo.sh physically
+// replaces with a demo-safe stub before compiling — so the demo build never
+// has the real names in its source at all, not just unreferenced at runtime.
+type RoleMeta = { type: "admin" | "member"; category?: string };
+
+const ROLE_META: Record<string, RoleMeta> = {
+  ganny: { type: "admin" },
+  shashank: { type: "member", category: "AIR - NOMINATION" },
+  shaheer: { type: "member", category: "SEA - NOMINATION" },
+  kavya: { type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  jaya: { type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  cathrina: { type: "member", category: "NRS (AIR/SEA)" },
+  manager: { type: "admin" },
+  pricing: { type: "member" },
+  sunil: { type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  ramesh: { type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  goutham: { type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  spoorthi: { type: "member", category: "FREE HAND SALES (AIR/SEA)" },
+  linson: { type: "member", category: "FREE HAND SALES (AIR/SEA)" },
 };
+
+// Keep these in sync with DEMO_SEAT_LABELS/DEMO_PERSON_NAMES in
+// lib/auth/desk-seats.ts — same ids, shown through two separate code paths,
+// so the wording should match wherever they overlap.
+const DEMO_NAMES: Record<string, string> = {
+  ganny: "Admin",
+  shashank: "Air Desk",
+  shaheer: "Sea Desk",
+  kavya: "Independent Sales",
+  jaya: "Independent Sales",
+  cathrina: "Priority Desk",
+  manager: "Manager",
+  pricing: "Pricing Agent",
+  sunil: "Sales Rep A",
+  ramesh: "Sales Rep B",
+  goutham: "Sales Rep C",
+  spoorthi: "Sales Rep D",
+  linson: "Sales Rep E",
+};
+
+const NAMES: Record<string, string> = IS_DEMO_BUILD ? DEMO_NAMES : REAL_NAMES;
+
+export const TEAM_ROLES: Record<string, TeamRole> = Object.fromEntries(
+  Object.entries(ROLE_META).map(([id, meta]) => [id, { ...meta, name: NAMES[id] ?? id }]),
+);
+
+/** Demo-build-only stand-in for a raw login id — a few admin screens show the
+ * username right next to the display name (e.g. "Sales Rep A (sunil)"),
+ * which would leak the real login even after the name itself is swapped. */
+const DEMO_IDS: Record<string, string> = {
+  ganny: "admin", shashank: "air-nom", shaheer: "sea-nom", kavya: "sales-1", jaya: "sales-1",
+  cathrina: "priority-desk", manager: "manager", pricing: "pricing", sunil: "sales-a",
+  ramesh: "sales-b", goutham: "sales-c", spoorthi: "sales-d", linson: "sales-e",
+};
+
+export function demoSafeId(id: string): string {
+  return IS_DEMO_BUILD ? DEMO_IDS[id] ?? id : id;
+}
 
 /** Shared company mailboxes → who works that inbox (login ids). */
 export const ATLAS_IMAP = {
-  host: "czipop.logix.in",
+  host: IS_DEMO_BUILD ? "imap.example.com" : (REAL_IMAP_HOST as string),
   port: 993,
   secure: true,
   folder: "INBOX",
@@ -41,19 +81,19 @@ export const ATLAS_IMAP = {
 export const MAILBOX_TEAMS = {
   pricing: {
     key: "pricing" as const,
-    email: "pricing@atlaslogistics.co.in",
+    email: IS_DEMO_BUILD ? "pricing@example.com" : REAL_MAILBOX_EMAILS.pricing,
     users: ["shashank", "shaheer"] as const,
     desks: ["AIR - NOMINATION", "SEA - NOMINATION"] as const,
   },
   pricingsales: {
     key: "pricingsales" as const,
-    email: "pricingsales@atlaslogistics.co.in",
+    email: IS_DEMO_BUILD ? "sales@example.com" : REAL_MAILBOX_EMAILS.pricingsales,
     users: ["kavya", "cathrina"] as const,
     desks: ["FREE HAND SALES (AIR/SEA)", "NRS (AIR/SEA)"] as const,
   },
   monitor: {
     key: "monitor" as const,
-    email: "ganesh@blr.atlaslogistics.co.in",
+    email: IS_DEMO_BUILD ? "admin@example.com" : REAL_MAILBOX_EMAILS.monitor,
     users: ["ganny"] as const,
     desks: ["ADMIN MONITOR"] as const,
   },

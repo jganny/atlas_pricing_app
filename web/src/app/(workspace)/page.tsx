@@ -38,6 +38,7 @@ import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
 import { sellAmountInr } from "@/lib/quotes/money";
 import { formatCurrency } from "@/lib/utils";
+import { demoLabel } from "@/lib/demo-mode";
 
 const CartonTokens = dynamic(
   () => import("@/components/three/CartonTokens").then((m) => m.CartonTokens),
@@ -417,7 +418,7 @@ export default function DashboardPage() {
               {!admin && nrsAlerts.length > 0 ? (
                 <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
                   <h2 className="mb-2 text-sm font-extrabold text-amber-950">
-                    NRS confirmation alerts
+                    {demoLabel("NRS confirmation alerts", "Priority follow-up alerts")}
                   </h2>
                   <ul className="space-y-2 text-sm">
                     {nrsAlerts.map((a) => (
@@ -564,7 +565,7 @@ export default function DashboardPage() {
                     {nrsEntries.length > 0 ? (
                       <div className="mt-3 border-t border-[var(--color-border)] pt-2">
                         <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
-                          NRS registry
+                          {demoLabel("NRS registry", "Priority follow-ups")}
                         </div>
                         <ul className="mt-1 text-xs">
                           {nrsEntries.slice(0, 4).map((n, i) => (

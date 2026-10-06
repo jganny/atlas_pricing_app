@@ -35,6 +35,7 @@ import { useAuthStore } from "@/store/auth";
 import { toast } from "@/components/Toast";
 import { formatQuoteGp, formatQuoteSell } from "@/lib/quotes/money";
 import { getLocalQuote } from "@/lib/quotes/local-enquiries";
+import { demoLabel } from "@/lib/demo-mode";
 
 function stubQuoteFromEnquiry(row: EnquiryRecord): SavedQuote {
   return {
@@ -205,7 +206,7 @@ export function EnquiryInspector({
         commodity: commodity.trim() || String(full?.commodity ?? ""),
       });
       pushNrsAlert(
-        `NRS confirmation needed for ${ref} · ${row.customer}` +
+        `${demoLabel("NRS", "Priority")} confirmation needed for ${ref} · ${row.customer}` +
           (shipperName.trim() ? ` · shipper ${shipperName.trim()}` : "") +
           (consigneeName.trim() ? ` · consignee ${consigneeName.trim()}` : "") +
           (commodity.trim() ? ` · ${commodity.trim()}` : ""),

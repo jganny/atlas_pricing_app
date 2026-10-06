@@ -42,6 +42,7 @@ import {
 import { signedInCaption } from "@/lib/auth/desk-seats";
 import { useSeatsVersion } from "@/hooks/use-seats-version";
 import { isAdminUser } from "@/lib/quotes/team-roles";
+import { demoLabel } from "@/lib/demo-mode";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
@@ -72,7 +73,7 @@ const workNav: NavItem[] = [
   { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
   // NRS follow-ups: visible only when RBAC grants `nrs` (Cathrina). Not Admin.
-  { href: "/nrs", label: "NRS follow-ups", icon: ClipboardList, route: "nrs" },
+  { href: "/nrs", label: demoLabel("NRS follow-ups", "Priority follow-ups"), icon: ClipboardList, route: "nrs" },
   { href: "/won-followups", label: "Won follow-ups", icon: BellRing, route: "won-followups" },
 ];
 

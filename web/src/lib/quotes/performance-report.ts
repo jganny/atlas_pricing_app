@@ -1,7 +1,7 @@
 /** Performance report windows — daily → annual (legacy generatePerformanceReport). */
 
 import type { EnquiryRecord } from "@/lib/types";
-import { deskDisplayName, TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { deskDisplayName, demoSafeId, TEAM_ROLES } from "@/lib/quotes/team-roles";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 
 export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "annual" | "all";
@@ -98,7 +98,7 @@ export function buildPerformanceReport(
     .map(([desk, v]) => {
       const label = deskDisplayName(desk);
       return {
-        desk: label.toLowerCase() === desk ? desk : `${label} · ${desk}`,
+        desk: label.toLowerCase() === desk ? desk : `${label} · ${demoSafeId(desk)}`,
         ...v,
       };
     })

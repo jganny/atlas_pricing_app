@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import { isNrsUser } from "@/lib/auth/rbac";
+import { demoLabel } from "@/lib/demo-mode";
 
 export default function NrsFollowUpsPage() {
   const user = useAuthStore((s) => s.user);
@@ -34,10 +35,14 @@ export default function NrsFollowUpsPage() {
   if (!allowed) {
     return (
       <Card className="space-y-2">
-        <h1 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">NRS follow-ups</h1>
+        <h1 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">
+          {demoLabel("NRS follow-ups", "Priority follow-ups")}
+        </h1>
         <p className="text-sm text-[var(--color-text-muted)]">
-          This queue is only for the NRS login (Cathrina). Confirmed/won quotes still create a
-          follow-up copy here automatically for her — Admin and other desks do not use this tab.
+          {demoLabel(
+            "This queue is only for the NRS login (Cathrina). Confirmed/won quotes still create a follow-up copy here automatically for her — Admin and other desks do not use this tab.",
+            "This queue is only for the Priority Follow-ups desk. Confirmed/won quotes still create a follow-up copy here automatically — other desks do not use this tab.",
+          )}
         </p>
       </Card>
     );
@@ -94,13 +99,15 @@ export default function NrsFollowUpsPage() {
       <div className="flex flex-wrap items-center gap-2">
         <ClipboardList className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
-          NRS follow-ups
+          {demoLabel("NRS follow-ups", "Priority follow-ups")}
         </h1>
         <Badge tone="info">{pending.length} pending</Badge>
       </div>
       <p className="text-sm text-[var(--color-text-muted)]">
-        Fill shipper / consignee / commodity after a quote is won. Stored locally for Cathrina
-        until ops sync is wired.
+        {demoLabel(
+          "Fill shipper / consignee / commodity after a quote is won. Stored locally for Cathrina until ops sync is wired.",
+          "Fill shipper / consignee / commodity after a quote is won. Stored locally until ops sync is wired.",
+        )}
       </p>
 
       {pending.length === 0 ? (

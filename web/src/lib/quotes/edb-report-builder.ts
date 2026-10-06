@@ -3,6 +3,7 @@ import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 import { seatForLogin } from "@/lib/auth/desk-seats";
 import { PERIOD_GRANULARITIES, parseCreatedAt, periodKey, type PeriodGranularity } from "@/lib/quotes/report-periods";
+import { demoLabel } from "@/lib/demo-mode";
 
 export type ReportDim =
   | "mode"
@@ -29,7 +30,7 @@ export const REPORT_DIMS: Array<{ id: ReportDim; label: string }> = [
   { id: "status", label: "Status" },
   { id: "customer", label: "Customer" },
   { id: "desk", label: "Desk / creator" },
-  { id: "seat", label: "Desk seat (Free Hand / Air Nom / Sea Nom / NRS…)" },
+  { id: "seat", label: demoLabel("Desk seat (Free Hand / Air Nom / Sea Nom / NRS…)", "Desk seat") },
   ...PERIOD_GRANULARITIES.map((g) => ({ id: g.id as ReportDim, label: `Period: ${g.label}` })),
 ];
 
