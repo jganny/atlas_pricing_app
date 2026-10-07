@@ -257,9 +257,14 @@ export function validateAirCargo(cargo: AirCargoRow[]): string | null {
   return null;
 }
 
-export function validateSelectedAirline(option: AirlineOption | undefined): string | null {
+export function validateSelectedAirline(
+  option: AirlineOption | undefined,
+  /** Import on DDP/DAP/DDU — carrier details are optional (see relaxed-save.ts). */
+  relaxed = false,
+): string | null {
   if (!option) return "Add and select an airline option.";
   if (!option.name.trim()) return "Enter carrier / airline on the selected option.";
+  if (relaxed) return null;
   if (!option.routing.trim()) return "Enter routing on the selected option.";
   if (!option.tt.trim()) return "Enter transit time on the selected option.";
   if (!option.validity.trim()) return "Enter quote validity on the selected option.";

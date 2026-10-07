@@ -63,6 +63,7 @@ import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/histo
 import type { SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import { WinLossPanel } from "@/components/WinLossPanel";
+import { isRelaxedImportQuote } from "@/lib/pricing/relaxed-save";
 import { ContainerLoadView } from "@/components/ContainerLoadView";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import {
@@ -595,7 +596,7 @@ function SeaDeskInner() {
     for (const lane of toCheck) {
       if (!lane) continue;
       const quoted = quotedOnLane(liners, lane.id, fallback);
-      const linerErr = validateSelectedLiner(quoted, mode);
+      const linerErr = validateSelectedLiner(quoted, mode, isRelaxedImportQuote(module, incoterm));
       if (linerErr) {
         toast(`${laneRouteLabel(lane, lanes.indexOf(lane))}: ${linerErr}`, "error");
         setActiveLaneId(lane.id);
@@ -699,7 +700,7 @@ function SeaDeskInner() {
         setStep("shipment");
         return;
       }
-      const linerErr = validateSelectedLiner(selected, mode);
+      const linerErr = validateSelectedLiner(selected, mode, isRelaxedImportQuote(module, incoterm));
       if (linerErr) {
         setSaveMsg(linerErr);
         toast(linerErr, "error");

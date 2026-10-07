@@ -218,9 +218,12 @@ export function validateSeaCargoBasics(grossWeightKg: number, volumeCbm: number)
 export function validateSelectedLiner(
   option: LinerOption | undefined,
   mode: SeaMode,
+  /** Import on DDP/DAP/DDU — carrier details and freight rates are optional (see relaxed-save.ts). */
+  relaxed = false,
 ): string | null {
   if (!option) return "Add and select a liner option.";
   if (!option.name.trim()) return "Enter liner / carrier on the selected option.";
+  if (relaxed) return null;
   if (!option.routing.trim()) return "Enter routing on the selected option.";
   if (!option.tt.trim()) return "Enter transit time on the selected option.";
   if (!option.validity.trim()) return "Enter quote validity on the selected option.";

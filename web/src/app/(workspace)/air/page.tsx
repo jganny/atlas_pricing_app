@@ -78,6 +78,7 @@ import type { AirTariff, SavedQuote, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import { demoLabel } from "@/lib/demo-mode";
 import { WinLossPanel } from "@/components/WinLossPanel";
+import { isRelaxedImportQuote } from "@/lib/pricing/relaxed-save";
 
 const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
@@ -595,7 +596,7 @@ function AirDeskInner() {
     for (const lane of toCheck) {
       if (!lane) continue;
       const quoted = quotedOnLane(airlines, lane.id, fallback);
-      const airlineErr = validateSelectedAirline(quoted);
+      const airlineErr = validateSelectedAirline(quoted, isRelaxedImportQuote(module, incoterm));
       if (airlineErr) {
         toast(`${laneRouteLabel(lane, lanes.indexOf(lane))}: ${airlineErr}`, "error");
         setActiveLaneId(lane.id);
@@ -713,7 +714,7 @@ function AirDeskInner() {
       const fallback = lanes[0]?.id || "";
       for (const lane of completeLanes) {
         const quoted = quotedOnLane(airlines, lane.id, fallback);
-        const airlineErr = validateSelectedAirline(quoted);
+        const airlineErr = validateSelectedAirline(quoted, isRelaxedImportQuote(module, incoterm));
         if (airlineErr) {
           const msg = `${laneRouteLabel(lane, lanes.indexOf(lane))}: ${airlineErr}`;
           setSaveMsg(msg);
