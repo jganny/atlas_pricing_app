@@ -213,11 +213,13 @@ export function belongsToViewersDesk(
 }
 
 /** "Person · Desk" for a quote — the desk it belongs to, not the desk its creator sits in today. */
-export function quoteOwnerLabel(q: { deskSeat?: string | null; creator?: string | null }): string {
+export function quoteOwnerLabel(q: { deskSeat?: string | null; creator?: string | null; creatorName?: string | null }): string {
   const seatId = quoteDeskSeatId(q);
   const seat = seatId ? DESK_SEATS.find((s) => s.id === seatId) : undefined;
   if (!seat) return enquiryAssigneeLabel(q.creator);
-  const person = personDisplayName(q.creator);
+  // The name saved on the quote wins, so history keeps showing who actually did the work
+  // even if the same desk login is later handed to someone else.
+  const person = q.creatorName || personDisplayName(q.creator);
   return person.toLowerCase() === seat.label.toLowerCase() || person === "—" ? seat.label : `${person} · ${seat.label}`;
 }
 

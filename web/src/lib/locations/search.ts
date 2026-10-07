@@ -1,5 +1,7 @@
 "use client";
 
+import { customPorts } from "@/lib/custom-entries";
+
 /** Client-side airport / seaport directory search (static JSON under /app/data). */
 
 export type LocationHit = {
@@ -75,6 +77,17 @@ export async function searchLocations(
         kind: pool.kind,
         s,
       });
+    }
+  }
+  // Ports/airports people added themselves (in either app) that the built-in list lacks.
+  const customPools: Array<{ kind: "airport" | "seaport"; rows: Raw[] }> = [];
+  if (kind !== "seaport") customPools.push({ kind: "airport", rows: customPorts("airports") });
+  if (kind !== "airport") customPools.push({ kind: "seaport", rows: customPorts("seaports") });
+  for (const pool of customPools) {
+    for (const row of pool.rows) {
+      const s = score(row, q);
+      if (s <= 0 || hits.some((h) => h.kind === pool.kind && h.code === row.code)) continue;
+      hits.push({ code: row.code, name: row.name, city: "", country: "", kind: pool.kind, s });
     }
   }
   return hits

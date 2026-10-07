@@ -1,5 +1,6 @@
 "use client";
 
+import { rememberFromQuote } from "./remember-entries";
 import { deskSeatForSave } from "./desk-stamp";
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult, DimUnit, SeaMode } from "@atlas/pricing-core";
@@ -185,7 +186,9 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
     notes: `Courier quote. CHW: ${input.calc.chargeableKg} kg, Zone ${input.calc.zone}, ${primary?.name ?? ""}`,
   };
 
-  return writeQuote(id, quoteData);
+  const savedId = await writeQuote(id, quoteData);
+  void rememberFromQuote({ kind: "air", customer: input.customer });
+  return savedId;
 }
 
 export interface SaveAirInput extends SaveMeta {
@@ -363,7 +366,14 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     notes: `Air quote (React Phase 7). CHW: ${input.totals.freight.chargeableWeightKg} kg · ${input.totals.freight.usedBreak} · ${input.airlines.length} options`,
   };
 
-  return writeQuote(id, quoteData);
+  const savedId = await writeQuote(id, quoteData);
+  void rememberFromQuote({
+    kind: "air",
+    customer: input.customer,
+    commodity: input.commodity,
+    carriers: input.airlines.map((a) => a.name),
+  });
+  return savedId;
 }
 
 export interface SaveSeaInput extends SaveMeta {
@@ -531,5 +541,12 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     notes: `Sea quote (React Phase 7). ${input.mode.toUpperCase()} · RT ${input.totals.freight.chargeableRt} · ${input.liners.length} options`,
   };
 
-  return writeQuote(id, quoteData);
+  const savedId = await writeQuote(id, quoteData);
+  void rememberFromQuote({
+    kind: "sea",
+    customer: input.customer,
+    commodity: input.commodity,
+    carriers: input.liners.map((l) => l.name),
+  });
+  return savedId;
 }

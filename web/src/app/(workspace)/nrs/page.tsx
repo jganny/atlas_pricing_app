@@ -14,6 +14,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import { isNrsUser } from "@/lib/auth/rbac";
 import { demoLabel } from "@/lib/demo-mode";
+import { NrsDirectory } from "@/components/NrsDirectory";
 
 export default function NrsFollowUpsPage() {
   const user = useAuthStore((s) => s.user);
@@ -204,6 +205,8 @@ export default function NrsFollowUpsPage() {
           </ul>
         </div>
       ) : null}
+
+      <NrsDirectory username={user?.username || ""} />
     </div>
   );
 }

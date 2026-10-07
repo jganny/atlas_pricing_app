@@ -25,6 +25,9 @@ import {
   setQuoteStatus,
 } from "@/lib/firebase/quote-lifecycle";
 import { pushNrsAlert, pushNrsFollowUp } from "@/lib/quotes/nrs-alerts";
+import { saveNrsRegistryEntry } from "@/lib/firebase/nrs-registry";
+import { buildRegistryEntry } from "@/lib/quotes/nrs-registry";
+import { quoteDeskSeatId } from "@/lib/auth/desk-seats";
 import { upsertWonFollowUp } from "@/lib/firebase/won-followups";
 import { missingWonFields } from "@/lib/quotes/won-followups";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
@@ -195,23 +198,51 @@ export function EnquiryInspector({
       );
       const missing = missingWonFields(followUpValues);
 
-      pushNrsFollowUp({
-        quoteId: row.id,
-        ref,
-        customer: row.customer,
-        buyRate: buy,
-        sellRate: sell,
-        shipper: shipperName.trim(),
-        consignee: consigneeName.trim(),
-        commodity: commodity.trim() || String(full?.commodity ?? ""),
-      });
-      pushNrsAlert(
-        `${demoLabel("NRS", "Priority")} confirmation needed for ${ref} · ${row.customer}` +
-          (shipperName.trim() ? ` · shipper ${shipperName.trim()}` : "") +
-          (consigneeName.trim() ? ` · consignee ${consigneeName.trim()}` : "") +
-          (commodity.trim() ? ` · ${commodity.trim()}` : ""),
-        ref,
-      );
+      // Only a confirmation made on the Air or Sea nomination desk goes to the NRS desk.
+      // It reaches them instantly: the follow-up and alert are shared, and the booking
+      // is added to the NRS directory.
+      const deskSeat = quoteDeskSeatId(row);
+      if (deskSeat === "air-nom" || deskSeat === "sea-nom") {
+        pushNrsFollowUp({
+          quoteId: row.id,
+          ref,
+          customer: row.customer,
+          buyRate: buy,
+          sellRate: sell,
+          shipper: shipperName.trim(),
+          consignee: consigneeName.trim(),
+          commodity: commodity.trim() || String(full?.commodity ?? ""),
+        });
+        pushNrsAlert(
+          `${demoLabel("NRS", "Priority")} confirmation needed for ${ref} · ${row.customer}` +
+            (shipperName.trim() ? ` · shipper ${shipperName.trim()}` : "") +
+            (consigneeName.trim() ? ` · consignee ${consigneeName.trim()}` : "") +
+            (commodity.trim() ? ` · ${commodity.trim()}` : ""),
+          ref,
+        );
+        if (useLiveData) {
+          void saveNrsRegistryEntry(
+            buildRegistryEntry({
+              quoteId: row.id,
+              ref,
+              customer: row.customer,
+              mode: deskSeat === "sea-nom" ? "sea" : "air",
+              pol: row.origin,
+              pod: row.destination,
+              shipperName,
+              consigneeName,
+              commodity: commodity.trim() || String(full?.commodity ?? ""),
+              confirmedCarrier: row.carrier,
+              confirmedBuyRate: buy,
+              grossProfit: row.grossProfit,
+              grossProfitINR: row.grossProfitINR,
+              grossProfitCurrency: row.grossProfitCurrency,
+              creator: row.creator,
+              deskSeat,
+            }),
+          ).catch((e) => console.warn("NRS directory save:", e instanceof Error ? e.message : e));
+        }
+      }
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       await queryClient.invalidateQueries({ queryKey: queryKeys.wonFollowUps });

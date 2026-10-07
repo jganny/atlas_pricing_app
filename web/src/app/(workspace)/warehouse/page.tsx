@@ -316,6 +316,7 @@ export default function WarehouseDeskPage() {
                   autoComplete="off"
                   data-1p-ignore="true"
                   value={customer}
+                  list="atlas-customer-suggestions"
                   onChange={(e) => setCustomer(e.target.value)}
                 />
               </div>

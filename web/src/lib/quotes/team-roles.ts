@@ -128,7 +128,7 @@ export function isAdminUser(username: string | undefined | null, role?: string):
 }
 
 /** What to show as the owner of a quote: its desk (and who made it), or the person for non-desk logins. */
-export function quoteDeskLabel(q: { deskSeat?: string | null; creator?: string | null }): string {
+export function quoteDeskLabel(q: { deskSeat?: string | null; creator?: string | null; creatorName?: string | null }): string {
   return quoteDeskSeatId(q) ? quoteOwnerLabel(q) : deskDisplayName(q.creator);
 }
 

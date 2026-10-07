@@ -1,10 +1,14 @@
 /** Performance report windows — daily → annual (legacy generatePerformanceReport). */
 
 import type { EnquiryRecord } from "@/lib/types";
+import { DESK_SEATS, OWNED_DESK_SEATS, personDisplayName, quoteDeskSeatId } from "@/lib/auth/desk-seats";
 import { deskDisplayName, demoSafeId, TEAM_ROLES } from "@/lib/quotes/team-roles";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
 
 export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "annual" | "all";
+
+/** "desk" totals each desk whoever sat there; "person" credits each person across every desk they worked. */
+export type ReportGrouping = "desk" | "person";
 
 export function periodWindow(period: ReportPeriod, now = new Date()): { from: Date; to: Date; label: string } {
   const to = new Date(now);
@@ -54,18 +58,33 @@ export interface PerformanceReport {
   revenue: number;
   gp: number;
   conversion: number;
-  byDesk: Array<{ desk: string; count: number; won: number; revenue: number }>;
+  groupBy: ReportGrouping;
+  /** One line per group (a desk or a person, per `groupBy`) — `detail` says who/where the work came from. */
+  byDesk: Array<{ desk: string; count: number; won: number; revenue: number; detail: string }>;
   rows: EnquiryRecord[];
+}
+
+function deskLabel(seatId: string): string {
+  return DESK_SEATS.find((x) => x.id === seatId)?.label ?? seatId;
+}
+
+function personOf(r: EnquiryRecord): string {
+  return r.creatorName || personDisplayName(r.creator);
 }
 
 export function buildPerformanceReport(
   rows: EnquiryRecord[],
   period: ReportPeriod,
   officer = "all",
+  groupBy: ReportGrouping = "person",
 ): PerformanceReport {
   const { from, to, label } = periodWindow(period);
   const filtered = rows.filter((r) => {
-    if (officer !== "all" && (r.creator || "").toLowerCase() !== officer.toLowerCase()) return false;
+    if (officer.startsWith("seat:")) {
+      if (quoteDeskSeatId(r) !== officer.slice(5)) return false;
+    } else if (officer !== "all" && (r.creator || "").toLowerCase() !== officer.toLowerCase()) {
+      return false;
+    }
     const d = rowDate(r);
     if (!d) return true;
     return d >= from && d <= to;
@@ -77,30 +96,55 @@ export function buildPerformanceReport(
     .filter((e) => e.status === "won")
     .reduce((s, e) => s + sellAmountInr(e), 0);
   const gp = filtered.reduce((s, e) => s + gpAmountInr(e), 0);
-  const deskMap: Record<string, { count: number; won: number; revenue: number }> = {};
-  for (const e of filtered) {
-    const k = (e.creator || "unknown").toLowerCase();
-    if (!deskMap[k]) deskMap[k] = { count: 0, won: 0, revenue: 0 };
-    deskMap[k].count += 1;
-    if (e.status === "won") {
-      deskMap[k].won += 1;
-      deskMap[k].revenue += sellAmountInr(e);
+
+  // A group is a desk (its own seat id; non-desk logins stay by person) or a person (their login).
+  const groupKey = (r: EnquiryRecord): string => {
+    if (groupBy === "desk") {
+      const seat = quoteDeskSeatId(r);
+      if (seat && OWNED_DESK_SEATS.includes(seat)) return `seat:${seat}`;
     }
+    return (r.creator || "unknown").toLowerCase();
+  };
+  const groups: Record<string, { count: number; won: number; revenue: number; parts: Map<string, number> }> = {};
+  const ensure = (k: string) => (groups[k] ??= { count: 0, won: 0, revenue: 0, parts: new Map() });
+  for (const e of filtered) {
+    const g = ensure(groupKey(e));
+    g.count += 1;
+    if (e.status === "won") {
+      g.won += 1;
+      g.revenue += sellAmountInr(e);
+    }
+    // Desk view: who did the work. Person view: which desks they worked in.
+    const seat = quoteDeskSeatId(e);
+    const part = groupBy === "desk" ? personOf(e) : seat ? deskLabel(seat) : "own login";
+    g.parts.set(part, (g.parts.get(part) ?? 0) + 1);
   }
-  for (const e of rows) {
-    const k = (e.creator || "").toLowerCase();
-    if (k && !deskMap[k]) deskMap[k] = { count: 0, won: 0, revenue: 0 };
+  if (groupBy === "desk") {
+    for (const s of OWNED_DESK_SEATS) ensure(`seat:${s}`);
+    for (const e of rows) {
+      const k = groupKey(e);
+      if (k) ensure(k);
+    }
+  } else {
+    for (const e of rows) {
+      const k = (e.creator || "").toLowerCase();
+      if (k) ensure(k);
+    }
+    for (const id of Object.keys(TEAM_ROLES)) ensure(id);
   }
-  for (const id of Object.keys(TEAM_ROLES)) {
-    if (!deskMap[id]) deskMap[id] = { count: 0, won: 0, revenue: 0 };
-  }
-  const byDesk = Object.entries(deskMap)
-    .map(([desk, v]) => {
-      const label = deskDisplayName(desk);
-      return {
-        desk: label.toLowerCase() === desk ? desk : `${label} · ${demoSafeId(desk)}`,
-        ...v,
-      };
+  const byDesk = Object.entries(groups)
+    .map(([key, v]) => {
+      let name: string;
+      if (key.startsWith("seat:")) name = deskLabel(key.slice(5));
+      else {
+        const l = deskDisplayName(key);
+        name = l.toLowerCase() === key ? key : `${l} · ${demoSafeId(key)}`;
+      }
+      const detail = [...v.parts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([n, c]) => `${n} ${c}`)
+        .join(" · ");
+      return { desk: name, count: v.count, won: v.won, revenue: v.revenue, detail };
     })
     .sort((a, b) => b.revenue - a.revenue);
 
@@ -115,9 +159,14 @@ export function buildPerformanceReport(
     revenue,
     gp,
     conversion: filtered.length ? Math.round((won / filtered.length) * 100) : 0,
+    groupBy,
     byDesk,
     rows: filtered,
   };
+}
+
+function csvCell(v: string): string {
+  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
 export function performanceReportCsv(report: PerformanceReport): string {
@@ -132,8 +181,9 @@ export function performanceReportCsv(report: PerformanceReport): string {
     `Revenue,${report.revenue}`,
     `GP,${report.gp}`,
     "",
-    "Desk,Quotes,Won,Revenue",
-    ...report.byDesk.map((d) => `${d.desk},${d.count},${d.won},${d.revenue}`),
+    `Grouped by,${report.groupBy === "desk" ? "Desk" : "Person"}`,
+    `${report.groupBy === "desk" ? "Desk" : "Person"},Quotes,Won,Revenue,Detail`,
+    ...report.byDesk.map((d) => `${csvCell(d.desk)},${d.count},${d.won},${d.revenue},${csvCell(d.detail)}`),
   ];
   return lines.join("\n");
 }

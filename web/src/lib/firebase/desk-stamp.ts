@@ -1,5 +1,5 @@
 import { doc, getDoc } from "firebase/firestore";
-import { currentDeskSeatId, quoteDeskSeatId, type DeskSeatId } from "@/lib/auth/desk-seats";
+import { currentDeskSeatId, personDisplayName, quoteDeskSeatId, type DeskSeatId } from "@/lib/auth/desk-seats";
 import { getFirebaseDb } from "./client";
 
 /**
@@ -12,7 +12,15 @@ import { getFirebaseDb } from "./client";
 export async function deskSeatForSave(
   quoteId: string | undefined,
   creator: string,
-): Promise<{ deskSeat?: DeskSeatId }> {
+): Promise<{ deskSeat?: DeskSeatId; creatorName?: string }> {
+  const stamp = await deskForSave(quoteId, creator);
+  // Also remember the person's name as it is today, so it keeps reading correctly
+  // after the desk changes hands.
+  const name = personDisplayName(creator);
+  return stamp.deskSeat && name && name !== "—" ? { ...stamp, creatorName: name } : stamp;
+}
+
+async function deskForSave(quoteId: string | undefined, creator: string): Promise<{ deskSeat?: DeskSeatId }> {
   if (quoteId) {
     try {
       const snap = await getDoc(doc(getFirebaseDb(), "quotes", quoteId));

@@ -13,6 +13,7 @@ import {
   type ExtractedBreak,
 } from "@/lib/ai/circular-extraction";
 import { publishAirTariffBreaks } from "@/lib/firebase/circulars";
+import { removeDuplicateTariffs } from "@/lib/firebase/dedupe";
 import type { CircularRecord } from "@/lib/types";
 
 const BREAK_LABELS: Record<WeightBreakName, string> = {
@@ -108,6 +109,7 @@ export function AirTariffExtractionReview({
         uploadedBy,
       );
       toast(`Published ${origin} → ${destination} rates for ${carrier}.`, "success");
+      void removeDuplicateTariffs("air");
       onPublished();
       onClose();
     } catch {

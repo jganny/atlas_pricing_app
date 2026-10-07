@@ -1074,6 +1074,7 @@ function AirDeskInner() {
                     spellCheck={false}
                     data-testid="air-customer"
                     value={customer}
+                  list="atlas-customer-suggestions"
                     onChange={(e) => setCustomer(e.target.value)}
                     placeholder="Customer name"
                   />

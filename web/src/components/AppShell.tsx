@@ -33,9 +33,12 @@ import { useAuthStore } from "@/store/auth";
 import { useWonFollowUps } from "@/hooks/use-atlas-data";
 import { escalationTier, missingWonFields } from "@/lib/quotes/won-followups";
 import { toast } from "@/components/Toast";
+import { useNrsLiveAlerts } from "@/hooks/use-nrs-live-alerts";
+import { CustomerSuggestions } from "@/components/CustomerSuggestions";
 import {
   canAccessRoute,
   deskFocusLabel,
+  isNrsUser,
   preferredHomePath,
   type AppRouteId,
 } from "@/lib/auth/rbac";
@@ -171,6 +174,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [wonFollowUps],
   );
   const pendingWonCount = pendingRows.length;
+  // NRS seat only: live pop-up when a nomination desk confirms a quote, plus the sidebar count.
+  const pendingNrsCount = useNrsLiveAlerts(isNrsUser(user?.username));
 
   // Once per browser session, not once per page: a single quiet summary,
   // never repeated while the user is actively working.
@@ -248,7 +253,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               pathname={normalized}
               dark={opts.dark}
               onNavigate={opts.onNavigate}
-              badgeCount={item.href === "/won-followups" ? pendingWonCount : undefined}
+              badgeCount={
+                item.href === "/won-followups" ? pendingWonCount : item.href === "/nrs" ? pendingNrsCount : undefined
+              }
             />
           ))}
         </div>
@@ -278,6 +285,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
+      <CustomerSuggestions />
       <MockBanner />
       <div className="flex min-h-screen">
         <aside className="hidden w-64 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-atlas-navy)] text-white md:flex md:flex-col">

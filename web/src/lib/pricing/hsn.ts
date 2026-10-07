@@ -1,3 +1,5 @@
+import { customNames } from "@/lib/custom-entries";
+
 /** HSN chapters + key headings — ported from legacy Atlas autocomplete. */
 export type HsnItem = { code: string; name: string; label: string };
 
@@ -459,10 +461,20 @@ export const HSN_COMMODITIES: HsnItem[] = [
   ...HEADINGS.map(toItem),
 ];
 
+/** Built-in commodities plus any names people have added themselves (air and sea lists). */
+function allCommodities(): HsnItem[] {
+  const known = new Set(HSN_COMMODITIES.map((i) => i.name.toLowerCase()));
+  const custom = [...customNames("air_commodities"), ...customNames("sea_commodities")]
+    .filter((n) => !known.has(n.toLowerCase()))
+    .map((n): HsnItem => ({ code: "CUSTOM", name: n, label: n }));
+  return custom.length ? [...HSN_COMMODITIES, ...custom] : HSN_COMMODITIES;
+}
+
 export function searchHsnCommodities(query: string, limit = 40): HsnItem[] {
   const q = query.trim().toLowerCase();
-  if (!q) return HSN_COMMODITIES.slice(0, limit);
-  const scored = HSN_COMMODITIES.map((item) => {
+  const pool = allCommodities();
+  if (!q) return pool.slice(0, limit);
+  const scored = pool.map((item) => {
     const hay = `${item.code} ${item.name} ${item.label}`.toLowerCase();
     let score = 0;
     if (item.code.toLowerCase() === q) score = 100;

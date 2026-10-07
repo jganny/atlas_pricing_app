@@ -1,5 +1,6 @@
 "use client";
 
+import { removeDuplicateCirculars, removeDuplicateTariffs } from "@/lib/firebase/dedupe";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
@@ -129,6 +130,8 @@ export default function CircularsPage() {
         }
         await queryClient.invalidateQueries({ queryKey: queryKeys.circulars });
         await refetch();
+        // Every upload ends with a clean-up: an older copy of the same circular is removed.
+        void removeDuplicateCirculars();
       } else {
         const local: CircularRecord = {
           id: `circ-local-${Date.now()}`,
@@ -246,6 +249,7 @@ export default function CircularsPage() {
       queryClient.setQueryData(queryKeys.courierTariffs, mergeCourierTariffBooks(courierBooks));
       await queryClient.invalidateQueries({ queryKey: queryKeys.courierTariffs });
       await queryClient.invalidateQueries({ queryKey: queryKeys.circulars });
+      if (useLiveData) void removeDuplicateCirculars();
       toast("Courier tariff is live for the year — Courier desk will fill rates up to 70 kg.", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Saved on this computer only", "info");
@@ -268,6 +272,7 @@ export default function CircularsPage() {
           ]);
           toast(`Published ${n} air tariffs`, "success");
           await queryClient.invalidateQueries({ queryKey: queryKeys.airTariffs });
+          void removeDuplicateTariffs("air");
         } catch (e) {
           toast(
             e instanceof Error

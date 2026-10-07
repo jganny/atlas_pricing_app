@@ -5,6 +5,8 @@
 
 import slimSeed from "../../../public/data/carriers-slim.json";
 
+import { customNames } from "@/lib/custom-entries";
+
 export type CarrierKind = "airline" | "ocean" | "courier";
 export type CarrierSearchKind = CarrierKind | "all" | "airline+courier";
 
@@ -230,7 +232,29 @@ function carrierPool(kind: CarrierSearchKind): CarrierRecord[] {
     seen.add(key);
     pool.push(c);
   }
+  // Airlines and shipping lines people added themselves (in either app).
+  const known = new Set(pool.map((c) => `${c.kind}:${c.name.toLowerCase()}`));
+  const custom: Array<[CarrierKind, string[]]> = [
+    ["airline", customNames("airlines")],
+    ["ocean", [...customNames("shippinglines"), ...customNames("linernames")]],
+  ];
+  for (const [k, names] of custom) {
+    if (kinds && !kinds.includes(k)) continue;
+    for (const name of names) {
+      const id = `${k}:${name.toLowerCase()}`;
+      if (known.has(id)) continue;
+      known.add(id);
+      pool.push({ code: shortCode(name), name, kind: k });
+    }
+  }
   return pool;
+}
+
+/** A short display code for a name that has none: initials of its words, else its first letters. */
+function shortCode(name: string): string {
+  const words = name.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  const initials = words.map((w) => w[0]).join("").toUpperCase();
+  return (words.length > 1 ? initials : name.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase()).slice(0, 4);
 }
 
 export function airlineDirectoryCount(): number {

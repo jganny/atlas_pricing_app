@@ -39,6 +39,8 @@ export interface EnquiryRecord {
   creator: string
   /** Desk the quote belongs to (stamped at save) — stays put when staff change desks. */
   deskSeat?: string
+  /** Name of the person who made the quote, as it was when saved. */
+  creatorName?: string
   createdAt: string
   grandTotal?: number
   currency?: string
@@ -70,6 +72,7 @@ export interface SavedQuote {
   creator: string
   /** Desk the quote belongs to (stamped at save). */
   deskSeat?: string
+  creatorName?: string
   status: string
   type: string
   date?: string

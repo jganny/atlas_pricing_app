@@ -1,5 +1,6 @@
 "use client";
 
+import { removeDuplicateContacts } from "@/lib/firebase/dedupe";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -318,6 +319,7 @@ export default function DirectoryPage() {
         replacePrevious,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
+      void removeDuplicateContacts();
       toast(
         replacePrevious
           ? `This week's list is live — ${result.added} agents added${
