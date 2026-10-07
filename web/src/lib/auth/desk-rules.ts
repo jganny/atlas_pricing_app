@@ -2,10 +2,22 @@
  * Desk category rules — NRS / Free Hand vs Nomination.
  */
 
+import { activeSeatForLogin, type DeskSeatId } from "@/lib/auth/desk-seats";
 import { TEAM_ROLES } from "@/lib/quotes/team-roles";
+
+/** The rules belong to the desk, so whoever sits in the seat gets that desk's category. */
+const SEAT_CATEGORY: Partial<Record<DeskSeatId, string>> = {
+  "air-nom": "AIR - NOMINATION",
+  "sea-nom": "SEA - NOMINATION",
+  nrs: "NRS (AIR/SEA)",
+  freehand: "FREE HAND SALES (AIR/SEA)",
+};
 
 export function deskCategory(username: string | undefined | null): string {
   const u = (username || "").toLowerCase().trim();
+  const seat = activeSeatForLogin(u);
+  const fromSeat = seat ? SEAT_CATEGORY[seat.id] : undefined;
+  if (fromSeat) return fromSeat;
   return TEAM_ROLES[u]?.category || "";
 }
 

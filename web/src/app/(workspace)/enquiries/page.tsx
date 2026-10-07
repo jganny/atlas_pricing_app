@@ -1,5 +1,6 @@
 "use client";
 
+import { sharesDeskWith } from "@/lib/auth/desk-seats";
 import { ReportBuilderPanel } from "@/components/ReportBuilderPanel";
 import { GuideTipButton } from "@/components/GuideTipButton";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -263,6 +264,7 @@ function EnquiryDatabaseInner() {
         const mine =
           !username ||
           creator === username ||
+          sharesDeskWith(creator, username) ||
           assignee === username ||
           assignee.includes(username) ||
           creator.includes(username);

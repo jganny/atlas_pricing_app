@@ -1,3 +1,4 @@
+import { activeSeatForLogin, isDisplacedLogin, occupantLoginForSeat, type DeskSeatId } from "@/lib/auth/desk-seats";
 import { ATLAS_IMAP, MAILBOX_TEAMS, isAdminUser } from "@/lib/quotes/team-roles";
 import type { InboxEnquiry, InboxMailboxKey, ParsedEnquiry } from "@/lib/types";
 
@@ -21,17 +22,30 @@ export function detectEnquiryMode(text: string): "air" | "sea" | "unknown" {
   return "unknown";
 }
 
+/** Which desk seats read each shared mailbox — whoever sits in them gets the mail. */
+const MAILBOX_SEATS: Record<"pricing" | "pricingsales", DeskSeatId[]> = {
+  pricing: ["air-nom", "sea-nom"],
+  pricingsales: ["freehand", "nrs"],
+};
+
 export function assignInboxUsers(
   mailbox: InboxMailboxKey,
   mode: InboxEnquiry["mode"],
 ): { assignedUsers: string[]; suggestedUser: string | null } {
   if (mailbox === "pricing") {
-    if (mode === "air") return { assignedUsers: ["shashank"], suggestedUser: "shashank" };
-    if (mode === "sea") return { assignedUsers: ["shaheer"], suggestedUser: "shaheer" };
-    return { assignedUsers: [...MAILBOX_TEAMS.pricing.users], suggestedUser: null };
+    // Routed to the desk seat's current holder, not a fixed person.
+    if (mode === "air") {
+      const u = occupantLoginForSeat("air-nom");
+      return { assignedUsers: [u], suggestedUser: u };
+    }
+    if (mode === "sea") {
+      const u = occupantLoginForSeat("sea-nom");
+      return { assignedUsers: [u], suggestedUser: u };
+    }
+    return { assignedUsers: MAILBOX_SEATS.pricing.map(occupantLoginForSeat), suggestedUser: null };
   }
   // Free Hand + NRS share pricingsales until someone claims the row.
-  return { assignedUsers: [...MAILBOX_TEAMS.pricingsales.users], suggestedUser: null };
+  return { assignedUsers: MAILBOX_SEATS.pricingsales.map(occupantLoginForSeat), suggestedUser: null };
 }
 
 export function canSeeInboxItem(
@@ -44,6 +58,10 @@ export function canSeeInboxItem(
   if (!u) return false;
   if (item.claimedBy && item.claimedBy === u) return true;
   if (item.assignedUsers.map((x) => x.toLowerCase()).includes(u)) return true;
+  const seat = activeSeatForLogin(u)?.id;
+  if (seat && item.mailbox === "pricing" && MAILBOX_SEATS.pricing.includes(seat)) return true;
+  if (seat && item.mailbox === "pricingsales" && MAILBOX_SEATS.pricingsales.includes(seat)) return true;
+  if (isDisplacedLogin(u)) return false;
   if ((MAILBOX_TEAMS.pricing.users as readonly string[]).includes(u) && item.mailbox === "pricing") {
     return true;
   }

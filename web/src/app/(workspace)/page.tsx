@@ -19,7 +19,8 @@ import { toast } from "@/components/Toast";
 import { useEnquiries, useLeads, useWonFollowUps } from "@/hooks/use-atlas-data";
 import { missingWonFields } from "@/lib/quotes/won-followups";
 import { useAuthStore } from "@/store/auth";
-import { canAccessRoute, deskFocusLabel } from "@/lib/auth/rbac";
+import { canAccessRoute, deskFocusLabel, isNrsUser } from "@/lib/auth/rbac";
+import { sharesDeskWith } from "@/lib/auth/desk-seats";
 import {
   fetchAmendmentRequests,
   resolveAmendment,
@@ -33,7 +34,7 @@ import {
   subscribeHiddenAsk,
 } from "@/lib/quotes/hidden-ask";
 import { listOfflineQuotes, removeOfflineQuote } from "@/lib/quotes/offline-cache";
-import { dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
+import { NRS_CHANGED_EVENT, dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
 import { isAdminUser, TEAM_ROLES, deskDisplayName } from "@/lib/quotes/team-roles";
 import { sellAmountInr } from "@/lib/quotes/money";
 import { formatCurrency } from "@/lib/utils";
@@ -60,6 +61,13 @@ export default function DashboardPage() {
       /* ignore */
     }
   }, [username]);
+
+  // The NRS desk's alerts are shared — refresh when the shared copy changes.
+  useEffect(() => {
+    const onNrs = () => setNrsAlerts(listNrsAlerts().filter((a) => !a.dismissed));
+    window.addEventListener(NRS_CHANGED_EVENT, onNrs);
+    return () => window.removeEventListener(NRS_CHANGED_EVENT, onNrs);
+  }, []);
 
   useEffect(() => {
     const refresh = () => setHiddenAskIds(listHiddenQuoteIds());
@@ -88,6 +96,7 @@ export default function DashboardPage() {
       enquiries.filter(
         (e) =>
           e.creator?.toLowerCase() === username ||
+          sharesDeskWith(e.creator, username) ||
           e.assignee?.toLowerCase().includes(focus.toLowerCase().slice(0, 4)),
       ),
     [enquiries, username, focus],
@@ -406,7 +415,7 @@ export default function DashboardPage() {
                 </section>
               ) : null}
 
-              {!admin && nrsAlerts.length > 0 ? (
+              {!admin && isNrsUser(username) && nrsAlerts.length > 0 ? (
                 <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
                   <h2 className="mb-2 text-sm font-extrabold text-amber-950">
                     {demoLabel("NRS confirmation alerts", "Priority follow-up alerts")}

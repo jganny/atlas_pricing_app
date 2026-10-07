@@ -10,6 +10,7 @@ import {
   personDisplayName,
   removeOccupant,
   upsertOccupant,
+  withSeatHistory,
   type DeskSeatId,
 } from "@/lib/auth/desk-seats";
 import { TEAM_ROLES, demoSafeId } from "@/lib/quotes/team-roles";
@@ -151,11 +152,12 @@ export function DeskSeatsAdmin() {
                       toast("Login id required", "error");
                       return;
                     }
-                    const next = {
+                    // withSeatHistory remembers the outgoing login, so the desk keeps its past quotes.
+                    const next = withSeatHistory({
                       seatId: seat.id as DeskSeatId,
                       loginId,
                       personName: draft.personName.trim() || loginId,
-                    };
+                    });
                     const before = occ?.personName || personDisplayName(occupantLoginForSeat(seat.id));
                     try {
                       if (useLiveData) await saveDeskSeat(next, adminUser?.username || "admin");

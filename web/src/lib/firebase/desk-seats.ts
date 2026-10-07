@@ -22,6 +22,7 @@ export function subscribeDeskSeats(
             seatId: (String(x.seatId || d.id) as DeskSeatId),
             loginId: String(x.loginId ?? ""),
             personName: String(x.personName ?? ""),
+            previousLogins: Array.isArray(x.previousLogins) ? x.previousLogins.map((l) => String(l).toLowerCase()) : [],
           };
         }).filter((o) => o.loginId),
       ),
@@ -34,6 +35,7 @@ export async function saveDeskSeat(occ: SeatOccupant, updatedBy: string): Promis
     seatId: occ.seatId,
     loginId: occ.loginId.toLowerCase(),
     personName: occ.personName,
+    previousLogins: (occ.previousLogins ?? []).map((l) => l.toLowerCase()),
     updatedBy,
     updatedAt: serverTimestamp(),
   });

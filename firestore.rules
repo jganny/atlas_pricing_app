@@ -40,6 +40,14 @@ service cloud.firestore {
     match /custom_autocomplete_entries/{entryId} { allow read, write: if isSignedIn(); }
     match /customer_control/{customerId} { allow read, write: if isSignedIn(); }
     match /nrs_registry/{entryId} { allow read, write: if isSignedIn(); }
+    // --- test-app only (desk-owned NRS queue) --------------------------------
+    // The NRS desk's follow-ups and confirmation alerts, shared by desk instead of
+    // sitting in one browser. Any desk can create one when a quote is won; the NRS
+    // seat works them. Stored by desk, never by person, so it survives a seat
+    // change. The legacy app does not read or write these.
+    match /nrs_followups/{followUpId} { allow read, write: if isSignedIn(); }
+    match /nrs_alerts/{alertId} { allow read, write: if isSignedIn(); }
+    // --------------------------------------------------------------------------
     match /archive_quotes/{quoteId} { allow read, write: if isSignedIn(); }
     match /inbox_enquiries/{itemId} { allow read, write: if isSignedIn(); }
     match /contactsDirectory/{contactId} { allow read, write: if isSignedIn(); }

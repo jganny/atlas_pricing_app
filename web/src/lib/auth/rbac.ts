@@ -2,7 +2,7 @@
  * Phase 10–14 route access. Admins see everything.
  */
 
-import { seatForLogin, type DeskSeatId } from "@/lib/auth/desk-seats";
+import { activeSeatForLogin, isDisplacedLogin, type DeskSeatId } from "@/lib/auth/desk-seats";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 
 export type AppRouteId =
@@ -122,9 +122,9 @@ export function normalizeUsername(username: string | undefined | null): string {
   return (username || "").toLowerCase().trim();
 }
 
-/** NRS follow-ups sidebar + route: Cathrina only. */
+/** NRS follow-ups sidebar + route: whoever currently sits in the NRS desk seat — not a fixed person. */
 export function isNrsUser(username: string | undefined | null): boolean {
-  return normalizeUsername(username) === "cathrina";
+  return activeSeatForLogin(normalizeUsername(username))?.id === "nrs";
 }
 
 function routesForSeat(seatId: DeskSeatId): AppRouteId[] | null {
@@ -144,11 +144,13 @@ export function allowedRoutesForUser(
   const u = normalizeUsername(username);
   // Admins get full desk access but never the NRS personal follow-up queue.
   if (isAdminUser(username, role)) return ALL;
-  const seat = seatForLogin(u);
+  const seat = activeSeatForLogin(u);
   if (seat) {
     const fromSeat = routesForSeat(seat.id);
     if (fromSeat) return fromSeat;
   }
+  // A seat's old login after the seat moved to someone else keeps plain desk access only.
+  if (isDisplacedLogin(u)) return CORE;
   if (ROLE_ROUTES[u]) return ROLE_ROUTES[u];
   if (TEAM_ROLES[u]?.type === "member") return CORE;
   // Named people (e.g. Goutham) get the desk, not Admin.
@@ -198,24 +200,17 @@ export function preferredHomePath(
 ): string {
   const u = normalizeUsername(username);
   if (isAdminUser(username, role)) return "/";
-  const seat = seatForLogin(u);
+  const seat = activeSeatForLogin(u);
   if (seat?.id === "air-nom") return "/air/";
   if (seat?.id === "sea-nom") return "/sea/";
   if (seat?.id === "nrs" || seat?.id === "freehand") return "/inbox/";
-  if (u === "shashank") return "/air/";
-  if (u === "shaheer") return "/sea/";
-  if (u === "kavya" || u === "jaya" || u === "cathrina") return "/inbox/";
   return "/";
 }
 
 export function deskFocusLabel(username: string | undefined | null): string {
   const u = normalizeUsername(username);
-  const seat = seatForLogin(u);
+  const seat = activeSeatForLogin(u);
   if (seat) return seat.label;
-  if (u === "shashank") return "Air Nomination";
-  if (u === "shaheer") return "Sea Nomination";
-  if (u === "kavya" || u === "jaya") return "Free Hand";
-  if (u === "cathrina") return "NRS";
   if (isAdminUser(username)) return "Admin";
   return TEAM_ROLES[u]?.name || "Desk";
 }

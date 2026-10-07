@@ -5,6 +5,7 @@ import { CheckCircle2, ClipboardList, Save } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import {
+  NRS_CHANGED_EVENT,
   listNrsFollowUps,
   updateNrsFollowUp,
   type NrsFollowUp,
@@ -26,7 +27,11 @@ export default function NrsFollowUpsPage() {
   }
 
   useEffect(() => {
-    if (allowed) reload();
+    if (!allowed) return;
+    reload();
+    // The queue is shared across the desk — pick up changes made elsewhere.
+    window.addEventListener(NRS_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(NRS_CHANGED_EVENT, reload);
   }, [allowed]);
 
   const pending = useMemo(() => rows.filter((r) => r.status === "pending"), [rows]);
@@ -40,7 +45,7 @@ export default function NrsFollowUpsPage() {
         </h1>
         <p className="text-sm text-[var(--color-text-muted)]">
           {demoLabel(
-            "This queue is only for the NRS login (Cathrina). Confirmed/won quotes still create a follow-up copy here automatically for her — Admin and other desks do not use this tab.",
+            "This queue belongs to the NRS desk and is shared by whoever sits in that seat. Confirmed/won quotes create a follow-up copy here automatically — Admin and other desks do not use this tab.",
             "This queue is only for the Priority Follow-ups desk. Confirmed/won quotes still create a follow-up copy here automatically — other desks do not use this tab.",
           )}
         </p>

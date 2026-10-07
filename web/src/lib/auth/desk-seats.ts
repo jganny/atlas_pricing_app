@@ -82,6 +82,12 @@ export interface SeatOccupant {
   seatId: DeskSeatId;
   loginId: string;
   personName: string;
+  /**
+   * Logins that held this seat before the current one. Quotes only store the
+   * login that created them, so this is what lets the desk keep seeing its own
+   * history after the seat changes hands to someone with a different login.
+   */
+  previousLogins?: string[];
 }
 
 const STORAGE_KEY = "atlas_desk_occupants_v1";
@@ -109,6 +115,76 @@ export function seatForLogin(loginId: string | undefined | null): DeskSeat | nul
   const assigned = listOccupants().find((o) => o.loginId.toLowerCase() === id);
   if (assigned) return DESK_SEATS.find((s) => s.id === assigned.seatId) || null;
   return DESK_SEATS.find((s) => s.defaultLoginIds.includes(id)) || null;
+}
+
+/**
+ * The seat a login sits in right now. Unlike seatForLogin (which also keeps a
+ * seat's old default logins attached so historical quotes still resolve), this
+ * is strict: once a seat is handed to someone with a different login, the old
+ * default login no longer holds it. Used for access and desk behaviour.
+ */
+export function activeSeatForLogin(loginId: string | undefined | null): DeskSeat | null {
+  if (!loginId) return null;
+  const id = loginId.toLowerCase();
+  const assigned = listOccupants().find((o) => o.loginId.toLowerCase() === id);
+  if (assigned) return DESK_SEATS.find((s) => s.id === assigned.seatId) || null;
+  const def = DESK_SEATS.find((s) => s.defaultLoginIds.includes(id));
+  if (!def) return null;
+  return isSeatHeldByOtherLogin(def, id) ? null : def;
+}
+
+function isSeatHeldByOtherLogin(seat: DeskSeat, loginId: string): boolean {
+  const holder = listOccupants().find((o) => o.seatId === seat.id);
+  if (!holder) return false;
+  const h = holder.loginId.toLowerCase();
+  // Same family of default logins (e.g. kavya / jaya for Free Hand) isn't "someone else".
+  return h !== loginId && !seat.defaultLoginIds.includes(h);
+}
+
+/** True for a seat's old default login after the seat moved to a different login. */
+export function isDisplacedLogin(loginId: string | undefined | null): boolean {
+  if (!loginId) return false;
+  const id = loginId.toLowerCase();
+  if (listOccupants().some((o) => o.loginId.toLowerCase() === id)) return false;
+  const def = DESK_SEATS.find((s) => s.defaultLoginIds.includes(id));
+  return !!def && isSeatHeldByOtherLogin(def, id);
+}
+
+/** Every login whose quotes/data belong to this desk: its defaults, the current holder, and past holders. */
+export function seatLoginIds(seatId: DeskSeatId): string[] {
+  const seat = DESK_SEATS.find((s) => s.id === seatId);
+  const occ = listOccupants().find((o) => o.seatId === seatId);
+  const ids = new Set<string>(seat?.defaultLoginIds ?? []);
+  if (occ) {
+    ids.add(occ.loginId.toLowerCase());
+    (occ.previousLogins ?? []).forEach((l) => ids.add(l.toLowerCase()));
+  }
+  return [...ids];
+}
+
+/**
+ * Does `creator` (the login stored on a quote/enquiry) belong to the same desk
+ * as `username`? True for the login itself and for anyone who has ever held the
+ * same desk seat — so a new person at the desk sees the desk's whole history.
+ */
+export function sharesDeskWith(creator: string | undefined | null, username: string | undefined | null): boolean {
+  const c = (creator || "").toLowerCase();
+  const u = (username || "").toLowerCase();
+  if (!c || !u) return false;
+  if (c === u) return true;
+  const seat = activeSeatForLogin(u);
+  if (!seat || seat.id === "admin" || seat.id === "manager" || seat.id === "pricing") return false;
+  return seatLoginIds(seat.id).includes(c);
+}
+
+/** Adds the outgoing holder to the seat's history when the seat changes hands. */
+export function withSeatHistory(next: SeatOccupant): SeatOccupant {
+  const old = listOccupants().find((r) => r.seatId === next.seatId);
+  const nextLogin = next.loginId.toLowerCase();
+  const history = new Set<string>([...(old?.previousLogins ?? []), ...(next.previousLogins ?? [])].map((l) => l.toLowerCase()));
+  if (old && old.loginId.toLowerCase() !== nextLogin) history.add(old.loginId.toLowerCase());
+  history.delete(nextLogin);
+  return { ...next, previousLogins: [...history].sort() };
 }
 
 export function occupantLoginForSeat(seatId: DeskSeatId): string {
@@ -151,7 +227,7 @@ export function saveOccupants(rows: SeatOccupant[]): void {
 /** Applies the shared (Firestore) seat list; returns true when it actually changed anything. */
 export function applyRemoteOccupants(rows: SeatOccupant[]): boolean {
   const norm = (r: SeatOccupant[]) =>
-    JSON.stringify([...r].sort((a, b) => a.seatId.localeCompare(b.seatId)).map((o) => [o.seatId, o.loginId.toLowerCase(), o.personName]));
+    JSON.stringify([...r].sort((a, b) => a.seatId.localeCompare(b.seatId)).map((o) => [o.seatId, o.loginId.toLowerCase(), o.personName, [...(o.previousLogins ?? [])].map((l) => l.toLowerCase()).sort()]));
   if (norm(rows) === norm(listOccupants())) return false;
   saveOccupants(rows);
   return true;
@@ -169,10 +245,11 @@ export function getSeatsVersion(): number {
 }
 
 export function upsertOccupant(next: SeatOccupant): void {
+  const withHistory = withSeatHistory(next);
   const rows = listOccupants().filter(
     (r) => r.seatId !== next.seatId && r.loginId.toLowerCase() !== next.loginId.toLowerCase(),
   );
-  rows.push(next);
+  rows.push(withHistory);
   saveOccupants(rows);
 }
 

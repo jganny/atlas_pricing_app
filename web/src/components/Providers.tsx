@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastContainer } from "@/components/Toast";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { subscribeDeskSeats } from "@/lib/firebase/desk-seats";
+import { startNrsDeskSync } from "@/lib/firebase/nrs-desk";
 import { applyRemoteOccupants } from "@/lib/auth/desk-seats";
 import { deskDisplayName } from "@/lib/quotes/team-roles";
 import { queryKeys } from "@/hooks/query-keys";
@@ -149,6 +150,16 @@ function SeatsSync() {
   return null;
 }
 
+/** Keeps the NRS desk's follow-ups and alerts shared, so they live with the desk and not one browser. */
+function NrsDeskSync() {
+  const user = useAuthStore((s) => s.user);
+  useEffect(() => {
+    if (!useLiveData || !user) return;
+    return startNrsDeskSync();
+  }, [user]);
+  return null;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -173,6 +184,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ErrorBoundary>
         <AuthSync />
         <SeatsSync />
+        <NrsDeskSync />
         <EscapeHandler />
         <CommandPalette />
         <HelpFab />
