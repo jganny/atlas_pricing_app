@@ -110,8 +110,8 @@ export default function NrsFollowUpsPage() {
       </div>
       <p className="text-sm text-[var(--color-text-muted)]">
         {demoLabel(
-          "Fill shipper / consignee / commodity after a quote is won. Stored locally for Cathrina until ops sync is wired.",
-          "Fill shipper / consignee / commodity after a quote is won. Stored locally until ops sync is wired.",
+          "Fill shipper / consignee / commodity after a quote is won. Shared with everyone at this desk.",
+          "Fill shipper / consignee / commodity after a quote is won. Shared with everyone at this desk.",
         )}
       </p>
 

@@ -54,7 +54,7 @@ export function DeskSeatsAdmin() {
       <h2 className="mb-1 font-bold text-[var(--color-atlas-navy)]">Desk seats</h2>
       <p className="mb-4 text-xs text-[var(--color-text-muted)]">
         {demoLabel(
-          "Seat names never change. Assign or remove the person sitting in Air Nom, Sea Nom, NRS, or Free Hand. Named logins (Goutham, …) keep their own username and password.",
+          "Seat names never change. Assign or remove the person sitting in Air Nom, Sea Nom, NRS, or Free Hand. Individually named logins keep their own username and password.",
           "Seat names never change. Assign or remove the person sitting in each desk seat. Named logins keep their own username and password.",
         )}
       </p>
