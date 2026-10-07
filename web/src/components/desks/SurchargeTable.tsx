@@ -100,17 +100,20 @@ export function SurchargeTable({
             {enabled ? "✓ Included" : "✕ Excluded"}
           </span>
         </label>
-        <Button
-          type="button"
-          id={topAddId}
-          tabIndex={rows.length === 0 ? 0 : -1}
-          variant="secondary"
-          className="px-2 py-1 text-xs"
-          disabled={!enabled}
-          onClick={() => addRowAfter(-1)}
-        >
-          <Plus className="mr-1 h-3 w-3" /> Add
-        </Button>
+        {/* Once there are rows, each row's own "+" does the job; this button
+            only exists so an empty table still has a way to get its first row. */}
+        {rows.length === 0 ? (
+          <Button
+            type="button"
+            id={topAddId}
+            variant="secondary"
+            className="px-2 py-1 text-xs"
+            disabled={!enabled}
+            onClick={() => addRowAfter(-1)}
+          >
+            <Plus className="mr-1 h-3 w-3" /> Add
+          </Button>
+        ) : null}
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs">
