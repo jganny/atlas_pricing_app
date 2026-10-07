@@ -1,6 +1,6 @@
 import type { SavedQuote } from "../types";
 import { formatCurrency } from "../utils";
-import { enquiryAssigneeLabel } from "../auth/desk-seats";
+import { quoteOwnerLabel } from "../auth/desk-seats";
 import { getQuoteRefId } from "./ref-id";
 
 export function statusLabel(status: string | undefined): string {
@@ -31,7 +31,7 @@ export function identityRows(quote: SavedQuote): Array<[string, string]> {
     ["Reference", getQuoteRefId(quote)],
     ["Status", statusLabel(quote.status)],
     ["Route", quote.route || "—"],
-    ["Creator", enquiryAssigneeLabel(quote.creator)],
+    ["Creator", quoteOwnerLabel(quote)],
     ["Date", quote.date || "—"],
   ];
 

@@ -162,19 +162,63 @@ export function seatLoginIds(seatId: DeskSeatId): string[] {
   return [...ids];
 }
 
+/** The four desks that own their quotes. Everything else (Admin, individual sales logins…) is by person. */
+export const OWNED_DESK_SEATS: DeskSeatId[] = ["air-nom", "sea-nom", "nrs", "freehand"];
+
+function isOwnedSeat(id: DeskSeatId | undefined | null): id is DeskSeatId {
+  return !!id && OWNED_DESK_SEATS.includes(id);
+}
+
+/** The owned desk a login sits in right now, if any. */
+export function currentDeskSeatId(loginId: string | undefined | null): DeskSeatId | undefined {
+  const id = activeSeatForLogin(loginId)?.id;
+  return isOwnedSeat(id) ? id : undefined;
+}
+
 /**
- * Does `creator` (the login stored on a quote/enquiry) belong to the same desk
- * as `username`? True for the login itself and for anyone who has ever held the
- * same desk seat — so a new person at the desk sees the desk's whole history.
+ * For quotes saved before they carried a desk stamp: the desk their creator's
+ * login originally belonged to (its default seat first, then past holders, then
+ * the seat it holds now). Such quotes pre-date any shuffling, so this is stable.
  */
-export function sharesDeskWith(creator: string | undefined | null, username: string | undefined | null): boolean {
-  const c = (creator || "").toLowerCase();
+function legacyDeskForLogin(loginId: string): DeskSeatId | undefined {
+  const id = loginId.toLowerCase();
+  const byDefault = DESK_SEATS.find((s) => isOwnedSeat(s.id) && s.defaultLoginIds.includes(id));
+  if (byDefault) return byDefault.id;
+  const occ = listOccupants();
+  const byHistory = occ.find((o) => isOwnedSeat(o.seatId) && (o.previousLogins ?? []).some((l) => l.toLowerCase() === id));
+  if (byHistory) return byHistory.seatId;
+  const current = occ.find((o) => isOwnedSeat(o.seatId) && o.loginId.toLowerCase() === id);
+  return current?.seatId;
+}
+
+/** Which desk a quote/enquiry belongs to: its stamp, or (older quotes) its creator's original desk. */
+export function quoteDeskSeatId(q: { deskSeat?: string | null; creator?: string | null }): DeskSeatId | undefined {
+  if (q.deskSeat && isOwnedSeat(q.deskSeat as DeskSeatId)) return q.deskSeat as DeskSeatId;
+  return q.creator ? legacyDeskForLogin(q.creator) : undefined;
+}
+
+/**
+ * Is this quote part of the viewer's own work? Desk holders see their desk's
+ * quotes, whoever made them; everyone else (individual sales logins…) sees their own.
+ */
+export function belongsToViewersDesk(
+  q: { deskSeat?: string | null; creator?: string | null },
+  username: string | undefined | null,
+): boolean {
   const u = (username || "").toLowerCase();
-  if (!c || !u) return false;
-  if (c === u) return true;
-  const seat = activeSeatForLogin(u);
-  if (!seat || seat.id === "admin" || seat.id === "manager" || seat.id === "pricing") return false;
-  return seatLoginIds(seat.id).includes(c);
+  if (!u) return false;
+  const mine = currentDeskSeatId(u);
+  if (mine) return quoteDeskSeatId(q) === mine;
+  return (q.creator || "").toLowerCase() === u;
+}
+
+/** "Person · Desk" for a quote — the desk it belongs to, not the desk its creator sits in today. */
+export function quoteOwnerLabel(q: { deskSeat?: string | null; creator?: string | null }): string {
+  const seatId = quoteDeskSeatId(q);
+  const seat = seatId ? DESK_SEATS.find((s) => s.id === seatId) : undefined;
+  if (!seat) return enquiryAssigneeLabel(q.creator);
+  const person = personDisplayName(q.creator);
+  return person.toLowerCase() === seat.label.toLowerCase() || person === "—" ? seat.label : `${person} · ${seat.label}`;
 }
 
 /** Adds the outgoing holder to the seat's history when the seat changes hands. */

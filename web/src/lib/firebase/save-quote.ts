@@ -1,5 +1,6 @@
 "use client";
 
+import { deskSeatForSave } from "./desk-stamp";
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult, DimUnit, SeaMode } from "@atlas/pricing-core";
 import type { AirlineOption, CourierOption, LinerOption } from "@/lib/pricing/carrier-options";
@@ -100,6 +101,7 @@ async function writeQuote(id: string, quoteData: Record<string, unknown>): Promi
 
 export async function saveCourierQuote(input: SaveCourierInput): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+  const deskStamp = await deskSeatForSave(input.quoteId, input.creator);
   const lanes = input.lanes.length
     ? input.lanes
     : [{ id: "lane_0", origin: input.originCity, destination: input.destCity }];
@@ -117,6 +119,7 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
+    ...deskStamp,
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     mode: "Courier",
@@ -224,6 +227,7 @@ export interface SaveAirInput extends SaveMeta {
 
 export async function saveAirQuote(input: SaveAirInput): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+  const deskStamp = await deskSeatForSave(input.quoteId, input.creator);
   const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
   const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
   const quotedLanes = input.quotedLanes ?? [];
@@ -284,6 +288,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
+    ...deskStamp,
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     leadId: input.leadId,
@@ -401,6 +406,7 @@ export interface SaveSeaInput extends SaveMeta {
 
 export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+  const deskStamp = await deskSeatForSave(input.quoteId, input.creator);
   const originCode = input.origin.split(" - ")[0]?.trim() || input.origin.trim();
   const destCode = input.destination.split(" - ")[0]?.trim() || input.destination.trim();
   const liner = input.selected.name;
@@ -459,6 +465,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
+    ...deskStamp,
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     leadId: input.leadId,

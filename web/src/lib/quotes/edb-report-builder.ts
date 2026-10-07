@@ -1,7 +1,7 @@
 import type { EnquiryLeg, EnquiryLegKind, EnquiryRecord } from "@/lib/types";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
-import { deskDisplayName } from "@/lib/quotes/team-roles";
-import { seatForLogin } from "@/lib/auth/desk-seats";
+import { deskDisplayName, quoteDeskLabel } from "@/lib/quotes/team-roles";
+import { DESK_SEATS, quoteDeskSeatId } from "@/lib/auth/desk-seats";
 import { PERIOD_GRANULARITIES, parseCreatedAt, periodKey, type PeriodGranularity } from "@/lib/quotes/report-periods";
 import { demoLabel } from "@/lib/demo-mode";
 
@@ -106,8 +106,8 @@ export function explodeFacts(rows: EnquiryRecord[]): ReportFact[] {
         mode: row.mode,
         status: row.status,
         customer: row.customer || "—",
-        desk: deskDisplayName(row.creator || row.assignee) || "—",
-        seat: seatForLogin(row.creator || row.assignee)?.label || deskDisplayName(row.creator || row.assignee) || "—",
+        desk: quoteDeskLabel(row) || "—",
+        seat: DESK_SEATS.find((s) => s.id === quoteDeskSeatId(row))?.label || deskDisplayName(row.creator || row.assignee) || "—",
         time: parseCreatedAt(row.createdAt),
         leg,
         sellInr: sell * share,

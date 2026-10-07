@@ -1,7 +1,7 @@
 import type { EnquiryLeg, EnquiryLegKind, EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { allLanesRoute } from "@/lib/quotes/lanes";
-import { deskDisplayName } from "@/lib/quotes/team-roles";
+import { quoteDeskLabel } from "@/lib/quotes/team-roles";
 import { hoursSince, isOpenQuoteStatus } from "@/lib/sla";
 
 export function mapMode(type: string | undefined, module: string | undefined): EnquiryRecord["mode"] {
@@ -149,8 +149,9 @@ export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
     destination,
     status: mapStatus(data.status),
     slaHoursOpen: open ? Math.round(hoursSince(createdAt)) : 0,
-    assignee: deskDisplayName(data.creator || ""),
+    assignee: quoteDeskLabel({ deskSeat: data.deskSeat, creator: data.creator }),
     creator: (data.creator || "").toLowerCase(),
+    deskSeat: data.deskSeat || undefined,
     createdAt,
     grandTotal: amount,
     currency: data.currency,

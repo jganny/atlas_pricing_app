@@ -20,7 +20,7 @@ import { useEnquiries, useLeads, useWonFollowUps } from "@/hooks/use-atlas-data"
 import { missingWonFields } from "@/lib/quotes/won-followups";
 import { useAuthStore } from "@/store/auth";
 import { canAccessRoute, deskFocusLabel, isNrsUser } from "@/lib/auth/rbac";
-import { sharesDeskWith } from "@/lib/auth/desk-seats";
+import { belongsToViewersDesk, currentDeskSeatId } from "@/lib/auth/desk-seats";
 import {
   fetchAmendmentRequests,
   resolveAmendment,
@@ -95,9 +95,10 @@ export default function DashboardPage() {
     () =>
       enquiries.filter(
         (e) =>
-          e.creator?.toLowerCase() === username ||
-          sharesDeskWith(e.creator, username) ||
-          e.assignee?.toLowerCase().includes(focus.toLowerCase().slice(0, 4)),
+          belongsToViewersDesk(e, username) ||
+          // Individual (non-desk) logins keep the looser name match; desk holders see exactly their desk.
+          (!currentDeskSeatId(username) &&
+            e.assignee?.toLowerCase().includes(focus.toLowerCase().slice(0, 4))),
       ),
     [enquiries, username, focus],
   );

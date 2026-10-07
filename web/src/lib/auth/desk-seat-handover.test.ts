@@ -67,20 +67,21 @@ const store: Record<string, string> = {};
   assert.equal(inbox.assignInboxUsers("pricing", "sea").suggestedUser, "newsea");
 
   // The desk's history stays with the desk: the new person sees what earlier holders did.
-  assert.equal(seats.sharesDeskWith("cathrina", "newnrs"), true);
-  assert.equal(seats.sharesDeskWith("newnrs", "newnrs"), true);
-  assert.equal(seats.sharesDeskWith("shashank", "newair"), true);
-  assert.equal(seats.sharesDeskWith("shaheer", "newsea"), true);
-  assert.equal(seats.sharesDeskWith("kavya", "newfree"), true);
-  assert.equal(seats.sharesDeskWith("jaya", "newfree"), true);
+  const q = (creator: string, deskSeat?: string) => ({ creator, deskSeat });
+  assert.equal(seats.belongsToViewersDesk(q("cathrina"), "newnrs"), true);
+  assert.equal(seats.belongsToViewersDesk(q("newnrs", "nrs"), "newnrs"), true);
+  assert.equal(seats.belongsToViewersDesk(q("shashank"), "newair"), true);
+  assert.equal(seats.belongsToViewersDesk(q("shaheer"), "newsea"), true);
+  assert.equal(seats.belongsToViewersDesk(q("kavya"), "newfree"), true);
+  assert.equal(seats.belongsToViewersDesk(q("jaya"), "newfree"), true);
   // …but desks stay separate from each other.
-  assert.equal(seats.sharesDeskWith("shashank", "newsea"), false);
-  assert.equal(seats.sharesDeskWith("cathrina", "newfree"), false);
+  assert.equal(seats.belongsToViewersDesk(q("shashank"), "newsea"), false);
+  assert.equal(seats.belongsToViewersDesk(q("cathrina"), "newfree"), false);
 
   // A second handover keeps the whole chain.
   seats.upsertOccupant({ seatId: "nrs", loginId: "nrsthree", personName: "Third" });
-  assert.equal(seats.sharesDeskWith("newnrs", "nrsthree"), true);
-  assert.equal(seats.sharesDeskWith("cathrina", "nrsthree"), true);
+  assert.equal(seats.belongsToViewersDesk(q("newnrs", "nrs"), "nrsthree"), true);
+  assert.equal(seats.belongsToViewersDesk(q("cathrina"), "nrsthree"), true);
   assert.deepEqual(seats.seatLoginIds("nrs").sort(), ["cathrina", "newnrs", "nrsthree"]);
 
   // The history travels with the shared seat record, so every computer agrees.

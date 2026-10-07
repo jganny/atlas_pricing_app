@@ -37,6 +37,8 @@ export interface EnquiryRecord {
   assignee: string
   /** Raw Firestore creator / desk id. */
   creator: string
+  /** Desk the quote belongs to (stamped at save) — stays put when staff change desks. */
+  deskSeat?: string
   createdAt: string
   grandTotal?: number
   currency?: string
@@ -66,6 +68,8 @@ export interface SavedQuote {
   quoteNumber?: string | number
   customer: string
   creator: string
+  /** Desk the quote belongs to (stamped at save). */
+  deskSeat?: string
   status: string
   type: string
   date?: string

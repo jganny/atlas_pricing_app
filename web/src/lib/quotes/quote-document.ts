@@ -1,7 +1,7 @@
 import type { SavedQuote } from "../types";
 import { getQuoteRefId } from "./ref-id";
 import { formatCurrency } from "../utils";
-import { enquiryAssigneeLabel } from "../auth/desk-seats";
+import { quoteOwnerLabel } from "../auth/desk-seats";
 import { identityRows } from "./quote-identity";
 import {
   formatRoutingPreview,
@@ -100,7 +100,7 @@ export function buildClientQuoteDocument(
   const chw = Number(quote.details?.chargeableWeight ?? 0);
   const type = (quote.type || "").toLowerCase();
   const heading = compareHeading(type);
-  const prepared = enquiryAssigneeLabel(quote.creator);
+  const prepared = quoteOwnerLabel(quote);
   const quoted = options.find((o) => o.selected) ?? options[0];
   const pdfFilename = `Quote-${ref}.pdf`;
   const title = `Quotation ${ref} · ${quote.customer || "Vertex"}`;

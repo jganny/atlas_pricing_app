@@ -22,7 +22,7 @@ import {
   formatRoutingPreview,
   formatTransitPreview,
 } from "@/lib/pricing/terms";
-import { enquiryAssigneeLabel } from "@/lib/auth/desk-seats";
+import { quoteOwnerLabel } from "@/lib/auth/desk-seats";
 import {
   compareHeading,
   quotedFieldLabel,
@@ -298,7 +298,7 @@ export function QuotePreviewModal({
               <div className="text-right text-xs text-[var(--color-text-muted)]">
                 <div>Ref #{ref}</div>
                 <div>{quote.date || "—"}</div>
-                <div>Prepared by {enquiryAssigneeLabel(quote.creator)}</div>
+                <div>Prepared by {quoteOwnerLabel(quote)}</div>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">

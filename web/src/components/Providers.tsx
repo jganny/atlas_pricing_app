@@ -10,7 +10,7 @@ import { UpdateBanner } from "@/components/UpdateBanner";
 import { subscribeDeskSeats } from "@/lib/firebase/desk-seats";
 import { startNrsDeskSync } from "@/lib/firebase/nrs-desk";
 import { applyRemoteOccupants } from "@/lib/auth/desk-seats";
-import { deskDisplayName } from "@/lib/quotes/team-roles";
+import { quoteDeskLabel } from "@/lib/quotes/team-roles";
 import { queryKeys } from "@/hooks/query-keys";
 import type { EnquiryRecord } from "@/lib/types";
 import { subscribeToAuthChanges } from "@/lib/firebase/auth";
@@ -141,7 +141,7 @@ function SeatsSync() {
       (rows) => {
         if (!applyRemoteOccupants(rows)) return;
         qc.setQueryData<EnquiryRecord[]>(queryKeys.enquiries, (cur) =>
-          cur?.map((r) => ({ ...r, assignee: deskDisplayName(r.creator || "") })),
+          cur?.map((r) => ({ ...r, assignee: quoteDeskLabel(r) })),
         );
       },
       (err) => console.warn("Desk seats sync:", err.message),

@@ -1,5 +1,6 @@
 "use client";
 
+import { deskSeatForSave } from "./desk-stamp";
 import { doc, setDoc } from "firebase/firestore";
 import { nextQuoteNumber } from "@/lib/quotes/ref-id";
 import { computeGp } from "@/lib/pricing/quote-display";
@@ -45,6 +46,7 @@ export async function saveTransportQuote(input: {
   terms?: string;
 }): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+  const deskStamp = await deskSeatForSave(input.quoteId, input.creator);
   const singleLaneTotal = input.freightSell + input.detention + input.tolls;
   const total = input.allLanesAmount && input.allLanesAmount > 0 ? input.allLanesAmount : singleLaneTotal;
   const buy = input.freightBuy;
@@ -63,6 +65,7 @@ export async function saveTransportQuote(input: {
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
+    ...deskStamp,
     status: "quoted",
     quoteNumber: nextQuoteNumber(),
     mode: "Transport",
@@ -127,6 +130,7 @@ export async function saveWarehouseQuote(input: {
   terms?: string;
 }): Promise<string> {
   const id = input.quoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
+  const deskStamp = await deskSeatForSave(input.quoteId, input.creator);
   const storage = input.ratePerCbm * input.cbm * Math.max(1, input.days);
   const total = storage + input.handling;
   const buy = input.buyTotal ?? 0;
@@ -142,6 +146,7 @@ export async function saveWarehouseQuote(input: {
     timestamp: Date.now(),
     customer: input.customer,
     creator: input.creator,
+    ...deskStamp,
     status: "quoted",
     quoteNumber: nextQuoteNumber(),
     mode: "Warehouse",

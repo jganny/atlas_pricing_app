@@ -1,6 +1,14 @@
 /** Desk roles — mirrors legacy TEAM_ROLES for ownership labels/filters. */
 
-import { enquiryAssigneeLabel, seatForLogin } from "@/lib/auth/desk-seats";
+import {
+  DESK_SEATS,
+  OWNED_DESK_SEATS,
+  enquiryAssigneeLabel,
+  listOccupants,
+  quoteDeskSeatId,
+  quoteOwnerLabel,
+  seatForLogin,
+} from "@/lib/auth/desk-seats";
 import { IS_DEMO_BUILD } from "@/lib/demo-mode";
 import { REAL_NAMES, REAL_MAILBOX_EMAILS, REAL_IMAP_HOST } from "@/lib/quotes/team-roles-real-names";
 
@@ -119,22 +127,49 @@ export function isAdminUser(username: string | undefined | null, role?: string):
   return TEAM_ROLES[u]?.type === "admin";
 }
 
+/** What to show as the owner of a quote: its desk (and who made it), or the person for non-desk logins. */
+export function quoteDeskLabel(q: { deskSeat?: string | null; creator?: string | null }): string {
+  return quoteDeskSeatId(q) ? quoteOwnerLabel(q) : deskDisplayName(q.creator);
+}
+
+/** Logins that belong to one of the four desks (now or before) — filtered by desk, not by person. */
+function deskSeatLogins(): Set<string> {
+  const ids = new Set<string>();
+  DESK_SEATS.filter((s) => OWNED_DESK_SEATS.includes(s.id)).forEach((s) => s.defaultLoginIds.forEach((l) => ids.add(l)));
+  listOccupants()
+    .filter((o) => OWNED_DESK_SEATS.includes(o.seatId))
+    .forEach((o) => {
+      ids.add(o.loginId.toLowerCase());
+      (o.previousLogins ?? []).forEach((l) => ids.add(l.toLowerCase()));
+    });
+  return ids;
+}
+
 export function listDeskFilterOptions(creatorsFromData: string[] = []): Array<{ id: string; label: string }> {
+  const seatLogins = deskSeatLogins();
   const ids = new Set<string>([
     ...Object.keys(TEAM_ROLES),
     ...creatorsFromData.map((c) => c.toLowerCase()).filter(Boolean),
   ]);
   ids.delete("mahendra");
   ids.delete("jaya"); // retired login — Kavya holds Free Hand now
-  return Array.from(ids)
+  const people = Array.from(ids)
+    .filter((id) => !seatLogins.has(id))
     .sort((a, b) => deskDisplayName(a).localeCompare(deskDisplayName(b)))
     .map((id) => ({ id, label: deskDisplayName(id) }));
+  const desks = DESK_SEATS.filter((s) => OWNED_DESK_SEATS.includes(s.id)).map((s) => ({ id: `seat:${s.id}`, label: s.label }));
+  return [...desks, ...people];
 }
 
-/** Match quote.creator against a selected desk filter value. */
-export function matchesDeskFilter(creator: string, deskFilter: string): boolean {
+/** Match a quote against a selected desk filter value ("seat:<desk>" = that desk's quotes, whoever made them). */
+export function matchesDeskFilter(
+  row: { creator: string; deskSeat?: string | null },
+  deskFilter: string,
+): boolean {
   if (!deskFilter || deskFilter === "all") return true;
   if (deskFilter === "mine") return false; // handled by caller with username
+  if (deskFilter.startsWith("seat:")) return quoteDeskSeatId(row) === deskFilter.slice(5);
+  const creator = row.creator;
   const c = (creator || "").toLowerCase();
   const target = deskFilter.toLowerCase();
   const roleName = (TEAM_ROLES[target]?.name || "").toLowerCase();

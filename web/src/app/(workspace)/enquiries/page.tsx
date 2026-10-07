@@ -1,6 +1,6 @@
 "use client";
 
-import { sharesDeskWith } from "@/lib/auth/desk-seats";
+import { belongsToViewersDesk, currentDeskSeatId } from "@/lib/auth/desk-seats";
 import { ReportBuilderPanel } from "@/components/ReportBuilderPanel";
 import { GuideTipButton } from "@/components/GuideTipButton";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -263,13 +263,12 @@ function EnquiryDatabaseInner() {
         const assignee = (row.assignee || "").toLowerCase();
         const mine =
           !username ||
-          creator === username ||
-          sharesDeskWith(creator, username) ||
-          assignee === username ||
-          assignee.includes(username) ||
-          creator.includes(username);
+          belongsToViewersDesk(row, username) ||
+          // Individual (non-desk) logins keep the looser name match.
+          (!currentDeskSeatId(username) &&
+            (creator === username || assignee === username || assignee.includes(username) || creator.includes(username)));
         if (!mine) return false;
-      } else if (!matchesDeskFilter(row.creator, deskFilter)) {
+      } else if (!matchesDeskFilter(row, deskFilter)) {
         return false;
       }
       if (!q) return true;
