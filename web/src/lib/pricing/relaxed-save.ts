@@ -2,7 +2,8 @@
  * Import quotes on delivered terms (DDP / DAP / DDU) are built from whichever
  * charge groups the desk ticks, so the carrier details (routing, transit time,
  * validity) and freight rates must not be compulsory just to save them.
- * Everything else — customer, lane, cargo, carrier name — is still checked.
+ * Only the customer name is still required — origin, destination, cargo,
+ * carrier and its details can all be left blank.
  */
 const RELAXED_TERMS = new Set(["DDP", "DAP", "DDU"]);
 

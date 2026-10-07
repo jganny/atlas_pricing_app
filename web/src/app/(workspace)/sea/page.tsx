@@ -33,7 +33,7 @@ import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-optio
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
-import { seaShipmentSchema } from "@/lib/pricing/desk-schemas";
+import { relaxedShipmentSchema, seaShipmentSchema } from "@/lib/pricing/desk-schemas";
 import {
   computeLinerTotals,
   seaCargoHasData,
@@ -589,7 +589,7 @@ function SeaDeskInner() {
   );
 
   const handlePreview = () => {
-    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
+    const cargoErr = isRelaxedImportQuote(module, incoterm) ? null : validateSeaCargoBasics(grossWeightKg, volumeCbm);
     const fallback = lanes[0]?.id || "";
     const completeLanes = usableLanes(lanes);
     const toCheck = completeLanes.length ? completeLanes : [activeLane].filter(Boolean);
@@ -677,7 +677,8 @@ function SeaDeskInner() {
 
   const handleSave = useCallback(
     async () => {
-      const shipment = seaShipmentSchema.safeParse({
+      const relaxed = isRelaxedImportQuote(module, incoterm);
+      const shipment = (relaxed ? relaxedShipmentSchema : seaShipmentSchema).safeParse({
         customer,
         origin,
         destination,
@@ -693,14 +694,14 @@ function SeaDeskInner() {
         setStep("shipment");
         return;
       }
-      const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
+      const cargoErr = relaxed ? null : validateSeaCargoBasics(grossWeightKg, volumeCbm);
       if (cargoErr) {
         setSaveMsg(cargoErr);
         toast(cargoErr, "error");
         setStep("shipment");
         return;
       }
-      const linerErr = validateSelectedLiner(selected, mode, isRelaxedImportQuote(module, incoterm));
+      const linerErr = validateSelectedLiner(selected, mode, relaxed);
       if (linerErr) {
         setSaveMsg(linerErr);
         toast(linerErr, "error");

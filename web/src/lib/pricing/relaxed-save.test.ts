@@ -18,9 +18,10 @@ const air = createAirlineOption({ name: "Emirates SkyCargo" }, true);
 assert.match(validateSelectedAirline(air) ?? "", /routing/i);
 // relaxed: saves with them blank…
 assert.equal(validateSelectedAirline(air, true), null);
-// …but still needs an option and a carrier name
+// …and even the carrier name can be blank, but there must still be an option
 assert.ok(validateSelectedAirline(undefined, true));
-assert.match(validateSelectedAirline(createAirlineOption({}, true), true) ?? "", /carrier/i);
+assert.equal(validateSelectedAirline(createAirlineOption({}, true), true), null);
+assert.match(validateSelectedAirline(createAirlineOption({}, true)) ?? "", /carrier/i);
 
 // Sea FCL: normally needs routing/transit/validity and a rate on every container row
 const sea = createLinerOption({ name: "Maersk" }, true);
@@ -28,7 +29,8 @@ assert.ok(validateSelectedLiner(sea, "fcl"));
 assert.equal(validateSelectedLiner(sea, "fcl", true), null);
 assert.equal(validateSelectedLiner(sea, "lcl", true), null);
 assert.ok(validateSelectedLiner(undefined, "fcl", true));
-assert.match(validateSelectedLiner(createLinerOption({}, true), "fcl", true) ?? "", /liner/i);
+assert.equal(validateSelectedLiner(createLinerOption({}, true), "fcl", true), null);
+assert.match(validateSelectedLiner(createLinerOption({}, true), "fcl") ?? "", /liner/i);
 
 // A fully filled option stays valid either way
 const full = createAirlineOption(

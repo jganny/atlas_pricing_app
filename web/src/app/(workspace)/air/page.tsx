@@ -63,7 +63,7 @@ import {
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
-import { airShipmentSchema } from "@/lib/pricing/desk-schemas";
+import { airShipmentSchema, relaxedShipmentSchema } from "@/lib/pricing/desk-schemas";
 import { getDefaultFreightTerms } from "@/lib/pricing/terms";
 import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
 import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
@@ -589,7 +589,7 @@ function AirDeskInner() {
   }, [laneAirlines, totalsById]);
 
   const handlePreview = () => {
-    const cargoErr = validateAirCargo(cargo);
+    const cargoErr = isRelaxedImportQuote(module, incoterm) ? null : validateAirCargo(cargo);
     const fallback = lanes[0]?.id || "";
     const completeLanes = usableLanes(lanes);
     const toCheck = completeLanes.length ? completeLanes : [activeLane].filter(Boolean);
@@ -667,7 +667,8 @@ function AirDeskInner() {
 
   const handleSave = useCallback(
     async () => {
-      const shipment = airShipmentSchema.safeParse({
+      const relaxed = isRelaxedImportQuote(module, incoterm);
+      const shipment = (relaxed ? relaxedShipmentSchema : airShipmentSchema).safeParse({
         customer,
         origin,
         destination,
@@ -683,7 +684,7 @@ function AirDeskInner() {
         setStep("shipment");
         return;
       }
-      for (const lane of lanes) {
+      for (const lane of relaxed ? [] : lanes) {
         const hasOrigin = Boolean(lane.origin.trim());
         const hasDest = Boolean(lane.destination.trim());
         if (!hasOrigin && !hasDest) continue;
@@ -697,14 +698,14 @@ function AirDeskInner() {
         }
       }
       const completeLanes = usableLanes(lanes);
-      if (!completeLanes.length) {
+      if (!relaxed && !completeLanes.length) {
         const msg = "Enter origin and destination for at least one lane.";
         setSaveMsg(msg);
         toast(msg, "error");
         setStep("shipment");
         return;
       }
-      const cargoErr = validateAirCargo(cargo);
+      const cargoErr = relaxed ? null : validateAirCargo(cargo);
       if (cargoErr) {
         setSaveMsg(cargoErr);
         toast(cargoErr, "error");
@@ -714,7 +715,7 @@ function AirDeskInner() {
       const fallback = lanes[0]?.id || "";
       for (const lane of completeLanes) {
         const quoted = quotedOnLane(airlines, lane.id, fallback);
-        const airlineErr = validateSelectedAirline(quoted, isRelaxedImportQuote(module, incoterm));
+        const airlineErr = validateSelectedAirline(quoted, relaxed);
         if (airlineErr) {
           const msg = `${laneRouteLabel(lane, lanes.indexOf(lane))}: ${airlineErr}`;
           setSaveMsg(msg);

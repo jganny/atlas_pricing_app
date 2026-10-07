@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button, NumberInput } from "@/components/ui";
 import {
@@ -7,7 +8,7 @@ import {
   type BillingUnit,
   type SurchargeRow,
 } from "@/lib/pricing/surcharges";
-import { focusByIdNow } from "@/lib/ui/desk-keyboard";
+import { focusById, focusByIdNow } from "@/lib/ui/desk-keyboard";
 
 const UNIT_OPTIONS: Array<{ value: BillingUnit; label: string }> = [
   { value: "kg", label: "Per kg" },
@@ -44,6 +45,38 @@ export function SurchargeTable({
     onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   }
   const emptyAddId = rows.length === 0 ? firstNameInputId : undefined;
+  const topAddId = emptyAddId ?? `surcharge-add-top-${title.replace(/\W+/g, "-").toLowerCase()}`;
+
+  // After a keyboard add/delete the row set changes on the next render, so the
+  // element to focus is remembered here and focused once it exists — that way
+  // a whole table can be filled in and tidied without touching the mouse.
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingFocus.current) return;
+    const id = pendingFocus.current;
+    pendingFocus.current = null;
+    focusById(id);
+  }, [rows]);
+
+  function nameIdFor(row: SurchargeRow, index: number): string {
+    return index === 0 ? firstNameInputId || `surcharge-name-${row.id}` : `surcharge-name-${row.id}`;
+  }
+
+  /** Inserts a blank row after `index` (or at the end when index is -1) and moves focus into its Name. */
+  function addRowAfter(index: number) {
+    const fresh = createSurchargeRow({ name: "", unit: units[0] ?? "flat" });
+    const at = index < 0 ? rows.length : index + 1;
+    pendingFocus.current = nameIdFor(fresh, at);
+    onChange([...rows.slice(0, at), fresh, ...rows.slice(at)]);
+  }
+
+  function deleteRow(index: number) {
+    const remaining = rows.filter((_, j) => j !== index);
+    if (!remaining.length) pendingFocus.current = topAddId;
+    else if (index > 0) pendingFocus.current = `surcharge-add-${remaining[index - 1].id}`;
+    else pendingFocus.current = nameIdFor(remaining[0], 0);
+    onChange(remaining);
+  }
 
   return (
     <div
@@ -69,14 +102,12 @@ export function SurchargeTable({
         </label>
         <Button
           type="button"
-          id={emptyAddId}
-          tabIndex={emptyAddId ? 0 : -1}
+          id={topAddId}
+          tabIndex={rows.length === 0 ? 0 : -1}
           variant="secondary"
           className="px-2 py-1 text-xs"
           disabled={!enabled}
-          onClick={() =>
-            onChange([...rows, createSurchargeRow({ name: "", unit: units[0] ?? "flat" })])
-          }
+          onClick={() => addRowAfter(-1)}
         >
           <Plus className="mr-1 h-3 w-3" /> Add
         </Button>
@@ -109,7 +140,7 @@ export function SurchargeTable({
               <tr key={row.id} className="border-t border-[var(--color-border)]">
                 <td className="p-1">
                   <input
-                    id={i === 0 ? firstNameInputId || `surcharge-name-${row.id}` : `surcharge-name-${row.id}`}
+                    id={nameIdFor(row, i)}
                     disabled={!enabled}
                     autoComplete="off"
                     name={`atlas-surcharge-name-${row.id}`}
@@ -165,13 +196,29 @@ export function SurchargeTable({
                     onChange={(e) => update(i, { remarks: e.target.value })}
                     placeholder="Optional"
                     onKeyDown={(e) => {
-                      if (e.key === "Tab" && !e.shiftKey && focusByIdNow(`surcharge-del-${row.id}`)) {
+                      if (e.key === "Tab" && !e.shiftKey && focusByIdNow(`surcharge-add-${row.id}`)) {
                         e.preventDefault();
+                      } else if (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        addRowAfter(i);
                       }
                     }}
                   />
                 </td>
-                <td className="p-1">
+                <td className="whitespace-nowrap p-1">
+                  <button
+                    type="button"
+                    id={`surcharge-add-${row.id}`}
+                    tabIndex={0}
+                    disabled={!enabled}
+                    className="mr-0.5 rounded p-0.5 text-sky-700 outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-30"
+                    aria-label="Add row below"
+                    title="Add a row below (Space / Enter)"
+                    data-testid="surcharge-add"
+                    onClick={() => addRowAfter(i)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
                   <button
                     type="button"
                     id={`surcharge-del-${row.id}`}
@@ -179,8 +226,9 @@ export function SurchargeTable({
                     disabled={!enabled}
                     className="rounded p-0.5 text-red-600 outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-30"
                     aria-label="Delete surcharge row"
+                    title="Delete this row (Space / Enter)"
                     data-testid="surcharge-delete"
-                    onClick={() => onChange(rows.filter((_, j) => j !== i))}
+                    onClick={() => deleteRow(i)}
                     onKeyDown={(e) => {
                       if (
                         e.key === "Tab" &&
@@ -200,6 +248,11 @@ export function SurchargeTable({
           </tbody>
         </table>
       </div>
+      {rows.length > 0 ? (
+        <p className="mt-1.5 text-[10.5px] text-[var(--color-text-muted)]">
+          Keyboard: Tab to move · Enter in Remarks, or Space on + , adds a row below · Space on the bin deletes it.
+        </p>
+      ) : null}
     </div>
   );
 }

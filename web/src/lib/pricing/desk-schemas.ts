@@ -23,3 +23,8 @@ export const seaShipmentSchema = z.object({
 });
 
 export type SeaShipmentForm = z.infer<typeof seaShipmentSchema>;
+
+/** Relaxed import quotes (DDP/DAP/DDU, see relaxed-save.ts) only need to know who the quote is for. */
+export const relaxedShipmentSchema = z.object({
+  customer: z.string().trim().min(1, "Enter customer name."),
+});

@@ -263,8 +263,8 @@ export function validateSelectedAirline(
   relaxed = false,
 ): string | null {
   if (!option) return "Add and select an airline option.";
-  if (!option.name.trim()) return "Enter carrier / airline on the selected option.";
   if (relaxed) return null;
+  if (!option.name.trim()) return "Enter carrier / airline on the selected option.";
   if (!option.routing.trim()) return "Enter routing on the selected option.";
   if (!option.tt.trim()) return "Enter transit time on the selected option.";
   if (!option.validity.trim()) return "Enter quote validity on the selected option.";
