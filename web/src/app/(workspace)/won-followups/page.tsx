@@ -10,6 +10,7 @@ import {
   WON_FOLLOWUP_FIELD_LABELS,
   escalationTier,
   missingWonFields,
+  splitWonRows,
   type EscalationTier,
   type WonFollowUpValues,
 } from "@/lib/quotes/won-followups";
@@ -42,18 +43,10 @@ export default function WonFollowUpsPage() {
     setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...next } }));
   }
 
-  const pending = useMemo(
-    () =>
-      rows
-        .map((r) => draftFor(r))
-        .filter((r) => missingWonFields(r).length > 0)
-        .sort((a, b) => new Date(a.wonAt).getTime() - new Date(b.wonAt).getTime()),
-    [rows, drafts],
-  );
-  const complete = useMemo(
-    () => rows.filter((r) => missingWonFields(r).length === 0).slice(0, 20),
-    [rows],
-  );
+  // Membership comes from the saved rows, so a row stays on screen while it is being typed in.
+  const { pending: pendingSaved, complete: completeAll } = useMemo(() => splitWonRows(rows), [rows]);
+  const pending = pendingSaved;
+  const complete = useMemo(() => completeAll.slice(0, 20), [completeAll]);
 
   async function save(row: WonFollowUpRow) {
     setSaving(row.id);
@@ -106,10 +99,12 @@ export default function WonFollowUpsPage() {
         <Card className="text-sm text-[var(--color-text-muted)]">Nothing pending — every Won quote is fully filled in.</Card>
       ) : (
         <div className="space-y-3">
-          {pending.map((row) => {
+          {pending.map((saved) => {
+            const row = draftFor(saved);
             const tier = escalationTier(row.wonAt);
             const style = TIER_STYLE[tier];
-            const missing = missingWonFields(row);
+            const missing = missingWonFields(saved);
+            const nowMissing = missingWonFields(row);
             return (
               <Card key={row.id} className={cn("space-y-3", style.card)}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -154,10 +149,17 @@ export default function WonFollowUpsPage() {
                     </div>
                   </div>
                 </div>
-                <Button type="button" size="sm" disabled={saving === row.id} onClick={() => void save(row)}>
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Save
-                </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button" size="sm" disabled={saving === row.id} onClick={() => void save(saved)}>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {saving === row.id ? "Saving…" : "Save"}
+                  </Button>
+                  <span className="text-xs text-[var(--color-text-muted)]">
+                    {nowMissing.length === 0
+                      ? "Everything is filled in — Save to finish this one."
+                      : `${nowMissing.length} still to fill: ${nowMissing.map((f) => WON_FOLLOWUP_FIELD_LABELS[f]).join(", ")}`}
+                  </span>
+                </div>
               </Card>
             );
           })}

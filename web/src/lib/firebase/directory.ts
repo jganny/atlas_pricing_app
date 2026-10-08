@@ -12,6 +12,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import type { DirectoryContact } from "@/lib/types";
+import { planAgencyImport } from "@/lib/quotes/agent-import";
 import { getFirebaseDb } from "./client";
 
 function mapContact(id: string, data: Record<string, unknown>): DirectoryContact {
@@ -111,73 +112,79 @@ export async function deleteDirectoryContact(id: string): Promise<void> {
 }
 
 /**
- * Writes a bulk Excel import as one dated batch. When `replacePrevious` is
- * true:
- *  - every existing "agency" contact that itself came from an earlier
- *    import (has an `importBatchId`) is deleted first — so this week's
- *    file replaces last week's imported rows instead of piling on top of
- *    them.
- *  - a contact added BY HAND (no `importBatchId`) is left alone UNLESS
- *    this week's file contains a row with the exact same name, in which
- *    case the uploaded row's data takes over that same document — the
- *    manual entry is "absorbed" into the tracked batch instead of leaving
- *    two records for the same agent, and from then on it's a normal
- *    import-managed row (replaceable by a future upload the same way).
- *    A hand-added contact with no name match in the new file is untouched.
+ * What a weekly agent upload would do, worked out before anything is written — shown to the
+ * user to confirm. See planAgencyImport for the rules.
+ */
+export async function previewAgencyImport(contacts: DirectoryContactInput[]) {
+  return planAgencyImport(await fetchDirectoryContacts(), contacts);
+}
+
+/**
+ * Writes a bulk Excel import as one dated batch.
+ *
+ * Overseas Agents (`replacePrevious`): the file replaces last week's imported agents, repeated
+ * agents are kept once, and older copies of an agent the file covers are removed — see
+ * planAgencyImport. Agents added by hand that aren't in the file are never touched.
+ *
+ * Any other contact list (`replacePrevious` false) only adds rows; nothing is removed.
  */
 export async function importDirectoryContacts(
   contacts: DirectoryContactInput[],
   opts: { updatedBy: string; replacePrevious: boolean },
-): Promise<{ added: number; replaced: number; absorbed: number }> {
+): Promise<{ added: number; replaced: number; absorbed: number; duplicatesRemoved: number }> {
   const db = getFirebaseDb();
   const batchId = `import-${Date.now()}`;
-
-  let toDelete: string[] = [];
-  const manualIdByName = new Map<string, string>();
-  if (opts.replacePrevious) {
-    const existing = await fetchDirectoryContacts();
-    const isAgency = (c: DirectoryContact) => (c.category || "").toLowerCase() === "agency";
-    toDelete = existing.filter((c) => isAgency(c) && c.importBatchId).map((c) => c.id);
-    for (const c of existing) {
-      if (isAgency(c) && !c.importBatchId) {
-        manualIdByName.set(c.name.trim().toLowerCase(), c.id);
-      }
-    }
-  }
 
   type Write =
     | { kind: "delete"; id: string }
     | { kind: "set"; id?: string; data: Record<string, unknown> };
 
+  const writes: Write[] = [];
+  let incoming = contacts;
   let absorbed = 0;
-  const writes: Write[] = [
-    ...toDelete.map((id): Write => ({ kind: "delete", id })),
-    ...contacts.map((c): Write => {
-      const absorbId = manualIdByName.get(c.name.trim().toLowerCase());
-      if (absorbId) absorbed += 1;
-      return {
-        kind: "set",
-        id: absorbId,
-        data: {
-          name: c.name.trim(),
-          category: c.category || "agency",
-          contactPerson: c.contactPerson?.trim() || "",
-          email: c.email?.trim() || "",
-          phone: c.phone?.trim() || "",
-          location: c.location?.trim() || "",
-          notes: c.notes?.trim() || "",
-          sheetGroup: c.sheetGroup?.trim() || "",
-          agreement: c.agreement?.trim() || "",
-          agreementUrl: c.agreementUrl?.trim() || "",
-          agreementFileName: c.agreementFileName?.trim() || "",
-          suspended: Boolean(c.suspended),
-          importBatchId: batchId,
-          updatedBy: opts.updatedBy,
-          updatedAt: serverTimestamp(),
-        },
-      };
-    }),
-  ];
+  let replaced = 0;
+  let duplicatesRemoved = 0;
+  let existingById = new Map<string, DirectoryContact>();
+  let absorbIdByIndex: Record<number, string> = {};
+
+  if (opts.replacePrevious) {
+    const existing = await fetchDirectoryContacts();
+    existingById = new Map(existing.map((c) => [c.id, c]));
+    const plan = planAgencyImport(existing, contacts);
+    incoming = plan.incoming;
+    absorbIdByIndex = plan.absorbIdByIndex;
+    absorbed = Object.keys(absorbIdByIndex).length;
+    replaced = plan.previousImportRemoved;
+    duplicatesRemoved = plan.oldDuplicatesRemoved.length;
+    plan.deleteIds.forEach((id) => writes.push({ kind: "delete", id }));
+  }
+
+  incoming.forEach((c, i) => {
+    const absorbId = absorbIdByIndex[i];
+    const old = absorbId ? existingById.get(absorbId) : undefined;
+    writes.push({
+      kind: "set",
+      id: absorbId,
+      data: {
+        name: c.name.trim(),
+        category: c.category || "agency",
+        contactPerson: c.contactPerson?.trim() || "",
+        email: c.email?.trim() || "",
+        phone: c.phone?.trim() || "",
+        location: c.location?.trim() || "",
+        notes: c.notes?.trim() || "",
+        sheetGroup: c.sheetGroup?.trim() || "",
+        // An agreement already attached to the agent is kept when the file doesn't carry one.
+        agreement: c.agreement?.trim() || old?.agreement || "",
+        agreementUrl: c.agreementUrl?.trim() || old?.agreementUrl || "",
+        agreementFileName: c.agreementFileName?.trim() || old?.agreementFileName || "",
+        suspended: Boolean(c.suspended),
+        importBatchId: batchId,
+        updatedBy: opts.updatedBy,
+        updatedAt: serverTimestamp(),
+      },
+    });
+  });
 
   // Firestore batched writes cap at 500 ops — chunk with headroom to spare.
   const CHUNK = 400;
@@ -191,5 +198,5 @@ export async function importDirectoryContacts(
     await batch.commit();
   }
 
-  return { added: contacts.length - absorbed, replaced: toDelete.length, absorbed };
+  return { added: incoming.length - absorbed, replaced, absorbed, duplicatesRemoved };
 }

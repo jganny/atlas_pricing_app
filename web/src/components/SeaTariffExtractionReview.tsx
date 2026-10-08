@@ -12,7 +12,6 @@ import {
   type ExtractedContainer,
 } from "@/lib/ai/circular-extraction";
 import { publishSeaTariffRow } from "@/lib/firebase/circulars";
-import { removeDuplicateTariffs } from "@/lib/firebase/dedupe";
 import type { CircularRecord } from "@/lib/types";
 
 const CONTAINER_TYPE_OPTIONS = [
@@ -127,7 +126,6 @@ export function SeaTariffExtractionReview({
         uploadedBy,
       );
       toast(`Published ${origin} → ${destination} sea rates for ${carrier}.`, "success");
-      void removeDuplicateTariffs("sea");
       onPublished();
       onClose();
     } catch {

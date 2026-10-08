@@ -1,6 +1,6 @@
 "use client";
 
-import { removeDuplicateContacts } from "@/lib/firebase/dedupe";
+import { describeAgencyPlan } from "@/lib/quotes/agent-import";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -26,6 +26,7 @@ import { useLiveData } from "@/lib/api";
 import {
   deleteDirectoryContact,
   importDirectoryContacts,
+  previewAgencyImport,
   saveDirectoryContact,
   type DirectoryContactInput,
 } from "@/lib/firebase/directory";
@@ -314,17 +315,27 @@ export default function DirectoryPage() {
     setBusy(true);
     try {
       const replacePrevious = effectiveParent === "agents";
+      if (replacePrevious) {
+        // The weekly list replaces the old one and removes older duplicates — show exactly what
+        // will happen and only go ahead once the user says so.
+        const plan = await previewAgencyImport(mapped);
+        if (!window.confirm(describeAgencyPlan(plan))) {
+          toast("Upload cancelled — nothing was changed.", "info");
+          return;
+        }
+      }
       const result = await importDirectoryContacts(mapped, {
         updatedBy: user?.username || "unknown",
         replacePrevious,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
-      void removeDuplicateContacts();
       toast(
         replacePrevious
           ? `This week's list is live — ${result.added} agents added${
-              result.absorbed ? `, ${result.absorbed} matched to a hand-added agent` : ""
-            }, ${result.replaced} from last week's import removed`
+              result.absorbed ? `, ${result.absorbed} matched to an agent already on the list` : ""
+            }, ${result.replaced} from last week's import replaced${
+              result.duplicatesRemoved ? `, ${result.duplicatesRemoved} older duplicates deleted` : ""
+            }`
           : `Imported ${result.added} contacts`,
         "success",
       );

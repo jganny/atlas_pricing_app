@@ -21,7 +21,7 @@ export function VendorCompareList({
   vendors,
   currency,
   heading = "Compare options",
-  hint = "Cheapest → highest. ★ marks the lowest total per lane. Click a row to inspect its breakup. Quoted is the option on this document.",
+  hint = "Cheapest → highest. ★ marks the lowest total and ▲ the highest, per lane. Click a row to inspect its breakup. Quoted is the option on this document.",
   onSelect,
   activeId,
   testId = "vendor-compare-list",
@@ -43,7 +43,10 @@ export function VendorCompareList({
       <h3 className="mb-1 text-sm font-extrabold text-[var(--color-atlas-navy)]">{heading}</h3>
       <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">{hint}</p>
       <div className="space-y-3">
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const priced = group.rows.filter((r) => r.total > 0).map((r) => r.total);
+          const hiTotal = priced.length > 1 && Math.max(...priced) > Math.min(...priced) ? Math.max(...priced) : 0;
+          return (
           <div key={group.label || "one"}>
             {showHeaders && group.label ? (
               <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--color-atlas-navy)]">
@@ -60,6 +63,12 @@ export function VendorCompareList({
                         <span data-testid="vendor-compare-star" className="text-emerald-700">
                           {" "}
                           ★
+                        </span>
+                      ) : null}
+                      {hiTotal > 0 && v.total === hiTotal ? (
+                        <span data-testid="vendor-compare-highest" className="text-amber-700">
+                          {" "}
+                          ▲ highest
                         </span>
                       ) : null}
                       {v.selected ? (
@@ -116,7 +125,8 @@ export function VendorCompareList({
               })}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

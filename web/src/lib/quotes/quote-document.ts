@@ -29,6 +29,7 @@ function optionFlags(option: OptionBreakdown): string {
   const bits: string[] = [];
   if (option.selected) bits.push("quoted offer");
   if (option.cheapest) bits.push("lowest");
+  if (option.highest) bits.push("highest");
   return bits.join(" · ");
 }
 
@@ -54,11 +55,30 @@ export function groupOptionsByLane<T extends { laneId?: string; laneLabel?: stri
   return order.map((key) => groups.get(key)!);
 }
 
-/** Quoted offer first within each lane; lanes stay in first-seen order so the pack reads Lane 1 top to bottom, then Lane 2. */
+/**
+ * Cheapest to highest within each lane, tagging the cheapest and the highest so the customer can see
+ * every price at a glance. Lanes stay in first-seen order (Lane 1 top to bottom, then Lane 2). The
+ * option we recommend keeps its own "quoted offer" marker wherever it falls; options with no price
+ * yet go last.
+ */
 export function orderOptionsForPack(options: OptionBreakdown[]): OptionBreakdown[] {
-  return groupOptionsByLane(options).flatMap((group) =>
-    [...group.options].sort((a, b) => Number(b.selected) - Number(a.selected)),
-  );
+  return groupOptionsByLane(options).flatMap((group) => {
+    const priced = group.options.filter((o) => o.total > 0);
+    const min = priced.length ? Math.min(...priced.map((o) => o.total)) : 0;
+    const max = priced.length ? Math.max(...priced.map((o) => o.total)) : 0;
+    return [...group.options]
+      .sort((a, b) => {
+        const pa = a.total > 0;
+        const pb = b.total > 0;
+        if (pa !== pb) return pa ? -1 : 1;
+        return a.total - b.total || Number(b.selected) - Number(a.selected);
+      })
+      .map((o) => ({
+        ...o,
+        cheapest: o.total > 0 && o.total === min,
+        highest: priced.length > 1 && max > min && o.total === max,
+      }));
+  });
 }
 
 function optionListPlain(options: OptionBreakdown[], heading: string, cur: string): string[] {
@@ -66,7 +86,7 @@ function optionListPlain(options: OptionBreakdown[], heading: string, cur: strin
   const multiLane = groupOptionsByLane(options).length > 1;
   const lines = [heading];
   for (const option of options) {
-    const flag = option.selected ? "quoted offer" : option.cheapest ? "lowest" : "alternative";
+    const flag = optionFlags(option) || "alternative";
     const lanePrefix = multiLane && option.laneLabel ? `${option.laneLabel} · ` : "";
     lines.push(`• ${lanePrefix}${option.name}: ${formatCurrency(option.total, cur)} (${flag})`);
   }
@@ -120,7 +140,7 @@ export function buildClientQuoteDocument(
     ...(holidayNotices.length ? [...holidayNotices, ""] : []),
     ...(list.length ? [...list, ""] : []),
     options.length > 1
-      ? "The attached PDF matches this quotation. It lists every airline option and the full charge breakup for each one."
+      ? "The attached PDF matches this quotation. It lists every option from lowest to highest price, with the full charge breakup for each one."
       : "The attached PDF matches this quotation, including the charge breakup.",
   ].join("\n");
 
@@ -134,7 +154,7 @@ export function buildClientQuoteDocument(
     ...list,
     "",
     options.length > 1
-      ? "PDF attached — every airline’s breakup is on the document (quoted offer first)."
+      ? "PDF attached — every option’s breakup is on the document, lowest price first."
       : "PDF attached — official quotation with charge breakup.",
   ].join("\n");
 
@@ -166,7 +186,7 @@ export function buildClientQuoteDocument(
     const laneTag = multiLanePack && option.laneLabel ? ` <span class="lane-tag">${esc(option.laneLabel)}</span>` : "";
     return `<section class="panel${option.selected ? " quoted" : ""}">
         <p class="panel-kicker">${index + 1} of ${laneCount} · ${esc(role)}${laneTag}</p>
-        <h3>${esc(option.name)}${option.cheapest ? " ★ lowest" : ""}</h3>
+        <h3>${esc(option.name)}${option.cheapest ? " ★ lowest" : ""}${option.highest ? " ▲ highest" : ""}</h3>
         ${dl}
         <div class="row muted"><span>Routing</span><span>${esc(routing)}</span></div>
         <div class="row muted"><span>Transit time</span><span>${esc(tt)}</span></div>
@@ -185,7 +205,7 @@ export function buildClientQuoteDocument(
 
   const packHint =
     options.length > 1
-      ? `<p class="hint"><strong>Quoted offer</strong> — the option we're recommending to the client, chosen on the desk; it prints first${multiLanePack ? " in each lane" : ""}. <strong>★ Lowest</strong> — the cheapest option${multiLanePack ? " on that lane" : ""}, shown for comparison even when it isn't the one we're recommending. The same option can be both, like it is here.</p>`
+      ? `<p class="hint">Options are listed from the lowest price to the highest${multiLanePack ? " within each lane" : ""}. <strong>★ Lowest</strong> — the cheapest option. <strong>▲ Highest</strong> — the most expensive option. <strong>Quoted offer</strong> — the option we're recommending to you.</p>`
       : "";
 
   const identityRowsHtml = identityRows(quote)

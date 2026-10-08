@@ -1,5 +1,7 @@
 "use client";
 
+import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,6 +20,8 @@ import { ValidityField } from "@/components/ValidityField";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
 import { EmptyNumberInput } from "@/components/EmptyNumberInput";
+import { SurchargeTable } from "@/components/desks/SurchargeTable";
+import { calcSurchargeCost, sumSurcharges, type SurchargeRow } from "@/lib/pricing/surcharges";
 import { VendorCompareList } from "@/components/VendorCompareList";
 import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
 import { useAuthStore } from "@/store/auth";
@@ -102,6 +106,9 @@ function priceCourierCard(
     destPin: string;
     scope: "domestic" | "international";
     gstEnabled: boolean;
+    /** Charges at either end (freight by courier, clearance under cargo mode) — same for every carrier. */
+    originCharges: SurchargeRow[];
+    destCharges: SurchargeRow[];
   },
 ): {
   tariff: CourierTariffLookup;
@@ -115,6 +122,9 @@ function priceCourierCard(
   fuel: number;
   extras: number;
   tax: number;
+  /** Origin / destination charges, added to the total after GST (enter them as final amounts). */
+  originFees: number;
+  destFees: number;
   total: number;
 } {
   const manual = option.manualOverride;
@@ -146,6 +156,9 @@ function priceCourierCard(
     (s.insurance ? Math.max((s.declaredValue * s.insurancePct) / 100, 0) : 0);
   const sub = base + fuel + extras;
   const tax = ctx.gstEnabled ? sub * 0.18 : 0;
+  const feeBase = { chargeableKg: ctx.chargeableKg };
+  const originFees = sumSurcharges(ctx.originCharges.map((r) => calcSurchargeCost(r, feeBase))).quote;
+  const destFees = sumSurcharges(ctx.destCharges.map((r) => calcSurchargeCost(r, feeBase))).quote;
   const name =
     option.directoryCarrier.trim() ||
     (!manual && tariff.status === "hit" ? tariff.book.carrier : "");
@@ -161,7 +174,9 @@ function priceCourierCard(
     fuel,
     extras,
     tax,
-    total: sub + tax,
+    originFees,
+    destFees,
+    total: sub + tax + originFees + destFees,
   };
 }
 
@@ -201,11 +216,60 @@ function CourierDeskInner() {
   const [packages, setPackages] = useState<CourierPackageLine[]>([{ ...EMPTY_PACKAGE }]);
   const [couriers, setCouriers] = useState<CourierOption[]>(() => [createCourierOption({}, true)]);
   const [terms, setTerms] = useState(DEFAULT_COURIER_TERMS);
+  const [originCharges, setOriginCharges] = useState<SurchargeRow[]>([]);
+  const [destCharges, setDestCharges] = useState<SurchargeRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
+  const draft = useDeskDraft({
+    desk: "courier",
+    username: user?.username,
+    enabled: loader.ready && !loader.sourceQuote && !loader.smartPrefill && !loader.editingQuoteId,
+    state: {
+      customer,
+      lanes,
+      activeLaneId,
+      originCountry,
+      destCountry,
+      originPin,
+      destPin,
+      scope,
+      currency,
+      gstEnabled,
+      validity,
+      packages,
+      couriers,
+      terms,
+      originCharges,
+      destCharges,
+      tab,
+    },
+    apply: (s) => {
+      setCustomer(s.customer);
+      setLanes(s.lanes);
+      setActiveLaneId(s.activeLaneId);
+      setOriginCountry(s.originCountry);
+      setDestCountry(s.destCountry);
+      setOriginPin(s.originPin);
+      setDestPin(s.destPin);
+      setScope(s.scope);
+      setCurrency(s.currency);
+      setGstEnabled(s.gstEnabled);
+      setValidity(s.validity);
+      setPackages(s.packages);
+      setCouriers(s.couriers);
+      setTerms(s.terms);
+      setOriginCharges(s.originCharges);
+      setDestCharges(s.destCharges);
+      setTab(s.tab);
+    },
+    summarize: (s) => `${s.customer.trim() || "no customer yet"} · ${s.lanes[0]?.origin || "…"} → ${s.lanes[0]?.destination || "…"}`,
+    hasContent: (s) => Boolean(s.customer.trim()) || s.lanes.some((l) => l.origin.trim() || l.destination.trim()),
+  });
 
   const multiLane = usableLanes(lanes).length > 1;
   const couriersOnLane = optionsOnLane(couriers, activeLaneId, fallbackLaneId);
@@ -453,6 +517,8 @@ function CourierDeskInner() {
     setValidity(loaded.validity);
     setPackages(loaded.packages);
     setCouriers(loaded.couriers);
+    setOriginCharges(loaded.originCharges);
+    setDestCharges(loaded.destCharges);
     if (loaded.terms) setTerms(loaded.terms);
   }, [loader.sourceQuote]);
 
@@ -501,8 +567,10 @@ function CourierDeskInner() {
       destPin,
       scope,
       gstEnabled,
+      originCharges,
+      destCharges,
     }),
-    [tariffBooks, cargo.chargeableKg, originCountry, destCountry, originCity, originPin, destCity, destPin, scope, gstEnabled],
+    [tariffBooks, cargo.chargeableKg, originCountry, destCountry, originCity, originPin, destCity, destPin, scope, gstEnabled, originCharges, destCharges],
   );
 
   const priced = useMemo(
@@ -522,6 +590,7 @@ function CourierDeskInner() {
   const allLanesTotal = useMemo(() => quotedLanes.reduce((sum, l) => sum + l.amount, 0), [quotedLanes]);
 
   function applyReset() {
+    draft.clear();
     const lane = newLane();
     setCustomer("");
     setLanes([lane]);
@@ -536,6 +605,8 @@ function CourierDeskInner() {
     setValidity("15 days");
     setPackages([{ ...EMPTY_PACKAGE }]);
     setCouriers([createCourierOption({}, true)]);
+    setOriginCharges([]);
+    setDestCharges([]);
     setTerms(DEFAULT_COURIER_TERMS);
     setSaveMsg(null);
     setSaveEnquiryPath(null);
@@ -558,6 +629,8 @@ function CourierDeskInner() {
       transit: SERVICE_LEVELS[p.option.service as CourierServiceKey]?.transit,
       chargeableKg: cargo.chargeableKg,
       gstAmount: p.tax,
+      localOriginTotal: p.originFees,
+      destClearanceTotal: p.destFees,
     }));
   }
 
@@ -596,6 +669,8 @@ function CourierDeskInner() {
         zone: cargo.zone,
         gstAmount: primary?.gstAmount ?? 0,
         validity,
+        localOriginCharges: originCharges,
+        destClearanceCharges: destCharges,
         originCity,
         destCity,
         lanes: lanes.map((l) => ({ id: l.id, origin: l.origin, destination: l.destination })),
@@ -718,6 +793,8 @@ function CourierDeskInner() {
               quotedLanes,
               allLanesAmount: multiLane ? allLanesTotal : undefined,
               termsAndConditions: terms,
+              originCharges,
+              destCharges,
               validity,
               quoteId,
               quoteNumber,
@@ -733,6 +810,7 @@ function CourierDeskInner() {
         const msg = savedEnquiryMessage(row, { cloud });
         setSaveMsg(msg);
         setSaveEnquiryPath(savedEnquiryHref(row));
+        draft.clear();
         toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Save failed";
@@ -773,6 +851,7 @@ function CourierDeskInner() {
 
   return (
     <div className="space-y-6">
+      <DraftResumeBanner deskLabel="courier" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
@@ -1375,6 +1454,31 @@ function CourierDeskInner() {
                   ) : null}
                 </div>
               ) : null}
+
+              <div className="space-y-3 rounded-lg border border-[var(--color-border)] p-3" data-testid="courier-end-charges">
+                <h3 className="text-sm font-bold">Origin and destination charges (optional)</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  When the freight is by courier but the clearance or handling at either end is done under cargo
+                  mode, add those charges here once. They are added to every carrier&apos;s total after GST, so
+                  enter them as the final amount to charge.
+                </p>
+                <SurchargeTable
+                  title="Origin charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={originCharges}
+                  onChange={setOriginCharges}
+                  units={["flat", "kg"]}
+                />
+                <SurchargeTable
+                  title="Destination charges"
+                  enabled
+                  onEnabledChange={() => {}}
+                  rows={destCharges}
+                  onChange={setDestCharges}
+                  units={["flat", "kg"]}
+                />
+              </div>
             </div>
           ) : null}
 
@@ -1429,6 +1533,18 @@ function CourierDeskInner() {
                   <dt className="text-[var(--color-text-muted)]">Fuel + extras</dt>
                   <dd>{formatCurrency(activePriced.fuel + activePriced.extras, currency)}</dd>
                 </div>
+                {activePriced.originFees > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Origin charges</dt>
+                    <dd>{formatCurrency(activePriced.originFees, currency)}</dd>
+                  </div>
+                ) : null}
+                {activePriced.destFees > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Destination charges</dt>
+                    <dd>{formatCurrency(activePriced.destFees, currency)}</dd>
+                  </div>
+                ) : null}
                 {gstEnabled ? (
                   <div className="flex justify-between">
                     <dt className="text-[var(--color-text-muted)]">GST (18%)</dt>
@@ -1493,6 +1609,18 @@ function CourierDeskInner() {
                   <dt className="text-[var(--color-text-muted)]">Fuel + extras</dt>
                   <dd>{formatCurrency(activePriced.fuel + activePriced.extras, currency)}</dd>
                 </div>
+                {activePriced.originFees > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Origin charges</dt>
+                    <dd>{formatCurrency(activePriced.originFees, currency)}</dd>
+                  </div>
+                ) : null}
+                {activePriced.destFees > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Destination charges</dt>
+                    <dd>{formatCurrency(activePriced.destFees, currency)}</dd>
+                  </div>
+                ) : null}
                 {gstEnabled ? (
                   <div className="flex justify-between">
                     <dt className="text-[var(--color-text-muted)]">GST (18%)</dt>

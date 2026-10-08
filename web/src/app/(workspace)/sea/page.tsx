@@ -1,5 +1,7 @@
 "use client";
 
+import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Plus, RotateCcw, Save, Ship, Trash2, Zap } from "lucide-react";
@@ -169,6 +171,57 @@ function SeaDeskInner() {
   const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
+  const draft = useDeskDraft({
+    desk: "sea",
+    username: user?.username,
+    enabled: loader.ready && !loader.sourceQuote && !loader.smartPrefill && !loader.editingQuoteId,
+    state: {
+      customer,
+      lanes,
+      activeLaneId,
+      currency,
+      incoterm,
+      commodity,
+      module,
+      mode,
+      grossWeightKg,
+      volumeCbm,
+      cargo,
+      dimUnit,
+      chargeableCbmOverride,
+      customFx,
+      liners,
+      localOriginCharges,
+      destClearanceCharges,
+      terms,
+      step,
+    },
+    apply: (s) => {
+      setCustomer(s.customer);
+      setLanes(s.lanes);
+      setActiveLaneId(s.activeLaneId);
+      setCurrency(s.currency);
+      setIncoterm(s.incoterm);
+      setCommodity(s.commodity);
+      setModule(s.module);
+      setMode(s.mode);
+      setGrossWeightKg(s.grossWeightKg);
+      setVolumeCbm(s.volumeCbm);
+      setCargo(s.cargo);
+      setDimUnit(s.dimUnit);
+      setChargeableCbmOverride(s.chargeableCbmOverride);
+      setCustomFx(s.customFx);
+      setLiners(s.liners);
+      setLocalOriginCharges(s.localOriginCharges);
+      setDestClearanceCharges(s.destClearanceCharges);
+      setTerms(s.terms);
+      setStep(s.step);
+    },
+    summarize: (s) => `${s.customer.trim() || "no customer yet"} · ${s.lanes[0]?.origin || "…"} → ${s.lanes[0]?.destination || "…"}`,
+    hasContent: (s) => Boolean(s.customer.trim()) || s.lanes.some((l) => l.origin.trim() || l.destination.trim()),
+  });
   const prefillApplied = useRef(false);
 
   // Per-package L×W×H rows are the primary way to enter cargo (mirrors Air
@@ -487,6 +540,7 @@ function SeaDeskInner() {
   }
 
   function applyReset() {
+    draft.clear();
     const lane = newLane();
     setCustomer("");
     setLanes([lane]);
@@ -831,6 +885,7 @@ function SeaDeskInner() {
         const msg = savedEnquiryMessage(row, { cloud });
         setSaveMsg(msg);
         setSaveEnquiryPath(savedEnquiryHref(row));
+        draft.clear();
         toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Save failed";
@@ -898,6 +953,7 @@ function SeaDeskInner() {
 
   return (
     <div className="space-y-3">
+      <DraftResumeBanner deskLabel="sea" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>

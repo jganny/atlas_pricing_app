@@ -297,6 +297,8 @@ export function loadCourierDeskFromQuote(quote: SavedQuote) {
     packages: (d.packages as Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>) ?? [
       { qty: 1, gw: 5, l: 30, w: 20, h: 15 },
     ],
+    originCharges: mapSurcharges(d.localOriginCharges) ?? [],
+    destCharges: mapSurcharges(d.destClearanceCharges) ?? [],
     lanes: savedLanes,
     couriers,
     terms: String(d.termsAndConditions ?? ""),

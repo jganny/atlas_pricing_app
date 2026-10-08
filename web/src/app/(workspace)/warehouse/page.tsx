@@ -1,5 +1,7 @@
 "use client";
 
+import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -73,6 +75,47 @@ export default function WarehouseDeskPage() {
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+
+  // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
+  const draft = useDeskDraft({
+    desk: "warehouse",
+    username: user?.username,
+    enabled: loader.ready && !loader.sourceQuote && !loader.smartPrefill && !loader.editingQuoteId,
+    state: {
+      customer,
+      location,
+      otherDescription,
+      storageType,
+      currency,
+      ratePerCbm,
+      cbm,
+      handling,
+      days,
+      buyTotal,
+      validity,
+      notes,
+      terms,
+      tab,
+    },
+    apply: (s) => {
+      setCustomer(s.customer);
+      setLocation(s.location);
+      setOtherDescription(s.otherDescription);
+      setStorageType(s.storageType);
+      setCurrency(s.currency);
+      setRatePerCbm(s.ratePerCbm);
+      setCbm(s.cbm);
+      setHandling(s.handling);
+      setDays(s.days);
+      setBuyTotal(s.buyTotal);
+      setValidity(s.validity);
+      setNotes(s.notes);
+      setTerms(s.terms);
+      setTab(s.tab);
+    },
+    summarize: (s) => `${s.customer.trim() || "no customer yet"} · ${s.location}`,
+    hasContent: (s) => Boolean(s.customer.trim()) || s.cbm > 0 || s.ratePerCbm > 0,
+  });
 
   useEffect(() => {
     const c = searchParams?.get("customer");
@@ -240,6 +283,7 @@ export default function WarehouseDeskPage() {
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       toast("Warehouse quote saved", "success");
+        draft.clear();
     } finally {
       setBusy(false);
     }
@@ -260,6 +304,7 @@ export default function WarehouseDeskPage() {
 
   return (
     <div className="space-y-4">
+      <DraftResumeBanner deskLabel="warehouse" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>

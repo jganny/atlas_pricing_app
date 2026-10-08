@@ -1,5 +1,7 @@
 "use client";
 
+import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -115,6 +117,51 @@ export default function TransportDeskPage() {
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+
+  // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
+  const draft = useDeskDraft({
+    desk: "transport",
+    username: user?.username,
+    enabled: loader.ready && !loader.sourceQuote && !loader.smartPrefill && !loader.editingQuoteId,
+    state: {
+      customer,
+      lanes,
+      activeLaneId,
+      vehicleType,
+      serviceType,
+      currency,
+      commodity,
+      ewayBillNo,
+      ewayRequired,
+      gstin,
+      invoiceValue,
+      validity,
+      truckers,
+      notes,
+      terms,
+      tab,
+    },
+    apply: (s) => {
+      setCustomer(s.customer);
+      setLanes(s.lanes);
+      setActiveLaneId(s.activeLaneId);
+      setVehicleType(s.vehicleType);
+      setServiceType(s.serviceType);
+      setCurrency(s.currency);
+      setCommodity(s.commodity);
+      setEwayBillNo(s.ewayBillNo);
+      setEwayRequired(s.ewayRequired);
+      setGstin(s.gstin);
+      setInvoiceValue(s.invoiceValue);
+      setValidity(s.validity);
+      setTruckers(s.truckers);
+      setNotes(s.notes);
+      setTerms(s.terms);
+      setTab(s.tab);
+    },
+    summarize: (s) => `${s.customer.trim() || "no customer yet"} · ${s.lanes[0]?.origin || "…"} → ${s.lanes[0]?.destination || "…"}`,
+    hasContent: (s) => Boolean(s.customer.trim()) || s.lanes.some((l) => l.origin.trim() || l.destination.trim()),
+  });
 
   useEffect(() => {
     const c = searchParams?.get("customer");
@@ -410,6 +457,7 @@ export default function TransportDeskPage() {
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       toast("Transport quote saved", "success");
+        draft.clear();
     } finally {
       setBusy(false);
     }
@@ -419,6 +467,7 @@ export default function TransportDeskPage() {
 
   return (
     <div className="space-y-4">
+      <DraftResumeBanner deskLabel="transport" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>

@@ -14,7 +14,7 @@ import {
 } from "../pricing/air-desk";
 import { computeLinerTotals } from "../pricing/sea-desk";
 import { quoteSideRate } from "../pricing/quote-rate";
-import type { SurchargeRow } from "../pricing/surcharges";
+import { calcSurchargeCost, type CalculatedSurcharge, type SurchargeRow } from "../pricing/surcharges";
 import { laneRouteLabel, type QuoteLane } from "./lanes";
 import { vendorRowsFromQuote, type VendorPreviewRow } from "./vendor-preview";
 import { mapSurcharges } from "./desk-loader";
@@ -25,6 +25,8 @@ export type SurchargeBreakdownLine = { name: string; amount: number; remarks?: s
 export type ContainerBreakdownLine = { type: string; qty: number; rate: number; amount: number };
 
 export type OptionBreakdown = VendorPreviewRow & {
+  /** Set by orderOptionsForPack: the most expensive option on its lane (only when there is a real spread). */
+  highest?: boolean;
   baseFreight: number;
   originFees: number;
   destFees: number;
@@ -275,6 +277,8 @@ export function courierSnapshot(
     validity?: string;
     chargeableKg?: number;
     gstAmount?: number;
+    localOriginTotal?: number;
+    destClearanceTotal?: number;
   },
   lanes: QuoteLane[],
   fallbackLaneId: string,
@@ -288,6 +292,8 @@ export function courierSnapshot(
     id: option.id,
     name: computed.name || "Untitled",
     kind: "courier",
+    localOriginTotal: computed.localOriginTotal ?? 0,
+    destClearanceTotal: computed.destClearanceTotal ?? 0,
     directoryCarrier: option.directoryCarrier,
     carrierId: option.carrierId,
     service: option.service,
@@ -366,6 +372,7 @@ function totalsFromRaw(
   dimUnit: DimUnit = "cms",
   localOriginCharges: SurchargeRow[] = [],
   destClearanceCharges: SurchargeRow[] = [],
+  courierKg = 0,
 ): FeeFields {
   const k = kind.toLowerCase();
   const computeAir = shouldComputeAirline(kind, quoteType);
@@ -412,8 +419,12 @@ function totalsFromRaw(
 
   const originArr = computed?.origin ?? seaComputed?.origin ?? [];
   const destArr = computed?.dest ?? seaComputed?.dest ?? [];
-  const localOriginArr = computed?.localOrigin ?? seaComputed?.localOrigin ?? [];
-  const destClearanceArr = computed?.destClearance ?? seaComputed?.destClearance ?? [];
+  // Courier quotes carry their own origin / destination charges, priced per chargeable kg or flat.
+  const isCourier = quoteType.toLowerCase().includes("courier");
+  const courierArr = (rows: SurchargeRow[]): CalculatedSurcharge[] =>
+    isCourier ? rows.map((r) => calcSurchargeCost(r, { chargeableKg: courierKg })) : [];
+  const localOriginArr = computed?.localOrigin ?? seaComputed?.localOrigin ?? courierArr(localOriginCharges);
+  const destClearanceArr = computed?.destClearance ?? seaComputed?.destClearance ?? courierArr(destClearanceCharges);
 
   return {
     baseFreight,
@@ -651,6 +662,7 @@ export function optionBreakdownsFromQuote(quote: SavedQuote): OptionBreakdown[] 
       dimUnit,
       localOriginCharges,
       destClearanceCharges,
+      num(d.chargeableWeight),
     );
     return {
       ...v,

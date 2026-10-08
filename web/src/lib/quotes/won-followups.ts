@@ -29,6 +29,21 @@ export function missingWonFields(v: WonFollowUpValues): WonFollowUpField[] {
   return out;
 }
 
+/**
+ * Which rows are still waiting and which are done — judged on what is SAVED, never on
+ * what is half-typed. (Judging on the typed text made a row vanish the moment its last
+ * missing field got its first letter, before the user could press Save.)
+ */
+export function splitWonRows<T extends WonFollowUpValues & { wonAt: string }>(
+  rows: T[],
+): { pending: T[]; complete: T[] } {
+  const pending = rows
+    .filter((r) => missingWonFields(r).length > 0)
+    .sort((a, b) => new Date(a.wonAt).getTime() - new Date(b.wonAt).getTime());
+  const complete = rows.filter((r) => missingWonFields(r).length === 0);
+  return { pending, complete };
+}
+
 export type EscalationTier = "quiet" | "amber" | "red";
 
 export function daysSince(dateIso: string, now: Date = new Date()): number {

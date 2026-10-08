@@ -5,12 +5,11 @@ import { HelpFab } from "@/components/HelpFab";
 import { CommandPalette } from "@/components/CommandPalette";
 import { EscapeHandler } from "@/components/EscapeHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ToastContainer, toast } from "@/components/Toast";
+import { ToastContainer } from "@/components/Toast";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { subscribeDeskSeats } from "@/lib/firebase/desk-seats";
 import { startNrsDeskSync } from "@/lib/firebase/nrs-desk";
 import { startCustomEntriesSync } from "@/lib/firebase/custom-entries";
-import { DUPLICATES_REMOVED_EVENT, type DuplicatesRemoved } from "@/lib/firebase/dedupe";
 import { applyRemoteOccupants } from "@/lib/auth/desk-seats";
 import { quoteDeskLabel } from "@/lib/quotes/team-roles";
 import { queryKeys } from "@/hooks/query-keys";
@@ -172,26 +171,6 @@ function CustomEntriesSync() {
   return null;
 }
 
-/** Tells the user when an upload's clean-up removed older copies, and refreshes the lists. */
-function DuplicatesNotice() {
-  const qc = useQueryClient();
-  useEffect(() => {
-    function onRemoved(e: Event) {
-      const { what, count } = (e as CustomEvent<DuplicatesRemoved>).detail;
-      toast(`Removed ${count} duplicate${count > 1 ? "s" : ""} from ${what} — kept the newest.`, "info");
-      const key =
-        what === "circulars" ? queryKeys.circulars
-        : what === "air tariffs" ? queryKeys.airTariffs
-        : what === "sea tariffs" ? queryKeys.seaTariffs
-        : queryKeys.directory;
-      void qc.invalidateQueries({ queryKey: key });
-    }
-    window.addEventListener(DUPLICATES_REMOVED_EVENT, onRemoved);
-    return () => window.removeEventListener(DUPLICATES_REMOVED_EVENT, onRemoved);
-  }, [qc]);
-  return null;
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -217,7 +196,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <AuthSync />
         <SeatsSync />
         <NrsDeskSync />
-        <DuplicatesNotice />
         <CustomEntriesSync />
         <EscapeHandler />
         <CommandPalette />

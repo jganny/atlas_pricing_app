@@ -1,5 +1,6 @@
 "use client";
 
+import { orderOptionsForPack } from "@/lib/quotes/quote-document";
 import { useEffect, useMemo, useState } from "react";
 import { Download, Mail, MessageCircle, Printer, X } from "lucide-react";
 import type { SavedQuote } from "@/lib/types";
@@ -63,7 +64,8 @@ function BreakdownPanel({
       </div>
       <div className="mb-3 font-extrabold text-[var(--color-atlas-navy)]">
         {option.name}
-        {option.cheapest ? " ★" : ""}
+        {option.cheapest ? " ★ lowest" : ""}
+        {option.highest ? " ▲ highest" : ""}
         {option.selected ? " · quoted" : ""}
         {option.laneLabel ? ` · ${option.laneLabel}` : ""}
       </div>
@@ -110,7 +112,7 @@ export function QuotePreviewModal({
 }) {
   const ref = getQuoteRefId(quote);
   const vendors = vendorRowsFromQuote(quote);
-  const options = uniqueOptionBreakdowns(optionBreakdownsFromQuote(quote));
+  const options = orderOptionsForPack(uniqueOptionBreakdowns(optionBreakdownsFromQuote(quote)));
   const quoted = vendors.find((v) => v.selected) ?? vendors[0];
   const cheapest = vendors.find((v) => v.cheapest);
   const [inspectId, setInspectId] = useState(quoted?.id ?? options[0]?.id ?? "");

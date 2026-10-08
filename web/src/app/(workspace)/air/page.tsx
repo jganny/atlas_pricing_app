@@ -1,5 +1,7 @@
 "use client";
 
+import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -148,6 +150,49 @@ function AirDeskInner() {
   const hideAgreement = shouldHideAgencyAgreement(user?.username);
   const [agreementName, setAgreementName] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | undefined>(undefined);
+
+  // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
+  const draft = useDeskDraft({
+    desk: "air",
+    username: user?.username,
+    enabled: loader.ready && !loader.sourceQuote && !loader.smartPrefill && !loader.editingQuoteId,
+    state: {
+      customer,
+      lanes,
+      activeLaneId,
+      currency,
+      incoterm,
+      commodity,
+      module,
+      customFx,
+      cargo,
+      dimUnit,
+      airlines,
+      localOriginCharges,
+      destClearanceCharges,
+      terms,
+      step,
+    },
+    apply: (s) => {
+      setCustomer(s.customer);
+      setLanes(s.lanes);
+      setActiveLaneId(s.activeLaneId);
+      setCurrency(s.currency);
+      setIncoterm(s.incoterm);
+      setCommodity(s.commodity);
+      setModule(s.module);
+      setCustomFx(s.customFx);
+      setCargo(s.cargo);
+      setDimUnit(s.dimUnit);
+      setAirlines(s.airlines);
+      setLocalOriginCharges(s.localOriginCharges);
+      setDestClearanceCharges(s.destClearanceCharges);
+      setTerms(s.terms);
+      setStep(s.step);
+    },
+    summarize: (s) => `${s.customer.trim() || "no customer yet"} · ${s.lanes[0]?.origin || "…"} → ${s.lanes[0]?.destination || "…"}`,
+    hasContent: (s) => Boolean(s.customer.trim()) || s.lanes.some((l) => l.origin.trim() || l.destination.trim()),
+  });
   const prefillApplied = useRef(false);
 
   useEffect(() => {
@@ -478,6 +523,7 @@ function AirDeskInner() {
   }
 
   function applyReset() {
+    draft.clear();
     const lane = newLane();
     setCustomer("");
     setLanes([lane]);
@@ -852,6 +898,7 @@ function AirDeskInner() {
         const msg = savedEnquiryMessage(row, { cloud, lanesNote });
         setSaveMsg(msg);
         setSaveEnquiryPath(savedEnquiryHref(row));
+        draft.clear();
         toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Save failed";
@@ -913,6 +960,7 @@ function AirDeskInner() {
 
   return (
     <div className="space-y-3">
+      <DraftResumeBanner deskLabel="air" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>

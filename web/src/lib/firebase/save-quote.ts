@@ -55,6 +55,9 @@ export interface CourierCardResult {
   transit?: string;
   chargeableKg?: number;
   gstAmount?: number;
+  /** Origin / destination charges included in sellLocal (same for every card). */
+  localOriginTotal?: number;
+  destClearanceTotal?: number;
 }
 
 export interface SaveCourierInput extends SaveMeta {
@@ -83,6 +86,9 @@ export interface SaveCourierInput extends SaveMeta {
   /** Sum of each lane's quoted card, when there's more than one lane. */
   allLanesAmount?: number;
   termsAndConditions?: string;
+  /** Charges at origin / destination (e.g. clearance under cargo mode), shared by every carrier. */
+  originCharges?: SurchargeRow[];
+  destCharges?: SurchargeRow[];
   validity?: string;
 }
 
@@ -176,11 +182,15 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
             validity: input.validity || "",
             chargeableKg: c.chargeableKg,
             gstAmount: c.gstAmount,
+            localOriginTotal: c.localOriginTotal,
+            destClearanceTotal: c.destClearanceTotal,
           },
           lanes,
           fallbackLaneId,
         ),
       ),
+      localOriginCharges: input.originCharges ?? [],
+      destClearanceCharges: input.destCharges ?? [],
       termsAndConditions: input.termsAndConditions ?? DEFAULT_COURIER_TERMS,
     },
     notes: `Courier quote. CHW: ${input.calc.chargeableKg} kg, Zone ${input.calc.zone}, ${primary?.name ?? ""}`,
