@@ -41,6 +41,9 @@ function mapContact(id: string, data: Record<string, unknown>): DirectoryContact
     updatedBy: data.updatedBy ? String(data.updatedBy) : "",
     updatedAt: updatedAtStr,
     importBatchId: data.importBatchId ? String(data.importBatchId) : undefined,
+    rating: Number.isFinite(Number(data.rating)) && data.rating !== "" && data.rating != null ? Number(data.rating) : undefined,
+    creditTerms: data.creditTerms ? String(data.creditTerms) : undefined,
+    moduleType: data.moduleType ? String(data.moduleType) : undefined,
   };
 }
 
@@ -116,7 +119,11 @@ export async function deleteDirectoryContact(id: string): Promise<void> {
  * user to confirm. See planAgencyImport for the rules.
  */
 export async function previewAgencyImport(contacts: DirectoryContactInput[]) {
-  return planAgencyImport(await fetchDirectoryContacts(), contacts);
+  const agencyRows = contacts.filter((c) => (c.category || "agency").toLowerCase() === "agency");
+  return {
+    plan: planAgencyImport(await fetchDirectoryContacts(), agencyRows),
+    otherRows: contacts.length - agencyRows.length,
+  };
 }
 
 /**
@@ -140,7 +147,11 @@ export async function importDirectoryContacts(
     | { kind: "set"; id?: string; data: Record<string, unknown> };
 
   const writes: Write[] = [];
-  let incoming = contacts;
+  // Only Overseas Agents are replaced and de-duplicated weekly; any other contact rows in the file
+  // (liners, airlines…) are simply added.
+  const isAgency = (c: DirectoryContactInput) => (c.category || "agency").toLowerCase() === "agency";
+  const others = opts.replacePrevious ? contacts.filter((c) => !isAgency(c)) : [];
+  let incoming = opts.replacePrevious ? contacts.filter(isAgency) : contacts;
   let absorbed = 0;
   let replaced = 0;
   let duplicatesRemoved = 0;
@@ -150,9 +161,9 @@ export async function importDirectoryContacts(
   if (opts.replacePrevious) {
     const existing = await fetchDirectoryContacts();
     existingById = new Map(existing.map((c) => [c.id, c]));
-    const plan = planAgencyImport(existing, contacts);
-    incoming = plan.incoming;
-    absorbIdByIndex = plan.absorbIdByIndex;
+    const plan = planAgencyImport(existing, incoming);
+    incoming = [...plan.incoming, ...others];
+    absorbIdByIndex = plan.absorbIdByIndex; // indexes refer to the agency rows, which come first
     absorbed = Object.keys(absorbIdByIndex).length;
     replaced = plan.previousImportRemoved;
     duplicatesRemoved = plan.oldDuplicatesRemoved.length;
@@ -179,6 +190,9 @@ export async function importDirectoryContacts(
         agreementUrl: c.agreementUrl?.trim() || old?.agreementUrl || "",
         agreementFileName: c.agreementFileName?.trim() || old?.agreementFileName || "",
         suspended: Boolean(c.suspended),
+        ...(c.rating !== undefined ? { rating: c.rating } : {}),
+        ...(c.creditTerms ? { creditTerms: c.creditTerms } : {}),
+        ...(c.moduleType ? { moduleType: c.moduleType } : {}),
         importBatchId: batchId,
         updatedBy: opts.updatedBy,
         updatedAt: serverTimestamp(),

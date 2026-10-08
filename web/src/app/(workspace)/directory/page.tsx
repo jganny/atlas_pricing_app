@@ -1,6 +1,7 @@
 "use client";
 
 import { describeAgencyPlan } from "@/lib/quotes/agent-import";
+import { describeUnreadableWorkbook, parseDirectorySheets, type ParsedWorkbook } from "@/lib/directory/excel-import";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -266,36 +267,24 @@ export default function DirectoryPage() {
   }
 
   async function importDirectoryExcel(file: File) {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array" });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
-    const mapped: DirectoryContactInput[] = raw
-      .map((r) => {
-        const get = (...names: string[]) => {
-          const keys = Object.keys(r);
-          for (const n of names) {
-            const k = keys.find((x) => x.toLowerCase().replace(/\s/g, "") === n.toLowerCase());
-            if (k != null) return String(r[k] ?? "").trim();
-          }
-          return "";
-        };
-        return {
-          name: get("name", "company", "agent"),
-          category: get("category") || (effectiveParent === "agents" ? "agency" : "vendor"),
-          contactPerson: get("contactperson", "contact"),
-          email: get("email"),
-          phone: get("phone"),
-          location: get("location", "city", "country"),
-          notes: get("notes"),
-          sheetGroup: get("sheetgroup", "group") || get("category") || "agency",
-          agreement: get("agreement"),
-          suspended: /^y|true|1/i.test(get("suspended")),
-        };
-      })
-      .filter((c) => c.name);
+    let parsed: ParsedWorkbook;
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      // Every sheet is read (a weekly report can have an agents tab and a suspended tab); title rows
+      // above the header and differently-worded column names are handled by the reader.
+      const sheets = wb.SheetNames.map((name) => ({
+        name,
+        rows: XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], { header: 1, defval: "", blankrows: true }),
+      }));
+      parsed = parseDirectorySheets(sheets, effectiveParent === "agents" ? "agency" : "other");
+    } catch (e) {
+      toast(`Could not read this file as an Excel sheet${e instanceof Error ? ` (${e.message})` : ""}.`, "error");
+      return;
+    }
+    const mapped = parsed.contacts;
     if (!mapped.length) {
-      toast("No contacts found in file", "error");
+      toast(describeUnreadableWorkbook(parsed), "error");
       return;
     }
 
@@ -318,8 +307,10 @@ export default function DirectoryPage() {
       if (replacePrevious) {
         // The weekly list replaces the old one and removes older duplicates — show exactly what
         // will happen and only go ahead once the user says so.
-        const plan = await previewAgencyImport(mapped);
-        if (!window.confirm(describeAgencyPlan(plan))) {
+        const { plan, otherRows } = await previewAgencyImport(mapped);
+        const read = parsed.sheets.filter((x) => x.contacts > 0).map((x) => `${x.name} (${x.contacts})`).join(", ");
+        const intro = `Read from the file: ${read}.${otherRows ? ` ${otherRows} of them are not agents and will simply be added.` : ""}\n\n`;
+        if (!window.confirm(intro + describeAgencyPlan(plan))) {
           toast("Upload cancelled — nothing was changed.", "info");
           return;
         }
@@ -835,6 +826,8 @@ export default function DirectoryPage() {
                     </div>
                     <div className="text-xs text-[var(--color-text-muted)]">
                       {c.sheetGroup || c.category}
+                      {c.rating ? ` · ${"★".repeat(Math.min(5, c.rating))}` : ""}
+                      {c.creditTerms ? ` · Credit: ${c.creditTerms}` : ""}
                     </div>
                   </td>
                   <td className="px-3 py-2.5">{c.contactPerson || "—"}</td>

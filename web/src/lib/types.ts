@@ -205,6 +205,10 @@ export interface DirectoryContact {
    * added by hand. Lets a new import replace the previous week's imported
    * rows without touching manually-added contacts. */
   importBatchId?: string
+  /** From the weekly agent report: star rating (★ count), credit terms, and module (Air/Sea…). */
+  rating?: number
+  creditTerms?: string
+  moduleType?: string
 }
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'quoted' | 'won' | 'lost'

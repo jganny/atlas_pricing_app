@@ -70,14 +70,26 @@ function filled(c: Partial<DirectoryContact>): number {
   return [c.contactPerson, c.email, c.phone, c.location, c.notes, c.sheetGroup, c.agreement].filter((v) => (v || "").trim()).length;
 }
 
-function cluster<T>(items: T[], same: (a: T, b: T) => boolean): T[][] {
-  const groups: T[][] = [];
+/**
+ * Groups the same company together. Rows are first bucketed by their tidied name (one pass), and
+ * only rows in the same bucket are compared — so a list of thousands stays instant.
+ */
+function cluster<T extends AgentLike>(items: T[]): T[][] {
+  const buckets = new Map<string, T[][]>();
+  const order: T[][][] = [];
   for (const item of items) {
-    const g = groups.find((grp) => grp.some((x) => same(x, item)));
+    const key = normalizeAgentName(item.name);
+    let groups = buckets.get(key);
+    if (!groups) {
+      groups = [];
+      buckets.set(key, groups);
+      order.push(groups);
+    }
+    const g = groups.find((grp) => grp.some((x) => sameAgent(x, item)));
     if (g) g.push(item);
     else groups.push([item]);
   }
-  return groups;
+  return order.flat();
 }
 
 export type AgencyImportPlan<I extends AgentLike & Partial<DirectoryContact>> = {
@@ -103,7 +115,7 @@ export function planAgencyImport<I extends AgentLike & Partial<DirectoryContact>
 ): AgencyImportPlan<I> {
   // 1. Repeats inside the file.
   const fileRepeats: string[] = [];
-  const groups = cluster(file.filter((r) => (r.name || "").trim()), sameAgent);
+  const groups = cluster(file.filter((r) => (r.name || "").trim()));
   const incoming = groups.map((g) => {
     if (g.length > 1) fileRepeats.push(g[0].name.trim());
     // the fuller row wins; on a tie, the later one
@@ -123,8 +135,15 @@ export function planAgencyImport<I extends AgentLike & Partial<DirectoryContact>
     Number(Boolean(b.agreementUrl)) - Number(Boolean(a.agreementUrl)) ||
     (b.updatedAt || "").localeCompare(a.updatedAt || "");
 
+  const existingByName = new Map<string, DirectoryContact[]>();
+  for (const m of handOrOld) {
+    const k = normalizeAgentName(m.name);
+    existingByName.set(k, [...(existingByName.get(k) ?? []), m]);
+  }
   incoming.forEach((row, i) => {
-    const matches = handOrOld.filter((m) => !used.has(m.id) && sameAgent(m, row)).sort(keepOrder);
+    const matches = (existingByName.get(normalizeAgentName(row.name)) ?? [])
+      .filter((m) => !used.has(m.id) && sameAgent(m, row))
+      .sort(keepOrder);
     if (!matches.length) return;
     absorbIdByIndex[i] = matches[0].id;
     matches.forEach((m) => used.add(m.id));
@@ -137,7 +156,7 @@ export function planAgencyImport<I extends AgentLike & Partial<DirectoryContact>
   // 3. Repeats among the hand-added agents the file doesn't mention.
   const rest = handOrOld.filter((m) => !used.has(m.id));
   let manualKept = 0;
-  for (const g of cluster(rest, sameAgent)) {
+  for (const g of cluster(rest)) {
     const sorted = [...g].sort(keepOrder);
     manualKept += 1;
     for (const extra of sorted.slice(1)) {
