@@ -476,6 +476,7 @@ function AirDeskInner() {
     if (draft.currency) setCurrency(draft.currency);
     if (p.commodity) setCommodity(p.commodity);
     if (p.incoterm) setIncoterm(p.incoterm);
+    if (p.module) setModule(p.module);
     if (p.notes) {
       setTerms((prev) => {
         const block = `Pickup / collection\n${p.notes}`;

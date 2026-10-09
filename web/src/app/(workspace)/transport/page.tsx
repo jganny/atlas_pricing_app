@@ -1,6 +1,8 @@
 "use client";
 
 import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { useHubPrefill } from "@/hooks/use-hub-prefill";
+import { matchVehicleType } from "@/lib/hub/prefill";
 import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -117,6 +119,19 @@ export default function TransportDeskPage() {
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+
+  // Filled in from a Quote Hub job that was just opened.
+  useHubPrefill("transport", (p) => {
+    setCustomer(p.customer);
+    const lane = newLane({ origin: p.origin, destination: p.destination });
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
+    if (p.commodity) setCommodity(p.commodity);
+    if (p.invoiceValue) setInvoiceValue(p.invoiceValue);
+    const vehicle = matchVehicleType(INDIA_VEHICLE_TYPES, p.vehicleType);
+    if (vehicle) setVehicleType(vehicle);
+    if (p.notes) setNotes(p.notes);
+  });
 
   // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
   const draft = useDeskDraft({

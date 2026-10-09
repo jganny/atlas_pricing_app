@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { useHubPrefill } from "@/hooks/use-hub-prefill";
 import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -223,6 +224,18 @@ function CourierDeskInner() {
   const [saveEnquiryPath, setSaveEnquiryPath] = useState<string | null>(null);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // Filled in from a Quote Hub job that was just opened.
+  useHubPrefill("courier", (p) => {
+    setCustomer(p.customer);
+    const lane = newLane({ origin: p.origin, destination: p.destination });
+    setLanes([lane]);
+    setActiveLaneId(lane.id);
+    if (p.originCountry) setOriginCountry(p.originCountry);
+    if (p.destCountry) setDestCountry(p.destCountry);
+    if (p.originCountry && p.destCountry) setScope(p.originCountry === p.destCountry ? "domestic" : "international");
+    if (p.packages.length) setPackages(p.packages.map((x) => ({ qty: x.qty, gw: x.gw, l: x.l, w: x.w, h: x.h })));
+  });
 
   // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
   const draft = useDeskDraft({

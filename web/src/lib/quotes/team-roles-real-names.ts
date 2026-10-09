@@ -38,3 +38,6 @@ export const REAL_MAILBOX_EMAILS = {
   monitor: "ganesh@blr.atlaslogistics.co.in",
 };
 export const REAL_IMAP_HOST = "czipop.logix.in";
+
+/** The company's own email domains — senders on these are colleagues, never customers (Quote Hub). */
+export const REAL_OWN_EMAIL_DOMAINS: string[] = ["atlaslogistics.co.in"];

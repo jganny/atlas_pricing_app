@@ -47,6 +47,11 @@ service cloud.firestore {
     // change. The legacy app does not read or write these.
     match /nrs_followups/{followUpId} { allow read, write: if isSignedIn(); }
     match /nrs_alerts/{alertId} { allow read, write: if isSignedIn(); }
+    // --- test-app only (Quote Hub) --------------------------------------------
+    // Enquiries read from dropped emails/documents, waiting to be opened in a desk.
+    // Shared by desk; the app filters who sees which. The legacy app never touches them.
+    match /quoteHubJobs/{jobId} { allow read, write: if isSignedIn(); }
+    // --------------------------------------------------------------------------
     // --------------------------------------------------------------------------
     match /archive_quotes/{quoteId} { allow read, write: if isSignedIn(); }
     match /inbox_enquiries/{itemId} { allow read, write: if isSignedIn(); }

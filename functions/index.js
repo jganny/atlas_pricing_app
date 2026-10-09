@@ -1416,4 +1416,6 @@ exports.draftEnquiryReply = functions
   });
 
 const inboxPoll = require("./inbox-poll");
+const hubExtract = require("./hub-extract");
+exports.extractShipmentFromDocuments = hubExtract.extractShipmentFromDocuments;
 exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;

@@ -10,7 +10,7 @@ import {
   seatForLogin,
 } from "@/lib/auth/desk-seats";
 import { IS_DEMO_BUILD } from "@/lib/demo-mode";
-import { REAL_NAMES, REAL_MAILBOX_EMAILS, REAL_IMAP_HOST } from "@/lib/quotes/team-roles-real-names";
+import { REAL_NAMES, REAL_MAILBOX_EMAILS, REAL_IMAP_HOST, REAL_OWN_EMAIL_DOMAINS } from "@/lib/quotes/team-roles-real-names";
 
 export interface TeamRole {
   name: string;
@@ -85,6 +85,9 @@ export const ATLAS_IMAP = {
   secure: true,
   folder: "INBOX",
 } as const;
+
+/** Senders on these domains are colleagues (never the customer) when Quote Hub reads an email. */
+export const OWN_EMAIL_DOMAINS: string[] = IS_DEMO_BUILD ? ["example.com"] : REAL_OWN_EMAIL_DOMAINS;
 
 export const MAILBOX_TEAMS = {
   pricing: {

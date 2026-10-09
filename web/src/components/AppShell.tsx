@@ -35,6 +35,8 @@ import { escalationTier, missingWonFields } from "@/lib/quotes/won-followups";
 import { toast } from "@/components/Toast";
 import { useNrsLiveAlerts } from "@/hooks/use-nrs-live-alerts";
 import { CustomerSuggestions } from "@/components/CustomerSuggestions";
+import { useHubJobs } from "@/hooks/use-hub-jobs";
+import { visibleJobs, waitingCounts } from "@/lib/hub/jobs";
 import {
   canAccessRoute,
   deskFocusLabel,
@@ -176,6 +178,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pendingWonCount = pendingRows.length;
   // NRS seat only: live pop-up when a nomination desk confirms a quote, plus the sidebar count.
   const pendingNrsCount = useNrsLiveAlerts(isNrsUser(user?.username));
+  // Quote Hub jobs waiting in each desk — shown as a count on that desk's menu entry.
+  const { jobs: hubJobs } = useHubJobs();
+  const hubCounts = useMemo(
+    () => waitingCounts(visibleJobs(hubJobs, user?.username, admin)),
+    [hubJobs, user?.username, admin],
+  );
+  const hubBadge: Record<string, number> = {
+    "/air": hubCounts.air,
+    "/sea": hubCounts.sea,
+    "/courier": hubCounts.courier,
+    "/transport": hubCounts.transport,
+    "/warehouse": hubCounts.warehouse,
+  };
 
   // Once per browser session, not once per page: a single quiet summary,
   // never repeated while the user is actively working.
@@ -254,7 +269,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               dark={opts.dark}
               onNavigate={opts.onNavigate}
               badgeCount={
-                item.href === "/won-followups" ? pendingWonCount : item.href === "/nrs" ? pendingNrsCount : undefined
+                item.href === "/won-followups"
+                  ? pendingWonCount
+                  : item.href === "/nrs"
+                    ? pendingNrsCount
+                    : hubBadge[item.href] || undefined
               }
             />
           ))}

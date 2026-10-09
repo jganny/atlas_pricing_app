@@ -143,6 +143,8 @@ export interface ParsedEnquiry {
   linerLabel?: string
   commodity?: string
   incoterm?: string
+  /** Import or Export, when the documents made it clear (Quote Hub). */
+  module?: 'export' | 'import'
   notes?: string
   /** Handling requirements found in the enquiry (temperature range, odd size…) — goes into the quote's Terms. */
   specialHandling?: string[]

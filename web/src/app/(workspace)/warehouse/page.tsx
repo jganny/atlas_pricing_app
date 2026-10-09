@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeskDraft } from "@/hooks/use-desk-draft";
+import { useHubPrefill } from "@/hooks/use-hub-prefill";
 import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -75,6 +76,17 @@ export default function WarehouseDeskPage() {
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);
   const [previewQuote, setPreviewQuote] = useState<SavedQuote | null>(null);
+
+  // Filled in from a Quote Hub job that was just opened.
+  useHubPrefill("warehouse", (p) => {
+    setCustomer(p.customer);
+    const known = WAREHOUSE_LOCATIONS.find((l) => p.location && l.toLowerCase().includes(p.location.toLowerCase()));
+    if (known) setLocation(known);
+    else if (p.location) setOtherDescription(p.location);
+    if (p.cbm) setCbm(p.cbm);
+    if (p.days) setDays(p.days);
+    if (p.notes) setNotes(p.notes);
+  });
 
   // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
   const draft = useDeskDraft({

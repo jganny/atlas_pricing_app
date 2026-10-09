@@ -24,6 +24,7 @@ cat > "$TEAM_NAMES_FILE" <<'EOF'
 export const REAL_NAMES: Record<string, string> = {};
 export const REAL_MAILBOX_EMAILS = { pricing: "", pricingsales: "", monitor: "" };
 export const REAL_IMAP_HOST = "";
+export const REAL_OWN_EMAIL_DOMAINS: string[] = [];
 EOF
 
 cat > "$SEAT_NAMES_FILE" <<'EOF'

@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ChevronRight, Package, Plane, Ship, Truck } from "lucide-react";
-import { QuoteHubIntake } from "@/components/QuoteHubIntake";
+import { QuoteHubDrop } from "@/components/QuoteHubDrop";
+import { WaitingJobs } from "@/components/WaitingJobs";
 
 const HubHero = dynamic(
   () => import("@/components/three/HubHero").then((m) => m.HubHero),
@@ -47,15 +48,17 @@ export default function QuoteHubPage() {
             Quote hub
           </p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[var(--color-atlas-navy)]">
-            Dump the job. Vertex routes it.
+            Drop the job. Vertex reads it.
           </h1>
           <p className="mt-2 max-w-lg text-sm text-[var(--color-text-muted)]">
-            Do not pick Air vs Sea first. Paste the enquiry or tap what Vertex already queued. Finding
-            an old quote stays on Home in Ask Vertex.
+            Drop an Outlook email or the documents. Vertex works out Air, Sea, Courier, Transport or
+            Warehouse, Import or Export, and fills a draft — you only add the rates. Finding an old quote
+            stays on Home in Ask Vertex.
           </p>
         </div>
 
-        <QuoteHubIntake frosted />
+        <QuoteHubDrop />
+        <WaitingJobs />
 
         <div>
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--color-atlas-ink)]/70">

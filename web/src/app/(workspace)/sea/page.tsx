@@ -507,6 +507,12 @@ function SeaDeskInner() {
     setOrigin(p.origin || "");
     setDestination(p.destination || "");
     if (p.incoterm) setIncoterm(p.incoterm);
+    if (p.module) setModule(p.module);
+    if (p.commodity) setCommodity(p.commodity);
+    if (p.packages.length) {
+      // gw is the weight of ONE package; the desk multiplies by qty.
+      setCargo(p.packages.map((x) => ({ l: x.l ?? 0, w: x.w ?? 0, h: x.h ?? 0, qty: x.qty || 1, gw: x.gw ?? 0 })));
+    }
     if (p.mode) setMode(p.mode);
     else if (st?.mode) setMode(st.mode);
     if (draft.currency || st?.currency) {
