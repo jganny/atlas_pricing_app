@@ -46,7 +46,7 @@ const SYSTEM_PROMPT =
   "- needsCheck: add an entry for anything you are not sure of, naming the field and a short reason " +
   "(for example 'origin: invoice says Madras port, read as Chennai'). Do not add entries for values that are clearly stated.\n" +
   "- summary: one short line, e.g. 'Sea export — Chennai to Jebel Ali, 24 pallets, 31.7 CBM'.\n" +
-  "Always answer by calling the record_shipment tool.";
+  "You MUST answer by calling the record_shipment tool exactly once — never reply with plain text.";
 
 const placeSchema = {
   type: "object",
@@ -175,9 +175,29 @@ function buildRequestBody(docs, ctx) {
     max_tokens: 3000,
     system: SYSTEM_PROMPT,
     tools: [TOOL],
-    tool_choice: { type: "tool", name: "record_shipment" },
+    // This model does not accept a forced tool call; "auto" plus the instruction below makes it call the tool.
+    tool_choice: { type: "auto" },
     messages: [{ role: "user", content }],
   };
+}
+
+/** The tool call's input; if the model answered in text instead, the JSON object inside it. */
+function pickExtraction(payload) {
+  const content = Array.isArray(payload?.content) ? payload.content : [];
+  const tool = content.find((b) => b?.type === "tool_use" && b?.name === "record_shipment" && b.input && typeof b.input === "object");
+  if (tool) return tool.input;
+  const text = content.filter((b) => b?.type === "text").map((b) => b.text || "").join("\n");
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try {
+      const parsed = JSON.parse(text.slice(start, end + 1));
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      /* not JSON */
+    }
+  }
+  return null;
 }
 
 exports.extractShipmentFromDocuments = functions
@@ -203,16 +223,22 @@ exports.extractShipmentFromDocuments = functions
       throw new functions.https.HttpsError("unavailable", "Reading documents is temporarily unavailable. Try again.");
     }
     if (!response.ok) {
-      functions.logger.warn("extractShipmentFromDocuments: API error", { status: response.status });
+      let detail = "";
+      try {
+        detail = (await response.text()).slice(0, 400);
+      } catch {
+        /* ignore */
+      }
+      functions.logger.warn("extractShipmentFromDocuments: API error", { status: response.status, detail });
       throw new functions.https.HttpsError("unavailable", "Reading documents is temporarily unavailable. Try again.");
     }
     const payload = await response.json();
-    const block = (payload?.content || []).find((b) => b?.type === "tool_use" && b?.name === "record_shipment");
-    if (!block || typeof block.input !== "object") {
-      functions.logger.warn("extractShipmentFromDocuments: no tool result");
+    const extraction = pickExtraction(payload);
+    if (!extraction) {
+      functions.logger.warn("extractShipmentFromDocuments: no usable result", { stop: payload?.stop_reason });
       throw new functions.https.HttpsError("internal", "The documents could not be read into a quote. Try again, or fill the desk by hand.");
     }
-    return { extraction: block.input };
+    return { extraction };
   });
 
-exports._test = { validateDocs, buildRequestBody, cleanDomains, SYSTEM_PROMPT, TOOL };
+exports._test = { validateDocs, buildRequestBody, cleanDomains, pickExtraction, SYSTEM_PROMPT, TOOL };

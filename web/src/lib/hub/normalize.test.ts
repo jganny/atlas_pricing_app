@@ -103,6 +103,32 @@ const store: Record<string, string> = {};
   assert.equal(noMode.extraction.needsCheck[0].field, "mode");
   assert.equal(n.normalizeExtraction({ mode: "banana", grossWeightKg: 80, direction: "export", summary: "x" }).extraction.mode, "air");
 
+  // Real results from the AI service (captured), run through the same clean-up.
+  const realFwd = n.normalizeExtraction(
+    {
+      mode: "air", direction: "import",
+      sender: { name: "Li Wei", email: "liwei@shenzhen-air.com", company: "Shenzhen Air Cargo Co., Ltd." },
+      origin: { text: "Shanghai PVG", code: "PVG", country: "CN" }, destination: { text: "Bengaluru BLR", code: "BLR", country: "IN" },
+      grossWeightKg: 180, packages: [{ description: "cartons", qty: 3, gw: 60, l: null, w: null, h: null }],
+      needsCheck: [{ field: "packages", note: "dimensions not stated" }], summary: "Air import — Shanghai PVG to Bengaluru BLR, 3 cartons, 180 kg",
+    },
+    { headerSender: { name: "Anil", email: "anil@blr.atlaslogistics.co.in" } },
+  );
+  assert.equal(realFwd.customer, "Shenzhen Air Cargo Co., Ltd.");
+  assert.equal(realFwd.extraction.direction, "import");
+  assert.deepEqual(realFwd.extraction.packages, [{ qty: 3, gw: 60, description: "cartons" }]); // missing sizes stay missing
+  assert.equal(realFwd.extraction.needsCheck.length, 1);
+  const realSea = n.normalizeExtraction({
+    mode: "sea", direction: "export", sender: { name: "Ravi Kumar", company: "Gulf Freight Co LLC", email: "ravi@gulffreight.ae" },
+    origin: { text: "Madras port (Chennai)", code: "INMAA", country: "IN" }, destination: { text: "JEBEL ALI", code: "AEJEA", country: "AE" },
+    incoterm: "FOB", commodity: "Cotton fabric rolls", grossWeightKg: 9500, volumeCbm: 31.7, containers: [],
+    packages: [{ description: "Pallet", qty: 24, l: 120, w: 100, h: 110, gw: 396 }], seaMode: null,
+    needsCheck: [{ field: "seaMode", note: "FCL or LCL is not stated" }], summary: "Sea export",
+  });
+  assert.equal(realSea.extraction.seaMode, null);
+  assert.equal(n.placeLabel(realSea.extraction.origin), "INMAA - Madras port (Chennai)");
+  assert.equal(realSea.extraction.packages[0].gw, 396);
+
   // Garbage in, safe out.
   const junk = n.normalizeExtraction(null);
   assert.equal(junk.extraction.packages.length, 0);
