@@ -51,6 +51,18 @@ service cloud.firestore {
     // Enquiries read from dropped emails/documents, waiting to be opened in a desk.
     // Shared by desk; the app filters who sees which. The legacy app never touches them.
     match /quoteHubJobs/{jobId} { allow read, write: if isSignedIn(); }
+    // --- test-app only (Ask Vertex chat) --------------------------------------
+    // Each person's chat history is private to them. Usage counters are written by the
+    // server only; a person can read their own, and an admin can read everyone's.
+    match /chatThreads/{threadId} {
+      allow read, update, delete: if isSignedIn() && resource.data.owner == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.owner == request.auth.uid;
+    }
+    match /chatUsage/{usageId} {
+      allow read: if isSignedIn() && (usageId.matches(request.auth.uid + '_.*') || isAdmin());
+      allow write: if false;
+    }
+    // --------------------------------------------------------------------------
     // --------------------------------------------------------------------------
     // --------------------------------------------------------------------------
     match /archive_quotes/{quoteId} { allow read, write: if isSignedIn(); }

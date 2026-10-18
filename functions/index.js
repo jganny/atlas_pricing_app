@@ -1418,4 +1418,6 @@ exports.draftEnquiryReply = functions
 const inboxPoll = require("./inbox-poll");
 const hubExtract = require("./hub-extract");
 exports.extractShipmentFromDocuments = hubExtract.extractShipmentFromDocuments;
+const vertexChat = require("./vertex-chat");
+exports.vertexChatStream = vertexChat.vertexChatStream;
 exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;

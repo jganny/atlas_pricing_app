@@ -19,6 +19,7 @@ import {
   saveRuntimeFirebaseConfig,
 } from "@/lib/firebase/runtime-config";
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
+import { ChatUsageAdmin } from "@/components/ChatUsageAdmin";
 import { CustomsHolidaysAdmin } from "@/components/CustomsHolidaysAdmin";
 import { UserBranchAdmin } from "@/components/UserBranchAdmin";
 import { AuditTrailPanel } from "@/components/AuditTrailPanel";
@@ -136,6 +137,7 @@ export default function AdminPage() {
       </div>
 
       <DeskSeatsAdmin />
+      <ChatUsageAdmin />
 
       <CustomsHolidaysAdmin />
 

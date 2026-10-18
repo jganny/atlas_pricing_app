@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { VertexAskBar } from "@/components/VertexAskBar";
+import { VertexChat } from "@/components/VertexChat";
 import { FeatureGuide } from "@/components/FeatureGuide";
 import { OPEN_GUIDE_EVENT } from "@/components/GuideTipButton";
 import { useEnquiries } from "@/hooks/use-atlas-data";
@@ -22,6 +23,7 @@ export function HelpFab() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [guideQuery, setGuideQuery] = useState("");
+  const [tab, setTab] = useState<"chat" | "find">("chat");
   const pathname = usePathname() || "/";
   const { data: rows = [] } = useEnquiries();
 
@@ -35,6 +37,7 @@ export function HelpFab() {
   useEffect(() => {
     function onGuide(e: Event) {
       setGuideQuery(String((e as CustomEvent<{ query?: string }>).detail?.query ?? ""));
+      setTab("find");
       setOpen(true);
     }
     window.addEventListener(OPEN_GUIDE_EVENT, onGuide);
@@ -65,10 +68,10 @@ export function HelpFab() {
     };
   }, [open]);
 
-  const panel =
-    open && mounted
+  // The panel stays mounted (just hidden) so a conversation survives closing and reopening it.
+  const panel = mounted
       ? createPortal(
-          <div className="fixed inset-0 z-[210] flex justify-end" data-testid="help-panel">
+          <div className={cn("fixed inset-0 z-[210] flex justify-end", !open && "hidden")} data-testid="help-panel">
             <button
               type="button"
               className="atlas-overlay absolute inset-0"
@@ -77,7 +80,7 @@ export function HelpFab() {
               onClick={() => setOpen(false)}
             />
             <aside
-              className="atlas-glass relative z-10 flex h-full w-full max-w-md flex-col shadow-2xl animate-[atlas-slide-in_0.22s_ease-out]"
+              className="atlas-glass relative z-10 flex h-full w-full max-w-xl flex-col shadow-2xl animate-[atlas-slide-in_0.22s_ease-out]"
               role="dialog"
               aria-modal="true"
               aria-label="Vertex assistant"
@@ -85,10 +88,10 @@ export function HelpFab() {
               <div className="flex items-start justify-between border-b border-[var(--color-border)] px-5 py-4">
                 <div>
                   <div className="text-sm font-extrabold tracking-wide text-[var(--color-atlas-navy)]">
-                    Vertex
+                    Ask Vertex
                   </div>
                   <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-                    Tell me the customer or lane — I will open it. ⌘?
+                    Logistics, your app, your quotes, anything. ⌘?
                   </p>
                 </div>
                 <button
@@ -102,7 +105,29 @@ export function HelpFab() {
                 </button>
               </div>
 
-              <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+              <div className="flex gap-1 border-b border-[var(--color-border)] px-5 pt-2" role="tablist" aria-label="Vertex">
+                {([["chat", "Chat"], ["find", "Find & guide"]] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === id}
+                    onClick={() => setTab(id)}
+                    className={cn(
+                      "rounded-t-lg px-3 py-1.5 text-xs font-bold",
+                      tab === id ? "border-b-2 border-[var(--color-atlas-navy)] text-[var(--color-atlas-navy)]" : "text-[var(--color-text-muted)]",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className={cn("min-h-0 flex-1", tab !== "chat" && "hidden")}>
+                <VertexChat />
+              </div>
+
+              <div className={cn("flex-1 space-y-4 overflow-y-auto px-5 py-4", tab !== "find" && "hidden")}>
                 <VertexAskBar compact onNavigate={() => setOpen(false)} />
 
                 <FeatureGuide pathname={pathname} initialQuery={guideQuery} onNavigate={() => setOpen(false)} />
@@ -168,6 +193,7 @@ export function HelpFab() {
         data-testid="help-fab"
         onClick={() => {
           setGuideQuery("");
+          setTab("chat");
           setOpen(true);
         }}
         className={cn(
