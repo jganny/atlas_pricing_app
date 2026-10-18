@@ -30,32 +30,26 @@ const SYSTEM_PROMPT =
   "- direction: the forwarder's home country is India. 'export' when the goods start in India and go abroad; " +
   "'import' when the goods come into India; otherwise 'unknown' (domestic or between two foreign countries). " +
   "Say why in directionReason.\n" +
-  "- sender: the person and company ASKING the forwarder for a quote — the sender of the email. The forwarder's " +
+  "- senderName / senderEmail / senderCompany: the person and company ASKING the forwarder for a quote — the sender of the email. The forwarder's " +
   "own email domains are listed in the user message. If the email's sender is on one of those domains (a colleague " +
   "forwarding the enquiry), look further down the forwarded text (for example '-----Original Message-----' or " +
   "'From:' lines) for the original external sender and use that person and company. Take the company from their " +
   "email signature; if there is no signature use the email domain's company name. Do NOT use the shipper or " +
   "consignee named on an invoice unless they are also the sender. If the company cannot be told, leave it empty.\n" +
-  "- places: give the text as printed, plus a code when you are confident — IATA 3-letter for airports, UN/LOCODE " +
+  "- originText/originCode/originCountry and destinationText/destinationCode/destinationCountry: give the text as printed, plus a code when you are confident — IATA 3-letter for airports, UN/LOCODE " +
   "5-letter for seaports — and the 2-letter country code.\n" +
   "- packages: from the packing list. Dimensions in cm (convert inches), weights in kg. One entry per line item " +
   "or pallet group: qty = number of identical packages, l/w/h = size of ONE package, gw = gross weight of ONE package " +
   "(if only a line total is printed, divide it by qty). If only totals are given, leave packages empty and fill " +
   "grossWeightKg (total) and volumeCbm (total).\n" +
   "- containers: normalised like 20GP, 40GP, 40HC, 20RF, 40RF, 40FR, 20OT.\n" +
-  "- needsCheck: add an entry for anything you are not sure of, naming the field and a short reason " +
-  "(for example 'origin: invoice says Madras port, read as Chennai'). Do not add entries for values that are clearly stated.\n" +
+  "- needsCheck: keep it SHORT — at most 3 entries, only where a different reading is genuinely plausible AND it " +
+  "would change the quote (a port, the mode, a weight, a cargo size), e.g. 'origin: invoice says Madras port, read " +
+  "as Chennai'. Do NOT flag standard assumptions: weights are kg and sizes are cm unless stated otherwise (a bare " +
+  "'Gross Weight: 120' is 120 kg), an airport code pair means air, a seaport pair or containers mean sea. Do NOT flag " +
+  "safety-data-sheet remarks or customer wishes — put those in notes. Nothing to flag is a good answer.\n" +
   "- summary: one short line, e.g. 'Sea export — Chennai to Jebel Ali, 24 pallets, 31.7 CBM'.\n" +
   "You MUST answer by calling the record_shipment tool exactly once — never reply with plain text.";
-
-const placeSchema = {
-  type: "object",
-  properties: {
-    text: { type: "string" },
-    code: { type: "string" },
-    country: { type: "string" },
-  },
-};
 
 const TOOL = {
   name: "record_shipment",
@@ -67,12 +61,15 @@ const TOOL = {
       modeReason: { type: "string" },
       direction: { type: "string", enum: ["export", "import", "unknown"] },
       directionReason: { type: "string" },
-      sender: {
-        type: "object",
-        properties: { name: { type: "string" }, email: { type: "string" }, company: { type: "string" } },
-      },
-      origin: placeSchema,
-      destination: placeSchema,
+      senderName: { type: "string" },
+      senderEmail: { type: "string" },
+      senderCompany: { type: "string" },
+      originText: { type: "string" },
+      originCode: { type: "string" },
+      originCountry: { type: "string" },
+      destinationText: { type: "string" },
+      destinationCode: { type: "string" },
+      destinationCountry: { type: "string" },
       incoterm: { type: "string" },
       commodity: { type: "string" },
       hsCode: { type: "string" },
@@ -181,18 +178,51 @@ function buildRequestBody(docs, ctx) {
   };
 }
 
+const JUNK = /<\/?parameter[^>]*>|<\/?antml:[^>]*>/gi;
+
+/** Removes stray tool-call markup the model occasionally leaks into a value. */
+function cleanValue(v) {
+  if (typeof v === "string") return v.replace(JUNK, " ").replace(/\s+/g, " ").trim();
+  if (Array.isArray(v)) return v.map(cleanValue);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, cleanValue(x)]));
+  return v;
+}
+
+/** Flat tool fields → the nested sender / origin / destination the app works with. */
+function toNested(raw) {
+  const x = cleanValue(raw && typeof raw === "object" ? raw : {});
+  const s = (v) => (typeof v === "string" ? v : "");
+  const sender = x.sender && typeof x.sender === "object" ? x.sender : {};
+  const place = (flatPrefix, nested) => {
+    const n = nested && typeof nested === "object" ? nested : {};
+    return {
+      text: s(x[flatPrefix + "Text"]) || s(n.text),
+      code: s(x[flatPrefix + "Code"]) || s(n.code),
+      country: s(x[flatPrefix + "Country"]) || s(n.country),
+    };
+  };
+  const { senderName, senderEmail, senderCompany, originText, originCode, originCountry, destinationText, destinationCode, destinationCountry, ...rest } = x;
+  void senderName; void senderEmail; void senderCompany; void originText; void originCode; void originCountry; void destinationText; void destinationCode; void destinationCountry;
+  return {
+    ...rest,
+    sender: { name: s(x.senderName) || s(sender.name), email: s(x.senderEmail) || s(sender.email), company: s(x.senderCompany) || s(sender.company) },
+    origin: place("origin", x.origin),
+    destination: place("destination", x.destination),
+  };
+}
+
 /** The tool call's input; if the model answered in text instead, the JSON object inside it. */
 function pickExtraction(payload) {
   const content = Array.isArray(payload?.content) ? payload.content : [];
   const tool = content.find((b) => b?.type === "tool_use" && b?.name === "record_shipment" && b.input && typeof b.input === "object");
-  if (tool) return tool.input;
+  if (tool) return toNested(tool.input);
   const text = content.filter((b) => b?.type === "text").map((b) => b.text || "").join("\n");
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start >= 0 && end > start) {
     try {
       const parsed = JSON.parse(text.slice(start, end + 1));
-      if (parsed && typeof parsed === "object") return parsed;
+      if (parsed && typeof parsed === "object") return toNested(parsed);
     } catch {
       /* not JSON */
     }
@@ -241,4 +271,4 @@ exports.extractShipmentFromDocuments = functions
     return { extraction };
   });
 
-exports._test = { validateDocs, buildRequestBody, cleanDomains, pickExtraction, SYSTEM_PROMPT, TOOL };
+exports._test = { validateDocs, buildRequestBody, cleanDomains, pickExtraction, toNested, cleanValue, SYSTEM_PROMPT, TOOL };
