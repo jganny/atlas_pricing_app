@@ -83,7 +83,7 @@ service cloud.firestore {
             && request.resource.data.audience == 'list'
             && request.resource.data.createdBy == chatLogin()
             && chatLogin() in request.resource.data.memberLogins
-            && (request.resource.data.kind != 'dm' || request.resource.data.memberLogins.size() == 2))
+            && (request.resource.data.kind != 'dm' || request.resource.data.memberLogins.size() in [1, 2]))
         || (roomId == 'everyone' && request.resource.data.kind == 'channel' && request.resource.data.audience == 'all')
       );
       allow update: if isSignedIn() && (

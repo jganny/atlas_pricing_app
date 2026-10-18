@@ -10,12 +10,14 @@ import type { Person, Presence } from "@/lib/chat/types";
 
 /** Start a direct chat with one person, or a group with several. */
 export function NewChatDialog({
+  meLogin,
   people,
   presence,
   onClose,
   onDirect,
   onGroup,
 }: {
+  meLogin: string;
   people: Person[];
   presence: Record<string, Presence>;
   onClose: () => void;
@@ -51,6 +53,15 @@ export function NewChatDialog({
           <Search className="h-4 w-4 text-slate-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a colleague" className="min-w-0 flex-1 bg-transparent text-sm outline-none" autoFocus />
         </div>
+        {mode === "dm" && !q.trim() ? (
+          <button type="button" onClick={() => onDirect(meLogin)} className="mx-2 mt-2 flex items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-slate-50" data-testid="chat-notes-to-self">
+            <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-amber-100 text-base">📝</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">Notes to self</span>
+              <span className="block text-xs text-slate-500">Keep reminders and files for yourself</span>
+            </span>
+          </button>
+        ) : null}
         <ul className="mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-2">
           {shown.length === 0 ? <li className="px-4 py-6 text-center text-sm text-slate-500">Nobody found.</li> : null}
           {shown.map((p) => {

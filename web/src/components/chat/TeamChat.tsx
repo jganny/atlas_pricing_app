@@ -66,6 +66,7 @@ export function TeamChat() {
       </section>
       {showNew ? (
         <NewChatDialog
+          meLogin={me.login}
           people={others}
           presence={presence}
           onClose={() => setShowNew(false)}

@@ -45,6 +45,7 @@ export function isMember(room: ChatRoom, login: string): boolean {
 export function roomTitle(room: ChatRoom, me: string, people: Person[]): string {
   if (room.kind !== "dm") return room.name;
   const other = room.memberLogins.find((l) => l !== me.toLowerCase());
+  if (!other) return "Notes to self";
   return people.find((p) => p.login === other)?.name || other || room.name;
 }
 

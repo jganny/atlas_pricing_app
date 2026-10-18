@@ -31,6 +31,8 @@ assert.equal(isMember(room({}), "A"), true);
 assert.equal(isMember(room({}), "zed"), false);
 assert.equal(roomTitle(room({ kind: "dm", memberLogins: ["cathrina", "ganny"] }), "ganny", people), "Cathrina");
 assert.equal(roomTitle(room({ kind: "group", name: "Reefer" }), "ganny", people), "Reefer");
+assert.equal(roomTitle(room({ kind: "dm", memberLogins: ["ganny"] }), "ganny", people), "Notes to self");
+assert.equal(dmRoomId("ganny", "ganny"), "dm_ganny__ganny");
 const secs = sectionsFor([room({ id: "a", kind: "channel", name: "Sea Desk" }), room({ id: EVERYONE_ROOM, kind: "channel", name: "Everyone" }), room({ id: "g1", lastMessageAt: 5 }), room({ id: "g2", lastMessageAt: 9 })]);
 assert.deepEqual(secs[0].rooms.map((r) => r.id), [EVERYONE_ROOM, "a"]);
 assert.deepEqual(secs[1].rooms.map((r) => r.id), ["g2", "g1"]);

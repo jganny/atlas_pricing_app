@@ -215,7 +215,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           kind: "dm",
           name: "Direct message",
           audience: "list",
-          memberLogins: [me.login, other.toLowerCase()],
+          memberLogins: [...new Set([me.login, other.toLowerCase()])],
           createdBy: me.login,
           createdAt: Date.now(),
         });
