@@ -13,6 +13,9 @@ assert.match(p, /NEVER invent, estimate or 'ballpark' a freight rate/);
 assert.match(p, /18 October 2026/);
 assert.match(p, /You can search the web/);
 assert.match(t.systemPrompt({ hasWeb: false }), /Web search is switched off/);
+assert.match(t.systemPrompt({ hasWeb: true, hasQuotes: false }), /cannot look up quotes in this chat/);
+assert.doesNotMatch(t.systemPrompt({ hasWeb: true, hasQuotes: false }), /search_quotes/);
+assert.match(t.systemPrompt({ hasWeb: true }), /search_quotes/);
 
 // Who can see which quotes — desks own their quotes, individuals see their own, admin sees all.
 const rows = [{ seatId: "sea-nom", loginId: "newsea", previousLogins: ["shaheer"] }];

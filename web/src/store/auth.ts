@@ -43,6 +43,8 @@ export const useAuthStore = create<AuthState>()(
       async logout() {
         await atlasApi.logout();
         set({ user: null, error: null });
+        // The on-device database copy was removed on sign-out, so start the page afresh.
+        if (useLiveData && typeof window !== "undefined") window.location.reload();
       },
     }),
     {

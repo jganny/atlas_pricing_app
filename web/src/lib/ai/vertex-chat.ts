@@ -126,6 +126,8 @@ export interface StreamOptions {
   web: boolean;
   appContext?: string;
   workspace?: string;
+  /** false = the assistant may not look up the person's own quotes (used where others can read the answer). */
+  quotes?: boolean;
   signal?: AbortSignal;
   onEvent: (ev: ChatEvent) => void;
 }
@@ -152,6 +154,7 @@ export async function streamChat(o: StreamOptions): Promise<void> {
         web: o.web,
         appContext: o.appContext,
         workspace: o.workspace,
+        quotes: o.quotes,
       }),
     });
   } catch (e) {

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const swPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../public/sw.js");
 const src = fs.readFileSync(swPath, "utf8");
 
-assert.match(src, /atlas-app-shell-v32/);
+assert.match(src, /atlas-app-shell-v33/);
 assert.match(src, /event\.data\.type === "SKIP_WAITING"/);
 assert.match(src, /networkFirst/);
 assert.equal(
@@ -19,5 +19,9 @@ assert.ok(
   "skipWaiting must live in the message handler",
 );
 assert.equal(src.includes("clients.claim"), false, "claim during activate reloads Safari mid-load");
+
+assert.match(src, /addEventListener\("push"/, "chat alerts need a push handler");
+assert.match(src, /addEventListener\("notificationclick"/);
+assert.match(src, /visibilityState === "visible"/, "no pop-up while Atlas is on screen");
 
 console.log("sw.js contract tests passed");

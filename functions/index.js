@@ -1421,3 +1421,9 @@ exports.extractShipmentFromDocuments = hubExtract.extractShipmentFromDocuments;
 const vertexChat = require("./vertex-chat");
 exports.vertexChat = vertexChat.vertexChat;
 exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;
+
+// Team chat: delete messages and files 100 days after they were sent, and alert people who are away.
+const chatRetention = require("./chat-retention");
+exports.chatRetention = chatRetention.chatRetention;
+const chatNotify = require("./chat-notify");
+exports.chatNotify = chatNotify.chatNotify;

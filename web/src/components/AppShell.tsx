@@ -12,6 +12,7 @@ import {
   FileText,
   Home,
   Inbox,
+  MessageSquare,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -51,6 +52,7 @@ import { demoLabel } from "@/lib/demo-mode";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
+import { ChatProvider, useTeamChatOptional } from "./chat/ChatProvider";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 import { WorkspaceMore } from "./WorkspaceMore";
 import { BrandMark } from "./BrandMark";
@@ -75,6 +77,7 @@ const desksNav: NavItem[] = [
 
 const workNav: NavItem[] = [
   { href: "/inbox", label: "Inbox", icon: Inbox, route: "inbox" },
+  { href: "/chat", label: "Team chat", icon: MessageSquare, route: "chat" },
   { href: "/enquiries", label: "Enquiry DB", icon: Database, route: "enquiries" },
   { href: "/sales", label: "Sales", icon: Briefcase, route: "sales" },
   // NRS follow-ups: visible only when RBAC grants `nrs` (Cathrina). Not Admin.
@@ -160,8 +163,10 @@ function NavLink({
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function AppShellInner({ children }: { children: React.ReactNode }) {
   useSeatsVersion();
+  const teamChat = useTeamChatOptional();
+  const chatBadge = teamChat?.badge ?? 0;
   const pathname = usePathname() ?? "/";
   const normalized =
     pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
@@ -273,7 +278,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? pendingWonCount
                   : item.href === "/nrs"
                     ? pendingNrsCount
-                    : hubBadge[item.href] || undefined
+                    : item.href === "/chat"
+                      ? chatBadge || undefined
+                      : hubBadge[item.href] || undefined
               }
             />
           ))}
@@ -301,6 +308,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const focus = deskFocusLabel(user?.username);
   const home = preferredHomePath(user?.username, user?.role);
   const showInbox = canAccessRoute(user?.username, user?.role, "inbox");
+  const showChat = canAccessRoute(user?.username, user?.role, "chat");
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
@@ -405,6 +413,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Inbox className="h-4 w-4" />
                 </Link>
               ) : null}
+              {showChat ? (
+                <Link href="/chat" className="relative rounded-lg p-2 hover:bg-white/10" aria-label="Team chat">
+                  <MessageSquare className="h-4 w-4" />
+                  {chatBadge ? (
+                    <span className="absolute right-0 top-0 rounded-full bg-[var(--color-atlas-error)] px-1 text-[9px] font-extrabold text-white">{chatBadge}</span>
+                  ) : null}
+                </Link>
+              ) : null}
             </div>
           </header>
 
@@ -430,6 +446,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   title="Inbox"
                 >
                   <Inbox className="h-3.5 w-3.5" />
+                </Link>
+              ) : null}
+              {showChat ? (
+                <Link
+                  href="/chat"
+                  className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-atlas-navy)] hover:bg-white"
+                  aria-label="Team chat"
+                  title="Team chat"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  {chatBadge ? (
+                    <span className="absolute -right-0.5 -top-0.5 rounded-full bg-[var(--color-atlas-error)] px-1 text-[9px] font-extrabold text-white">{chatBadge}</span>
+                  ) : null}
                 </Link>
               ) : null}
               <PremiumPipToggle onOpen={() => setPipOpen(true)} />
@@ -501,5 +530,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </ul>
       </PremiumPip>
     </div>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <ChatProvider>
+      <AppShellInner>{children}</AppShellInner>
+    </ChatProvider>
   );
 }

@@ -1,5 +1,5 @@
 /* Vertex PWA shell — never cache Firestore. Bump CACHE on every UI release. */
-const CACHE = "atlas-app-shell-v32";
+const CACHE = "atlas-app-shell-v33";
 const PRECACHE = [
   "/app/manifest.webmanifest",
   "/app/icon-192.png",
@@ -66,7 +66,19 @@ self.addEventListener("fetch", (event) => {
     url.pathname === "/app/" ||
     url.pathname.endsWith(".html");
   if (isHtmlNav) {
-    event.respondWith(fetch(req, { cache: "no-store" }).catch(() => caches.match("/app/")));
+    // Online: always the fresh page (a copy is kept). Offline: the last copy of this page, so the
+    // app — and Team chat, with its on-device messages — still opens without a connection.
+    event.respondWith(
+      fetch(req, { cache: "no-store" })
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            void caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(async () => (await caches.match(req)) || (await caches.match("/app/")) || Response.error()),
+    );
     return;
   }
 
@@ -92,6 +104,45 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => cached);
       return cached || fetchPromise;
+    }),
+  );
+});
+
+// Team chat alerts. The server sends a small data message; show it unless Atlas is already on screen.
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = {};
+  }
+  const d = payload.data || payload.notification || payload;
+  if (!d || (!d.title && !d.body)) return;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      if (wins.some((w) => w.visibilityState === "visible")) return undefined;
+      return self.registration.showNotification(d.title || "Atlas Pricing", {
+        body: d.body || "",
+        tag: d.tag || "atlas-chat",
+        icon: "/app/icon-192.png",
+        badge: "/app/icon-192.png",
+        data: { url: d.url || "/app/chat/" },
+      });
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/app/chat/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => w.url.includes("/app"));
+      if (open) {
+        void open.navigate(url).catch(() => undefined);
+        return open.focus();
+      }
+      return self.clients.openWindow(url);
     }),
   );
 });

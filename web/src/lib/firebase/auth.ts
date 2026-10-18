@@ -8,7 +8,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import type { AuthUser, UserRole } from "@/lib/types";
-import { getFirebaseAuth, getFirebaseDb } from "./client";
+import { getFirebaseAuth, getFirebaseDb, wipeLocalFirestoreCache } from "./client";
 
 const CANONICAL_DOMAIN = "atlaspricing.com";
 const LEGACY_DOMAIN = "pricing.local";
@@ -102,6 +102,7 @@ export async function firebaseLogin(username: string, password: string): Promise
 
 export async function firebaseLogout(): Promise<void> {
   await signOut(getFirebaseAuth());
+  await wipeLocalFirestoreCache();
 }
 
 export function subscribeToAuthChanges(

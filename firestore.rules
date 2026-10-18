@@ -62,6 +62,76 @@ service cloud.firestore {
       allow read: if isSignedIn() && (usageId.matches(request.auth.uid + '_.*') || isAdmin());
       allow write: if false;
     }
+    // --- test-app only (Team chat) --------------------------------------------
+    // Desk chats, groups and direct messages between colleagues. A room lists the logins that
+    // may see it (desk chats follow whoever sits in the desk; "Everyone" is open to all signed-in
+    // staff). Messages are readable by room members and by the administrator, who reviews chats
+    // under company policy (each review is recorded in chatAudit). People can write only as
+    // themselves, edit only their own words, and nobody can hard-delete from the app: messages
+    // are removed automatically 100 days after they were sent by a scheduled server job.
+    // The legacy app never touches these collections.
+    function chatLogin() { return request.auth.token.email.split('@')[0]; }
+    function chatCanSee(room) {
+      return room.get('audience', 'list') == 'all' || chatLogin() in room.get('memberLogins', []);
+    }
+    match /chatRooms/{roomId} {
+      function roomData() { return get(/databases/$(database)/documents/chatRooms/$(roomId)).data; }
+      allow read: if isSignedIn() && (chatCanSee(resource.data) || isAdmin());
+      allow create: if isSignedIn() && (
+        isAdmin()
+        || (request.resource.data.kind in ['group', 'dm']
+            && request.resource.data.audience == 'list'
+            && request.resource.data.createdBy == chatLogin()
+            && chatLogin() in request.resource.data.memberLogins
+            && (request.resource.data.kind != 'dm' || request.resource.data.memberLogins.size() == 2))
+        || (roomId == 'everyone' && request.resource.data.kind == 'channel' && request.resource.data.audience == 'all')
+      );
+      allow update: if isSignedIn() && (
+        isAdmin()
+        || (chatCanSee(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['lastMessageAt', 'lastMessageText', 'lastMessageBy', 'pinned', 'mentioned']))
+        || (resource.data.kind == 'group' && resource.data.createdBy == chatLogin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'memberLogins']))
+      );
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (chatCanSee(roomData()) || isAdmin());
+        allow create: if isSignedIn() && chatCanSee(roomData())
+          && request.resource.data.senderLogin == chatLogin()
+          && request.resource.data.text is string && request.resource.data.text.size() <= 4000;
+        allow update: if isSignedIn() && chatCanSee(roomData()) && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          || (resource.data.senderLogin == chatLogin()
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['text', 'editedAtMs', 'deleted', 'attachments', 'mentions', 'quote']))
+        );
+        allow delete: if false;
+      }
+      match /typing/{login} {
+        allow read: if isSignedIn() && (chatCanSee(roomData()) || isAdmin());
+        allow write: if isSignedIn() && login == chatLogin() && chatCanSee(roomData());
+      }
+      match /receipts/{login} {
+        allow read: if isSignedIn() && (chatCanSee(roomData()) || isAdmin());
+        allow write: if isSignedIn() && login == chatLogin() && chatCanSee(roomData());
+      }
+    }
+    // Who is online, each person's own read marks / muted chats / notification devices, and the
+    // administrator's review log (admin can add entries and read them; nobody can change or remove one).
+    match /chatPresence/{login} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && login == chatLogin();
+    }
+    match /chatState/{login} {
+      allow read, write: if isSignedIn() && login == chatLogin();
+    }
+    match /chatAudit/{entryId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.by == chatLogin();
+      allow update, delete: if false;
+    }
     // --------------------------------------------------------------------------
     // --------------------------------------------------------------------------
     // --------------------------------------------------------------------------
