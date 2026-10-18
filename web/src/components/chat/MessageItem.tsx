@@ -184,7 +184,7 @@ export function MessageItem({
           ) : null}
           <span className={cn("ml-2 inline-flex items-center gap-1 align-bottom text-[10px]", mine ? "text-white/60" : "text-slate-400")}>
             {msg.editedAtMs ? "edited" : ""}
-            {mine ? (msg.pending ? <Clock className="h-3 w-3" aria-label="Waiting to send" /> : <Check className="h-3 w-3" aria-label="Sent" />) : null}
+            {mine ? (msg.failed ? <span className="flex items-center gap-0.5 text-red-300"><AlertCircle className="h-3 w-3" aria-label="Couldn't send" /> not sent</span> : msg.pending ? <Clock className="h-3 w-3" aria-label="Waiting to send" /> : <Check className="h-3 w-3" aria-label="Sent" />) : null}
           </span>
         </div>
         {reactions.length ? (

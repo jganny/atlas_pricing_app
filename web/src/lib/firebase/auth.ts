@@ -8,7 +8,8 @@ import {
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import type { AuthUser, UserRole } from "@/lib/types";
-import { getFirebaseAuth, getFirebaseDb, wipeLocalFirestoreCache } from "./client";
+import { wipeChatCache } from "@/lib/chat/chat-cache";
+import { getFirebaseAuth, getFirebaseDb } from "./client";
 
 const CANONICAL_DOMAIN = "atlaspricing.com";
 const LEGACY_DOMAIN = "pricing.local";
@@ -102,7 +103,8 @@ export async function firebaseLogin(username: string, password: string): Promise
 
 export async function firebaseLogout(): Promise<void> {
   await signOut(getFirebaseAuth());
-  await wipeLocalFirestoreCache();
+  // Team chat keeps a copy of recent chats on this device; remove it so the next person can't see it.
+  await wipeChatCache();
 }
 
 export function subscribeToAuthChanges(

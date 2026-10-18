@@ -2,15 +2,7 @@
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import {
-  clearIndexedDbPersistence,
-  getFirestore,
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  terminate,
-  type Firestore,
-} from "firebase/firestore";
+import { getFirestore, type Firestore } from "firebase/firestore";
 import { firebaseConfig, firebaseDatabaseId } from "@/lib/env";
 import { loadRuntimeFirebaseConfig } from "@/lib/firebase/runtime-config";
 
@@ -56,38 +48,13 @@ export function getFirebaseAuth(): Auth {
   return auth;
 }
 
-/**
- * Firestore with an on-device copy (IndexedDB) so the team chat — and anything else already
- * read — still opens offline, and messages written offline are sent when the connection returns.
- * If the browser can't do that (private window, old browser) it quietly falls back to online-only.
- */
 export function getFirebaseDb(): Firestore {
   if (!db) {
     const id = resolvedDatabaseId();
-    const database = id && id !== "(default)" ? id : undefined;
-    try {
-      db = initializeFirestore(
-        getFirebaseApp(),
-        { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) },
-        database,
-      );
-    } catch {
-      db = database ? getFirestore(getFirebaseApp(), database) : getFirestore(getFirebaseApp());
-    }
+    db =
+      id && id !== "(default)"
+        ? getFirestore(getFirebaseApp(), id)
+        : getFirestore(getFirebaseApp());
   }
   return db;
-}
-
-/**
- * Removes the on-device copy of the database. Called when someone signs out so the next person
- * on a shared computer can't see what was cached. The page must be reloaded afterwards.
- */
-export async function wipeLocalFirestoreCache(): Promise<void> {
-  if (!db) return;
-  try {
-    await terminate(db);
-    await clearIndexedDbPersistence(db);
-  } catch {
-    /* nothing cached, or the browser doesn't allow it — nothing to wipe */
-  }
 }

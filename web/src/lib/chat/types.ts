@@ -61,6 +61,8 @@ export interface ChatMessage {
   deleted?: boolean;
   /** True while the message has only been saved on this device (sent offline). */
   pending?: boolean;
+  /** The server refused it (for example you were removed from the chat). Stays on this device only. */
+  failed?: boolean;
 }
 
 export interface ChatState {

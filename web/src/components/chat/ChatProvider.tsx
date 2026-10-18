@@ -9,7 +9,7 @@ import { IS_DEMO_BUILD } from "@/lib/demo-mode";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { processOutbox } from "@/lib/chat/actions";
 import { badgeRooms, dmRoomId, isMember, newId, wasMentioned } from "@/lib/chat/chat-logic";
-import { firestoreBackend } from "@/lib/chat/firestore-backend";
+import { offlineBackend } from "@/lib/chat/offline-backend";
 import { mockBackend } from "@/lib/chat/mock-backend";
 import { channelsToSync, desiredChannels, listPeople } from "@/lib/chat/people";
 import { currentPushState, enablePush, type PushState } from "@/lib/chat/push";
@@ -41,7 +41,7 @@ export interface ChatContextValue {
 }
 
 const EMPTY_STATE: ChatState = { reads: {}, muted: {} };
-const backendFor = () => (useLiveData ? firestoreBackend : mockBackend);
+const backendFor = () => (useLiveData ? offlineBackend : mockBackend);
 
 const Ctx = createContext<ChatContextValue | null>(null);
 

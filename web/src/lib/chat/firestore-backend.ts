@@ -39,6 +39,26 @@ function toMessage(id: string, roomId: string, d: DocumentData, pending: boolean
   return { ...(rest as ChatMessage), id, roomId, pending };
 }
 
+/** Saves a message and bumps its room; resolves when the server has it (rejects if it can't be reached). */
+export function deliverMessage(msg: ChatMessage): Promise<void> {
+  const batch = writeBatch(getFirebaseDb());
+  const { pending: _pending, ...body } = msg;
+  void _pending;
+  batch.set(doc(messages(msg.roomId), msg.id), { ...clean(body), expireAt: Timestamp.fromMillis(expiryFor(msg.createdAtMs)) });
+  const bump: Record<string, unknown> = {
+    lastMessageAt: msg.createdAtMs,
+    lastMessageText: previewText(msg),
+    lastMessageBy: msg.senderLogin,
+  };
+  for (const login of msg.mentions ?? []) bump[`mentioned.${login}`] = msg.createdAtMs;
+  batch.update(roomRef(msg.roomId), bump);
+  return batch.commit();
+}
+
+export function deliverRoom(room: ChatRoom): Promise<void> {
+  return setDoc(roomRef(room.id), clean(room));
+}
+
 export const firestoreBackend: ChatBackend = {
   subscribeRooms(me, cb) {
     const db = getFirebaseDb();
@@ -72,20 +92,8 @@ export const firestoreBackend: ChatBackend = {
   },
 
   sendMessage(msg) {
-    const db = getFirebaseDb();
-    const batch = writeBatch(db);
-    const { pending: _pending, ...body } = msg;
-    void _pending;
-    batch.set(doc(messages(msg.roomId), msg.id), { ...clean(body), expireAt: Timestamp.fromMillis(expiryFor(msg.createdAtMs)) });
-    const bump: Record<string, unknown> = {
-      lastMessageAt: msg.createdAtMs,
-      lastMessageText: previewText(msg),
-      lastMessageBy: msg.senderLogin,
-    };
-    for (const login of msg.mentions ?? []) bump[`mentioned.${login}`] = msg.createdAtMs;
-    batch.update(roomRef(msg.roomId), bump);
-    // Not awaited on purpose: offline, this stays queued on the device and goes out later.
-    batch.commit().catch((e) => console.warn("Team chat send:", e.message));
+    // Not awaited on purpose; the offline layer (offline-backend.ts) keeps it safe until the server confirms.
+    deliverMessage(msg).catch((e) => console.warn("Team chat send:", e.message));
   },
 
   patchMessage(roomId, id, patch) {
@@ -112,8 +120,7 @@ export const firestoreBackend: ChatBackend = {
   },
 
   async createRoom(room) {
-    // Saved on the device straight away and sent when online, so this must not wait for the server.
-    setDoc(roomRef(room.id), clean(room)).catch((e) => console.warn("Team chat new room:", e.message));
+    await deliverRoom(room);
   },
 
   patchRoom(roomId, patch) {
