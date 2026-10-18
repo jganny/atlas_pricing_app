@@ -360,7 +360,17 @@ async function runChat({ apiKey, db, user, body, write, signal }) {
       method: "POST",
       signal,
       headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: MODELS[mode], max_tokens: mode === "deep" ? 4096 : 1800, stream: true, system: sys, tools, messages }),
+      // Deep: the model decides how much to think, at medium effort — the first words appear in about a second
+      // (the default thinks for 9–15 s before writing anything). Quick uses the small model as is.
+      body: JSON.stringify({
+        model: MODELS[mode],
+        max_tokens: mode === "deep" ? 4096 : 1800,
+        stream: true,
+        system: sys,
+        tools,
+        messages,
+        ...(mode === "deep" ? { thinking: { type: "adaptive" }, output_config: { effort: "medium" } } : {}),
+      }),
     });
     if (!res.ok) {
       const detail = (await res.text().catch(() => "")).slice(0, 400);
