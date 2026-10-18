@@ -13,6 +13,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { defineSecret } = require("firebase-functions/params");
+const { onRequest } = require("firebase-functions/v2/https");
 const { _test: hub } = require("./hub-extract");
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
@@ -424,9 +425,9 @@ async function runChat({ apiKey, db, user, body, write, signal }) {
   return { sources: dedupeSources(allSources), used, totals };
 }
 
-exports.vertexChatStream = functions
-  .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 300, memory: "1GB" })
-  .https.onRequest(async (req, res) => {
+// Second-generation function: Google's first-generation front end holds a streamed response back
+// until it finishes, so answers would only appear at the end. Second generation streams as it goes.
+exports.vertexChat = onRequest({ secrets: [anthropicApiKey], timeoutSeconds: 300, memory: "1GiB", invoker: "public" }, async (req, res) => {
     applyCors(req, res);
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
@@ -481,6 +482,6 @@ exports.vertexChatStream = functions
       }
     }
     res.end();
-  });
+});
 
 exports._test = { runChat, dayKey, systemPrompt, seatInfo, canSeeQuote, filterQuotes, BlockBuilder, readEvents, buildMessages, dedupeSources, SEARCH_QUOTES_TOOL, MODELS };

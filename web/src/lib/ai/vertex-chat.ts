@@ -115,7 +115,7 @@ export function dayKeyIST(now = Date.now()): string {
 
 export const DEFAULT_DAILY_LIMIT = 50;
 
-const STREAM_URL = "https://us-central1-vertex-35d95.cloudfunctions.net/vertexChatStream";
+const STREAM_URL = "https://us-central1-vertex-35d95.cloudfunctions.net/vertexChat";
 
 export interface StreamOptions {
   getToken: () => Promise<string>;
