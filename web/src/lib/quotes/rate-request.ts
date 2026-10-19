@@ -153,3 +153,11 @@ export function buildRequestEmail(i: EmailInput): { subject: string; body: strin
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Rate requests are switched off for everyone but the main administrator while the feature is on hold
+ * (sending from the pricing mailbox has not been verified). Widen this when the feature is resumed.
+ */
+export function canUseRateRequests(username: string | undefined | null): boolean {
+  return (username || "").toLowerCase() === "ganny";
+}

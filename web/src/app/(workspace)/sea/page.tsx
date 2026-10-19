@@ -34,6 +34,7 @@ import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { autoLiners } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
+import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
@@ -1433,9 +1434,11 @@ function SeaDeskInner() {
                   Carriers on this lane ({laneLiners.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" onClick={() => setShowRateRequest(true)} data-testid="request-rates">
+                  {canUseRateRequests(user?.username) ? (
+                    <Button type="button" variant="secondary" onClick={() => setShowRateRequest(true)} data-testid="request-rates">
                     Request rates
-                  </Button>
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="secondary"

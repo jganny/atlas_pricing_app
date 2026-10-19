@@ -51,6 +51,7 @@ import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { autoAirlines } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
+import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { chargeableWeightKg, summarizeCargo } from "@atlas/pricing-core";
 import {
   AIR_WEIGHT_BREAKS,
@@ -1444,9 +1445,11 @@ function AirDeskInner() {
                   Carriers on this lane ({laneAirlines.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" onClick={() => setShowRateRequest(true)} data-testid="request-rates">
+                  {canUseRateRequests(user?.username) ? (
+                    <Button type="button" variant="secondary" onClick={() => setShowRateRequest(true)} data-testid="request-rates">
                     Request rates
-                  </Button>
+                    </Button>
+                  ) : null}
                   <Button type="button" variant="secondary" onClick={() => addAirline("airline")}>
                     <Plus className="mr-1 h-4 w-4" /> Airline
                   </Button>

@@ -6,9 +6,12 @@
   "scope": "/app/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0a2540",
+  "background_color": "#ffffff",
   "theme_color": "#0a2540",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/app/icon-192.png",
@@ -23,7 +26,7 @@
       "purpose": "any"
     },
     {
-      "src": "/app/icon-512.png",
+      "src": "/app/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -34,13 +37,23 @@
       "name": "New quote",
       "short_name": "Quote",
       "url": "/app/quote/",
-      "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Inbox",
       "short_name": "Inbox",
       "url": "/app/inbox/",
-      "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

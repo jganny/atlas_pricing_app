@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildRequestEmail, newRequestRef, planFor, selectRecipients, MAX_AUTO_RECIPIENTS, type RequestContext } from "./rate-request";
+import { canUseRateRequests, buildRequestEmail, newRequestRef, planFor, selectRecipients, MAX_AUTO_RECIPIENTS, type RequestContext } from "./rate-request";
 import { countryCodesIn, countryOfPlace, parseCoverage, vendorKind } from "@/lib/directory/coverage";
 import type { DirectoryContact } from "@/lib/types";
 
@@ -67,4 +67,8 @@ const e = buildRequestEmail({ ...vCtx, ref, originLabel: "BOM - Mumbai", destLab
 assert.match(e.subject, /RQ-ABC1234/);
 assert.match(e.body, /Gross weight: 145 kg/);
 assert.doesNotMatch(e.body, /customer|margin|sell|buy/i, "no customer or price words in what vendors see");
+// Switched off for everyone but the main admin while the feature is on hold.
+assert.equal(canUseRateRequests("ganny"), true);
+assert.equal(canUseRateRequests("Ganny"), true);
+for (const u of ["shashank", "shaheer", "cathrina", "kavya", "sunil", "manager", "pricing", "demo", "", undefined, null]) assert.equal(canUseRateRequests(u), false, String(u));
 console.log("rate-request tests passed");
