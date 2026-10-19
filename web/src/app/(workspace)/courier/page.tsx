@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuoteTimer } from "@/hooks/use-quote-timer";
 import { useDeskDraft } from "@/hooks/use-desk-draft";
 import { useHubPrefill } from "@/hooks/use-hub-prefill";
 import { DraftResumeBanner } from "@/components/DraftResumeBanner";
@@ -1731,6 +1732,7 @@ function SurchargeToggle({
 }
 
 export default function CourierDeskPage() {
+  useQuoteTimer();
   return (
     <Suspense fallback={<Card className="p-6 text-sm text-[var(--color-text-muted)]">Loading courier desk…</Card>}>
       <CourierDeskInner />

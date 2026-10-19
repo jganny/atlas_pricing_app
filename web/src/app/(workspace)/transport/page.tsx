@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuoteTimer } from "@/hooks/use-quote-timer";
 import { useDeskDraft } from "@/hooks/use-desk-draft";
 import { useHubPrefill } from "@/hooks/use-hub-prefill";
 import { matchVehicleType } from "@/lib/hub/prefill";
@@ -83,6 +84,7 @@ const TRANSPORT_FOCUS: Record<TabId, string> = {
 };
 
 export default function TransportDeskPage() {
+  useQuoteTimer();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();

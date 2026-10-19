@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuoteTimer } from "@/hooks/use-quote-timer";
 import { useDeskDraft } from "@/hooks/use-desk-draft";
 import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -48,6 +49,7 @@ import { useLiveData } from "@/lib/api";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
+import { autoAirlines } from "@/lib/pricing/auto-carriers";
 import {
   AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
@@ -86,7 +88,11 @@ const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDU", "DDP"];
 type Step = "shipment" | "carrier" | "terms";
 const AIR_STEPS = ["shipment", "carrier", "terms"] as const;
 
+// Stable fallback: a fresh [] every render would make effects that depend on it run forever.
+const NO_AIR_TARIFFS: AirTariff[] = [];
+
 export default function AirDeskPage() {
+  useQuoteTimer();
   return (
     <Suspense fallback={<Card className="p-6 text-sm text-[var(--color-text-muted)]">Loading air desk…</Card>}>
       <AirDeskInner />
@@ -98,7 +104,8 @@ function AirDeskInner() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const { data: tariffs = [] } = useAirTariffs();
+  const { data: tariffData } = useAirTariffs();
+  const tariffs = tariffData ?? NO_AIR_TARIFFS;
   const loader = useQuoteDeskLoader("air");
   const customerFieldName = useAntiAutofillName("atlas-party-air");
 
@@ -340,6 +347,32 @@ function AirDeskInner() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tariffMatchById]);
+
+  // Auto-draft: arriving at the Carriers step with nothing named yet, add every carrier that has a Circulars
+  // rate on this lane (priced by the silent tariff fill above), so the user starts from a finished comparison.
+  const autoCarriersKey = useRef("");
+  useEffect(() => {
+    if (step !== "carrier" || loader.sourceQuote || loader.editingQuoteId) return;
+    const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
+    const destCode = destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
+    if (!originCode || !destCode || !tariffs.length) return;
+    const laneId = activeLane?.id || lanes[0]?.id || "";
+    const key = `${laneId}:${originCode}>${destCode}`;
+    if (autoCarriersKey.current === key) return;
+    autoCarriersKey.current = key;
+    const onLane = airlines.filter((a) => !a.laneId || a.laneId === laneId);
+    if (onLane.some((a) => a.name.trim())) return; // already working on carriers — leave them alone
+    const res = autoAirlines(tariffs, originCode, destCode, { laneId });
+    if (!res.options.length) return;
+    setAirlines((prev) => [...prev.filter((a) => !((!a.laneId || a.laneId === laneId) && !a.name.trim())), ...res.options]);
+    if (res.currency) setCurrency(res.currency);
+    toast(
+      `Added ${res.options.length} carrier${res.options.length > 1 ? "s" : ""} with rates on file for ${originCode} → ${destCode}. Remove any you don't want.` +
+        (res.skipped.length ? ` Not added (different currency): ${res.skipped.join(", ")}.` : ""),
+      "success",
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, origin, destination, tariffs]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;

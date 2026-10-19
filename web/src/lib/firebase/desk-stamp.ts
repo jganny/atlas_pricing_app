@@ -1,5 +1,6 @@
 import { doc, getDoc } from "firebase/firestore";
 import { currentDeskSeatId, personDisplayName, quoteDeskSeatId, type DeskSeatId } from "@/lib/auth/desk-seats";
+import { takeQuoteSeconds } from "@/lib/quotes/quote-timer";
 import { getFirebaseDb } from "./client";
 
 /**
@@ -12,8 +13,13 @@ import { getFirebaseDb } from "./client";
 export async function deskSeatForSave(
   quoteId: string | undefined,
   creator: string,
-): Promise<{ deskSeat?: DeskSeatId; creatorName?: string }> {
-  const stamp = await deskForSave(quoteId, creator);
+): Promise<{ deskSeat?: DeskSeatId; creatorName?: string; quoteSeconds?: number }> {
+  const stamp: { deskSeat?: DeskSeatId; creatorName?: string; quoteSeconds?: number } = { ...(await deskForSave(quoteId, creator)) };
+  // Only a NEW quote is timed; re-saving or amending an old one says nothing about how fast it was made.
+  if (!quoteId) {
+    const secs = takeQuoteSeconds();
+    if (secs !== null) stamp.quoteSeconds = secs;
+  }
   // Also remember the person's name as it is today, so it keeps reading correctly
   // after the desk changes hands.
   const name = personDisplayName(creator);

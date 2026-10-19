@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuoteTimer } from "@/hooks/use-quote-timer";
 import { useDeskDraft } from "@/hooks/use-desk-draft";
 import { DraftResumeBanner } from "@/components/DraftResumeBanner";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -31,6 +32,7 @@ import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
+import { autoLiners } from "@/lib/pricing/auto-carriers";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
@@ -107,7 +109,11 @@ function linerRatesAreEmpty(opt: LinerOption, mode: SeaMode): boolean {
 }
 const SEA_STEPS = ["shipment", "carrier", "terms"] as const;
 
+// Stable fallback: a fresh [] every render would make effects that depend on it run forever.
+const NO_SEA_TARIFFS: SeaTariff[] = [];
+
 export default function SeaDeskPage() {
+  useQuoteTimer();
   return (
     <Suspense fallback={<Card className="p-6 text-sm text-[var(--color-text-muted)]">Loading sea desk…</Card>}>
       <SeaDeskInner />
@@ -119,7 +125,8 @@ function SeaDeskInner() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const { data: tariffs = [] } = useSeaTariffs();
+  const { data: tariffData } = useSeaTariffs();
+  const tariffs = tariffData ?? NO_SEA_TARIFFS;
   const loader = useQuoteDeskLoader("sea");
   const customerFieldName = useAntiAutofillName("atlas-party-sea");
   const [leadId, setLeadId] = useState<string | undefined>(undefined);
@@ -381,6 +388,32 @@ function SeaDeskInner() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tariffMatchById]);
+
+  // Auto-draft: arriving at the Carriers step with nothing named yet, add every liner that has a Circulars
+  // rate on this lane and mode, with the shipment's containers, priced by the silent tariff fill above.
+  const autoCarriersKey = useRef("");
+  useEffect(() => {
+    if (step !== "carrier" || loader.sourceQuote || loader.editingQuoteId) return;
+    const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
+    const destCode = destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
+    if (!originCode || !destCode || !tariffs.length) return;
+    const laneId = activeLane?.id || lanes[0]?.id || "";
+    const key = `${laneId}:${originCode}>${destCode}:${mode}`;
+    if (autoCarriersKey.current === key) return;
+    autoCarriersKey.current = key;
+    const onLane = liners.filter((l) => !l.laneId || l.laneId === laneId);
+    if (onLane.some((l) => l.name.trim())) return; // already working on carriers — leave them alone
+    const res = autoLiners(tariffs, originCode, destCode, mode, { laneId, containers: onLane[0]?.containers });
+    if (!res.options.length) return;
+    setLiners((prev) => [...prev.filter((l) => !((!l.laneId || l.laneId === laneId) && !l.name.trim())), ...res.options]);
+    if (res.currency) setCurrency(res.currency);
+    toast(
+      `Added ${res.options.length} carrier${res.options.length > 1 ? "s" : ""} with rates on file for ${originCode} → ${destCode}. Remove any you don't want.` +
+        (res.skipped.length ? ` Not added (different currency): ${res.skipped.join(", ")}.` : ""),
+      "success",
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, origin, destination, tariffs, mode]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;

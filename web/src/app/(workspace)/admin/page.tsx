@@ -20,6 +20,7 @@ import {
 } from "@/lib/firebase/runtime-config";
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
 import { ChatUsageAdmin } from "@/components/ChatUsageAdmin";
+import { QuoteSpeedAdmin } from "@/components/QuoteSpeedAdmin";
 import { ChatReviewAdmin } from "@/components/chat/ChatReviewAdmin";
 import { CustomsHolidaysAdmin } from "@/components/CustomsHolidaysAdmin";
 import { UserBranchAdmin } from "@/components/UserBranchAdmin";
@@ -139,6 +140,7 @@ export default function AdminPage() {
 
       <DeskSeatsAdmin />
       <ChatUsageAdmin />
+      <QuoteSpeedAdmin />
       {/* Reviewing chats needs the main administrator account (the database allows nobody else). */}
       {user?.username?.toLowerCase() === "ganny" || !useLiveData ? <ChatReviewAdmin /> : null}
 

@@ -153,6 +153,7 @@ export function mapQuoteFromSaved(id: string, data: SavedQuote): EnquiryRecord {
     creator: (data.creator || "").toLowerCase(),
     deskSeat: data.deskSeat || undefined,
     creatorName: data.creatorName || undefined,
+    quoteSeconds: typeof data.quoteSeconds === "number" ? data.quoteSeconds : undefined,
     createdAt,
     grandTotal: amount,
     currency: data.currency,

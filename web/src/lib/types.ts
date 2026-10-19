@@ -41,6 +41,8 @@ export interface EnquiryRecord {
   deskSeat?: string
   /** Name of the person who made the quote, as it was when saved. */
   creatorName?: string
+  /** Seconds from opening the desk to saving this new quote (measured automatically). */
+  quoteSeconds?: number
   createdAt: string
   grandTotal?: number
   currency?: string
@@ -73,6 +75,7 @@ export interface SavedQuote {
   /** Desk the quote belongs to (stamped at save). */
   deskSeat?: string
   creatorName?: string
+  quoteSeconds?: number
   status: string
   type: string
   date?: string

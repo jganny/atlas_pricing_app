@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuoteTimer } from "@/hooks/use-quote-timer";
 import { useDeskDraft } from "@/hooks/use-desk-draft";
 import { useHubPrefill } from "@/hooks/use-hub-prefill";
 import { DraftResumeBanner } from "@/components/DraftResumeBanner";
@@ -55,6 +56,7 @@ const WH_FOCUS: Record<WhTab, string> = {
 };
 
 export default function WarehouseDeskPage() {
+  useQuoteTimer();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
