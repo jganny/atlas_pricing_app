@@ -318,9 +318,16 @@ export interface LeadActivity {
   id: string
   leadId: string
   type: 'note' | 'call' | 'email' | 'meeting' | 'status'
+  /** What was discussed (or the note). */
   body: string
   createdBy?: string
+  /** When it was logged. */
   createdAt: string
+  /** The day the visit/call/meeting actually happened (YYYY-MM-DD). Older entries don't have one. */
+  activityDate?: string
+  /** What happens next, and by when (YYYY-MM-DD). */
+  nextStep?: string
+  followUpDate?: string
 }
 
 export interface CreditControl {

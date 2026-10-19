@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
-import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
+import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
+import { activityDay, formatDay, sortActivities, todayISO, visitProblem } from "@/lib/sales/activity-log";
 import { toast } from "@/components/Toast";
 import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/use-atlas-data";
 import { queryKeys } from "@/hooks/query-keys";
@@ -86,7 +87,11 @@ export function PipelineView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [note, setNote] = useState("");
-  const [noteType, setNoteType] = useState<LeadActivity["type"]>("note");
+  const [noteType, setNoteType] = useState<LeadActivity["type"]>("meeting");
+  const [noteDate, setNoteDate] = useState(() => todayISO());
+  const [nextStep, setNextStep] = useState("");
+  const [followUp, setFollowUp] = useState("");
+  const [noteError, setNoteError] = useState("");
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -158,7 +163,7 @@ export function PipelineView() {
           fetchLeadActivities(lead.id),
           new Promise<LeadActivity[]>((resolve) => setTimeout(() => resolve([]), 4000)),
         ]);
-        if (rows.length) setActivities(rows);
+        if (rows.length) setActivities(sortActivities(rows));
         else setActivities(await mockApi.fetchLeadActivities(lead.id));
       } else {
         setActivities(await mockApi.fetchLeadActivities(lead.id));
@@ -256,33 +261,46 @@ export function PipelineView() {
   }
 
   async function postNote() {
-    if (!selected || !note.trim()) return;
+    if (!selected) return;
+    const problem = visitProblem({ body: note, activityDate: noteDate, nextStep, followUpDate: followUp });
+    if (problem) {
+      setNoteError(problem);
+      return;
+    }
+    setNoteError("");
     setBusy(true);
     try {
       const body = note.trim();
+      const extra = { activityDate: noteDate, nextStep: nextStep.trim() || undefined, followUpDate: followUp || undefined };
       if (useLiveData) {
         try {
           await Promise.race([
-            addLeadActivity(selected.id, body, user?.username || "desk", noteType),
+            addLeadActivity(selected.id, body, user?.username || "desk", noteType, extra),
             new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000)),
           ]);
         } catch {
           /* local */
         }
       }
-      setActivities((a) => [
-        {
-          id: `act-${Date.now()}`,
-          leadId: selected.id,
-          type: noteType,
-          body,
-          createdBy: user?.username,
-          createdAt: new Date().toISOString(),
-        },
-        ...a,
-      ]);
+      setActivities((a) =>
+        sortActivities([
+          {
+            id: `act-${Date.now()}`,
+            leadId: selected.id,
+            type: noteType,
+            body,
+            createdBy: user?.username,
+            createdAt: new Date().toISOString(),
+            ...extra,
+          },
+          ...a,
+        ]),
+      );
       setNote("");
-      toast("Activity logged", "success");
+      setNextStep("");
+      setFollowUp("");
+      setNoteDate(todayISO());
+      toast("Visit logged", "success");
     } finally {
       setBusy(false);
     }
@@ -918,26 +936,62 @@ export function PipelineView() {
           ) : null}
 
           <h3 className="mt-4 text-sm font-bold">Activity</h3>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Select
-              className="w-28"
-              value={noteType}
-              onChange={(e) => setNoteType(e.target.value as LeadActivity["type"])}
-            >
-              <option value="note">Note</option>
-              <option value="call">Call</option>
-              <option value="email">Email</option>
-              <option value="meeting">Meeting</option>
-            </Select>
-            <Input
-              className="mt-0 min-w-[12rem] flex-1"
-              placeholder="Log a call, meeting, or follow-up…"
+          <div className="mt-2 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                className="mt-0 w-36"
+                aria-label="Type of activity"
+                value={noteType}
+                onChange={(e) => setNoteType(e.target.value as LeadActivity["type"])}
+              >
+                <option value="meeting">Meeting / visit</option>
+                <option value="call">Call</option>
+                <option value="email">Email</option>
+                <option value="note">Note</option>
+              </Select>
+              <Input
+                type="date"
+                className="mt-0 w-40"
+                aria-label="Date of the visit"
+                value={noteDate}
+                max={todayISO()}
+                onChange={(e) => setNoteDate(e.target.value)}
+              />
+              <span className="text-xs text-[var(--color-text-muted)]">Today unless you change it</span>
+            </div>
+            <Textarea
+              rows={4}
+              className="mt-0"
+              aria-label="What was discussed"
+              placeholder="What was discussed — requirements, lanes, volumes, rates asked, objections, who attended…"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
-            <Button type="button" disabled={busy || !note.trim()} onClick={() => void postNote()}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log"}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                className="mt-0 min-w-[12rem] flex-1"
+                aria-label="Next step"
+                placeholder="Next step (optional) — e.g. send Air rate by Friday"
+                value={nextStep}
+                onChange={(e) => setNextStep(e.target.value)}
+              />
+              <Input
+                type="date"
+                className="mt-0 w-40"
+                aria-label="Follow-up date"
+                value={followUp}
+                min={noteDate}
+                onChange={(e) => setFollowUp(e.target.value)}
+              />
+              <Button type="button" disabled={busy} onClick={() => void postNote()}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save visit"}
+              </Button>
+            </div>
+            {noteError ? (
+              <p role="alert" className="text-xs font-semibold text-red-700">
+                {noteError}
+              </p>
+            ) : null}
           </div>
           <ul className="mt-3 space-y-2 text-sm">
             {activities.length === 0 ? (
@@ -948,10 +1002,16 @@ export function PipelineView() {
                   <div className="flex items-center gap-2">
                     <Badge tone="neutral">{a.type}</Badge>
                     <span className="text-xs text-[var(--color-text-muted)]">
-                      {a.createdBy} · {new Date(a.createdAt).toLocaleString()}
+                      {formatDay(activityDay(a))} · logged by {a.createdBy || "—"}
                     </span>
                   </div>
-                  <div className="mt-1">{a.body}</div>
+                  {a.body ? <div className="mt-1 whitespace-pre-wrap">{a.body}</div> : null}
+                  {a.nextStep || a.followUpDate ? (
+                    <div className="mt-1 text-xs font-semibold text-[var(--color-atlas-navy)]">
+                      Next: {a.nextStep || "follow up"}
+                      {a.followUpDate ? ` · ${formatDay(a.followUpDate)}` : ""}
+                    </div>
+                  ) : null}
                 </li>
               ))
             )}
