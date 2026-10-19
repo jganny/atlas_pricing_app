@@ -44,6 +44,7 @@ function mapContact(id: string, data: Record<string, unknown>): DirectoryContact
     rating: Number.isFinite(Number(data.rating)) && data.rating !== "" && data.rating != null ? Number(data.rating) : undefined,
     creditTerms: data.creditTerms ? String(data.creditTerms) : undefined,
     moduleType: data.moduleType ? String(data.moduleType) : undefined,
+    coverage: Array.isArray(data.coverage) ? (data.coverage as unknown[]).map((x) => String(x).toUpperCase()).filter(Boolean) : undefined,
   };
 }
 
@@ -98,6 +99,8 @@ export async function saveDirectoryContact(
     agreementUrl: input.agreementUrl?.trim() || "",
     agreementFileName: input.agreementFileName?.trim() || "",
     suspended: Boolean(input.suspended),
+    // Only written when given, so saving other fields never wipes it (and the weekly import never touches it).
+    ...(input.coverage ? { coverage: input.coverage } : {}),
     updatedBy,
     updatedAt: serverTimestamp(),
   };

@@ -1427,3 +1427,7 @@ const chatRetention = require("./chat-retention");
 exports.chatRetention = chatRetention.chatRetention;
 const chatNotify = require("./chat-notify");
 exports.chatNotify = chatNotify.chatNotify;
+
+// Rate requests: the desk emails chosen agents / airlines / liners / coloaders for rates.
+const rateRequests = require("./rate-requests");
+exports.sendRateRequests = rateRequests.sendRateRequests;

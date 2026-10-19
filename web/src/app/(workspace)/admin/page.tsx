@@ -21,6 +21,7 @@ import {
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
 import { ChatUsageAdmin } from "@/components/ChatUsageAdmin";
 import { QuoteSpeedAdmin } from "@/components/QuoteSpeedAdmin";
+import { MailTestAdmin } from "@/components/MailTestAdmin";
 import { ChatReviewAdmin } from "@/components/chat/ChatReviewAdmin";
 import { CustomsHolidaysAdmin } from "@/components/CustomsHolidaysAdmin";
 import { UserBranchAdmin } from "@/components/UserBranchAdmin";
@@ -141,6 +142,7 @@ export default function AdminPage() {
       <DeskSeatsAdmin />
       <ChatUsageAdmin />
       <QuoteSpeedAdmin />
+      {user?.username?.toLowerCase() === "ganny" ? <MailTestAdmin /> : null}
       {/* Reviewing chats needs the main administrator account (the database allows nobody else). */}
       {user?.username?.toLowerCase() === "ganny" || !useLiveData ? <ChatReviewAdmin /> : null}
 

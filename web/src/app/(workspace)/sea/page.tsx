@@ -33,6 +33,7 @@ import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { autoLiners } from "@/lib/pricing/auto-carriers";
+import { RateRequestPanel } from "@/components/RateRequestPanel";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
@@ -153,6 +154,7 @@ function SeaDeskInner() {
   const [commodity, setCommodity] = useState("GENERAL");
   const [module, setModule] = useState<"export" | "import">("export");
   const [mode, setMode] = useState<SeaMode>("fcl");
+  const [showRateRequest, setShowRateRequest] = useState(false);
   const [grossWeightKg, setGrossWeightKg] = useState(0);
   const [volumeCbm, setVolumeCbm] = useState(0);
   const [cargo, setCargo] = useState<SeaCargoRow[]>([]);
@@ -990,8 +992,19 @@ function SeaDeskInner() {
     setStep,
   });
 
+  const requestCargo = {
+    grossKg: grossWeightKg || undefined,
+    volumeCbm: volumeCbm || undefined,
+    pieces: cargo.reduce((n, r) => n + (r.qty || 0), 0) || undefined,
+    containers: mode === "fcl" ? (liners.find((l) => l.selected) ?? liners[0])?.containers.map((c) => ({ type: c.type, qty: c.qty })) : undefined,
+    commodity: commodity && commodity !== "GENERAL" ? commodity : "General cargo",
+  };
+
   return (
     <div className="space-y-3">
+      {showRateRequest ? (
+        <RateRequestPanel mode="sea" direction={module} incoterm={incoterm} origin={origin} destination={destination} cargo={requestCargo} onClose={() => setShowRateRequest(false)} />
+      ) : null}
       <DraftResumeBanner deskLabel="sea" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
@@ -1420,6 +1433,9 @@ function SeaDeskInner() {
                   Carriers on this lane ({laneLiners.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setShowRateRequest(true)} data-testid="request-rates">
+                    Request rates
+                  </Button>
                   <Button
                     type="button"
                     variant="secondary"

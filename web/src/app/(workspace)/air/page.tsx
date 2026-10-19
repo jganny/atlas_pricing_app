@@ -50,9 +50,12 @@ import { saveAirQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { autoAirlines } from "@/lib/pricing/auto-carriers";
+import { RateRequestPanel } from "@/components/RateRequestPanel";
+import { chargeableWeightKg, summarizeCargo } from "@atlas/pricing-core";
 import {
   AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
+  cargoRowsToLines,
   computeAirlineTotals,
   validateAirCargo,
   validateSelectedAirline,
@@ -133,6 +136,7 @@ function AirDeskInner() {
   const [customFx, setCustomFx] = useState(0);
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
+  const [showRateRequest, setShowRateRequest] = useState(false);
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
   const [localOriginCharges, setLocalOriginCharges] = useState<SurchargeRow[]>([]);
   const [destClearanceCharges, setDestClearanceCharges] = useState<SurchargeRow[]>([]);
@@ -992,8 +996,22 @@ function AirDeskInner() {
     setStep,
   });
 
+  const requestCargo = (() => {
+    const sum = summarizeCargo(cargoRowsToLines(cargo), dimUnit);
+    return {
+      pieces: sum.packageQty || undefined,
+      grossKg: sum.grossWeightKg || undefined,
+      volumeCbm: sum.volumeCbm || undefined,
+      chargeableKg: sum.grossWeightKg || sum.volumeWeightKg ? chargeableWeightKg(sum, 0) : undefined,
+      commodity: commodity && commodity !== "GENERAL" ? commodity : "General cargo",
+    };
+  })();
+
   return (
     <div className="space-y-3">
+      {showRateRequest ? (
+        <RateRequestPanel mode="air" direction={module} incoterm={incoterm} origin={origin} destination={destination} cargo={requestCargo} onClose={() => setShowRateRequest(false)} />
+      ) : null}
       <DraftResumeBanner deskLabel="air" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
@@ -1426,6 +1444,9 @@ function AirDeskInner() {
                   Carriers on this lane ({laneAirlines.length})
                 </h2>
                 <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setShowRateRequest(true)} data-testid="request-rates">
+                    Request rates
+                  </Button>
                   <Button type="button" variant="secondary" onClick={() => addAirline("airline")}>
                     <Plus className="mr-1 h-4 w-4" /> Airline
                   </Button>

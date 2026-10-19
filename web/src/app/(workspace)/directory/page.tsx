@@ -1,5 +1,6 @@
 "use client";
 
+import { countryCodesIn, coverageLabel, parseCoverage } from "@/lib/directory/coverage";
 import { describeAgencyPlan } from "@/lib/quotes/agent-import";
 import { describeUnreadableWorkbook, parseDirectorySheets, type ParsedWorkbook } from "@/lib/directory/excel-import";
 import { useEffect, useMemo, useState } from "react";
@@ -134,6 +135,7 @@ export default function DirectoryPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DirectoryContactInput>(EMPTY_FORM);
+  const [coverageText, setCoverageText] = useState("");
   const [busy, setBusy] = useState(false);
   const [weeklyOpen, setWeeklyOpen] = useState(false);
   const [weeklyEmails, setWeeklyEmails] = useState("");
@@ -237,8 +239,36 @@ export default function DirectoryPage() {
     ];
   }, [rows, effectiveParent]);
 
+  /** Vendors with no countries yet: read them from location/notes, after a count and a confirmation. */
+  async function fillMissingCoverage() {
+    const todo = rows
+      .filter((c) => !isAgencyContact(c.category) && !(c.coverage && c.coverage.length))
+      .map((c) => ({ c, found: countryCodesIn(`${c.location || ""} ${c.notes || ""}`) }))
+      .filter((x) => x.found.length > 0);
+    if (!todo.length) {
+      toast("Nothing to fill: every vendor either has countries or none can be read from its location and notes.", "info");
+      return;
+    }
+    if (!window.confirm(`Fill "Countries served" for ${todo.length} vendor${todo.length > 1 ? "s" : ""} from their location and notes? You can correct any of them afterwards.`)) return;
+    setBusy(true);
+    try {
+      let done = 0;
+      for (const { c, found } of todo) {
+        await saveDirectoryContact({ ...c, coverage: found }, user?.username || "unknown");
+        done += 1;
+      }
+      toast(`Filled ${done} vendor${done > 1 ? "s" : ""}.`, "success");
+      await queryClient.invalidateQueries({ queryKey: queryKeys.directory });
+    } catch {
+      toast("Couldn't save some vendors. Try again.", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function openCreate() {
     setEditingId(null);
+    setCoverageText("");
     setForm({
       ...EMPTY_FORM,
       category: effectiveParent === "agents" ? "agency" : "airline",
@@ -249,6 +279,7 @@ export default function DirectoryPage() {
 
   function openEdit(c: DirectoryContact) {
     setEditingId(c.id);
+    setCoverageText(coverageLabel(c.coverage));
     setForm({
       name: c.name,
       category: c.category,
@@ -400,7 +431,7 @@ export default function DirectoryPage() {
         try {
           await Promise.race([
             saveDirectoryContact(
-              { ...form, id: editingId || undefined },
+              { ...form, coverage: parseCoverage(coverageText), id: editingId || undefined },
               user?.username || "unknown",
             ),
             new Promise((_, reject) =>
@@ -495,6 +526,11 @@ export default function DirectoryPage() {
           {canEdit && effectiveParent === "agents" ? (
             <Button type="button" variant="secondary" onClick={() => setWeeklyOpen((v) => !v)}>
               Weekly agency list
+            </Button>
+          ) : null}
+          {canEdit && effectiveParent === "vendors" ? (
+            <Button type="button" variant="secondary" onClick={() => void fillMissingCoverage()} title="Read countries from each vendor's location and notes">
+              Fill countries served
             </Button>
           ) : null}
           {canEdit ? (
@@ -618,6 +654,30 @@ export default function DirectoryPage() {
                   setForm((f) => ({ ...f, location: e.target.value }))
                 }
               />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="dir-coverage">Countries served</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="dir-coverage"
+                  value={coverageText}
+                  placeholder="e.g. Lebanon, UAE, Germany — decides who gets a rate request"
+                  onChange={(e) => setCoverageText(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  title="Read the countries from the location and notes"
+                  onClick={() => {
+                    const found = countryCodesIn(`${form.location || ""} ${form.notes || ""}`);
+                    if (!found.length) toast("No country found in the location or notes.", "info");
+                    else setCoverageText(coverageLabel(found));
+                  }}
+                >
+                  Suggest
+                </Button>
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">Agents are also placed by their location. Airlines, liners and coloaders need this filled to be asked automatically.</p>
             </div>
             <div>
               <Label htmlFor="dir-email">Email</Label>
@@ -828,6 +888,7 @@ export default function DirectoryPage() {
                       {c.sheetGroup || c.category}
                       {c.rating ? ` · ${"★".repeat(Math.min(5, c.rating))}` : ""}
                       {c.creditTerms ? ` · Credit: ${c.creditTerms}` : ""}
+                      {c.coverage?.length ? ` · Serves: ${coverageLabel(c.coverage)}` : ""}
                     </div>
                   </td>
                   <td className="px-3 py-2.5">{c.contactPerson || "—"}</td>

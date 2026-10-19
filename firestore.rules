@@ -120,6 +120,12 @@ service cloud.firestore {
     }
     // Who is online, each person's own read marks / muted chats / notification devices, and the
     // administrator's review log (admin can add entries and read them; nobody can change or remove one).
+    // --- test-app only (Rate requests) ----------------------------------------
+    // Log of the rate-request emails desks send to agents and vendors. Written only by the
+    // server function that sends them; any signed-in user can read it. Per-person daily send
+    // counters are server-only. The legacy app never touches these.
+    match /rateRequests/{refId} { allow read: if isSignedIn(); allow write: if false; }
+    match /rateRequestCaps/{capId} { allow read, write: if false; }
     match /chatPresence/{login} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && login == chatLogin();

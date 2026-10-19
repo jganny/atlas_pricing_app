@@ -214,6 +214,8 @@ export interface DirectoryContact {
   rating?: number
   creditTerms?: string
   moduleType?: string
+  /** Countries this contact serves, as two-letter codes. Decides who gets a rate request. */
+  coverage?: string[]
 }
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'quoted' | 'won' | 'lost'
