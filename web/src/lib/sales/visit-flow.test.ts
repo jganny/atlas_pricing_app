@@ -27,6 +27,7 @@ const rows = [
 ];
 const h = handoversFrom(rows);
 assert.deepEqual(h.map((e) => `${e.from}>${e.to}:${e.company}`), ["sunil>ramesh:Pearl Cargo", "linson>goutham:Gulf Imports"]);
+assert.equal(handoversFrom([{ id: "9", atIso: "2026-10-20T10:00:00Z", actor: "ramesh", action: "lead.handover", entityLabel: "X", changes: { owner: { from: "sunil", to: "ramesh" } } }])[0].from, "sunil", "a lead received is reported as given by the other person");
 assert.equal(unseenHandovers(h, "2026-10-18T12:00:00Z"), 1);
 assert.equal(unseenHandovers(h, ""), 2);
 

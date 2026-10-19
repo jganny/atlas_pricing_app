@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, ClipboardList, Save } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
+import { openQuoteHref } from "@/lib/quotes/won-followups";
 import {
   NRS_CHANGED_EVENT,
   listNrsFollowUps,
@@ -200,6 +202,9 @@ export default function NrsFollowUpsPage() {
                 <span className="font-semibold">{r.ref}</span> · {r.customer}
                 {r.shipper ? ` · ${r.shipper}` : ""}
                 {r.consignee ? ` → ${r.consignee}` : ""}
+                <Link href={openQuoteHref(r.quoteId, r.ref)} className="ml-2 font-semibold text-sky-700 underline">
+                  Open quote
+                </Link>
               </li>
             ))}
           </ul>

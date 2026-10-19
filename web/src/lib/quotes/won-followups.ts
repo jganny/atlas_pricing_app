@@ -59,3 +59,8 @@ export function escalationTier(wonAt: string, now: Date = new Date()): Escalatio
   if (days >= 3) return "amber";
   return "quiet";
 }
+
+/** Where a won quote opens in full (Enquiry DB, with that quote selected). */
+export function openQuoteHref(quoteId: string, ref: string): string {
+  return `/enquiries/?q=${encodeURIComponent(ref)}&select=${encodeURIComponent(quoteId)}&pipeline=won`;
+}

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { daysSince, escalationTier, missingWonFields, splitWonRows, type WonFollowUpValues } from "./won-followups";
+import { daysSince, escalationTier, missingWonFields, openQuoteHref, splitWonRows, type WonFollowUpValues } from "./won-followups";
 
 const complete: WonFollowUpValues = {
   shipperName: "Acme Exports",
@@ -51,5 +51,8 @@ assert.equal(missingWonFields(typedDraft).length, 0, "the draft alone would look
 assert.equal(splitWonRows(rows).pending.some((r) => r.id === "newer"), true, "…but the row is still on the list until saved");
 // Once saved, it moves to complete.
 assert.equal(splitWonRows([typedDraft]).complete.length, 1);
+
+// A Complete row opens its quote in Enquiry DB.
+assert.equal(openQuoteHref("q 1", "AE-0412/26"), "/enquiries/?q=AE-0412%2F26&select=q%201&pipeline=won");
 
 console.log("won-followups.test.ts: all assertions passed");

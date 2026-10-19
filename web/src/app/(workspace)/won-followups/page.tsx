@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { BellRing, CheckCircle2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, NumberInput } from "@/components/ui";
 import { toast } from "@/components/Toast";
+import { openQuoteHref } from "@/lib/quotes/won-followups";
 import { useWonFollowUps } from "@/hooks/use-atlas-data";
 import { upsertWonFollowUp, type WonFollowUpRow } from "@/lib/firebase/won-followups";
 import {
@@ -176,6 +178,9 @@ export default function WonFollowUpsPage() {
                 {r.shipperName ? ` · ${r.shipperName}` : ""}
                 {r.consigneeName ? ` → ${r.consigneeName}` : ""}
                 {r.buyRate > 0 ? ` · Buy ${formatCurrency(r.buyRate)}` : ""}
+                <Link href={openQuoteHref(r.quoteId, r.ref)} className="ml-2 font-semibold text-sky-700 underline">
+                  Open quote
+                </Link>
               </li>
             ))}
           </ul>

@@ -95,6 +95,8 @@ export function PipelineView() {
   const [nextStep, setNextStep] = useState("");
   const [followUp, setFollowUp] = useState("");
   const [noteError, setNoteError] = useState("");
+  const [handDir, setHandDir] = useState<"give" | "receive">("give");
+  const [handPerson, setHandPerson] = useState("");
   const [visiting, setVisiting] = useState(false);
   const [visitQuery, setVisitQuery] = useState("");
   const [showAllActs, setShowAllActs] = useState(false);
@@ -227,6 +229,13 @@ export function PipelineView() {
       toast("Company is required", "error");
       return;
     }
+    if (!handPerson) {
+      toast(handDir === "give" ? "Choose who you are giving this lead to" : "Choose who gave you this lead", "error");
+      return;
+    }
+    const me = (user?.username || "").toLowerCase();
+    const leadOwner = handDir === "give" ? handPerson : me;
+    const handFrom = handDir === "give" ? me : handPerson;
     setBusy(true);
     try {
       const payload = {
@@ -234,13 +243,13 @@ export function PipelineView() {
         contactName: form.contactName,
         email: form.email,
         phone: form.phone,
-        source: form.source,
+        source: form.source || (handDir === "receive" ? `Lead from ${TEAM_ROLES[handPerson]?.name || handPerson}` : ""),
         status: "new" as LeadStatus,
         modes: form.modes,
         dealValue: form.dealValue,
         nextAction: form.nextAction,
         nextDueDate: form.nextDueDate,
-        owner: form.owner || user?.username || "",
+        owner: leadOwner,
         winLossReason: form.winLossReason,
       };
       let id = `lead-local-${Date.now()}`;
@@ -262,20 +271,21 @@ export function PipelineView() {
       };
       queryClient.setQueryData(queryKeys.leads, [row, ...rawLeads]);
       logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: `New lead ${row.company}` });
-      // A lead given to another sales person is reported to the admin.
-      if (isHandover(user?.username, payload.owner)) {
+      // Every handover between two people is reported to the admin.
+      if (isHandover(handFrom, leadOwner)) {
         logAudit({
           action: "lead.handover",
           entityType: "lead",
           entityId: id,
           entityLabel: row.company,
-          summary: `${TEAM_ROLES[(user?.username || "").toLowerCase()]?.name || user?.username} gave ${row.company} to ${TEAM_ROLES[payload.owner]?.name || payload.owner}`,
-          changes: { owner: { from: (user?.username || "").toLowerCase(), to: payload.owner } },
+          summary: `${TEAM_ROLES[handFrom]?.name || handFrom} gave ${row.company} to ${TEAM_ROLES[leadOwner]?.name || leadOwner}`,
+          changes: { owner: { from: handFrom, to: leadOwner } },
         });
       }
       setCreating(false);
       setForm({ ...EMPTY_FORM, owner: user?.username || "" });
-      toast("Lead created", "success");
+      setHandPerson("");
+      toast(handDir === "give" ? "Lead handed over" : "Lead added", "success");
     } finally {
       setBusy(false);
     }
@@ -345,16 +355,16 @@ export function PipelineView() {
       if (lead) await openLead(lead);
       return;
     }
-    const account = accounts.find((a) => a.id === c.id);
-    if (!account) return;
+    const account = c.kind === "account" ? accounts.find((a) => a.id === c.id) : undefined;
+    if (c.kind === "account" && !account) return;
     setBusy(true);
     try {
       const payload = {
-        company: account.name,
+        company: account ? account.name : c.company,
         contactName: "",
         email: "",
         phone: "",
-        source: "Existing account",
+        source: account ? "Existing account" : "Known contact",
         status: "contacted" as LeadStatus,
         modes: ["air"] as NonNullable<SalesLead["modes"]>,
         dealValue: 0,
@@ -362,7 +372,7 @@ export function PipelineView() {
         nextDueDate: "",
         owner: user?.username || "",
         winLossReason: "",
-        accountId: account.id,
+        ...(account ? { accountId: account.id } : {}),
       };
       let id = `lead-local-${Date.now()}`;
       if (useLiveData) {
@@ -377,7 +387,7 @@ export function PipelineView() {
       }
       const row: SalesLead = { id, ...payload, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() };
       queryClient.setQueryData(queryKeys.leads, [row, ...rawLeads]);
-      logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: `Visit to existing account ${row.company}` });
+      logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: account ? `Visit to existing account ${row.company}` : `New company from a visit: ${row.company}` });
       await openLead(row);
     } finally {
       setBusy(false);
@@ -491,7 +501,7 @@ export function PipelineView() {
         <Card className="border-sky-200 bg-sky-50/40">
           <h2 className="font-bold">New visit</h2>
           <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-            For a company you already deal with. Not in the list? Use <b>New lead</b> instead.
+            For any company you have met or know — one already in the list, or a new one (a customer you knew from before). Pick it, then log what happened.
           </p>
           <Input
             autoFocus
@@ -504,8 +514,6 @@ export function PipelineView() {
           <ul className="mt-2 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-white text-sm">
             {visitQuery.trim().length < 2 ? (
               <li className="px-3 py-2 text-xs text-[var(--color-text-muted)]">Type at least two letters.</li>
-            ) : visitCandidates(leads, accounts.filter((a) => canViewAccount(a)), visitQuery).length === 0 ? (
-              <li className="px-3 py-2 text-xs text-[var(--color-text-muted)]">No existing company matches. Use New lead for a new company.</li>
             ) : (
               visitCandidates(leads, accounts.filter((a) => canViewAccount(a)), visitQuery).map((c) => (
                 <li key={c.key}>
@@ -516,6 +524,18 @@ export function PipelineView() {
                 </li>
               ))
             )}
+            {visitQuery.trim().length >= 2 ? (
+              <li>
+                <button
+                  type="button"
+                  className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50"
+                  onClick={() => void startVisit({ key: "new", kind: "new", id: "", company: visitQuery.trim(), detail: "" })}
+                >
+                  <span className="font-semibold text-[var(--color-atlas-navy)]">Add “{visitQuery.trim()}” as a new company</span>
+                  <span className="text-xs text-[var(--color-text-muted)]">A customer you already know from before — starts with this visit</span>
+                </button>
+              </li>
+            ) : null}
           </ul>
         </Card>
       ) : null}
@@ -581,6 +601,10 @@ export function PipelineView() {
       {creating ? (
         <Card className="border-sky-200 bg-sky-50/40">
           <h2 className="font-bold">New lead</h2>
+          <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+            Only for a lead passed between two people — one you are giving to a colleague, or one a colleague gave you. For a company
+            you know yourself, use <b>New visit</b>.
+          </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label>Company *</Label>
@@ -610,14 +634,23 @@ export function PipelineView() {
               </Select>
             </div>
             <div>
-              <Label>Owner</Label>
-              <Select value={form.owner} onChange={(e) => setForm((f) => ({ ...f, owner: e.target.value }))}>
-                <option value="">—</option>
-                {owners.map((id) => (
-                  <option key={id} value={id}>
-                    {TEAM_ROLES[id]?.name || id}
-                  </option>
-                ))}
+              <Label>This lead is</Label>
+              <Select value={handDir} onChange={(e) => setHandDir(e.target.value as "give" | "receive")}>
+                <option value="give">One I am giving to…</option>
+                <option value="receive">One I received from…</option>
+              </Select>
+            </div>
+            <div>
+              <Label>Colleague *</Label>
+              <Select value={handPerson} onChange={(e) => setHandPerson(e.target.value)}>
+                <option value="">Choose a person</option>
+                {owners
+                  .filter((id) => id !== (user?.username || "").toLowerCase())
+                  .map((id) => (
+                    <option key={id} value={id}>
+                      {TEAM_ROLES[id]?.name || id}
+                    </option>
+                  ))}
               </Select>
             </div>
             <div className="sm:col-span-2">

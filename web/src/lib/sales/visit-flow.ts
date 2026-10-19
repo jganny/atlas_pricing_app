@@ -33,7 +33,7 @@ export function isHandover(actor: string | undefined | null, owner: string | und
 
 export interface VisitCandidate {
   key: string;
-  kind: "lead" | "account";
+  kind: "lead" | "account" | "new";
   id: string;
   company: string;
   detail: string;
@@ -79,7 +79,7 @@ interface AuditLike {
 export function handoversFrom(records: AuditLike[]): HandoverEntry[] {
   return records
     .filter((r) => r.action === "lead.handover")
-    .map((r) => ({ id: r.id, atIso: r.atIso, from: r.actor, to: r.changes?.owner?.to || "", company: r.entityLabel }))
+    .map((r) => ({ id: r.id, atIso: r.atIso, from: r.changes?.owner?.from || r.actor, to: r.changes?.owner?.to || "", company: r.entityLabel }))
     .sort((a, b) => b.atIso.localeCompare(a.atIso));
 }
 
