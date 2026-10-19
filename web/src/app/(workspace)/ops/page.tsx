@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PackageCheck } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
+import { QuoteDrawer } from "@/components/QuoteDrawer";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { formatQuoteSell } from "@/lib/quotes/money";
 
 export default function OpsPage() {
   const { data: enquiries = [], isLoading } = useEnquiries();
+  const [open, setOpen] = useState<{ id: string; ref: string; customer: string } | null>(null);
   const won = useMemo(
     () => enquiries.filter((e) => e.status === "won").slice(0, 40),
     [enquiries],
@@ -23,7 +25,7 @@ export default function OpsPage() {
         </h1>
       </div>
       <p className="text-sm text-[var(--color-text-muted)]">
-        Jobs handed to operations after sales. Open a row for the full quote in{" "}
+        Jobs handed to operations after sales. Click a job to open the quote — view, print and share it, amend it on the desk, or duplicate it. You can also use{" "}
         <Link href="/enquiries/?pipeline=won" className="font-semibold text-[var(--color-atlas-sky)] underline">
           Enquiry DB
         </Link>
@@ -57,19 +59,17 @@ export default function OpsPage() {
                 <th className="px-3 py-2">Mode</th>
                 <th className="px-3 py-2">Amount</th>
                 <th className="px-3 py-2">Desk</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
               {won.map((e) => (
-                <tr key={e.id} className="border-b last:border-0">
-                  <td className="px-3 py-2">
-                    <Link
-                      href={`/enquiries/?q=${encodeURIComponent(e.ref)}&select=${encodeURIComponent(e.id)}&pipeline=won`}
-                      className="font-semibold text-sky-700"
-                    >
-                      {e.ref}
-                    </Link>
-                  </td>
+                <tr
+                  key={e.id}
+                  className="cursor-pointer border-b last:border-0 hover:bg-sky-50"
+                  onClick={() => setOpen({ id: e.id, ref: e.ref, customer: e.customer })}
+                >
+                  <td className="px-3 py-2 font-semibold text-sky-700">{e.ref}</td>
                   <td className="px-3 py-2">{e.customer}</td>
                   <td className="px-3 py-2">
                     {e.origin} → {e.destination}
@@ -77,12 +77,18 @@ export default function OpsPage() {
                   <td className="px-3 py-2 capitalize">{e.mode}</td>
                   <td className="px-3 py-2 tabular-nums">{formatQuoteSell(e)}</td>
                   <td className="px-3 py-2">{e.assignee}</td>
+                  <td className="px-3 py-2 text-right">
+                    <Button type="button" size="sm" onClick={(ev) => { ev.stopPropagation(); setOpen({ id: e.id, ref: e.ref, customer: e.customer }); }}>
+                      Open quote
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      {open ? <QuoteDrawer quote={open} onClose={() => setOpen(null)} /> : null}
     </div>
   );
 }

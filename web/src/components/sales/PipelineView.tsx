@@ -100,7 +100,7 @@ export function PipelineView() {
   const [visiting, setVisiting] = useState(false);
   const [visitQuery, setVisitQuery] = useState("");
   const [showAllActs, setShowAllActs] = useState(false);
-  const [focusVisit, setFocusVisit] = useState(false);
+  const [visitTarget, setVisitTarget] = useState<{ id: string; company: string } | null>(null);
   const admin = isAdminUser(user?.username, user?.role);
   const handovers = useLeadHandovers(admin);
   const canViewAccount = (a: { owner?: string }) => canViewOwned(user?.username, user?.role, a.owner);
@@ -291,12 +291,76 @@ export function PipelineView() {
     }
   }
 
-  async function postNote() {
-    if (!selected) return;
+  /** The visit form — used under "New visit" and inside a lead's panel. */
+  function renderVisitForm(where: "new" | "panel", leadId: string) {
+    return (
+      <div className="mt-2 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            className="mt-0 w-36"
+            aria-label="Type of activity"
+            value={noteType}
+            onChange={(e) => setNoteType(e.target.value as LeadActivity["type"])}
+          >
+            <option value="meeting">Meeting / visit</option>
+            <option value="call">Call</option>
+            <option value="email">Email</option>
+            <option value="note">Note</option>
+          </Select>
+          <Input
+            type="date"
+            className="mt-0 w-40"
+            aria-label="Date of the visit"
+            value={noteDate}
+            max={todayISO()}
+            onChange={(e) => setNoteDate(e.target.value)}
+          />
+          <span className="text-xs text-[var(--color-text-muted)]">Today unless you change it</span>
+        </div>
+        <Textarea
+          id={`visit-notes-${where}`}
+          rows={4}
+          className="mt-0"
+          aria-label="What was discussed"
+          placeholder="What was discussed — requirements, lanes, volumes, rates asked, objections, who attended…"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            className="mt-0 min-w-[12rem] flex-1"
+            aria-label="Next step"
+            placeholder="Next step (optional) — e.g. send Air rate by Friday"
+            value={nextStep}
+            onChange={(e) => setNextStep(e.target.value)}
+          />
+          <Input
+            type="date"
+            className="mt-0 w-40"
+            aria-label="Follow-up date"
+            value={followUp}
+            min={noteDate}
+            onChange={(e) => setFollowUp(e.target.value)}
+          />
+          <Button type="button" disabled={busy} onClick={() => void postNote(leadId, where === "new")}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : where === "new" ? "Save visit" : "Save visit"}
+          </Button>
+        </div>
+        {noteError ? (
+          <p role="alert" className="text-xs font-semibold text-red-700">
+            {noteError}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  /** Saves the visit against a lead. Returns true when it was saved (so the caller can close its form). */
+  async function postNote(leadId: string, closeNewVisit = false): Promise<boolean> {
     const problem = visitProblem({ body: note, activityDate: noteDate, nextStep, followUpDate: followUp });
     if (problem) {
       setNoteError(problem);
-      return;
+      return false;
     }
     setNoteError("");
     setBusy(true);
@@ -306,32 +370,40 @@ export function PipelineView() {
       if (useLiveData) {
         try {
           await Promise.race([
-            addLeadActivity(selected.id, body, user?.username || "desk", noteType, extra),
+            addLeadActivity(leadId, body, user?.username || "desk", noteType, extra),
             new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000)),
           ]);
         } catch {
           /* local */
         }
       }
-      setActivities((a) =>
-        sortActivities([
-          {
-            id: `act-${Date.now()}`,
-            leadId: selected.id,
-            type: noteType,
-            body,
-            createdBy: user?.username,
-            createdAt: new Date().toISOString(),
-            ...extra,
-          },
-          ...a,
-        ]),
-      );
+      if (selected?.id === leadId) {
+        setActivities((a) =>
+          sortActivities([
+            {
+              id: `act-${Date.now()}`,
+              leadId,
+              type: noteType,
+              body,
+              createdBy: user?.username,
+              createdAt: new Date().toISOString(),
+              ...extra,
+            },
+            ...a,
+          ]),
+        );
+      }
       setNote("");
       setNextStep("");
       setFollowUp("");
       setNoteDate(todayISO());
-      toast("Visit logged", "success");
+      toast(visitTarget && closeNewVisit ? `Visit to ${visitTarget.company} logged` : "Visit logged", "success");
+      if (closeNewVisit) {
+        setVisiting(false);
+        setVisitTarget(null);
+        setVisitQuery("");
+      }
+      return true;
     } finally {
       setBusy(false);
     }
@@ -347,12 +419,10 @@ export function PipelineView() {
 
   /** Log a visit to a company that's already known: open its lead (making one from an account if needed). */
   async function startVisit(c: VisitCandidate) {
-    setVisiting(false);
     setVisitQuery("");
-    setFocusVisit(true);
     if (c.kind === "lead") {
       const lead = leads.find((l) => l.id === c.id);
-      if (lead) await openLead(lead);
+      if (lead) setVisitTarget({ id: lead.id, company: lead.company });
       return;
     }
     const account = c.kind === "account" ? accounts.find((a) => a.id === c.id) : undefined;
@@ -388,7 +458,7 @@ export function PipelineView() {
       const row: SalesLead = { id, ...payload, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() };
       queryClient.setQueryData(queryKeys.leads, [row, ...rawLeads]);
       logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: account ? `Visit to existing account ${row.company}` : `New company from a visit: ${row.company}` });
-      await openLead(row);
+      setVisitTarget({ id: row.id, company: row.company });
     } finally {
       setBusy(false);
     }
@@ -419,18 +489,19 @@ export function PipelineView() {
     toast("Entry deleted", "success");
   }
 
-  // After choosing a lead, bring its panel into view so nobody has to scroll down to find it.
+  // After choosing a lead from the list, bring its panel into view so nobody has to scroll down to find it.
   useEffect(() => {
     if (!selectedId) return;
     const t = window.setTimeout(() => {
       document.getElementById("lead-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      if (focusVisit) {
-        document.getElementById("visit-notes")?.focus({ preventScroll: true });
-        setFocusVisit(false);
-      }
     }, 150);
     return () => window.clearTimeout(t);
-  }, [selectedId, focusVisit]);
+  }, [selectedId]);
+
+  // The cursor goes straight into the discussion box once the company is chosen.
+  useEffect(() => {
+    if (visitTarget) window.setTimeout(() => document.getElementById("visit-notes-new")?.focus(), 50);
+  }, [visitTarget]);
 
   function startEdit(lead: SalesLead) {
     setEditForm({ ...lead });
@@ -486,7 +557,7 @@ export function PipelineView() {
           Pipeline, follow-ups, and quote from lead — same records as legacy Sales.
         </p>
         <div className="flex gap-2">
-          <Button type="button" className="gap-1.5" onClick={() => { setVisiting((v) => !v); setCreating(false); }} data-testid="new-visit">
+          <Button type="button" className={cn("gap-1.5", visiting && "ring-2 ring-sky-400 ring-offset-1")} aria-pressed={visiting} onClick={() => { setVisiting((v) => !v); setVisitTarget(null); setVisitQuery(""); setCreating(false); }} data-testid="new-visit">
             <Plus className="h-4 w-4" />
             New visit
           </Button>
@@ -498,45 +569,64 @@ export function PipelineView() {
       </div>
 
       {visiting ? (
-        <Card className="border-sky-200 bg-sky-50/40">
-          <h2 className="font-bold">New visit</h2>
-          <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-            For any company you have met or know — one already in the list, or a new one (a customer you knew from before). Pick it, then log what happened.
-          </p>
-          <Input
-            autoFocus
-            className="mt-2"
-            aria-label="Company visited"
-            placeholder="Start typing the company name"
-            value={visitQuery}
-            onChange={(e) => setVisitQuery(e.target.value)}
-          />
-          <ul className="mt-2 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-white text-sm">
-            {visitQuery.trim().length < 2 ? (
-              <li className="px-3 py-2 text-xs text-[var(--color-text-muted)]">Type at least two letters.</li>
-            ) : (
-              visitCandidates(leads, accounts.filter((a) => canViewAccount(a)), visitQuery).map((c) => (
-                <li key={c.key}>
-                  <button type="button" className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50" onClick={() => void startVisit(c)}>
-                    <span className="font-semibold text-[var(--color-atlas-navy)]">{c.company}</span>
-                    <span className="text-xs text-[var(--color-text-muted)]">{c.detail}</span>
-                  </button>
-                </li>
-              ))
-            )}
-            {visitQuery.trim().length >= 2 ? (
-              <li>
-                <button
-                  type="button"
-                  className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50"
-                  onClick={() => void startVisit({ key: "new", kind: "new", id: "", company: visitQuery.trim(), detail: "" })}
-                >
-                  <span className="font-semibold text-[var(--color-atlas-navy)]">Add “{visitQuery.trim()}” as a new company</span>
-                  <span className="text-xs text-[var(--color-text-muted)]">A customer you already know from before — starts with this visit</span>
+        <Card className="border-sky-300 bg-sky-50/60" id="new-visit-card">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="font-bold">New visit</h2>
+            <button type="button" className="text-xs font-semibold text-[var(--color-text-muted)] underline" onClick={() => { setVisiting(false); setVisitTarget(null); setVisitQuery(""); }}>
+              Close
+            </button>
+          </div>
+          {visitTarget ? (
+            <>
+              <p className="mt-1 text-sm">
+                Visit to <b>{visitTarget.company}</b>{" "}
+                <button type="button" className="ml-1 text-xs font-semibold text-sky-800 underline" onClick={() => setVisitTarget(null)}>
+                  Change company
                 </button>
-              </li>
-            ) : null}
-          </ul>
+              </p>
+              <div className="mt-1">{renderVisitForm("new", visitTarget.id)}</div>
+            </>
+          ) : (
+            <>
+              <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                For any company you have met or know — one already in the list, or a new one (a customer you knew from before). Pick it, then log what happened.
+              </p>
+              <Input
+                autoFocus
+                className="mt-2"
+                aria-label="Company visited"
+                placeholder="Start typing the company name"
+                value={visitQuery}
+                onChange={(e) => setVisitQuery(e.target.value)}
+              />
+              <ul className="mt-2 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-white text-sm">
+                {visitQuery.trim().length < 2 ? (
+                  <li className="px-3 py-2 text-xs text-[var(--color-text-muted)]">Type at least two letters.</li>
+                ) : (
+                  visitCandidates(leads, accounts.filter((a) => canViewAccount(a)), visitQuery).map((c) => (
+                    <li key={c.key}>
+                      <button type="button" className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50" onClick={() => void startVisit(c)}>
+                        <span className="font-semibold text-[var(--color-atlas-navy)]">{c.company}</span>
+                        <span className="text-xs text-[var(--color-text-muted)]">{c.detail}</span>
+                      </button>
+                    </li>
+                  ))
+                )}
+                {visitQuery.trim().length >= 2 ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50"
+                      onClick={() => void startVisit({ key: "new", kind: "new", id: "", company: visitQuery.trim(), detail: "" })}
+                    >
+                      <span className="font-semibold text-[var(--color-atlas-navy)]">Add “{visitQuery.trim()}” as a new company</span>
+                      <span className="text-xs text-[var(--color-text-muted)]">A customer you already know from before — starts with this visit</span>
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            </>
+          )}
         </Card>
       ) : null}
 
@@ -1102,64 +1192,7 @@ export function PipelineView() {
           ) : null}
 
           <h3 className="mt-4 border-t border-[var(--color-border)] pt-3 text-sm font-bold">Log a visit</h3>
-          <div className="mt-2 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                className="mt-0 w-36"
-                aria-label="Type of activity"
-                value={noteType}
-                onChange={(e) => setNoteType(e.target.value as LeadActivity["type"])}
-              >
-                <option value="meeting">Meeting / visit</option>
-                <option value="call">Call</option>
-                <option value="email">Email</option>
-                <option value="note">Note</option>
-              </Select>
-              <Input
-                type="date"
-                className="mt-0 w-40"
-                aria-label="Date of the visit"
-                value={noteDate}
-                max={todayISO()}
-                onChange={(e) => setNoteDate(e.target.value)}
-              />
-              <span className="text-xs text-[var(--color-text-muted)]">Today unless you change it</span>
-            </div>
-            <Textarea
-              id="visit-notes"
-              rows={4}
-              className="mt-0"
-              aria-label="What was discussed"
-              placeholder="What was discussed — requirements, lanes, volumes, rates asked, objections, who attended…"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                className="mt-0 min-w-[12rem] flex-1"
-                aria-label="Next step"
-                placeholder="Next step (optional) — e.g. send Air rate by Friday"
-                value={nextStep}
-                onChange={(e) => setNextStep(e.target.value)}
-              />
-              <Input
-                type="date"
-                className="mt-0 w-40"
-                aria-label="Follow-up date"
-                value={followUp}
-                min={noteDate}
-                onChange={(e) => setFollowUp(e.target.value)}
-              />
-              <Button type="button" disabled={busy} onClick={() => void postNote()}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save visit"}
-              </Button>
-            </div>
-            {noteError ? (
-              <p role="alert" className="text-xs font-semibold text-red-700">
-                {noteError}
-              </p>
-            ) : null}
-          </div>
+          {renderVisitForm("panel", selected.id)}
           <ul className="mt-3 space-y-2 text-sm">
             {activities.length === 0 ? (
               <li className="text-[var(--color-text-muted)]">No activities yet.</li>

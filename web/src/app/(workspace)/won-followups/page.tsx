@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { BellRing, CheckCircle2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, NumberInput } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { openQuoteHref } from "@/lib/quotes/won-followups";
+import { QuoteDrawer } from "@/components/QuoteDrawer";
 import { useWonFollowUps } from "@/hooks/use-atlas-data";
 import { upsertWonFollowUp, type WonFollowUpRow } from "@/lib/firebase/won-followups";
 import {
@@ -49,6 +48,7 @@ export default function WonFollowUpsPage() {
   const { pending: pendingSaved, complete: completeAll } = useMemo(() => splitWonRows(rows), [rows]);
   const pending = pendingSaved;
   const complete = useMemo(() => completeAll.slice(0, 20), [completeAll]);
+  const [openQuote, setOpenQuote] = useState<{ id: string; ref: string; customer: string } | null>(null);
 
   async function save(row: WonFollowUpRow) {
     setSaving(row.id);
@@ -115,6 +115,9 @@ export default function WonFollowUpsPage() {
                       {row.ref} · {row.customer}
                     </div>
                     <div className="text-xs text-[var(--color-text-muted)]">{daysLabel(row.wonAt)}</div>
+                    <Button type="button" size="sm" variant="secondary" className="mt-1" onClick={() => setOpenQuote({ id: row.quoteId, ref: row.ref, customer: row.customer })}>
+                      Open quote
+                    </Button>
                   </div>
                   <span className={cn("rounded px-2 py-0.5 text-[10px] font-bold uppercase", style.badge)}>
                     {style.label}
@@ -173,19 +176,24 @@ export default function WonFollowUpsPage() {
           <h2 className="text-sm font-bold uppercase text-[var(--color-text-muted)]">Complete</h2>
           <ul className="space-y-1 text-sm">
             {complete.map((r) => (
-              <li key={r.id} className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2">
+              <li
+                key={r.id}
+                className="cursor-pointer rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 hover:border-sky-300 hover:bg-sky-50"
+                onClick={() => setOpenQuote({ id: r.quoteId, ref: r.ref, customer: r.customer })}
+              >
                 <span className="font-semibold">{r.ref}</span> · {r.customer}
                 {r.shipperName ? ` · ${r.shipperName}` : ""}
                 {r.consigneeName ? ` → ${r.consigneeName}` : ""}
                 {r.buyRate > 0 ? ` · Buy ${formatCurrency(r.buyRate)}` : ""}
-                <Link href={openQuoteHref(r.quoteId, r.ref)} className="ml-2 font-semibold text-sky-700 underline">
+                <Button type="button" size="sm" className="ml-2 align-middle" onClick={(ev) => { ev.stopPropagation(); setOpenQuote({ id: r.quoteId, ref: r.ref, customer: r.customer }); }}>
                   Open quote
-                </Link>
+                </Button>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
+      {openQuote ? <QuoteDrawer quote={openQuote} onClose={() => setOpenQuote(null)} /> : null}
     </div>
   );
 }

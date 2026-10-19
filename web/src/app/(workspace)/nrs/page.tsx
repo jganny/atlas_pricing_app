@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { CheckCircle2, ClipboardList, Save } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { openQuoteHref } from "@/lib/quotes/won-followups";
+import { QuoteDrawer } from "@/components/QuoteDrawer";
 import {
   NRS_CHANGED_EVENT,
   listNrsFollowUps,
@@ -24,6 +23,7 @@ export default function NrsFollowUpsPage() {
 
   const [rows, setRows] = useState<NrsFollowUp[]>([]);
   const [editing, setEditing] = useState<Record<string, Partial<NrsFollowUp>>>({});
+  const [openQuote, setOpenQuote] = useState<{ id: string; ref: string; customer: string } | null>(null);
 
   function reload() {
     setRows(listNrsFollowUps());
@@ -136,6 +136,9 @@ export default function NrsFollowUpsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setOpenQuote({ id: row.quoteId, ref: row.ref, customer: row.customer })}>
+                      Open quote
+                    </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => saveRow(row.id)}>
                       <Save className="h-3.5 w-3.5" />
                       Save
@@ -198,13 +201,17 @@ export default function NrsFollowUpsPage() {
           </h2>
           <ul className="space-y-1 text-sm">
             {complete.slice(0, 20).map((r) => (
-              <li key={r.id} className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2">
+              <li
+                key={r.id}
+                className="cursor-pointer rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 hover:border-sky-300 hover:bg-sky-50"
+                onClick={() => setOpenQuote({ id: r.quoteId, ref: r.ref, customer: r.customer })}
+              >
                 <span className="font-semibold">{r.ref}</span> · {r.customer}
                 {r.shipper ? ` · ${r.shipper}` : ""}
                 {r.consignee ? ` → ${r.consignee}` : ""}
-                <Link href={openQuoteHref(r.quoteId, r.ref)} className="ml-2 font-semibold text-sky-700 underline">
+                <Button type="button" size="sm" className="ml-2 align-middle" onClick={(ev) => { ev.stopPropagation(); setOpenQuote({ id: r.quoteId, ref: r.ref, customer: r.customer }); }}>
                   Open quote
-                </Link>
+                </Button>
               </li>
             ))}
           </ul>
@@ -212,6 +219,7 @@ export default function NrsFollowUpsPage() {
       ) : null}
 
       <NrsDirectory username={user?.username || ""} />
+      {openQuote ? <QuoteDrawer quote={openQuote} onClose={() => setOpenQuote(null)} /> : null}
     </div>
   );
 }
