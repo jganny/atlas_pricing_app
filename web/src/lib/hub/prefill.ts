@@ -8,6 +8,24 @@ import { storeSmartQuotePrefill, type SmartQuotePrefill } from "@/lib/pricing/sm
 import { placeLabel } from "./normalize";
 import type { HubJob, HubMode } from "./types";
 
+/**
+ * The reader gives the weight of ONE package ("2 drums x 25 kg" → qty 2, gw 25). The Air desk's weight column is the
+ * weight of the whole line (qty × each), so 2 × 25 must arrive as 50, not 25. When the document also states a total
+ * weight, the reading whose rows add up to that total wins; with no total, per-package is assumed.
+ */
+export function lineTotalWeights(
+  packages: Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>,
+  statedTotalKg?: number | null,
+): Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }> {
+  const perPackage = packages.map((p) => ({ ...p, gw: p.gw === undefined ? undefined : Math.round(p.gw * (p.qty || 1) * 100) / 100 }));
+  if (!statedTotalKg || statedTotalKg <= 0) return perPackage;
+  const sum = (rows: typeof packages) => rows.reduce((n, p) => n + (p.gw ?? 0), 0);
+  const close = (v: number) => Math.abs(v - statedTotalKg) / statedTotalKg <= 0.02;
+  // The rows were already line totals (e.g. "50 kg, 2 drums") and add up to the stated total as they are.
+  if (!close(sum(perPackage)) && close(sum(packages))) return packages.map((p) => ({ ...p }));
+  return perPackage;
+}
+
 export function toParsedEnquiry(job: HubJob): ParsedEnquiry {
   const x = job.extraction;
   const notes = [x.notes, x.hsCode ? `HS ${x.hsCode}` : "", x.invoiceValue ? `Invoice value ${x.currency || ""} ${x.invoiceValue}`.trim() : ""]
@@ -24,7 +42,7 @@ export function toParsedEnquiry(job: HubJob): ParsedEnquiry {
     specialHandling: x.specialHandling.length ? x.specialHandling : undefined,
     grossWeight: x.grossWeightKg ?? undefined,
     volume: x.volumeCbm ?? undefined,
-    packages: x.packages.map((p) => ({ qty: p.qty, gw: p.gw, l: p.l, w: p.w, h: p.h })),
+    packages: lineTotalWeights(x.packages.map((p) => ({ qty: p.qty, gw: p.gw, l: p.l, w: p.w, h: p.h })), x.grossWeightKg),
     containers: x.containers,
     mode: x.seaMode ?? undefined,
     confidence: x.needsCheck.length ? 0.7 : 0.9,

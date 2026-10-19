@@ -3,6 +3,7 @@
  * canEditAgentsDirectory / canAccessVendorsDirectory.
  */
 
+import { activeSeatForLogin } from "@/lib/auth/desk-seats";
 import { isAdminUser, TEAM_ROLES } from "@/lib/quotes/team-roles";
 
 function roleCategory(username: string | undefined | null): string {
@@ -33,6 +34,19 @@ export function canAccessVendorsDirectory(
     cat === "FREE HAND SALES (AIR/SEA)" ||
     cat === "NRS (AIR/SEA)"
   );
+}
+
+/**
+ * Adding and deleting circulars: Admin and the four desks (Air Nom, Sea Nom, NRS, Free Hand), by desk seat
+ * so it follows whoever sits there. Individual sales logins (who share the Free Hand category) can read only.
+ */
+export function canManageCirculars(
+  username: string | undefined | null,
+  role?: string,
+): boolean {
+  if (isAdminUser(username, role)) return true;
+  const seat = activeSeatForLogin(username)?.id;
+  return seat === "air-nom" || seat === "sea-nom" || seat === "nrs" || seat === "freehand";
 }
 
 export function isAgencyContact(category: string | undefined): boolean {

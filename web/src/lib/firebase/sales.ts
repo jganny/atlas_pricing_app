@@ -215,3 +215,8 @@ export async function addLeadActivity(
   });
   return ref.id;
 }
+
+/** Removes one visit/activity entry. Who may do this is decided in the app (see canDeleteActivity). */
+export async function deleteLeadActivity(id: string): Promise<void> {
+  await deleteDoc(doc(getFirebaseDb(), "activities", id));
+}

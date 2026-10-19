@@ -12,6 +12,8 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   "lead.create": "Lead created",
   "lead.update": "Lead edited",
   "lead.status": "Lead stage changed",
+  "lead.handover": "Lead handed to another sales person",
+  "lead.visit.delete": "Visit entry deleted",
   "account.create": "Account created",
   "account.update": "Account edited",
   "account.delete": "Account deleted",

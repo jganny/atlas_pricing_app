@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { activityDay, formatDay, sortActivities, todayISO, visitProblem } from "@/lib/sales/activity-log";
 import { toast } from "@/components/Toast";
@@ -12,18 +12,21 @@ import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/u
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useAuthStore } from "@/store/auth";
-import { canEditLead, visibleToUser } from "@/lib/auth/sales-access";
+import { useLeadHandovers } from "@/hooks/use-lead-handovers";
+import { canDeleteActivity, deleteMinutesLeft, isHandover, visitCandidates, type VisitCandidate } from "@/lib/sales/visit-flow";
+import { canEditLead, canViewOwned, visibleToUser } from "@/lib/auth/sales-access";
 import { logAudit } from "@/lib/firebase/audit-log";
 import { diffFields } from "@/lib/audit/audit-entry";
 import { useLiveData } from "@/lib/api";
 import {
   addLeadActivity,
+  deleteLeadActivity,
   fetchLeadActivities,
   saveLead,
   updateLeadStatus,
 } from "@/lib/firebase/sales";
 import { mockApi } from "@/lib/mock/api";
-import { TEAM_ROLES } from "@/lib/quotes/team-roles";
+import { TEAM_ROLES, isAdminUser } from "@/lib/quotes/team-roles";
 import {
   LEAD_SOURCES,
   deskHrefsForLead,
@@ -92,6 +95,13 @@ export function PipelineView() {
   const [nextStep, setNextStep] = useState("");
   const [followUp, setFollowUp] = useState("");
   const [noteError, setNoteError] = useState("");
+  const [visiting, setVisiting] = useState(false);
+  const [visitQuery, setVisitQuery] = useState("");
+  const [showAllActs, setShowAllActs] = useState(false);
+  const [focusVisit, setFocusVisit] = useState(false);
+  const admin = isAdminUser(user?.username, user?.role);
+  const handovers = useLeadHandovers(admin);
+  const canViewAccount = (a: { owner?: string }) => canViewOwned(user?.username, user?.role, a.owner);
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -252,6 +262,17 @@ export function PipelineView() {
       };
       queryClient.setQueryData(queryKeys.leads, [row, ...rawLeads]);
       logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: `New lead ${row.company}` });
+      // A lead given to another sales person is reported to the admin.
+      if (isHandover(user?.username, payload.owner)) {
+        logAudit({
+          action: "lead.handover",
+          entityType: "lead",
+          entityId: id,
+          entityLabel: row.company,
+          summary: `${TEAM_ROLES[(user?.username || "").toLowerCase()]?.name || user?.username} gave ${row.company} to ${TEAM_ROLES[payload.owner]?.name || payload.owner}`,
+          changes: { owner: { from: (user?.username || "").toLowerCase(), to: payload.owner } },
+        });
+      }
       setCreating(false);
       setForm({ ...EMPTY_FORM, owner: user?.username || "" });
       toast("Lead created", "success");
@@ -314,6 +335,93 @@ export function PipelineView() {
     router.push(chosen === "air" || chosen === "sea" || !chosen ? `${href}${href.includes("?") ? "&" : "?"}smart=1` : href);
   }
 
+  /** Log a visit to a company that's already known: open its lead (making one from an account if needed). */
+  async function startVisit(c: VisitCandidate) {
+    setVisiting(false);
+    setVisitQuery("");
+    setFocusVisit(true);
+    if (c.kind === "lead") {
+      const lead = leads.find((l) => l.id === c.id);
+      if (lead) await openLead(lead);
+      return;
+    }
+    const account = accounts.find((a) => a.id === c.id);
+    if (!account) return;
+    setBusy(true);
+    try {
+      const payload = {
+        company: account.name,
+        contactName: "",
+        email: "",
+        phone: "",
+        source: "Existing account",
+        status: "contacted" as LeadStatus,
+        modes: ["air"] as NonNullable<SalesLead["modes"]>,
+        dealValue: 0,
+        nextAction: "",
+        nextDueDate: "",
+        owner: user?.username || "",
+        winLossReason: "",
+        accountId: account.id,
+      };
+      let id = `lead-local-${Date.now()}`;
+      if (useLiveData) {
+        try {
+          id = await Promise.race([
+            saveLead(payload),
+            new Promise<string>((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000)),
+          ]);
+        } catch {
+          /* keep local id */
+        }
+      }
+      const row: SalesLead = { id, ...payload, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() };
+      queryClient.setQueryData(queryKeys.leads, [row, ...rawLeads]);
+      logAudit({ action: "lead.create", entityType: "lead", entityId: id, entityLabel: row.company, summary: `Visit to existing account ${row.company}` });
+      await openLead(row);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteActivity(a: LeadActivity) {
+    if (!canDeleteActivity(a, user?.username, admin)) {
+      toast(admin ? "This entry can't be deleted." : "Entries can be deleted by their author for 2 hours. After that, ask the admin.", "error");
+      return;
+    }
+    if (!window.confirm("Delete this entry? This can't be undone.")) return;
+    try {
+      if (useLiveData) await deleteLeadActivity(a.id);
+    } catch {
+      toast("Couldn't delete that entry. Check your connection and try again.", "error");
+      return;
+    }
+    setActivities((rows) => rows.filter((x) => x.id !== a.id));
+    if (selected) {
+      logAudit({
+        action: "lead.visit.delete",
+        entityType: "lead",
+        entityId: selected.id,
+        entityLabel: selected.company,
+        summary: `Deleted a ${a.type} entry (${activityDay(a)}) by ${a.createdBy || "unknown"}`,
+      });
+    }
+    toast("Entry deleted", "success");
+  }
+
+  // After choosing a lead, bring its panel into view so nobody has to scroll down to find it.
+  useEffect(() => {
+    if (!selectedId) return;
+    const t = window.setTimeout(() => {
+      document.getElementById("lead-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (focusVisit) {
+        document.getElementById("visit-notes")?.focus({ preventScroll: true });
+        setFocusVisit(false);
+      }
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [selectedId, focusVisit]);
+
   function startEdit(lead: SalesLead) {
     setEditForm({ ...lead });
     setEditing(true);
@@ -367,11 +475,70 @@ export function PipelineView() {
         <p className="text-sm text-[var(--color-text-muted)]">
           Pipeline, follow-ups, and quote from lead — same records as legacy Sales.
         </p>
-        <Button type="button" className="gap-1.5" onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" />
-          New lead
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" className="gap-1.5" onClick={() => { setVisiting((v) => !v); setCreating(false); }} data-testid="new-visit">
+            <Plus className="h-4 w-4" />
+            New visit
+          </Button>
+          <Button type="button" variant="secondary" className="gap-1.5" onClick={() => { setCreating(true); setVisiting(false); }}>
+            <Plus className="h-4 w-4" />
+            New lead
+          </Button>
+        </div>
       </div>
+
+      {visiting ? (
+        <Card className="border-sky-200 bg-sky-50/40">
+          <h2 className="font-bold">New visit</h2>
+          <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+            For a company you already deal with. Not in the list? Use <b>New lead</b> instead.
+          </p>
+          <Input
+            autoFocus
+            className="mt-2"
+            aria-label="Company visited"
+            placeholder="Start typing the company name"
+            value={visitQuery}
+            onChange={(e) => setVisitQuery(e.target.value)}
+          />
+          <ul className="mt-2 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-white text-sm">
+            {visitQuery.trim().length < 2 ? (
+              <li className="px-3 py-2 text-xs text-[var(--color-text-muted)]">Type at least two letters.</li>
+            ) : visitCandidates(leads, accounts.filter((a) => canViewAccount(a)), visitQuery).length === 0 ? (
+              <li className="px-3 py-2 text-xs text-[var(--color-text-muted)]">No existing company matches. Use New lead for a new company.</li>
+            ) : (
+              visitCandidates(leads, accounts.filter((a) => canViewAccount(a)), visitQuery).map((c) => (
+                <li key={c.key}>
+                  <button type="button" className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50" onClick={() => void startVisit(c)}>
+                    <span className="font-semibold text-[var(--color-atlas-navy)]">{c.company}</span>
+                    <span className="text-xs text-[var(--color-text-muted)]">{c.detail}</span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </Card>
+      ) : null}
+
+      {admin && handovers.entries.length ? (
+        <Card className={cn("py-2.5", handovers.unseen ? "border-amber-300 bg-amber-50" : "border-[var(--color-border)]")}>
+          <details onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open) handovers.markSeen(); }}>
+            <summary className="cursor-pointer text-sm font-bold text-[var(--color-atlas-navy)]">
+              Lead handovers
+              {handovers.unseen ? <span className="ml-2 rounded-full bg-[var(--color-atlas-error)] px-2 py-0.5 text-[10px] font-extrabold text-white">{handovers.unseen} new</span> : null}
+              <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">leads one sales person gave to another</span>
+            </summary>
+            <ul className="mt-2 space-y-1 text-sm">
+              {handovers.entries.slice(0, 20).map((h) => (
+                <li key={h.id}>
+                  <span className="text-xs text-[var(--color-text-muted)]">{new Date(h.atIso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · </span>
+                  <b>{TEAM_ROLES[h.from]?.name || h.from}</b> gave <b>{h.company}</b> to <b>{TEAM_ROLES[h.to]?.name || h.to}</b>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm sm:grid-cols-4" data-testid="sales-kpi-strip">
         <div>
@@ -814,7 +981,7 @@ export function PipelineView() {
       ) : null}
 
       {selected && !editing ? (
-        <Card>
+        <Card id="lead-panel" className="scroll-mt-16">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">{selected.company}</h2>
@@ -901,41 +1068,7 @@ export function PipelineView() {
             </p>
           ) : null}
 
-          {linkedQuotes.length ? (
-            <div className="mt-3 rounded-lg bg-emerald-50 p-3">
-              <p className="text-xs font-extrabold uppercase text-emerald-900">Linked quotes</p>
-              <ul className="mt-1 space-y-1 text-sm">
-                {linkedQuotes.map((q) => (
-                  <li key={q.id}>
-                    <Link className="font-semibold text-sky-800" href={`/enquiries/?q=${encodeURIComponent(q.ref)}&select=${encodeURIComponent(q.id)}`}>
-                      {q.ref}
-                    </Link>{" "}
-                    · {q.mode.toUpperCase()} · {q.status}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {relatedQuotes.length ? (
-            <div className="mt-3 rounded-lg bg-slate-50 p-3">
-              <p className="text-xs font-extrabold uppercase text-[var(--color-text-muted)]">
-                Possible matches (by company name)
-              </p>
-              <ul className="mt-1 space-y-1 text-sm">
-                {relatedQuotes.map((q) => (
-                  <li key={q.id}>
-                    <Link className="font-semibold text-sky-800" href={`/enquiries/?q=${encodeURIComponent(q.ref)}&select=${encodeURIComponent(q.id)}`}>
-                      {q.ref}
-                    </Link>{" "}
-                    · {q.mode.toUpperCase()} · {q.status}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          <h3 className="mt-4 text-sm font-bold">Activity</h3>
+          <h3 className="mt-4 border-t border-[var(--color-border)] pt-3 text-sm font-bold">Log a visit</h3>
           <div className="mt-2 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <Select
@@ -960,6 +1093,7 @@ export function PipelineView() {
               <span className="text-xs text-[var(--color-text-muted)]">Today unless you change it</span>
             </div>
             <Textarea
+              id="visit-notes"
               rows={4}
               className="mt-0"
               aria-label="What was discussed"
@@ -997,13 +1131,24 @@ export function PipelineView() {
             {activities.length === 0 ? (
               <li className="text-[var(--color-text-muted)]">No activities yet.</li>
             ) : (
-              activities.map((a) => (
+              (showAllActs ? activities : activities.slice(0, 5)).map((a) => (
                 <li key={a.id} className="rounded-lg bg-slate-50 px-3 py-2">
                   <div className="flex items-center gap-2">
                     <Badge tone="neutral">{a.type}</Badge>
                     <span className="text-xs text-[var(--color-text-muted)]">
                       {formatDay(activityDay(a))} · logged by {a.createdBy || "—"}
                     </span>
+                    {canDeleteActivity(a, user?.username, admin) ? (
+                      <button
+                        type="button"
+                        className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                        title={admin ? "Delete this entry" : `You can delete this for ${deleteMinutesLeft(a)} more minute(s)`}
+                        onClick={() => void deleteActivity(a)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                        {!admin ? <span className="font-normal text-[var(--color-text-muted)]"> · {deleteMinutesLeft(a) >= 60 ? `${Math.floor(deleteMinutesLeft(a) / 60)}h ${deleteMinutesLeft(a) % 60}m` : `${deleteMinutesLeft(a)}m`} left</span> : null}
+                      </button>
+                    ) : null}
                   </div>
                   {a.body ? <div className="mt-1 whitespace-pre-wrap">{a.body}</div> : null}
                   {a.nextStep || a.followUpDate ? (
@@ -1016,6 +1161,46 @@ export function PipelineView() {
               ))
             )}
           </ul>
+          {activities.length > 5 ? (
+            <button type="button" className="mt-2 text-xs font-semibold text-sky-800 underline" onClick={() => setShowAllActs((v) => !v)}>
+              {showAllActs ? "Show fewer" : `Show all ${activities.length} entries`}
+            </button>
+          ) : null}
+
+          {linkedQuotes.length ? (
+            <div className="mt-3 rounded-lg bg-emerald-50 p-3">
+              <p className="text-xs font-extrabold uppercase text-emerald-900">Linked quotes</p>
+              <ul className="mt-1 space-y-1 text-sm">
+                {linkedQuotes.map((q) => (
+                  <li key={q.id}>
+                    <Link className="font-semibold text-sky-800" href={`/enquiries/?q=${encodeURIComponent(q.ref)}&select=${encodeURIComponent(q.id)}`}>
+                      {q.ref}
+                    </Link>{" "}
+                    · {q.mode.toUpperCase()} · {q.status}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {relatedQuotes.length ? (
+            <div className="mt-3 rounded-lg bg-slate-50 p-3">
+              <p className="text-xs font-extrabold uppercase text-[var(--color-text-muted)]">
+                Possible matches (by company name)
+              </p>
+              <ul className="mt-1 space-y-1 text-sm">
+                {relatedQuotes.map((q) => (
+                  <li key={q.id}>
+                    <Link className="font-semibold text-sky-800" href={`/enquiries/?q=${encodeURIComponent(q.ref)}&select=${encodeURIComponent(q.id)}`}>
+                      {q.ref}
+                    </Link>{" "}
+                    · {q.mode.toUpperCase()} · {q.status}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
         </Card>
       ) : null}
     </div>

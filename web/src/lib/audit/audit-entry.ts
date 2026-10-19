@@ -4,6 +4,8 @@ export type AuditAction =
   | "lead.create"
   | "lead.update"
   | "lead.status"
+  | "lead.handover"
+  | "lead.visit.delete"
   | "account.create"
   | "account.update"
   | "account.delete"

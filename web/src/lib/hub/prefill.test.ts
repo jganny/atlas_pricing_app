@@ -11,7 +11,7 @@ const store: Record<string, string> = {};
 
 (async () => {
   const seats = await import("../auth/desk-seats");
-  const { toParsedEnquiry, toSmartPrefill, toDeskPrefill, matchVehicleType } = await import("./prefill");
+  const { toParsedEnquiry, toSmartPrefill, toDeskPrefill, matchVehicleType, lineTotalWeights } = await import("./prefill");
   const { visibleJobs, waitingCounts } = await import("./jobs");
   const { demoHubJobs } = await import("./demo-jobs");
   const { INDIA_VEHICLE_TYPES } = await import("../desk/constants");
@@ -43,6 +43,22 @@ const store: Record<string, string> = {};
   assert.equal(ap.parsed.module, "import");
   assert.equal(ap.parsed.origin, "PVG - Shanghai");
   assert.equal(ap.parsed.customer, "Pearl Cargo Ltd");
+
+  // Weights: "2 drums x 25 kg" is a 50 kg line on the Air desk, not 25 (the Beirut enquiry: 145 kg, not 108).
+  const drums = [
+    { qty: 2, gw: 25, l: 42, w: 42, h: 57 },
+    { qty: 9, gw: 5, l: 30, w: 30, h: 31 },
+    { qty: 2, gw: 25, l: 42, w: 42, h: 57 },
+  ];
+  assert.deepEqual(lineTotalWeights(drums, 145).map((r) => r.gw), [50, 45, 50]);
+  assert.deepEqual(lineTotalWeights(drums).map((r) => r.gw), [50, 45, 50], "no stated total: each-package is assumed");
+  assert.equal(lineTotalWeights(drums, 145).reduce((n, r) => n + (r.gw ?? 0), 0), 145);
+  // Rows that were already line totals and add up to the stated total are left alone.
+  const alreadyTotals = [{ qty: 2, gw: 50 }, { qty: 9, gw: 45 }, { qty: 2, gw: 50 }];
+  assert.deepEqual(lineTotalWeights(alreadyTotals, 145).map((r) => r.gw), [50, 45, 50]);
+  assert.equal(lineTotalWeights([{ qty: 1, gw: 12.5 }], 12.5)[0].gw, 12.5, "single pieces are unchanged");
+  assert.equal(lineTotalWeights([{ qty: 3 }], 100)[0].gw, undefined, "a missing weight stays missing");
+  assert.equal(toParsedEnquiry({ ...air, extraction: { ...air.extraction, grossWeightKg: 145, packages: drums } }).packages.reduce((n, r) => n + (r.gw ?? 0), 0), 145);
 
   // Unknown direction sets nothing, so the desk keeps its own default.
   assert.equal(toParsedEnquiry({ ...air, extraction: { ...air.extraction, direction: "unknown" } }).module, undefined);

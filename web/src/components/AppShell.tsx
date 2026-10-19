@@ -53,6 +53,7 @@ import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { ChatProvider, useTeamChatOptional } from "./chat/ChatProvider";
+import { useLeadHandovers } from "@/hooks/use-lead-handovers";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 import { WorkspaceMore } from "./WorkspaceMore";
 import { BrandMark } from "./BrandMark";
@@ -175,6 +176,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pipOpen, setPipOpen] = useState(false);
   const admin = isAdminUser(user?.username, user?.role);
+  // Admin only: leads that sales people handed to each other since the admin last looked.
+  const { unseen: handoverUnseen } = useLeadHandovers(admin);
   const { data: wonFollowUps = [] } = useWonFollowUps();
   const pendingRows = useMemo(
     () => wonFollowUps.filter((r) => missingWonFields(r).length > 0),
@@ -280,7 +283,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     ? pendingNrsCount
                     : item.href === "/chat"
                       ? chatBadge || undefined
-                      : hubBadge[item.href] || undefined
+                      : item.href === "/sales"
+                        ? handoverUnseen || undefined
+                        : hubBadge[item.href] || undefined
               }
             />
           ))}

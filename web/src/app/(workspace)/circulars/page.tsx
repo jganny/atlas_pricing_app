@@ -28,7 +28,7 @@ import {
   rememberCourierTariffBook,
   type CourierTariffBook,
 } from "@/lib/quotes/courier-tariff";
-import { canAccessVendorsDirectory } from "@/lib/auth/directory-access";
+import { canManageCirculars } from "@/lib/auth/directory-access";
 import { AirTariffExtractionReview } from "@/components/AirTariffExtractionReview";
 import { SeaTariffExtractionReview } from "@/components/SeaTariffExtractionReview";
 import { CourierTariffExtractionReview } from "@/components/CourierTariffExtractionReview";
@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 export default function CircularsPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const canManage = canAccessVendorsDirectory(user?.username, user?.role);
+  const canManage = canManageCirculars(user?.username, user?.role);
   const { data: air = [], isLoading: airLoading } = useAirTariffs();
   const { data: sea = [], isLoading: seaLoading } = useSeaTariffs();
   const { data: courierBooks = [] } = useCourierTariffs();
