@@ -23,7 +23,8 @@ function detectMode(p: string): QuoteMode | null {
 }
 
 function laneFrom(p: string): { origin?: string; dest?: string } {
-  const code = p.match(/\b([a-z]{3})\s*(?:to|→|-|–)\s*([a-z]{3})\b/i);
+  // Airport codes (3 letters) or UN/LOCODE seaport codes (5 letters), both ends the same length.
+  const code = p.match(/\b([a-z]{3})\s*(?:to|→|-|–)\s*([a-z]{3})\b/i) || p.match(/\b([a-z]{5})\s*(?:to|→|-|–)\s*([a-z]{5})\b/i);
   if (code) return { origin: code[1].toUpperCase(), dest: code[2].toUpperCase() };
   const cleaned = p.replace(
     /\b(quote|quotes|air|sea|courier|new|start|create|make|desk|freight|from)\b/gi,

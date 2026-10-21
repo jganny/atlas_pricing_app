@@ -52,8 +52,9 @@ import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/fireba
 import { autoAirlines } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
 import { LaneCarriers } from "@/components/LaneCarriers";
-import { hasInstruction, parseInstruction, type Instruction } from "@/lib/hub/instruction";
-import { marginLabel, planInstruction } from "@/lib/hub/instruction-quote";
+import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
+import { marginLabel, planInstruction, type PlanChoice } from "@/lib/hub/instruction-quote";
+import { readInstructionWithAI } from "@/lib/ai/instruction-ai";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { chargeableWeightKg, summarizeCargo } from "@atlas/pricing-core";
 import {
@@ -144,7 +145,9 @@ function AirDeskInner() {
   const [showRateRequest, setShowRateRequest] = useState(false);
   // Quote Hub instruction ("use BLR - EK rates for +100, add 10/kg, quote in USD…")
   const [instr, setInstr] = useState<Instruction | null>(null);
-  const [instrChoice, setInstrChoice] = useState<{ margin?: number; currency?: string }>({});
+  const [instrChoice, setInstrChoice] = useState<PlanChoice>({});
+  const [instrReading, setInstrReading] = useState(false);
+  const [typedRate, setTypedRate] = useState("");
   const [attention, setAttention] = useState("");
   const [autoPreview, setAutoPreview] = useState(false);
   const instrApplied = useRef("");
@@ -1030,7 +1033,23 @@ function AirDeskInner() {
     const text = loader.smartPrefill?.instruction;
     if (!text) return;
     const parsed = parseInstruction(text);
-    if (hasInstruction(parsed)) setInstr(parsed);
+    // Plain words the rules only half understood are read by the AI, which only fills what the rules left blank.
+    if (!useLiveData || !shouldAskAI(text, parsed)) {
+      if (hasInstruction(parsed)) setInstr(parsed);
+      return;
+    }
+    let cancelled = false;
+    setInstrReading(true);
+    void readInstructionWithAI(text).then((ai) => {
+      if (cancelled) return;
+      setInstrReading(false);
+      const merged = mergeInstruction(parsed, ai);
+      if (hasInstruction(merged)) setInstr(merged);
+    });
+    return () => {
+      cancelled = true;
+      setInstrReading(false);
+    };
   }, [loader.smartPrefill]);
 
   const instrPlan = useMemo(() => {
@@ -1048,15 +1067,15 @@ function AirDeskInner() {
 
   // When the plan is settled, fill the desk: one airline, only the break asked for, the margin and currency applied.
   useEffect(() => {
-    if (!instrPlan || instrPlan.status !== "ready" || !instrPlan.tariff || !instrPlan.weightBreak) return;
-    const key = JSON.stringify([instrPlan.tariff.id, instrPlan.weightBreak, instrPlan.sellRate, instrPlan.buyRate, instrPlan.currency, instrPlan.customFx]);
+    if (!instrPlan || instrPlan.status !== "ready" || !instrPlan.carrierLabel || !instrPlan.weightBreak) return;
+    const key = JSON.stringify([instrPlan.tariff?.id ?? "typed", instrPlan.carrierLabel, instrPlan.weightBreak, instrPlan.sellRate, instrPlan.buyRate, instrPlan.currency, instrPlan.customFx]);
     if (instrApplied.current === key) return;
     const first = !instrApplied.current;
     instrApplied.current = key;
     setAirlines([
       createAirlineOption(
         {
-          name: instrPlan.tariff.carrier,
+          name: instrPlan.carrierLabel,
           routing: `${origin}-${destination}`,
           tt: "TBA",
           validity: "15 days",
@@ -1078,6 +1097,11 @@ function AirDeskInner() {
     if (!autoPreview || !selected || !selectedTotals) return;
     if (!(selectedTotals.freight.chargeableWeightKg > 0)) return;
     setAutoPreview(false);
+    // A weight typed in Ask Vertex has no package sizes yet; the rate is applied, the sizes are for the person to add.
+    if (!isRelaxedImportQuote(module, incoterm) && validateAirCargo(cargo)) {
+      toast("Rate applied. Add the package sizes (L × W × H) under Shipment, then press Preview.", "info");
+      return;
+    }
     handlePreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPreview, selected, selectedTotals]);
@@ -1104,6 +1128,13 @@ function AirDeskInner() {
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
         </Card>
       ) : null}
+      {instrReading ? (
+        <Card className="border-violet-200 bg-violet-50 py-2" data-testid="instruction-reading">
+          <p className="text-sm text-violet-950">
+            <b className="text-violet-900">Vertex:</b> reading your instruction…
+          </p>
+        </Card>
+      ) : null}
       {instr && instrPlan ? (
         <Card className={instrPlan.status === "blocked" ? "border-amber-300 bg-amber-50 py-2" : "border-violet-200 bg-violet-50 py-2"} data-testid="instruction-banner">
           <p className="text-sm">
@@ -1128,6 +1159,51 @@ function AirDeskInner() {
                 </Button>
               ))}
             </div>
+          ) : null}
+          {instrPlan.choices.carriers ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">On file:</span>
+              {instrPlan.choices.carriers.map((c) => (
+                <Button key={c.code} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((x) => ({ ...x, carrier: c.code }))}>
+                  {c.code} · {c.currency} {c.rate.toFixed(2)}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.choices.breaks ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">Break it has:</span>
+              {instrPlan.choices.breaks.map((b) => (
+                <Button key={b.key} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((x) => ({ ...x, weightBreak: b.key }))}>
+                  {b.label} · {b.rate.toFixed(2)}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.askRate ? (
+            <form
+              className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const n = Number(typedRate);
+                if (Number.isFinite(n) && n > 0) setInstrChoice((x) => ({ ...x, buyRate: n, currency: x.currency || instrPlan.askRate?.currency }));
+              }}
+            >
+              <label htmlFor="instr-typed-rate" className="font-semibold">
+                Or type {instrPlan.askRate.carrier}&apos;s rate ({instrPlan.askRate.currency}/kg):
+              </label>
+              <input
+                id="instr-typed-rate"
+                inputMode="decimal"
+                value={typedRate}
+                onChange={(e) => setTypedRate(e.target.value)}
+                className="w-20 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm"
+                data-testid="instruction-typed-rate"
+              />
+              <Button type="submit" size="sm" variant="secondary">
+                Use this rate
+              </Button>
+            </form>
           ) : null}
           {instrPlan.status === "ready" && instrPlan.issues.length ? <p className="mt-1 text-[11px] text-violet-800">{instrPlan.issues.join(" ")}</p> : null}
         </Card>

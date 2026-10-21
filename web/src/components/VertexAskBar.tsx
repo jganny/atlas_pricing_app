@@ -6,6 +6,8 @@ import { Search, Sparkles } from "lucide-react";
 import { SwipeDeleteRow } from "@/components/SwipeDeleteRow";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { newQuoteHref, parseDeskIntent } from "@/lib/ai/desk-intent";
+import { askPrefill } from "@/lib/hub/ask-instruction";
+import { storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { enquiryHref, searchQuotes } from "@/lib/quotes/find-quotes";
 import {
   hideQuoteFromAsk,
@@ -15,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const HELP: Record<string, string> = {
-  "": "Try: find Zenith, Maersk last week, quote air BLR to LHR, or overdue.",
+  "": "Try: find Zenith, Maersk last week, overdue, or a quote with an instruction: quote air BLR to LHR 120 kg use EK +100 add 10/kg in USD.",
   offline:
     "Offline backups are a safety net on this computer: if save or the network hiccups, Vertex keeps the last quotes you saved here so you can reopen them without the file name. They are not a second database — Enquiry DB is the source of truth.",
   performance:
@@ -75,6 +77,14 @@ export function VertexAskBar({
       return;
     }
     if (intent.kind === "new") {
+      // "quote air BLR to LHR 120 kg use EK +100 add 10/kg in USD" (or a sea one): the desk opens filled and applies the instruction.
+      const prefill = askPrefill(value, intent);
+      if (prefill) {
+        storeSmartQuotePrefill(prefill);
+        setNote(`Opening ${intent.mode} desk with your instruction`);
+        go(`/${intent.mode}?smart=1`);
+        return;
+      }
       setNote(`Opening ${intent.mode} desk`);
       go(newQuoteHref(intent));
       return;
@@ -125,7 +135,7 @@ export function VertexAskBar({
             aria-activedescendant={activeIndex >= 0 ? `vertex-ask-hit-${shown[activeIndex]?.id}` : undefined}
             enterKeyHint="search"
             className="w-full rounded-lg border border-[var(--color-border)] bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-sky-400"
-            placeholder="Find a quote (customer or city — no file name) · or quote air BLR to LHR"
+            placeholder="Find a quote (customer or city) · or: quote air BLR to LHR 120 kg use EK +100 add 10/kg in USD"
             value={value}
             onChange={(e) => {
               setValue(e.target.value);

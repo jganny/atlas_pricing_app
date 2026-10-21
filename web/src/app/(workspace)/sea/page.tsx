@@ -59,6 +59,10 @@ import {
 } from "@/lib/pricing/terms";
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
+import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
+import { planSeaInstruction, type SeaChoice } from "@/lib/hub/instruction-sea";
+import { marginLabel } from "@/lib/hub/instruction-quote";
+import { readInstructionWithAI } from "@/lib/ai/instruction-ai";
 import { useSeaTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
@@ -164,6 +168,14 @@ function SeaDeskInner() {
   const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
+  const [attention, setAttention] = useState("");
+  const [instr, setInstr] = useState<Instruction | null>(null);
+  const [instrChoice, setInstrChoice] = useState<SeaChoice>({});
+  const [instrReading, setInstrReading] = useState(false);
+  const [typedRate, setTypedRate] = useState("");
+  const [seedContainers, setSeedContainers] = useState<Array<{ type: string; qty: number }>>([]);
+  const [autoPreview, setAutoPreview] = useState(false);
+  const instrApplied = useRef("");
   const [liners, setLiners] = useState<LinerOption[]>([createLinerOption({}, true)]);
   const [localOriginCharges, setLocalOriginCharges] = useState<SurchargeRow[]>([]);
   const [destClearanceCharges, setDestClearanceCharges] = useState<SurchargeRow[]>([]);
@@ -543,6 +555,8 @@ function SeaDeskInner() {
   function applySmartDraft(draft: SmartQuoteDraft) {
     const p = draft.parsed;
     const st = draft.seaTariff;
+    setAttention(p.contact ? [p.contact.name, p.contact.email].filter(Boolean).join(" · ") : "");
+    setSeedContainers(p.containers.map((c) => ({ type: c.type, qty: c.qty })));
     setCustomer(p.customer || "");
     setOrigin(p.origin || "");
     setDestination(p.destination || "");
@@ -730,6 +744,7 @@ function SeaDeskInner() {
       amountINR: currency === "INR" ? amount : amount * fx,
       route: allLanesRoute(lanes) || `${originCode} → ${destCode} via ${selected.name || "Any"}`,
       details: {
+        ...(attention ? { attention } : {}),
         origin,
         destination,
         liner: linerLabel,
@@ -854,6 +869,7 @@ function SeaDeskInner() {
         amountINR: currency === "INR" ? amount : amount * fx,
         route: allLanesRoute(lanes) || `${origin} → ${destination}`,
         details: {
+          ...(attention ? { attention } : {}),
           origin,
           destination,
           liner:
@@ -1012,6 +1028,81 @@ function SeaDeskInner() {
     setStep,
   });
 
+  // ---- Quote Hub / Ask Vertex instruction ------------------------------------------------------------------------
+  useEffect(() => {
+    const text = loader.smartPrefill?.instruction;
+    if (!text) return;
+    const parsed = parseInstruction(text);
+    // Plain words the rules only half understood are read by the AI, which only fills what the rules left blank.
+    if (!useLiveData || !shouldAskAI(text, parsed)) {
+      if (hasInstruction(parsed)) setInstr(parsed);
+      return;
+    }
+    let cancelled = false;
+    setInstrReading(true);
+    void readInstructionWithAI(text).then((ai) => {
+      if (cancelled) return;
+      setInstrReading(false);
+      const merged = mergeInstruction(parsed, ai);
+      if (hasInstruction(merged)) setInstr(merged);
+    });
+    return () => {
+      cancelled = true;
+      setInstrReading(false);
+    };
+  }, [loader.smartPrefill]);
+
+  const instrPlan = useMemo(() => {
+    if (!instr) return null;
+    return planSeaInstruction({
+      instr,
+      tariffs,
+      originCode: origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase(),
+      destCode: destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase(),
+      mode,
+      containers: seedContainers,
+      choice: instrChoice,
+    });
+  }, [instr, tariffs, origin, destination, mode, seedContainers, instrChoice]);
+
+  // When the plan is settled, fill the desk: one liner, the rates and margin applied, currency set.
+  useEffect(() => {
+    if (!instrPlan || instrPlan.status !== "ready" || !instrPlan.carrierLabel || !instrPlan.mode) return;
+    const key = JSON.stringify([instrPlan.tariff?.id ?? "typed", instrPlan.carrierLabel, instrPlan.mode, instrPlan.containers, instrPlan.lclBuy, instrPlan.lclSell, instrPlan.currency, instrPlan.customFx]);
+    if (instrApplied.current === key) return;
+    const first = !instrApplied.current;
+    instrApplied.current = key;
+    setMode(instrPlan.mode);
+    setLiners([
+      createLinerOption(
+        {
+          name: instrPlan.carrierLabel,
+          routing: `${origin}-${destination}`,
+          tt: "TBA",
+          validity: "15 days",
+          ...(instrPlan.containers ? { containers: instrPlan.containers } : {}),
+          lclSell: instrPlan.lclSell ?? 0,
+          lclBuy: instrPlan.lclBuy ?? 0,
+        },
+        true,
+      ),
+    ]);
+    if (instrPlan.currency) setCurrency(instrPlan.currency);
+    if (instrPlan.customFx) setCustomFx(instrPlan.customFx);
+    setStep("carrier");
+    if (first) setAutoPreview(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instrPlan]);
+
+  // …then open the preview, ready to print or share as PDF — only once the cargo is known.
+  useEffect(() => {
+    if (!autoPreview || !selected || !selectedTotals) return;
+    if (validateSeaCargoBasics(grossWeightKg, volumeCbm)) return;
+    setAutoPreview(false);
+    handlePreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPreview, selected, selectedTotals, grossWeightKg, volumeCbm]);
+
   const requestCargo = {
     grossKg: grossWeightKg || undefined,
     volumeCbm: volumeCbm || undefined,
@@ -1029,6 +1120,87 @@ function SeaDeskInner() {
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
+        </Card>
+      ) : null}
+
+      {instrReading ? (
+        <Card className="border-violet-200 bg-violet-50 py-2" data-testid="instruction-reading">
+          <p className="text-sm text-violet-950">
+            <b className="text-violet-900">Vertex:</b> reading your instruction…
+          </p>
+        </Card>
+      ) : null}
+      {instr && instrPlan ? (
+        <Card className={instrPlan.status === "blocked" ? "border-amber-300 bg-amber-50 py-2" : "border-violet-200 bg-violet-50 py-2"} data-testid="instruction-banner">
+          <p className="text-sm">
+            <b className="text-violet-900">Vertex:</b> <span className={instrPlan.status === "blocked" ? "text-amber-900" : "text-violet-950"}>{instrPlan.summary}</span>
+          </p>
+          {instrPlan.choices.margin ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">Margin:</span>
+              {instrPlan.choices.margin.map((m, i) => (
+                <Button key={i} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((c) => ({ ...c, margin: i }))}>
+                  {marginLabel(m)}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.choices.currency ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">Quote in:</span>
+              {instrPlan.choices.currency.map((c) => (
+                <Button key={c} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((x) => ({ ...x, currency: c }))}>
+                  {c}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.choices.carriers ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">On file:</span>
+              {instrPlan.choices.carriers.map((c) => (
+                <Button key={c.code} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((x) => ({ ...x, carrier: c.code }))}>
+                  {c.code} · {c.rate}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.choices.containers ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">Container it has:</span>
+              {instrPlan.choices.containers.map((c) => (
+                <Button key={c.type} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((x) => ({ ...x, container: c.type }))}>
+                  {c.type} · {c.rate}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.askRate ? (
+            <form
+              className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const n = Number(typedRate);
+                if (Number.isFinite(n) && n > 0) setInstrChoice((x) => ({ ...x, buyRate: n, currency: x.currency || instrPlan.askRate?.currency }));
+              }}
+            >
+              <label htmlFor="instr-typed-rate" className="font-semibold">
+                Or type {instrPlan.askRate.carrier}&apos;s rate ({instrPlan.askRate.currency}/{instrPlan.askRate.unit}):
+              </label>
+              <input
+                id="instr-typed-rate"
+                inputMode="decimal"
+                value={typedRate}
+                onChange={(e) => setTypedRate(e.target.value)}
+                className="w-24 rounded border border-[var(--color-border)] bg-white px-2 py-1 text-sm"
+                data-testid="instruction-typed-rate"
+              />
+              <Button type="submit" size="sm" variant="secondary">
+                Use this rate
+              </Button>
+            </form>
+          ) : null}
+          {instrPlan.status === "ready" && instrPlan.issues.length ? <p className="mt-1 text-[11px] text-violet-800">{instrPlan.issues.join(" ")}</p> : null}
         </Card>
       ) : null}
 

@@ -57,10 +57,44 @@ assert.equal(p.sellRate, 2.8);
 assert.ok(p.issues.some((x) => /No margin/.test(x)));
 
 // Nothing is invented when the rate is not on file
-assert.match(planInstruction({ ...base, instr: parseInstruction("use XX rates +100") }).summary, /XX has no rate on file for BLR → BEY\. On file: EK, QR/);
-assert.match(planInstruction({ ...base, destCode: "DXB", instr: i2 }).summary, /No rates on file for BLR → DXB/);
-assert.match(planInstruction({ ...base, instr: parseInstruction("EK rates +1000 add 5%") }).summary, /no \+1000 rate/);
-assert.match(planInstruction({ ...base, instr: parseInstruction("add 5%") }).summary, /Say which carrier/);
+p = planInstruction({ ...base, instr: parseInstruction("use XX rates +100") });
+assert.equal(p.status, "blocked");
+assert.match(p.summary, /XX has no rate on file for BLR → BEY/);
+assert.deepEqual(p.choices.carriers?.map((c) => c.code), ["EK", "QR"], "carriers that DO have a +100 rate are offered");
+assert.deepEqual(p.askRate, { carrier: "XX", currency: "USD" }, "or the person can type the rate");
+p = planInstruction({ ...base, destCode: "DXB", instr: i2 });
+assert.match(p.summary, /No rates on file for BLR → DXB/);
+assert.deepEqual(p.askRate, { carrier: "EK", currency: "USD" });
+p = planInstruction({ ...base, instr: parseInstruction("EK rates +1000 add 5%") });
+assert.match(p.summary, /no \+1000 rate/);
+assert.deepEqual(p.choices.breaks?.map((b) => b.label), ["+45", "+100", "+300"], "the breaks the sheet does have are offered");
+// Picking one of them settles it
+p = planInstruction({ ...base, instr: parseInstruction("EK rates +1000 add 5%"), choice: { weightBreak: "plus300" } });
+assert.equal(p.status, "ready");
+assert.equal(p.weightBreak, "plus300");
+assert.equal(p.sellRate, 2.63, "2.50 + 5%");
+// No carrier named: the carriers with a rate are offered
+p = planInstruction({ ...base, instr: parseInstruction("add 5%"), chargeableKg: 120 });
+assert.match(p.summary, /Which carrier/);
+assert.deepEqual(p.choices.carriers?.map((c) => c.code), ["EK", "QR"]);
+p = planInstruction({ ...base, instr: parseInstruction("add 5%"), chargeableKg: 120, choice: { carrier: "QR" } });
+assert.equal(p.status, "ready");
+assert.equal(p.carrierLabel, "Qatar Airways");
+assert.equal(p.sellRate, 3.26, "3.10 + 5%");
+// A rate the person typed stands in for a missing sheet, and says so
+p = planInstruction({ ...base, destCode: "DXB", instr: i2, choice: { buyRate: 4 } });
+assert.equal(p.status, "ready");
+assert.equal(p.typedRate, true);
+assert.equal(p.buyRate, 4);
+assert.equal(p.sellRate, 4.4);
+assert.equal(p.carrierLabel, "Emirates", "the airline's full name is borrowed from another sheet on file");
+assert.ok(p.issues.some((x) => /typed in/.test(x)));
+// …and a rate stated inside the instruction itself works the same way
+p = planInstruction({ ...base, destCode: "DXB", instr: { ...parseInstruction("XX +100 add 10/kg in USD"), buyRate: 4.2 } });
+assert.equal(p.sellRate, 14.2);
+assert.equal(p.carrierLabel, "XX");
+// Sea-style margins are refused for air with a plain reason
+assert.match(planInstruction({ ...base, instr: { ...i2, margins: [{ kind: "perContainer", value: 50 }] } }).summary, /sea quote/);
 assert.match(planInstruction({ ...base, destCode: "", instr: i2 }).summary, /Origin and destination/);
 // Matches by name too, and the newest sheet wins
 const newer = [tariff({ createdAt: "2026-09-01", breaks: { plus100: { sell: 9, buy: 9 } } }), tariff({ id: "n", createdAt: "2026-10-09" })];

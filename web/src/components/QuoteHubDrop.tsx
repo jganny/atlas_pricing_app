@@ -122,7 +122,11 @@ export function QuoteHubDrop() {
         />
         {instruction.trim() ? (
           <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-            {hasInstruction(parseInstruction(instruction)) ? "Understood — it is applied when you open the job." : "Not understood yet — add a carrier (EK), a break (+100) or a margin (10/kg or 10%)."}
+            {hasInstruction(parseInstruction(instruction))
+              ? "Understood — it is applied when you open the job."
+              : useLiveData
+                ? "Vertex will read this in plain words when you open the job."
+                : "Not understood yet — add a carrier (EK), a break (+100) or a margin (10/kg or 10%)."}
           </p>
         ) : null}
       </div>
