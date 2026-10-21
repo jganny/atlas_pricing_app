@@ -146,6 +146,8 @@ export interface ParsedEnquiry {
   linerLabel?: string
   commodity?: string
   incoterm?: string
+  /** Who sent the enquiry (Quote Hub), so the quote can be addressed to them. */
+  contact?: { name: string; email: string }
   /** Import or Export, when the documents made it clear (Quote Hub). */
   module?: 'export' | 'import'
   notes?: string

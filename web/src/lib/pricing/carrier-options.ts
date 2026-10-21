@@ -38,6 +38,8 @@ export interface AirlineOption {
   originSurcharges: SurchargeRow[];
   destSurcharges: SurchargeRow[];
   selected: boolean;
+  /** Rates were set by a Quote Hub instruction: the tariff fill must not add the other weight breaks after them. */
+  rateLock?: boolean;
 }
 
 export function createAirlineOption(
@@ -66,6 +68,7 @@ export function createAirlineOption(
     originSurcharges: partial.originSurcharges ?? defaultAirOriginSurcharges(),
     destSurcharges: partial.destSurcharges ?? defaultAirDestSurcharges(),
     selected,
+    ...(partial.rateLock ? { rateLock: true } : {}),
   };
 }
 

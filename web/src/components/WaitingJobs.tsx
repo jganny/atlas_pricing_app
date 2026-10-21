@@ -50,6 +50,11 @@ export function WaitingJobs() {
                   {j.files.slice(0, 2).join(", ")}
                   {j.files.length > 2 ? ` +${j.files.length - 2}` : ""}
                 </div>
+                {j.instruction ? (
+                  <div className="mt-0.5 truncate text-xs font-semibold text-violet-800" title={j.instruction}>
+                    Vertex will: {j.instruction}
+                  </div>
+                ) : null}
               </div>
               <span className="text-xs text-[var(--color-text-muted)]">
                 {j.status === "opened" ? "Opened" : j.checkCount === 0 ? "All filled" : `${j.checkCount} to check`}

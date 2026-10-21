@@ -52,6 +52,8 @@ import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/fireba
 import { autoAirlines } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
 import { LaneCarriers } from "@/components/LaneCarriers";
+import { hasInstruction, parseInstruction, type Instruction } from "@/lib/hub/instruction";
+import { marginLabel, planInstruction } from "@/lib/hub/instruction-quote";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { chargeableWeightKg, summarizeCargo } from "@atlas/pricing-core";
 import {
@@ -140,6 +142,12 @@ function AirDeskInner() {
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [showRateRequest, setShowRateRequest] = useState(false);
+  // Quote Hub instruction ("use BLR - EK rates for +100, add 10/kg, quote in USD…")
+  const [instr, setInstr] = useState<Instruction | null>(null);
+  const [instrChoice, setInstrChoice] = useState<{ margin?: number; currency?: string }>({});
+  const [attention, setAttention] = useState("");
+  const [autoPreview, setAutoPreview] = useState(false);
+  const instrApplied = useRef("");
   const [airlines, setAirlines] = useState<AirlineOption[]>([createAirlineOption({}, true)]);
   const [localOriginCharges, setLocalOriginCharges] = useState<SurchargeRow[]>([]);
   const [destClearanceCharges, setDestClearanceCharges] = useState<SurchargeRow[]>([]);
@@ -326,6 +334,7 @@ function AirDeskInner() {
     setAirlines((prev) => {
       let anyChanged = false;
       const next = prev.map((a) => {
+        if (a.rateLock) return a; // rates were set by an instruction — leave the other breaks empty
         const match = tariffMatchById[a.id];
         if (!match || match.status !== "matched") return a;
         const tariff = match.tariff;
@@ -512,6 +521,7 @@ function AirDeskInner() {
 
   function applySmartDraft(draft: SmartQuoteDraft) {
     const p = draft.parsed;
+    setAttention(p.contact ? [p.contact.name, p.contact.email].filter(Boolean).join(" · ") : "");
     setCustomer(p.customer || "");
     setOrigin(p.origin || "");
     setDestination(p.destination || "");
@@ -735,6 +745,7 @@ function AirDeskInner() {
         incoterm,
         module,
         dimUnit,
+        ...(attention ? { attention } : {}),
         creatorBranch: user?.branch || "Bangalore",
         commodity,
         chargeableWeight: selectedTotals.freight.chargeableWeightKg,
@@ -860,6 +871,7 @@ function AirDeskInner() {
           incoterm,
           module,
           dimUnit,
+          ...(attention ? { attention } : {}),
           creatorBranch: user?.branch || "Bangalore",
           commodity,
           chargeableWeight: selectedTotals.freight.chargeableWeightKg,
@@ -1013,6 +1025,63 @@ function AirDeskInner() {
     setStep,
   });
 
+  // ---- Quote Hub instruction -------------------------------------------------------------------------------------
+  useEffect(() => {
+    const text = loader.smartPrefill?.instruction;
+    if (!text) return;
+    const parsed = parseInstruction(text);
+    if (hasInstruction(parsed)) setInstr(parsed);
+  }, [loader.smartPrefill]);
+
+  const instrPlan = useMemo(() => {
+    if (!instr) return null;
+    const sum = summarizeCargo(cargoRowsToLines(cargo), dimUnit);
+    return planInstruction({
+      instr,
+      tariffs,
+      originCode: origin.split(" - ")[0]?.trim().toUpperCase() || "",
+      destCode: destination.split(" - ")[0]?.trim().toUpperCase() || "",
+      chargeableKg: sum.grossWeightKg || sum.volumeWeightKg ? chargeableWeightKg(sum, 0) : undefined,
+      choice: instrChoice,
+    });
+  }, [instr, tariffs, origin, destination, cargo, dimUnit, instrChoice]);
+
+  // When the plan is settled, fill the desk: one airline, only the break asked for, the margin and currency applied.
+  useEffect(() => {
+    if (!instrPlan || instrPlan.status !== "ready" || !instrPlan.tariff || !instrPlan.weightBreak) return;
+    const key = JSON.stringify([instrPlan.tariff.id, instrPlan.weightBreak, instrPlan.sellRate, instrPlan.buyRate, instrPlan.currency, instrPlan.customFx]);
+    if (instrApplied.current === key) return;
+    const first = !instrApplied.current;
+    instrApplied.current = key;
+    setAirlines([
+      createAirlineOption(
+        {
+          name: instrPlan.tariff.carrier,
+          routing: `${origin}-${destination}`,
+          tt: "TBA",
+          validity: "15 days",
+          breaks: { ...EMPTY_AIR_BREAKS, [instrPlan.weightBreak]: { sell: instrPlan.sellRate ?? 0, buy: instrPlan.buyRate ?? 0 } },
+          rateLock: true,
+        },
+        true,
+      ),
+    ]);
+    if (instrPlan.currency) setCurrency(instrPlan.currency);
+    if (instrPlan.customFx) setCustomFx(instrPlan.customFx);
+    setStep("carrier");
+    if (first) setAutoPreview(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instrPlan]);
+
+  // …then open the preview, ready to print or share as PDF.
+  useEffect(() => {
+    if (!autoPreview || !selected || !selectedTotals) return;
+    if (!(selectedTotals.freight.chargeableWeightKg > 0)) return;
+    setAutoPreview(false);
+    handlePreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPreview, selected, selectedTotals]);
+
   const requestCargo = (() => {
     const sum = summarizeCargo(cargoRowsToLines(cargo), dimUnit);
     return {
@@ -1033,6 +1102,34 @@ function AirDeskInner() {
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50 py-2">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>
+        </Card>
+      ) : null}
+      {instr && instrPlan ? (
+        <Card className={instrPlan.status === "blocked" ? "border-amber-300 bg-amber-50 py-2" : "border-violet-200 bg-violet-50 py-2"} data-testid="instruction-banner">
+          <p className="text-sm">
+            <b className="text-violet-900">Vertex:</b> <span className={instrPlan.status === "blocked" ? "text-amber-900" : "text-violet-950"}>{instrPlan.summary}</span>
+          </p>
+          {instrPlan.choices.margin ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">Margin:</span>
+              {instrPlan.choices.margin.map((m, i) => (
+                <Button key={i} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((c) => ({ ...c, margin: i }))}>
+                  {marginLabel(m)}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.choices.currency ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="font-semibold">Quote in:</span>
+              {instrPlan.choices.currency.map((c) => (
+                <Button key={c} type="button" size="sm" variant="secondary" onClick={() => setInstrChoice((x) => ({ ...x, currency: c }))}>
+                  {c}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {instrPlan.status === "ready" && instrPlan.issues.length ? <p className="mt-1 text-[11px] text-violet-800">{instrPlan.issues.join(" ")}</p> : null}
         </Card>
       ) : null}
       {loader.loadError ? (

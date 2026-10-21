@@ -47,6 +47,7 @@ export function toParsedEnquiry(job: HubJob): ParsedEnquiry {
     mode: x.seaMode ?? undefined,
     confidence: x.needsCheck.length ? 0.7 : 0.9,
     source: `Quote Hub · ${job.files[0] ?? "documents"}`,
+    ...(job.senderEmail ? { contact: { name: job.senderName || "", email: job.senderEmail } } : {}),
   };
   return parsed;
 }
@@ -59,6 +60,7 @@ export function toSmartPrefill(job: HubJob): SmartQuotePrefill {
     tariffFound: false,
     currency: job.extraction.currency || undefined,
     createdAt: Date.now(),
+    ...(job.instruction ? { instruction: job.instruction } : {}),
   };
 }
 

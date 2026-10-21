@@ -121,6 +121,7 @@ export function buildClientQuoteDocument(
   const type = (quote.type || "").toLowerCase();
   const heading = compareHeading(type);
   const prepared = quoteOwnerLabel(quote);
+  const attn = typeof quote.details?.attention === "string" ? quote.details.attention.trim() : "";
   const quoted = options.find((o) => o.selected) ?? options[0];
   const pdfFilename = `Quote-${ref}.pdf`;
   const title = `Quotation ${ref} · ${quote.customer || "Vertex"}`;
@@ -133,6 +134,7 @@ export function buildClientQuoteDocument(
     "",
     `Ref: ${ref}`,
     `Customer: ${quote.customer || "—"}`,
+    ...(attn ? [`Attention: ${attn}`] : []),
     `Route: ${quote.route || "—"}`,
     `Date: ${quote.date || "—"}`,
     `Prepared by: ${prepared}`,
@@ -147,6 +149,7 @@ export function buildClientQuoteDocument(
   const shareText = [
     `Atlas Logistics quotation ${ref}`,
     `Customer: ${quote.customer || "—"}`,
+    ...(attn ? [`Attention: ${attn}`] : []),
     `Route: ${quote.route || "—"}`,
     `Date: ${quote.date || "—"}`,
     "",

@@ -13,6 +13,8 @@ export interface SmartQuotePrefill {
   createdAt: number;
   /** Set when this prefill originated from a Sales lead — threaded through to the saved quote. */
   leadId?: string;
+  /** What the person typed with a Quote Hub drop; the Air desk reads it and applies it. */
+  instruction?: string;
 }
 
 export function storeSmartQuotePrefill(prefill: SmartQuotePrefill) {

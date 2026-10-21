@@ -7,6 +7,7 @@ import { toast } from "@/components/Toast";
 import { useLiveData } from "@/lib/api";
 import { fetchDirectoryContacts } from "@/lib/firebase/directory";
 import { readDocuments } from "@/lib/firebase/hub-jobs";
+import { hasInstruction, parseInstruction } from "@/lib/hub/instruction";
 import { normalizeExtraction, type AgentRef } from "@/lib/hub/normalize";
 import { prepareJobs, type PreparedJob } from "@/lib/hub/prepare-documents";
 import type { HubJob } from "@/lib/hub/types";
@@ -27,6 +28,7 @@ export function QuoteHubDrop() {
   const [over, setOver] = useState(false);
   const [paste, setPaste] = useState("");
   const [showPaste, setShowPaste] = useState(false);
+  const [instruction, setInstruction] = useState("");
   const agents = useRef<AgentRef[] | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
@@ -45,7 +47,7 @@ export function QuoteHubDrop() {
     return agents.current;
   }
 
-  async function readJob(job: PreparedJob) {
+  async function readJob(job: PreparedJob, instructionText = "") {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setItems((prev) => [{ id, label: job.label, state: "reading" as const, message: "Reading…" }, ...prev].slice(0, 8));
     try {
@@ -67,6 +69,7 @@ export function QuoteHubDrop() {
         summary: n.extraction.summary || job.label,
         checkCount: n.extraction.needsCheck.length,
         extraction: n.extraction,
+        ...(instructionText ? { instruction: instructionText } : {}),
       };
       await add(hubJob);
       patch(id, { state: "done", message: `${hubJob.summary} — waiting below` });
@@ -81,9 +84,12 @@ export function QuoteHubDrop() {
       toast("Reading real documents works in the live app — the list below shows sample jobs.", "info");
       return;
     }
+    // What was typed applies to this drop only; the box is emptied so it never leaks onto the next enquiry.
+    const typed = instruction.trim();
+    setInstruction("");
     try {
       const jobs = await prepareJobs(files);
-      await Promise.all(jobs.map((j) => readJob(j)));
+      await Promise.all(jobs.map((j) => readJob(j, typed)));
     } catch (e) {
       toast(e instanceof Error ? e.message : "Could not read those files.", "error");
     }
@@ -96,13 +102,30 @@ export function QuoteHubDrop() {
       toast("Reading real text works in the live app — the list below shows sample jobs.", "info");
       return;
     }
+    const typed = instruction.trim();
     setPaste("");
     setShowPaste(false);
-    await readJob({ label: text.slice(0, 50), documents: [{ name: "Pasted enquiry", kind: "text", text }], fileNames: ["Pasted enquiry"] });
+    setInstruction("");
+    await readJob({ label: text.slice(0, 50), documents: [{ name: "Pasted enquiry", kind: "text", text }], fileNames: ["Pasted enquiry"] }, typed);
   }
 
   return (
     <Card className="atlas-frost space-y-3 rounded-2xl bg-white/70">
+      <div>
+        <input
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          aria-label="What should Vertex do with the next drop"
+          placeholder="Optional: tell Vertex what to do — e.g. use BLR - EK rates for +100, add 10/kg, quote in USD"
+          className="w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-violet-400"
+          data-testid="hub-instruction"
+        />
+        {instruction.trim() ? (
+          <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+            {hasInstruction(parseInstruction(instruction)) ? "Understood — it is applied when you open the job." : "Not understood yet — add a carrier (EK), a break (+100) or a margin (10/kg or 10%)."}
+          </p>
+        ) : null}
+      </div>
       <div
         onDragOver={(e) => {
           e.preventDefault();

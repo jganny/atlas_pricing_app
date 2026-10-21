@@ -26,8 +26,11 @@ export function identityRows(quote: SavedQuote): Array<[string, string]> {
   const d = quote.details ?? {};
   const type = (quote.type || "").toLowerCase();
   const cur = quote.currency || "USD";
+  const attention = typeof d.attention === "string" ? d.attention.trim() : "";
   const rows: Array<[string, string]> = [
     ["Customer", quote.customer || "—"],
+    // Who the quote is addressed to (the sender of the enquiry), when the desk was filled from an email.
+    ...(attention ? ([["Attention", attention]] as Array<[string, string]>) : []),
     ["Reference", getQuoteRefId(quote)],
     ["Status", statusLabel(quote.status)],
     ["Route", quote.route || "—"],

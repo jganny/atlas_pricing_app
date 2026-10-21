@@ -67,6 +67,8 @@ export interface HubJob {
   summary: string;
   checkCount: number;
   extraction: HubExtraction;
+  /** What the person typed with the drop, e.g. "use BLR - EK rates for +100, add 10/kg, quote in USD". */
+  instruction?: string;
 }
 
 /** Plain pieces of a document the browser has prepared for reading. */
