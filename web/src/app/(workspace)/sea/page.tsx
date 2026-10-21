@@ -34,6 +34,7 @@ import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { autoLiners } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
+import { LaneCarriers } from "@/components/LaneCarriers";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
@@ -66,7 +67,7 @@ import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { useHistoricalAutofill } from "@/hooks/use-historical-autofill";
 import { normalizeCarrierName, normalizeSurchargeName } from "@/lib/quotes/historical-autofill";
-import type { SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
+import type { AirTariff, SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import { WinLossPanel } from "@/components/WinLossPanel";
 import { isRelaxedImportQuote } from "@/lib/pricing/relaxed-save";
@@ -113,6 +114,7 @@ const SEA_STEPS = ["shipment", "carrier", "terms"] as const;
 
 // Stable fallback: a fresh [] every render would make effects that depend on it run forever.
 const NO_SEA_TARIFFS: SeaTariff[] = [];
+const NO_AIR_TARIFFS_SEA: AirTariff[] = [];
 
 export default function SeaDeskPage() {
   useQuoteTimer();
@@ -397,6 +399,8 @@ function SeaDeskInner() {
   const autoCarriersKey = useRef("");
   useEffect(() => {
     if (step !== "carrier" || loader.sourceQuote || loader.editingQuoteId) return;
+    // Delivered-terms imports: the shipper books the liner, so no carriers are added for them.
+    if (isRelaxedImportQuote(module, incoterm)) return;
     const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
     const destCode = destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
     if (!originCode || !destCode || !tariffs.length) return;
@@ -416,7 +420,7 @@ function SeaDeskInner() {
       "success",
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, origin, destination, tariffs, mode]);
+  }, [step, origin, destination, tariffs, mode, module, incoterm]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -771,6 +775,18 @@ function SeaDeskInner() {
     setPreviewQuote(q);
   };
 
+  /** Adds a liner by name (from the "This lane" row) with the shipment's containers; a blank starter is filled instead. */
+  function addLaneLiner(name: string) {
+    const laneId = activeLane?.id || lanes[0]?.id || "";
+    setLiners((prev) => {
+      const onLane = prev.filter((l) => !l.laneId || l.laneId === laneId);
+      const blank = prev.findIndex((l) => (!l.laneId || l.laneId === laneId) && !l.name.trim());
+      if (blank >= 0) return prev.map((l, i) => (i === blank ? { ...l, name, laneId: l.laneId || laneId } : l));
+      const containers = onLane[0]?.containers.map((c) => ({ ...c, sellRate: 0, buyRate: 0 }));
+      return [...prev, createLinerOption({ name, laneId, ...(containers?.length ? { containers } : {}) }, onLane.length === 0)];
+    });
+  }
+
   const handleSave = useCallback(
     async () => {
       const relaxed = isRelaxedImportQuote(module, incoterm);
@@ -972,15 +988,18 @@ function SeaDeskInner() {
       toast("Enter customer name before liners.", "error");
       return;
     }
-    if (!origin.trim() || !destination.trim()) {
-      toast("Enter origin and destination before liners.", "error");
-      return;
-    }
-    const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
-    if (cargoErr) {
-      toast(cargoErr, "error");
-      setSaveMsg(cargoErr);
-      return;
+    // Imports on delivered terms (DDP/DAP/DDU): only the customer is required — no origin, cargo or liner.
+    if (!isRelaxedImportQuote(module, incoterm)) {
+      if (!origin.trim() || !destination.trim()) {
+        toast("Enter origin and destination before liners.", "error");
+        return;
+      }
+      const cargoErr = validateSeaCargoBasics(grossWeightKg, volumeCbm);
+      if (cargoErr) {
+        toast(cargoErr, "error");
+        setSaveMsg(cargoErr);
+        return;
+      }
     }
     setSaveMsg(null);
     setStep("carrier");
@@ -1401,6 +1420,15 @@ function SeaDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
+              {!isRelaxedImportQuote(module, incoterm) ? (
+                <LaneCarriers mode="sea" origin={origin} destination={destination} seaMode={mode} airTariffs={NO_AIR_TARIFFS_SEA} seaTariffs={tariffs} existing={laneLiners.map((l) => l.name)} onAdd={addLaneLiner} />
+              ) : null}
+              {isRelaxedImportQuote(module, incoterm) ? (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" data-testid="relaxed-import-note">
+                  <b>Import under {incoterm.toUpperCase()}:</b> the shipper books the liner, so you don&apos;t need to enter one. Add the destination clearance
+                  and delivery charges below — the liner, routing and freight rates can stay blank.
+                </p>
+              ) : null}
               <div className="space-y-3 rounded-xl border-2 border-[var(--color-atlas-navy)]/20 bg-[var(--color-atlas-gold-soft)]/40 p-3">
                 <p className="text-xs text-[var(--color-text-muted)]">
                   <strong>Local charges — once per quote, not per carrier.</strong> These apply

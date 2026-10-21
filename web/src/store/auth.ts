@@ -41,6 +41,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       async logout() {
+        // Record the sign-out time before the session is gone (best effort; never blocks signing out).
+        if (useLiveData) {
+          try {
+            const { endSession } = await import("@/lib/firebase/session-log");
+            await endSession("signed_out");
+          } catch {
+            /* signing out matters more than the log */
+          }
+        }
         await atlasApi.logout();
         set({ user: null, error: null });
       },

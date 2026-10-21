@@ -12,6 +12,8 @@ import {
   type ExtractedContainer,
 } from "@/lib/ai/circular-extraction";
 import { publishSeaTariffRow } from "@/lib/firebase/circulars";
+import { stationForOrigin } from "@/lib/circulars/stations";
+import { setCircularStation } from "@/lib/firebase/circulars";
 import type { CircularRecord } from "@/lib/types";
 
 const CONTAINER_TYPE_OPTIONS = [
@@ -126,6 +128,9 @@ export function SeaTariffExtractionReview({
         uploadedBy,
       );
       toast(`Published ${origin} → ${destination} sea rates for ${carrier}.`, "success");
+      // The rate sheet now says where it is from: label the circular with that station if it has none.
+      const st = stationForOrigin(origin);
+      if (st && !circular.station) void setCircularStation(circular.id, st.name).catch(() => undefined);
       onPublished();
       onClose();
     } catch {

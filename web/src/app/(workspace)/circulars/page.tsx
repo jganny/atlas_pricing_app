@@ -1,5 +1,6 @@
 "use client";
 
+import { STATION_NAMES, stationByName, stationForOrigin, stationLabel } from "@/lib/circulars/stations";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   parseTariffImportRows,
   publishAirTariffRows,
   saveCircular,
+  setCircularStation,
   uploadCircularFile,
 } from "@/lib/firebase/circulars";
 import { publishCourierTariffBook } from "@/lib/firebase/courier-tariffs";
@@ -45,6 +47,7 @@ export default function CircularsPage() {
   const { data: circulars = [], isLoading: circLoading, refetch } = useCirculars();
 
   const [category, setCategory] = useState("all");
+  const [station, setStation] = useState("all"); // "all" | a station name | "none"
   const [search, setSearch] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,6 +58,7 @@ export default function CircularsPage() {
     notes: "",
     effectiveDate: "",
     expiryDate: "",
+    station: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<
@@ -68,6 +72,7 @@ export default function CircularsPage() {
     const q = search.toLowerCase().trim();
     return circulars.filter((c) => {
       if (category !== "all" && c.category !== category) return false;
+      if (station === "none" ? !!stationByName(c.station) : station !== "all" && stationByName(c.station)?.name !== station) return false;
       if (!q) return true;
       return [c.title, c.carrier, c.fileName, c.notes, c.category]
         .filter(Boolean)
@@ -75,7 +80,36 @@ export default function CircularsPage() {
         .toLowerCase()
         .includes(q);
     });
-  }, [circulars, category, search]);
+  }, [circulars, category, search, station]);
+
+  // How many circulars each station has (in the chosen category), for the filter chips.
+  const stationCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    let none = 0;
+    for (const c of circulars) {
+      if (category !== "all" && c.category !== category) continue;
+      const st = stationByName(c.station);
+      if (st) counts.set(st.name, (counts.get(st.name) ?? 0) + 1);
+      else none += 1;
+    }
+    return { counts, none };
+  }, [circulars, category]);
+
+  // Extracted tariffs follow the same station filter, by the station their origin code belongs to.
+  const tariffInStation = (origin: string) => station === "all" || (station === "none" ? !stationForOrigin(origin) : stationForOrigin(origin)?.name === station);
+
+  /** One-click labelling of an existing circular. */
+  async function setStationFor(c: CircularRecord, name: string) {
+    if (!name) return;
+    queryClient.setQueryData(queryKeys.circulars, circulars.map((x) => (x.id === c.id ? { ...x, station: name } : x)));
+    try {
+      if (useLiveData) await setCircularStation(c.id, name);
+      toast(`Labelled ${stationLabel(name)}`, "success");
+    } catch {
+      toast("Couldn't save the station. Try again.", "error");
+      void refetch();
+    }
+  }
 
   async function handleSave() {
     if (!form.title.trim()) {
@@ -313,6 +347,8 @@ export default function CircularsPage() {
                 notes: "",
                 effectiveDate: "",
                 expiryDate: "",
+                // Browsing one station? A new sheet is most likely for that station.
+                station: station !== "all" && station !== "none" ? station : "",
               });
               setFile(null);
               setEditorOpen(true);
@@ -350,6 +386,22 @@ export default function CircularsPage() {
             )}
           >
             {c.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Station">
+        {[{ id: "all", label: "All stations", n: circulars.length }, ...STATION_NAMES.filter((n) => stationCounts.counts.has(n)).map((n) => ({ id: n, label: stationLabel(n), n: stationCounts.counts.get(n) ?? 0 })), ...(stationCounts.none ? [{ id: "none", label: "Not set", n: stationCounts.none }] : [])].map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => setStation(c.id)}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-bold",
+              station === c.id ? "bg-sky-700 text-white" : c.id === "none" ? "bg-amber-100 text-amber-900" : "bg-sky-50 text-sky-900",
+            )}
+          >
+            {c.label} <span className="opacity-70">{c.n}</span>
           </button>
         ))}
       </div>
@@ -449,6 +501,17 @@ export default function CircularsPage() {
               />
             </div>
             <div>
+              <Label htmlFor="circ-station">Branch / origin station</Label>
+              <Select id="circ-station" value={form.station} onChange={(e) => setForm((f) => ({ ...f, station: e.target.value }))}>
+                <option value="">Choose…</option>
+                {STATION_NAMES.map((n) => (
+                  <option key={n} value={n}>
+                    {stationLabel(n)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
               <Label htmlFor="circ-eff">Effective (YYYY-MM)</Label>
               <Input
                 id="circ-eff"
@@ -510,12 +573,34 @@ export default function CircularsPage() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
               >
                 <div>
-                  <div className="font-semibold">{c.title || c.fileName || "Untitled"}</div>
+                  <div className="flex flex-wrap items-center gap-2 font-semibold">
+                    {stationByName(c.station) ? (
+                      <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-bold text-sky-900">{stationLabel(c.station)}</span>
+                    ) : (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900">Station not set</span>
+                    )}
+                    {c.title || c.fileName || "Untitled"}
+                  </div>
                   <div className="text-[var(--color-text-muted)]">
                     {[c.carrier, c.category, c.fileName].filter(Boolean).join(" · ") || "—"}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {canManage && !stationByName(c.station) ? (
+                    <select
+                      aria-label="Set station"
+                      className="rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
+                      value=""
+                      onChange={(e) => void setStationFor(c, e.target.value)}
+                    >
+                      <option value="">Set station…</option>
+                      {STATION_NAMES.map((n) => (
+                        <option key={n} value={n}>
+                          {stationLabel(n)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
                   {c.downloadURL ? (
                     <a
                       href={c.downloadURL}
@@ -617,10 +702,10 @@ export default function CircularsPage() {
         <Card>
           <h2 className="mb-3 font-bold">Published air tariffs</h2>
           <ul className="space-y-2 text-sm">
-            {air.length === 0 ? (
-              <li className="text-[var(--color-text-muted)]">None yet.</li>
+            {air.filter((t) => tariffInStation(t.origin)).length === 0 ? (
+              <li className="text-[var(--color-text-muted)]">{air.length === 0 ? "None yet." : "None for this station."}</li>
             ) : (
-              air.slice(0, 12).map((t) => (
+              air.filter((t) => tariffInStation(t.origin)).slice(0, 12).map((t) => (
                 <li key={t.id} className="rounded-lg bg-slate-50 px-3 py-2">
                   <div className="font-semibold">{t.carrier}</div>
                   <div className="text-[var(--color-text-muted)]">
@@ -634,10 +719,10 @@ export default function CircularsPage() {
         <Card>
           <h2 className="mb-3 font-bold">Published sea tariffs</h2>
           <ul className="space-y-2 text-sm">
-            {sea.length === 0 ? (
-              <li className="text-[var(--color-text-muted)]">None yet.</li>
+            {sea.filter((t) => tariffInStation(t.origin)).length === 0 ? (
+              <li className="text-[var(--color-text-muted)]">{sea.length === 0 ? "None yet." : "None for this station."}</li>
             ) : (
-              sea.slice(0, 12).map((t) => (
+              sea.filter((t) => tariffInStation(t.origin)).slice(0, 12).map((t) => (
                 <li key={t.id} className="rounded-lg bg-slate-50 px-3 py-2">
                   <div className="font-semibold">{t.carrier}</div>
                   <div className="text-[var(--color-text-muted)]">

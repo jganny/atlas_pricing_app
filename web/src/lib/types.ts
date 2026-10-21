@@ -187,6 +187,8 @@ export interface CircularRecord {
   effectiveDate?: string
   expiryDate?: string
   uploadedBy?: string
+  /** The branch / origin station this rate sheet belongs to (e.g. "Bangalore"). */
+  station?: string
 }
 
 /** Agent / vendor contact from Firestore `contactsDirectory`. */

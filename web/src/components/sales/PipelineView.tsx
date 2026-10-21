@@ -397,6 +397,7 @@ export function PipelineView() {
       setNextStep("");
       setFollowUp("");
       setNoteDate(todayISO());
+      logAudit({ action: "lead.visit", entityType: "lead", entityId: leadId, entityLabel: (selected?.id === leadId ? selected.company : visitTarget?.company) || "", summary: `${noteType} on ${noteDate}` });
       toast(visitTarget && closeNewVisit ? `Visit to ${visitTarget.company} logged` : "Visit logged", "success");
       if (closeNewVisit) {
         setVisiting(false);

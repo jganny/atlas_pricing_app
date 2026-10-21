@@ -7,6 +7,7 @@ import { toast } from "@/components/Toast";
 import { useDirectory } from "@/hooks/use-atlas-data";
 import { useLiveData } from "@/lib/api";
 import { personDisplayName } from "@/lib/auth/desk-seats";
+import { loadAirportCountries } from "@/lib/directory/airport-countries";
 import { COUNTRIES, countryName, countryOfPlace } from "@/lib/directory/coverage";
 import { sendRateRequests, type RateRequestResult } from "@/lib/firebase/rate-requests";
 import {
@@ -21,20 +22,6 @@ import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
 const NO_CONTACTS: never[] = [];
-let airportCountries: Map<string, string> | null = null;
-
-async function loadAirportCountries(): Promise<Map<string, string>> {
-  if (airportCountries) return airportCountries;
-  const base = process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? "" : "/app";
-  try {
-    const rows = (await (await fetch(`${base}/data/airports-slim.json`, { cache: "force-cache" })).json()) as Array<{ code: string; country?: string }>;
-    airportCountries = new Map(rows.filter((r) => r.country).map((r) => [r.code.toUpperCase(), String(r.country).toUpperCase()]));
-  } catch {
-    airportCountries = new Map();
-  }
-  return airportCountries;
-}
-
 /**
  * Ask the right agents / airlines / liners / coloaders for rates: the app picks them from the Directory, writes the
  * message, and the user checks the list and presses Send once. The customer's name and prices are never included.

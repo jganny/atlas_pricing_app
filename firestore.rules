@@ -126,6 +126,25 @@ service cloud.firestore {
     // counters are server-only. The legacy app never touches these.
     match /rateRequests/{refId} { allow read: if isSignedIn(); allow write: if false; }
     match /rateRequestCaps/{capId} { allow read, write: if false; }
+    // --- test-app only (Sign-in and activity log) -----------------------------
+    // One record per working session: when someone signed in, when the app last saw them, how long they
+    // were really using it, and any long idle stretches. People write only their own record, can only
+    // add to the running totals (never lower them or change the start time), and cannot delete it.
+    // The administrator reads them all. The legacy app never touches this collection.
+    match /sessionLog/{sessionId} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.login == chatLogin());
+      allow create: if isSignedIn()
+        && request.resource.data.login == chatLogin()
+        && request.resource.data.startAt == request.time
+        && request.resource.data.keys().hasOnly(['login', 'name', 'startAt', 'startMs', 'lastSeenAt', 'lastSeenMs', 'activeSec', 'idleMin', 'longestIdleMin', 'ua', 'version']);
+      allow update: if isSignedIn()
+        && resource.data.login == chatLogin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['lastSeenAt', 'lastSeenMs', 'activeSec', 'idleMin', 'longestIdleMin', 'endMs', 'endReason'])
+        && request.resource.data.lastSeenAt == request.time
+        && request.resource.data.activeSec >= resource.data.activeSec;
+      allow delete: if false;
+    }
     match /chatPresence/{login} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && login == chatLogin();

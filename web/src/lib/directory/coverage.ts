@@ -217,14 +217,23 @@ export function coverageLabel(codes: string[] | undefined): string {
 
 export type VendorKind = "airline" | "liner" | "coloader" | "transporter" | "other";
 
-/** What sort of vendor a contact is, from its Directory group / category. */
-export function vendorKind(c: Pick<DirectoryContact, "category" | "sheetGroup">): VendorKind {
-  const g = `${c.sheetGroup || ""} ${c.category || ""}`.toLowerCase();
+function kindOf(text: string): VendorKind {
+  const g = text.toLowerCase();
   if (/co-?load|consol|nvo|lcl/.test(g)) return "coloader";
   if (/airline|air line|\bair\b|cargo airline/.test(g)) return "airline";
   if (/liner|shipping|ocean|sea|vessel|\bfcl\b/.test(g)) return "liner";
   if (/transport|truck|haul|logistic/.test(g)) return "transporter";
   return "other";
+}
+
+/**
+ * What sort of vendor a contact is. The Directory group ("Shipping Lines", "Co-loaders") is what people actually
+ * edit, so it decides; the category is only used when the group says nothing (the category often stays "airline"
+ * on contacts whose group was changed later).
+ */
+export function vendorKind(c: Pick<DirectoryContact, "category" | "sheetGroup">): VendorKind {
+  const fromGroup = kindOf(c.sheetGroup || "");
+  return fromGroup !== "other" ? fromGroup : kindOf(c.category || "");
 }
 
 /**

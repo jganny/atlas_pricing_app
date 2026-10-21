@@ -13,6 +13,10 @@ assert.equal(isRelaxedImportQuote("import", "FOB"), false);
 assert.equal(isRelaxedImportQuote("export", "DDP"), false);
 assert.equal(isRelaxedImportQuote("export", "DAP"), false);
 
+// Whichever way it is spelt, delivered-terms imports are relaxed and every other term is not
+for (const t of ["DDP", "DAP", "DDU", "ddp", " dap "]) assert.equal(isRelaxedImportQuote("import", t), true, t);
+for (const t of ["EXW", "FCA", "FOB", "CFR", "CIF", "CPT", "CIP", "DPU", "", "  "]) assert.equal(isRelaxedImportQuote("import", t), false, t);
+
 // Air: normally routing/transit/validity are compulsory
 const air = createAirlineOption({ name: "Emirates SkyCargo" }, true);
 assert.match(validateSelectedAirline(air) ?? "", /routing/i);

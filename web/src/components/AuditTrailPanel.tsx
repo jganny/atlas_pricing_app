@@ -13,6 +13,7 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   "lead.update": "Lead edited",
   "lead.status": "Lead stage changed",
   "lead.handover": "Lead handed to another sales person",
+  "lead.visit": "Visit logged",
   "lead.visit.delete": "Visit entry deleted",
   "account.create": "Account created",
   "account.update": "Account edited",

@@ -182,6 +182,9 @@ export default function LoginPage() {
                   ? "Creating…"
                   : "Create account"}
             </Button>
+            {mode === "signin" ? (
+              <p className="text-center text-[11px] text-[var(--color-text-muted)]">Sign-ins and time spent working in the app are recorded.</p>
+            ) : null}
           </form>
           <div className="mt-3 text-center text-xs">
             <button

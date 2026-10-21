@@ -54,6 +54,7 @@ import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { ChatProvider, useTeamChatOptional } from "./chat/ChatProvider";
 import { useLeadHandovers } from "@/hooks/use-lead-handovers";
+import { SessionTracker } from "@/components/SessionTracker";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 import { WorkspaceMore } from "./WorkspaceMore";
 import { BrandMark } from "./BrandMark";
@@ -541,6 +542,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ChatProvider>
+      <SessionTracker />
       <AppShellInner>{children}</AppShellInner>
     </ChatProvider>
   );

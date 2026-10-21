@@ -18,6 +18,8 @@ assert.equal(vendorKind({ category: "airline", sheetGroup: "Airlines" }), "airli
 assert.equal(vendorKind({ category: "vendor", sheetGroup: "Co-loaders" }), "coloader");
 assert.equal(vendorKind({ category: "vendor", sheetGroup: "Shipping Lines" }), "liner");
 assert.equal(vendorKind({ category: "vendor", sheetGroup: "Transporters" }), "transporter");
+assert.equal(vendorKind({ category: "airline", sheetGroup: "Shipping Lines" }), "liner", "the group decides, not a stale category");
+assert.equal(vendorKind({ category: "airline", sheetGroup: "" }), "airline", "the category is used when the group is empty");
 
 // Plans follow the three rules
 const ctx = (o: Partial<RequestContext>): RequestContext => ({ mode: "air", direction: "import", incoterm: "FOB", originCountry: "CN", destCountry: "IN", ...o });

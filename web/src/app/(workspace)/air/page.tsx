@@ -51,6 +51,7 @@ import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
 import { autoAirlines } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
+import { LaneCarriers } from "@/components/LaneCarriers";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { chargeableWeightKg, summarizeCargo } from "@atlas/pricing-core";
 import {
@@ -82,7 +83,7 @@ import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
-import type { AirTariff, SavedQuote, SmartQuoteDraft } from "@/lib/types";
+import type { AirTariff, SavedQuote, SeaTariff, SmartQuoteDraft } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import { demoLabel } from "@/lib/demo-mode";
 import { WinLossPanel } from "@/components/WinLossPanel";
@@ -94,6 +95,7 @@ const AIR_STEPS = ["shipment", "carrier", "terms"] as const;
 
 // Stable fallback: a fresh [] every render would make effects that depend on it run forever.
 const NO_AIR_TARIFFS: AirTariff[] = [];
+const NO_SEA_TARIFFS_AIR: SeaTariff[] = [];
 
 export default function AirDeskPage() {
   useQuoteTimer();
@@ -358,6 +360,8 @@ function AirDeskInner() {
   const autoCarriersKey = useRef("");
   useEffect(() => {
     if (step !== "carrier" || loader.sourceQuote || loader.editingQuoteId) return;
+    // Delivered-terms imports: the shipper books the airline, so no carriers are added for them.
+    if (isRelaxedImportQuote(module, incoterm)) return;
     const originCode = origin.split(" - ")[0]?.trim().toUpperCase() || origin.trim().toUpperCase();
     const destCode = destination.split(" - ")[0]?.trim().toUpperCase() || destination.trim().toUpperCase();
     if (!originCode || !destCode || !tariffs.length) return;
@@ -377,7 +381,7 @@ function AirDeskInner() {
       "success",
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, origin, destination, tariffs]);
+  }, [step, origin, destination, tariffs, module, incoterm]);
 
   useEffect(() => {
     if (prefillApplied.current || loader.sourceQuote) return;
@@ -601,6 +605,17 @@ function AirDeskInner() {
   function selectAirline(id: string) {
     const fallback = activeLane?.id || lanes[0]?.id || "";
     setAirlines((prev) => selectWithinLane(prev, id, fallback));
+  }
+
+  /** Adds a carrier by name (from the "This lane" row); a blank starter option is filled instead of left empty. */
+  function addLaneAirline(name: string) {
+    const laneId = activeLane?.id || lanes[0]?.id || "";
+    setAirlines((prev) => {
+      const blank = prev.findIndex((a) => (!a.laneId || a.laneId === laneId) && !a.name.trim());
+      if (blank >= 0) return prev.map((a, i) => (i === blank ? { ...a, name, laneId: a.laneId || laneId } : a));
+      const onLane = prev.filter((a) => !a.laneId || a.laneId === laneId);
+      return [...prev, createAirlineOption({ name, laneId }, onLane.length === 0)];
+    });
   }
 
   function addAirline(kind: "airline" | "coloader") {
@@ -980,9 +995,10 @@ function AirDeskInner() {
     // looks broken next to the tab that already works. Warn, don't block.
     if (!customer.trim()) {
       toast("Customer name is still blank.", "info");
-    } else if (!origin.trim() || !destination.trim()) {
+    } else if (!isRelaxedImportQuote(module, incoterm) && (!origin.trim() || !destination.trim())) {
       toast("Origin/destination are still blank.", "info");
-    } else {
+    } else if (!isRelaxedImportQuote(module, incoterm)) {
+      // Delivered-terms imports need no cargo or carrier, so there is nothing to nudge about.
       const cargoErr = validateAirCargo(cargo);
       if (cargoErr) toast(cargoErr, "info");
     }
@@ -1387,6 +1403,15 @@ function AirDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
+              {!isRelaxedImportQuote(module, incoterm) ? (
+                <LaneCarriers mode="air" origin={origin} destination={destination} airTariffs={tariffs} seaTariffs={NO_SEA_TARIFFS_AIR} existing={laneAirlines.map((a) => a.name)} onAdd={addLaneAirline} />
+              ) : null}
+              {isRelaxedImportQuote(module, incoterm) ? (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" data-testid="relaxed-import-note">
+                  <b>Import under {incoterm.toUpperCase()}:</b> the shipper books the airline, so you don&apos;t need to enter one. Add the destination clearance
+                  and delivery charges below — the airline, routing and freight rates can stay blank.
+                </p>
+              ) : null}
               {lanes.length > 1 ? (
                 <LaneChips
                   lanes={lanes}

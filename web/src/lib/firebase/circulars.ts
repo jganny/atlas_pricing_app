@@ -47,6 +47,7 @@ function mapCircular(id: string, data: Record<string, unknown>): CircularRecord 
     effectiveDate: data.effectiveDate ? String(data.effectiveDate) : "",
     expiryDate: data.expiryDate ? String(data.expiryDate) : "",
     uploadedBy: data.uploadedBy ? String(data.uploadedBy) : "",
+    station: data.station ? String(data.station) : "",
   };
 }
 
@@ -75,6 +76,7 @@ export type CircularInput = {
   fileName?: string;
   downloadURL?: string;
   storagePath?: string;
+  station?: string;
 };
 
 export async function uploadCircularFile(
@@ -106,6 +108,8 @@ export async function saveCircular(
     uploadedBy,
     updatedAt: serverTimestamp(),
   };
+  // Written only when given, so editing other fields never clears a station.
+  if (input.station !== undefined) payload.station = input.station.trim();
   if (input.fileName) payload.fileName = input.fileName;
   if (input.downloadURL) payload.downloadURL = input.downloadURL;
   if (input.storagePath) payload.storagePath = input.storagePath;
@@ -117,6 +121,11 @@ export async function saveCircular(
   payload.createdAt = serverTimestamp();
   const refDoc = await addDoc(collection(db, "circularsLibrary"), payload);
   return refDoc.id;
+}
+
+/** Labels an existing circular with its station. */
+export async function setCircularStation(id: string, station: string): Promise<void> {
+  await updateDoc(doc(getFirebaseDb(), "circularsLibrary", id), { station: station.trim(), updatedAt: serverTimestamp() });
 }
 
 export async function deleteCircular(id: string): Promise<void> {
