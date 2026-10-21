@@ -47,6 +47,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${ibmPlex.variable} h-full`}>
+      <head>
+        {/* Open the connections to the database and sign-in servers while the page code is still loading. */}
+        <link rel="preconnect" href="https://firestore.googleapis.com" crossOrigin="" />
+        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossOrigin="" />
+        <link rel="preconnect" href="https://securetoken.googleapis.com" crossOrigin="" />
+      </head>
       <body className="min-h-full font-sans antialiased">
         <Providers>{children}</Providers>
       </body>

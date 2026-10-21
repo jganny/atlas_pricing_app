@@ -1,9 +1,10 @@
 /* Vertex PWA shell — never cache Firestore. Bump CACHE on every UI release. */
-const CACHE = "atlas-app-shell-v33";
+const CACHE = "atlas-app-shell-v34";
 const PRECACHE = [
   "/app/manifest.webmanifest",
   "/app/icon-192.png",
   "/app/icon-512.png",
+  "/app/icon-maskable-512.png",
   "/app/apple-touch-icon.png",
 ];
 
@@ -20,7 +21,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== "atlas-static-v1").map((k) => caches.delete(k)))),
   );
 });
 
@@ -29,6 +30,28 @@ self.addEventListener("message", (event) => {
     void self.skipWaiting();
   }
 });
+
+// The app's code files have a different name every time their content changes (hash in the file name),
+// so a file we already hold can never be stale: serve it from the device with no network wait.
+// Kept in its own cache and trimmed, so old releases' files don't pile up.
+const STATIC_CACHE = "atlas-static-v1";
+const STATIC_MAX = 400;
+
+async function cacheFirstStatic(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const response = await fetch(request);
+  // Only real files: a missing file is answered with the app's HTML page, which must never be kept as a script.
+  const type = (response && response.headers.get("content-type")) || "";
+  if (response && response.ok && !/text\/html/i.test(type)) {
+    void cache.put(request, response.clone()).then(async () => {
+      const keys = await cache.keys();
+      if (keys.length > STATIC_MAX) await Promise.all(keys.slice(0, keys.length - STATIC_MAX).map((k) => cache.delete(k)));
+    });
+  }
+  return response;
+}
 
 async function networkFirst(request) {
   try {
@@ -58,6 +81,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (!url.pathname.startsWith("/app")) return;
+
+  if (url.pathname.startsWith("/app/_next/static/")) {
+    event.respondWith(cacheFirstStatic(req));
+    return;
+  }
 
   // HTML must not stick — Safari was serving Control tower after deploys.
   const isHtmlNav =

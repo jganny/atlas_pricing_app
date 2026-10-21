@@ -2,8 +2,6 @@
  * Reads an email dragged out of Outlook: `.msg` (desktop Outlook) or `.eml` (Outlook on the web and
  * most other mail programs). Gives back who sent it, what it says, and the files attached to it.
  */
-import PostalMime from "postal-mime";
-
 export interface EmailAttachment {
   name: string;
   mime: string;
@@ -48,6 +46,7 @@ function bytesOf(content: unknown): Uint8Array {
 }
 
 export async function parseEml(data: ArrayBuffer | Uint8Array): Promise<ParsedEmail> {
+  const { default: PostalMime } = await import("postal-mime");
   const mail = await PostalMime.parse(data as ArrayBuffer);
   const body = (mail.text && mail.text.trim()) || (mail.html ? htmlToText(mail.html) : "");
   return {
