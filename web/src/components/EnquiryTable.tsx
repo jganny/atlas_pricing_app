@@ -23,6 +23,9 @@ import {
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
 
+/** Rows drawn at a time in the Enquiry DB table. */
+const PAGE_ROWS = 150;
+
 function slaTone(hours: number) {
   if (hours > 8) return "error" as const;
   if (hours > 4) return "warn" as const;
@@ -228,6 +231,18 @@ export function EnquiryTable({
     getSortedRowModel: getSortedRowModel(),
   });
 
+  // Draw a page of rows at a time: all ~1,200 at once is ~25,000 page elements and freezes the screen on open.
+  const [limit, setLimit] = useState(PAGE_ROWS);
+  const [seenRows, setSeenRows] = useState(rows);
+  if (seenRows !== rows) {
+    setSeenRows(rows);
+    setLimit(PAGE_ROWS);
+  }
+  const sortedRows = table.getRowModel().rows;
+  const selectedAt = selectedId ? sortedRows.findIndex((r) => r.original.id === selectedId) : -1;
+  const shownCount = Math.min(sortedRows.length, Math.max(limit, selectedAt + 1));
+  const shownRows = sortedRows.slice(0, shownCount);
+
   if (rows.length === 0) {
     return (
       <p className="p-6 text-sm text-[var(--color-text-muted)]">No enquiries match your filters.</p>
@@ -274,7 +289,7 @@ export function EnquiryTable({
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row) => {
+          {shownRows.map((row) => {
             const selected = selectedId === row.original.id;
             return (
               <tr
@@ -310,6 +325,21 @@ export function EnquiryTable({
           })}
         </tbody>
       </table>
+      {shownCount < sortedRows.length ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-text-muted)]" data-testid="edb-more">
+          <span>
+            Showing {shownCount.toLocaleString()} of {sortedRows.length.toLocaleString()} quotes. Search or filter to narrow them down.
+          </span>
+          <span className="flex gap-2">
+            <button type="button" className="rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1 font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50" onClick={() => setLimit(shownCount + PAGE_ROWS)}>
+              Show {PAGE_ROWS} more
+            </button>
+            <button type="button" className="rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1 font-semibold hover:bg-slate-50" onClick={() => setLimit(sortedRows.length)}>
+              Show all
+            </button>
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

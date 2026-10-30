@@ -6,7 +6,6 @@ import { STATION_NAMES, stationByName, stationForOrigin, stationLabel } from "@/
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
-import * as XLSX from "xlsx";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { toast } from "@/components/Toast";
@@ -211,6 +210,8 @@ export default function CircularsPage() {
   }
 
   async function onImportFile(f: File) {
+    // The spreadsheet reader is large, so it is fetched only when someone actually imports a file.
+    const XLSX = await import("xlsx");
     const buf = await f.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -221,6 +222,8 @@ export default function CircularsPage() {
   }
 
   async function onCourierTariffFile(f: File) {
+    // The spreadsheet reader is large, so it is fetched only when someone actually imports a file.
+    const XLSX = await import("xlsx");
     const buf = await f.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     const sheets = wb.SheetNames.map((name) => ({

@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.122",
+    date: "2026-10-30",
+    items: [
+      "Faster Enquiry DB: it now shows 150 quotes at a time, with “Show 150 more” and “Show all”. Opening it no longer freezes the screen while 1,200 rows are drawn.",
+      "Faster Circulars: the spreadsheet reader loads only when you import a file, not every time you open the page.",
+    ],
+  },
+  {
     version: "0.3.121",
     date: "2026-10-30",
     items: [
