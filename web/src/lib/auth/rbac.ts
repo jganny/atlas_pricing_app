@@ -74,10 +74,12 @@ const CORE: AppRouteId[] = [
 
 /** Per-login allowed surfaces (admins bypass). */
 const ROLE_ROUTES: Record<string, AppRouteId[]> = {
+  // The two nomination desks cover each other: Air Nom also has the Sea desk, Sea Nom also has the Air desk.
   shashank: [
     "dashboard",
     "smart-quote",
     "air",
+    "sea",
     "transport",
     "warehouse",
     "inbox",
@@ -93,6 +95,7 @@ const ROLE_ROUTES: Record<string, AppRouteId[]> = {
     "dashboard",
     "smart-quote",
     "sea",
+    "air",
     "transport",
     "warehouse",
     "inbox",

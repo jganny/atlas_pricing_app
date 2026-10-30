@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.125",
+    date: "2026-10-30",
+    items: [
+      "The two nomination desks now cover each other: Air Nom can open the Sea desk, and Sea Nom can open the Air desk. Each still lands on their own desk when they sign in.",
+      "A booking handed to NRS is listed as Air or Sea by the shipment itself, so a sea quote made by Air Nom shows as a Sea nomination.",
+    ],
+  },
+  {
     version: "0.3.124",
     date: "2026-10-30",
     items: [

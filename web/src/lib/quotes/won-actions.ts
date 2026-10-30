@@ -15,6 +15,16 @@ import type { EnquiryRecord } from "@/lib/types";
 
 const NOMINATION_SEATS = ["air-nom", "sea-nom"];
 
+/**
+ * Whether the NRS directory lists the booking as Air or Sea. It follows the shipment itself: since the two nomination desks
+ * cover each other, an Air Nom user can quote a sea shipment, and that is a Sea nomination. The seat is only a fallback.
+ */
+export function nrsBookingMode(quoteMode: string | undefined | null, seat: string | undefined | null): "air" | "sea" {
+  if (quoteMode === "sea") return "sea";
+  if (quoteMode === "air") return "air";
+  return seat === "sea-nom" ? "sea" : "air";
+}
+
 /** Who sees the Won switch on a row: a quote made on a nomination desk, to the people at that desk and to the admin. */
 export function canQuickWon(
   row: Pick<EnquiryRecord, "status" | "deskSeat" | "creator">,
@@ -70,7 +80,7 @@ export async function quickWon(row: EnquiryRecord, username: string): Promise<Qu
       quoteId: row.id,
       ref,
       customer: row.customer,
-      mode: seat === "sea-nom" ? "sea" : "air",
+      mode: nrsBookingMode(row.mode, seat),
       pol: row.origin,
       pod: row.destination,
       commodity,

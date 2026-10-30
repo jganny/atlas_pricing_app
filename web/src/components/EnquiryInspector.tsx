@@ -29,6 +29,7 @@ import { saveNrsRegistryEntry } from "@/lib/firebase/nrs-registry";
 import { buildRegistryEntry } from "@/lib/quotes/nrs-registry";
 import { quoteDeskSeatId } from "@/lib/auth/desk-seats";
 import { upsertWonFollowUp } from "@/lib/firebase/won-followups";
+import { nrsBookingMode } from "@/lib/quotes/won-actions";
 import { missingWonFields } from "@/lib/quotes/won-followups";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { deskPathForQuote } from "@/lib/quotes/desk-loader";
@@ -234,7 +235,7 @@ export function EnquiryInspector({
               quoteId: row.id,
               ref,
               customer: row.customer,
-              mode: deskSeat === "sea-nom" ? "sea" : "air",
+              mode: nrsBookingMode(row.mode, deskSeat),
               pol: row.origin,
               pod: row.destination,
               shipperName,
