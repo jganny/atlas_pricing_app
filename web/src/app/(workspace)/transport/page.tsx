@@ -115,7 +115,7 @@ export default function TransportDeskPage() {
   const [ewayRequired, setEwayRequired] = useState(false);
   const [gstin, setGstin] = useState("");
   const [invoiceValue, setInvoiceValue] = useState(0);
-  const [validity, setValidity] = useState("15 days");
+  const [validity, setValidity] = useState("");
   const [truckers, setTruckers] = useState<TruckerOption[]>(() => [createTruckerOption({ name: "" }, true)]);
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState(DEFAULT_TERMS);
@@ -338,7 +338,7 @@ export default function TransportDeskPage() {
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
-    const loaded = loadTransportDeskFromQuote(loader.sourceQuote, { duplicate: loader.isDuplicate });
+    const loaded = loadTransportDeskFromQuote(loader.sourceQuote);
     setCustomer(loaded.customer);
     setVehicleType(loaded.vehicleType);
     setServiceType(loaded.serviceType);

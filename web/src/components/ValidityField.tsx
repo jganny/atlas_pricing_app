@@ -159,7 +159,11 @@ export function ValidityField({
           aria-label="Validity text"
         />
       </div>
-      {status === "expired" ? (
+      {status === "none" ? (
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]" data-testid="validity-hint">
+          No validity set — pick a date for this carrier or type your own words.
+        </p>
+      ) : status === "expired" ? (
         <p className="mt-1 text-xs font-semibold text-red-700" data-testid="validity-hint">
           This date has passed — pick a new one before sending.
         </p>

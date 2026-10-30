@@ -177,7 +177,7 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
             name: d.parsed.airlineLabel || d.carrierLabel || "",
             routing: `${d.parsed.origin}-${d.parsed.destination}`,
             tt: "TBA",
-            validity: "15 days",
+            validity: "",
             breaks: d.airBreaks
               ? { ...EMPTY_AIR_BREAKS, ...d.airBreaks }
               : undefined,
@@ -209,7 +209,7 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
             name: d.parsed.linerLabel || d.carrierLabel || "",
             routing: `${d.parsed.origin}-${d.parsed.destination}`,
             tt: "TBA",
-            validity: "15 days",
+            validity: "",
             containers: d.parsed.containers.length
               ? d.parsed.containers.map((c) => ({
                   type: c.type,

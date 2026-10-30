@@ -81,7 +81,6 @@ import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
 import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
-import { defaultValidity } from "@/lib/quotes/validity";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
@@ -484,7 +483,7 @@ function AirDeskInner() {
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
-    const loaded = loadAirDeskFromQuote(loader.sourceQuote, { duplicate: loader.isDuplicate });
+    const loaded = loadAirDeskFromQuote(loader.sourceQuote);
     setCustomer(loaded.customer);
     setOrigin(loaded.origin);
     setDestination(loaded.destination);
@@ -566,7 +565,7 @@ function AirDeskInner() {
           name: p.airlineLabel || draft.carrierLabel || "",
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
-          validity: defaultValidity(),
+          validity: "",
           // Only Circulars (or explicit breaks) fill rates — never invent defaults
           breaks: draft.airBreaks
             ? { ...EMPTY_AIR_BREAKS, ...draft.airBreaks }
@@ -1079,7 +1078,7 @@ function AirDeskInner() {
           name: instrPlan.carrierLabel,
           routing: `${origin}-${destination}`,
           tt: "TBA",
-          validity: defaultValidity(),
+          validity: "",
           breaks: { ...EMPTY_AIR_BREAKS, [instrPlan.weightBreak]: { sell: instrPlan.sellRate ?? 0, buy: instrPlan.buyRate ?? 0 } },
           rateLock: true,
         },

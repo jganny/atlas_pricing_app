@@ -19,17 +19,6 @@ import {
   type SurchargeRow,
 } from "@/lib/pricing/surcharges";
 
-import { validityOnDuplicate } from "./validity";
-
-/** Options for opening a saved quote on a desk. A duplicate starts with a fresh validity date; an amend keeps it. */
-export interface LoadOptions {
-  duplicate?: boolean;
-}
-
-function freshValidity(quote: SavedQuote, value: string, opts?: LoadOptions): string {
-  return opts?.duplicate ? validityOnDuplicate(value, quote.date) : value;
-}
-
 export function deskPathForQuote(quote: SavedQuote): string | null {
   const type = (quote.type || "").toLowerCase();
   if (type === "air") return "/air";
@@ -57,7 +46,7 @@ export function mapSurcharges(raw: unknown): SurchargeRow[] | undefined {
     .filter((r) => r.name.trim() && !/^ams(\s+fee)?$/i.test(r.name.trim()));
 }
 
-export function loadAirDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) {
+export function loadAirDeskFromQuote(quote: SavedQuote) {
   const d = quote.details ?? {};
   const cargoItems = (d.cargoItems as AirCargoRow[]) ?? [];
   const module =
@@ -136,14 +125,14 @@ export function loadAirDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) {
     cargo: cargoItems.length
       ? cargoItems
       : [{ l: 120, w: 80, h: 90, qty: 1, gw: 150 }],
-    airlines: airlines.map((a) => ({ ...a, validity: freshValidity(quote, a.validity, opts) })),
+    airlines,
     localOriginCharges: mapSurcharges(d.localOriginCharges) ?? [],
     destClearanceCharges: mapSurcharges(d.destClearanceCharges) ?? [],
     terms: String(d.termsAndConditions ?? ""),
   };
 }
 
-export function loadSeaDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) {
+export function loadSeaDeskFromQuote(quote: SavedQuote) {
   const d = quote.details ?? {};
   const containers = (d.containers as SeaContainerRow[]) ?? [];
   const mode =
@@ -209,7 +198,7 @@ export function loadSeaDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) {
     dimUnit: d.dimUnit === "inches" ? ("inches" as const) : ("cms" as const),
     chargeableCbmOverride: Number(d.chargeableCbmOverride ?? 0),
     customExchangeRate: Number(d.customExchangeRate ?? 0),
-    liners: liners.map((l) => ({ ...l, validity: freshValidity(quote, l.validity, opts) })),
+    liners,
     localOriginCharges: mapSurcharges(d.localOriginCharges) ?? [],
     destClearanceCharges: mapSurcharges(d.destClearanceCharges) ?? [],
     terms: String(d.termsAndConditions ?? ""),
@@ -237,7 +226,7 @@ function surchargesFromRaw(raw: unknown): CourierSurcharges {
   };
 }
 
-export function loadCourierDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) {
+export function loadCourierDeskFromQuote(quote: SavedQuote) {
   const d = quote.details ?? {};
 
   const savedLanes = Array.isArray(d.lanes)
@@ -304,7 +293,7 @@ export function loadCourierDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) 
     scope: (d.scope as "domestic" | "international") ?? "domestic",
     currency: quote.currency ?? "INR",
     gstEnabled: d.gstEnabled !== false,
-    validity: freshValidity(quote, String(d.validity ?? "15 days") || "15 days", opts),
+    validity: String(d.validity ?? ""),
     packages: (d.packages as Array<{ qty: number; gw?: number; l?: number; w?: number; h?: number }>) ?? [
       { qty: 1, gw: 5, l: 30, w: 20, h: 15 },
     ],
@@ -316,7 +305,7 @@ export function loadCourierDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) 
   };
 }
 
-export function loadTransportDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) {
+export function loadTransportDeskFromQuote(quote: SavedQuote) {
   const d = quote.details ?? {};
 
   const savedLanes = Array.isArray(d.lanes)
@@ -380,14 +369,14 @@ export function loadTransportDeskFromQuote(quote: SavedQuote, opts?: LoadOptions
     ewayRequired: Boolean(d.ewayRequired),
     gstin: String(d.gstin ?? ""),
     invoiceValue: Number(d.invoiceValue ?? 0),
-    validity: freshValidity(quote, String(d.validity ?? "15 days") || "15 days", opts),
+    validity: String(d.validity ?? ""),
     truckers,
     notes: String(quote.notes ?? ""),
     terms: String(d.termsAndConditions ?? ""),
   };
 }
 
-export function loadWarehouseDeskFromQuote(quote: SavedQuote, opts?: LoadOptions) {
+export function loadWarehouseDeskFromQuote(quote: SavedQuote) {
   const d = quote.details ?? {};
 
   return {
@@ -401,7 +390,7 @@ export function loadWarehouseDeskFromQuote(quote: SavedQuote, opts?: LoadOptions
     handling: Number(d.handling ?? 0),
     days: Number(d.days ?? 1),
     buyTotal: Number(d.buyTotal ?? 0),
-    validity: freshValidity(quote, String(d.validity ?? "15 days") || "15 days", opts),
+    validity: String(d.validity ?? ""),
     notes: String(quote.notes ?? ""),
     terms: String(d.termsAndConditions ?? ""),
   };

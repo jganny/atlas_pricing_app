@@ -73,7 +73,7 @@ export default function WarehouseDeskPage() {
   const [handling, setHandling] = useState(0);
   const [days, setDays] = useState(7);
   const [buyTotal, setBuyTotal] = useState(0);
-  const [validity, setValidity] = useState("15 days");
+  const [validity, setValidity] = useState("");
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [busy, setBusy] = useState(false);

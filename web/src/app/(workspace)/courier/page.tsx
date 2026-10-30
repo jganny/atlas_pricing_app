@@ -214,7 +214,7 @@ function CourierDeskInner() {
   const [scope, setScope] = useState<"domestic" | "international">("domestic");
   const [currency, setCurrency] = useState("INR");
   const [gstEnabled, setGstEnabled] = useState(true);
-  const [validity, setValidity] = useState("15 days");
+  const [validity, setValidity] = useState("");
   const [packages, setPackages] = useState<CourierPackageLine[]>([{ ...EMPTY_PACKAGE }]);
   const [couriers, setCouriers] = useState<CourierOption[]>(() => [createCourierOption({}, true)]);
   const [terms, setTerms] = useState(DEFAULT_COURIER_TERMS);
@@ -514,7 +514,7 @@ function CourierDeskInner() {
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
-    const loaded = loadCourierDeskFromQuote(loader.sourceQuote, { duplicate: loader.isDuplicate });
+    const loaded = loadCourierDeskFromQuote(loader.sourceQuote);
     setCustomer(loaded.customer);
     const restoredLanes = loaded.lanes.length
       ? loaded.lanes
@@ -616,7 +616,7 @@ function CourierDeskInner() {
     setScope("domestic");
     setCurrency("INR");
     setGstEnabled(true);
-    setValidity("15 days");
+    setValidity("");
     setPackages([{ ...EMPTY_PACKAGE }]);
     setCouriers([createCourierOption({}, true)]);
     setOriginCharges([]);
