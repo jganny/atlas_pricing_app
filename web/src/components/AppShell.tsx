@@ -53,6 +53,7 @@ import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { WhatsNewLink } from "./WhatsNew";
+import { TourLink } from "./GuidedTour";
 import { ChatProvider, useTeamChatOptional } from "./chat/ChatProvider";
 import { useLeadHandovers } from "@/hooks/use-lead-handovers";
 import { SessionTracker } from "@/components/SessionTracker";
@@ -344,7 +345,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             </div>
             <div className="mt-1 text-xs text-white/60">
               Quote · book · track · v{appVersion} ·{" "}
-              <WhatsNewLink className="font-semibold text-white/80 underline-offset-2 hover:underline" />
+              <WhatsNewLink className="font-semibold text-white/80 underline-offset-2 hover:underline" />{" "}·{" "}
+              <TourLink className="font-semibold text-white/80 underline-offset-2 hover:underline" />
             </div>
             <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c3d0dc]">
               {focus}

@@ -11,6 +11,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.121",
+    date: "2026-10-30",
+    items: [
+      "New Home page. One Start box takes a dropped email or invoice, a pasted email, or a typed request. Below it: what is waiting for you, this month's numbers, and a bar for each desk (the admin sees every desk, everyone else sees their own).",
+      "On the Air and Sea Carriers step, Vertex suggests the airlines or liners your team has used on that lane before, with whether a tariff is on file. One tap adds it.",
+      "Save draft on the Air and Sea desks: park a quote while you wait for a rate, note what you are waiting for, and Continue it later from Drafts. A draft is not a quote.",
+      "Circulars now open as folders: station, then airline, liner or courier, then the carrier. A carrier's tariff and its fuel circular sit together. Files without a stored copy are marked.",
+      "Take the tour: a short guided walkthrough, under the app name. Captions on screen, with an optional read-aloud.",
+    ],
+  },
+  {
     version: "0.3.120",
     date: "2026-10-30",
     items: [

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import type { SavedQuote } from "@/lib/types";
 import { getLocalQuote } from "@/lib/quotes/local-enquiries";
 import { fetchQuoteById } from "@/lib/firebase/quote-lifecycle";
+import { fetchDraft } from "@/lib/firebase/drafts";
 import { useLiveData } from "@/lib/api";
 import {
   clearSmartQuotePrefill,
@@ -20,6 +21,7 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
   const prefillOrigin = searchParams?.get("origin") ?? "";
   const prefillDest = searchParams?.get("dest") ?? "";
   const prefillCustomer = searchParams?.get("customer") ?? "";
+  const draftParam = searchParams?.get("draft") ?? null;
   const loadId = editId || duplicateId;
   const isDuplicate = Boolean(duplicateId && !editId);
 
@@ -29,9 +31,28 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
   const [editingQuoteNumber, setEditingQuoteNumber] = useState<string | number | undefined>();
   const [editingStatus, setEditingStatus] = useState<string | undefined>();
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [ready, setReady] = useState(!loadId && !smart);
+  const [ready, setReady] = useState(!loadId && !smart && !draftParam);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftStep, setDraftStep] = useState<string | null>(null);
 
   useEffect(() => {
+    if (draftParam) {
+      setReady(false);
+      void fetchDraft(draftParam)
+        .then((d) => {
+          if (!d) {
+            setLoadError("That draft is no longer there.");
+            return;
+          }
+          setSourceQuote(d.quote);
+          setDraftId(d.id);
+          setDraftStep(d.step);
+          setLoadError(null);
+        })
+        .catch((e) => setLoadError(e instanceof Error ? e.message : "Couldn't open the draft."))
+        .finally(() => setReady(true));
+      return;
+    }
     if (smart && deskMode) {
       const prefill = peekSmartQuotePrefill(deskMode);
       if (prefill) {
@@ -83,7 +104,7 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : "Load failed"))
       .finally(() => setReady(true));
-  }, [loadId, editId, isDuplicate, smart, deskMode]);
+  }, [loadId, editId, isDuplicate, smart, deskMode, draftParam]);
 
   return {
     ready,
@@ -91,6 +112,9 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
     sourceQuote,
     smartPrefill,
     isDuplicate,
+    draftId,
+    draftStep,
+    setDraftId,
     isEditing: Boolean(editingQuoteId),
     editingQuoteId,
     editingQuoteNumber,
@@ -104,12 +128,16 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
       setEditingQuoteId(null);
       setEditingQuoteNumber(undefined);
       setEditingStatus(undefined);
+      setDraftId(null);
+      setDraftStep(null);
       setLoadError(null);
       setReady(true);
       clearSmartQuotePrefill();
     },
     banner: editId
       ? `Amending quote ${editId}`
+      : draftId
+        ? "Continuing your saved draft — Save quote when it is ready"
       : duplicateId
         ? `Duplicating quote ${duplicateId} — saves as new`
         : smartPrefill

@@ -35,6 +35,11 @@ import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/fireba
 import { autoLiners } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
 import { LaneCarriers } from "@/components/LaneCarriers";
+import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
+import { deleteDraft } from "@/lib/firebase/drafts";
+import { buildSeaDraftQuote } from "@/lib/quotes/drafts";
+import { CarrierSuggestions } from "@/components/CarrierSuggestions";
+import { placeCode } from "@/lib/quotes/carrier-suggestions";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
@@ -140,6 +145,8 @@ function SeaDeskInner() {
   const [leadId, setLeadId] = useState<string | undefined>(undefined);
 
   const [step, setStep] = useState<Step>("shipment");
+  /** The saved draft this desk was opened from, or last parked as — saving the quote retires it. */
+  const [parkedId, setParkedId] = useState<string | null>(null);
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
   const [activeLaneId, setActiveLaneId] = useState("");
@@ -536,6 +543,10 @@ function SeaDeskInner() {
     setLanes([lane]);
     setActiveLaneId(lane.id);
     if (loaded.terms) setTerms(loaded.terms);
+    if (loader.draftId) {
+      setParkedId(loader.draftId);
+      if (loader.draftStep === "shipment" || loader.draftStep === "carrier" || loader.draftStep === "terms") setStep(loader.draftStep);
+    }
   }, [loader.sourceQuote]);
 
   useEffect(() => {
@@ -601,6 +612,7 @@ function SeaDeskInner() {
 
   function applyReset() {
     draft.clear();
+    setParkedId(null);
     const lane = newLane();
     setCustomer("");
     setLanes([lane]);
@@ -960,6 +972,10 @@ function SeaDeskInner() {
         setSaveMsg(msg);
         setSaveEnquiryPath(savedEnquiryHref(row));
         draft.clear();
+        if (parkedId) {
+          void deleteDraft(parkedId);
+          setParkedId(null);
+        }
         toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Save failed";
@@ -996,6 +1012,7 @@ function SeaDeskInner() {
       dimUnit,
       localOriginCharges,
       destClearanceCharges,
+      parkedId,
     ],
   );
 
@@ -1234,6 +1251,23 @@ function SeaDeskInner() {
             <Zap className="mr-1.5 h-4 w-4" />
             Circulars
           </Button>
+          <DraftsMenu mode="sea" activeId={parkedId} />
+          <SaveDraftButton
+            mode="sea"
+            step={step}
+            draftId={parkedId}
+            onSaved={setParkedId}
+            build={() => ({
+              customer,
+              origin,
+              destination,
+              quote: buildSeaDraftQuote({
+                customer, origin, destination, currency, incoterm, module, dimUnit, customFx, terms,
+                creator: user?.username ?? "", shippingMode: mode, grossWeightKg, volumeCbm, cargo, chargeableCbmOverride, liners,
+                localOriginCharges, destClearanceCharges,
+              }),
+            })}
+          />
           <Button type="button" variant="secondary" className="h-9" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             Preview
@@ -1593,7 +1627,17 @@ function SeaDeskInner() {
           {step === "carrier" ? (
             <div className="space-y-4">
               {!isRelaxedImportQuote(module, incoterm) ? (
-                <LaneCarriers mode="sea" origin={origin} destination={destination} seaMode={mode} airTariffs={NO_AIR_TARIFFS_SEA} seaTariffs={tariffs} existing={laneLiners.map((l) => l.name)} onAdd={addLaneLiner} />
+                <>
+                  <CarrierSuggestions
+                    mode="sea"
+                    origin={origin}
+                    destination={destination}
+                    hasTariff={(n) => lookupSeaTariffForCarrier(tariffs, placeCode(origin), placeCode(destination), n, mode).status === "matched"}
+                    existing={laneLiners.map((l) => l.name)}
+                    onAdd={addLaneLiner}
+                  />
+                  <LaneCarriers mode="sea" origin={origin} destination={destination} seaMode={mode} airTariffs={NO_AIR_TARIFFS_SEA} seaTariffs={tariffs} existing={laneLiners.map((l) => l.name)} onAdd={addLaneLiner} />
+                </>
               ) : null}
               {isRelaxedImportQuote(module, incoterm) ? (
                 <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" data-testid="relaxed-import-note">

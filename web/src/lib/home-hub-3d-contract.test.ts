@@ -20,7 +20,11 @@ assert.match(hub, /QuoteHubDrop/);
 assert.match(hub, /WaitingJobs/);
 assert.match(hub, /atlas-frost/);
 assert.doesNotMatch(home, /CartonTokens/, "the decorative carton box was replaced by the Sea desk container view");
-assert.match(home, /VertexAskBar/);
+// Home has one start box: it holds the Ask Vertex bar and takes dropped enquiries the same way Quote Hub does.
+const start = fs.readFileSync(path.join(web, "src/components/HomeStartBox.tsx"), "utf8");
+assert.match(home, /HomeStartBox/);
+assert.match(start, /VertexAskBar/);
+assert.match(start, /useHubReader/);
 assert.doesNotMatch(home, /motion-sample/);
 assert.match(shell, /normalized === "\/quote"/);
 assert.match(css, /atlas-frost/);

@@ -52,6 +52,11 @@ import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/fireba
 import { autoAirlines } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
 import { LaneCarriers } from "@/components/LaneCarriers";
+import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
+import { deleteDraft } from "@/lib/firebase/drafts";
+import { buildAirDraftQuote } from "@/lib/quotes/drafts";
+import { CarrierSuggestions } from "@/components/CarrierSuggestions";
+import { placeCode } from "@/lib/quotes/carrier-suggestions";
 import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
 import { marginLabel, planInstruction, type PlanChoice } from "@/lib/hub/instruction-quote";
 import { readInstructionWithAI } from "@/lib/ai/instruction-ai";
@@ -119,6 +124,8 @@ function AirDeskInner() {
   const customerFieldName = useAntiAutofillName("atlas-party-air");
 
   const [step, setStep] = useState<Step>("shipment");
+  /** The saved draft this desk was opened from, or last parked as — saving the quote retires it. */
+  const [parkedId, setParkedId] = useState<string | null>(null);
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
   const [activeLaneId, setActiveLaneId] = useState("");
@@ -506,6 +513,10 @@ function AirDeskInner() {
       setActiveLaneId(lane.id);
     }
     if (loaded.terms) setTerms(loaded.terms);
+    if (loader.draftId) {
+      setParkedId(loader.draftId);
+      if (loader.draftStep === "shipment" || loader.draftStep === "carrier" || loader.draftStep === "terms") setStep(loader.draftStep);
+    }
   }, [loader.sourceQuote]);
 
   useEffect(() => {
@@ -580,6 +591,7 @@ function AirDeskInner() {
 
   function applyReset() {
     draft.clear();
+    setParkedId(null);
     const lane = newLane();
     setCustomer("");
     setLanes([lane]);
@@ -968,6 +980,10 @@ function AirDeskInner() {
         setSaveMsg(msg);
         setSaveEnquiryPath(savedEnquiryHref(row));
         draft.clear();
+        if (parkedId) {
+          void deleteDraft(parkedId);
+          setParkedId(null);
+        }
         toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Save failed";
@@ -1001,6 +1017,7 @@ function AirDeskInner() {
       dimUnit,
       localOriginCharges,
       destClearanceCharges,
+      parkedId,
     ],
   );
 
@@ -1244,6 +1261,22 @@ function AirDeskInner() {
             <Zap className="mr-1.5 h-4 w-4" />
             Circulars
           </Button>
+          <DraftsMenu mode="air" activeId={parkedId} />
+          <SaveDraftButton
+            mode="air"
+            step={step}
+            draftId={parkedId}
+            onSaved={setParkedId}
+            build={() => ({
+              customer,
+              origin,
+              destination,
+              quote: buildAirDraftQuote({
+                customer, origin, destination, currency, incoterm, module, dimUnit, customFx, terms,
+                creator: user?.username ?? "", commodity, cargo, airlines, lanes, localOriginCharges, destClearanceCharges,
+              }),
+            })}
+          />
           <Button type="button" variant="secondary" className="h-9" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             {lanes.length > 1 ? "Preview all lanes" : "Preview"}
@@ -1577,7 +1610,17 @@ function AirDeskInner() {
           {step === "carrier" ? (
             <div className="space-y-4">
               {!isRelaxedImportQuote(module, incoterm) ? (
-                <LaneCarriers mode="air" origin={origin} destination={destination} airTariffs={tariffs} seaTariffs={NO_SEA_TARIFFS_AIR} existing={laneAirlines.map((a) => a.name)} onAdd={addLaneAirline} />
+                <>
+                  <CarrierSuggestions
+                    mode="air"
+                    origin={origin}
+                    destination={destination}
+                    hasTariff={(n) => lookupAirTariffForCarrier(tariffs, placeCode(origin), placeCode(destination), n).status === "matched"}
+                    existing={laneAirlines.map((a) => a.name)}
+                    onAdd={addLaneAirline}
+                  />
+                  <LaneCarriers mode="air" origin={origin} destination={destination} airTariffs={tariffs} seaTariffs={NO_SEA_TARIFFS_AIR} existing={laneAirlines.map((a) => a.name)} onAdd={addLaneAirline} />
+                </>
               ) : null}
               {isRelaxedImportQuote(module, incoterm) ? (
                 <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" data-testid="relaxed-import-note">

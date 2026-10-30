@@ -28,9 +28,11 @@ const HELP: Record<string, string> = {
 export function VertexAskBar({
   compact = false,
   onNavigate,
+  placeholder = "Find a quote (customer or city) · or: quote air BLR to LHR 120 kg use EK +100 add 10/kg in USD",
 }: {
   compact?: boolean;
   onNavigate?: () => void;
+  placeholder?: string;
 }) {
   const router = useRouter();
   const { data: rows = [] } = useEnquiries();
@@ -136,7 +138,7 @@ export function VertexAskBar({
             aria-activedescendant={activeIndex >= 0 ? `vertex-ask-hit-${shown[activeIndex]?.id}` : undefined}
             enterKeyHint="search"
             className="w-full rounded-lg border border-[var(--color-border)] bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-sky-400"
-            placeholder="Find a quote (customer or city) · or: quote air BLR to LHR 120 kg use EK +100 add 10/kg in USD"
+            placeholder={placeholder}
             value={value}
             onChange={(e) => {
               setValue(e.target.value);

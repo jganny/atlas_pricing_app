@@ -1,5 +1,7 @@
 "use client";
 
+import { CircularFolders, RoleChip } from "@/components/CircularFolders";
+import { buildFolders } from "@/lib/circulars/folders";
 import { STATION_NAMES, stationByName, stationForOrigin, stationLabel } from "@/lib/circulars/stations";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,6 +44,7 @@ export default function CircularsPage() {
   const queryClient = useQueryClient();
   const canManage = canManageCirculars(user?.username, user?.role);
   const [editingStationId, setEditingStationId] = useState<string | null>(null);
+  const [flat, setFlat] = useState(false);
   const { data: air = [], isLoading: airLoading } = useAirTariffs();
   const { data: sea = [], isLoading: seaLoading } = useSeaTariffs();
   const { data: courierBooks = [] } = useCourierTariffs();
@@ -82,6 +85,8 @@ export default function CircularsPage() {
         .includes(q);
     });
   }, [circulars, category, search, station]);
+
+  const folderGroups = useMemo(() => buildFolders(filtered), [filtered]);
 
   // How many circulars each station has (in the chosen category), for the filter chips.
   const stationCounts = useMemo(() => {
@@ -321,6 +326,111 @@ export default function CircularsPage() {
 
   const loading = airLoading || seaLoading || circLoading;
 
+  /** One file's row: station tag, title, carrier, its role (Tariff / FSC…), and the actions. */
+  const renderFile = (c: CircularRecord) => (
+            <li
+                key={c.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 font-semibold">
+                    {canManage && editingStationId === c.id ? (
+                      <select
+                        aria-label="Set station"
+                        autoFocus
+                        className="rounded border border-amber-300 bg-white px-1.5 py-0.5 text-xs font-bold"
+                        value={stationByName(c.station) ? c.station : ""}
+                        onBlur={() => setEditingStationId(null)}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setEditingStationId(null);
+                          if (next) void setStationFor(c, next);
+                        }}
+                      >
+                        <option value="">Choose station…</option>
+                        {STATION_NAMES.map((n) => (
+                          <option key={n} value={n}>
+                            {stationLabel(n)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <StationChip
+                        station={stationByName(c.station) ? stationLabel(c.station) : null}
+                        editable={canManage}
+                        onEdit={() => setEditingStationId(c.id)}
+                      />
+                    )}
+                    {c.title || c.fileName || "Untitled"}
+                    <RoleChip category={c.category} />
+                  </div>
+                  <div className="text-[var(--color-text-muted)]">
+                    {[c.carrier, c.category, c.fileName].filter(Boolean).join(" · ") || "—"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {c.downloadURL ? (
+                    <a
+                      href={c.downloadURL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-bold text-sky-700"
+                    >
+                      Open
+                    </a>
+                  ) : (
+                    <span className="text-xs font-semibold text-amber-700" title="This entry has no file stored with it, so nobody can open it. Upload it again.">
+                      No file attached
+                    </span>
+                  )}
+                  {canManage && c.category === "airline_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setExtractCircular({ circular: c, kind: "air" })}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Extract rates with AI
+                    </Button>
+                  ) : null}
+                  {canManage && c.category === "sea_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setExtractCircular({ circular: c, kind: "sea" })}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Extract rates with AI
+                    </Button>
+                  ) : null}
+                  {canManage && c.category === "courier_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setExtractCircular({ circular: c, kind: "courier" })}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Extract rates with AI
+                    </Button>
+                  ) : null}
+                  {canManage ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="px-2 py-1 text-rose-700"
+                      disabled={busy}
+                      onClick={() => void handleDelete(c)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -497,9 +607,16 @@ export default function CircularsPage() {
               <Label htmlFor="circ-carrier">Carrier</Label>
               <Input
                 id="circ-carrier"
+                list="circ-carrier-names"
                 value={form.carrier}
                 onChange={(e) => setForm((f) => ({ ...f, carrier: e.target.value }))}
               />
+              <datalist id="circ-carrier-names">
+                {[...new Set(circulars.map((c) => (c.carrier || "").trim()).filter(Boolean))].sort().map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+              <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">Use the exact same carrier name for a tariff and its FSC circular, and they land in one folder.</p>
             </div>
             <div>
               <Label htmlFor="circ-station">Branch / origin station</Label>
@@ -567,106 +684,18 @@ export default function CircularsPage() {
         ) : filtered.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">No circulars in this category.</p>
         ) : (
-          <ul className="space-y-2 text-sm">
-            {filtered.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 font-semibold">
-                    {canManage && editingStationId === c.id ? (
-                      <select
-                        aria-label="Set station"
-                        autoFocus
-                        className="rounded border border-amber-300 bg-white px-1.5 py-0.5 text-xs font-bold"
-                        value={stationByName(c.station) ? c.station : ""}
-                        onBlur={() => setEditingStationId(null)}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          setEditingStationId(null);
-                          if (next) void setStationFor(c, next);
-                        }}
-                      >
-                        <option value="">Choose station…</option>
-                        {STATION_NAMES.map((n) => (
-                          <option key={n} value={n}>
-                            {stationLabel(n)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <StationChip
-                        station={stationByName(c.station) ? stationLabel(c.station) : null}
-                        editable={canManage}
-                        onEdit={() => setEditingStationId(c.id)}
-                      />
-                    )}
-                    {c.title || c.fileName || "Untitled"}
-                  </div>
-                  <div className="text-[var(--color-text-muted)]">
-                    {[c.carrier, c.category, c.fileName].filter(Boolean).join(" · ") || "—"}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {c.downloadURL ? (
-                    <a
-                      href={c.downloadURL}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs font-bold text-sky-700"
-                    >
-                      Open
-                    </a>
-                  ) : null}
-                  {canManage && c.category === "airline_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setExtractCircular({ circular: c, kind: "air" })}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Extract rates with AI
-                    </Button>
-                  ) : null}
-                  {canManage && c.category === "sea_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setExtractCircular({ circular: c, kind: "sea" })}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Extract rates with AI
-                    </Button>
-                  ) : null}
-                  {canManage && c.category === "courier_tariff" && c.storagePath && /\.pdf$/i.test(c.fileName || "") ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setExtractCircular({ circular: c, kind: "courier" })}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Extract rates with AI
-                    </Button>
-                  ) : null}
-                  {canManage ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="px-2 py-1 text-rose-700"
-                      disabled={busy}
-                      onClick={() => void handleDelete(c)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-end">
+              <button type="button" className="text-xs font-semibold text-sky-700 hover:underline" onClick={() => setFlat((v) => !v)}>
+                {flat ? "Show as folders" : "Show as flat list"}
+              </button>
+            </div>
+            {flat ? (
+              <ul className="space-y-2">{filtered.map((c) => renderFile(c))}</ul>
+            ) : (
+              <CircularFolders groups={folderGroups} openAll={search.trim().length > 0} renderFile={renderFile} />
+            )}
+          </div>
         )}
       </Card>
 

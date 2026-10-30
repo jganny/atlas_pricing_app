@@ -3,110 +3,39 @@
 import { useRef, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { Button, Card } from "@/components/ui";
-import { toast } from "@/components/Toast";
+import { useHubReader } from "@/hooks/use-hub-reader";
 import { useLiveData } from "@/lib/api";
-import { fetchDirectoryContacts } from "@/lib/firebase/directory";
-import { readDocuments } from "@/lib/firebase/hub-jobs";
 import { hasInstruction, parseInstruction } from "@/lib/hub/instruction";
-import { normalizeExtraction, type AgentRef } from "@/lib/hub/normalize";
-import { prepareJobs, type PreparedJob } from "@/lib/hub/prepare-documents";
-import type { HubJob } from "@/lib/hub/types";
-import { OWN_EMAIL_DOMAINS } from "@/lib/quotes/team-roles";
-import { currentDeskSeatId } from "@/lib/auth/desk-seats";
-import { useHubJobs } from "@/hooks/use-hub-jobs";
-import { useAuthStore } from "@/store/auth";
-
-type Item = { id: string; label: string; state: "reading" | "done" | "error"; message: string };
 
 const ACCEPT = ".msg,.eml,.pdf,.xlsx,.xls,.csv,.docx,.txt,image/*";
 
 /** Drop Outlook emails, invoices, packing lists or photos: each job is read and filed as a ready-filled draft. */
 export function QuoteHubDrop() {
-  const user = useAuthStore((s) => s.user);
-  const { add } = useHubJobs();
-  const [items, setItems] = useState<Item[]>([]);
+  const { items, readFiles, readText } = useHubReader();
   const [over, setOver] = useState(false);
   const [paste, setPaste] = useState("");
   const [showPaste, setShowPaste] = useState(false);
   const [instruction, setInstruction] = useState("");
-  const agents = useRef<AgentRef[] | null>(null);
   const input = useRef<HTMLInputElement>(null);
-
-  const patch = (id: string, next: Partial<Item>) => setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...next } : i)));
-
-  async function agentList(): Promise<AgentRef[]> {
-    if (agents.current) return agents.current;
-    try {
-      const rows = await fetchDirectoryContacts();
-      agents.current = rows
-        .filter((c) => (c.category || "").toLowerCase() === "agency")
-        .map((c) => ({ name: c.name, email: c.email, location: c.location }));
-    } catch {
-      agents.current = [];
-    }
-    return agents.current;
-  }
-
-  async function readJob(job: PreparedJob, instructionText = "") {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setItems((prev) => [{ id, label: job.label, state: "reading" as const, message: "Reading…" }, ...prev].slice(0, 8));
-    try {
-      const raw = await readDocuments(job.documents, { ownDomains: OWN_EMAIL_DOMAINS, headerSender: job.headerSender });
-      const n = normalizeExtraction(raw, { ownDomains: OWN_EMAIL_DOMAINS, headerSender: job.headerSender, agents: await agentList() });
-      const username = (user?.username || "").toLowerCase();
-      const hubJob: HubJob = {
-        id,
-        createdBy: username,
-        deskSeat: currentDeskSeatId(username),
-        createdAt: new Date().toISOString(),
-        status: "waiting",
-        mode: n.extraction.mode,
-        direction: n.extraction.direction,
-        customer: n.customer,
-        senderEmail: n.senderEmail,
-        senderName: n.senderName,
-        files: job.fileNames,
-        summary: n.extraction.summary || job.label,
-        checkCount: n.extraction.needsCheck.length,
-        extraction: n.extraction,
-        ...(instructionText ? { instruction: instructionText } : {}),
-      };
-      await add(hubJob);
-      patch(id, { state: "done", message: `${hubJob.summary} — waiting below` });
-    } catch (e) {
-      patch(id, { state: "error", message: e instanceof Error ? e.message : "Could not read this one." });
-    }
-  }
 
   async function handleFiles(files: File[]) {
     if (!files.length) return;
-    if (!useLiveData) {
-      toast("Reading real documents works in the live app — the list below shows sample jobs.", "info");
-      return;
-    }
     // What was typed applies to this drop only; the box is emptied so it never leaks onto the next enquiry.
     const typed = instruction.trim();
-    setInstruction("");
-    try {
-      const jobs = await prepareJobs(files);
-      await Promise.all(jobs.map((j) => readJob(j, typed)));
-    } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not read those files.", "error");
-    }
+    if (useLiveData) setInstruction("");
+    await readFiles(files, typed);
   }
 
   async function handlePaste() {
     const text = paste.trim();
     if (!text) return;
-    if (!useLiveData) {
-      toast("Reading real text works in the live app — the list below shows sample jobs.", "info");
-      return;
-    }
     const typed = instruction.trim();
-    setPaste("");
-    setShowPaste(false);
-    setInstruction("");
-    await readJob({ label: text.slice(0, 50), documents: [{ name: "Pasted enquiry", kind: "text", text }], fileNames: ["Pasted enquiry"] }, typed);
+    if (useLiveData) {
+      setPaste("");
+      setShowPaste(false);
+      setInstruction("");
+    }
+    await readText(text, typed);
   }
 
   return (

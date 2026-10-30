@@ -168,6 +168,8 @@ service cloud.firestore {
     match /leads/{leadId} { allow read, write: if isSignedIn(); }
     match /activities/{activityId} { allow read, write: if isSignedIn(); }
     match /wonFollowUps/{quoteId} { allow read, write: if isSignedIn(); }
+    // Saved drafts of a desk's quote in progress. Not quotes: never listed in Enquiry DB. Visibility by desk is applied in the app, like wonFollowUps.
+    match /quoteDrafts/{draftId} { allow read, write: if isSignedIn(); }
     match /customsHolidays/{holidayId} { allow read, write: if isSignedIn(); }
     match /accounts/{accountId} {
       allow read: if isSignedIn();
