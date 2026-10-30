@@ -110,8 +110,8 @@ export function EnquiryTable({
           accessorKey: "customer",
           header: "Customer",
           cell: ({ row }) => (
-            <div className="min-w-0">
-              <div className="whitespace-nowrap">{row.original.customer || "—"}</div>
+            <div className="min-w-0 max-w-[260px]">
+              <div className="truncate whitespace-nowrap" title={row.original.customer || undefined}>{row.original.customer || "—"}</div>
               {row.original.carrier ? (
                 <div className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">
                   {row.original.carrier}
@@ -126,6 +126,34 @@ export function EnquiryTable({
           cell: ({ getValue }) => <ModeChip mode={String(getValue())} />,
         },
       ];
+      // Status and the Won switch sit right after Ref and Date, so they are always on screen without scrolling sideways.
+      defs.splice(2, 0, {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => <StatusChip status={row.original.status} />,
+      });
+      if (wonToggle) {
+        defs.splice(3, 0, {
+          id: "won",
+          header: "Won",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const r = row.original;
+            if (!wonToggle.canToggle(r)) return <span className="text-slate-300">—</span>;
+            return (
+              <span className="inline-flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <ToggleSwitch
+                  label={`Mark ${r.customer || r.ref} as Won`}
+                  checked={r.status === "won"}
+                  disabled={wonToggle.busyId === r.id}
+                  onChange={(on) => wonToggle.onToggle(r, on)}
+                  data-testid="won-switch"
+                />
+              </span>
+            );
+          },
+        });
+      }
       if (vis.lane) {
         defs.push({
           id: "lane",
@@ -133,7 +161,7 @@ export function EnquiryTable({
           accessorFn: (r) =>
             r.destination ? `${r.origin} → ${r.destination}` : r.origin || "—",
           cell: ({ getValue }) => (
-            <span className="whitespace-nowrap">{String(getValue())}</span>
+            <span className="block max-w-[240px] truncate whitespace-nowrap" title={String(getValue())}>{String(getValue())}</span>
           ),
         });
       }
@@ -154,33 +182,6 @@ export function EnquiryTable({
           cell: ({ row }) => (
             <span className="whitespace-nowrap tabular-nums">{formatTonnageCell(row.original)}</span>
           ),
-        });
-      }
-      defs.push({
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => <StatusChip status={row.original.status} />,
-      });
-      if (wonToggle) {
-        defs.push({
-          id: "won",
-          header: "Won",
-          enableSorting: false,
-          cell: ({ row }) => {
-            const r = row.original;
-            if (!wonToggle.canToggle(r)) return <span className="text-slate-300">—</span>;
-            return (
-              <span className="inline-flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <ToggleSwitch
-                  label={`Mark ${r.customer || r.ref} as Won`}
-                  checked={r.status === "won"}
-                  disabled={wonToggle.busyId === r.id}
-                  onChange={(on) => wonToggle.onToggle(r, on)}
-                  data-testid="won-switch"
-                />
-              </span>
-            );
-          },
         });
       }
       if (vis.sla) {

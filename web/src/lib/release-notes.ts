@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.124",
+    date: "2026-10-30",
+    items: [
+      "Enquiry DB: Status and the Won switch now sit right after Ref and Date, so they are on screen without scrolling sideways. Very long customer names and lanes are shortened (hover to read them in full), which also stops the table running off the screen.",
+    ],
+  },
+  {
     version: "0.3.123",
     date: "2026-10-30",
     items: [
