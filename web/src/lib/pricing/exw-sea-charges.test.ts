@@ -33,13 +33,14 @@ const rows40 = buildExwRows(chennai, [{ type: "40'HC", qty: 2 }]);
 assert.ok(rows40.every(isExwRow));
 const thc = rows40.find((r) => r.name.startsWith("THC"))!;
 assert.equal(thc.unit, "container");
-assert.equal(thc.sell, 235);
+assert.equal(thc.buy, 235);
+assert.equal(thc.sell, 0, "only Buy is filled; Sell is left for the desk");
 assert.equal(calcSurchargeCost(thc, { containerCount: 2 }).calculatedCost, 470);
 const transport40 = rows40.find((r) => r.name.startsWith("Transportation"))!;
-assert.equal(transport40.sell, 250);
+assert.equal(transport40.buy, 250);
 const rows20 = buildExwRows(chennai, [{ type: "20'GP", qty: 1 }]);
 const transport20 = rows20.find((r) => r.name.startsWith("Transportation"))!;
-assert.equal(transport20.sell, 0, "no amount on the sheet: kept as a line");
+assert.equal(transport20.buy, 0, "no amount on the sheet: kept as a line");
 assert.equal(transport20.remarks, "Will revert");
 const total20 = rows20.reduce((n, r) => n + calcSurchargeCost(r, { containerCount: 1 }).calculatedCost, 0);
 assert.equal(total20, 390, "the filled charges add up to the sheet's own total");
@@ -49,9 +50,10 @@ const mixed = buildExwRows(chennai, [{ type: "20'GP", qty: 1 }, { type: "40'HC",
 const mixedThc = mixed.find((r) => r.name.startsWith("THC"))!;
 assert.equal(mixedThc.unit, "flat");
 assert.equal(mixedThc.name, "THC (1 × 20' + 2 × 40')");
-assert.equal(mixedThc.sell, 95 + 2 * 235);
+assert.equal(mixedThc.buy, 95 + 2 * 235);
+assert.equal(mixedThc.sell, 0);
 const mixedTransport = mixed.find((r) => r.name.startsWith("Transportation"))!;
-assert.equal(mixedTransport.sell, 500, "the known 40' part is counted");
+assert.equal(mixedTransport.buy, 500, "the known 40' part is counted");
 assert.match(mixedTransport.remarks, /Will revert/, "and the unknown 20' part is flagged");
 
 // A 45' box has no rate on the sheets: flat rows, the 45' is left out of the arithmetic
@@ -62,7 +64,7 @@ assert.equal(with45.find((r) => r.name.startsWith("THC"))!.unit, "flat");
 const hyd = EXW_SHEETS.find((s) => s.id === "hyd-factory")!;
 const hydRows = buildExwRows(hyd, [{ type: "40'GP", qty: 1 }]);
 const hydTransport = hydRows.find((r) => r.name.startsWith("Transportation"))!;
-assert.equal(hydTransport.sell, 0);
+assert.equal(hydTransport.buy, 0);
 assert.equal(hydTransport.remarks, "Need complete address");
 
 // Validity
@@ -78,7 +80,7 @@ assert.equal(sameExwRows(filled, buildExwRows(chennai, c1)), true);
 assert.equal(exwFillDecision({ current: [], previous: null, next: filled }), "fill", "nothing there yet: fill");
 assert.equal(exwFillDecision({ current: filled, previous: filled, next: refilledFor2 }), "fill", "untouched: refill for the new inputs");
 
-const edited = filled.map((r) => (r.name.startsWith("THC") ? { ...r, sell: 300 } : r));
+const edited = filled.map((r) => (r.name.startsWith("THC") ? { ...r, buy: 300 } : r));
 assert.equal(exwFillDecision({ current: edited, previous: filled, next: refilledFor2 }), "keep", "an edited amount is kept");
 const renamed = filled.map((r, i) => (i === 0 ? { ...r, name: "Handling (special)" } : r));
 assert.equal(exwFillDecision({ current: renamed, previous: filled, next: refilledFor2 }), "keep", "a renamed line is kept");
@@ -94,4 +96,6 @@ assert.equal(exwFillDecision({ current: [createSurchargeRow({ name: "My THC", se
 assert.equal(exwFillDecision({ current: filled, previous: filled, next: null }), "clear");
 assert.equal(exwFillDecision({ current: edited, previous: filled, next: null }), "keep");
 assert.equal(exwFillDecision({ current: [], previous: null, next: null }), "keep");
+// Every filled row carries its amount in Buy and nothing in Sell
+for (const sh of EXW_SHEETS) for (const r of buildExwRows(sh, [{ type: "40'HC", qty: 2 }, { type: "20'GP", qty: 1 }])) assert.equal(r.sell, 0, `${sh.id}: ${r.name} has no Sell`);
 console.log("exw-sea-charges tests passed");

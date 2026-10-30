@@ -218,12 +218,13 @@ export const isExwRow = (r: Pick<SurchargeRow, "id">) => r.id.startsWith(EXW_ROW
  * The Local Origin Charges rows for one sheet and the containers on the quote.
  * One size only: a row per charge priced per container (the quote shows "2 containers × $285 = $570").
  * Both sizes: a flat row per charge with the working in its name. A charge with no amount keeps its note ("Will revert").
+ * The amounts go in the Buy column only (they are the agent's cost); Sell is left empty for the desk to price.
  */
 export function buildExwRows(sheet: ExwSheet, containers: ContainerCount[]): SurchargeRow[] {
   const { n20, n40, other } = countBySize(containers);
   const rows: SurchargeRow[] = [];
   const mk = (name: string, amount: number, unit: SurchargeRow["unit"], remarks: string, idx: number) =>
-    createSurchargeRow({ id: `${EXW_ROW_PREFIX}${sheet.id}_${idx}`, name, sell: amount, buy: amount, unit, remarks });
+    createSurchargeRow({ id: `${EXW_ROW_PREFIX}${sheet.id}_${idx}`, name, sell: 0, buy: amount, unit, remarks });
   sheet.lines.forEach((line, idx) => {
     const only: 20 | 40 | null = n20 > 0 && n40 === 0 && other === 0 ? 20 : n40 > 0 && n20 === 0 && other === 0 ? 40 : null;
     const note = [line.note, line.tbc && line.per20 === null && line.per40 === null ? line.tbc : ""].filter(Boolean).join(" · ");

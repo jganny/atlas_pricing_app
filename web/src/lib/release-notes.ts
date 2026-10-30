@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.126",
+    date: "2026-10-30",
+    items: [
+      "EXW sea export: the agent's sheet amounts now fill in the Buy column only. Sell is left empty for you to price. Until you enter a Sell, the quote total uses the Buy figure as a placeholder.",
+    ],
+  },
+  {
     version: "0.3.125",
     date: "2026-10-30",
     items: [

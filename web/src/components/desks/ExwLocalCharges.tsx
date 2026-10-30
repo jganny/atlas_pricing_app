@@ -195,7 +195,7 @@ export function ExwLocalCharges({
           </ul>
         </details>
       ) : null}
-      <div className="text-[11px] text-sky-900/80">Source: {EXW_SOURCE}. Amounts fill as both Sell and Buy; add your margin on Sell.</div>
+      <div className="text-[11px] text-sky-900/80">Source: {EXW_SOURCE}. Amounts fill in the Buy column only. Enter your Sell.</div>
     </div>
   );
 }
