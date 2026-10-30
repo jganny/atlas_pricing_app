@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
+import { VertexEmblem } from "@/components/VertexEmblem";
 import { SwipeDeleteRow } from "@/components/SwipeDeleteRow";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { newQuoteHref, parseDeskIntent } from "@/lib/ai/desk-intent";
@@ -112,7 +113,7 @@ export function VertexAskBar({
     <div className={cn("space-y-2", compact ? "" : "atlas-panel rounded-xl p-3 md:p-4")}>
       {!compact ? (
         <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-          <Sparkles className="h-3.5 w-3.5 text-[var(--color-atlas-gold)]" />
+          <VertexEmblem size={22} />
           Ask Vertex
         </div>
       ) : null}

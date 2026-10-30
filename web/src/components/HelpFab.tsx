@@ -9,10 +9,10 @@ import {
   Inbox,
   PlaneTakeoff,
   Search,
-  Sparkles,
   X,
 } from "lucide-react";
 import { VertexAskBar } from "@/components/VertexAskBar";
+import { VertexEmblem } from "@/components/VertexEmblem";
 import { VertexChat } from "@/components/VertexChat";
 import { FeatureGuide } from "@/components/FeatureGuide";
 import { OPEN_GUIDE_EVENT } from "@/components/GuideTipButton";
@@ -86,13 +86,16 @@ export function HelpFab() {
               aria-label="Vertex assistant"
             >
               <div className="flex items-start justify-between border-b border-[var(--color-border)] px-5 py-4">
-                <div>
-                  <div className="text-sm font-extrabold tracking-wide text-[var(--color-atlas-navy)]">
-                    Ask Vertex
+                <div className="flex items-center gap-3">
+                  <VertexEmblem size={40} follow />
+                  <div>
+                    <div className="text-sm font-extrabold tracking-wide text-[var(--color-atlas-navy)]">
+                      Ask Vertex
+                    </div>
+                    <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                      Logistics, your app, your quotes, anything. ⌘?
+                    </p>
                   </div>
-                  <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-                    Logistics, your app, your quotes, anything. ⌘?
-                  </p>
                 </div>
                 <button
                   type="button"
@@ -197,10 +200,10 @@ export function HelpFab() {
           setOpen(true);
         }}
         className={cn(
-          "fixed bottom-20 right-4 z-[220] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-white shadow-[0_12px_28px_rgba(28,24,79,0.32)] transition hover:scale-[1.03] hover:bg-[var(--color-atlas-ink)] md:bottom-5 md:right-5",
+          "fixed bottom-20 right-4 z-[220] flex h-14 w-14 items-center justify-center rounded-full shadow-[0_12px_28px_rgba(28,24,79,0.38)] transition hover:scale-[1.04] md:bottom-5 md:right-5",
         )}
       >
-        <Sparkles className="h-5 w-5" />
+        <VertexEmblem size={56} follow />
       </button>
       {panel}
     </>
