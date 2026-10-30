@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { calcSurchargeCost } from "./surcharges";
-import { EXW_SHEETS, buildExwRows, countBySize, exwSheetsForOrigin, exwValidity, isExwRow, sheetTotal, sizeBucket } from "./exw-sea-charges";
+import { createSurchargeRow } from "./surcharges";
+import { EXW_SHEETS, buildExwRows, exwFillDecision, sameExwRows, countBySize, exwSheetsForOrigin, exwValidity, isExwRow, sheetTotal, sizeBucket } from "./exw-sea-charges";
 
 // Every total the agents printed must match what was copied (and "will revert" lines are simply not in the sum)
 for (const s of EXW_SHEETS) {
@@ -69,4 +70,28 @@ const today = new Date(2026, 9, 30);
 assert.equal(exwValidity(EXW_SHEETS.find((s) => s.id === "mumbai-factory")!, today).state, "valid");
 assert.equal(exwValidity(EXW_SHEETS.find((s) => s.id === "chennai-cfs")!, today).state, "expired");
 assert.equal(exwValidity(EXW_SHEETS.find((s) => s.id === "mundra-factory")!, today).state, "undated");
+// Customising the filled charges: the desk's changes are never overwritten
+const c1 = [{ type: "40'HC", qty: 1 }];
+const filled = buildExwRows(chennai, c1);
+const refilledFor2 = buildExwRows(chennai, [{ type: "40'HC", qty: 2 }]);
+assert.equal(sameExwRows(filled, buildExwRows(chennai, c1)), true);
+assert.equal(exwFillDecision({ current: [], previous: null, next: filled }), "fill", "nothing there yet: fill");
+assert.equal(exwFillDecision({ current: filled, previous: filled, next: refilledFor2 }), "fill", "untouched: refill for the new inputs");
+
+const edited = filled.map((r) => (r.name.startsWith("THC") ? { ...r, sell: 300 } : r));
+assert.equal(exwFillDecision({ current: edited, previous: filled, next: refilledFor2 }), "keep", "an edited amount is kept");
+const renamed = filled.map((r, i) => (i === 0 ? { ...r, name: "Handling (special)" } : r));
+assert.equal(exwFillDecision({ current: renamed, previous: filled, next: refilledFor2 }), "keep", "a renamed line is kept");
+const noted = filled.map((r, i) => (i === 0 ? { ...r, remarks: "per agent email" } : r));
+assert.equal(exwFillDecision({ current: noted, previous: filled, next: refilledFor2 }), "keep", "an added remark is kept");
+assert.equal(exwFillDecision({ current: filled.slice(1), previous: filled, next: refilledFor2 }), "keep", "a deleted line stays deleted");
+assert.equal(exwFillDecision({ current: [...filled, createSurchargeRow({ name: "Extra", sell: 10 })], previous: filled, next: refilledFor2 }), "keep", "an added line is kept");
+assert.equal(exwFillDecision({ current: [], previous: filled, next: refilledFor2 }), "keep", "deleting everything after a fill is respected");
+assert.equal(exwFillDecision({ current: filled, previous: null, next: refilledFor2 }), "keep", "a quote opened from a save is left exactly as saved");
+assert.equal(exwFillDecision({ current: [createSurchargeRow({ name: "My THC", sell: 250 })], previous: null, next: filled }), "keep", "the desk's own typed charges are not overwritten");
+
+// No longer an EXW export: untouched charges are taken back, changed ones are left
+assert.equal(exwFillDecision({ current: filled, previous: filled, next: null }), "clear");
+assert.equal(exwFillDecision({ current: edited, previous: filled, next: null }), "keep");
+assert.equal(exwFillDecision({ current: [], previous: null, next: null }), "keep");
 console.log("exw-sea-charges tests passed");

@@ -16,6 +16,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     items: [
       "The two nomination desks now cover each other: Air Nom can open the Sea desk, and Sea Nom can open the Air desk. Each still lands on their own desk when they sign in.",
       "A booking handed to NRS is listed as Air or Sea by the shipment itself, so a sea quote made by Air Nom shows as a Sea nomination.",
+      "EXW charges you have filled are yours to change: edit an amount, rename or delete a line, or add your own. Switching the port, stuffing or containers no longer overwrites your changes. “Fill again from the agent's sheet” brings the sheet's figures back when you want them.",
     ],
   },
   {

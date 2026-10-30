@@ -9,7 +9,9 @@ import {
   buildExwRows,
   exwSheetsForOrigin,
   exwValidity,
+  exwFillDecision,
   isExwRow,
+  sameExwRows,
   type ContainerCount,
   type Stuffing,
 } from "@/lib/pricing/exw-sea-charges";
@@ -58,26 +60,19 @@ export function ExwLocalCharges({
   useEffect(() => {
     rowsRef.current = rows;
   });
-  const lastKey = useRef<string | null>(null);
+  // What this card filled last time, so it can tell whether the desk has changed any of it since.
+  const filledRef = useRef<SurchargeRow[] | null>(null);
 
   useEffect(() => {
-    const current = rowsRef.current;
-    const mine = current.filter(isExwRow);
-    if (!fillKey || !sheet) {
-      // No longer an EXW export (or not in USD): take back only the rows this card added.
-      lastKey.current = "";
-      if (mine.length) setRows(current.filter((r) => !isExwRow(r)));
-      return;
+    const next = fillKey && sheet ? buildExwRows(sheet, containers) : null;
+    const decision = exwFillDecision({ current: rowsRef.current, previous: filledRef.current, next });
+    if (decision === "fill" && next) {
+      filledRef.current = next;
+      setRows(next);
+    } else if (decision === "clear") {
+      filledRef.current = null;
+      setRows(rowsRef.current.filter((r) => !isExwRow(r)));
     }
-    // A saved quote or draft was opened with its EXW rows: leave them exactly as saved.
-    if (lastKey.current === null && mine.length) {
-      lastKey.current = fillKey;
-      return;
-    }
-    // The desk typed its own charges: do not overwrite them. The Replace button below offers the sheet instead.
-    if (current.length > mine.length) return;
-    lastKey.current = fillKey;
-    setRows(buildExwRows(sheet, containers));
     // containers and sheet are captured through fillKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fillKey]);
@@ -88,6 +83,14 @@ export function ExwLocalCharges({
   const validity = sheet ? exwValidity(sheet) : null;
   const mine = rows.filter(isExwRow);
   const typedRows = rows.length - mine.length;
+  // What the sheet gives for the quote as it stands now; if the charges below differ, the desk has changed them (or the inputs moved).
+  const fresh = sheet && usd ? buildExwRows(sheet, containers) : [];
+  const differs = mine.length > 0 && !sameExwRows(mine, fresh);
+  const noneFilled = fresh.length > 0 && mine.length === 0 && typedRows === 0;
+  const refill = () => {
+    filledRef.current = fresh;
+    setRows([...rows.filter((r) => !isExwRow(r)), ...fresh]);
+  };
 
   return (
     <div className="space-y-2 rounded-xl border border-sky-300 bg-sky-50/70 p-3" data-testid="exw-local-charges">
@@ -139,16 +142,32 @@ export function ExwLocalCharges({
         </div>
       ) : (
         <p className="text-sm text-sky-950" data-testid="exw-status">
-          {mine.length
-            ? `${mine.length} charges filled below from the agent's sheet, for ${containers.map((c) => `${c.qty} × ${c.type}`).join(" + ") || "your containers"}. Edit any amount; changing the port, stuffing or containers refills them.`
-            : typedRows
-              ? "You already have local charges typed below, so I left them alone."
-              : "Charges fill in once the containers are entered."}
+          {differs
+              ? "These charges differ from the agent's sheet because you changed them, or the port, stuffing or containers changed. They stay exactly as you have them."
+              : mine.length
+                ? `${mine.length} charges filled below from the agent's sheet, for ${containers.map((c) => `${c.qty} × ${c.type}`).join(" + ") || "your containers"}. Change, add or delete any line; your changes are never overwritten.`
+                : typedRows
+                  ? "You already have local charges typed below, so I left them alone."
+                  : "Charges fill in once the containers are entered."}
         </p>
       )}
 
+      {usd && (differs || noneFilled) && sheet ? (
+        <Button type="button" size="sm" variant="secondary" onClick={refill} data-testid="exw-refill">
+          {noneFilled ? "Fill from the agent's sheet" : "Fill again from the agent's sheet"}
+        </Button>
+      ) : null}
+
       {usd && typedRows > 0 && sheet ? (
-        <Button type="button" size="sm" variant="secondary" onClick={() => setRows(buildExwRows(sheet, containers))}>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            filledRef.current = fresh;
+            setRows(fresh);
+          }}
+        >
           Replace my {typedRows} typed charge{typedRows === 1 ? "" : "s"} with the EXW sheet
         </Button>
       ) : null}

@@ -258,6 +258,37 @@ export function buildExwRows(sheet: ExwSheet, containers: ContainerCount[]): Sur
   return rows;
 }
 
+/** True when two lists are the same charges, line for line (id, name, amounts, unit, remarks). */
+export function sameExwRows(a: SurchargeRow[], b: SurchargeRow[]): boolean {
+  if (a.length !== b.length) return false;
+  const byId = new Map(b.map((r) => [r.id, r]));
+  return a.every((r) => {
+    const o = byId.get(r.id);
+    return !!o && o.name === r.name && o.sell === r.sell && o.buy === r.buy && o.unit === r.unit && o.remarks === r.remarks;
+  });
+}
+
+/**
+ * What to do with the Local Origin Charges when the port, stuffing, containers or terms change.
+ * - "fill": the desk has not touched what was filled (or nothing is filled yet), so fill it again for the new inputs.
+ * - "clear": it is no longer an EXW export and the filled charges are still untouched, so take them back.
+ * - "keep": leave everything alone. The desk edited, deleted or added a charge, typed its own, or opened a saved quote.
+ * `previous` is what was filled last time (null if nothing was filled in this session); `next` is the fill for the new inputs
+ * (null when the quote is not an EXW export now).
+ */
+export function exwFillDecision(args: { current: SurchargeRow[]; previous: SurchargeRow[] | null; next: SurchargeRow[] | null }): "fill" | "clear" | "keep" {
+  const { current, previous, next } = args;
+  const mine = current.filter(isExwRow);
+  const typed = current.length - mine.length;
+  if (!next) {
+    if (!mine.length) return "keep";
+    return previous && sameExwRows(mine, previous) ? "clear" : "keep";
+  }
+  if (typed > 0) return "keep";
+  if (!mine.length) return previous ? "keep" : "fill"; // deleted everything after a fill: that was the desk's choice
+  return previous && sameExwRows(mine, previous) ? "fill" : "keep";
+}
+
 export type ExwValidity = { state: "valid" | "expired" | "undated"; text: string };
 
 export function exwValidity(sheet: ExwSheet, now: Date = new Date()): ExwValidity {
