@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, doc, getDocs, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import type { WonFollowUpValues } from "@/lib/quotes/won-followups";
 import { getFirebaseDb } from "./client";
 
@@ -84,4 +84,9 @@ export async function upsertWonFollowUp(
   if (row.buyRate !== undefined) patch.buyRate = row.buyRate;
   if (row.sellAmount !== undefined) patch.sellAmount = row.sellAmount;
   await setDoc(doc(getFirebaseDb(), "wonFollowUps", row.quoteId), patch, { merge: true });
+}
+
+/** Drops a quote's follow-up row (an immediate Undo of Won, so it does not linger as "pending"). */
+export async function deleteWonFollowUp(quoteId: string): Promise<void> {
+  await deleteDoc(doc(getFirebaseDb(), "wonFollowUps", quoteId));
 }

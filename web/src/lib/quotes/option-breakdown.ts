@@ -20,7 +20,27 @@ import { vendorRowsFromQuote, type VendorPreviewRow } from "./vendor-preview";
 import { mapSurcharges } from "./desk-loader";
 
 /** One named surcharge row's own quoted amount — e.g. "Origin THC" → 4500. */
-export type SurchargeBreakdownLine = { name: string; amount: number; remarks?: string };
+export type SurchargeBreakdownLine = {
+  name: string;
+  amount: number;
+  remarks?: string;
+  /** How the row was priced. Anything other than flat shows as "quantity × rate = total" on the quote. */
+  unit?: "flat" | "kg" | "cbm" | "container";
+  rate?: number;
+  qty?: number;
+};
+/** A calculated surcharge row as a quote line, keeping the rate and quantity when it was priced per kg, cbm or container. */
+export function surchargeLine(r: CalculatedSurcharge): SurchargeBreakdownLine {
+  const line: SurchargeBreakdownLine = { name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined };
+  const rate = quoteSideRate(r.sell > 0 ? r.sell : 0, r.buy > 0 ? r.buy : 0);
+  if ((r.unit === "kg" || r.unit === "cbm" || r.unit === "container") && rate > 0 && r.calculatedCost > 0) {
+    line.unit = r.unit;
+    line.rate = rate;
+    line.qty = Math.round((r.calculatedCost / rate) * 100) / 100;
+  }
+  return line;
+}
+
 /** One FCL container-type row's own quoted amount — e.g. 2 × 40'GP @ 500 → 1000. */
 export type ContainerBreakdownLine = { type: string; qty: number; rate: number; amount: number };
 
@@ -444,10 +464,10 @@ function totalsFromRaw(
     // previously dropped here even though it saved to Firestore fine.
     originLines: originArr
       .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
-      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
+      .map(surchargeLine),
     destLines: destArr
       .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
-      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
+      .map(surchargeLine),
     localOriginFees: pick(
       raw.localOriginTotal,
       computed?.localOriginTotal ?? seaComputed?.localOriginTotal ?? 0,
@@ -462,10 +482,10 @@ function totalsFromRaw(
     ),
     localOriginLines: localOriginArr
       .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
-      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
+      .map(surchargeLine),
     destClearanceLines: destClearanceArr
       .filter((r) => r.calculatedCost > 0 || r.remarks.trim())
-      .map((r) => ({ name: r.name, amount: r.calculatedCost, remarks: r.remarks.trim() || undefined })),
+      .map(surchargeLine),
     containerLines: computeSea && seaCtx.mode === "fcl" ? containerLinesFromRaw(raw) : [],
     ams: computeAir
       ? pick(raw.ams ?? raw.amsFee, computed?.ams ?? 0, selectedFallback.ams, selected)
@@ -506,8 +526,16 @@ function rawOptions(d: Record<string, unknown>): Record<string, unknown>[] {
 
 export type ChargeLine = { label: string; value: string };
 
-/** A remarks-only row (no sell/buy entered) shows its note instead of $0.00. */
-function surchargeLineValue(o: SurchargeBreakdownLine, money: (n: number) => string): string {
+/**
+ * One surcharge row as printed. A row priced per kg, cbm or container shows its working, the same way base freight does:
+ * "8582.80 kg × $0.06 = $514.97". A remarks-only row (no sell/buy entered) shows its note instead of $0.00.
+ */
+export function surchargeLineValue(o: SurchargeBreakdownLine, money: (n: number) => string): string {
+  if (o.amount > 0 && o.unit && o.unit !== "flat" && o.rate && o.qty) {
+    const qty = o.unit === "container" ? `${o.qty} ${o.qty === 1 ? "container" : "containers"}` : `${o.qty.toFixed(2)} ${o.unit}`;
+    const working = `${qty} × ${money(o.rate)} = ${money(o.amount)}`;
+    return o.remarks ? `${working} (${o.remarks})` : working;
+  }
   if (o.amount > 0) return o.remarks ? `${money(o.amount)} (${o.remarks})` : money(o.amount);
   return o.remarks || money(o.amount);
 }

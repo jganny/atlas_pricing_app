@@ -39,6 +39,7 @@ import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
 import { deleteDraft } from "@/lib/firebase/drafts";
 import { buildSeaDraftQuote } from "@/lib/quotes/drafts";
 import { CarrierSuggestions } from "@/components/CarrierSuggestions";
+import { ExwLocalCharges } from "@/components/desks/ExwLocalCharges";
 import { placeCode } from "@/lib/quotes/carrier-suggestions";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
@@ -1231,7 +1232,7 @@ function SeaDeskInner() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[var(--color-atlas-sea)]">
           <Ship className="h-5 w-5" />
-          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Sea desk</h1>
+          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #1D9E75", paddingLeft: 10 }}>Sea desk</h1>
           <Badge tone="info">Phase 7</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1645,6 +1646,17 @@ function SeaDeskInner() {
                   and delivery charges below — the liner, routing and freight rates can stay blank.
                 </p>
               ) : null}
+              <ExwLocalCharges
+                origin={origin}
+                module={module}
+                incoterm={incoterm}
+                seaMode={mode}
+                currency={currency}
+                containers={(selected?.containers ?? []).map((c) => ({ type: c.type, qty: c.qty }))}
+                rows={localOriginCharges}
+                setRows={setLocalOriginCharges}
+                onUseUsd={() => setCurrency("USD")}
+              />
               <div className="space-y-3 rounded-xl border-2 border-[var(--color-atlas-navy)]/20 bg-[var(--color-atlas-gold-soft)]/40 p-3">
                 <p className="text-xs text-[var(--color-text-muted)]">
                   <strong>Local charges — once per quote, not per carrier.</strong> These apply

@@ -1,6 +1,7 @@
 "use client";
 
 import { CircularFolders, RoleChip } from "@/components/CircularFolders";
+import { StationSuggestions } from "@/components/StationSuggestions";
 import { buildFolders } from "@/lib/circulars/folders";
 import { STATION_NAMES, stationByName, stationForOrigin, stationLabel } from "@/lib/circulars/stations";
 import { useMemo, useState } from "react";
@@ -112,6 +113,20 @@ export default function CircularsPage() {
       toast(`Labelled ${stationLabel(name)}`, "success");
     } catch {
       toast("Couldn't save the station. Try again.", "error");
+      void refetch();
+    }
+  }
+
+  /** Applies the reviewed station suggestions: the screen updates at once, then each is saved. */
+  async function applyStations(picks: Array<{ id: string; station: string }>) {
+    if (!picks.length) return;
+    const byId = new Map(picks.map((p) => [p.id, p.station]));
+    queryClient.setQueryData(queryKeys.circulars, circulars.map((x) => (byId.has(x.id) ? { ...x, station: byId.get(x.id) } : x)));
+    try {
+      if (useLiveData) await Promise.all(picks.map((p) => setCircularStation(p.id, p.station)));
+      toast(`Labelled ${picks.length} circular${picks.length === 1 ? "" : "s"}`, "success");
+    } catch {
+      toast("Couldn't save every station. Reloading the list.", "error");
       void refetch();
     }
   }
@@ -527,58 +542,6 @@ export default function CircularsPage() {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {canManage ? (
-        <Card className="border-slate-200 bg-gradient-to-b from-slate-50 to-white p-5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
-            Year tariff
-          </p>
-          <h2 className="mt-1 text-lg font-extrabold text-[var(--color-atlas-navy)]">
-            Upload FedEx / courier Excel
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--color-text-muted)]">
-            Import and Export sheets, weights through 70 kg. Validity defaults to Jan–Dec {tariffYear}.
-            Above 70 kg stays case-by-case. Courier desk fills the matching slab when FedEx is selected
-            and cargo is entered, then sells at +5% on the uploaded tariff (fuel extra). If the file
-            uses Zone A–N columns, include a Country / Zone sheet so USA, UK, UAE match.
-          </p>
-          <Input
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="mt-4 max-w-md"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onCourierTariffFile(f);
-            }}
-          />
-          {courierBook ? (
-            <div className="mt-4 space-y-3">
-              {courierBook.warnings?.length ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                  {courierBook.warnings.join(" ")}
-                </p>
-              ) : null}
-              <CourierTariffBoard book={courierBook} />
-              <Button type="button" disabled={busy} onClick={() => void publishCourierBook()}>
-                Keep {courierBook.carrier} {courierBook.year} live for the year
-              </Button>
-            </div>
-          ) : courierBooks.length ? (
-            <div className="mt-4 space-y-4">
-              {courierBooks.some((b) => courierTariffNeedsReupload(b)) ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                  A live FedEx book was stored as rate numbers (1331, 1443…) instead of Zone A–N.
-                  Re-upload EXPORT FEDEX RATES and IMPORTS RATES so Courier desk can fill rates.
-                </p>
-              ) : null}
-              {courierBooks.map((b) => (
-                <CourierTariffBoard key={b.id} book={b} />
-              ))}
-            </div>
-          ) : null}
-        </Card>
-      ) : courierBooks[0] ? (
-        <CourierTariffBoard book={courierBooks[0]} />
-      ) : null}
 
       {editorOpen ? (
         <Card id="circular-editor" className="border-sky-200 bg-sky-50/40">
@@ -680,6 +643,8 @@ export default function CircularsPage() {
         </Card>
       ) : null}
 
+      {canManage ? <StationSuggestions circulars={circulars} onApply={applyStations} /> : null}
+
       <Card>
         <h2 className="mb-3 font-bold">Documents ({filtered.length})</h2>
         {loading ? (
@@ -701,6 +666,59 @@ export default function CircularsPage() {
           </div>
         )}
       </Card>
+
+      {canManage ? (
+        <Card className="border-slate-200 bg-gradient-to-b from-slate-50 to-white p-5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
+            Year tariff
+          </p>
+          <h2 className="mt-1 text-lg font-extrabold text-[var(--color-atlas-navy)]">
+            Upload FedEx / courier Excel
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--color-text-muted)]">
+            Import and Export sheets, weights through 70 kg. Validity defaults to Jan–Dec {tariffYear}.
+            Above 70 kg stays case-by-case. Courier desk fills the matching slab when FedEx is selected
+            and cargo is entered, then sells at +5% on the uploaded tariff (fuel extra). If the file
+            uses Zone A–N columns, include a Country / Zone sheet so USA, UK, UAE match.
+          </p>
+          <Input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="mt-4 max-w-md"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void onCourierTariffFile(f);
+            }}
+          />
+          {courierBook ? (
+            <div className="mt-4 space-y-3">
+              {courierBook.warnings?.length ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  {courierBook.warnings.join(" ")}
+                </p>
+              ) : null}
+              <CourierTariffBoard book={courierBook} />
+              <Button type="button" disabled={busy} onClick={() => void publishCourierBook()}>
+                Keep {courierBook.carrier} {courierBook.year} live for the year
+              </Button>
+            </div>
+          ) : courierBooks.length ? (
+            <div className="mt-4 space-y-4">
+              {courierBooks.some((b) => courierTariffNeedsReupload(b)) ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  A live FedEx book was stored as rate numbers (1331, 1443…) instead of Zone A–N.
+                  Re-upload EXPORT FEDEX RATES and IMPORTS RATES so Courier desk can fill rates.
+                </p>
+              ) : null}
+              {courierBooks.map((b) => (
+                <CourierTariffBoard key={b.id} book={b} />
+              ))}
+            </div>
+          ) : null}
+        </Card>
+      ) : courierBooks[0] ? (
+        <CourierTariffBoard book={courierBooks[0]} />
+      ) : null}
 
       {canManage ? (
         <Card>

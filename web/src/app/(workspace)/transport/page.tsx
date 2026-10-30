@@ -30,6 +30,9 @@ import { useLiveData } from "@/lib/api";
 import { saveTransportQuote } from "@/lib/firebase/save-transport-warehouse";
 import { loadTransportDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
+import { deleteDraft } from "@/lib/firebase/drafts";
+import { buildTransportDraftQuote } from "@/lib/quotes/drafts";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { VendorCompareList } from "@/components/VendorCompareList";
 import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
@@ -91,6 +94,8 @@ export default function TransportDeskPage() {
   const loader = useQuoteDeskLoader();
   const customerFieldName = useAntiAutofillName("atlas-party-transport");
   const [tab, setTab] = useState<TabId>("lane");
+  /** The saved draft this desk was opened from, or last parked as — saving the quote retires it. */
+  const [parkedId, setParkedId] = useState<string | null>(null);
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
   const [activeLaneId, setActiveLaneId] = useState("");
@@ -356,6 +361,10 @@ export default function TransportDeskPage() {
       setLanes(loaded.lanes.map((l) => newLane(l)));
       setActiveLaneId(loaded.lanes[0]?.id || "");
     }
+    if (loader.draftId) {
+      setParkedId(loader.draftId);
+      if (loader.draftStep === "lane" || loader.draftStep === "cargo" || loader.draftStep === "charges" || loader.draftStep === "terms") setTab(loader.draftStep);
+    }
   }, [loader.sourceQuote]);
 
   const total = useMemo(
@@ -475,6 +484,10 @@ export default function TransportDeskPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       toast("Transport quote saved", "success");
         draft.clear();
+        if (parkedId) {
+          void deleteDraft(parkedId);
+          setParkedId(null);
+        }
     } finally {
       setBusy(false);
     }
@@ -498,12 +511,28 @@ export default function TransportDeskPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Truck className="h-5 w-5 text-[var(--color-atlas-sky)]" />
-          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
+          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #639922", paddingLeft: 10 }}>
             Transport desk
           </h1>
           <Badge tone="info">Phase 10</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
+          <DraftsMenu mode="transport" activeId={parkedId} />
+          <SaveDraftButton
+            mode="transport"
+            step={tab}
+            draftId={parkedId}
+            onSaved={setParkedId}
+            build={() => ({
+              customer,
+              origin: lanes[0]?.origin ?? "",
+              destination: lanes[0]?.destination ?? "",
+              quote: buildTransportDraftQuote({
+                customer, creator: user?.username ?? "", lanes, vehicleType, serviceType, currency, commodity, ewayBillNo,
+                ewayRequired, gstin, invoiceValue, validity, truckers, notes, terms,
+              }),
+            })}
+          />
           <Button type="button" variant="secondary" className="h-9" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             Preview

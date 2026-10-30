@@ -53,6 +53,7 @@ import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { WhatsNewLink } from "./WhatsNew";
+import { MODE_COLORS, type ModeKey } from "@/lib/ui/colors";
 import { TourLink } from "./GuidedTour";
 import { ChatProvider, useTeamChatOptional } from "./chat/ChatProvider";
 import { useLeadHandovers } from "@/hooks/use-lead-handovers";
@@ -132,6 +133,8 @@ function NavLink({
   badgeHint?: (n: number) => string;
 }) {
   const active = pathActive(pathname, item.href, item.exact);
+  // The five kinds of shipment each have their own colour (see lib/ui/colors).
+  const deskColor = MODE_COLORS[item.href.replace(/^\//, "") as ModeKey];
   return (
     <Link
       href={item.href}
@@ -157,9 +160,12 @@ function NavLink({
               ? "top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-white"
               : "top-0 h-full w-1 bg-[var(--color-atlas-sky)]",
           )}
+          style={deskColor ? { backgroundColor: deskColor } : undefined}
         />
       ) : null}
-      <item.icon className="h-4 w-4" />
+      <span className="inline-flex" style={deskColor ? { color: deskColor } : undefined}>
+        <item.icon className="h-4 w-4" />
+      </span>
       <span className="flex-1">{item.label}</span>
       {badgeCount ? (
         <span

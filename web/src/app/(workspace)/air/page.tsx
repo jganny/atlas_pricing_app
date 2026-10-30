@@ -1241,7 +1241,7 @@ function AirDeskInner() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[var(--color-atlas-air)]">
           <PlaneTakeoff className="h-5 w-5" />
-          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Air desk</h1>
+          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #378ADD", paddingLeft: 10 }}>Air desk</h1>
           <Badge tone="info">Phase 7</Badge>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -17,6 +17,9 @@ import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
 import { useAuthStore } from "@/store/auth";
 import { useLiveData } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/query-keys";
+import { canQuickWon, quickWon, quickWonFromRow, undoQuickWon, type QuickWon } from "@/lib/quotes/won-actions";
 import { lookupQuoteByRef, lookupQuotesByText } from "@/lib/firebase/archive-lookup";
 import type { EnquiryRecord } from "@/lib/types";
 import {
@@ -142,6 +145,87 @@ function EnquiryDatabaseInner() {
   const rows = useMemo(() => mergeLocalEnquiries(liveRows), [liveRows]);
   const user = useAuthStore((s) => s.user);
   const admin = isAdminUser(user?.username, user?.role);
+  const queryClient = useQueryClient();
+  const [wonBusy, setWonBusy] = useState<string | null>(null);
+  const [lastWon, setLastWon] = useState<QuickWon | null>(null);
+  // The Undo bar stays open for 10 seconds, then the Won stands.
+  useEffect(() => {
+    if (!lastWon) return;
+    const t = window.setTimeout(() => setLastWon(null), 10_000);
+    return () => window.clearTimeout(t);
+  }, [lastWon]);
+
+  function setStatusInCache(id: string, status: EnquiryRecord["status"]) {
+    queryClient.setQueryData(queryKeys.enquiries, (old: EnquiryRecord[] | undefined) =>
+      old ? old.map((e) => (e.id === id ? { ...e, status } : e)) : old,
+    );
+  }
+  async function refreshAfterWon() {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.wonFollowUps });
+  }
+
+  async function onWonToggle(row: EnquiryRecord, on: boolean) {
+    if (!useLiveData) {
+      toast("Mock mode — status changes disabled.", "info");
+      return;
+    }
+    const username = user?.username || "";
+    if (on) {
+      setWonBusy(row.id);
+      setStatusInCache(row.id, "won");
+      try {
+        const won = await quickWon(row, username);
+        setLastWon(won);
+        toast("Moved to Won. NRS has been told.", "success");
+        await refreshAfterWon();
+      } catch (e) {
+        setStatusInCache(row.id, row.status);
+        toast(e instanceof Error ? e.message : "Could not mark it Won.", "error");
+      } finally {
+        setWonBusy(null);
+      }
+      return;
+    }
+    if (!window.confirm(`Switch ${row.customer || row.ref} back to Quoted? NRS may already be working on it; their notes stay in the NRS list.`)) return;
+    setWonBusy(row.id);
+    setStatusInCache(row.id, "quoted");
+    try {
+      await undoQuickWon(quickWonFromRow(row), { withdrawNrs: false });
+      toast("Switched back to Quoted.", "success");
+      await refreshAfterWon();
+    } catch (e) {
+      setStatusInCache(row.id, "won");
+      toast(e instanceof Error ? e.message : "Could not switch it back.", "error");
+    } finally {
+      setWonBusy(null);
+    }
+  }
+
+  async function undoLastWon() {
+    const w = lastWon;
+    if (!w) return;
+    setLastWon(null);
+    setStatusInCache(w.quoteId, "quoted");
+    try {
+      await undoQuickWon(w, { withdrawNrs: true });
+      toast("Undone. The quote is back to Quoted and NRS was not troubled.", "success");
+      await refreshAfterWon();
+    } catch (e) {
+      setStatusInCache(w.quoteId, "won");
+      toast(e instanceof Error ? e.message : "Could not undo.", "error");
+    }
+  }
+  const wonToggle = useMemo(
+    () => ({
+      canToggle: (r: EnquiryRecord) => canQuickWon(r, user?.username, admin),
+      onToggle: (r: EnquiryRecord, on: boolean) => void onWonToggle(r, on),
+      busyId: wonBusy,
+    }),
+    // onWonToggle is re-created each render but only reads what these already track
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.username, admin, wonBusy],
+  );
 
   const [search, setSearch] = useState(searchParams?.get("q") || "");
   const [pipeline, setPipeline] = useState(searchParams?.get("pipeline") || "all");
@@ -779,6 +863,17 @@ function EnquiryDatabaseInner() {
           </Card>
         ) : null}
 
+        {lastWon ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-950" role="status" data-testid="won-undo">
+            <span className="flex-1">
+              <b>{lastWon.customer || lastWon.ref}</b> moved to Won. NRS has been told and will fill in the shipper, consignee and commodity.
+            </span>
+            <Button type="button" size="sm" variant="secondary" onClick={() => void undoLastWon()}>
+              Undo
+            </Button>
+          </div>
+        ) : null}
+
         <Card className="overflow-hidden p-0">
           {isLoading ? (
             <TableSkeleton rows={8} />
@@ -791,6 +886,7 @@ function EnquiryDatabaseInner() {
               visibleColumns={columns}
               sorting={sorting}
               onSortingChange={setSorting}
+              wonToggle={wonToggle}
             />
           )}
         </Card>

@@ -54,6 +54,9 @@ import { loadCourierDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
+import { deleteDraft } from "@/lib/firebase/drafts";
+import { buildCourierDraftQuote } from "@/lib/quotes/drafts";
 import { toast } from "@/components/Toast";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import type { SavedQuote } from "@/lib/types";
@@ -190,6 +193,8 @@ function CourierDeskInner() {
   const { data: tariffBooks = [] } = useCourierTariffs();
   const customerFieldName = useAntiAutofillName("atlas-party-courier");
   const [tab, setTab] = useState<Tab>("shipment");
+  /** The saved draft this desk was opened from, or last parked as — saving the quote retires it. */
+  const [parkedId, setParkedId] = useState<string | null>(null);
   const [customer, setCustomer] = useState("");
   const [lanes, setLanes] = useState<QuoteLane[]>(() => [newLane()]);
   const [activeLaneId, setActiveLaneId] = useState("");
@@ -534,6 +539,10 @@ function CourierDeskInner() {
     setOriginCharges(loaded.originCharges);
     setDestCharges(loaded.destCharges);
     if (loaded.terms) setTerms(loaded.terms);
+    if (loader.draftId) {
+      setParkedId(loader.draftId);
+      if (loader.draftStep === "shipment" || loader.draftStep === "packages" || loader.draftStep === "carriers" || loader.draftStep === "terms") setTab(loader.draftStep);
+    }
   }, [loader.sourceQuote]);
 
   // Shared across every card — chargeable weight/zone depend only on cargo
@@ -605,6 +614,7 @@ function CourierDeskInner() {
 
   function applyReset() {
     draft.clear();
+    setParkedId(null);
     const lane = newLane();
     setCustomer("");
     setLanes([lane]);
@@ -825,6 +835,10 @@ function CourierDeskInner() {
         setSaveMsg(msg);
         setSaveEnquiryPath(savedEnquiryHref(row));
         draft.clear();
+        if (parkedId) {
+          void deleteDraft(parkedId);
+          setParkedId(null);
+        }
         toast(msg, cloud === "cloud-failed" ? "info" : "success");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Save failed";
@@ -858,6 +872,7 @@ function CourierDeskInner() {
       fallbackLaneId,
       multiLane,
       allLanesTotal,
+      parkedId,
     ],
   );
 
@@ -881,7 +896,7 @@ function CourierDeskInner() {
         <div>
           <div className="flex items-center gap-2 text-violet-600">
             <Package className="h-5 w-5" />
-            <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">Courier desk</h1>
+            <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #D85A30", paddingLeft: 10 }}>Courier desk</h1>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             4-tab flow — shipment, packages, carriers, terms. Add a lane for extra city pairs, and
@@ -894,6 +909,22 @@ function CourierDeskInner() {
             <RotateCcw className="mr-2 h-4 w-4" />
             Reset
           </Button>
+          <DraftsMenu mode="courier" activeId={parkedId} />
+          <SaveDraftButton
+            mode="courier"
+            step={tab}
+            draftId={parkedId}
+            onSaved={setParkedId}
+            build={() => ({
+              customer,
+              origin: originCity,
+              destination: destCity,
+              quote: buildCourierDraftQuote({
+                customer, creator: user?.username ?? "", lanes, originCountry, destCountry, originPin, destPin, scope, currency,
+                gstEnabled, validity, packages, couriers, originCharges, destCharges, terms,
+              }),
+            })}
+          />
           <Button type="button" variant="secondary" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-2 h-4 w-4" />
             Preview

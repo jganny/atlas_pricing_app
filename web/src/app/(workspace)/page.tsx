@@ -30,6 +30,7 @@ import { listOfflineQuotes, removeOfflineQuote } from "@/lib/quotes/offline-cach
 import { NRS_CHANGED_EVENT, dismissNrsAlert, listNrsAlerts, type NrsAlert } from "@/lib/quotes/nrs-alerts";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { cn } from "@/lib/utils";
+import { tint } from "@/lib/ui/colors";
 import { demoLabel } from "@/lib/demo-mode";
 
 export default function DashboardPage() {
@@ -207,23 +208,23 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="atlas-metric-strip" data-testid="home-tiles">
-            <div className="atlas-metric-cell">
+            <div className="atlas-metric-cell" style={{ backgroundColor: tint("#EF9F27", 0.14) }}>
               <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Waiting for you</div>
               <div className={cn("mt-1 text-2xl font-extrabold tabular-nums", attentionAll.length ? "text-amber-600" : "text-[var(--color-atlas-navy)]")}>{attentionAll.length}</div>
             </div>
-            <div className="atlas-metric-cell">
+            <div className="atlas-metric-cell" style={{ backgroundColor: tint("#378ADD", 0.14) }}>
               <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Quoted this month</div>
               <div className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--color-atlas-navy)]">{totals.quoted}</div>
             </div>
-            <div className="atlas-metric-cell">
+            <div className="atlas-metric-cell" style={{ backgroundColor: tint("#34A853", 0.14) }}>
               <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Won</div>
               <div className="mt-1 text-2xl font-extrabold tabular-nums text-emerald-700">{totals.won}</div>
             </div>
-            <div className="atlas-metric-cell">
+            <div className="atlas-metric-cell" style={{ backgroundColor: tint("#7F77DD", 0.14) }}>
               <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Won rate</div>
               <div className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--color-atlas-navy)]">{totals.wonPct}%</div>
             </div>
-            <div className="atlas-metric-cell">
+            <div className="atlas-metric-cell" style={{ backgroundColor: tint("#1D9E75", 0.14) }}>
               <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Avg. quote time</div>
               <div className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--color-atlas-navy)]">{secondsLabel(totals.avgSeconds)}</div>
             </div>

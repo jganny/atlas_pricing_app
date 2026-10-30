@@ -11,6 +11,21 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.123",
+    date: "2026-10-30",
+    items: [
+      "Sea export on EXW terms: the local charges now fill in by themselves from the agents' sheet for the origin port (Mumbai, Chennai, Mundra, and the Bangalore, Hyderabad and Delhi ICDs). Choose factory or CFS / ICD stuffing on the card. Charges are per 20' or 40' for the containers on the quote, and any amount the sheet says “will revert” keeps its note.",
+      "Anything entered per kilo, per cbm or per container now shows its working on the quote, the same way base freight does. For example Handling prints as “8582.80 kg × $0.06 = $514.97”.",
+      "Circulars: the documents now come first, and the FedEx / courier upload and tariffs sit below them.",
+      "Circulars: “Review suggestions” fills in missing stations from the airport code in the title (for example EK_BLR becomes Bangalore). You tick the ones to keep, then press Apply.",
+      "Save draft now works on the Courier, Transport and Warehouse desks too.",
+      "Fuel circulars from shipping lines now sit in the Liner folders, with their tariff.",
+      "Enquiry DB: a Won switch on Air Nom and Sea Nom quotes. One tap moves the quote to Won and tells NRS, who fill in the shipper, consignee and commodity. Undo stays open for 10 seconds.",
+      "A little colour: each kind of shipment and each status has its own colour in Enquiry DB, each desk's title and menu entry carries its colour, and the Home tiles are tinted.",
+      "The factory / CFS stuffing choice is now a sliding switch.",
+    ],
+  },
+  {
     version: "0.3.122",
     date: "2026-10-30",
     items: [

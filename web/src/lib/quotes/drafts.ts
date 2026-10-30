@@ -5,9 +5,10 @@
  */
 import type { SavedQuote } from "@/lib/types";
 import { belongsToViewersDesk } from "@/lib/auth/desk-seats";
-import { serializeAirlineOption, serializeLinerOption, type AirlineOption, type LinerOption } from "@/lib/pricing/carrier-options";
+import { serializeAirlineOption, serializeLinerOption, type AirlineOption, type CourierOption, type LinerOption, type TruckerOption } from "@/lib/pricing/carrier-options";
 
-export type DraftMode = "air" | "sea";
+export type DraftMode = "air" | "sea" | "courier" | "transport" | "warehouse";
+export const DRAFT_MODES: DraftMode[] = ["air", "sea", "courier", "transport", "warehouse"];
 
 export interface DraftRow {
   id: string;
@@ -93,6 +94,51 @@ export function buildSeaDraftQuote(
       localOriginCharges: s.localOriginCharges,
       destClearanceCharges: s.destClearanceCharges,
       termsAndConditions: s.terms,
+    },
+  };
+}
+
+export function buildCourierDraftQuote(s: {
+  customer: string; creator: string; lanes: Array<{ id: string; origin: string; destination: string }>;
+  originCountry: string; destCountry: string; originPin: string; destPin: string; scope: string; currency: string;
+  gstEnabled: boolean; validity: string; packages: unknown; couriers: CourierOption[]; originCharges: unknown; destCharges: unknown; terms: string;
+}): SavedQuote {
+  return {
+    id: "", customer: s.customer, creator: s.creator, status: "draft", type: "courier", currency: s.currency,
+    details: {
+      originCity: s.lanes[0]?.origin ?? "", destCity: s.lanes[0]?.destination ?? "",
+      originCountry: s.originCountry, destCountry: s.destCountry, originPin: s.originPin, destPin: s.destPin,
+      scope: s.scope, gstEnabled: s.gstEnabled, validity: s.validity, packages: s.packages,
+      carrierQuotes: s.couriers, lanes: s.lanes, localOriginCharges: s.originCharges, destClearanceCharges: s.destCharges,
+      termsAndConditions: s.terms,
+    },
+  };
+}
+
+export function buildTransportDraftQuote(s: {
+  customer: string; creator: string; lanes: Array<{ id: string; origin: string; destination: string }>; vehicleType: string; serviceType: string;
+  currency: string; commodity: string; ewayBillNo: string; ewayRequired: boolean; gstin: string; invoiceValue: number; validity: string;
+  truckers: TruckerOption[]; notes: string; terms: string;
+}): SavedQuote {
+  return {
+    id: "", customer: s.customer, creator: s.creator, status: "draft", type: "transport", currency: s.currency, notes: s.notes,
+    details: {
+      lanes: s.lanes, vehicleType: s.vehicleType, serviceType: s.serviceType, commodity: s.commodity, ewayBillNo: s.ewayBillNo,
+      ewayRequired: s.ewayRequired, gstin: s.gstin, invoiceValue: s.invoiceValue, validity: s.validity, truckers: s.truckers,
+      termsAndConditions: s.terms,
+    },
+  };
+}
+
+export function buildWarehouseDraftQuote(s: {
+  customer: string; creator: string; location: string; otherDescription: string; storageType: string; currency: string;
+  ratePerCbm: number; cbm: number; handling: number; days: number; buyTotal: number; validity: string; notes: string; terms: string;
+}): SavedQuote {
+  return {
+    id: "", customer: s.customer, creator: s.creator, status: "draft", type: "warehouse", currency: s.currency, notes: s.notes,
+    details: {
+      location: s.location, otherDescription: s.otherDescription, storageType: s.storageType, ratePerCbm: s.ratePerCbm, cbm: s.cbm,
+      handling: s.handling, days: s.days, buyTotal: s.buyTotal, validity: s.validity, termsAndConditions: s.terms,
     },
   };
 }

@@ -35,7 +35,7 @@ export function SaveDraftButton({
   onSaved,
 }: {
   mode: DraftMode;
-  build: () => { quote: SavedQuote; customer: string; origin: string; destination: string };
+  build: () => { quote: SavedQuote; customer: string; origin: string; destination: string; /** shown instead of "origin → destination" (e.g. a warehouse location) */ route?: string };
   step: string;
   draftId: string | null;
   onSaved: (id: string) => void;
@@ -52,7 +52,7 @@ export function SaveDraftButton({
     if (!user) return;
     setBusy(true);
     try {
-      const { quote, customer, origin, destination } = build();
+      const { quote, customer, origin, destination, route } = build();
       const id = draftId ?? newDraftId();
       const t = draftTitle(customer, origin, destination);
       await saveDraft({
@@ -61,7 +61,7 @@ export function SaveDraftButton({
         seat: currentDeskSeatId(user.username) ?? "",
         creator: user.username,
         customer: t.customer,
-        route: t.route,
+        route: route?.trim() || t.route,
         waitingFor: waiting.trim(),
         quote,
         step,

@@ -35,6 +35,8 @@ export function mapSurcharges(raw: unknown): SurchargeRow[] | undefined {
     .map((s) => {
       const row = s as Record<string, unknown>;
       return createSurchargeRow({
+        // EXW sheet rows keep their id, so reopening a quote still knows which rows came from the sheet.
+        ...(String(row.id ?? "").startsWith("exw_") ? { id: String(row.id) } : {}),
         name: String(row.name ?? ""),
         sell: Number(row.sell ?? row.rate ?? 0),
         buy: Number(row.buy ?? row.buyRate ?? 0),

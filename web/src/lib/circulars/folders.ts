@@ -25,6 +25,7 @@ export function kindOf(category: string | undefined): FolderKind {
       return "airline";
     case "sea_tariff":
     case "line_circular":
+    case "fuel_circular_shipping":
       return "liner";
     case "courier_tariff":
       return "courier";
@@ -40,6 +41,7 @@ export function roleOf(category: string | undefined): FileRole {
     case "courier_tariff":
       return "tariff";
     case "fuel_circular_airline":
+    case "fuel_circular_shipping":
       return "fsc";
     case "line_circular":
       return "circular";

@@ -1,6 +1,6 @@
 "use client";
 
-import { arrayUnion, collection, doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import { arrayUnion, collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import type { NrsPartyFields, NrsRegistryEntry, NrsRegistryFollowUp } from "@/lib/quotes/nrs-registry";
 import { partyUpdates } from "@/lib/quotes/nrs-registry";
 import { getFirebaseDb } from "./client";
@@ -34,4 +34,9 @@ export async function updateNrsRegistryParties(id: string, fields: NrsPartyField
 
 export async function addNrsRegistryFollowUp(id: string, entry: NrsRegistryFollowUp): Promise<void> {
   await updateDoc(doc(getFirebaseDb(), COLLECTION, id), { followUps: arrayUnion(clean(entry)) });
+}
+
+/** Removes a booking that was added by mistake (an immediate Undo of Won). */
+export async function deleteNrsRegistryEntry(id: string): Promise<void> {
+  await deleteDoc(doc(getFirebaseDb(), COLLECTION, id));
 }

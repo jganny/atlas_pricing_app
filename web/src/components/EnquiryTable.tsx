@@ -11,6 +11,8 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui";
+import { ModeChip, StatusChip } from "@/components/Chips";
+import { ToggleSwitch } from "@/components/ToggleSwitch";
 import { cn } from "@/lib/utils";
 import type { EnquiryRecord } from "@/lib/types";
 import {
@@ -57,6 +59,7 @@ export function EnquiryTable({
   visibleColumns,
   sorting: controlledSorting,
   onSortingChange: controlledOnSortingChange,
+  wonToggle,
 }: {
   rows: EnquiryRecord[];
   selectedId: string | null;
@@ -68,6 +71,8 @@ export function EnquiryTable({
    * it. Falls back to internal state when the caller doesn't need that. */
   sorting?: SortingState;
   onSortingChange?: (updater: SortingState | ((old: SortingState) => SortingState)) => void;
+  /** One-tap Won on quotes the viewer may switch (see lib/quotes/won-actions). Leave out to hide the column. */
+  wonToggle?: { canToggle: (row: EnquiryRecord) => boolean; onToggle: (row: EnquiryRecord, on: boolean) => void; busyId: string | null };
 }) {
   const [internalSorting, setInternalSorting] = useState<SortingState>([{ id: "ref", desc: true }]);
   const sorting = controlledSorting ?? internalSorting;
@@ -118,9 +123,7 @@ export function EnquiryTable({
         {
           accessorKey: "mode",
           header: "Mode",
-          cell: ({ getValue }) => (
-            <span className="uppercase">{String(getValue())}</span>
-          ),
+          cell: ({ getValue }) => <ModeChip mode={String(getValue())} />,
         },
       ];
       if (vis.lane) {
@@ -156,23 +159,30 @@ export function EnquiryTable({
       defs.push({
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => {
-          const status = row.original.status;
-          return (
-            <Badge
-              tone={
-                status === "open" || status === "quoted"
-                  ? "warn"
-                  : status === "won"
-                    ? "success"
-                    : "neutral"
-              }
-            >
-              {status}
-            </Badge>
-          );
-        },
+        cell: ({ row }) => <StatusChip status={row.original.status} />,
       });
+      if (wonToggle) {
+        defs.push({
+          id: "won",
+          header: "Won",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const r = row.original;
+            if (!wonToggle.canToggle(r)) return <span className="text-slate-300">—</span>;
+            return (
+              <span className="inline-flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <ToggleSwitch
+                  label={`Mark ${r.customer || r.ref} as Won`}
+                  checked={r.status === "won"}
+                  disabled={wonToggle.busyId === r.id}
+                  onChange={(on) => wonToggle.onToggle(r, on)}
+                  data-testid="won-switch"
+                />
+              </span>
+            );
+          },
+        });
+      }
       if (vis.sla) {
         defs.push({
           accessorKey: "slaHoursOpen",
@@ -219,7 +229,7 @@ export function EnquiryTable({
       }
       return defs;
     },
-    [metricModes, showBuy, vis.amount, vis.desk, vis.gp, vis.lane, vis.sla, vis.tonnage],
+    [metricModes, showBuy, vis.amount, vis.desk, vis.gp, vis.lane, vis.sla, vis.tonnage, wonToggle],
   );
 
   const table = useReactTable({

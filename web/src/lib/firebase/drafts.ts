@@ -2,7 +2,7 @@
 
 import { collection, deleteDoc, doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { useLiveData } from "@/lib/api";
-import type { DraftRow } from "@/lib/quotes/drafts";
+import { DRAFT_MODES, type DraftMode, type DraftRow } from "@/lib/quotes/drafts";
 import { getFirebaseDb } from "./client";
 
 /**
@@ -40,7 +40,7 @@ function fromDoc(id: string, x: Record<string, unknown>): DraftRow | null {
   try {
     return {
       id,
-      mode: x.mode === "sea" ? "sea" : "air",
+      mode: DRAFT_MODES.includes(x.mode as DraftMode) ? (x.mode as DraftMode) : "air",
       seat: String(x.seat ?? ""),
       creator: String(x.creator ?? ""),
       customer: String(x.customer ?? ""),

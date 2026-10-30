@@ -27,6 +27,9 @@ import { useLiveData } from "@/lib/api";
 import { saveWarehouseQuote } from "@/lib/firebase/save-transport-warehouse";
 import { loadWarehouseDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
+import { deleteDraft } from "@/lib/firebase/drafts";
+import { buildWarehouseDraftQuote } from "@/lib/quotes/drafts";
 import { queryKeys } from "@/hooks/query-keys";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
@@ -63,6 +66,8 @@ export default function WarehouseDeskPage() {
   const loader = useQuoteDeskLoader();
   const customerFieldName = useAntiAutofillName("atlas-party-warehouse");
   const [tab, setTab] = useState<WhTab>("details");
+  /** The saved draft this desk was opened from, or last parked as — saving the quote retires it. */
+  const [parkedId, setParkedId] = useState<string | null>(null);
   const [customer, setCustomer] = useState("");
   const [location, setLocation] = useState<string>(WAREHOUSE_LOCATIONS[0]);
   const [otherDescription, setOtherDescription] = useState("");
@@ -205,6 +210,10 @@ export default function WarehouseDeskPage() {
     setValidity(loaded.validity);
     setNotes(loaded.notes);
     setTerms(loaded.terms);
+    if (loader.draftId) {
+      setParkedId(loader.draftId);
+      if (loader.draftStep === "details" || loader.draftStep === "storage" || loader.draftStep === "terms") setTab(loader.draftStep);
+    }
   }, [loader.sourceQuote]);
 
   const storage = ratePerCbm * cbm * Math.max(1, days);
@@ -298,6 +307,10 @@ export default function WarehouseDeskPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.enquiries });
       toast("Warehouse quote saved", "success");
         draft.clear();
+        if (parkedId) {
+          void deleteDraft(parkedId);
+          setParkedId(null);
+        }
     } finally {
       setBusy(false);
     }
@@ -332,12 +345,29 @@ export default function WarehouseDeskPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Warehouse className="h-5 w-5 text-[var(--color-atlas-sky)]" />
-          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
+          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #7F77DD", paddingLeft: 10 }}>
             Warehouse desk
           </h1>
           <Badge tone="info">Phase 10</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
+          <DraftsMenu mode="warehouse" activeId={parkedId} />
+          <SaveDraftButton
+            mode="warehouse"
+            step={tab}
+            draftId={parkedId}
+            onSaved={setParkedId}
+            build={() => ({
+              customer,
+              origin: "",
+              destination: "",
+              route: location === "Other" || !location ? otherDescription || "No location yet" : location,
+              quote: buildWarehouseDraftQuote({
+                customer, creator: user?.username ?? "", location, otherDescription, storageType, currency, ratePerCbm, cbm, handling,
+                days, buyTotal, validity, notes, terms,
+              }),
+            })}
+          />
           <Button type="button" variant="secondary" className="h-9" data-testid="desk-preview" onClick={handlePreview}>
             <Eye className="mr-1.5 h-4 w-4" />
             Preview

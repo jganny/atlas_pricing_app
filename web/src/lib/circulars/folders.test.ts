@@ -8,6 +8,8 @@ assert.equal(kindOf("fuel_circular_airline"), "airline");
 assert.equal(kindOf("sea_tariff"), "liner");
 assert.equal(kindOf("line_circular"), "liner");
 assert.equal(kindOf("courier_tariff"), "courier");
+assert.equal(kindOf("fuel_circular_shipping"), "liner", "a liner's fuel circular sits with the liners");
+assert.equal(roleOf("fuel_circular_shipping"), "fsc");
 assert.equal(kindOf("general"), "general");
 assert.equal(kindOf(undefined), "general");
 assert.equal(roleOf("fuel_circular_airline"), "fsc");

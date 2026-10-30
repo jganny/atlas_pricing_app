@@ -169,6 +169,23 @@ export function updateNrsFollowUp(
   return next;
 }
 
+/**
+ * Takes a quote's handover back from the NRS desk: its pending follow-up is removed and its alert is dismissed.
+ * Used only for an immediate Undo, before anyone has worked on it.
+ */
+export function withdrawNrsHandover(quoteId: string, ref: string) {
+  const all = listNrsFollowUps();
+  const gone = all.filter((f) => f.quoteId === quoteId && f.status === "pending");
+  if (gone.length) {
+    persistFollowUps(all.filter((f) => !gone.includes(f)));
+    gone.forEach((f) => mirror?.removeFollowUp(f.id));
+  }
+  listNrsAlerts()
+    .filter((a) => a.quoteRef === ref && !a.dismissed)
+    .forEach((a) => dismissNrsAlert(a.id));
+  notifyChanged();
+}
+
 export function listPendingNrsFollowUps(): NrsFollowUp[] {
   return listNrsFollowUps().filter((f) => f.status === "pending");
 }
