@@ -193,7 +193,15 @@ export function EnquiryInspector({
         sellAmount: sell,
       };
       await upsertWonFollowUp(
-        { quoteId: row.id, ref, customer: row.customer, wonAt: new Date().toISOString(), ...followUpValues },
+        {
+          quoteId: row.id,
+          ref,
+          customer: row.customer,
+          wonAt: new Date().toISOString(),
+          ownerSeat: quoteDeskSeatId(row) ?? "",
+          ownerLogin: row.creator || user?.username || "",
+          ...followUpValues,
+        },
         user?.username || "",
       );
       const missing = missingWonFields(followUpValues);

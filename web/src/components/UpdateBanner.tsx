@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { appVersion } from "@/lib/env";
 import { Button } from "@/components/ui";
+import { WhatsNewInline } from "@/components/WhatsNew";
 import { bannerVisibleAfterLoad, beginRefreshReload } from "@/lib/app-update";
 
 async function applyRefreshNow() {
@@ -24,7 +25,7 @@ async function applyRefreshNow() {
 }
 
 /**
- * Sticky update banner — stays until the user clicks Refresh now.
+ * Sticky update banner — stays until the user presses Update now.
  * One click reloads the tab once; a session guard stops SW claim from looping.
  */
 export function UpdateBanner() {
@@ -43,8 +44,7 @@ export function UpdateBanner() {
       className="sticky top-0 z-[100] flex flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-950"
     >
       <span>
-        <strong>App updated</strong> (v{appVersion}). Click refresh to load the latest desks and
-        fixes — this banner stays until you do.
+        <strong>Update ready</strong> (v{appVersion.replace(/-(test-app|demo)$/, "")}). See what changed below, then press Update — this banner stays until you do.
       </span>
       <Button
         type="button"
@@ -56,8 +56,9 @@ export function UpdateBanner() {
         }}
       >
         <RefreshCw className="h-3.5 w-3.5" />
-        Refresh now
+        Update now
       </Button>
+      <WhatsNewInline />
     </div>
   );
 }

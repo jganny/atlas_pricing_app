@@ -38,6 +38,7 @@ import {
 import { VendorCompareList } from "@/components/VendorCompareList";
 import { useCustomsHolidays } from "@/hooks/use-atlas-data";
 import { holidayAdvisoryText, relevantHolidaysForUserBranch } from "@/lib/quotes/customs-holidays";
+import { formatValidity } from "@/lib/quotes/validity";
 
 function BreakdownPanel({
   option,
@@ -465,9 +466,9 @@ export function QuotePreviewModal({
                             {" · "}
                             {String(lane.airline ?? "—")}
                             {String(lane.validity ?? "").trim()
-                              ? ` · valid ${String(lane.validity)}`
+                              ? ` · valid ${formatValidity(String(lane.validity))}`
                               : quotedOnLane?.validity
-                                ? ` · valid ${quotedOnLane.validity}`
+                                ? ` · valid ${formatValidity(quotedOnLane.validity)}`
                                 : ""}
                           </span>
                           <span className="text-lg font-extrabold text-emerald-700">{money(lane.amount, cur)}</span>

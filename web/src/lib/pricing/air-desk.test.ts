@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { WeightBreaks } from "@atlas/pricing-core";
-import { computeAdjacentBreakComparison, computeAirlineTotals, EMPTY_AIR_BREAKS } from "./air-desk";
+import { computeAdjacentBreakComparison, computeAirlineTotals, EMPTY_AIR_BREAKS, visibleAirBreaks } from "./air-desk";
 import { createAirlineOption } from "./carrier-options";
 import { createSurchargeRow } from "./surcharges";
 
@@ -64,5 +64,13 @@ assert.equal(
   withoutShared.origin[0]?.calculatedCost,
   "the carrier's own Fuel Surcharge must be untouched by the shared charges",
 );
+
+// An amended quote must not look as if its freight went missing: a break that already holds a rate stays visible
+// next to the active one, even when it is not the break the current weight falls in.
+const savedRates: WeightBreaks = { ...EMPTY_AIR_BREAKS, plus300: { sell: 4.9, buy: 4.1 } };
+assert.deepEqual(visibleAirBreaks(150, "plus100", false), ["plus100"], "no saved rate elsewhere: only the active break");
+assert.deepEqual(visibleAirBreaks(150, "plus100", false, savedRates), ["plus100", "plus300"], "a saved rate on another break stays in view");
+assert.deepEqual(visibleAirBreaks(150, "plus300", false, savedRates), ["plus300"], "the active break is never listed twice");
+assert.equal(visibleAirBreaks(150, "plus100", true, savedRates).length, 7, "show-all still shows every break");
 
 console.log("air-desk.test.ts: all assertions passed");

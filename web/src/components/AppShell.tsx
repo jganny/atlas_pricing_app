@@ -31,7 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { appVersion } from "@/lib/env";
 import { useAuthStore } from "@/store/auth";
-import { useWonFollowUps } from "@/hooks/use-atlas-data";
+import { useScopedWonFollowUps } from "@/hooks/use-scoped-won-followups";
 import { escalationTier, missingWonFields } from "@/lib/quotes/won-followups";
 import { toast } from "@/components/Toast";
 import { useNrsLiveAlerts } from "@/hooks/use-nrs-live-alerts";
@@ -52,6 +52,7 @@ import { demoLabel } from "@/lib/demo-mode";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
+import { WhatsNewLink } from "./WhatsNew";
 import { ChatProvider, useTeamChatOptional } from "./chat/ChatProvider";
 import { useLeadHandovers } from "@/hooks/use-lead-handovers";
 import { SessionTracker } from "@/components/SessionTracker";
@@ -119,12 +120,15 @@ function NavLink({
   onNavigate,
   dark,
   badgeCount,
+  badgeHint,
 }: {
   item: NavItem;
   pathname: string;
   onNavigate?: () => void;
   dark?: boolean;
   badgeCount?: number;
+  /** What the number counts, e.g. "Quote Hub job waiting" — shown on hover and read aloud. */
+  badgeHint?: (n: number) => string;
 }) {
   const active = pathActive(pathname, item.href, item.exact);
   return (
@@ -157,7 +161,11 @@ function NavLink({
       <item.icon className="h-4 w-4" />
       <span className="flex-1">{item.label}</span>
       {badgeCount ? (
-        <span className="rounded-full bg-[var(--color-atlas-error)] px-1.5 py-0.5 text-[10px] font-extrabold text-white">
+        <span
+          className="rounded-full bg-[var(--color-atlas-error)] px-1.5 py-0.5 text-[10px] font-extrabold text-white"
+          title={badgeHint?.(badgeCount)}
+          aria-label={badgeHint?.(badgeCount)}
+        >
           {badgeCount}
         </span>
       ) : null}
@@ -179,7 +187,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const admin = isAdminUser(user?.username, user?.role);
   // Admin only: leads that sales people handed to each other since the admin last looked.
   const { unseen: handoverUnseen } = useLeadHandovers(admin);
-  const { data: wonFollowUps = [] } = useWonFollowUps();
+  const { rows: wonFollowUps } = useScopedWonFollowUps();
   const pendingRows = useMemo(
     () => wonFollowUps.filter((r) => missingWonFields(r).length > 0),
     [wonFollowUps],
@@ -277,6 +285,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               pathname={normalized}
               dark={opts.dark}
               onNavigate={opts.onNavigate}
+              badgeHint={
+                item.href === "/won-followups"
+                  ? (n) => `${n} Won quote${n === 1 ? "" : "s"} still missing details`
+                  : item.href in hubBadge
+                    ? (n) => `${n} job${n === 1 ? "" : "s"} from Quote Hub waiting here`
+                    : undefined
+              }
               badgeCount={
                 item.href === "/won-followups"
                   ? pendingWonCount
@@ -327,7 +342,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               <BrandMark size={40} />
               ATLAS PRICING
             </div>
-            <div className="mt-1 text-xs text-white/60">Quote · book · track · v{appVersion}</div>
+            <div className="mt-1 text-xs text-white/60">
+              Quote · book · track · v{appVersion} ·{" "}
+              <WhatsNewLink className="font-semibold text-white/80 underline-offset-2 hover:underline" />
+            </div>
             <div className="mt-2 inline-flex rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c3d0dc]">
               {focus}
             </div>

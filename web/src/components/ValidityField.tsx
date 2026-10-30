@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEventHandler } from "react";
 import { Input, Label } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { formatValidity, validityStatus } from "@/lib/quotes/validity";
 import { addDays, asDateValue, monthCells, parseIso, toIso, WEEKDAYS } from "@/lib/date-cells";
 
 const PRESETS = [
@@ -26,6 +27,7 @@ export function ValidityField({
   onTextKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }) {
   const dateVal = asDateValue(value);
+  const status = validityStatus(value);
   const rootRef = useRef<HTMLDivElement>(null);
   const [calOpen, setCalOpen] = useState(false);
   const calRef = useRef<HTMLDivElement>(null);
@@ -157,6 +159,19 @@ export function ValidityField({
           aria-label="Validity text"
         />
       </div>
+      {status === "expired" ? (
+        <p className="mt-1 text-xs font-semibold text-red-700" data-testid="validity-hint">
+          This date has passed — pick a new one before sending.
+        </p>
+      ) : status === "soon" ? (
+        <p className="mt-1 text-xs font-semibold text-amber-700" data-testid="validity-hint">
+          Valid until {formatValidity(value)} — ending soon.
+        </p>
+      ) : status === "ok" ? (
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]" data-testid="validity-hint">
+          Valid until {formatValidity(value)}.
+        </p>
+      ) : null}
       {calOpen ? (
         <div
           ref={calRef}

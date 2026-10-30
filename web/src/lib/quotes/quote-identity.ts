@@ -2,6 +2,7 @@ import type { SavedQuote } from "../types";
 import { formatCurrency } from "../utils";
 import { quoteOwnerLabel } from "../auth/desk-seats";
 import { getQuoteRefId } from "./ref-id";
+import { formatValidity } from "./validity";
 
 export function statusLabel(status: string | undefined): string {
   const s = (status || "quoted").toLowerCase();
@@ -46,7 +47,7 @@ export function identityRows(quote: SavedQuote): Array<[string, string]> {
       const label = String(lane.laneLabel ?? "Lane");
       const name = String(lane.airline ?? "—");
       const amt = money(lane.amount, cur);
-      const validity = String(lane.validity ?? "").trim();
+      const validity = formatValidity(String(lane.validity ?? ""));
       rows.push([label, `${name} · ${amt}${validity ? ` · valid ${validity}` : ""}`]);
     });
     rows.push(["All lanes total", money(d.allLanesTotal ?? quote.amount, cur)]);
@@ -97,7 +98,7 @@ export function identityRows(quote: SavedQuote): Array<[string, string]> {
   }
 
   if (quotedLanes.length <= 1 && String(d.validity ?? "").trim()) {
-    rows.push(["Validity", String(d.validity)]);
+    rows.push(["Validity", formatValidity(String(d.validity))]);
   }
 
   if (quote.notes) rows.push(["Notes", quote.notes]);

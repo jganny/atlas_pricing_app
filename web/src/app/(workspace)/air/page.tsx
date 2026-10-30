@@ -18,7 +18,7 @@ import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Input, Label, NumberInput, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
-import { AirlineEditorOverlay, AirlineOptionForm } from "@/components/desks/AirlineOptionForm";
+import { AirlineEditorOverlay, AirlineOptionForm, CompactFreight } from "@/components/desks/AirlineOptionForm";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { VendorCompareList } from "@/components/VendorCompareList";
 import { GuideNote } from "@/components/GuideNote";
@@ -81,6 +81,7 @@ import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
 import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { defaultValidity } from "@/lib/quotes/validity";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
@@ -483,7 +484,7 @@ function AirDeskInner() {
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
-    const loaded = loadAirDeskFromQuote(loader.sourceQuote);
+    const loaded = loadAirDeskFromQuote(loader.sourceQuote, { duplicate: loader.isDuplicate });
     setCustomer(loaded.customer);
     setOrigin(loaded.origin);
     setDestination(loaded.destination);
@@ -565,7 +566,7 @@ function AirDeskInner() {
           name: p.airlineLabel || draft.carrierLabel || "",
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
-          validity: "15 days",
+          validity: defaultValidity(),
           // Only Circulars (or explicit breaks) fill rates — never invent defaults
           breaks: draft.airBreaks
             ? { ...EMPTY_AIR_BREAKS, ...draft.airBreaks }
@@ -1078,7 +1079,7 @@ function AirDeskInner() {
           name: instrPlan.carrierLabel,
           routing: `${origin}-${destination}`,
           tt: "TBA",
-          validity: "15 days",
+          validity: defaultValidity(),
           breaks: { ...EMPTY_AIR_BREAKS, [instrPlan.weightBreak]: { sell: instrPlan.sellRate ?? 0, buy: instrPlan.buyRate ?? 0 } },
           rateLock: true,
         },
@@ -1744,9 +1745,12 @@ function AirDeskInner() {
                         }
                       />
                     ) : (
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        Compact row — tap Edit to enter routing, AMS, and the matching weight break.
-                      </p>
+                      <CompactFreight
+                        opt={opt}
+                        tot={tot}
+                        currency={currency}
+                        onUpdateBreak={(name, field, value) => updateBreak(opt.id, name, field, value)}
+                      />
                     )}
                   </Card>
                 );

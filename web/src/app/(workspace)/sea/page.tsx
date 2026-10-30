@@ -58,6 +58,7 @@ import {
   normalizeRouting,
 } from "@/lib/pricing/terms";
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { defaultValidity } from "@/lib/quotes/validity";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
 import { planSeaInstruction, type SeaChoice } from "@/lib/hub/instruction-sea";
@@ -515,7 +516,7 @@ function SeaDeskInner() {
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
-    const loaded = loadSeaDeskFromQuote(loader.sourceQuote);
+    const loaded = loadSeaDeskFromQuote(loader.sourceQuote, { duplicate: loader.isDuplicate });
     setCustomer(loaded.customer);
     setOrigin(loaded.origin);
     setDestination(loaded.destination);
@@ -588,7 +589,7 @@ function SeaDeskInner() {
           name: p.linerLabel || draft.carrierLabel || "",
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
-          validity: "15 days",
+          validity: defaultValidity(),
           containers,
           lclSell: st?.lclRate?.sell ?? 0,
           lclBuy: st?.lclRate?.buy ?? 0,
@@ -1079,7 +1080,7 @@ function SeaDeskInner() {
           name: instrPlan.carrierLabel,
           routing: `${origin}-${destination}`,
           tt: "TBA",
-          validity: "15 days",
+          validity: defaultValidity(),
           ...(instrPlan.containers ? { containers: instrPlan.containers } : {}),
           lclSell: instrPlan.lclSell ?? 0,
           lclBuy: instrPlan.lclBuy ?? 0,

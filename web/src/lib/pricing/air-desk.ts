@@ -236,15 +236,22 @@ export function computeAdjacentBreakComparison(
   return { current, next, cheaper };
 }
 
-/** One active break for the chargeable kg — full tariff card is opt-in. */
+/**
+ * One active break for the chargeable kg — full tariff card is opt-in.
+ * Any other break that already holds a saved rate stays in view too, so an amended or duplicated quote
+ * never looks as if its freight went missing (the rate was just sitting on a break other than the active one).
+ */
 export function visibleAirBreaks(
   chargeableWeightKg: number,
   usedBreak: WeightBreakName | undefined,
   showAll: boolean,
+  saved?: WeightBreaks,
 ): WeightBreakName[] {
   if (showAll || !(chargeableWeightKg > 0)) return AIR_WEIGHT_BREAKS;
   const active = usedBreak || getWeightBreakBracket(chargeableWeightKg);
-  return AIR_WEIGHT_BREAKS.includes(active) ? [active] : AIR_WEIGHT_BREAKS;
+  if (!AIR_WEIGHT_BREAKS.includes(active)) return AIR_WEIGHT_BREAKS;
+  const filled = (name: WeightBreakName) => (saved?.[name]?.sell ?? 0) > 0 || (saved?.[name]?.buy ?? 0) > 0;
+  return AIR_WEIGHT_BREAKS.filter((name) => name === active || filled(name));
 }
 
 export function validateAirCargo(cargo: AirCargoRow[]): string | null {

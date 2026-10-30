@@ -17,7 +17,7 @@ function breaksAreEmpty(breaks: WeightBreaks): boolean {
   return Object.values(breaks).every((b) => (b?.sell || 0) === 0 && (b?.buy || 0) === 0);
 }
 
-const BREAK_LABELS: Record<WeightBreakName, string> = {
+export const BREAK_LABELS: Record<WeightBreakName, string> = {
   min: "Minimum",
   minus45: "−45 kg",
   plus45: "+45 kg",
@@ -51,7 +51,7 @@ export function AirlineOptionForm({
   const amsId = `air-ams-fee-${opt.id}`;
   const dgId = `air-dg-fee-${opt.id}`;
   const chw = tot?.freight.chargeableWeightKg ?? 0;
-  const breaksToShow = visibleAirBreaks(chw, tot?.freight.usedBreak, showAllBreaks);
+  const breaksToShow = visibleAirBreaks(chw, tot?.freight.usedBreak, showAllBreaks, opt.breaks);
   const breakComparison = opt.wbEnabled ? computeAdjacentBreakComparison(chw, opt.breaks) : null;
 
   return (
@@ -201,7 +201,9 @@ export function AirlineOptionForm({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-[var(--color-text-muted)]">
               {chw > 0 && !showAllBreaks
-                ? `Showing the ${BREAK_LABELS[breaksToShow[0] ?? "plus500"]} break for ${chw.toFixed(0)} kg chargeable.`
+                ? breaksToShow.length > 1
+                  ? `Showing the active break for ${chw.toFixed(0)} kg chargeable, plus breaks that already hold a rate.`
+                  : `Showing the ${BREAK_LABELS[breaksToShow[0] ?? "plus500"]} break for ${chw.toFixed(0)} kg chargeable.`
                 : "Enter Sell (customer) and/or Buy (cost). Quote total uses Sell when set; if Sell is blank it uses Buy."}
             </p>
             <button
@@ -420,6 +422,61 @@ export function AirlineEditorOverlay({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+/**
+ * Freight on a compact airline row: the active break's sell and buy right on the row, so freight can be
+ * amended without opening Edit — plus a note of any other break that already holds a rate.
+ */
+export function CompactFreight({
+  opt,
+  tot,
+  currency,
+  onUpdateBreak,
+}: {
+  opt: AirlineOption;
+  tot?: AirlineTotals;
+  currency: string;
+  onUpdateBreak: (name: WeightBreakName, field: "sell" | "buy", value: number) => void;
+}) {
+  const chw = tot?.freight.chargeableWeightKg ?? 0;
+  if (!opt.wbEnabled) {
+    return <p className="text-xs text-[var(--color-text-muted)]">Weight-break freight is switched off for this option — tap Edit to turn it on.</p>;
+  }
+  const shown = visibleAirBreaks(chw, tot?.freight.usedBreak, false, opt.breaks);
+  const active = tot?.freight.usedBreak ?? shown[0];
+  const rows = chw > 0 ? shown : (["plus100"] as WeightBreakName[]);
+  return (
+    <div className="space-y-2" data-testid="compact-freight">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]">
+        <span>
+          Freight{chw > 0 ? ` · ${chw.toFixed(0)} kg chargeable` : ""}
+        </span>
+        {tot && tot.baseFreightQuote > 0 ? (
+          <span className="font-bold text-[var(--color-atlas-navy)]">{formatCurrency(tot.baseFreightQuote, currency)}</span>
+        ) : null}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {rows.map((name) => (
+          <div key={name} className={`rounded-lg border px-3 py-2 ${name === active ? "border-amber-300 bg-amber-50" : "border-[var(--color-border)]"}`}>
+            <div className="mb-1 text-xs font-bold">
+              {BREAK_LABELS[name]} {name === active ? <Badge tone="warn">Active</Badge> : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex-1 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">
+                Sell
+                <NumberInput step="0.01" className="mt-0 w-full px-2 py-1" value={opt.breaks[name]?.sell ?? 0} onValueChange={(n) => onUpdateBreak(name, "sell", n)} />
+              </label>
+              <label className="flex-1 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">
+                Buy
+                <NumberInput step="0.01" className="mt-0 w-full px-2 py-1" value={opt.breaks[name]?.buy ?? 0} onValueChange={(n) => onUpdateBreak(name, "buy", n)} />
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-[var(--color-text-muted)]">Tap Edit for routing, AMS, DG and the other breaks.</p>
     </div>
   );
 }

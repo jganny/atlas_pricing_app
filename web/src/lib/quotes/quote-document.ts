@@ -3,6 +3,7 @@ import { getQuoteRefId } from "./ref-id";
 import { formatCurrency } from "../utils";
 import { quoteOwnerLabel } from "../auth/desk-seats";
 import { identityRows } from "./quote-identity";
+import { formatValidity } from "./validity";
 import {
   formatRoutingPreview,
   formatTransitPreview,
@@ -193,7 +194,7 @@ export function buildClientQuoteDocument(
         ${dl}
         <div class="row muted"><span>Routing</span><span>${esc(routing)}</span></div>
         <div class="row muted"><span>Transit time</span><span>${esc(tt)}</span></div>
-        <div class="row muted"><span>Validity</span><span>${esc(option.validity || "—")}</span></div>
+        <div class="row muted"><span>Validity</span><span>${esc(formatValidity(option.validity) || "—")}</span></div>
       </section>`;
   }
 

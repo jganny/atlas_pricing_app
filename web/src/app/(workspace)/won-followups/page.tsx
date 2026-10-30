@@ -5,7 +5,8 @@ import { BellRing, CheckCircle2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, NumberInput } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { QuoteDrawer } from "@/components/QuoteDrawer";
-import { useWonFollowUps } from "@/hooks/use-atlas-data";
+import { useScopedWonFollowUps } from "@/hooks/use-scoped-won-followups";
+import { pendingByOwner, wonOwnerKey } from "@/lib/quotes/won-scope";
 import { upsertWonFollowUp, type WonFollowUpRow } from "@/lib/firebase/won-followups";
 import {
   WON_FOLLOWUP_FIELD_LABELS,
@@ -34,7 +35,8 @@ function daysLabel(wonAt: string): string {
 
 export default function WonFollowUpsPage() {
   const user = useAuthStore((s) => s.user);
-  const { data: rows = [], isLoading } = useWonFollowUps();
+  const { rows, isLoading, admin, quoteOf } = useScopedWonFollowUps();
+  const [person, setPerson] = useState<string>("all");
   const [drafts, setDrafts] = useState<Record<string, Partial<WonFollowUpValues>>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -45,7 +47,12 @@ export default function WonFollowUpsPage() {
   }
 
   // Membership comes from the saved rows, so a row stays on screen while it is being typed in.
-  const { pending: pendingSaved, complete: completeAll } = useMemo(() => splitWonRows(rows), [rows]);
+  const owners = useMemo(() => (admin ? pendingByOwner(rows, quoteOf) : []), [admin, rows, quoteOf]);
+  const shown = useMemo(
+    () => (admin && person !== "all" ? rows.filter((r) => wonOwnerKey(r, quoteOf(r.quoteId)).key === person) : rows),
+    [admin, person, rows, quoteOf],
+  );
+  const { pending: pendingSaved, complete: completeAll } = useMemo(() => splitWonRows(shown), [shown]);
   const pending = pendingSaved;
   const complete = useMemo(() => completeAll.slice(0, 20), [completeAll]);
   const [openQuote, setOpenQuote] = useState<{ id: string; ref: string; customer: string } | null>(null);
@@ -87,7 +94,26 @@ export default function WonFollowUpsPage() {
         <BellRing className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Won follow-ups</h1>
         <Badge tone={pending.length ? "warn" : "success"}>{pending.length} pending</Badge>
+        {!admin ? <span className="text-xs text-[var(--color-text-muted)]">Your desk only</span> : null}
       </div>
+      {admin && owners.length ? (
+        <div className="flex flex-wrap gap-2" data-testid="won-by-person">
+          {[{ key: "all", label: "Everyone", pending: owners.reduce((n, o) => n + o.pending, 0), overdue: owners.reduce((n, o) => n + o.overdue, 0) }, ...owners].map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => setPerson(o.key)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-bold",
+                person === o.key ? "border-[var(--color-atlas-navy)] bg-[var(--color-atlas-navy)] text-white" : "border-[var(--color-border)] bg-white text-[var(--color-atlas-navy)] hover:bg-slate-50",
+              )}
+            >
+              {o.label} · {o.pending}
+              {o.overdue ? <span className={cn("ml-1", person === o.key ? "text-red-200" : "text-red-600")}>({o.overdue} overdue)</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <p className="text-sm text-[var(--color-text-muted)]">
         Shipper, consignee, commodity, buy rate and sell amount — whatever was still blank when a
         quote was converted to Won. Fill in a field and save; a row drops off this list the moment
@@ -98,7 +124,7 @@ export default function WonFollowUpsPage() {
       {isLoading ? (
         <Card className="text-sm text-[var(--color-text-muted)]">Loading…</Card>
       ) : pending.length === 0 ? (
-        <Card className="text-sm text-[var(--color-text-muted)]">Nothing pending — every Won quote is fully filled in.</Card>
+        <Card className="text-sm text-[var(--color-text-muted)]">Nothing pending{admin && person !== "all" ? " for this desk" : ""} — every Won quote is fully filled in.</Card>
       ) : (
         <div className="space-y-3">
           {pending.map((saved) => {
@@ -114,7 +140,10 @@ export default function WonFollowUpsPage() {
                     <div className="font-extrabold text-[var(--color-atlas-navy)]">
                       {row.ref} · {row.customer}
                     </div>
-                    <div className="text-xs text-[var(--color-text-muted)]">{daysLabel(row.wonAt)}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">
+                      {daysLabel(row.wonAt)}
+                      {admin ? ` · ${wonOwnerKey(row, quoteOf(row.quoteId)).label}` : ""}
+                    </div>
                     <Button type="button" size="sm" variant="secondary" className="mt-1" onClick={() => setOpenQuote({ id: row.quoteId, ref: row.ref, customer: row.customer })}>
                       Open quote
                     </Button>

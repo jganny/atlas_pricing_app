@@ -100,11 +100,11 @@ export function GlobalRefreshButton({ compact = false }: { compact?: boolean }) 
           ? "inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-atlas-navy)] hover:bg-white disabled:opacity-60"
           : "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-bold text-[var(--color-atlas-navy)] hover:bg-slate-50 disabled:opacity-60"
       }
-      title="Refresh enquiries, inbox, tariffs"
-      aria-label="Refresh"
+      title="Sync — reload enquiries, inbox and tariffs"
+      aria-label="Sync"
     >
       <RefreshCw className={cn("h-3.5 w-3.5", busy && "animate-spin")} />
-      {compact ? null : "Refresh"}
+      {compact ? null : "Sync"}
     </button>
   );
 }
@@ -203,8 +203,7 @@ export function FxConverter({ compact = false }: { compact?: boolean }) {
                     Exchange rate
                   </div>
                   <div className="text-[11px] text-[var(--color-text-muted)]">
-                    {source === "live" ? "Live mid-market" : "Cached desk rate"} · USD · EUR · GBP →
-                    INR
+                    {source === "live" ? "Reference rate · mid-market, refreshed every 5 min" : "Cached desk rate (could not reach the rate service)"} · USD · EUR · GBP → INR
                   </div>
                 </div>
                 <button type="button" onClick={() => setOpen(false)} aria-label="Close">

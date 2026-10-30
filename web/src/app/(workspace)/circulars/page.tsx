@@ -41,6 +41,7 @@ export default function CircularsPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const canManage = canManageCirculars(user?.username, user?.role);
+  const [editingStationId, setEditingStationId] = useState<string | null>(null);
   const { data: air = [], isLoading: airLoading } = useAirTariffs();
   const { data: sea = [], isLoading: seaLoading } = useSeaTariffs();
   const { data: courierBooks = [] } = useCourierTariffs();
@@ -574,10 +575,32 @@ export default function CircularsPage() {
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2 font-semibold">
-                    {stationByName(c.station) ? (
-                      <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-bold text-sky-900">{stationLabel(c.station)}</span>
+                    {canManage && editingStationId === c.id ? (
+                      <select
+                        aria-label="Set station"
+                        autoFocus
+                        className="rounded border border-amber-300 bg-white px-1.5 py-0.5 text-xs font-bold"
+                        value={stationByName(c.station) ? c.station : ""}
+                        onBlur={() => setEditingStationId(null)}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setEditingStationId(null);
+                          if (next) void setStationFor(c, next);
+                        }}
+                      >
+                        <option value="">Choose station…</option>
+                        {STATION_NAMES.map((n) => (
+                          <option key={n} value={n}>
+                            {stationLabel(n)}
+                          </option>
+                        ))}
+                      </select>
                     ) : (
-                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900">Station not set</span>
+                      <StationChip
+                        station={stationByName(c.station) ? stationLabel(c.station) : null}
+                        editable={canManage}
+                        onEdit={() => setEditingStationId(c.id)}
+                      />
                     )}
                     {c.title || c.fileName || "Untitled"}
                   </div>
@@ -586,21 +609,6 @@ export default function CircularsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {canManage && !stationByName(c.station) ? (
-                    <select
-                      aria-label="Set station"
-                      className="rounded border border-amber-300 bg-white px-1.5 py-1 text-xs"
-                      value=""
-                      onChange={(e) => void setStationFor(c, e.target.value)}
-                    >
-                      <option value="">Set station…</option>
-                      {STATION_NAMES.map((n) => (
-                        <option key={n} value={n}>
-                          {stationLabel(n)}
-                        </option>
-                      ))}
-                    </select>
-                  ) : null}
                   {c.downloadURL ? (
                     <a
                       href={c.downloadURL}
@@ -763,5 +771,23 @@ export default function CircularsPage() {
         />
       ) : null}
     </div>
+  );
+}
+
+/** The station tag on a circular. A desk user clicks it to set or change the station; everyone else just reads it. */
+function StationChip({ station, editable, onEdit }: { station: string | null; editable: boolean; onEdit: () => void }) {
+  const tone = station ? "bg-sky-100 text-sky-900" : "bg-amber-100 text-amber-900";
+  const text = station ?? "Station not set";
+  if (!editable) return <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${tone}`}>{text}</span>;
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      title={station ? "Click to change the station" : "Click to set the station"}
+      className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ring-transparent hover:ring-current ${tone}`}
+    >
+      {text}
+      <span aria-hidden className="ml-1 opacity-60">✎</span>
+    </button>
   );
 }

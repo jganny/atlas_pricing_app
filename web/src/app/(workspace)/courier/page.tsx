@@ -514,7 +514,7 @@ function CourierDeskInner() {
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
-    const loaded = loadCourierDeskFromQuote(loader.sourceQuote);
+    const loaded = loadCourierDeskFromQuote(loader.sourceQuote, { duplicate: loader.isDuplicate });
     setCustomer(loaded.customer);
     const restoredLanes = loaded.lanes.length
       ? loaded.lanes

@@ -338,7 +338,7 @@ export default function TransportDeskPage() {
 
   useEffect(() => {
     if (!loader.sourceQuote) return;
-    const loaded = loadTransportDeskFromQuote(loader.sourceQuote);
+    const loaded = loadTransportDeskFromQuote(loader.sourceQuote, { duplicate: loader.isDuplicate });
     setCustomer(loaded.customer);
     setVehicleType(loaded.vehicleType);
     setServiceType(loaded.serviceType);

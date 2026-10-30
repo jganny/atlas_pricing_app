@@ -233,12 +233,12 @@ export const GUIDE: GuideEntry[] = [
   },
   {
     id: "refresh-banner",
-    title: "'App updated — Refresh now' banner",
+    title: "'Update ready' banner and What's new",
     path: "/",
     where: "Top of any page after a release",
-    summary: "Appears once when a newer version has loaded. Click Refresh now to finish the update.",
-    steps: ["Click Refresh now once; if you don't see it, do a hard refresh (⌘⇧R)."],
-    keywords: ["refresh", "update", "banner", "new version", "stale", "cache", "version"],
+    summary: "Appears once when a newer version has loaded, with a short list of what changed. Press Update now to finish the update. The Sync button in the top bar only reloads your data. “What's new” under the app name shows recent changes any time.",
+    steps: ["Read the list, then press Update now once; if you don't see the banner, do a hard refresh (⌘⇧R)."],
+    keywords: ["refresh", "update", "banner", "new version", "stale", "cache", "version", "sync", "what's new", "whats new", "release notes"],
   },
   {
     id: "desk-seats",

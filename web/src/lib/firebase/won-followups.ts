@@ -17,6 +17,10 @@ export interface WonFollowUpRow extends WonFollowUpValues {
   ref: string;
   customer: string;
   wonAt: string;
+  /** Desk and login that won the quote — stamped at conversion; older rows are matched to their quote instead. */
+  ownerSeat: string;
+  ownerLogin: string;
+  updatedBy: string;
 }
 
 function num(v: unknown): number {
@@ -31,6 +35,9 @@ function fromDoc(id: string, x: Record<string, unknown>): WonFollowUpRow {
     ref: String(x.ref ?? ""),
     customer: String(x.customer ?? ""),
     wonAt: String(x.wonAt ?? ""),
+    ownerSeat: String(x.ownerSeat ?? ""),
+    ownerLogin: String(x.ownerLogin ?? ""),
+    updatedBy: String(x.updatedBy ?? ""),
     shipperName: String(x.shipperName ?? ""),
     consigneeName: String(x.consigneeName ?? ""),
     commodity: String(x.commodity ?? ""),
@@ -58,7 +65,7 @@ export function subscribeWonFollowUps(
 /** Creates or updates a quote's follow-up row. Merge, so filling in one
  * field from the worklist never clobbers the others. */
 export async function upsertWonFollowUp(
-  row: { quoteId: string; ref: string; customer: string; wonAt?: string } & Partial<WonFollowUpValues>,
+  row: { quoteId: string; ref: string; customer: string; wonAt?: string; ownerSeat?: string; ownerLogin?: string } & Partial<WonFollowUpValues>,
   updatedBy: string,
 ): Promise<void> {
   const patch: Record<string, unknown> = {
@@ -69,6 +76,8 @@ export async function upsertWonFollowUp(
     updatedAt: serverTimestamp(),
   };
   if (row.wonAt) patch.wonAt = row.wonAt;
+  if (row.ownerSeat) patch.ownerSeat = row.ownerSeat;
+  if (row.ownerLogin) patch.ownerLogin = row.ownerLogin;
   if (row.shipperName !== undefined) patch.shipperName = row.shipperName;
   if (row.consigneeName !== undefined) patch.consigneeName = row.consigneeName;
   if (row.commodity !== undefined) patch.commodity = row.commodity;
