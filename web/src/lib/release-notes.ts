@@ -15,6 +15,8 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: "2026-10-31",
     items: [
       "Esc now closes the Quotation Preview (and any other open window). Before, it could be ignored because a hidden panel took the key.",
+      "Enquiry DB search now finds a quote wherever it is. Words you type are also matched against every quote in the database, and any that are too old for the list appear in a yellow box above it (click one to open it).",
+      "Quote Hub → Waiting for you: new Clear all button (asks first). Each job now also shows who added it, for which desk, and the date.",
       "Amend, Duplicate and View/Print from Enquiry DB: if the full quote cannot be read at that moment (for example a weak connection), you now get a clear message and nothing opens. Before, a blank desk page could open and Amend could then overwrite the real quote.",
     ],
   },

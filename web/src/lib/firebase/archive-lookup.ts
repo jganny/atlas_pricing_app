@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import type { EnquiryRecord, SavedQuote } from "@/lib/types";
 import { getQuoteRefId } from "@/lib/quotes/ref-id";
-import { getFirebaseDb } from "./client";
+import { getFirebaseApp, getFirebaseAuth, getFirebaseDb } from "./client";
 import { mapQuoteFromSaved } from "./quotes";
 
 export interface ArchiveLookupResult {
@@ -200,4 +200,93 @@ export async function lookupQuotesByText(raw: string): Promise<ArchiveLookupResu
   }
 
   return hits;
+}
+
+
+// ---- Search across every quote, however old -------------------------------------------------------------------------
+// Enquiry DB only keeps the newest quotes in memory. To find an older one we read a light summary of every quote (no
+// attached files, so it is small) once, keep it for a few minutes, and match the typed words against it.
+
+const SUMMARY_FIELDS = [
+  "customer",
+  "route",
+  "routingDetails",
+  "creator",
+  "quoteRefNo",
+  "quoteNumber",
+  "details.origin",
+  "details.destination",
+  "details.airline",
+  "details.shippingLine",
+  "details.carrier",
+];
+
+type FsValue = Record<string, unknown>;
+
+function unwrap(v: FsValue | undefined): unknown {
+  if (!v) return undefined;
+  if ("stringValue" in v) return v.stringValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return v.doubleValue;
+  if ("mapValue" in v) {
+    const out: Record<string, unknown> = {};
+    const fields = ((v.mapValue as { fields?: Record<string, FsValue> }).fields ?? {}) as Record<string, FsValue>;
+    for (const [k, x] of Object.entries(fields)) out[k] = unwrap(x);
+    return out;
+  }
+  return undefined;
+}
+
+let summaryCache: { at: number; rows: SavedQuote[] } | null = null;
+
+async function quoteSummaries(): Promise<SavedQuote[]> {
+  if (summaryCache && Date.now() - summaryCache.at < 5 * 60_000) return summaryCache.rows;
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) return [];
+  const projectId = getFirebaseApp().options.projectId;
+  const res = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: "quotes" }],
+        select: { fields: SUMMARY_FIELDS.map((fieldPath) => ({ fieldPath })) },
+      },
+    }),
+  });
+  if (!res.ok) throw new Error("Could not search older quotes right now.");
+  const body = (await res.json()) as Array<{ document?: { name: string; fields?: Record<string, FsValue> } }>;
+  const rows: SavedQuote[] = [];
+  for (const item of body) {
+    if (!item.document) continue;
+    const fields: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(item.document.fields ?? {})) fields[k] = unwrap(v);
+    rows.push({ id: item.document.name.split("/").pop() ?? "", ...(fields as object) } as SavedQuote);
+  }
+  summaryCache = { at: Date.now(), rows };
+  return rows;
+}
+
+/** Quotes matching the typed words anywhere in the database, newest first, skipping ones already on screen. */
+export async function findQuotesAnywhere(raw: string, skipIds: Set<string>, max = 12): Promise<EnquiryRecord[]> {
+  const q = raw.trim();
+  if (q.length < 2) return [];
+  const all = await quoteSummaries();
+  const digits = /^\d+$/.test(q) ? q.replace(/^0+/, "") : "";
+  const refTail = q.toUpperCase().match(/^[A-Z]{3,}\d{4}IN0*(\d+)$/)?.[1] ?? "";
+  const exact = all.filter((r) => {
+    const n = String(r.quoteNumber ?? "");
+    return (digits && n === digits) || (refTail && n === refTail);
+  });
+  const text = all.filter((r) => !exact.includes(r) && matchesText(r, q));
+  const ids = [...exact, ...text]
+    .map((r) => r.id)
+    .filter((id) => id && !skipIds.has(id))
+    .slice(0, max);
+  const out: EnquiryRecord[] = [];
+  for (const id of ids) {
+    const full = await tryDoc("quotes", id);
+    if (full) out.push(mapQuoteFromSaved(full.id, full));
+  }
+  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

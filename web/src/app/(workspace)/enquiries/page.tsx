@@ -20,7 +20,7 @@ import { useLiveData } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/hooks/query-keys";
 import { canQuickWon, quickWon, quickWonFromRow, undoQuickWon, type QuickWon } from "@/lib/quotes/won-actions";
-import { lookupQuoteByRef, lookupQuotesByText } from "@/lib/firebase/archive-lookup";
+import { findQuotesAnywhere, lookupQuoteByRef, lookupQuotesByText } from "@/lib/firebase/archive-lookup";
 import type { EnquiryRecord } from "@/lib/types";
 import {
   downloadEnquiryCsv,
@@ -259,6 +259,9 @@ function EnquiryDatabaseInner() {
   const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveNote, setArchiveNote] = useState<string | null>(null);
+  // Quotes that match the typed words but are too old to be in the list (the list keeps the newest ~1,200).
+  const [olderHits, setOlderHits] = useState<EnquiryRecord[]>([]);
+  const [olderBusy, setOlderBusy] = useState(false);
 
   useEffect(() => {
     const q = searchParams?.get("q");
@@ -443,6 +446,27 @@ function EnquiryDatabaseInner() {
     const fin = summarizeEnquiryFinancials(filtered);
     return { open, overdue, total: filtered.length, ...fin };
   }, [filtered]);
+
+  useEffect(() => {
+    const q = search.trim();
+    if (!useLiveData || q.length < 2) {
+      setOlderHits([]);
+      setOlderBusy(false);
+      return;
+    }
+    let live = true;
+    setOlderBusy(true);
+    const timer = setTimeout(() => {
+      findQuotesAnywhere(q, new Set(rows.map((r) => r.id)))
+        .then((hits) => live && setOlderHits(hits))
+        .catch(() => live && setOlderHits([]))
+        .finally(() => live && setOlderBusy(false));
+    }, 600);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [search, rows]);
 
   const fyCards = useMemo(() => buildFyReportCards(filtered), [filtered]);
 
@@ -835,6 +859,35 @@ function EnquiryDatabaseInner() {
         </Card>
         {archiveNote ? (
           <p className="px-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{archiveNote}</p>
+        ) : null}
+        {olderHits.length || olderBusy ? (
+          <Card className="space-y-1.5 border-amber-200 bg-amber-50 p-2.5" data-testid="older-quotes">
+            <p className="text-xs font-extrabold text-amber-900">
+              {olderBusy && !olderHits.length
+                ? "Searching older quotes…"
+                : `${olderHits.length} more match${olderHits.length === 1 ? "" : "es"} in older quotes (not in the list below)`}
+            </p>
+            <ul className="space-y-1">
+              {olderHits.map((h) => (
+                <li key={h.id}>
+                  <button
+                    type="button"
+                    className="flex w-full flex-wrap items-center gap-x-3 rounded-md bg-white px-2.5 py-1.5 text-left text-xs shadow-sm hover:bg-amber-100"
+                    onClick={() => {
+                      setArchiveHit(h);
+                      setSelectedId(h.id);
+                    }}
+                  >
+                    <span className="font-bold text-[var(--color-atlas-navy)]">{h.ref}</span>
+                    <span>{h.customer}</span>
+                    <span className="text-[var(--color-text-muted)]">
+                      {h.mode} · {h.origin} → {h.destination} · {h.status}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
         ) : null}
         {showColumns ? (
           <Card className="flex flex-wrap gap-3 p-2 text-xs font-semibold">

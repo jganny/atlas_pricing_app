@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
@@ -8,6 +9,8 @@ import { openJobHref } from "@/lib/hub/prefill";
 import { visibleJobs } from "@/lib/hub/jobs";
 import { HUB_MODE_LABEL, type HubJob } from "@/lib/hub/types";
 import { isAdminUser } from "@/lib/quotes/team-roles";
+import { quoteOwnerLabel } from "@/lib/auth/desk-seats";
+import { toast } from "@/components/Toast";
 import { useAuthStore } from "@/store/auth";
 
 function directionLabel(j: HubJob): string {
@@ -19,6 +22,7 @@ export function WaitingJobs() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { jobs, ready, setStatus, remove } = useHubJobs();
+  const [clearing, setClearing] = useState(false);
   const list = visibleJobs(jobs, user?.username, isAdminUser(user?.username, user?.role));
 
   async function open(job: HubJob) {
@@ -27,9 +31,30 @@ export function WaitingJobs() {
     router.push(href);
   }
 
+  async function clearAll() {
+    if (!list.length) return;
+    if (!window.confirm(`Clear all ${list.length} waiting job${list.length === 1 ? "" : "s"} from this list? The quotes themselves are not affected.`)) return;
+    setClearing(true);
+    try {
+      await Promise.all(list.map((j) => setStatus(j.id, "dismissed")));
+      toast(`Cleared ${list.length} job${list.length === 1 ? "" : "s"}.`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not clear the list", "error");
+    } finally {
+      setClearing(false);
+    }
+  }
+
   return (
     <Card className="atlas-frost space-y-2 rounded-2xl bg-white/70" data-testid="hub-waiting">
-      <h2 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">Waiting for you</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">Waiting for you</h2>
+        {list.length > 0 ? (
+          <Button type="button" size="sm" variant="secondary" data-testid="hub-clear-all" disabled={clearing} onClick={() => void clearAll()}>
+            Clear all
+          </Button>
+        ) : null}
+      </div>
       {!ready ? (
         <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>
       ) : list.length === 0 ? (
@@ -49,6 +74,9 @@ export function WaitingJobs() {
                   {" · "}
                   {j.files.slice(0, 2).join(", ")}
                   {j.files.length > 2 ? ` +${j.files.length - 2}` : ""}
+                </div>
+                <div className="text-[11px] text-[var(--color-text-muted)]" data-testid="hub-job-owner">
+                  Added by {quoteOwnerLabel({ deskSeat: j.deskSeat, creator: j.createdBy })} · {new Date(j.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                 </div>
                 {j.instruction ? (
                   <div className="mt-0.5 truncate text-xs font-semibold text-violet-800" title={j.instruction}>

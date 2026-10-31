@@ -17,3 +17,11 @@ assert.doesNotMatch(esc, /document\.querySelector<HTMLButtonElement>\("\[data-mo
 assert.match(inspector, /Couldn't load the full quote/);
 
 console.log("escape + amend contract: Esc closes the visible top window; Amend never opens a blank summary");
+
+const edb = fs.readFileSync(path.join(root, "app/(workspace)/enquiries/page.tsx"), "utf8");
+const waiting = fs.readFileSync(path.join(root, "components/WaitingJobs.tsx"), "utf8");
+assert.match(edb, /findQuotesAnywhere/);
+assert.match(edb, /data-testid="older-quotes"/);
+assert.match(waiting, /hub-clear-all/);
+assert.match(waiting, /hub-job-owner/);
+console.log("older-quote search and Quote Hub clear-all are wired");
