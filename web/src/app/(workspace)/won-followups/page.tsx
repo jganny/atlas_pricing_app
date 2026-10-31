@@ -17,7 +17,7 @@ import {
   type WonFollowUpValues,
 } from "@/lib/quotes/won-followups";
 import { useAuthStore } from "@/store/auth";
-import { formatCurrency } from "@/lib/utils";
+import { formatAmountIn } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const TIER_STYLE: Record<EscalationTier, { card: string; badge: string; label: string }> = {
@@ -213,7 +213,7 @@ export default function WonFollowUpsPage() {
                 <span className="font-semibold">{r.ref}</span> · {r.customer}
                 {r.shipperName ? ` · ${r.shipperName}` : ""}
                 {r.consigneeName ? ` → ${r.consigneeName}` : ""}
-                {r.buyRate > 0 ? ` · Buy ${formatCurrency(r.buyRate)}` : ""}
+                {r.buyRate > 0 ? ` · Buy ${formatAmountIn(r.buyRate, r.currency || quoteOf(r.quoteId)?.currency)}` : ""}
                 <Button type="button" size="sm" className="ml-2 align-middle" onClick={(ev) => { ev.stopPropagation(); setOpenQuote({ id: r.quoteId, ref: r.ref, customer: r.customer }); }}>
                   Open quote
                 </Button>

@@ -4,7 +4,8 @@ import { useCallback, useMemo } from "react";
 import { useEnquiries, useWonFollowUps } from "@/hooks/use-atlas-data";
 import { useSeatsVersion } from "@/hooks/use-seats-version";
 import { isAdminUser } from "@/lib/quotes/team-roles";
-import { wonRowsForViewer, type WonOwnerHint } from "@/lib/quotes/won-scope";
+import type { EnquiryRecord } from "@/lib/types";
+import { wonRowsForViewer } from "@/lib/quotes/won-scope";
 import { useAuthStore } from "@/store/auth";
 
 /**
@@ -17,7 +18,7 @@ export function useScopedWonFollowUps() {
   const all = useWonFollowUps();
   const { data: enquiries = [] } = useEnquiries();
   useSeatsVersion();
-  const byId = useMemo(() => new Map<string, WonOwnerHint>(enquiries.map((e) => [e.id, e])), [enquiries]);
+  const byId = useMemo(() => new Map<string, EnquiryRecord>(enquiries.map((e) => [e.id, e])), [enquiries]);
   const quoteOf = useCallback((id: string) => byId.get(id), [byId]);
   const rows = useMemo(
     () => wonRowsForViewer(all.data ?? [], user?.username, admin, quoteOf),

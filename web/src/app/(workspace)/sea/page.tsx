@@ -39,6 +39,8 @@ import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
 import { deleteDraft } from "@/lib/firebase/drafts";
 import { buildSeaDraftQuote } from "@/lib/quotes/drafts";
 import { CarrierSuggestions } from "@/components/CarrierSuggestions";
+import { TariffCurrencyNotice } from "@/components/desks/TariffCurrencyNotice";
+import { currencyClashes, sameCurrency } from "@/lib/pricing/tariff-currency";
 import { ExwLocalCharges } from "@/components/desks/ExwLocalCharges";
 import { placeCode } from "@/lib/quotes/carrier-suggestions";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
@@ -377,6 +379,8 @@ function SeaDeskInner() {
         const match = tariffMatchById[l.id];
         if (!match || match.status !== "matched") return l;
         const tariff = match.tariff;
+        // A tariff in another currency is never dropped into this quote: a dollar rate under a rupee label is wrong.
+        if (!sameCurrency(tariff.currency, currency)) return l;
         let changed = false;
 
         const nextContainers = l.containers.map((row) => {
@@ -412,7 +416,7 @@ function SeaDeskInner() {
       return anyChanged ? next : prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tariffMatchById]);
+  }, [tariffMatchById, currency]);
 
   // Auto-draft: arriving at the Carriers step with nothing named yet, add every liner that has a Circulars
   // rate on this lane and mode, with the shipment's containers, priced by the silent tariff fill above.
@@ -710,6 +714,14 @@ function SeaDeskInner() {
     }
     toast(`Loaded ${tariff.carrier} ${mode.toUpperCase()} rates onto selected liner.`, "success");
   }
+
+  const clashes = currencyClashes(
+    liners.map((l) => {
+      const m = tariffMatchById[l.id];
+      return m && m.status === "matched" ? { carrier: m.tariff.carrier || l.name, tariffCurrency: m.tariff.currency } : null;
+    }),
+    currency,
+  );
 
   const laneLiners = liners.filter(
     (l) => !l.laneId || l.laneId === (activeLane?.id || lanes[0]?.id),
@@ -1629,6 +1641,7 @@ function SeaDeskInner() {
             <div className="space-y-4">
               {!isRelaxedImportQuote(module, incoterm) ? (
                 <>
+                  <TariffCurrencyNotice clashes={clashes} quoteCurrency={currency} onSwitch={setCurrency} />
                   <CarrierSuggestions
                     mode="sea"
                     origin={origin}

@@ -51,6 +51,8 @@ export type NrsFollowUp = {
   customer: string;
   buyRate: number;
   sellRate: number;
+  /** The quote's currency. Older follow-ups have none, and show the bare number. */
+  currency?: string;
   shipper: string;
   consignee: string;
   commodity: string;
@@ -105,6 +107,7 @@ export function pushNrsFollowUp(input: {
   quoteId: string;
   ref: string;
   customer: string;
+  currency?: string;
   buyRate?: number;
   sellRate?: number;
   shipper?: string;
@@ -121,6 +124,7 @@ export function pushNrsFollowUp(input: {
     customer: input.customer,
     buyRate: input.buyRate ?? 0,
     sellRate: input.sellRate ?? 0,
+    ...(input.currency ? { currency: input.currency } : {}),
     shipper: input.shipper ?? "",
     consignee: input.consignee ?? "",
     commodity: input.commodity ?? "",

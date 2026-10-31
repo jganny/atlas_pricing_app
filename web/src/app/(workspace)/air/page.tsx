@@ -56,6 +56,8 @@ import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
 import { deleteDraft } from "@/lib/firebase/drafts";
 import { buildAirDraftQuote } from "@/lib/quotes/drafts";
 import { CarrierSuggestions } from "@/components/CarrierSuggestions";
+import { TariffCurrencyNotice } from "@/components/desks/TariffCurrencyNotice";
+import { currencyClashes, sameCurrency } from "@/lib/pricing/tariff-currency";
 import { placeCode } from "@/lib/quotes/carrier-suggestions";
 import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
 import { marginLabel, planInstruction, type PlanChoice } from "@/lib/hub/instruction-quote";
@@ -348,6 +350,8 @@ function AirDeskInner() {
         const match = tariffMatchById[a.id];
         if (!match || match.status !== "matched") return a;
         const tariff = match.tariff;
+        // A tariff in another currency is never dropped into this quote: a dollar rate under a rupee label is wrong.
+        if (!sameCurrency(tariff.currency, currency)) return a;
         let changed = false;
         const nextBreaks = { ...a.breaks };
         for (const bn of AIR_WEIGHT_BREAKS) {
@@ -372,7 +376,7 @@ function AirDeskInner() {
       return anyChanged ? next : prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tariffMatchById]);
+  }, [tariffMatchById, currency]);
 
   // Auto-draft: arriving at the Carriers step with nothing named yet, add every carrier that has a Circulars
   // rate on this lane (priced by the silent tariff fill above), so the user starts from a finished comparison.
@@ -700,6 +704,14 @@ function AirDeskInner() {
     setCurrency(match.tariff.currency);
     toast(`Loaded ${match.tariff.carrier} rates onto selected airline.`, "success");
   }
+
+  const clashes = currencyClashes(
+    airlines.map((a) => {
+      const m = tariffMatchById[a.id];
+      return m && m.status === "matched" ? { carrier: m.tariff.carrier || a.name, tariffCurrency: m.tariff.currency } : null;
+    }),
+    currency,
+  );
 
   const laneAirlines = airlines.filter(
     (a) => !a.laneId || a.laneId === (activeLane?.id || lanes[0]?.id),
@@ -1611,6 +1623,7 @@ function AirDeskInner() {
             <div className="space-y-4">
               {!isRelaxedImportQuote(module, incoterm) ? (
                 <>
+                  <TariffCurrencyNotice clashes={clashes} quoteCurrency={currency} onSwitch={setCurrency} />
                   <CarrierSuggestions
                     mode="air"
                     origin={origin}
@@ -1925,12 +1938,13 @@ function AirDeskInner() {
                   <dd className="text-right">
                     {selectedTotals.baseFreightQuote > 0 ? (
                       <span className="block text-[11px] font-normal text-[var(--color-text-muted)]">
-                        {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg × $
-                        {(
+                        {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
+                        {formatCurrency(
                           (selectedTotals.freight.activeRate > 0
                             ? selectedTotals.freight.activeRate
-                            : selectedTotals.freight.activeBuyRate) || 0
-                        ).toFixed(2)}
+                            : selectedTotals.freight.activeBuyRate) || 0,
+                          currency,
+                        )}
                         {selectedTotals.quoteUsingBuyFreight ? " (Buy)" : ""}
                       </span>
                     ) : null}

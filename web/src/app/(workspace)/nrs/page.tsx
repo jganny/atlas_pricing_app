@@ -11,7 +11,7 @@ import {
   updateNrsFollowUp,
   type NrsFollowUp,
 } from "@/lib/quotes/nrs-alerts";
-import { formatCurrency } from "@/lib/utils";
+import { formatAmountIn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import { isNrsUser } from "@/lib/auth/rbac";
 import { demoLabel } from "@/lib/demo-mode";
@@ -132,7 +132,7 @@ export default function NrsFollowUpsPage() {
                       {d.ref} · {d.customer}
                     </div>
                     <div className="text-xs text-[var(--color-text-muted)]">
-                      Buy {formatCurrency(d.buyRate)} · Sell {formatCurrency(d.sellRate)}
+                      Buy {formatAmountIn(d.buyRate, d.currency)} · Sell {formatAmountIn(d.sellRate, d.currency)}
                     </div>
                   </div>
                   <div className="flex gap-2">

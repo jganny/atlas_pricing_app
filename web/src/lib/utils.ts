@@ -18,6 +18,15 @@ export function formatCurrency(amount: number, currency = 'USD') {
   }
 }
 
+/**
+ * An amount in a stated currency — or, when the currency is not known, just the number. It never guesses dollars:
+ * a bare "$" in front of a rupee figure is exactly the mistake this exists to prevent.
+ */
+export function formatAmountIn(amount: number, currency?: string | null) {
+  if (!currency || !currency.trim()) return Number(amount).toLocaleString('en-US', { maximumFractionDigits: 2 })
+  return formatCurrency(amount, currency)
+}
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

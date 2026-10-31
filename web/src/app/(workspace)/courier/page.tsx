@@ -54,6 +54,8 @@ import { loadCourierDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
+import { TariffCurrencyNotice } from "@/components/desks/TariffCurrencyNotice";
+import { currencyClashes } from "@/lib/pricing/tariff-currency";
 import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
 import { deleteDraft } from "@/lib/firebase/drafts";
 import { buildCourierDraftQuote } from "@/lib/quotes/drafts";
@@ -601,6 +603,12 @@ function CourierDeskInner() {
     [couriers, priceCtx],
   );
   const pricedById = useMemo(() => new Map(priced.map((p) => [p.option.id, p])), [priced]);
+  // A tariff-priced card is in the tariff book's own currency. If the quote says another currency, the numbers would be saved
+  // under the wrong label, so we stop and offer to switch rather than let that through.
+  const currencyClash = currencyClashes(
+    priced.map((p) => (!p.manual && p.tariff.status === "hit" ? { carrier: p.tariff.book.carrier, tariffCurrency: p.tariff.book.currency } : null)),
+    currency,
+  );
   const activePriced = activeCourier ? pricedById.get(activeCourier.id) : undefined;
 
   const quotedLanes = useMemo(() => {
@@ -659,6 +667,10 @@ function CourierDeskInner() {
   }
 
   const handlePreview = () => {
+    if (currencyClash.length) {
+      toast(`Tariff prices are in ${currencyClash[0].tariffCurrency} but this quote is in ${currency}. Switch the quote currency first.`, "error");
+      return;
+    }
     if (cargo.chargeableKg <= 0) {
       toast("Enter package weight / dimensions before preview.", "error");
       setTab("packages");
@@ -709,6 +721,12 @@ function CourierDeskInner() {
 
   const handleSave = useCallback(
     async () => {
+      if (currencyClash.length) {
+        const msg = `Tariff prices are in ${currencyClash[0].tariffCurrency} but this quote is in ${currency}. Switch the quote currency before saving.`;
+        setSaveMsg(msg);
+        toast(msg, "error");
+        return;
+      }
       if (!customer.trim()) {
         const msg = "Enter customer name before saving.";
         setSaveMsg(msg);
@@ -873,6 +891,7 @@ function CourierDeskInner() {
       multiLane,
       allLanesTotal,
       parkedId,
+      currencyClash,
     ],
   );
 
@@ -881,6 +900,7 @@ function CourierDeskInner() {
   return (
     <div className="space-y-6">
       <DraftResumeBanner deskLabel="courier" pending={draft.pending} onResume={draft.resume} onDiscard={draft.discard} />
+      <TariffCurrencyNotice clashes={currencyClash} quoteCurrency={currency} onSwitch={setCurrency} priced />
       {loader.banner ? (
         <Card className="border-sky-200 bg-sky-50">
           <p className="text-sm font-semibold text-sky-900">{loader.banner}</p>

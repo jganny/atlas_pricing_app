@@ -256,12 +256,13 @@ export function AirlineOptionForm({
           </div>
           {tot && tot.baseFreightQuote > 0 ? (
             <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-              Freight: {tot.freight.chargeableWeightKg.toFixed(2)} kg × $
-              {(
+              Freight: {tot.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
+              {formatCurrency(
                 (tot.freight.activeRate > 0
                   ? tot.freight.activeRate
-                  : tot.freight.activeBuyRate) || 0
-              ).toFixed(2)}
+                  : tot.freight.activeBuyRate) || 0,
+                currency,
+              )}
               {tot.quoteUsingBuyFreight ? " (from Buy)" : ""} ={" "}
               <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
             </p>
@@ -282,7 +283,7 @@ export function AirlineOptionForm({
                   {formatCurrency(breakComparison.current.total, currency)}
                 </p>
                 <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {breakComparison.current.weightUsedKg.toFixed(0)} kg × ${breakComparison.current.rate.toFixed(2)}
+                  {breakComparison.current.weightUsedKg.toFixed(0)} kg × {formatCurrency(breakComparison.current.rate, currency)}
                 </p>
               </div>
               <div
@@ -299,7 +300,7 @@ export function AirlineOptionForm({
                   {formatCurrency(breakComparison.next.total, currency)}
                 </p>
                 <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {breakComparison.next.weightUsedKg.toFixed(0)} kg (rounded up) × ${breakComparison.next.rate.toFixed(2)}
+                  {breakComparison.next.weightUsedKg.toFixed(0)} kg (rounded up) × {formatCurrency(breakComparison.next.rate, currency)}
                 </p>
               </div>
               {breakComparison.cheaper !== "equal" ? (

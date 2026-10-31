@@ -63,6 +63,7 @@ export async function quickWon(row: EnquiryRecord, username: string): Promise<Qu
       wonAt: new Date().toISOString(),
       ownerSeat: quoteDeskSeatId(row) ?? "",
       ownerLogin: row.creator || username,
+      currency: String(full?.currency ?? row.currency ?? ""),
       shipperName: "",
       consigneeName: "",
       commodity,
@@ -73,7 +74,7 @@ export async function quickWon(row: EnquiryRecord, username: string): Promise<Qu
   );
 
   const seat = quoteDeskSeatId(row);
-  pushNrsFollowUp({ quoteId: row.id, ref, customer: row.customer, buyRate: buy, sellRate: sell, shipper: "", consignee: "", commodity });
+  pushNrsFollowUp({ currency: String(full?.currency ?? row.currency ?? ""), quoteId: row.id, ref, customer: row.customer, buyRate: buy, sellRate: sell, shipper: "", consignee: "", commodity });
   pushNrsAlert(`Priority confirmation needed for ${ref} · ${row.customer}${commodity ? ` · ${commodity}` : ""}`, ref);
   await saveNrsRegistryEntry(
     buildRegistryEntry({

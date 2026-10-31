@@ -201,6 +201,7 @@ export function EnquiryInspector({
           wonAt: new Date().toISOString(),
           ownerSeat: quoteDeskSeatId(row) ?? "",
           ownerLogin: row.creator || user?.username || "",
+          currency: String(full?.currency ?? row.currency ?? ""),
           ...followUpValues,
         },
         user?.username || "",
@@ -213,6 +214,7 @@ export function EnquiryInspector({
       const deskSeat = quoteDeskSeatId(row);
       if (deskSeat === "air-nom" || deskSeat === "sea-nom") {
         pushNrsFollowUp({
+          currency: String(full?.currency ?? row.currency ?? ""),
           quoteId: row.id,
           ref,
           customer: row.customer,

@@ -11,6 +11,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.127",
+    date: "2026-10-31",
+    items: [
+      "Fixed a currency mix-up on the Air desk: the freight line under Quoted summary printed a dollar sign (for example “70 kg × $360”) even when the quote was in INR. Every rate now shows in the quote's own currency, including the freight line and the weight-break comparison on the airline card.",
+      "A Circulars tariff in a different currency from the quote (for example a USD tariff on an INR quote) is no longer filled in silently. A notice says so and offers to switch the quote to the tariff's currency. Applies to the Air and Sea desks.",
+      "Courier desk: if a tariff-priced card is in a different currency from the quote, preview and save pause until the currency matches, so figures are never saved under the wrong currency.",
+      "Performance report: the GP total was shown with a dollar sign but is in rupees. Now shown in INR like Revenue.",
+      "Won follow-ups, the NRS list and the Smart Quote result no longer assume dollars when a quote's currency isn't known; they show the quote's own currency.",
+    ],
+  },
+  {
     version: "0.3.126",
     date: "2026-10-30",
     items: [

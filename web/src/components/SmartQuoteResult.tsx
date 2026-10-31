@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Badge, Card } from "./ui";
 import type { SmartQuoteDraft } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatAmountIn } from "@/lib/utils";
 
 export function SmartQuoteResult({
   draft,
@@ -81,7 +81,7 @@ export function SmartQuoteResult({
               <div>
                 <dt className="text-[var(--color-text-muted)]">Est. freight (mock)</dt>
                 <dd className="text-lg font-extrabold text-emerald-700">
-                  {formatCurrency(draft.estimatedTotal)}
+                  {formatAmountIn(draft.estimatedTotal, draft.currency)}
                 </dd>
               </div>
             ) : null}
