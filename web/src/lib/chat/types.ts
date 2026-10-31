@@ -54,6 +54,8 @@ export interface ChatMessage {
   replyTo?: { id: string; name: string; snippet: string };
   attachments?: ChatAttachment[];
   quote?: QuoteCard;
+  /** Set when this message was forwarded from another conversation. */
+  forwardedFrom?: { name: string; login: string };
   mentions?: string[];
   /** emoji -> logins who reacted */
   reactions?: Record<string, string[]>;

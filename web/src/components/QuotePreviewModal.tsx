@@ -2,7 +2,7 @@
 
 import { orderOptionsForPack } from "@/lib/quotes/quote-document";
 import { useEffect, useMemo, useState } from "react";
-import { Download, Mail, MessageCircle, Printer, X } from "lucide-react";
+import { Download, MessageCircle, MessagesSquare, Printer, Share2, X } from "lucide-react";
 import type { SavedQuote } from "@/lib/types";
 import { toast } from "@/components/Toast";
 import { GuideNote } from "@/components/GuideNote";
@@ -18,6 +18,10 @@ import { getQuoteRefId } from "@/lib/quotes/ref-id";
 import { identityRows, money, statusLabel } from "@/lib/quotes/quote-identity";
 import { Badge, Button } from "@/components/ui";
 import { BrandMark } from "@/components/BrandMark";
+import { ChatTargetPicker } from "@/components/chat/ChatTargetPicker";
+import { useTeamChatOptional } from "@/components/chat/ChatProvider";
+import { sendChatMessage } from "@/lib/chat/actions";
+import type { ChatRoom, QuoteCard } from "@/lib/chat/types";
 import { formatCurrency } from "@/lib/utils";
 import {
   formatRoutingPreview,
@@ -149,6 +153,8 @@ export function QuotePreviewModal({
     [quote, customsHolidays],
   );
   const [shareBusy, setShareBusy] = useState<string | null>(null);
+  const teamChat = useTeamChatOptional();
+  const [pickingChat, setPickingChat] = useState(false);
 
   async function handlePrint() {
     setShareBusy("Opening printer…");
@@ -194,6 +200,34 @@ export function QuotePreviewModal({
       );
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
+      toast(err instanceof Error ? err.message : "Could not prepare the quotation PDF", "error");
+    } finally {
+      setShareBusy(null);
+    }
+  }
+
+  /** Sends the customer copy (PDF) plus a quote card into the chosen Team Chat conversations. Prices never go in the card; the PDF is the customer document, so it has no buy rates or GP. */
+  async function handleTeamChat(targets: ChatRoom[]) {
+    if (!teamChat?.me) return;
+    setShareBusy("Preparing PDF…");
+    try {
+      const file = await pdfFile();
+      const card: QuoteCard = {
+        id: quote.id,
+        ref,
+        customer: quote.customer,
+        mode: type ? type.charAt(0).toUpperCase() + type.slice(1) : "",
+        route: String(d.origin ?? d.originCity ?? "") && String(d.destination ?? d.destCity ?? "")
+          ? `${d.origin ?? d.originCity} → ${d.destination ?? d.destCity}`
+          : "",
+        status: statusLabel(quote.status),
+      };
+      for (const room of targets) {
+        sendChatMessage({ backend: teamChat.backend, me: teamChat.me, room, people: teamChat.people, text: "", files: [file], quote: card });
+      }
+      setPickingChat(false);
+      toast(`Shared in Team Chat with ${targets.length} conversation${targets.length === 1 ? "" : "s"} — the PDF is attached.`, "success");
+    } catch (err) {
       toast(err instanceof Error ? err.message : "Could not prepare the quotation PDF", "error");
     } finally {
       setShareBusy(null);
@@ -269,9 +303,15 @@ export function QuotePreviewModal({
               Download quote
             </Button>
             <Button type="button" variant="secondary" className="text-xs" data-testid="quote-email-btn" onClick={() => void handleEmail()} disabled={Boolean(shareBusy)}>
-              <Mail className="mr-1 h-4 w-4" />
-              {shareBusy === "Preparing PDF…" ? "Preparing PDF…" : "Email"}
+              <Share2 className="mr-1 h-4 w-4" />
+              {shareBusy === "Preparing PDF…" ? "Preparing PDF…" : "Share"}
             </Button>
+            {teamChat?.me ? (
+              <Button type="button" variant="secondary" className="text-xs" data-testid="quote-teamchat-btn" onClick={() => setPickingChat(true)} disabled={Boolean(shareBusy)}>
+                <MessagesSquare className="mr-1 h-4 w-4" />
+                Team Chat
+              </Button>
+            ) : null}
             <Button type="button" variant="secondary" className="text-xs" data-testid="quote-whatsapp-btn" onClick={() => void handleWhatsApp()} disabled={Boolean(shareBusy)}>
               <MessageCircle className="mr-1 h-4 w-4" />
               WhatsApp
@@ -279,8 +319,8 @@ export function QuotePreviewModal({
           </div>
           <GuideNote testId="quote-share-guide">
             {options.length > 1
-              ? "Email opens with the PDF only (no body text). WhatsApp opens the chat — attach the PDF that downloads. Download is the same pack: comparison plus every airline breakup."
-              : "Email opens with the PDF only (no body text). WhatsApp opens the chat — attach the PDF that downloads."}
+              ? "Share opens your device's share list (Mail, WhatsApp and more) with the PDF attached; on a computer it gives a mail draft with the PDF. Team Chat sends the PDF to a colleague or group here. Download is the same pack: comparison plus every airline breakup."
+              : "Share opens your device's share list (Mail, WhatsApp and more) with the PDF attached; on a computer it gives a mail draft with the PDF. Team Chat sends the PDF to a colleague or group here."}
           </GuideNote>
           <div className="mb-6 border-b-2 border-[var(--color-atlas-navy)] pb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -511,6 +551,16 @@ export function QuotePreviewModal({
           ) : null}
         </div>
       </div>
+      {pickingChat ? (
+        <ChatTargetPicker
+          title="Share in Team Chat"
+          hint="Sends the customer PDF (no buy rates or GP) and a quote card."
+          confirmLabel="Share"
+          busy={Boolean(shareBusy)}
+          onClose={() => setPickingChat(false)}
+          onConfirm={(targets) => void handleTeamChat(targets)}
+        />
+      ) : null}
     </div>
   );
 }

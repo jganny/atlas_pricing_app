@@ -14,21 +14,28 @@ export interface SendInput {
   files?: File[];
   replyTo?: ChatMessage;
   quote?: QuoteCard;
+  /** Files that are already uploaded (a forwarded message's attachments): sent as they are, not uploaded again. */
+  keepAttachments?: ChatAttachment[];
+  forwardedFrom?: { name: string; login: string };
 }
 
 /** Saves the message on this device straight away; files and delivery continue in the background. */
 export function sendChatMessage(input: SendInput): ChatMessage | null {
-  const { backend, me, room, people, files = [], replyTo, quote } = input;
+  const { backend, me, room, people, files = [], replyTo, quote, forwardedFrom } = input;
+  const kept = (input.keepAttachments ?? []).filter((a) => a.url && a.status === "ready").map((a) => ({ ...a }));
   const text = input.text.trim().slice(0, MAX_TEXT);
-  if (!text && !files.length && !quote) return null;
+  if (!text && !files.length && !quote && !kept.length) return null;
   const id = newId();
-  const attachments: ChatAttachment[] = files.map((f) => ({
+  const uploads: ChatAttachment[] = files.map((f) => ({
     name: safeFileName(f.name),
     size: f.size,
     type: f.type || "",
     url: "",
     status: "uploading",
   }));
+  // Already-uploaded files come first; the files still to upload keep their own position after them.
+  const attachments: ChatAttachment[] = [...kept, ...uploads];
+  const uploadOffset = kept.length;
   const mentions = parseMentions(text, people).filter((l) => l !== me.login);
   const msg: ChatMessage = {
     id,
@@ -39,6 +46,7 @@ export function sendChatMessage(input: SendInput): ChatMessage | null {
     createdAtMs: Date.now(),
     ...(attachments.length ? { attachments } : {}),
     ...(quote ? { quote } : {}),
+    ...(forwardedFrom ? { forwardedFrom } : {}),
     ...(mentions.length ? { mentions } : {}),
     ...(replyTo
       ? {
@@ -54,11 +62,39 @@ export function sendChatMessage(input: SendInput): ChatMessage | null {
   if (files.length) {
     void Promise.all(
       files.map((blob, index) =>
-        queueFile({ id: `${id}:${index}`, roomId: room.id, msgId: id, index, name: attachments[index].name, type: attachments[index].type, blob, addedAt: Date.now(), template: attachments }),
+        queueFile({ id: `${id}:${index + uploadOffset}`, roomId: room.id, msgId: id, index: index + uploadOffset, name: attachments[index + uploadOffset].name, type: attachments[index + uploadOffset].type, blob, addedAt: Date.now(), template: attachments }),
       ),
     ).then(() => processOutbox(backend));
   }
   return msg;
+}
+
+/**
+ * Forwards one message (its words, its quote card and its files) into other conversations. The files are not copied: the
+ * forwarded message points at the same stored files, so they stay available for as long as the original message does
+ * (the 100-day clean-up removes a message's files with that message).
+ */
+export function forwardChatMessage(opts: { backend: ChatBackend; me: Me; rooms: ChatRoom[]; people: Person[]; msg: ChatMessage }): number {
+  const { backend, me, rooms, people, msg } = opts;
+  if (msg.deleted) return 0;
+  const from = { name: msg.ai ? "Vertex" : people.find((p) => p.login === msg.senderLogin)?.name || msg.senderName, login: msg.senderLogin };
+  // A message that was itself forwarded keeps pointing at the person who first wrote it.
+  const origin = msg.forwardedFrom ?? from;
+  let sent = 0;
+  for (const room of rooms) {
+    const out = sendChatMessage({
+      backend,
+      me,
+      room,
+      people,
+      text: msg.text,
+      quote: msg.quote,
+      keepAttachments: msg.attachments,
+      forwardedFrom: origin,
+    });
+    if (out) sent += 1;
+  }
+  return sent;
 }
 
 /** A reply written by the assistant on someone's behalf. Shown as Vertex; the asker's login is what owns the message. */

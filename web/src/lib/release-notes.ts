@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.128",
+    date: "2026-10-31",
+    items: [
+      "Team Chat: new Forward. Hover a message (or open its ⋯ menu) and choose Forward to send its words, quote card and attachments to one or more conversations. The new message says “Forwarded from …”.",
+      "Quote preview: the Email button is now called Share. It opens your device's share list (Mail, WhatsApp and more) with the PDF attached, as before.",
+      "Quote preview: new Team Chat button. Pick one or more people, groups or desks and the customer PDF goes there with a quote card. The PDF never contains buy rates or GP.",
+      "Courier desk: gross profit was saved as 0 even when both Buy and Sell were entered, so it did not show on the quote. It is now saved from the Buy and Sell rates (several lanes add up). If a Buy rate is missing the GP is left blank instead of showing a false 0.",
+    ],
+  },
+  {
     version: "0.3.127",
     date: "2026-10-31",
     items: [

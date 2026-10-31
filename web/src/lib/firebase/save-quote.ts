@@ -90,6 +90,8 @@ export interface SaveCourierInput extends SaveMeta {
   originCharges?: SurchargeRow[];
   destCharges?: SurchargeRow[];
   validity?: string;
+  /** True when the quoted cards all have a buy figure, so `calc.grossProfit` is a real profit (and 0 means 0). */
+  gpKnown?: boolean;
 }
 
 async function writeQuote(id: string, quoteData: Record<string, unknown>): Promise<string> {
@@ -134,8 +136,14 @@ export async function saveCourierQuote(input: SaveCourierInput): Promise<string>
     amount,
     currency: input.currency,
     amountINR: input.currency === "INR" ? amount : amount * 83,
-    grossProfit: input.calc.grossProfit,
-    grossProfitCurrency: input.currency,
+    // Profit is saved only when it is known. An unknown profit stays blank instead of reading as 0.
+    ...(input.gpKnown
+      ? {
+          grossProfit: input.calc.grossProfit,
+          grossProfitCurrency: input.currency,
+          grossProfitINR: input.currency === "INR" ? input.calc.grossProfit : input.calc.grossProfit * 83,
+        }
+      : {}),
     route,
     routingDetails: route,
     details: {

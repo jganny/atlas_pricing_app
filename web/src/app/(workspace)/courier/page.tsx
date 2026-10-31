@@ -56,6 +56,7 @@ import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
 import { useQuoteDeskLoader } from "@/hooks/use-quote-desk-loader";
 import { TariffCurrencyNotice } from "@/components/desks/TariffCurrencyNotice";
 import { currencyClashes } from "@/lib/pricing/tariff-currency";
+import { courierGrossProfit } from "@/lib/quotes/courier-gp";
 import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
 import { deleteDraft } from "@/lib/firebase/drafts";
 import { buildCourierDraftQuote } from "@/lib/quotes/drafts";
@@ -751,6 +752,15 @@ function CourierDeskInner() {
       const primary = cards.find((c) => c.option.selected) ?? cards[0];
       const primaryPriced = priced.find((p) => p.option.id === primary?.option.id);
       const amount = multiLane ? allLanesTotal : primary?.sellLocal ?? 0;
+      // Profit = what the customer pays for the freight less what the carrier charges us, for each quoted card.
+      const quotedPriced = multiLane
+        ? lanes.map((l) => {
+            const onLane = couriers.filter((c) => (c.laneId || fallbackLaneId) === l.id);
+            const chosen = onLane.find((c) => c.selected) ?? onLane[0];
+            return chosen ? pricedById.get(chosen.id) : undefined;
+          })
+        : [primaryPriced];
+      const gp = courierGrossProfit(quotedPriced.map((p) => (p ? { base: p.base, buy: p.buy } : undefined)));
       const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
       const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
       const localQuote: SavedQuote = {
@@ -764,6 +774,7 @@ function CourierDeskInner() {
         timestamp: Date.now(),
         amount,
         currency,
+        ...(gp !== null ? { grossProfit: gp, grossProfitCurrency: currency } : {}),
         route: multiLane ? allLanesRoute(lanes) : `${originCity || "—"} → ${destCity || "—"}`,
         details: {
           origin: originCity,
@@ -806,7 +817,7 @@ function CourierDeskInner() {
               subtotal: primaryPriced.base + primaryPriced.fuel + primaryPriced.extras,
               tax: primaryPriced.tax,
               total: primaryPriced.total,
-              grossProfit: 0,
+              grossProfit: gp ?? 0,
               surcharges: {
                 ...cargo.surcharges,
                 fuel: primaryPriced.fuel,
@@ -830,6 +841,7 @@ function CourierDeskInner() {
               gstEnabled,
               packages: cargo.packages,
               calc,
+              gpKnown: gp !== null,
               lanes,
               cards,
               quotedLanes,
@@ -892,6 +904,8 @@ function CourierDeskInner() {
       allLanesTotal,
       parkedId,
       currencyClash,
+      couriers,
+      pricedById,
     ],
   );
 

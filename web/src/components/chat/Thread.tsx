@@ -9,7 +9,8 @@ import { Composer, type ComposerSend } from "./Composer";
 import { MessageItem, type MessageActions } from "./MessageItem";
 import { useTeamChat } from "./ChatProvider";
 import { cn } from "@/lib/utils";
-import { deleteMessage, editMessage, sendAssistantReply, sendChatMessage, togglePin } from "@/lib/chat/actions";
+import { deleteMessage, editMessage, forwardChatMessage, sendAssistantReply, sendChatMessage, togglePin } from "@/lib/chat/actions";
+import { ChatTargetPicker } from "./ChatTargetPicker";
 import { runAssistant } from "@/lib/chat/assistant";
 import {
   askPrompt,
@@ -36,6 +37,7 @@ const PAGE = 150;
 
 export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void }) {
   const chat = useTeamChat();
+  const [forwarding, setForwarding] = useState<ChatMessage | null>(null);
   const { me, backend, people, presence, state, markRead, setMuted } = chat;
   const online = useOnline();
   const [limit, setLimit] = useState(PAGE);
@@ -210,6 +212,7 @@ export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void })
     onCopy: (m) => {
       void navigator.clipboard?.writeText(m.text).then(() => toast("Copied", "success")).catch(() => undefined);
     },
+    onForward: (m) => setForwarding(m),
   };
 
   const seenMark = otherLogin ? receipts[otherLogin] ?? 0 : 0;
@@ -424,6 +427,20 @@ export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void })
         droppedFiles={dropped}
         onDroppedHandled={() => setDropped([])}
       />
+      {forwarding ? (
+        <ChatTargetPicker
+          title="Forward to…"
+          hint={forwarding.attachments?.length ? "The words and the files go along." : undefined}
+          confirmLabel="Forward"
+          onClose={() => setForwarding(null)}
+          onConfirm={(targets) => {
+            if (!me) return;
+            const n = forwardChatMessage({ backend, me, rooms: targets, people, msg: forwarding });
+            setForwarding(null);
+            toast(n ? `Forwarded to ${n} conversation${n === 1 ? "" : "s"}.` : "There was nothing to forward.", n ? "success" : "info");
+          }}
+        />
+      ) : null}
     </div>
   );
 }

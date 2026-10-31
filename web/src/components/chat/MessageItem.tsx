@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertCircle, Check, Clock, CornerUpLeft, Download, FileText, Image as ImageIcon, Languages, Pencil, Pin, PinOff, Smile, Trash2, MoreHorizontal, Copy, Sparkles } from "lucide-react";
+import { AlertCircle, Check, Clock, CornerUpLeft, Download, FileText, Image as ImageIcon, Languages, Pencil, Pin, PinOff, Smile, Trash2, MoreHorizontal, Copy, Sparkles, Forward } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Markdown } from "@/components/Markdown";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export interface MessageActions {
   onTranslate: (m: ChatMessage) => void;
   onJump: (id: string) => void;
   onCopy: (m: ChatMessage) => void;
+  onForward: (m: ChatMessage) => void;
 }
 
 function Attachment({ a }: { a: ChatAttachment }) {
@@ -89,6 +90,8 @@ export function MessageItem({
   const name = msg.ai ? "Vertex" : people.find((p) => p.login === msg.senderLogin)?.name || msg.senderName;
   const segments = tokenize(msg.text, people);
   const reactions = Object.entries(msg.reactions ?? {}).filter(([, who]) => who.length);
+  // Anything with words, a quote card or a finished file can be forwarded.
+  const canForward = Boolean(msg.text || msg.quote || msg.attachments?.some((a) => a.url && a.status === "ready")) && !msg.pending && !msg.failed;
 
   if (msg.deleted) {
     return (
@@ -124,6 +127,11 @@ export function MessageItem({
             mine ? "rounded-tr-sm bg-[var(--color-atlas-navy)] text-white" : msg.ai ? "rounded-tl-sm border border-amber-200 bg-amber-50 text-slate-900" : "rounded-tl-sm bg-slate-100 text-slate-900",
           )}
         >
+          {msg.forwardedFrom ? (
+            <span className={cn("mb-1 flex items-center gap-1 text-[11px] italic", mine ? "text-white/70" : "text-slate-500")} data-testid="forwarded-label">
+              <Forward className="h-3 w-3" /> Forwarded from {msg.forwardedFrom.name}
+            </span>
+          ) : null}
           {msg.replyTo ? (
             <button
               type="button"
@@ -228,12 +236,22 @@ export function MessageItem({
         <button type="button" aria-label="Reply" onClick={() => actions.onReply(msg)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
           <CornerUpLeft className="h-4 w-4" />
         </button>
+        {canForward ? (
+          <button type="button" aria-label="Forward" title="Forward" data-testid="forward-btn" onClick={() => actions.onForward(msg)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+            <Forward className="h-4 w-4" />
+          </button>
+        ) : null}
         <div className="relative">
           <button type="button" aria-label="More" onClick={() => { setMenu((v) => !v); setPicker(false); }} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <MoreHorizontal className="h-4 w-4" />
           </button>
           {menu ? (
             <div className={cn("absolute z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white py-1 text-xs shadow-lg", mine ? "right-0" : "left-0")} onClick={() => setMenu(false)}>
+              {canForward ? (
+                <button type="button" className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => actions.onForward(msg)}>
+                  <Forward className="h-3.5 w-3.5" /> Forward
+                </button>
+              ) : null}
               {msg.text ? (
                 <button type="button" className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => actions.onCopy(msg)}>
                   <Copy className="h-3.5 w-3.5" /> Copy text
