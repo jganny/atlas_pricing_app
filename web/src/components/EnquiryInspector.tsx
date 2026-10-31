@@ -85,7 +85,20 @@ export function EnquiryInspector({
     if (quote) return quote;
     setLoading(true);
     try {
-      const q = (await fetchQuoteById(row.id)) ?? getLocalQuote(row.id) ?? stubQuoteFromEnquiry(row);
+      // The list row is only a summary. Opening a desk or the preview from it would show a blank quote (and Amend could then save over
+      // the real one), so a read that fails is retried once and then reported, never replaced by the summary.
+      let q = (await fetchQuoteById(row.id)) ?? getLocalQuote(row.id);
+      if (!q && useLiveData) {
+        await new Promise((r) => setTimeout(r, 800));
+        q = await fetchQuoteById(row.id);
+      }
+      if (!q && useLiveData) {
+        const text = "Couldn't load the full quote — check your connection and press the button again. Nothing was changed.";
+        setMsg(text);
+        toast(text, "error");
+        return null;
+      }
+      q = q ?? stubQuoteFromEnquiry(row);
       setQuote(q);
       return q;
     } finally {

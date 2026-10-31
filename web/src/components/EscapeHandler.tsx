@@ -26,7 +26,9 @@ export function EscapeHandler() {
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")) {
         target.blur();
       }
-      const closer = document.querySelector<HTMLButtonElement>("[data-modal-close]");
+      // Only closers you can actually see (the Ask Vertex panel keeps hidden ones mounted), and the last one is the topmost window.
+      const visible = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-modal-close]")).filter((el) => el.getClientRects().length > 0);
+      const closer = visible[visible.length - 1];
       if (closer) {
         e.preventDefault();
         closer.click();

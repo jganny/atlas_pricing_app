@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.129",
+    date: "2026-10-31",
+    items: [
+      "Esc now closes the Quotation Preview (and any other open window). Before, it could be ignored because a hidden panel took the key.",
+      "Amend, Duplicate and View/Print from Enquiry DB: if the full quote cannot be read at that moment (for example a weak connection), you now get a clear message and nothing opens. Before, a blank desk page could open and Amend could then overwrite the real quote.",
+    ],
+  },
+  {
     version: "0.3.128",
     date: "2026-10-31",
     items: [
