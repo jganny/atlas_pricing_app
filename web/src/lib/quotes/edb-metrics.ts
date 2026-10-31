@@ -34,12 +34,23 @@ export function computeBuyTotal(row: EnquiryRecord): number | null {
   return null;
 }
 
+/**
+ * Older quotes store a flat minimum charge as the "applied rate" without marking the break as the minimum. A per-kg rate
+ * can never exceed the whole quote once multiplied by the weight, so when it does, the figure is a flat minimum.
+ */
+function rateIsFlatMinimum(row: EnquiryRecord, rate: number, total: number | null | undefined): boolean {
+  if (row.usedBreak === "min") return true;
+  const kg = row.billingWeight;
+  if (!(kg && kg > 1) || !total || row.mode === "sea") return false;
+  return rate * kg > total * 1.02;
+}
+
 export function formatBuyCell(row: EnquiryRecord, mode: BuySellMode): string {
   const currency = row.currency || "USD";
   if (mode === "perkg") {
     const rate = row.appliedBuyRate;
     if (rate == null || Number.isNaN(rate)) return "—";
-    if (row.usedBreak === "min") {
+    if (rateIsFlatMinimum(row, rate, computeBuyTotal(row))) {
       return `${formatCurrency(rate, currency)} (Min)`;
     }
     const unit = row.mode === "sea" ? "/RT" : "/kg";
@@ -54,7 +65,7 @@ export function formatSellCell(row: EnquiryRecord, mode: BuySellMode): string {
   if (mode === "perkg") {
     const rate = row.appliedRate;
     if (rate == null || Number.isNaN(rate)) return "—";
-    if (row.usedBreak === "min") {
+    if (rateIsFlatMinimum(row, rate, row.grandTotal)) {
       return `${formatCurrency(rate, currency)} (Min)`;
     }
     const unit = row.mode === "sea" ? "/RT" : "/kg";

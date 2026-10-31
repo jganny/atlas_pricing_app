@@ -55,7 +55,7 @@ function BreakdownPanel({
   const isTrucker = kind === "trucker" || kind === "transport";
   const isWarehouse = kind === "warehouse" || kind === "storage";
   const showRouting = !isTrucker && !isWarehouse;
-  const lines = optionChargeLines(option, currency, chargeableWeight);
+  const lines = optionChargeLines(option, currency, chargeableWeight, { showCostMarker: true });
   const body = lines.slice(0, -1);
   const total = lines[lines.length - 1];
   return (

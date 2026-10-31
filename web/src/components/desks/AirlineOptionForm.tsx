@@ -256,14 +256,22 @@ export function AirlineOptionForm({
           </div>
           {tot && tot.baseFreightQuote > 0 ? (
             <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-              Freight: {tot.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
-              {formatCurrency(
-                (tot.freight.activeRate > 0
-                  ? tot.freight.activeRate
-                  : tot.freight.activeBuyRate) || 0,
-                currency,
-              )}
-              {tot.quoteUsingBuyFreight ? " (from Buy)" : ""} ={" "}
+              Freight:{" "}
+              {tot.freight.isMinActive || tot.freight.usedBreak === "min" ? (
+                "minimum charge (flat)"
+              ) : (
+                <>
+                  {tot.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
+                  {formatCurrency(
+                    (tot.freight.activeRate > 0
+                      ? tot.freight.activeRate
+                      : tot.freight.activeBuyRate) || 0,
+                    currency,
+                  )}
+                  {tot.quoteUsingBuyFreight ? " (from Buy)" : ""}
+                </>
+              )}{" "}
+              ={" "}
               <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
             </p>
           ) : null}

@@ -1938,14 +1938,20 @@ function AirDeskInner() {
                   <dd className="text-right">
                     {selectedTotals.baseFreightQuote > 0 ? (
                       <span className="block text-[11px] font-normal text-[var(--color-text-muted)]">
-                        {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
-                        {formatCurrency(
-                          (selectedTotals.freight.activeRate > 0
-                            ? selectedTotals.freight.activeRate
-                            : selectedTotals.freight.activeBuyRate) || 0,
-                          currency,
+                        {selectedTotals.freight.isMinActive || selectedTotals.freight.usedBreak === "min" ? (
+                          "Minimum charge (flat)"
+                        ) : (
+                          <>
+                            {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
+                            {formatCurrency(
+                              (selectedTotals.freight.activeRate > 0
+                                ? selectedTotals.freight.activeRate
+                                : selectedTotals.freight.activeBuyRate) || 0,
+                              currency,
+                            )}
+                            {selectedTotals.quoteUsingBuyFreight ? " (Buy)" : ""}
+                          </>
                         )}
-                        {selectedTotals.quoteUsingBuyFreight ? " (Buy)" : ""}
                       </span>
                     ) : null}
                     {formatCurrency(selectedTotals.baseFreightQuote, currency)}

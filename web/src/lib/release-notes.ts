@@ -19,6 +19,8 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       "Courier desk: if a tariff-priced card is in a different currency from the quote, preview and save pause until the currency matches, so figures are never saved under the wrong currency.",
       "Performance report: the GP total was shown with a dollar sign but is in rupees. Now shown in INR like Revenue.",
       "Won follow-ups, the NRS list and the Smart Quote result no longer assume dollars when a quote's currency isn't known; they show the quote's own currency.",
+      "Quotes saved by the older app now print correctly. A flat minimum charge was shown as “15 kg × $405 = $405”, an option total showed $0.00 and the origin charges were missing. The customer copy now shows “Base freight (minimum charge)”, every charge itemised, and a total that adds up. The Air desk and Enquiry DB also label a minimum charge as a minimum instead of a per-kg rate.",
+      "The customer copy of a quote no longer says “(from Buy)” beside a rate. That note stays on the internal screen only.",
     ],
   },
   {

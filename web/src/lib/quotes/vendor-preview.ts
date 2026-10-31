@@ -90,6 +90,7 @@ function rec(raw: unknown): Record<string, unknown> {
 function storedTotal(a: Record<string, unknown>): number {
   return (
     num(a.quoteTotal) ||
+    num(a.grandTotal) || // older quotes keep an option's total here
     num(a.grandSell) ||
     num(a.sellLocal) ||
     num(a.sellUsd) ||

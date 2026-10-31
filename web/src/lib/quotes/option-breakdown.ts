@@ -56,6 +56,8 @@ export type OptionBreakdown = VendorPreviewRow & {
   chargeableWeight: number;
   validity: string;
   quoteUsingBuyFreight: boolean;
+  /** The freight is the flat minimum charge, not weight × a per-kg rate. */
+  freightIsMinimum?: boolean;
   gst: number;
   detention: number;
   tolls: number;
@@ -121,12 +123,10 @@ function asAirline(raw: Record<string, unknown>): AirlineOption {
       originFeesEnabled: raw.originFeesEnabled !== false,
       destFeesEnabled: raw.destFeesEnabled !== false,
       breaks: (raw.breaks as AirlineOption["breaks"]) ?? undefined,
-      originSurcharges: Array.isArray(raw.originSurcharges)
-        ? (raw.originSurcharges as AirlineOption["originSurcharges"])
-        : undefined,
-      destSurcharges: Array.isArray(raw.destSurcharges)
-        ? (raw.destSurcharges as AirlineOption["destSurcharges"])
-        : undefined,
+      // Quotes saved by the older app name a charge's amounts `rate` / `buyRate` rather than `sell` / `buy`;
+      // mapSurcharges reads both, so those quotes still itemise and total correctly.
+      originSurcharges: mapSurcharges(raw.originSurcharges),
+      destSurcharges: mapSurcharges(raw.destSurcharges),
     },
     Boolean(raw.selected),
   );
@@ -149,12 +149,8 @@ function asLiner(raw: Record<string, unknown>): LinerOption {
         : undefined,
       lclSell: num(raw.lclSell),
       lclBuy: num(raw.lclBuy),
-      originSurcharges: Array.isArray(raw.originSurcharges)
-        ? (raw.originSurcharges as LinerOption["originSurcharges"])
-        : undefined,
-      destSurcharges: Array.isArray(raw.destSurcharges)
-        ? (raw.destSurcharges as LinerOption["destSurcharges"])
-        : undefined,
+      originSurcharges: mapSurcharges(raw.originSurcharges),
+      destSurcharges: mapSurcharges(raw.destSurcharges),
     },
     Boolean(raw.selected),
   );
@@ -381,6 +377,18 @@ function pick(stored: unknown, computedVal: number, fallback: number, selected: 
   return selected ? fallback : 0;
 }
 
+/**
+ * Whether an airline's freight is its flat Minimum charge. True when the Minimum break is what was charged: either the
+ * rates say so, or (older quotes) the saved "rate" is the minimum amount itself, so weight × rate could never equal the freight.
+ */
+function isMinimumFreight(raw: Record<string, unknown>, baseFreight: number): boolean {
+  const breaks = (raw.breaks ?? {}) as Record<string, { sell?: number; buy?: number } | undefined>;
+  const min = num(breaks.min?.sell) || num(breaks.min?.buy);
+  if (!(min > 0) || !(baseFreight > 0)) return false;
+  const others = Object.entries(breaks).some(([k, v]) => k !== "min" && (num(v?.sell) > 0 || num(v?.buy) > 0));
+  return !others || Math.abs(baseFreight - min) < 0.5;
+}
+
 function totalsFromRaw(
   raw: Record<string, unknown>,
   cargo: AirCargoRow[],
@@ -507,6 +515,7 @@ function totalsFromRaw(
     quoteUsingBuyFreight: Boolean(
       raw.quoteUsingBuyFreight ?? computed?.quoteUsingBuyFreight ?? (selected && selectedFallback.quoteUsingBuyFreight),
     ),
+    freightIsMinimum: isMinimumFreight(raw, baseFreight),
     gst,
     detention,
     tolls,
@@ -545,7 +554,10 @@ export function optionChargeLines(
   option: OptionBreakdown,
   currency: string,
   chargeableWeight: number,
+  /** On the internal screen only: say when freight is priced from the Buy rate. Never on what the customer receives. */
+  opts: { showCostMarker?: boolean } = {},
 ): ChargeLine[] {
+  const showCostMarker = Boolean(opts.showCostMarker);
   const chw = option.chargeableWeight || chargeableWeight;
   const rate = option.appliedRate;
   const base = option.baseFreight;
@@ -577,12 +589,18 @@ export function optionChargeLines(
         }
       }
     } else {
-      lines.push({
-        label: "Base freight",
-        value: showKgRate
-          ? `${chw.toFixed(2)} kg × ${money(rate)}${option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base)}`
-          : money(base),
-      });
+      const kgRate = showKgRate && Math.abs(chw * rate - base) <= Math.max(0.5, base * 0.005);
+      lines.push(
+        option.freightIsMinimum
+          ? { label: "Base freight (minimum charge)", value: money(base) }
+          : {
+              label: "Base freight",
+              // "kg × rate = total" only when it really multiplies out; a flat minimum is never printed as a per-kg rate.
+              value: kgRate
+                ? `${chw.toFixed(2)} kg × ${money(rate)}${showCostMarker && option.quoteUsingBuyFreight ? " (from Buy)" : ""} = ${money(base)}`
+                : money(base),
+            },
+      );
     }
     if (option.originLines.length) {
       for (const o of option.originLines) lines.push({ label: o.name, value: surchargeLineValue(o, money) });
