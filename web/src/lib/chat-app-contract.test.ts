@@ -41,3 +41,7 @@ assert.match(read("src/components/chat/Composer.tsx"), /useVoiceRecorder/);
 assert.match(read("src/components/chat/MessageItem.tsx"), /data-testid="voice-note"/);
 
 console.log("chat app contract: own site, own manifest and worker, chat only; voice notes wired");
+
+// Official use only: no self sign-up in the chat app.
+const loginSrc = fs.readFileSync(path.join(web, "src/app/login/page.tsx"), "utf8");
+assert.match(loginSrc, /IS_CHAT_APP \? "hidden"/);

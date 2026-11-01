@@ -119,8 +119,9 @@ export default function LoginPage() {
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">
               {mode === "signin" ? (
                 <>
-                  Use your personal username. Desk seats (Air Nom, Sea Nom, NRS, Free Hand) stay —
-                  Admin assigns who sits in them.
+                  {IS_CHAT_APP
+                    ? "Sign in with the same username and password you use for the Pricing app."
+                    : "Use your personal username. Desk seats (Air Nom, Sea Nom, NRS, Free Hand) stay — Admin assigns who sits in them."}
                   {mock ? (
                     <>
                       {" "}
@@ -187,7 +188,8 @@ export default function LoginPage() {
               <p className="text-center text-[11px] text-[var(--color-text-muted)]">Sign-ins and time spent working in the app are recorded.</p>
             ) : null}
           </form>
-          <div className="mt-3 text-center text-xs">
+          {/* Vertex Chat is for existing staff only: no self sign-up there. */}
+          <div className={IS_CHAT_APP ? "hidden" : "mt-3 text-center text-xs"}>
             <button
               type="button"
               className="font-semibold text-sky-700 hover:underline"
