@@ -45,3 +45,8 @@ console.log("chat app contract: own site, own manifest and worker, chat only; vo
 // Official use only: no self sign-up in the chat app.
 const loginSrc = fs.readFileSync(path.join(web, "src/app/login/page.tsx"), "utf8");
 assert.match(loginSrc, /IS_CHAT_APP \? "hidden"/);
+
+// Profiles (photo + status) are wired into the provider, avatars and the More page.
+assert.match(read("src/components/chat/ChatProvider.tsx"), /subscribeProfiles/);
+assert.match(read("src/components/chat/Avatar.tsx"), /profiles\[/);
+assert.match(read("src/components/chat/ChatAppShell.tsx"), /ProfileDialog/);

@@ -6,6 +6,7 @@ import { MessageSquare } from "lucide-react";
 import { toast } from "@/components/Toast";
 import { ChatNotice } from "./ChatNotice";
 import { NewChatDialog } from "./NewChatDialog";
+import { ProfileDialog } from "./ProfileDialog";
 import { RoomList } from "./RoomList";
 import { Thread } from "./Thread";
 import { useTeamChat } from "./ChatProvider";
@@ -17,6 +18,7 @@ export function TeamChat({ standalone = false }: { standalone?: boolean } = {}) 
   const chat = useTeamChat();
   const { me, rooms, roomsReady, stateReady, state, people, presence, activeRoomId, setActiveRoomId, push } = chat;
   const [showNew, setShowNew] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   // A notification link (?room=…) opens that chat once.
   const wanted = useSearchParams()?.get("room");
   const opened = useRef(false);
@@ -53,6 +55,7 @@ export function TeamChat({ standalone = false }: { standalone?: boolean } = {}) 
           title={standalone ? CHAT_APP_NAME : undefined}
           subtitle={standalone ? CHAT_CLIENT_NAME : undefined}
           onNew={() => setShowNew(true)}
+          onProfile={standalone ? undefined : () => setShowProfile(true)}
           onEnablePush={() => void chat.turnOnNotifications().then((m) => m && toast(m, "info"))}
         />
       </aside>
@@ -83,6 +86,7 @@ export function TeamChat({ standalone = false }: { standalone?: boolean } = {}) 
           }}
         />
       ) : null}
+      {showProfile ? <ProfileDialog onClose={() => setShowProfile(false)} /> : null}
     </div>
   );
 }

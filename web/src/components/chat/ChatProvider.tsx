@@ -15,6 +15,9 @@ import { channelsToSync, desiredChannels, listPeople } from "@/lib/chat/people";
 import { currentPushState, enablePush, type PushState } from "@/lib/chat/push";
 import type { ChatBackend, ChatRoom, ChatState, Me, Person, Presence } from "@/lib/chat/types";
 import { useSeatsVersion } from "@/hooks/use-seats-version";
+import { saveMyProfile, subscribeProfiles } from "@/lib/chat/profile-store";
+import type { ChatProfile } from "@/lib/chat/profile";
+import { IS_CHAT_APP } from "@/lib/chat-app-mode";
 import { useAuthStore } from "@/store/auth";
 
 export interface ChatContextValue {
@@ -38,6 +41,10 @@ export interface ChatContextValue {
   createGroup: (name: string, logins: string[]) => Promise<string>;
   push: PushState;
   turnOnNotifications: () => Promise<string | undefined>;
+  /** Everyone's photo and status, by login. */
+  profiles: Record<string, ChatProfile>;
+  /** Changes this person's own photo and/or status. */
+  saveProfile: (patch: Partial<Pick<ChatProfile, "photo" | "status">>) => Promise<void>;
 }
 
 const EMPTY_STATE: ChatState = { reads: {}, muted: {} };
@@ -77,6 +84,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [presence, setPresence] = useState<Record<string, Presence>>({});
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [push, setPush] = useState<PushState>("unsupported");
+  const [profiles, setProfiles] = useState<Record<string, ChatProfile>>({});
   const login = me?.login;
 
   const people = useMemo(() => listPeople(), [seatsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -95,10 +103,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setStateReady(true);
     });
     const u3 = backend.subscribePresence((list) => setPresence(Object.fromEntries(list.map((p) => [p.login, p]))));
+    const u4 = subscribeProfiles((list) => setProfiles(Object.fromEntries(list.map((p) => [p.login, p]))));
     return () => {
       u1();
       u2();
       u3();
+      u4();
     };
   }, [backend, me]);
 
@@ -182,7 +192,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const body = r.lastMessageText || "New message";
       if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted") {
         try {
-          new Notification(title, { body, tag: r.id, icon: "/app/icon-192.png" });
+          new Notification(title, { body, tag: r.id, icon: IS_CHAT_APP ? "/icon-192.png" : "/app/icon-192.png" });
         } catch {
           /* some browsers only allow notifications from the service worker */
         }
@@ -243,6 +253,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [backend, me],
   );
 
+  const saveProfile = useCallback(
+    async (patch: Partial<Pick<ChatProfile, "photo" | "status">>) => {
+      if (login) await saveMyProfile(login, patch);
+    },
+    [login],
+  );
+
   const turnOnNotifications = useCallback(async () => {
     if (!me) return undefined;
     const r = await enablePush(true);
@@ -272,8 +289,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       createGroup,
       push,
       turnOnNotifications,
+      profiles,
+      saveProfile,
     }),
-    [enabled, me, backend, rooms, roomsReady, state, stateReady, people, presence, badge, activeRoomId, markRead, acceptNotice, setMuted, openDm, createGroup, push, turnOnNotifications],
+    [enabled, me, backend, rooms, roomsReady, state, stateReady, people, presence, badge, activeRoomId, markRead, acceptNotice, setMuted, openDm, createGroup, push, turnOnNotifications, profiles, saveProfile],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

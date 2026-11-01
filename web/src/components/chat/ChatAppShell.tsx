@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BellRing, ExternalLink, LogOut, MessagesSquare, MoreHorizontal, Users } from "lucide-react";
+import { BellRing, ExternalLink, LogOut, MessagesSquare, MoreHorizontal, UserRound, Users } from "lucide-react";
 import { Suspense } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { toast } from "@/components/Toast";
 import { Avatar } from "./Avatar";
 import { ChatProvider, useTeamChat } from "./ChatProvider";
 import { TeamChat } from "./TeamChat";
+import { ProfileDialog } from "./ProfileDialog";
 import { CHAT_APP_NAME, CHAT_CLIENT_NAME, PRICING_APP_URL } from "@/lib/chat-app-mode";
 import { isOnline } from "@/lib/chat/chat-logic";
 import { useAuthStore } from "@/store/auth";
@@ -98,7 +99,9 @@ function PeopleTab({ onOpened }: { onOpened: () => void }) {
               <Avatar name={p.name} seed={p.login} size={40} online={isOnline(chat.presence[p.login])} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{p.name}</span>
-                <span className="block truncate text-xs text-[var(--color-text-muted)]">{p.desk || "Staff"}</span>
+                <span className="block truncate text-xs text-[var(--color-text-muted)]">
+                  {chat.profiles[p.login]?.status ? `${chat.profiles[p.login]?.status}${p.desk ? ` · ${p.desk}` : ""}` : p.desk || "Staff"}
+                </span>
               </span>
             </button>
           </li>
@@ -114,13 +117,25 @@ function MoreTab() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const version = process.env.NEXT_PUBLIC_APP_VERSION || "";
+  const [editing, setEditing] = useState(false);
+  const mine = chat.me ? chat.profiles[chat.me.login] : undefined;
   return (
+    <>
     <div className="h-full overflow-y-auto" data-testid="more-tab">
       <header className="border-b border-[var(--color-border)] px-4 py-3">
         <h1 className="text-base font-extrabold text-[var(--color-atlas-navy)]">More</h1>
         <p className="text-xs text-[var(--color-text-muted)]">Signed in as {chat.me?.name}</p>
       </header>
       <ul className="divide-y divide-[var(--color-border)] text-sm">
+        <li>
+          <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50" onClick={() => setEditing(true)} data-testid="open-profile">
+            {chat.me ? <Avatar name={chat.me.name} seed={chat.me.login} size={32} /> : <UserRound className="h-5 w-5 text-slate-500" />}
+            <span className="flex-1">
+              <span className="block font-semibold">My profile</span>
+              <span className="block text-xs text-[var(--color-text-muted)]">{mine?.status || "Add a photo and a status"}</span>
+            </span>
+          </button>
+        </li>
         <li>
           <a href={PRICING_APP_URL} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50" data-testid="open-pricing-app">
             <ExternalLink className="h-5 w-5 text-slate-500" />
@@ -162,5 +177,7 @@ function MoreTab() {
         {version ? ` · v${version}` : ""}
       </p>
     </div>
+    {editing ? <ProfileDialog onClose={() => setEditing(false)} /> : null}
+    </>
   );
 }

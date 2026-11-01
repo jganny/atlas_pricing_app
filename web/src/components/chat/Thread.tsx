@@ -252,7 +252,7 @@ export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void })
               ? typingText
               : isDirect
                 ? isOnline(presence[otherLogin ?? ""])
-                  ? "Online"
+                  ? chat.profiles[otherLogin ?? ""]?.status || "Online"
                   : "Offline"
                 : room.audience === "all"
                   ? "Whole team"

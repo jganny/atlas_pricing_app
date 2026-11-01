@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BellRing, Hash, Plus, Search, Users } from "lucide-react";
+import { BellRing, Hash, Plus, Search, UserRound, Users } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { cn } from "@/lib/utils";
 import { hasUnread, isOnline, roomTitle, sectionsFor, timeLabel, wasMentioned } from "@/lib/chat/chat-logic";
@@ -21,6 +21,7 @@ export function RoomList({
   onEnablePush,
   title = "Team chat",
   subtitle,
+  onProfile,
 }: {
   rooms: ChatRoom[];
   activeId: string | null;
@@ -34,6 +35,8 @@ export function RoomList({
   onEnablePush: () => void;
   title?: string;
   subtitle?: string;
+  /** Opens "My profile" (photo and status). */
+  onProfile?: () => void;
 }) {
   const [q, setQ] = useState("");
   const sections = useMemo(() => {
@@ -50,6 +53,11 @@ export function RoomList({
           <h1 className="text-base font-extrabold text-[var(--color-atlas-navy)]">{title}</h1>
           {subtitle ? <p className="truncate text-[11px] text-[var(--color-text-muted)]">{subtitle}</p> : null}
         </div>
+        {onProfile ? (
+          <button type="button" onClick={onProfile} aria-label="My profile" title="My photo and status" data-testid="chat-profile" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
+            <UserRound className="h-5 w-5" />
+          </button>
+        ) : null}
         <button type="button" onClick={onNew} aria-label="New chat" title="New direct message or group" data-testid="chat-new" className="flex h-8 items-center gap-1 rounded-full bg-[var(--color-atlas-navy)] px-3 text-xs font-bold text-white">
           <Plus className="h-4 w-4" /> New
         </button>

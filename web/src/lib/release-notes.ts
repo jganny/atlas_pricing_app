@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.131",
+    date: "2026-11-01",
+    items: [
+      "Team Chat and Vertex Chat: profile photo and status. Add a small photo and a one-line status (Available, In a meeting, Travelling, On leave, or your own words). Photos show on chat avatars; the status shows in People and under a colleague's name in a direct chat.",
+      "In the Pricing app the profile button is the person icon at the top of the chat list. In Vertex Chat it is under More, then My profile.",
+    ],
+  },
+  {
     version: "0.3.130",
     date: "2026-11-01",
     items: [
