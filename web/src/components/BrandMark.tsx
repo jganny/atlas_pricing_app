@@ -2,7 +2,8 @@
 
 import { cn } from "@/lib/utils";
 
-const LOGO_SRC = "/app/atlas-logo.png";
+// The Vertex Chat build sits at the root of its own site; the Pricing app sits under /app.
+const LOGO_SRC = process.env.NEXT_PUBLIC_CHAT_APP === "true" ? "/atlas-logo.png" : "/app/atlas-logo.png";
 
 export function BrandMark({
   size = 36,

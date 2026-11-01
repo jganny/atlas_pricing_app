@@ -10,6 +10,7 @@ import { preferredHomePath } from "@/lib/auth/rbac";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useLiveData } from "@/lib/api";
 import { BrandMark } from "@/components/BrandMark";
+import { CHAT_APP_NAME, CHAT_CLIENT_NAME, IS_CHAT_APP } from "@/lib/chat-app-mode";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function LoginPage() {
   const [signupBusy, setSignupBusy] = useState(false);
 
   useEffect(() => {
-    if (user) router.replace(preferredHomePath(user.username, user.role));
+    if (user) router.replace(IS_CHAT_APP ? "/" : preferredHomePath(user.username, user.role));
   }, [user, router]);
 
   async function onSubmit(e: FormEvent) {
@@ -107,9 +108,9 @@ export default function LoginPage() {
               <BrandMark size={44} />
               <div>
                 <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-atlas-sky)]">
-                  Atlas Pricing
+                  {IS_CHAT_APP ? CHAT_APP_NAME : "Atlas Pricing"}
                 </div>
-                <div className="text-[11px] text-[var(--color-text-muted)]">Vertex workspace</div>
+                <div className="text-[11px] text-[var(--color-text-muted)]">{IS_CHAT_APP ? CHAT_CLIENT_NAME : "Vertex workspace"}</div>
               </div>
             </div>
             <h1 className="mt-2 text-2xl font-extrabold text-[var(--color-atlas-navy)]">

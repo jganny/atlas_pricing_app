@@ -2,12 +2,16 @@
 
 import { AuthGuard } from "@/components/AuthGuard";
 import { AppShell } from "@/components/AppShell";
+import { ChatAppShell } from "@/components/chat/ChatAppShell";
+import { IS_CHAT_APP } from "@/lib/chat-app-mode";
 
 export default function WorkspaceLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // The Vertex Chat build shows only the chat, whatever address is opened.
+  if (IS_CHAT_APP) return <ChatAppShell />;
   return (
     <AuthGuard>
       <a

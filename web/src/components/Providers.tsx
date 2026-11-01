@@ -20,6 +20,7 @@ import { useLiveData } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import type { AuthUser } from "@/lib/types";
 import { IS_DEMO_BUILD } from "@/lib/demo-mode";
+import { IS_CHAT_APP } from "@/lib/chat-app-mode";
 import { useEffect } from "react";
 
 /** Used only in local/dev preview when Firebase auth never responds. */
@@ -184,7 +185,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     initMonitoring();
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-    const base = process.env.NEXT_PUBLIC_BASE_PATH || "/app";
+    const base = IS_CHAT_APP ? "" : process.env.NEXT_PUBLIC_BASE_PATH || "/app";
     void navigator.serviceWorker.register(`${base}/sw.js`).catch(() => {
       /* optional */
     });
@@ -195,13 +196,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ErrorBoundary>
         <AuthSync />
         <SeatsSync />
-        <NrsDeskSync />
-        <CustomEntriesSync />
+        {/* The Vertex Chat app needs only sign-in, desk seats (for desk chats) and messages: none of the pricing-desk syncs, no assistant button, no command palette. */}
+        {IS_CHAT_APP ? null : <NrsDeskSync />}
+        {IS_CHAT_APP ? null : <CustomEntriesSync />}
         <EscapeHandler />
-        <CommandPalette />
-        <HelpFab />
+        {IS_CHAT_APP ? null : <CommandPalette />}
+        {IS_CHAT_APP ? null : <HelpFab />}
         <ToastContainer />
-        <UpdateBanner />
+        {IS_CHAT_APP ? null : <UpdateBanner />}
         {children}
       </ErrorBoundary>
     </QueryClientProvider>

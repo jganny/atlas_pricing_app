@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.130",
+    date: "2026-11-01",
+    items: [
+      "Team Chat: voice notes. Tap the microphone where Send would be, speak (up to 2 minutes), then tap Send. The message shows a play bar and its length. The microphone is only on while you record.",
+      "Vertex Chat: a separate chat-only app that can be put on a phone's Home Screen. It uses the same login and the same chats as Team Chat in the Pricing app, so messages show up in both. It has Chats, People and More; quote cards open the quote in the Pricing app.",
+    ],
+  },
+  {
     version: "0.3.129",
     date: "2026-10-31",
     items: [

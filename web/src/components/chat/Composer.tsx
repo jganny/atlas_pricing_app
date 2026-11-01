@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Paperclip, Send, Smile, Sparkles, Ticket, X } from "lucide-react";
 import { toast } from "@/components/Toast";
 import { QuotePicker } from "./QuotePicker";
+import { MicButton, RecordingBar, canRecordVoice, useVoiceRecorder } from "./VoiceRecorder";
 import { EMOJI_GROUPS } from "./emoji";
 import { cn } from "@/lib/utils";
 import { MAX_TEXT, formatBytes } from "@/lib/chat/chat-logic";
@@ -158,6 +159,9 @@ export function Composer({
   }
 
   const canSend = !!(text.trim() || files.length || quote);
+  const voice = useVoiceRecorder((file) => onSend({ text: "", files: [file] }));
+  // The microphone stands where Send would be while there is nothing to send (like WhatsApp). Not while editing.
+  const showMic = !canSend && !editing && canRecordVoice();
 
   return (
     <div className="relative border-t border-[var(--color-border)] bg-white px-3 pb-3 pt-2">
@@ -228,7 +232,8 @@ export function Composer({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-1.5">
+      {voice.recording ? <RecordingBar seconds={voice.seconds} onSend={voice.send} onCancel={voice.cancel} /> : null}
+      <div className={cn("flex items-end gap-1.5", voice.recording && "hidden")}>
         <div className="flex shrink-0 items-center">
           <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles([...(e.target.files ?? [])]); e.target.value = ""; }} />
           <button type="button" aria-label="Attach a file" title="Attach a file (up to 10 MB)" onClick={() => fileInput.current?.click()} className="rounded-full p-2 text-slate-500 hover:bg-slate-100">
@@ -265,7 +270,7 @@ export function Composer({
           value={text}
           data-testid="chat-input"
           aria-label="Message"
-          placeholder="Write a message — @ to tag someone, @Vertex to ask the assistant"
+          placeholder="Message — @ to tag someone"
           className="max-h-40 min-h-[2.5rem] flex-1 resize-none rounded-2xl border border-[var(--color-border)] bg-slate-50 px-3.5 py-2 text-sm outline-none focus:border-[var(--color-atlas-navy)] focus:bg-white"
           onChange={(e) => onChange(e.target.value, e.target.selectionStart)}
           onKeyDown={(e) => {
@@ -292,6 +297,7 @@ export function Composer({
             }
           }}
         />
+        {showMic ? <MicButton onClick={() => void voice.start()} /> : (
         <button
           type="button"
           aria-label={editing ? "Save changes" : "Send"}
@@ -302,6 +308,7 @@ export function Composer({
         >
           <Send className="h-4 w-4" />
         </button>
+        )}
       </div>
     </div>
   );

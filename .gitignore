@@ -17,6 +17,7 @@ web/node_modules/
 web/dist/
 /app/
 /app-demo/
+/app-chat/
 
 # Firebase
 .firebase/

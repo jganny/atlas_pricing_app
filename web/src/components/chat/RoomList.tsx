@@ -19,6 +19,8 @@ export function RoomList({
   onPick,
   onNew,
   onEnablePush,
+  title = "Team chat",
+  subtitle,
 }: {
   rooms: ChatRoom[];
   activeId: string | null;
@@ -30,6 +32,8 @@ export function RoomList({
   onPick: (id: string) => void;
   onNew: () => void;
   onEnablePush: () => void;
+  title?: string;
+  subtitle?: string;
 }) {
   const [q, setQ] = useState("");
   const sections = useMemo(() => {
@@ -42,7 +46,10 @@ export function RoomList({
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
       <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-3">
-        <h1 className="flex-1 text-base font-extrabold text-[var(--color-atlas-navy)]">Team chat</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base font-extrabold text-[var(--color-atlas-navy)]">{title}</h1>
+          {subtitle ? <p className="truncate text-[11px] text-[var(--color-text-muted)]">{subtitle}</p> : null}
+        </div>
         <button type="button" onClick={onNew} aria-label="New chat" title="New direct message or group" data-testid="chat-new" className="flex h-8 items-center gap-1 rounded-full bg-[var(--color-atlas-navy)] px-3 text-xs font-bold text-white">
           <Plus className="h-4 w-4" /> New
         </button>

@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
+import { CHAT_APP_NAME, CHAT_CLIENT_NAME, IS_CHAT_APP } from "@/lib/chat-app-mode";
+
+// The Vertex Chat build is a site of its own (root address); the Pricing app lives under /app.
+const P = IS_CHAT_APP ? "" : "/app";
 
 const ibmPlex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -10,23 +14,23 @@ const ibmPlex = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Atlas Pricing",
-  description: "Atlas Logistics pricing desks — quote, inbox, carriers",
+  title: IS_CHAT_APP ? CHAT_APP_NAME : "Atlas Pricing",
+  description: IS_CHAT_APP ? `Work chat for ${CHAT_CLIENT_NAME} staff` : "Atlas Logistics pricing desks — quote, inbox, carriers",
   // Explicit /app prefix: Next metadata basePath prefixing is unreliable with static export.
-  manifest: "/app/manifest.webmanifest",
-  applicationName: "Atlas Pricing",
+  manifest: `${P}/manifest.webmanifest`,
+  applicationName: IS_CHAT_APP ? CHAT_APP_NAME : "Atlas Pricing",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Atlas",
+    title: IS_CHAT_APP ? CHAT_APP_NAME : "Atlas",
   },
   formatDetection: { telephone: false },
   icons: {
     icon: [
-      { url: "/app/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/app/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: `${P}/icon-192.png`, sizes: "192x192", type: "image/png" },
+      { url: `${P}/icon-512.png`, sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/app/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: `${P}/apple-touch-icon.png`, sizes: "180x180", type: "image/png" }],
   },
   other: {
     "mobile-web-app-capable": "yes",

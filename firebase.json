@@ -24,6 +24,8 @@
         "web/out/**",
         "app-demo",
         "app-demo/**",
+        "app-chat",
+        "app-chat/**",
         "functions",
         "functions/**",
         "*.bak",

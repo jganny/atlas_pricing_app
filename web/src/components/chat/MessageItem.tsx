@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { IS_CHAT_APP, PRICING_APP_URL } from "@/lib/chat-app-mode";
 import { useState } from "react";
-import { AlertCircle, Check, Clock, CornerUpLeft, Download, FileText, Image as ImageIcon, Languages, Pencil, Pin, PinOff, Smile, Trash2, MoreHorizontal, Copy, Sparkles, Forward } from "lucide-react";
+import { AlertCircle, Check, Clock, CornerUpLeft, Download, FileText, Image as ImageIcon, Languages, Pencil, Pin, PinOff, Smile, Trash2, MoreHorizontal, Copy, Sparkles, Forward, Mic } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Markdown } from "@/components/Markdown";
 import { cn } from "@/lib/utils";
 import { QUICK_REACTIONS, fileKind, formatBytes, timeLabel, tokenize } from "@/lib/chat/chat-logic";
+import { formatDuration, isVoiceNote, voiceSecondsFromName } from "@/lib/chat/voice-note";
 import type { ChatAttachment, ChatMessage, Person } from "@/lib/chat/types";
 
 export interface MessageActions {
@@ -21,6 +23,9 @@ export interface MessageActions {
   onForward: (m: ChatMessage) => void;
 }
 
+// In the Vertex Chat app a quote card opens the quote in the Pricing app (a different address), so it is a plain link there.
+const QuoteLink = (IS_CHAT_APP ? "a" : Link) as React.ElementType<React.AnchorHTMLAttributes<HTMLAnchorElement>>;
+
 function Attachment({ a }: { a: ChatAttachment }) {
   const kind = fileKind(a.type, a.name);
   const waiting = a.status === "uploading" && !a.url;
@@ -30,6 +35,21 @@ function Attachment({ a }: { a: ChatAttachment }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={a.url} alt={a.name} className="max-h-56 max-w-full object-cover" loading="lazy" />
       </a>
+    );
+  }
+  if (kind === "audio" && isVoiceNote(a.name)) {
+    const length = voiceSecondsFromName(a.name);
+    return (
+      <div className="flex min-w-[14rem] max-w-xs items-center gap-2 rounded-lg border border-black/10 bg-white/70 px-2 py-1.5 text-slate-800" data-testid="voice-note">
+        <Mic className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+        {a.url ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <audio controls preload="none" src={a.url} className="h-9 min-w-0 flex-1" aria-label={`Voice note${length ? `, ${formatDuration(length)}` : ""}`} />
+        ) : (
+          <span className="flex-1 text-xs font-semibold">{a.status === "failed" ? "Voice note couldn't be sent" : "Sending voice note…"}</span>
+        )}
+        {length ? <span className="shrink-0 text-[11px] tabular-nums text-slate-500">{formatDuration(length)}</span> : null}
+      </div>
     );
   }
   const Icon = kind === "image" ? ImageIcon : FileText;
@@ -162,8 +182,8 @@ export function MessageItem({
             </p>
           ) : null}
           {msg.quote ? (
-            <Link
-              href={`/enquiries?select=${encodeURIComponent(msg.quote.id)}`}
+            <QuoteLink
+              href={IS_CHAT_APP ? `${PRICING_APP_URL}enquiries/?select=${encodeURIComponent(msg.quote.id)}` : `/enquiries?select=${encodeURIComponent(msg.quote.id)}`}
               className={cn("mt-1.5 block rounded-lg border px-3 py-2 text-xs", mine ? "border-white/30 bg-white/10 hover:bg-white/20" : "border-slate-300 bg-white hover:bg-slate-50")}
             >
               <span className="block text-[10px] font-bold uppercase tracking-wide opacity-70">
@@ -173,7 +193,7 @@ export function MessageItem({
                 {msg.quote.ref} — {msg.quote.customer}
               </span>
               <span className="block opacity-80">{msg.quote.route}</span>
-            </Link>
+            </QuoteLink>
           ) : null}
           {msg.attachments?.length ? (
             <div className="mt-1.5 flex flex-col gap-1.5">

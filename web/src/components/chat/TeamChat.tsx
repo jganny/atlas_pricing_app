@@ -10,9 +10,10 @@ import { RoomList } from "./RoomList";
 import { Thread } from "./Thread";
 import { useTeamChat } from "./ChatProvider";
 import { isMember } from "@/lib/chat/chat-logic";
+import { CHAT_APP_NAME, CHAT_CLIENT_NAME } from "@/lib/chat-app-mode";
 
 /** The Team chat page: chats on the left, the open conversation on the right (one at a time on a phone). */
-export function TeamChat() {
+export function TeamChat({ standalone = false }: { standalone?: boolean } = {}) {
   const chat = useTeamChat();
   const { me, rooms, roomsReady, stateReady, state, people, presence, activeRoomId, setActiveRoomId, push } = chat;
   const [showNew, setShowNew] = useState(false);
@@ -38,7 +39,7 @@ export function TeamChat() {
   const others = people.filter((p) => p.login !== me.login);
 
   return (
-    <div className="flex h-[calc(100dvh-10.5rem)] min-h-[28rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-white lg:h-[calc(100dvh-8rem)]" data-testid="team-chat">
+    <div className={standalone ? "flex h-full overflow-hidden bg-white" : "flex h-[calc(100dvh-10.5rem)] min-h-[28rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-white lg:h-[calc(100dvh-8rem)]"} data-testid="team-chat">
       <aside className={`w-full shrink-0 border-r border-[var(--color-border)] lg:block lg:w-80 ${active ? "hidden" : "block"}`}>
         <RoomList
           rooms={visible}
@@ -49,6 +50,8 @@ export function TeamChat() {
           state={state}
           push={push}
           onPick={setActiveRoomId}
+          title={standalone ? CHAT_APP_NAME : undefined}
+          subtitle={standalone ? CHAT_CLIENT_NAME : undefined}
           onNew={() => setShowNew(true)}
           onEnablePush={() => void chat.turnOnNotifications().then((m) => m && toast(m, "info"))}
         />
