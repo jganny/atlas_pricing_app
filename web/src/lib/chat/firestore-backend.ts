@@ -148,7 +148,7 @@ export const firestoreBackend: ChatBackend = {
       doc(getFirebaseDb(), "chatState", login),
       (snap) => {
         const d = (snap.data() ?? {}) as Partial<ChatState>;
-        cb({ reads: d.reads ?? {}, muted: d.muted ?? {}, noticeAcceptedAt: d.noticeAcceptedAt, tokens: d.tokens });
+        cb({ reads: d.reads ?? {}, muted: d.muted ?? {}, noticeAcceptedAt: d.noticeAcceptedAt, tokens: d.tokens, tasks: d.tasks });
       },
       (e) => console.warn("Team chat state:", e.message),
     );

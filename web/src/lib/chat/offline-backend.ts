@@ -10,6 +10,7 @@
 import * as cache from "./chat-cache";
 import { deliverMessage, deliverRoom, firestoreBackend } from "./firestore-backend";
 import { withReaction } from "./chat-logic";
+import { mergeTasks } from "./work";
 import type { ChatBackend, ChatMessage, ChatRoom, ChatState } from "./types";
 
 const queue = new Map<string, ChatMessage>();
@@ -96,6 +97,7 @@ function mergeState(server: ChatState, local: ChatState): ChatState {
     muted: { ...local.muted, ...server.muted },
     noticeAcceptedAt: server.noticeAcceptedAt ?? local.noticeAcceptedAt,
     tokens: server.tokens,
+    tasks: mergeTasks(server.tasks, local.tasks),
   };
 }
 
@@ -241,6 +243,7 @@ export const offlineBackend: ChatBackend = {
       reads: { ...cur.reads, ...(p.reads ?? {}) },
       muted: { ...cur.muted, ...(p.muted ?? {}) },
       noticeAcceptedAt: p.noticeAcceptedAt ?? cur.noticeAcceptedAt,
+      tasks: mergeTasks(cur.tasks, p.tasks),
     };
     localState.set(login, next);
     void cache.saveState(login, next);

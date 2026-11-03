@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { IS_CHAT_APP, PRICING_APP_URL } from "@/lib/chat-app-mode";
 import { useState } from "react";
-import { AlertCircle, Check, Clock, CornerUpLeft, Download, FileText, Image as ImageIcon, Languages, Pencil, Pin, PinOff, Smile, Trash2, MoreHorizontal, Copy, Sparkles, Forward, Mic } from "lucide-react";
+import { AlertCircle, Check, Clock, CornerUpLeft, Download, FileText, Image as ImageIcon, Languages, Pencil, Pin, PinOff, Smile, Trash2, MoreHorizontal, Copy, Sparkles, Forward, Mic, ClipboardCheck, Hourglass, ListPlus, ThumbsUp } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Markdown } from "@/components/Markdown";
 import { cn } from "@/lib/utils";
 import { QUICK_REACTIONS, fileKind, formatBytes, timeLabel, tokenize } from "@/lib/chat/chat-logic";
 import { formatDuration, isVoiceNote, voiceSecondsFromName } from "@/lib/chat/voice-note";
+import { CaseChip } from "./CaseChip";
+import { deadlineLabel, findQuoteRefs, isOverdue, type Acknowledgement, type ApprovalState } from "@/lib/chat/work";
 import type { ChatAttachment, ChatMessage, Person } from "@/lib/chat/types";
 
 export interface MessageActions {
@@ -21,6 +23,11 @@ export interface MessageActions {
   onJump: (id: string) => void;
   onCopy: (m: ChatMessage) => void;
   onForward: (m: ChatMessage) => void;
+  onTask: (m: ChatMessage) => void;
+  /** Answer an approval request. */
+  onDecide: (m: ChatMessage, outcome: "approved" | "declined", note?: string) => void;
+  /** "Got it" on a message that asked for a reply. */
+  onAck: (m: ChatMessage) => void;
 }
 
 // In the Vertex Chat app a quote card opens the quote in the Pricing app (a different address), so it is a plain link there.
@@ -89,6 +96,9 @@ export function MessageItem({
   translation,
   actions,
   isDirect,
+  approval,
+  mayDecide,
+  ack,
 }: {
   msg: ChatMessage;
   mine: boolean;
@@ -101,6 +111,9 @@ export function MessageItem({
   translation?: { text: string; busy: boolean };
   actions: MessageActions;
   isDirect: boolean;
+  approval?: ApprovalState;
+  mayDecide?: boolean;
+  ack?: Acknowledgement;
 }) {
   const [menu, setMenu] = useState(false);
   const [picker, setPicker] = useState(false);
@@ -112,6 +125,18 @@ export function MessageItem({
   const reactions = Object.entries(msg.reactions ?? {}).filter(([, who]) => who.length);
   // Anything with words, a quote card or a finished file can be forwarded.
   const canForward = Boolean(msg.text || msg.quote || msg.attachments?.some((a) => a.url && a.status === "ready")) && !msg.pending && !msg.failed;
+
+  // An answer to an approval request is a slim line in the chat, not a bubble.
+  if (msg.decision && !msg.deleted) {
+    const ok = msg.decision.outcome === "approved";
+    return (
+      <div id={`msg-${msg.id}`} className="my-1 flex justify-center px-2" data-testid="decision-line">
+        <span className={cn("rounded-full border px-3 py-1 text-[11px] font-semibold", ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800")}>
+          {ok ? "✅" : "❌"} {name} {ok ? "approved" : "declined"} “{msg.decision.title || "a request"}”{msg.decision.note ? ` — ${msg.decision.note}` : ""} · {timeLabel(msg.createdAtMs)}
+        </span>
+      </div>
+    );
+  }
 
   if (msg.deleted) {
     return (
@@ -202,6 +227,69 @@ export function MessageItem({
               ))}
             </div>
           ) : null}
+          {findQuoteRefs(msg.text).map((r) => (
+            <CaseChip key={r} reference={r} mine={mine} />
+          ))}
+          {msg.approval ? (
+            <div className={cn("mt-2 rounded-lg border px-2.5 py-2 text-xs", mine ? "border-white/30 bg-white/10" : "border-amber-300 bg-amber-50 text-slate-900")} data-testid="approval-card">
+              <div className="flex items-center gap-1.5 font-bold">
+                <ClipboardCheck className="h-3.5 w-3.5" />
+                {approval?.status === "approved" ? "Approved" : approval?.status === "declined" ? "Declined" : "Decision needed"}
+                {msg.approval.approvers.length ? (
+                  <span className="font-normal opacity-80"> · from {msg.approval.approvers.map((l) => people.find((p) => p.login === l)?.name.split(" ")[0] || l).join(", ")}</span>
+                ) : (
+                  <span className="font-normal opacity-80"> · anyone in this chat</span>
+                )}
+              </div>
+              {approval && approval.status !== "pending" ? (
+                <div className="mt-1" data-testid="approval-result">
+                  {approval.status === "approved" ? "✅" : "❌"} {people.find((p) => p.login === approval.by)?.name || approval.by} · {timeLabel(approval.at)}
+                  {approval.note ? ` — ${approval.note}` : ""}
+                </div>
+              ) : mayDecide ? (
+                <div className="mt-2 flex gap-2">
+                  <button type="button" data-testid="approve-btn" className="flex-1 rounded-lg bg-slate-900 px-3 py-1.5 font-bold text-white" onClick={() => actions.onDecide(msg, "approved")}>
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="decline-btn"
+                    className="flex-1 rounded-lg border border-slate-400 bg-white px-3 py-1.5 font-bold text-slate-800"
+                    onClick={() => {
+                      const note = window.prompt("Reason (optional)") ?? null;
+                      if (note !== null) actions.onDecide(msg, "declined", note.trim() || undefined);
+                    }}
+                  >
+                    Decline
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-1 opacity-70">Waiting for a decision…</div>
+              )}
+            </div>
+          ) : null}
+          {msg.replyBy ? (
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]" data-testid="replyby">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold",
+                  ack && ack.waiting.length === 0 ? "bg-emerald-100 text-emerald-800" : isOverdue(msg.replyBy, Date.now()) ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900",
+                )}
+              >
+                <Hourglass className="h-3 w-3" /> Reply by {deadlineLabel(msg.replyBy, Date.now())}
+              </span>
+              {ack && ack.asked.length ? (
+                <span className="opacity-80" title={ack.waiting.length ? `Waiting for ${ack.waiting.map((l) => people.find((p) => p.login === l)?.name || l).join(", ")}` : "Everyone has answered"}>
+                  {ack.done.length} of {ack.asked.length} answered
+                </span>
+              ) : null}
+              {ack && ack.waiting.includes(me) ? (
+                <button type="button" data-testid="ack-btn" onClick={() => actions.onAck(msg)} className="inline-flex items-center gap-1 rounded-full border border-slate-400 bg-white px-2 py-0.5 font-bold text-slate-800">
+                  <ThumbsUp className="h-3 w-3" /> Got it
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {translation ? (
             <div className={cn("mt-2 rounded-lg border-t px-1 pt-1.5 text-xs", mine ? "border-white/30" : "border-slate-300")}>
               <span className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase opacity-70">
@@ -270,6 +358,11 @@ export function MessageItem({
               {canForward ? (
                 <button type="button" className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => actions.onForward(msg)}>
                   <Forward className="h-3.5 w-3.5" /> Forward
+                </button>
+              ) : null}
+              {msg.text ? (
+                <button type="button" data-testid="make-task" className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => actions.onTask(msg)}>
+                  <ListPlus className="h-3.5 w-3.5" /> Make a task
                 </button>
               ) : null}
               {msg.text ? (

@@ -17,11 +17,17 @@ export interface SendInput {
   /** Files that are already uploaded (a forwarded message's attachments): sent as they are, not uploaded again. */
   keepAttachments?: ChatAttachment[];
   forwardedFrom?: { name: string; login: string };
+  /** Ask people to reply or acknowledge by this time (ms). */
+  replyBy?: number;
+  /** Ask for a decision. The logins who may decide; an empty list means anyone in the chat. */
+  approvalFrom?: string[];
+  /** This message is an answer to an approval request. */
+  decision?: ChatMessage["decision"];
 }
 
 /** Saves the message on this device straight away; files and delivery continue in the background. */
 export function sendChatMessage(input: SendInput): ChatMessage | null {
-  const { backend, me, room, people, files = [], replyTo, quote, forwardedFrom } = input;
+  const { backend, me, room, people, files = [], replyTo, quote, forwardedFrom, replyBy, approvalFrom, decision } = input;
   const kept = (input.keepAttachments ?? []).filter((a) => a.url && a.status === "ready").map((a) => ({ ...a }));
   const text = input.text.trim().slice(0, MAX_TEXT);
   if (!text && !files.length && !quote && !kept.length) return null;
@@ -47,6 +53,9 @@ export function sendChatMessage(input: SendInput): ChatMessage | null {
     ...(attachments.length ? { attachments } : {}),
     ...(quote ? { quote } : {}),
     ...(forwardedFrom ? { forwardedFrom } : {}),
+    ...(replyBy ? { replyBy } : {}),
+    ...(approvalFrom ? { approval: { id, approvers: approvalFrom } } : {}),
+    ...(decision ? { decision } : {}),
     ...(mentions.length ? { mentions } : {}),
     ...(replyTo
       ? {

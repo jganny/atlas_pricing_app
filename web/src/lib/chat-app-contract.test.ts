@@ -50,3 +50,16 @@ assert.match(loginSrc, /IS_CHAT_APP \? "hidden"/);
 assert.match(read("src/components/chat/ChatProvider.tsx"), /subscribeProfiles/);
 assert.match(read("src/components/chat/Avatar.tsx"), /profiles\[/);
 assert.match(read("src/components/chat/ChatAppShell.tsx"), /ProfileDialog/);
+
+// Work features: approvals, reply-by, tasks, case chips, slash actions.
+const composer = read("src/components/chat/Composer.tsx");
+assert.match(composer, /matchSlash/);
+assert.match(composer, /data-testid="slash-menu"/);
+const item = read("src/components/chat/MessageItem.tsx");
+assert.match(item, /data-testid="approval-card"/);
+assert.match(item, /data-testid="replyby"/);
+assert.match(item, /CaseChip/);
+assert.match(read("src/components/chat/Thread.tsx"), /decision: \{ forId: m\.id/);
+assert.match(read("src/components/chat/ChatAppShell.tsx"), /TasksPanel/);
+// Approvals are answered by new messages, so no rule has to let one person edit another's message.
+assert.doesNotMatch(readRoot("firestore.rules"), /'approval'|'decision'|'replyBy'/);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BellRing, Hash, Plus, Search, UserRound, Users } from "lucide-react";
+import { BellRing, Hash, ListChecks, Plus, Search, UserRound, Users } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { cn } from "@/lib/utils";
 import { hasUnread, isOnline, roomTitle, sectionsFor, timeLabel, wasMentioned } from "@/lib/chat/chat-logic";
@@ -22,6 +22,8 @@ export function RoomList({
   title = "Team chat",
   subtitle,
   onProfile,
+  onTasks,
+  tasksDue,
 }: {
   rooms: ChatRoom[];
   activeId: string | null;
@@ -37,6 +39,9 @@ export function RoomList({
   subtitle?: string;
   /** Opens "My profile" (photo and status). */
   onProfile?: () => void;
+  /** Opens "My tasks". */
+  onTasks?: () => void;
+  tasksDue?: number;
 }) {
   const [q, setQ] = useState("");
   const sections = useMemo(() => {
@@ -53,6 +58,12 @@ export function RoomList({
           <h1 className="text-base font-extrabold text-[var(--color-atlas-navy)]">{title}</h1>
           {subtitle ? <p className="truncate text-[11px] text-[var(--color-text-muted)]">{subtitle}</p> : null}
         </div>
+        {onTasks ? (
+          <button type="button" onClick={onTasks} aria-label="My tasks" title="My tasks and reminders" data-testid="chat-tasks" className="relative rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
+            <ListChecks className="h-5 w-5" />
+            {tasksDue ? <span className="absolute -right-0.5 -top-0.5 rounded-full bg-[var(--color-atlas-error)] px-1 text-[9px] font-extrabold text-white">{tasksDue}</span> : null}
+          </button>
+        ) : null}
         {onProfile ? (
           <button type="button" onClick={onProfile} aria-label="My profile" title="My photo and status" data-testid="chat-profile" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
             <UserRound className="h-5 w-5" />

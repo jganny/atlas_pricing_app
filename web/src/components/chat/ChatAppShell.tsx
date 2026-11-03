@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BellRing, ExternalLink, LogOut, MessagesSquare, MoreHorizontal, UserRound, Users } from "lucide-react";
+import { BellRing, ExternalLink, ListChecks, LogOut, MessagesSquare, MoreHorizontal, UserRound, Users } from "lucide-react";
 import { Suspense } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { toast } from "@/components/Toast";
@@ -10,12 +10,13 @@ import { Avatar } from "./Avatar";
 import { ChatProvider, useTeamChat } from "./ChatProvider";
 import { TeamChat } from "./TeamChat";
 import { ProfileDialog } from "./ProfileDialog";
+import { TasksPanel } from "./TasksPanel";
 import { CHAT_APP_NAME, CHAT_CLIENT_NAME, PRICING_APP_URL } from "@/lib/chat-app-mode";
 import { isOnline } from "@/lib/chat/chat-logic";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
-type Tab = "chats" | "people" | "more";
+type Tab = "chats" | "people" | "tasks" | "more";
 
 /** The whole screen of the Vertex Chat app: chats, people, and a small More page. No pricing desks. */
 export function ChatAppShell() {
@@ -44,16 +45,19 @@ function Frame() {
           </Suspense>
         ) : tab === "people" ? (
           <PeopleTab onOpened={() => setTab("chats")} />
+        ) : tab === "tasks" ? (
+          <TasksPanel onOpenChat={(roomId) => { chat.setActiveRoomId(roomId); setTab("chats"); }} />
         ) : (
           <MoreTab />
         )}
       </main>
       <nav
         aria-label="Sections"
-        className={cn("grid grid-cols-3 border-t border-[var(--color-border)] bg-white pb-[env(safe-area-inset-bottom)]", hideTabs && "max-lg:hidden")}
+        className={cn("grid grid-cols-4 border-t border-[var(--color-border)] bg-white pb-[env(safe-area-inset-bottom)]", hideTabs && "max-lg:hidden")}
       >
         <TabButton active={tab === "chats"} label="Chats" badge={chat.badge} onClick={() => setTab("chats")} icon={<MessagesSquare className="h-5 w-5" />} />
         <TabButton active={tab === "people"} label="People" onClick={() => setTab("people")} icon={<Users className="h-5 w-5" />} />
+        <TabButton active={tab === "tasks"} label="Tasks" badge={chat.tasksDue} onClick={() => setTab("tasks")} icon={<ListChecks className="h-5 w-5" />} />
         <TabButton active={tab === "more"} label="More" onClick={() => setTab("more")} icon={<MoreHorizontal className="h-5 w-5" />} />
       </nav>
     </div>

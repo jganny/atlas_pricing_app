@@ -13,7 +13,8 @@ import { offlineBackend } from "@/lib/chat/offline-backend";
 import { mockBackend } from "@/lib/chat/mock-backend";
 import { channelsToSync, desiredChannels, listPeople } from "@/lib/chat/people";
 import { currentPushState, enablePush, type PushState } from "@/lib/chat/push";
-import type { ChatBackend, ChatRoom, ChatState, Me, Person, Presence } from "@/lib/chat/types";
+import type { ChatBackend, ChatRoom, ChatState, ChatTask, Me, Person, Presence } from "@/lib/chat/types";
+import { dueSoonCount, newTaskId, openTasks, tasksToAnnounce } from "@/lib/chat/work";
 import { useSeatsVersion } from "@/hooks/use-seats-version";
 import { saveMyProfile, subscribeProfiles } from "@/lib/chat/profile-store";
 import type { ChatProfile } from "@/lib/chat/profile";
@@ -45,6 +46,13 @@ export interface ChatContextValue {
   profiles: Record<string, ChatProfile>;
   /** Changes this person's own photo and/or status. */
   saveProfile: (patch: Partial<Pick<ChatProfile, "photo" | "status">>) => Promise<void>;
+  /** This person's open tasks and reminders, soonest first. */
+  tasks: ChatTask[];
+  /** How many are due today or already late. */
+  tasksDue: number;
+  addTask: (text: string, opts?: { dueMs?: number; roomId?: string; msgId?: string }) => void;
+  setTaskDone: (id: string, done: boolean) => void;
+  removeTask: (id: string) => void;
 }
 
 const EMPTY_STATE: ChatState = { reads: {}, muted: {} };
@@ -260,6 +268,54 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [login],
   );
 
+  // Tasks and reminders live on this person's own record.
+  const taskList = useMemo(() => openTasks(state.tasks), [state.tasks]);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const tasksDue = useMemo(() => dueSoonCount(state.tasks, clock), [state.tasks, clock]);
+  const addTask = useCallback(
+    (text: string, opts?: { dueMs?: number; roomId?: string; msgId?: string }) => {
+      const clean = text.replace(/\s+/g, " ").trim().slice(0, 200);
+      if (!login || !clean) return;
+      const now = Date.now();
+      const id = newTaskId();
+      const task: ChatTask = { id, text: clean, createdAt: now, updatedAt: now, ...(opts?.dueMs ? { dueMs: opts.dueMs } : {}), ...(opts?.roomId ? { roomId: opts.roomId } : {}), ...(opts?.msgId ? { msgId: opts.msgId } : {}) };
+      backend.saveState(login, { tasks: { [id]: task } });
+    },
+    [backend, login],
+  );
+  const patchTask = useCallback(
+    (id: string, patch: Partial<ChatTask>) => {
+      const cur = stateRef.current.tasks?.[id];
+      if (!login || !cur) return;
+      backend.saveState(login, { tasks: { [id]: { ...cur, ...patch, updatedAt: Date.now() } } });
+    },
+    [backend, login],
+  );
+  const setTaskDone = useCallback((id: string, done: boolean) => patchTask(id, { done }), [patchTask]);
+  const removeTask = useCallback((id: string) => patchTask(id, { removed: true }), [patchTask]);
+
+  // Say so once when a task comes due (on screen, or as a notification when the app is in the background).
+  const announced = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!me || !stateReady) return;
+    for (const t of tasksToAnnounce(state.tasks, clock, announced.current)) {
+      announced.current.add(t.id);
+      if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification("Reminder", { body: t.text, tag: t.id, icon: IS_CHAT_APP ? "/icon-192.png" : "/app/icon-192.png" });
+        } catch {
+          /* some browsers only allow notifications from the service worker */
+        }
+      } else {
+        toast(`⏰ ${t.text}`, "info");
+      }
+    }
+  }, [me, stateReady, state.tasks, clock]);
+
   const turnOnNotifications = useCallback(async () => {
     if (!me) return undefined;
     const r = await enablePush(true);
@@ -291,8 +347,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       turnOnNotifications,
       profiles,
       saveProfile,
+      tasks: taskList,
+      tasksDue,
+      addTask,
+      setTaskDone,
+      removeTask,
     }),
-    [enabled, me, backend, rooms, roomsReady, state, stateReady, people, presence, badge, activeRoomId, markRead, acceptNotice, setMuted, openDm, createGroup, push, turnOnNotifications, profiles, saveProfile],
+    [enabled, me, backend, rooms, roomsReady, state, stateReady, people, presence, badge, activeRoomId, markRead, acceptNotice, setMuted, openDm, createGroup, push, turnOnNotifications, profiles, saveProfile, taskList, tasksDue, addTask, setTaskDone, removeTask],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

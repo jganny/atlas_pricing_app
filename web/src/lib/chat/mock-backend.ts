@@ -6,6 +6,7 @@
  */
 import { personDisplayName } from "@/lib/auth/desk-seats";
 import { EVERYONE_ROOM, newId, previewText, withReaction } from "./chat-logic";
+import { mergeTasks } from "./work";
 import type { AuditEntry, ChatBackend, ChatMessage, ChatRoom, ChatState, Presence, Typing } from "./types";
 
 interface Store {
@@ -146,16 +147,17 @@ export const mockBackend: ChatBackend = {
   subscribeState(login, cb) {
     return watch(() => {
       const s = load().states[login];
-      cb({ reads: s?.reads ?? {}, muted: s?.muted ?? {}, noticeAcceptedAt: s?.noticeAcceptedAt, tokens: s?.tokens });
+      cb({ reads: s?.reads ?? {}, muted: s?.muted ?? {}, noticeAcceptedAt: s?.noticeAcceptedAt, tokens: s?.tokens, tasks: s?.tasks });
     });
   },
 
   saveState(login, patch) {
     const s = load();
     const cur = s.states[login] ?? { reads: {}, muted: {} };
-    const { reads, muted, noticeAcceptedAt } = patch as Partial<ChatState>;
+    const { reads, muted, noticeAcceptedAt, tasks } = patch as Partial<ChatState>;
     s.states[login] = {
       ...cur,
+      tasks: mergeTasks(cur.tasks, tasks),
       reads: { ...cur.reads, ...(reads ?? {}) },
       muted: { ...cur.muted, ...(muted ?? {}) },
       noticeAcceptedAt: noticeAcceptedAt ?? cur.noticeAcceptedAt,

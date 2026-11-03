@@ -31,6 +31,7 @@ import {
   RETENTION_DAYS,
 } from "@/lib/chat/chat-logic";
 import type { ChatMessage, ChatRoom, Typing } from "@/lib/chat/types";
+import { ACK_EMOJI, acknowledgement, approvalState, canDecide } from "@/lib/chat/work";
 import { useOnline } from "@/hooks/use-online";
 
 const PAGE = 150;
@@ -159,7 +160,7 @@ export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void })
   function onSend(s: ComposerSend) {
     if (!me) return;
     const before = messagesRef.current;
-    const sent = sendChatMessage({ backend, me, room, people, text: s.text, files: s.files, quote: s.quote, replyTo: replyTo ?? undefined });
+    const sent = sendChatMessage({ backend, me, room, people, text: s.text, files: s.files, quote: s.quote, replyTo: replyTo ?? undefined, replyBy: s.replyBy, approvalFrom: s.approvalFrom });
     setReplyTo(null);
     setAtBottom(true);
     if (sent && asksVertex(sent.text)) void askVertex(sent, before);
@@ -213,7 +214,28 @@ export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void })
       void navigator.clipboard?.writeText(m.text).then(() => toast("Copied", "success")).catch(() => undefined);
     },
     onForward: (m) => setForwarding(m),
+    // One tap: the message becomes a private task that remembers where it came from.
+    onTask: (m) => {
+      chat.addTask(m.text.replace(/\s+/g, " ").slice(0, 140) || "Follow up", { roomId: room.id, msgId: m.id });
+      toast("Added to your tasks.", "success");
+    },
+    // An answer is a message of its own, so the record cannot be changed afterwards.
+    onDecide: (m, outcome, note) => {
+      if (!me) return;
+      const title = m.text.replace(/\s+/g, " ").slice(0, 60);
+      sendChatMessage({
+        backend, me, room, people,
+        text: `${outcome === "approved" ? "✅ Approved" : "❌ Declined"}: ${title}${note ? ` — ${note}` : ""}`,
+        replyTo: m,
+        decision: { forId: m.id, outcome, title, ...(note ? { note } : {}) },
+      });
+    },
+    onAck: (m) => {
+      if (me) backend.setReaction(room.id, m.id, ACK_EMOJI, me.login, true);
+    },
   };
+
+  const memberLogins = room.audience === "all" ? people.map((p) => p.login) : room.memberLogins;
 
   const seenMark = otherLogin ? receipts[otherLogin] ?? 0 : 0;
   const lastMine = [...messages].reverse().find((m) => m.senderLogin === myLogin && !m.deleted);
@@ -379,6 +401,9 @@ export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void })
                   translation={translations[msg.id]}
                   actions={actions}
                   isDirect={isDirect}
+                  approval={msg.approval ? approvalState(msg, messages) : undefined}
+                  mayDecide={msg.approval ? canDecide(msg, myLogin) : undefined}
+                  ack={msg.replyBy ? acknowledgement(msg, messages, memberLogins) : undefined}
                 />
               ))}
             </div>
@@ -424,6 +449,7 @@ export function Thread({ room, onBack }: { room: ChatRoom; onBack: () => void })
           setEditing(null);
         }}
         onTyping={onTyping}
+        onAddTask={(text, dueMs) => chat.addTask(text, { dueMs })}
         droppedFiles={dropped}
         onDroppedHandled={() => setDropped([])}
       />

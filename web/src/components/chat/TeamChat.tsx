@@ -7,6 +7,7 @@ import { toast } from "@/components/Toast";
 import { ChatNotice } from "./ChatNotice";
 import { NewChatDialog } from "./NewChatDialog";
 import { ProfileDialog } from "./ProfileDialog";
+import { TasksPanel } from "./TasksPanel";
 import { RoomList } from "./RoomList";
 import { Thread } from "./Thread";
 import { useTeamChat } from "./ChatProvider";
@@ -19,6 +20,7 @@ export function TeamChat({ standalone = false }: { standalone?: boolean } = {}) 
   const { me, rooms, roomsReady, stateReady, state, people, presence, activeRoomId, setActiveRoomId, push } = chat;
   const [showNew, setShowNew] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
   // A notification link (?room=…) opens that chat once.
   const wanted = useSearchParams()?.get("room");
   const opened = useRef(false);
@@ -56,6 +58,8 @@ export function TeamChat({ standalone = false }: { standalone?: boolean } = {}) 
           subtitle={standalone ? CHAT_CLIENT_NAME : undefined}
           onNew={() => setShowNew(true)}
           onProfile={standalone ? undefined : () => setShowProfile(true)}
+          onTasks={standalone ? undefined : () => setShowTasks(true)}
+          tasksDue={chat.tasksDue}
           onEnablePush={() => void chat.turnOnNotifications().then((m) => m && toast(m, "info"))}
         />
       </aside>
@@ -87,6 +91,14 @@ export function TeamChat({ standalone = false }: { standalone?: boolean } = {}) 
         />
       ) : null}
       {showProfile ? <ProfileDialog onClose={() => setShowProfile(false)} /> : null}
+      {showTasks ? (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-label="My tasks">
+          <button type="button" aria-label="Close" className="absolute inset-0 bg-black/40" onClick={() => setShowTasks(false)} />
+          <div className="relative z-10 h-[75vh] w-full max-w-md overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+            <TasksPanel onOpenChat={(roomId) => { setActiveRoomId(roomId); setShowTasks(false); }} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

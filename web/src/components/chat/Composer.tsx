@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Paperclip, Send, Smile, Sparkles, Ticket, X } from "lucide-react";
+import { ClipboardCheck, FileText, Hourglass, Paperclip, Send, Smile, Sparkles, Ticket, X } from "lucide-react";
 import { toast } from "@/components/Toast";
 import { QuotePicker } from "./QuotePicker";
 import { MicButton, RecordingBar, canRecordVoice, useVoiceRecorder } from "./VoiceRecorder";
+import { ApprovePanel, ReplyByPanel, TaskPanel } from "./WorkPanels";
+import { deadlineLabel, matchSlash, parseSlashWithText, type SlashKey } from "@/lib/chat/work";
 import { EMOJI_GROUPS } from "./emoji";
 import { cn } from "@/lib/utils";
 import { MAX_TEXT, formatBytes } from "@/lib/chat/chat-logic";
@@ -15,6 +17,9 @@ export interface ComposerSend {
   text: string;
   files: File[];
   quote?: QuoteCard;
+  replyBy?: number;
+  /** Ask for a decision from these people (empty = anyone in the chat). Absent = no approval asked. */
+  approvalFrom?: string[];
 }
 
 /** Text box with @mentions, emoji, files (button, paste or drop), quote cards, reply and edit. Drafts are kept per chat. */
@@ -30,6 +35,7 @@ export function Composer({
   onTyping,
   droppedFiles,
   onDroppedHandled,
+  onAddTask,
 }: {
   draftKey: string;
   mentionable: Person[];
@@ -42,6 +48,8 @@ export function Composer({
   onTyping: () => void;
   droppedFiles: File[];
   onDroppedHandled: () => void;
+  /** Saves a task or reminder for the signed-in person. */
+  onAddTask: (text: string, dueMs?: number) => void;
 }) {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -50,6 +58,11 @@ export function Composer({
   const [showQuotes, setShowQuotes] = useState(false);
   const [mentionAt, setMentionAt] = useState<{ start: number; query: string } | null>(null);
   const [mentionIdx, setMentionIdx] = useState(0);
+  const [slashIdx, setSlashIdx] = useState(0);
+  const [panel, setPanel] = useState<null | "approve" | "replyby" | "task" | "remind">(null);
+  const [panelText, setPanelText] = useState("");
+  const [replyBy, setReplyBy] = useState<number | undefined>();
+  const [approvers, setApprovers] = useState<string[] | undefined>();
   const area = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -66,6 +79,9 @@ export function Composer({
     setQuote(undefined);
     setShowEmoji(false);
     setShowQuotes(false);
+    setPanel(null);
+    setReplyBy(undefined);
+    setApprovers(undefined);
   }, [draftKey]);
 
   useEffect(() => {
@@ -144,18 +160,60 @@ export function Composer({
     });
   }
 
+  const slash = !editing ? matchSlash(text) : null;
+  const slashItems = slash && slash.length ? slash : [];
+
+  function runSlash(key: SlashKey) {
+    setText("");
+    setShowEmoji(false);
+    setPanelText("");
+    if (key === "quote") {
+      setPanel(null);
+      setShowQuotes(true);
+    } else {
+      setShowQuotes(false);
+      setPanel(key === "replyby" ? "replyby" : key === "approve" ? "approve" : key);
+      if (key === "approve" && !approvers) setApprovers([]);
+    }
+  }
+
   function submit() {
     if (editing) {
       onSaveEdit(text);
       setText("");
       return;
     }
+    // "/task call the client" saves a private task straight away; "/remind …" asks when.
+    const cmd = parseSlashWithText(text);
+    if (cmd) {
+      if (cmd.key === "task") {
+        onAddTask(cmd.rest);
+        toast("Task added.", "success");
+        setText("");
+      } else {
+        setPanelText(cmd.rest);
+        setPanel("remind");
+        setText("");
+      }
+      return;
+    }
+    if (slashItems.length) {
+      runSlash(slashItems[Math.min(slashIdx, slashItems.length - 1)].key);
+      return;
+    }
     if (!text.trim() && !files.length && !quote) return;
-    onSend({ text, files, quote });
+    if (approvers && !text.trim()) {
+      toast("Write what you need approved first.", "info");
+      return;
+    }
+    onSend({ text, files, quote, ...(replyBy ? { replyBy } : {}), ...(approvers ? { approvalFrom: approvers } : {}) });
     setText("");
     setFiles([]);
     setQuote(undefined);
     setShowEmoji(false);
+    setReplyBy(undefined);
+    setApprovers(undefined);
+    setPanel(null);
   }
 
   const canSend = !!(text.trim() || files.length || quote);
@@ -185,6 +243,60 @@ export function Composer({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {slashItems.length ? (
+        <ul className="absolute bottom-full left-3 z-30 mb-1 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg" role="listbox" data-testid="slash-menu">
+          {slashItems.map((c, i) => (
+            <li key={c.key} role="option" aria-selected={i === slashIdx}>
+              <button
+                type="button"
+                className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-sm", i === slashIdx ? "bg-sky-50" : "hover:bg-slate-50")}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  runSlash(c.key);
+                }}
+              >
+                <span className="font-bold">{c.label}</span>
+                <span className="text-xs text-slate-500">{c.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {panel === "approve" ? (
+        <ApprovePanel people={mentionable} approvers={approvers ?? []} replyBy={replyBy} onChange={(n) => { setApprovers(n.approvers); setReplyBy(n.replyBy); }} onClose={() => { setPanel(null); }} />
+      ) : null}
+      {panel === "replyby" ? <ReplyByPanel replyBy={replyBy} onPick={(ms) => { setReplyBy(ms); setPanel(null); area.current?.focus(); }} onClose={() => setPanel(null)} /> : null}
+      {panel === "task" || panel === "remind" ? (
+        <TaskPanel
+          kind={panel}
+          initialText={panelText}
+          onSave={(t, due) => {
+            onAddTask(t, due);
+            toast(due ? `Reminder set for ${deadlineLabel(due, Date.now())}.` : "Task added.", "success");
+            setPanel(null);
+          }}
+          onClose={() => setPanel(null)}
+        />
+      ) : null}
+      {approvers || replyBy ? (
+        <div className="mb-2 flex flex-wrap gap-1.5 text-xs">
+          {approvers ? (
+            <span className="flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 py-1 pl-2.5 pr-1 font-semibold text-amber-900">
+              <ClipboardCheck className="h-3.5 w-3.5" />
+              Decision from {approvers.length ? approvers.map((l) => mentionable.find((p) => p.login === l)?.name.split(" ")[0] || l).join(", ") : "anyone in the chat"}
+              <button type="button" aria-label="Remove approval request" onClick={() => setApprovers(undefined)} className="rounded-full p-0.5 hover:bg-amber-100"><X className="h-3 w-3" /></button>
+            </span>
+          ) : null}
+          {replyBy ? (
+            <span className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 py-1 pl-2.5 pr-1 font-semibold text-red-800" data-testid="replyby-chip">
+              <Hourglass className="h-3.5 w-3.5" />
+              Reply by {deadlineLabel(replyBy, Date.now())}
+              <button type="button" aria-label="Remove reply-by time" onClick={() => setReplyBy(undefined)} className="rounded-full p-0.5 hover:bg-red-100"><X className="h-3 w-3" /></button>
+            </span>
+          ) : null}
+        </div>
       ) : null}
 
       {replyTo ? (
@@ -270,10 +382,15 @@ export function Composer({
           value={text}
           data-testid="chat-input"
           aria-label="Message"
-          placeholder="Message — @ to tag someone"
+          placeholder="Message — @ to tag, / for actions"
           className="max-h-40 min-h-[2.5rem] flex-1 resize-none rounded-2xl border border-[var(--color-border)] bg-slate-50 px-3.5 py-2 text-sm outline-none focus:border-[var(--color-atlas-navy)] focus:bg-white"
           onChange={(e) => onChange(e.target.value, e.target.selectionStart)}
           onKeyDown={(e) => {
+            if (slashItems.length) {
+              if (e.key === "ArrowDown") { e.preventDefault(); setSlashIdx((i) => (i + 1) % slashItems.length); return; }
+              if (e.key === "ArrowUp") { e.preventDefault(); setSlashIdx((i) => (i - 1 + slashItems.length) % slashItems.length); return; }
+              if (e.key === "Tab") { e.preventDefault(); runSlash(slashItems[Math.min(slashIdx, slashItems.length - 1)].key); return; }
+            }
             if (suggestions.length) {
               if (e.key === "ArrowDown") { e.preventDefault(); setMentionIdx((i) => (i + 1) % suggestions.length); return; }
               if (e.key === "ArrowUp") { e.preventDefault(); setMentionIdx((i) => (i - 1 + suggestions.length) % suggestions.length); return; }

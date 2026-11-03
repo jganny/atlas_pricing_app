@@ -54,6 +54,12 @@ export interface ChatMessage {
   replyTo?: { id: string; name: string; snippet: string };
   attachments?: ChatAttachment[];
   quote?: QuoteCard;
+  /** A request for a decision. Who may decide: the listed people, or anyone in the chat but the sender when the list is empty. */
+  approval?: { id: string; approvers: string[] };
+  /** This message is somebody's answer to an approval request. Kept as its own message so the record cannot be edited. */
+  decision?: { forId: string; outcome: "approved" | "declined"; note?: string; title?: string };
+  /** Time (ms) by which people are asked to reply or acknowledge. */
+  replyBy?: number;
   /** Set when this message was forwarded from another conversation. */
   forwardedFrom?: { name: string; login: string };
   mentions?: string[];
@@ -74,6 +80,25 @@ export interface ChatState {
   noticeAcceptedAt?: number;
   /** Browser notification tokens for this person's devices. */
   tokens?: string[];
+  /** This person's own tasks and reminders (id -> task). Stored on their own record, so only they can change them. */
+  tasks?: Record<string, ChatTask>;
+}
+
+/** A to-do or reminder. Kept private to its owner. */
+export interface ChatTask {
+  id: string;
+  text: string;
+  /** When it is due (ms). None = no time. */
+  dueMs?: number;
+  done?: boolean;
+  /** Hidden from the list (the record stays, so a late sync cannot bring it back). */
+  removed?: boolean;
+  createdAt: number;
+  /** Last change (ms): when two devices disagree, the later one wins. */
+  updatedAt?: number;
+  /** The chat message it came from, so the task can jump back to it. */
+  roomId?: string;
+  msgId?: string;
 }
 
 export interface Presence {

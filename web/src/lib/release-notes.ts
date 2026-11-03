@@ -11,6 +11,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.132",
+    date: "2026-11-03",
+    items: [
+      "Team Chat and Vertex Chat: type “/” in the message box for quick actions: /quote (attach a quote card), /approve (ask for a decision), /replyby (ask for a reply by a time), /task and /remind (a private note or reminder for yourself).",
+      "Approvals with a record: ask for a decision, optionally from named people. They see Approve and Decline buttons, and the answer is kept in the chat with who decided and when. You cannot approve your own request.",
+      "Reply-by: ask people to reply or tap “Got it” by a time. The message shows the time, how many have answered, and turns red when late.",
+      "Quote references written in a message (for example AEPAY1026IN60278) now show a small card with the quote's status. Tap it to open the quote. No prices are shown.",
+      "My tasks: make a task from any message (⋯ menu, Make a task), or with /task. Only you see them. A reminder pops up when its time comes while the app is open. In Vertex Chat there is a Tasks tab; in the Pricing app it is the list icon at the top of the chat list.",
+    ],
+  },
+  {
     version: "0.3.131",
     date: "2026-11-01",
     items: [
