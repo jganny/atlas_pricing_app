@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.133",
+    date: "2026-11-03",
+    items: [
+      "The red number beside Air desk, Sea desk and the other desk names in the menu is gone. Quote Hub jobs are still listed under Waiting for you in Quote Hub. The app also no longer checks for those jobs on every page.",
+    ],
+  },
+  {
     version: "0.3.132",
     date: "2026-11-03",
     items: [
