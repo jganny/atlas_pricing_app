@@ -66,8 +66,10 @@ export default function CircularsPage() {
   });
   const [file, setFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<
-    Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number }>
+    Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number; currency: string }>
   >([]);
+  // For sheets with no currency column: the desk says which currency the whole sheet is in.
+  const [importCurrency, setImportCurrency] = useState("");
   const [courierBook, setCourierBook] = useState<CourierTariffBook | null>(null);
   const [extractCircular, setExtractCircular] = useState<{ circular: CircularRecord; kind: "air" | "sea" | "courier" } | null>(null);
   const tariffYear = new Date().getFullYear();
@@ -233,6 +235,7 @@ export default function CircularsPage() {
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
     const parsed = parseTariffImportRows(rows);
     setImportPreview(parsed);
+    setImportCurrency("");
     toast(`Parsed ${parsed.length} tariff rows`, parsed.length ? "success" : "info");
   }
 
@@ -312,14 +315,20 @@ export default function CircularsPage() {
     }
   }
 
+  const importNeedsCurrency = importPreview.some((r) => !r.currency);
+
   async function publishImport() {
     if (!importPreview.length) return;
+    if (importNeedsCurrency && !importCurrency) {
+      toast("Choose the currency of this sheet first.", "error");
+      return;
+    }
     setBusy(true);
     try {
       if (useLiveData) {
         try {
           const n = await Promise.race([
-            publishAirTariffRows(importPreview, user?.username || "unknown"),
+            publishAirTariffRows(importPreview.map((r) => ({ ...r, currency: r.currency || importCurrency })), user?.username || "unknown"),
             new Promise<number>((_, rej) =>
               setTimeout(() => rej(new Error("Publish timed out")), 8000),
             ),
@@ -748,7 +757,20 @@ export default function CircularsPage() {
                   </li>
                 ))}
               </ul>
-              <Button type="button" disabled={busy} onClick={() => void publishImport()}>
+              {importNeedsCurrency ? (
+                <label className="flex items-center gap-2 text-xs font-semibold">
+                  Currency of this sheet
+                  <select value={importCurrency} onChange={(e) => setImportCurrency(e.target.value)} className="rounded-md border px-2 py-1" data-testid="import-currency">
+                    <option value="">Choose…</option>
+                    {["INR", "USD", "EUR", "AED", "GBP", "SGD"].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <Button type="button" disabled={busy || (importNeedsCurrency && !importCurrency)} onClick={() => void publishImport()}>
                 Publish to air_tariffs
               </Button>
             </div>

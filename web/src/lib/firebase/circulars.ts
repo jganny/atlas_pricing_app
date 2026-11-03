@@ -136,7 +136,7 @@ export async function deleteCircular(id: string): Promise<void> {
 /** Parse a simple Excel/CSV-ish tariff sheet into preview rows (client-side). */
 export function parseTariffImportRows(
   rows: Array<Record<string, unknown>>,
-): Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number }> {
+): Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number; currency: string }> {
   return rows
     .map((r) => {
       const keys = Object.keys(r);
@@ -155,13 +155,15 @@ export function parseTariffImportRows(
         carrier: get("carrier", "airline", "liner") || "Imported",
         sell: Number.isFinite(sell) ? sell : 0,
         buy: Number.isFinite(buy) ? buy : 0,
+        // The currency printed in the sheet. Empty when the sheet has no currency column: the desk then chooses it, nothing is assumed.
+        currency: /^[A-Za-z]{3}$/.test(get("currency", "ccy", "cur")) ? get("currency", "ccy", "cur").toUpperCase() : "",
       };
     })
     .filter((r) => r.origin && r.destination);
 }
 
 export async function publishAirTariffRows(
-  rows: Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number }>,
+  rows: Array<{ origin: string; destination: string; carrier: string; sell: number; buy: number; currency: string }>,
   uploadedBy: string,
 ): Promise<number> {
   const db = getFirebaseDb();
@@ -184,7 +186,8 @@ export async function publishAirTariffRows(
       carrierCode,
       origin: row.origin,
       destination: row.destination,
-      currency: "USD",
+      // Each row says its own currency (India circulars are usually INR); never assumed to be dollars.
+      currency: row.currency,
       // The uploaded sheet only carries one sell/buy pair, not the airline's
       // real per-break rates, so the higher brackets are estimated at a
       // declining discount off it — real bracket-name keys this time
