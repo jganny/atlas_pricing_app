@@ -233,7 +233,7 @@ function pickExtraction(payload) {
 exports.extractShipmentFromDocuments = functions
   .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 150, memory: "1GB" })
   .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+    if (!context.auth || context.auth.token.chatOnly === true) throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
     const apiKey = anthropicApiKey.value();
     if (!apiKey) {
       throw new functions.https.HttpsError("failed-precondition", "Reading documents is not set up yet. Ask your admin to set ANTHROPIC_API_KEY.");

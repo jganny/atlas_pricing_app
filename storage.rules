@@ -1,8 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Chat-only staff (custom claim chatOnly) can use chat files but nothing else.
     match /circulars/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.token.get('chatOnly', false) != true;
     }
     // Team chat files: signed-in staff only, up to 10 MB each. Files are removed automatically
     // with their message 100 days after it was sent (by the scheduled server job).

@@ -29,7 +29,7 @@ const geoapifyKey = defineSecret("GEOAPIFY_KEY");
 exports.searchGlobalLocation = functions
   .runWith({ secrets: [geoapifyKey] })
   .https.onCall(async (data, context) => {
-    if (!context.auth) {
+    if (!context.auth || context.auth.token.chatOnly === true) {
       throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
     }
 
@@ -119,7 +119,7 @@ async function resolveUid(username) {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.adminResetPassword = functions.https.onCall(async (data, context) => {
   // 1. Require authentication
-  if (!context.auth) {
+  if (!context.auth || context.auth.token.chatOnly === true) {
     throw new functions.https.HttpsError(
       "unauthenticated",
       "You must be signed in to reset passwords."
@@ -207,7 +207,7 @@ exports.adminResetPassword = functions.https.onCall(async (data, context) => {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.adminCreateUser = functions.https.onCall(async (data, context) => {
   // 1. Require authentication
-  if (!context.auth) {
+  if (!context.auth || context.auth.token.chatOnly === true) {
     throw new functions.https.HttpsError("unauthenticated", "Must be signed in.");
   }
 
@@ -616,7 +616,7 @@ exports.weeklyAgencyListEmail = functions
 exports.triggerAgencyListNow = functions
   .runWith({ secrets: [anthropicApiKey] })
   .https.onCall(async (data, context) => {
-    if (!context.auth) {
+    if (!context.auth || context.auth.token.chatOnly === true) {
       throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
     }
     const callerUsername = (context.auth.token.email || "").split("@")[0].toLowerCase();
@@ -669,7 +669,7 @@ exports.triggerAgencyListNow = functions
 exports.atlasCopilot = functions
   .runWith({ secrets: [anthropicApiKey] })
   .https.onCall(async (data, context) => {
-    if (!context.auth) {
+    if (!context.auth || context.auth.token.chatOnly === true) {
       throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
     }
 
@@ -785,7 +785,12 @@ exports.atlasCopilotStream = functions
       return;
     }
     try {
-      await admin.auth().verifyIdToken(token);
+      const decoded = await admin.auth().verifyIdToken(token);
+      // Chat-only logins have no access to this.
+      if (decoded.chatOnly === true) {
+        res.status(403).json({ error: "This login is for Vertex Chat only." });
+        return;
+      }
     } catch {
       res.status(401).json({ error: "Sign in is required." });
       return;
@@ -905,7 +910,7 @@ const AIR_BREAK_KEYS = ["min", "minus45", "plus45", "plus100", "plus300", "plus5
 
 /** Shared by every "read a circular PDF, ask Claude to extract rates" function below. */
 function requireCircularInput(data, context) {
-  if (!context.auth) {
+  if (!context.auth || context.auth.token.chatOnly === true) {
     throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
   }
   const storagePath = typeof data?.storagePath === "string" ? data.storagePath.trim() : "";
@@ -1234,7 +1239,7 @@ exports.extractCourierTariffFromCircular = functions
 // numbers it typed in by hand.
 // ─────────────────────────────────────────────────────────────────────────────
 function requireVendorRateInput(data, context) {
-  if (!context.auth) {
+  if (!context.auth || context.auth.token.chatOnly === true) {
     throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
   }
   const pdfBase64 = typeof data?.pdfBase64 === "string" ? data.pdfBase64 : "";
@@ -1336,7 +1341,7 @@ exports.extractVendorRateFromDocument = functions
 exports.draftEnquiryReply = functions
   .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 60, memory: "256MB" })
   .https.onCall(async (data, context) => {
-    if (!context.auth) {
+    if (!context.auth || context.auth.token.chatOnly === true) {
       throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
     }
     const apiKey = anthropicApiKey.value();
@@ -1433,3 +1438,11 @@ exports.chatNotify = chatNotify.chatNotify;
 // Rate requests: the desk emails chosen agents / airlines / liners / coloaders for rates.
 const rateRequests = require("./rate-requests");
 exports.sendRateRequests = rateRequests.sendRateRequests;
+
+// Chat-only staff: logins for people who use Vertex Chat but not the Pricing app.
+const chatStaff = require("./chat-staff");
+exports.chatStaffCreate = chatStaff.chatStaffCreate;
+exports.chatStaffInvite = chatStaff.chatStaffInvite;
+exports.chatStaffSetActive = chatStaff.chatStaffSetActive;
+exports.chatStaffList = chatStaff.chatStaffList;
+exports.chatInviteRedeem = chatStaff.chatInviteRedeem;

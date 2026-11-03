@@ -98,7 +98,7 @@ function pickInput(payload) {
 exports.parseQuoteInstruction = functions
   .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 30, memory: "256MB" })
   .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+    if (!context.auth || context.auth.token.chatOnly === true) throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
     const text = typeof data?.text === "string" ? data.text.trim().slice(0, MAX_TEXT) : "";
     if (text.length < 3) throw new functions.https.HttpsError("invalid-argument", "Type the instruction first.");
     const apiKey = anthropicApiKey.value();

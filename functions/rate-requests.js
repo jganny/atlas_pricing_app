@@ -70,7 +70,7 @@ function validateRequest(data) {
 }
 
 exports.sendRateRequests = onCall({ secrets: [pricingPassword], timeoutSeconds: 300, memory: "512MiB" }, async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  if (!request.auth || request.auth.token.chatOnly === true) throw new HttpsError("unauthenticated", "Sign in is required.");
   const email = String(request.auth.token.email || "");
   const login = email.split("@")[0].toLowerCase();
   const data = request.data || {};

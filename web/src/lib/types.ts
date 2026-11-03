@@ -1,4 +1,5 @@
-export type UserRole = 'ganny' | 'manager' | 'pricing' | 'sales'
+/** 'chat' = a Vertex Chat-only login: no Pricing app access. */
+export type UserRole = 'ganny' | 'manager' | 'pricing' | 'sales' | 'chat'
 
 export interface AuthUser {
   id: string

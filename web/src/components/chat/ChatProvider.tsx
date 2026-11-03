@@ -95,7 +95,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [profiles, setProfiles] = useState<Record<string, ChatProfile>>({});
   const login = me?.login;
 
-  const people = useMemo(() => listPeople(), [seatsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The Pricing app's staff, plus anyone the admin added as chat-only (their name lives on their chat profile).
+  const people = useMemo(() => {
+    const base = listPeople();
+    const known = new Set(base.map((p) => p.login));
+    const extra = Object.values(profiles)
+      .filter((p) => p.chatOnly && p.name && !known.has(p.login))
+      .map((p) => ({ login: p.login, name: p.name as string }));
+    return extra.length ? [...base, ...extra].sort((a, b) => a.name.localeCompare(b.name)) : base;
+  }, [seatsVersion, profiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Rooms, this person's read marks, and who is online.
   useEffect(() => {

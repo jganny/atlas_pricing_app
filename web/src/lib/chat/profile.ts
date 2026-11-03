@@ -7,6 +7,9 @@ export interface ChatProfile {
   /** One line: "Available", "In a meeting", … or a short sentence of their own. */
   status?: string;
   statusAt?: number;
+  /** Set by the server for people who use Vertex Chat only: their name, and the flag. */
+  name?: string;
+  chatOnly?: boolean;
 }
 
 export const PHOTO_SIZE = 96;

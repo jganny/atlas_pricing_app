@@ -138,7 +138,8 @@ function SeatsSync() {
   const user = useAuthStore((s) => s.user);
   const qc = useQueryClient();
   useEffect(() => {
-    if (!useLiveData || !user) return;
+    // Chat-only logins have no access to desk seats (and need none).
+    if (!useLiveData || !user || user.role === "chat") return;
     return subscribeDeskSeats(
       (rows) => {
         if (!applyRemoteOccupants(rows)) return;

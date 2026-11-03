@@ -58,6 +58,17 @@ function mapRole(role: string | undefined): UserRole {
   return "pricing";
 }
 
+/** A chat-only login (custom claim set by the admin) has no pricing profile: it is built from the account itself. */
+async function chatOnlyProfile(user: User, username: string): Promise<AuthUser | null> {
+  try {
+    const token = await user.getIdTokenResult();
+    if (token.claims.chatOnly !== true) return null;
+  } catch {
+    return null;
+  }
+  return { id: user.uid, username, email: user.email ?? `${username}@${CANONICAL_DOMAIN}`, displayName: user.displayName || username, role: "chat", branch: "" };
+}
+
 async function fetchUserProfile(username: string, email: string, uid: string): Promise<AuthUser> {
   const db = getFirebaseDb();
   const snap = await getDoc(doc(db, "users", username));
@@ -98,6 +109,8 @@ export async function firebaseLogin(username: string, password: string): Promise
   }
 
   const usernameFromAuth = usernameFromEmail(user.email) || normalized;
+  const chatOnly = await chatOnlyProfile(user, usernameFromAuth);
+  if (chatOnly) return chatOnly;
   return fetchUserProfile(usernameFromAuth, user.email ?? canonicalEmail, user.uid);
 }
 
@@ -122,6 +135,11 @@ export function subscribeToAuthChanges(
         const username = usernameFromEmail(firebaseUser.email);
         if (!username) {
           onUser(null);
+          return;
+        }
+        const chatOnly = await chatOnlyProfile(firebaseUser, username);
+        if (chatOnly) {
+          onUser(chatOnly);
           return;
         }
         const profile = await fetchUserProfile(

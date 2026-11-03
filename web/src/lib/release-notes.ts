@@ -11,6 +11,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.134",
+    date: "2026-11-03",
+    items: [
+      "Admin → Chat-only staff: bring people who don't use the Pricing app onto Vertex Chat. Paste their names, create the logins in one click, and send each person a private link (WhatsApp or copy). They choose their own password; no password is ever shared. You can see who has joined, send a new link, or turn a login off.",
+      "A chat-only login can use chat, voice notes, profile and tasks, and nothing else: it cannot open any quote, customer, tariff, circular or stored file, and cannot use the assistant. It joins the Everyone chat.",
+      "Vertex Chat: the welcome page where a new person sets their password.",
+    ],
+  },
+  {
     version: "0.3.133",
     date: "2026-11-03",
     items: [

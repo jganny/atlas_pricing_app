@@ -455,6 +455,8 @@ exports.vertexChat = onRequest({ secrets: [anthropicApiKey], timeoutSeconds: 300
     } catch {
       return res.status(401).json({ error: "Please sign in again." });
     }
+    // The assistant (and the pricing facts behind it) is for the Pricing app's staff, not chat-only logins.
+    if (decoded.chatOnly === true) return res.status(403).json({ error: "The assistant isn't available for this login." });
     const apiKey = anthropicApiKey.value();
     if (!apiKey) return res.status(503).json({ error: "Ask Vertex is not set up yet. Ask your admin to set ANTHROPIC_API_KEY." });
 

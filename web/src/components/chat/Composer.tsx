@@ -9,6 +9,7 @@ import { ApprovePanel, ReplyByPanel, TaskPanel } from "./WorkPanels";
 import { deadlineLabel, matchSlash, parseSlashWithText, type SlashKey } from "@/lib/chat/work";
 import { EMOJI_GROUPS } from "./emoji";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth";
 import { MAX_TEXT, formatBytes } from "@/lib/chat/chat-logic";
 import { validateFiles } from "@/lib/chat/actions";
 import type { ChatMessage, Person, QuoteCard } from "@/lib/chat/types";
@@ -160,8 +161,10 @@ export function Composer({
     });
   }
 
+  // A chat-only login has no quotes to attach.
+  const chatOnly = useAuthStore((s) => s.user?.role === "chat");
   const slash = !editing ? matchSlash(text) : null;
-  const slashItems = slash && slash.length ? slash : [];
+  const slashItems = slash && slash.length ? slash.filter((c) => !(chatOnly && c.key === "quote")) : [];
 
   function runSlash(key: SlashKey) {
     setText("");
@@ -351,9 +354,11 @@ export function Composer({
           <button type="button" aria-label="Attach a file" title="Attach a file (up to 10 MB)" onClick={() => fileInput.current?.click()} className="rounded-full p-2 text-slate-500 hover:bg-slate-100">
             <Paperclip className="h-5 w-5" />
           </button>
+{chatOnly ? null : (
           <button type="button" aria-label="Share a quote" title="Share a quote" onClick={() => { setShowQuotes((v) => !v); setShowEmoji(false); }} className="rounded-full p-2 text-slate-500 hover:bg-slate-100">
             <Ticket className="h-5 w-5" />
           </button>
+          )}
           <div className="relative">
             <button type="button" aria-label="Emoji" title="Emoji" onClick={() => { setShowEmoji((v) => !v); setShowQuotes(false); }} className="rounded-full p-2 text-slate-500 hover:bg-slate-100">
               <Smile className="h-5 w-5" />

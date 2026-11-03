@@ -1,8 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() {
+    // Chat-only staff (people who use Vertex Chat but not the Pricing app) carry the custom claim chatOnly. They are signed
+    // in (isChatUser) but NOT "signed in" for everything else: every rule below that says isSignedIn() refuses them,
+    // so they can reach chat (which uses isChatUser) and nothing else.
+    function isChatUser() {
       return request.auth != null && request.auth.uid != null;
+    }
+    function isSignedIn() {
+      return isChatUser() && request.auth.token.get('chatOnly', false) != true;
     }
 
     // The users collection carries each account's password (mirrored here
@@ -76,8 +82,8 @@ service cloud.firestore {
     }
     match /chatRooms/{roomId} {
       function roomData() { return get(/databases/$(database)/documents/chatRooms/$(roomId)).data; }
-      allow read: if isSignedIn() && (chatCanSee(resource.data) || isAdmin());
-      allow create: if isSignedIn() && (
+      allow read: if isChatUser() && (chatCanSee(resource.data) || isAdmin());
+      allow create: if isChatUser() && (
         isAdmin()
         || (request.resource.data.kind in ['group', 'dm']
             && request.resource.data.audience == 'list'
@@ -86,7 +92,7 @@ service cloud.firestore {
             && (request.resource.data.kind != 'dm' || request.resource.data.memberLogins.size() in [1, 2]))
         || (roomId == 'everyone' && request.resource.data.kind == 'channel' && request.resource.data.audience == 'all')
       );
-      allow update: if isSignedIn() && (
+      allow update: if isChatUser() && (
         isAdmin()
         || (chatCanSee(resource.data)
             && request.resource.data.diff(resource.data).affectedKeys()
@@ -97,11 +103,11 @@ service cloud.firestore {
       allow delete: if false;
 
       match /messages/{messageId} {
-        allow read: if isSignedIn() && (chatCanSee(roomData()) || isAdmin());
-        allow create: if isSignedIn() && chatCanSee(roomData())
+        allow read: if isChatUser() && (chatCanSee(roomData()) || isAdmin());
+        allow create: if isChatUser() && chatCanSee(roomData())
           && request.resource.data.senderLogin == chatLogin()
           && request.resource.data.text is string && request.resource.data.text.size() <= 4000;
-        allow update: if isSignedIn() && chatCanSee(roomData()) && (
+        allow update: if isChatUser() && chatCanSee(roomData()) && (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
           || (resource.data.senderLogin == chatLogin()
               && request.resource.data.diff(resource.data).affectedKeys()
@@ -110,12 +116,12 @@ service cloud.firestore {
         allow delete: if false;
       }
       match /typing/{login} {
-        allow read: if isSignedIn() && (chatCanSee(roomData()) || isAdmin());
-        allow write: if isSignedIn() && login == chatLogin() && chatCanSee(roomData());
+        allow read: if isChatUser() && (chatCanSee(roomData()) || isAdmin());
+        allow write: if isChatUser() && login == chatLogin() && chatCanSee(roomData());
       }
       match /receipts/{login} {
-        allow read: if isSignedIn() && (chatCanSee(roomData()) || isAdmin());
-        allow write: if isSignedIn() && login == chatLogin() && chatCanSee(roomData());
+        allow read: if isChatUser() && (chatCanSee(roomData()) || isAdmin());
+        allow write: if isChatUser() && login == chatLogin() && chatCanSee(roomData());
       }
     }
     // Who is online, each person's own read marks / muted chats / notification devices, and the
@@ -132,12 +138,12 @@ service cloud.firestore {
     // add to the running totals (never lower them or change the start time), and cannot delete it.
     // The administrator reads them all. The legacy app never touches this collection.
     match /sessionLog/{sessionId} {
-      allow read: if isSignedIn() && (isAdmin() || resource.data.login == chatLogin());
-      allow create: if isSignedIn()
+      allow read: if isChatUser() && (isAdmin() || resource.data.login == chatLogin());
+      allow create: if isChatUser()
         && request.resource.data.login == chatLogin()
         && request.resource.data.startAt == request.time
         && request.resource.data.keys().hasOnly(['login', 'name', 'startAt', 'startMs', 'lastSeenAt', 'lastSeenMs', 'activeSec', 'idleMin', 'longestIdleMin', 'ua', 'version']);
-      allow update: if isSignedIn()
+      allow update: if isChatUser()
         && resource.data.login == chatLogin()
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['lastSeenAt', 'lastSeenMs', 'activeSec', 'idleMin', 'longestIdleMin', 'endMs', 'endReason'])
@@ -146,16 +152,24 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /chatPresence/{login} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && login == chatLogin();
+      allow read: if isChatUser();
+      allow write: if isChatUser() && login == chatLogin();
     }
     // Each person's own chat photo (a small JPEG kept as text) and one-line work status. Everyone signed in can see them;
     // people can write only their own, only these fields, and only within the size limits the app also enforces
     // (lib/chat/profile.ts: photo 24,000 characters, status 60).
     match /chatProfiles/{login} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && login == chatLogin()
+      allow read: if isChatUser();
+      // A person can create their own record and change only their photo and status. The name and the chat-only flag are
+      // set by the server when the admin adds a chat-only login, so they cannot be edited here.
+      allow create: if isChatUser() && login == chatLogin()
         && request.resource.data.keys().hasOnly(['login', 'photo', 'status', 'statusAt', 'updatedAt'])
+        && request.resource.data.get('photo', '') is string
+        && request.resource.data.get('photo', '').size() <= 24000
+        && request.resource.data.get('status', '') is string
+        && request.resource.data.get('status', '').size() <= 60;
+      allow update: if isChatUser() && login == chatLogin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['login', 'photo', 'status', 'statusAt', 'updatedAt'])
         && request.resource.data.get('photo', '') is string
         && request.resource.data.get('photo', '').size() <= 24000
         && request.resource.data.get('status', '') is string
@@ -163,7 +177,7 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /chatState/{login} {
-      allow read, write: if isSignedIn() && login == chatLogin();
+      allow read, write: if isChatUser() && login == chatLogin();
     }
     match /chatAudit/{entryId} {
       allow read: if isAdmin();

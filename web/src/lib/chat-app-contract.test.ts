@@ -63,3 +63,32 @@ assert.match(read("src/components/chat/Thread.tsx"), /decision: \{ forId: m\.id/
 assert.match(read("src/components/chat/ChatAppShell.tsx"), /TasksPanel/);
 // Approvals are answered by new messages, so no rule has to let one person edit another's message.
 assert.doesNotMatch(readRoot("firestore.rules"), /'approval'|'decision'|'replyBy'/);
+
+// Chat-only logins (custom claim chatOnly): chat yes, everything else no.
+const rulesText = readRoot("firestore.rules");
+assert.match(rulesText, /function isChatUser\(\)/);
+assert.match(rulesText, /request\.auth\.token\.get\('chatOnly', false\) != true/);
+const chatBlock = rulesText.slice(rulesText.indexOf("match /chatRooms/{roomId}"), rulesText.indexOf("// Who is online"));
+assert.ok(chatBlock.length > 500 && !chatBlock.includes("isSignedIn()"), "chat rooms use isChatUser only");
+for (const name of ["chatPresence", "chatState", "chatProfiles", "sessionLog"]) {
+  const start = rulesText.indexOf(`match /${name}/`);
+  const block = rulesText.slice(start, rulesText.indexOf("\n    }\n", start));
+  assert.ok(start > 0 && block.includes("isChatUser()") && !block.includes("isSignedIn()"), `${name} is open to chat-only logins`);
+}
+// Anything else (quotes, customers, users, tariffs) must still use isSignedIn, which refuses them.
+assert.match(rulesText, /match \/quotes\/\{quoteId\} \{ allow read, write: if isSignedIn\(\); \}/);
+assert.match(readRoot("storage.rules"), /circulars[\s\S]*chatOnly/);
+// Every server function that checks sign-in refuses chat-only logins.
+const fnDir = path.join(web, "..", "functions");
+for (const f of fs.readdirSync(fnDir).filter((x) => x.endsWith(".js") && !x.endsWith(".test.js") && x !== "chat-staff.js" && x !== "chat-staff-logic.js")) {
+  const src = fs.readFileSync(path.join(fnDir, f), "utf8");
+  const checks = src.match(/if \(!(context|request)\.auth[^)]*\)/g) ?? [];
+  for (const c of checks) assert.match(c, /chatOnly/, `${f}: ${c} must refuse chat-only logins`);
+}
+assert.match(fs.readFileSync(path.join(fnDir, "vertex-chat.js"), "utf8"), /decoded\.chatOnly === true/);
+assert.match(fs.readFileSync(path.join(fnDir, "index.js"), "utf8"), /decoded\.chatOnly === true/);
+// The sign-in, route and screens know about them.
+assert.match(read("src/lib/auth/rbac.ts"), /role === "chat"\) return \["chat"\]/);
+assert.match(read("src/lib/firebase/auth.ts"), /claims\.chatOnly !== true/);
+assert.match(read("src/app/join/page.tsx"), /redeemChatInvite/);
+assert.match(read("src/app/(workspace)/admin/page.tsx"), /ChatStaffAdmin/);

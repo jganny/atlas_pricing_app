@@ -150,6 +150,8 @@ export function allowedRoutesForUser(
   username: string | undefined | null,
   role?: string,
 ): AppRouteId[] {
+  // A Vertex Chat-only login reaches chat and nothing else.
+  if (role === "chat") return ["chat"];
   const u = normalizeUsername(username);
   // Admins get full desk access but never the NRS personal follow-up queue.
   if (isAdminUser(username, role)) return ALL;
