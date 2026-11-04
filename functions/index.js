@@ -1446,3 +1446,7 @@ exports.chatStaffInvite = chatStaff.chatStaffInvite;
 exports.chatStaffSetActive = chatStaff.chatStaffSetActive;
 exports.chatStaffList = chatStaff.chatStaffList;
 exports.chatInviteRedeem = chatStaff.chatInviteRedeem;
+
+// Carrier Board: read uploaded airline tariff circulars automatically (two independent reads must agree).
+const carrierReader = require("./carrier-reader");
+exports.readCarrierCircular = carrierReader.readCarrierCircular;

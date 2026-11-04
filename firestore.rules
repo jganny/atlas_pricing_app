@@ -158,6 +158,16 @@ service cloud.firestore {
     // Each person's own chat photo (a small JPEG kept as text) and one-line work status. Everyone signed in can see them;
     // people can write only their own, only these fields, and only within the size limits the app also enforces
     // (lib/chat/profile.ts: photo 24,000 characters, status 60).
+    // Carrier Board: airline rates read automatically from circulars. Everyone on the Pricing app can read them; only the
+    // server (which checks each circular twice) writes them.
+    match /carrierTariffs/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+      match /history/{entry} { allow read: if isSignedIn(); allow write: if false; }
+    }
+    match /carrierReads/{id} { allow read: if isSignedIn(); allow write: if false; }
+    match /carrierTariffHolds/{id} { allow read: if isSignedIn(); allow write: if false; }
+    match /carrierReadUsage/{id} { allow read: if isSignedIn(); allow write: if false; }
     match /chatProfiles/{login} {
       allow read: if isChatUser();
       // A person can create their own record and change only their photo and status. The name and the chat-only flag are
