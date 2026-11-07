@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Bell, Clock, FileClock, Inbox, PlaneTakeoff, Ship, Sparkles } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { PerformanceReportPanel } from "@/components/PerformanceReportPanel";
-import { HomeStartBox } from "@/components/HomeStartBox";
 import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
@@ -165,7 +164,8 @@ export default function DashboardPage() {
             {focus} · {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })} so far
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* On a computer these three are in the left menu; on a phone they save a trip through the menu. */}
+        <div className="flex flex-wrap gap-2 md:hidden" data-testid="home-phone-shortcuts">
           {showAir ? (
             <Link
               href="/air"
@@ -192,8 +192,6 @@ export default function DashboardPage() {
           ) : null}
         </div>
       </div>
-
-      <HomeStartBox />
 
       {error ? (
         <Card className="border-red-200 bg-red-50 py-3">

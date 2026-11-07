@@ -50,6 +50,7 @@ import { demoLabel } from "@/lib/demo-mode";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
+import { GlobalSearch } from "./GlobalSearch";
 import { WhatsNewLink } from "./WhatsNew";
 import { MODE_COLORS, type ModeKey } from "@/lib/ui/colors";
 import { TourLink } from "./GuidedTour";
@@ -419,6 +420,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               Atlas
             </Link>
             <div className="flex items-center gap-1">
+              <GlobalSearch variant="phone" />
               <Link href="/m" className="rounded-lg p-2 hover:bg-white/10" aria-label="Mobile app">
                 <Smartphone className="h-4 w-4" />
               </Link>
@@ -445,6 +447,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             <div className="min-w-0 text-sm font-semibold text-[var(--color-atlas-navy)]">
               {focus}
             </div>
+            <GlobalSearch variant="desk" />
             <div
               data-testid="workspace-tools"
               className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/70 bg-white/75 p-1 shadow-[0_8px_28px_rgba(15,35,58,0.06)] backdrop-blur-xl"

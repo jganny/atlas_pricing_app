@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight, Link2, Shield } from "lucide-react";
 import { toast } from "@/components/Toast";
 import { AdminSearch } from "./AdminSearch";
@@ -31,6 +32,10 @@ export function AdminShell({
   const list = useMemo(() => visibleSections(ctx), [ctx]);
   const groups = useMemo(() => groupSections(list), [list]);
 
+  // A jump from the top-bar search arrives as /admin/?section=…, which is known as soon as the page draws (the "#…" part is not).
+  const params = useSearchParams();
+  const requested = sectionFromHash(params?.get("section") ?? "", list);
+
   const [recent, setRecent] = useState<string[]>(() => {
     try {
       return parseRecent(localStorage.getItem(RECENT_KEY), list);
@@ -38,7 +43,13 @@ export function AdminShell({
       return [];
     }
   });
-  const [cur, setCur] = useState<string>(() => sectionFromHash(window.location.hash, list) ?? recent[0] ?? list[0]?.id ?? "");
+  const [cur, setCur] = useState<string>(() => sectionFromHash(window.location.hash, list) ?? requested ?? recent[0] ?? list[0]?.id ?? "");
+  const [seenRequest, setSeenRequest] = useState<string | null>(requested);
+  if (requested !== seenRequest) {
+    // Adjusting state while drawing: a new request from the search selects that section once.
+    setSeenRequest(requested);
+    if (requested) setCur(requested);
+  }
 
   const signals = useAdminSignals(ctx, resets);
   const tiles = useMemo(() => buildTiles(signals, ctx), [signals, ctx]);
@@ -58,7 +69,7 @@ export function AdminShell({
         return next;
       });
       try {
-        window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hashFor(id)}`);
+        window.history.replaceState(window.history.state, "", `${window.location.pathname}${hashFor(id)}`);
       } catch {
         /* the link just isn't updated */
       }

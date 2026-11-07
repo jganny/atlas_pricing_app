@@ -19,9 +19,8 @@ assert.match(hub, /Drop the job/);
 // One door: Quote Hub is the only place that accepts dropped documents — the desks do not.
 assert.match(drop, /onDrop/);
 for (const desk of [air, sea]) assert.doesNotMatch(desk, /onDrop=|QuoteHubDrop/);
-// Home has one start box (Ask Vertex bar + the same drop as Quote Hub); the desks still take no drops.
-const homeStart = fs.readFileSync(path.join(root, "components/HomeStartBox.tsx"), "utf8");
-assert.match(home, /HomeStartBox/);
-assert.match(homeStart, /VertexAskBar/);
+// Home has no start box of its own any more; quoting by typing is in the top-bar search, the desks still take no drops.
+assert.doesNotMatch(home, /HomeStartBox/);
+assert.equal(fs.existsSync(path.join(root, "components/HomeStartBox.tsx")), false);
 
 console.log("desk intake: Paste enquiry removed from Air/Sea; Drop the job + Ask Vertex remain");

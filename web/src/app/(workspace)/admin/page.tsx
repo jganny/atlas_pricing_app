@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { KeyRound, UserPlus } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
@@ -509,5 +509,9 @@ export default function AdminPage() {
     }
   };
 
-  return <AdminShell ctx={ctx} username={user?.username ?? ""} resets={resetSignal} render={render} />;
+  return (
+    <Suspense fallback={null}>
+      <AdminShell ctx={ctx} username={user?.username ?? ""} resets={resetSignal} render={render} />
+    </Suspense>
+  );
 }

@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.137",
+    date: "2026-11-08",
+    items: [
+      "A magnifier button in the top bar of every page. Click it (or press /) and it opens; type a customer, a quote number, a city or a few letters, and the matches drop down. Administrators also find settings (type password, holiday or money). It closes again when you pick a result, click away or press Esc.",
+      "Type a quote request into it (for example: quote air BLR to DXB 120 kg) and the last row, Start a quote from this, opens the desk already filled in.",
+      "Home no longer has the big Start here box: dropping and pasting enquiries is in Quote Hub, and finding or quoting by typing is the new search button.",
+      "On Home, the Air desk, Sea desk and Inbox buttons now show on phones only. On a computer they are in the left menu.",
+    ],
+  },
+  {
     version: "0.3.136",
     date: "2026-11-07",
     items: [
