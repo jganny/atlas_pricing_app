@@ -16,7 +16,10 @@ const L = require("./carrier-reader-logic");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const ADMIN_EMAIL = "ganny@atlaspricing.com";
 const MODEL = "claude-sonnet-5-5";
-const MAX_SHEET_CHARS = 150_000;
+const MAX_PARTS = 60; // a spreadsheet is read in parts; more than this is held for a person to look at
+const PARTS_AT_ONCE = 6;
+const MAX_ATTEMPTS = 3;
+const RETRY_MS = Number(process.env.CARRIER_RETRY_MS) || 4000;
 const FILE_LIFE_DAYS = 30;
 
 function requireAdmin(request) {
@@ -24,29 +27,40 @@ function requireAdmin(request) {
   if (String(request.auth.token.email || "").toLowerCase() !== ADMIN_EMAIL) throw new HttpsError("permission-denied", "Only the admin can do this.");
 }
 
-/** The circular as something the AI can read: a PDF document, or the spreadsheet turned into text. */
-async function contentFor(circ) {
+/** The circular as parts the AI can read in full: the whole PDF as one part, or a spreadsheet cut into small parts of text. */
+async function partsFor(circ) {
   const [buffer] = await admin.storage().bucket().file(circ.storagePath).download();
   const kind = L.fileKind(circ.fileName, circ.storagePath);
   if (kind === "pdf") {
     if (buffer.length > 28 * 1024 * 1024) throw new HttpsError("invalid-argument", "This PDF is too large to read (28 MB limit).");
-    return { type: "document", source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") } };
+    return [{ label: "document", content: { type: "document", source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") } } }];
   }
   if (kind === "sheet") {
     const wb = XLSX.read(buffer, { type: "buffer" });
-    let text = "";
-    for (const name of wb.SheetNames) text += `### Sheet: ${name}\n${XLSX.utils.sheet_to_csv(wb.Sheets[name])}\n\n`;
-    return { type: "text", text: `The document is a spreadsheet, shown here as text (one block per sheet):\n\n${text.slice(0, MAX_SHEET_CHARS)}` };
+    const sheets = wb.SheetNames.map((name) => ({ name, csv: XLSX.utils.sheet_to_csv(wb.Sheets[name]) }));
+    return L.chunkSheets(sheets).map((p) => ({ label: p.label, content: { type: "text", text: p.text } }));
   }
   throw new HttpsError("invalid-argument", "Only PDF and Excel circulars can be read automatically.");
 }
 
+function sumUsage(list) {
+  return list.reduce((t, u) => ({ input: t.input + (u.input_tokens || 0), output: t.output + (u.output_tokens || 0) }), { input: 0, output: 0 });
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function askOnce(apiKey, system, content, userText) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 12000, system, messages: [{ role: "user", content: [content, { type: "text", text: userText }] }] }),
-  });
+  let res;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      // Thinking is off: it would use up the answer allowance, and the two independent reads plus the checks are what keep this honest.
+      body: JSON.stringify({ model: MODEL, max_tokens: 16000, thinking: { type: "between_tools" }, system, messages: [{ role: "user", content: [content, { type: "text", text: userText }] }] }),
+    });
+    if (res.ok || ![429, 500, 502, 503, 529].includes(res.status) || attempt === MAX_ATTEMPTS) break;
+    await sleep(RETRY_MS * attempt); // busy: wait a little longer each time
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     console.warn("carrier reader: AI request failed", res.status, body.slice(0, 300));
@@ -55,26 +69,11 @@ async function askOnce(apiKey, system, content, userText) {
   }
   const payload = await res.json();
   const raw = (payload.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-  const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-  let parsed = null;
-  try {
-    parsed = JSON.parse(stripped);
-  } catch {
-    const a = stripped.indexOf("{");
-    const b = stripped.lastIndexOf("}");
-    if (a >= 0 && b > a) {
-      try {
-        parsed = JSON.parse(stripped.slice(a, b + 1));
-      } catch {
-        /* handled below */
-      }
-    }
-  }
-  return { parsed, usage: payload.usage || {}, truncated: payload.stop_reason === "max_tokens" };
+  return { parsed: L.parseRowLines(raw), usage: payload.usage || {}, truncated: payload.stop_reason === "max_tokens", stop: payload.stop_reason || "" };
 }
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApiKey], timeoutSeconds: 540, memory: "1GiB" }, async (request) => {
+exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApiKey], timeoutSeconds: 900, memory: "1GiB" }, async (request) => {
   requireAdmin(request);
   const circularId = String(request.data?.circularId || "");
   const dryRun = request.data?.dryRun === true;
@@ -87,16 +86,29 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   if (circ.category !== "airline_tariff") throw new HttpsError("failed-precondition", "Only airline tariff circulars are read here for now.");
   if (!circ.storagePath) throw new HttpsError("failed-precondition", "This circular has no file attached.");
 
-  const content = await contentFor(circ);
+  const parts = await partsFor(circ);
+  if (!parts.length) throw new HttpsError("failed-precondition", "Nothing readable was found in this file.");
+  if (parts.length > MAX_PARTS) throw new HttpsError("failed-precondition", `This circular is too long to read automatically (${parts.length} parts; the limit is ${MAX_PARTS}).`);
   const fallback = /^[A-Za-z0-9]{2,3}$/.test(String(circ.carrier || "").trim()) ? circ.carrier : "";
   const userText = `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Extract every route's weight-break rates as instructed.`;
   const [sysA, sysB] = L.systemPrompts();
-  const [a, b] = await Promise.all([askOnce(apiKey, sysA, content, userText), askOnce(apiKey, sysB, content, userText)]);
+
+  // Every part is read twice, independently, a few at a time.
+  const reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
+    const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, userText), askOnce(apiKey, sysB, part.content, userText)]);
+    return { label: part.label, a, b };
+  });
   const problems = [];
-  if (!a.parsed || !b.parsed) problems.push("One of the two reads could not be understood, so nothing was applied.");
-  if (a.truncated || b.truncated) problems.push("The circular is so long that a read was cut short, so nothing was applied.");
-  const readA = L.normalizeRows(a.parsed, fallback);
-  const readB = L.normalizeRows(b.parsed, fallback);
+  const failed = reads.filter((r) => !r.a.parsed || !r.b.parsed);
+  const cut = reads.filter((r) => r.a.truncated || r.b.truncated);
+  if (failed.length) problems.push(`${failed.length} of ${reads.length} part(s) could not be understood in one of the two reads (${failed.slice(0, 3).map((r) => r.label).join(", ")}), so routes in them were not updated.`);
+  if (cut.length) problems.push(`${cut.length} of ${reads.length} part(s) were so long that a read was cut short (${cut.slice(0, 3).map((r) => r.label).join(", ")}), so routes in them were not updated.`);
+  // A part that failed either read contributes nothing: its routes are neither applied nor lost, they simply keep their old rates.
+  const good = reads.filter((r) => r.a.parsed && r.b.parsed && !r.a.truncated && !r.b.truncated);
+  const readA = L.mergeRows(good.map((r) => L.normalizeRows(r.a.parsed, fallback)));
+  const readB = L.mergeRows(good.map((r) => L.normalizeRows(r.b.parsed, fallback)));
+  const a = { usage: sumUsage(reads.map((r) => r.a.usage)) };
+  const b = { usage: sumUsage(reads.map((r) => r.b.usage)) };
 
   const carriers = [...new Set([...readA, ...readB].map((r) => r.carrierCode).filter(Boolean))].slice(0, 10);
   const onFile = [];
@@ -104,10 +116,11 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
     const stored = await db.collection("carrierTariffs").where("carrierCode", "in", carriers).get();
     stored.forEach((d) => onFile.push(d.data()));
   }
-  const result = problems.length ? { apply: [], hold: [{ row: {}, reasons: problems }], unchanged: [] } : decide(readA, readB, onFile);
+  const decided = decide(readA, readB, onFile);
+  const result = problems.length ? { ...decided, hold: [{ row: {}, reasons: problems }, ...decided.hold] } : decided;
 
   const now = Date.now();
-  const usage = { input: (a.usage.input_tokens || 0) + (b.usage.input_tokens || 0), output: (a.usage.output_tokens || 0) + (b.usage.output_tokens || 0) };
+  const usage = { input: a.usage.input + b.usage.input, output: a.usage.output + b.usage.output };
   const summary = {
     circularId,
     title: circ.title || circ.fileName || "",
@@ -119,6 +132,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
     applied: result.apply.length,
     held: result.hold.length,
     unchanged: result.unchanged.length,
+    parts: { total: reads.length, failed: failed.length + cut.length },
     usage,
     dryRun,
     deleteFileAfter: now + FILE_LIFE_DAYS * 86_400_000,
