@@ -57,7 +57,8 @@ Object.defineProperty(admin, "storage", { value: () => ({ bucket: () => ({ file:
 // ---- a pretend AI --------------------------------------------------------------------------------------------------------------
 const calls = [];
 let behave = () => ({});
-const line = (...f) => [...f, ...Array(15 - f.length).fill("")].join("|");
+const line = (...f) => [...f, ...Array(11 - f.length).fill("")].join("|"); // 8 leading fields, 2 rate columns, notes
+const reply = (rows) => ["COLUMNS|0|45", ...rows].join("\n");
 globalThis.fetch = async (url, init) => {
   const body = JSON.parse(init.body);
   const text = body.messages[0].content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
@@ -72,7 +73,7 @@ globalThis.fetch = async (url, init) => {
     const m = /^([A-Z]{3}),([A-Z]{3}),(\d+),([\d.]+),([\d.]+)$/.exec(l.trim());
     if (m) out.push(line("EK", m[1], m[2], "INR", "", "", "published", m[3], m[4], m[5]));
   }
-  return new Response(JSON.stringify({ content: [{ type: "text", text: out.length ? out.join("\n") : "NONE" }], usage: { input_tokens: 1000, output_tokens: 100 }, stop_reason: "end_turn" }), { status: 200 });
+  return new Response(JSON.stringify({ content: [{ type: "text", text: out.length ? reply(out) : "NONE" }], usage: { input_tokens: 1000, output_tokens: 100 }, stop_reason: "end_turn" }), { status: 200 });
 };
 
 const { readCarrierCircular } = require("./carrier-reader");
@@ -129,7 +130,7 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
         const m = /^([A-Z]{3}),([A-Z]{3}),(\d+),([\d.]+),([\d.]+)$/.exec(l.trim());
         if (m) out.push(line("EK", m[1], m[2], "INR", "", "", "published", m[3], m[1] === victim ? "99" : m[4], m[5]));
       }
-      return { reply: out.join("\n") };
+      return { reply: reply(out) };
     }
     return {};
   };
@@ -158,7 +159,7 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
 
   // 5) a read cut short is never trusted
   calls.length = 0;
-  behave = (call) => (/part 1 of/.test(call.text) && call.isB ? { reply: line("EK", "AAA", "DXB", "INR", "", "", "published", "1", "2", "3"), stop: "max_tokens" } : {});
+  behave = (call) => (/part 1 of/.test(call.text) && call.isB ? { reply: reply([line("EK", "AAA", "DXB", "INR", "", "", "published", "1", "2", "3")]), stop: "max_tokens" } : {});
   res = await run({ circularId: "c1" });
   assert.equal(res.parts.failed, 1);
   assert.ok(!store.has("carrierTariffs/EK_AAA_DXB_INR"), "a truncated part contributes nothing");

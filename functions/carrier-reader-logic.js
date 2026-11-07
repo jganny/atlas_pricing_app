@@ -56,40 +56,66 @@ function fileKind(fileName, storagePath) {
   return "other";
 }
 
-const FIELDS = ["carrier", "origin", "destination", "currency", "validFrom", "validTo", "rateKind", "min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000", "notes"];
+/** Where a printed rate column starts (kg) -> our own weight break. Only weights we hold a column for; anything else is refused, never guessed. */
+function breakForThreshold(t) {
+  if (!Number.isFinite(t) || t < 0) return null;
+  if (t < 45) return "minus45"; // the base rate: "Normal", "General", "Below 45", or a column that applies from the first kilo
+  return { 45: "plus45", 100: "plus100", 300: "plus300", 500: "plus500", 1000: "plus1000" }[t] ?? null;
+}
+
+/** [0, 100, 300] -> ["minus45", "plus100", "plus300"], or null when a weight is one we have no column for or two columns land on the same break. */
+function mapThresholds(ts) {
+  const out = ts.map(breakForThreshold);
+  if (out.some((x) => x === null) || new Set(out).size !== out.length) return null;
+  return out;
+}
+
+const LEADING = ["carrier", "origin", "destination", "currency", "validFrom", "validTo", "rateKind", "min"];
 
 const FORMAT =
-  "Reply with ONLY lines, one line per route (origin and destination), no markdown, no commentary, no header line. Each line has exactly 15 fields separated by the | character, in this order: " +
+  "Reply with ONLY plain lines, no markdown, no commentary. " +
+  "Line 1 is COLUMNS followed by the weight in kg at which each printed per-kg rate column starts, left to right, separated by | , for example COLUMNS|0|100|300|500. " +
+  "Use 0 for a column that applies from the first kilo (headed Normal, General, Below 45 and so on). List only per-kg rate columns, never the minimum charge. Read the numbers from the column headings; do not assume them. " +
+  "Then one line per route (origin and destination), with these fields separated by | : " +
   "carrier (2-letter airline code) | origin (3-letter airport) | destination (3-letter airport) | currency (3-letter code exactly as the document states, or empty if it does not say) | " +
-  "validFrom (YYYY-MM-DD or empty) | validTo (YYYY-MM-DD or empty) | rateKind (contract, published or unknown) | min (flat minimum charge or empty) | minus45 (per kg under 45 kg or empty) | " +
-  "plus45 (per kg 45 kg and over or empty) | plus100 (per kg or empty) | plus300 (per kg or empty) | plus500 (per kg or empty) | plus1000 (per kg or empty) | notes (short, only if something is unclear, never contains the | character). " +
+  "validFrom (YYYY-MM-DD or empty) | validTo (YYYY-MM-DD or empty) | rateKind (contract, published or unknown) | min (flat minimum charge or empty) | " +
+  "then one per-kg rate for each column named on the COLUMNS line, in the same order (empty if not shown) | " +
+  "notes (short, only if something is unclear, never contains the | character). " +
   "Write numbers plainly, for example 28.5, without currency symbols or thousands separators. Leave a field empty, never write 0 or a guess, when the document does not clearly show it. " +
-  "Weight breaks may be labelled N, Q, M, +45, 45-99 and so on; map each onto the nearest of these by its weight threshold, not by its label. " +
   "rateKind is contract if the document calls itself an agreement or contract rate, published if it calls itself a published or standard tariff, else unknown. " +
   "Never invent, estimate or calculate a number that is not printed. Do not guess the currency: if it is not stated, leave it empty. " +
   "If this part of the document contains no airline rates at all, reply with exactly: NONE";
 
 /**
- * The AI's reply (one pipe-separated line per route) -> { rows } in the shape normalizeRows expects.
- * Lines that are not a route are ignored. Returns null when the reply has content but not one usable line, so the read is
- * treated as unreadable; "NONE" or an empty reply is a valid read with no routes.
+ * The AI's reply -> { rows, columns } in the shape normalizeRows expects.
+ * The COLUMNS line says where each printed rate column starts; this code, not the AI, matches those weights to our own breaks.
+ * Returns null when the reply is empty, has no usable COLUMNS line, names a weight we have no column for, or has no usable route line,
+ * so the read is treated as unreadable. Only a bare "NONE" is a valid read with no routes.
  */
 function parseRowLines(text) {
   const raw = String(text ?? "").trim();
-  if (!raw || /^none\b/i.test(raw)) return { rows: [] };
+  if (!raw) return null; // an empty reply is not a read: it is flagged, never taken to mean "no routes"
+  if (/^none[.!]?$/i.test(raw)) return { rows: [], columns: [] };
+  const cleaned = raw.split(/\r?\n/).map((l) => l.replace(/^[\s`*>\-]+/, "").split("|").map((x) => x.trim()));
+  const head = cleaned.find((p) => /^columns$/i.test(p[0]));
+  if (!head) return null;
+  const thresholds = head.slice(1).filter((x) => x !== "").map((x) => toNumber(x));
+  if (!thresholds.length || thresholds.some((x) => x === null)) return null;
+  const slots = mapThresholds(thresholds);
+  if (!slots) return null;
+  const width = LEADING.length + thresholds.length + 1; // leading fields, one rate per column, notes
   const rows = [];
-  for (const line of raw.split(/\r?\n/)) {
-    const parts = line.replace(/^[\s`*>\-]+/, "").split("|").map((x) => x.trim());
-    if (parts.length !== FIELDS.length) continue;
-    const [carrier, origin, destination, currency, validFrom, validTo, rateKind, ...rest] = parts;
+  for (const parts of cleaned) {
+    if (parts.length !== width) continue;
+    const [carrier, origin, destination, currency, validFrom, validTo, rateKind, min, ...rest] = parts;
     if (!/^[A-Za-z0-9]{2,3}$/.test(carrier) || !/^[A-Za-z]{3}$/.test(origin) || !/^[A-Za-z]{3}$/.test(destination)) continue; // a header or stray line
-    const breaks = {};
-    ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"].forEach((k, i) => {
-      breaks[k] = rest[i] === "" ? null : rest[i];
+    const breaks = { min: min === "" ? null : min, minus45: null, plus45: null, plus100: null, plus300: null, plus500: null, plus1000: null };
+    slots.forEach((slot, i) => {
+      breaks[slot] = rest[i] === "" ? null : rest[i];
     });
-    rows.push({ carrierCode: carrier, origin, destination, currency: currency || null, validFrom: validFrom || null, validTo: validTo || null, rateKind, breaks, notes: rest[7] || "" });
+    rows.push({ carrierCode: carrier, origin, destination, currency: currency || null, validFrom: validFrom || null, validTo: validTo || null, rateKind, breaks, notes: rest[thresholds.length] || "" });
   }
-  return rows.length ? { rows } : null;
+  return rows.length ? { rows, columns: thresholds } : null;
 }
 
 /**
@@ -164,4 +190,4 @@ function systemPrompts() {
   ];
 }
 
-module.exports = { toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, chunkSheets, mergeRows, mapLimit, FIELDS };
+module.exports = { toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };

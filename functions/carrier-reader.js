@@ -69,7 +69,8 @@ async function askOnce(apiKey, system, content, userText) {
   }
   const payload = await res.json();
   const raw = (payload.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-  return { parsed: L.parseRowLines(raw), usage: payload.usage || {}, truncated: payload.stop_reason === "max_tokens", stop: payload.stop_reason || "" };
+  const parsed = L.parseRowLines(raw);
+  return { parsed, usage: payload.usage || {}, truncated: payload.stop_reason === "max_tokens", stop: payload.stop_reason || "", chars: raw.length, head: raw.slice(0, 160), rows: parsed ? parsed.rows.length : 0, columns: parsed ? parsed.columns : null };
 }
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
@@ -159,5 +160,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
     const month = new Date(now).toISOString().slice(0, 7);
     await db.collection("carrierReadUsage").doc(month).set({ month, inputTokens: admin.firestore.FieldValue.increment(usage.input), outputTokens: admin.firestore.FieldValue.increment(usage.output), reads: admin.firestore.FieldValue.increment(1) }, { merge: true });
   }
-  return { ...summary, holdDetails: result.hold.slice(0, 20).map((h) => ({ route: h.row.origin ? `${h.row.carrierCode} ${h.row.origin}→${h.row.destination} ${h.row.currency || "?"}` : "", reasons: h.reasons })), sample: result.apply.slice(0, 3) };
+  // What each of the first parts' two reads said, in brief: lets the admin see why two reads disagreed. Not stored.
+  const diagnostics = reads.slice(0, 3).map((r) => ({ part: r.label, readA: { rows: r.a.rows, columns: r.a.columns, stop: r.a.stop, chars: r.a.chars, head: r.a.head }, readB: { rows: r.b.rows, columns: r.b.columns, stop: r.b.stop, chars: r.b.chars, head: r.b.head } }));
+  return { ...summary, diagnostics, holdDetails: result.hold.slice(0, 20).map((h) => ({ route: h.row.origin ? `${h.row.carrierCode} ${h.row.origin}→${h.row.destination} ${h.row.currency || "?"}` : "", reasons: h.reasons })), sample: result.apply.slice(0, 3) };
 });

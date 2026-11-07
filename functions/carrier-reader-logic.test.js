@@ -39,27 +39,50 @@ assert.match(a, /row by row/);
 assert.match(b, /each weight-break column/);
 assert.match(a, /Do not guess the currency/);
 
-// compact one-line answers
-const ln = (...f) => [...f, ...Array(15 - f.length).fill("")].join("|");
-const good = ln("EK", "BOM", "DXB", "INR", "", "", "unknown", "", "", "28");
-const ok = L.parseRowLines("EK|BOM|DXB|INR|2026-09-01|2026-12-31|contract|1500|31|28.5|26|24.5|||fuel extra\nEK|BLR|LHR||||published||||||||");
+// weight columns: the AI says where each printed column starts, the code matches them to our breaks
+assert.equal(L.breakForThreshold(0), "minus45");
+assert.equal(L.breakForThreshold(44), "minus45");
+assert.deepEqual([45, 100, 300, 500, 1000].map(L.breakForThreshold), ["plus45", "plus100", "plus300", "plus500", "plus1000"]);
+assert.equal(L.breakForThreshold(250), null, "a weight we hold no column for is never guessed");
+assert.equal(L.breakForThreshold(-1), null);
+assert.equal(L.breakForThreshold(NaN), null);
+assert.deepEqual(L.mapThresholds([0, 100, 300]), ["minus45", "plus100", "plus300"]);
+assert.deepEqual(L.mapThresholds([45, 100]), ["plus45", "plus100"]);
+assert.equal(L.mapThresholds([0, 250]), null);
+assert.equal(L.mapThresholds([0, 10]), null, "two columns on the same break are ambiguous");
+
+// compact answers: a COLUMNS line, then one line per route (8 leading fields, one rate per column, notes)
+const ln = (n, ...f) => [...f, ...Array(8 + n + 1 - f.length).fill("")].join("|");
+const ok = L.parseRowLines(["COLUMNS|0|45|100|300", ln(4, "EK", "BOM", "DXB", "INR", "2026-09-01", "2026-12-31", "contract", "1500", "31", "28.5", "26", "24.5", "fuel extra"), ln(4, "EK", "BLR", "LHR", "", "", "", "published")].join("\n"));
 assert.equal(ok.rows.length, 2);
+assert.deepEqual(ok.columns, [0, 45, 100, 300]);
 assert.deepEqual(L.normalizeRows(ok, "EK")[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: 26, plus300: 24.5, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "2026-12-31", rateKind: "contract", notes: "fuel extra" });
 assert.equal(L.normalizeRows(ok, "EK")[1].currency, "", "a missing currency is never guessed");
 assert.equal(L.normalizeRows(ok, "EK")[1].breaks.plus45, null, "an empty field stays empty, never 0");
-// a header line, commentary and bullets do not become routes; bullets and fences around a real line are tolerated
-assert.equal(L.parseRowLines(L.FIELDS.join("|") + "\n" + good).rows.length, 1, "a header line is skipped, the real line kept");
-assert.equal(L.parseRowLines(L.FIELDS.join("|")), null, "only a header: unreadable");
-assert.equal(L.parseRowLines("- " + good).rows.length, 1);
-assert.equal(L.parseRowLines("Here are the rates:\n" + good).rows.length, 1);
-assert.deepEqual(L.parseRowLines("NONE"), { rows: [] });
-assert.deepEqual(L.parseRowLines("  none "), { rows: [] });
-assert.deepEqual(L.parseRowLines(""), { rows: [] });
-assert.equal(L.parseRowLines("I could not read this document."), null, "words but no route: unreadable");
-assert.equal(L.parseRowLines("EK|BOM|DXB|INR|too|few"), null, "wrong number of fields is not a route");
-assert.equal(L.parseRowLines(ln("EK", "BOMBAY", "DXB", "INR")), null, "a long place name is not an airport code");
-assert.equal(L.FIELDS.length, 15);
-assert.match(a, /exactly 15 fields/);
+
+// the same numbers under different printed columns land on different breaks (this is what two reads used to disagree about)
+const three = (cols) => L.normalizeRows(L.parseRowLines([`COLUMNS|${cols.join("|")}`, ln(cols.length, "6E", "BOM", "ALA", "INR", "", "", "published", "", "280", "210", "165")].join("\n")), "6E")[0].breaks;
+assert.deepEqual([three([45, 100, 300]).plus45, three([45, 100, 300]).plus100, three([45, 100, 300]).plus300], [280, 210, 165]);
+assert.deepEqual([three([100, 300, 500]).plus100, three([100, 300, 500]).plus300, three([100, 300, 500]).plus500], [280, 210, 165]);
+
+// unreadable replies are flagged, never taken to mean "no routes"
+assert.equal(L.parseRowLines(ln(2, "EK", "BOM", "DXB")), null, "route lines without a COLUMNS line");
+assert.equal(L.parseRowLines("COLUMNS|0|250\n" + ln(2, "EK", "BOM", "DXB", "INR")), null, "a weight we have no column for");
+assert.equal(L.parseRowLines("COLUMNS|0|abc\n" + ln(2, "EK", "BOM", "DXB", "INR")), null);
+assert.equal(L.parseRowLines("COLUMNS\n" + ln(0, "EK", "BOM", "DXB")), null, "no column weights at all");
+assert.equal(L.parseRowLines("COLUMNS|0|45"), null, "only the COLUMNS line");
+assert.equal(L.parseRowLines("COLUMNS|0|45\n" + ln(1, "EK", "BOM", "DXB", "INR")), null, "a route line with the wrong number of fields is not a route");
+assert.equal(L.parseRowLines("COLUMNS|0|45\n" + ln(2, "EK", "BOMBAY", "DXB", "INR")), null, "a long place name is not an airport code");
+assert.equal(L.parseRowLines(""), null, "an empty reply is flagged, not read as no routes");
+assert.equal(L.parseRowLines("   \n "), null);
+assert.equal(L.parseRowLines("I could not read this document."), null);
+assert.equal(L.parseRowLines("None of these routes are listed."), null, "words that merely start with none are not a valid empty read");
+assert.deepEqual(L.parseRowLines("NONE"), { rows: [], columns: [] });
+assert.deepEqual(L.parseRowLines("  none. "), { rows: [], columns: [] });
+// tolerated: bullets, text before the real lines, a header line repeated for each part
+assert.equal(L.parseRowLines("- COLUMNS|0|45\n- " + ln(2, "EK", "BOM", "DXB", "INR")).rows.length, 1);
+assert.equal(L.parseRowLines("Here you go:\ncolumns|0|45\n" + ln(2, "EK", "BOM", "DXB", "INR") + "\nCOLUMNS|0|45\n" + ln(2, "EK", "BLR", "DXB", "INR")).rows.length, 2);
+assert.match(a, /COLUMNS/);
 
 // long sheets are cut into parts, each with the column headings, overlapping a little, nothing lost
 const lines = Array.from({ length: 100 }, (_, i) => (i === 0 ? "Origin,Dest,Min,N" : i < 6 ? `heading ${i}` : `BOM${i},DXB,${i},1.${i}`));
