@@ -381,7 +381,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
       type: "air",
       mode: "Air",
     },
-    notes: `Air quote (React Phase 7). CHW: ${input.totals.freight.chargeableWeightKg} kg · ${input.totals.freight.usedBreak} · ${input.airlines.length} options`,
+    notes: `Air quote. CHW: ${input.totals.freight.chargeableWeightKg} kg · ${input.totals.freight.usedBreak} · ${input.airlines.length} options`,
   };
 
   const savedId = await writeQuote(id, quoteData);
@@ -556,7 +556,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
       termsAndConditions: input.termsAndConditions,
       customExchangeRate: input.customExchangeRate && input.customExchangeRate > 0 ? input.customExchangeRate : null,
     },
-    notes: `Sea quote (React Phase 7). ${input.mode.toUpperCase()} · RT ${input.totals.freight.chargeableRt} · ${input.liners.length} options`,
+    notes: `Sea quote. ${input.mode.toUpperCase()} · RT ${input.totals.freight.chargeableRt} · ${input.liners.length} options`,
   };
 
   const savedId = await writeQuote(id, quoteData);

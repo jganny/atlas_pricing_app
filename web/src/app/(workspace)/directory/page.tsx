@@ -492,7 +492,6 @@ export default function DirectoryPage() {
             <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
               Directory
             </h1>
-            <Badge tone="info">Phase 11</Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             Overseas agents and vendor contacts

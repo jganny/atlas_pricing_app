@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { useEnquiries, useLeads } from "@/hooks/use-atlas-data";
 import { formatCurrency } from "@/lib/utils";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
@@ -45,7 +45,6 @@ export default function AnalyticsPage() {
       <div className="flex items-center gap-2">
         <BarChart3 className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Analytics</h1>
-        <Badge tone="info">Phase 13</Badge>
         <span className="ml-auto">
           <GuideTipButton query="win rate" />
         </span>

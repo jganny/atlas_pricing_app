@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
-import { Badge, Button, Card, Textarea } from "@/components/ui";
+import { Button, Card, Textarea } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { TEAM_ROLES, demoSafeId } from "@/lib/quotes/team-roles";
 import { useAuthStore } from "@/store/auth";
@@ -60,7 +60,6 @@ export default function HrPage() {
       <div className="flex items-center gap-2">
         <Users className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">HR / roster</h1>
-        <Badge tone="info">Phase 13</Badge>
       </div>
       <p className="text-sm text-[var(--color-text-muted)]">
         Desk roster, leave log, and notes — payroll stays out of scope. Signed in as{" "}

@@ -267,7 +267,6 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
           <h1 className="text-2xl font-extrabold text-[var(--color-atlas-navy)]">
             Smart Quote · {mode === "air" ? "Air" : "Sea"}
           </h1>
-          <Badge tone="info">Phase 8</Badge>
         </div>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           Paste or upload an enquiry → review extracted fields → apply to desk or save draft.

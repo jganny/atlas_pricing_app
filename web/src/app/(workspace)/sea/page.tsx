@@ -1245,7 +1245,6 @@ function SeaDeskInner() {
         <div className="flex items-center gap-2 text-[var(--color-atlas-sea)]">
           <Ship className="h-5 w-5" />
           <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #1D9E75", paddingLeft: 10 }}>Sea desk</h1>
-          <Badge tone="info">Phase 7</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button

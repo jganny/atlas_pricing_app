@@ -1,7 +1,7 @@
 "use client";
 
 import { BookOpen } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 
 const LINKS = [
   { title: "REACT_MIGRATION.md", href: "/feature-parity", blurb: "Parity tracker in-app" },
@@ -18,7 +18,6 @@ export default function DocsPage() {
       <div className="flex items-center gap-2">
         <BookOpen className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Documentation</h1>
-        <Badge tone="info">Phase 13</Badge>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {LINKS.map((l) => (

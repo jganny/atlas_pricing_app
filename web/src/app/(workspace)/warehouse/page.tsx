@@ -9,7 +9,6 @@ import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Save, Sparkles, Warehouse } from "lucide-react";
 import {
-  Badge,
   Button,
   Card,
   Input,
@@ -348,7 +347,6 @@ export default function WarehouseDeskPage() {
           <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #7F77DD", paddingLeft: 10 }}>
             Warehouse desk
           </h1>
-          <Badge tone="info">Phase 10</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
           <DraftsMenu mode="warehouse" activeId={parkedId} />

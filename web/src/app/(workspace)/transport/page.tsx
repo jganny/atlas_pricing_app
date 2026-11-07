@@ -10,7 +10,6 @@ import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Plus, Save, Sparkles, Truck } from "lucide-react";
 import {
-  Badge,
   Button,
   Card,
   Input,
@@ -514,7 +513,6 @@ export default function TransportDeskPage() {
           <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]" style={{ borderLeft: "4px solid #639922", paddingLeft: 10 }}>
             Transport desk
           </h1>
-          <Badge tone="info">Phase 10</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
           <DraftsMenu mode="transport" activeId={parkedId} />

@@ -18,6 +18,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       "Each Admin section has its own link (Copy link), the list remembers what you opened last, and on a phone the list becomes one tidy Section picker.",
       "Admin → AI credit and cost looks cleaner: a ring showing what is left, this month's cost, a bar for each feature that used it, and a cost-per-day chart.",
       "The yellow banner after a release now says \"Updated to v…\" with a Got it button. It used to say \"Update ready\" even when you were already on the new version.",
+      "The small \"Phase 7 / 10 / 11 / 13\" labels beside page titles (Air desk, Sea desk, Transport, Warehouse, Circulars, Directory, Analytics, Docs, Finance, HR, Smart quote) are gone. New Air and Sea quotes no longer carry \"React Phase 7\" in their saved note.",
     ],
   },
   {

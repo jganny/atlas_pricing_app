@@ -7,7 +7,7 @@ import { STATION_NAMES, stationByName, stationForOrigin, stationLabel } from "@/
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
-import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
+import { Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import { TableSkeleton } from "@/components/Skeleton";
 import { toast } from "@/components/Toast";
 import { useAirTariffs, useCirculars, useCourierTariffs, useSeaTariffs } from "@/hooks/use-atlas-data";
@@ -467,7 +467,6 @@ export default function CircularsPage() {
             <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">
               Circulars library
             </h1>
-            <Badge tone="info">Phase 11</Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             Documents, yearly courier Excel (Jan–Dec, up to 70 kg), and air/sea publish.

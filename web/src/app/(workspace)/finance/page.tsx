@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { Landmark } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { useCreditControls, useEnquiries } from "@/hooks/use-atlas-data";
 import { formatCurrency } from "@/lib/utils";
 import { gpAmountInr, sellAmountInr } from "@/lib/quotes/money";
@@ -24,7 +24,6 @@ export default function FinancePage() {
       <div className="flex items-center gap-2">
         <Landmark className="h-5 w-5 text-[var(--color-atlas-sky)]" />
         <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Finance</h1>
-        <Badge tone="info">Phase 13</Badge>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="py-3">
