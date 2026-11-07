@@ -73,7 +73,7 @@ async function askOnce(apiKey, system, content, userText) {
 }
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-exports.readCarrierCircular = onCall({ secrets: [anthropicApiKey], timeoutSeconds: 540, memory: "1GiB" }, async (request) => {
+exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApiKey], timeoutSeconds: 540, memory: "1GiB" }, async (request) => {
   requireAdmin(request);
   const circularId = String(request.data?.circularId || "");
   const dryRun = request.data?.dryRun === true;
