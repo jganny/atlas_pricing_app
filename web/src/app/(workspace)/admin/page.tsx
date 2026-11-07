@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Shield, UserPlus } from "lucide-react";
+import { KeyRound, UserPlus } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useCreditControls } from "@/hooks/use-atlas-data";
@@ -21,6 +21,7 @@ import {
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
 import { ChatUsageAdmin } from "@/components/ChatUsageAdmin";
 import { AiUsageAdmin } from "@/components/AiUsageAdmin";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { QuoteSpeedAdmin } from "@/components/QuoteSpeedAdmin";
 import { MailTestAdmin } from "@/components/MailTestAdmin";
 import { SessionLogAdmin } from "@/components/SessionLogAdmin";
@@ -47,6 +48,8 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { data: credits = [] } = useCreditControls();
   const admin = isAdminUser(user?.username, user?.role);
+  const isGanny = user?.username?.toLowerCase() === "ganny";
+  const ctx = useMemo(() => ({ isAdmin: admin, isGanny, live: useLiveData }), [admin, isGanny]);
 
   const [newUser, setNewUser] = useState({ username: "", displayName: "", role: "pricing" });
   const [nrs, setNrs] = useState({
@@ -134,35 +137,45 @@ export default function AdminPage() {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Shield className="h-5 w-5 text-[var(--color-atlas-sky)]" />
-        <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Admin console</h1>
-        <Badge tone="info">Phase 12</Badge>
-      </div>
+  const pendingResets = resets.filter((r) => r.status === "pending");
+  const resetSignal = {
+    count: pendingResets.length,
+    oldestAt: pendingResets.length ? Math.min(...pendingResets.map((r) => r.at)) : null,
+  };
 
-      <DeskSeatsAdmin />
-      {/* The AI account is the main administrator's: only they see its balance and can enter it. */}
-      {user?.username?.toLowerCase() === "ganny" && useLiveData ? <AiUsageAdmin /> : null}
-      <ChatUsageAdmin />
-      <QuoteSpeedAdmin />
-      {user?.username?.toLowerCase() === "ganny" ? <MailTestAdmin /> : null}
-      {user?.username?.toLowerCase() === "ganny" ? <SessionLogAdmin /> : null}
-      {/* Reviewing chats needs the main administrator account (the database allows nobody else). */}
-      {user?.username?.toLowerCase() === "ganny" && useLiveData ? <ChatStaffAdmin /> : null}
-      {user?.username?.toLowerCase() === "ganny" || !useLiveData ? <ChatReviewAdmin /> : null}
-
-      <CustomsHolidaysAdmin />
-
-      {admin ? <UserBranchAdmin /> : null}
-
-      {admin ? <ErrorMonitorPanel /> : null}
-
-      {admin ? <AuditTrailPanel /> : null}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+  // What each section looks like. The frame (search, tiles, list, links) lives in AdminShell; the list of sections and who may see
+  // them lives in lib/admin/sections.ts. The AI balance, chat-only staff, chat review, sign-in log and test email stay with the
+  // main administrator only (see the rules there).
+  const render = (id: string): React.ReactNode => {
+    switch (id) {
+      case "desk-seats":
+        return <DeskSeatsAdmin />;
+      case "ai-credit-and-cost":
+        return <AiUsageAdmin />;
+      case "ask-vertex-usage":
+        return <ChatUsageAdmin />;
+      case "time-to-quote":
+        return <QuoteSpeedAdmin />;
+      case "test-sending-email":
+        return <MailTestAdmin />;
+      case "sign-ins-activity":
+        return <SessionLogAdmin />;
+      case "chat-only-staff":
+        return <ChatStaffAdmin />;
+      case "team-chat-review":
+        return <ChatReviewAdmin />;
+      case "branch-holiday-calendar":
+        return <CustomsHolidaysAdmin />;
+      case "login-branch":
+        return <UserBranchAdmin />;
+      case "error-monitor":
+        return <ErrorMonitorPanel />;
+      case "audit-trail":
+        return <AuditTrailPanel />;
+      case "register-desk-user":
+        return (
+          <div className="max-w-xl">
+            <Card>
           <h2 className="mb-2 flex items-center gap-2 font-bold">
             <UserPlus className="h-4 w-4" />
             Register desk user
@@ -238,8 +251,12 @@ export default function AdminPage() {
             ) : null}
           </div>
         </Card>
-
-        <Card>
+          </div>
+        );
+      case "password-reset-queue":
+        return (
+          <div className="max-w-2xl">
+            <Card>
           <h2 className="mb-2 flex items-center gap-2 font-bold">
             <KeyRound className="h-4 w-4" />
             Password reset queue
@@ -287,8 +304,12 @@ export default function AdminPage() {
             </ul>
           )}
         </Card>
-
-        <Card>
+          </div>
+        );
+      case "priority-convert-capture":
+        return (
+          <div className="max-w-xl">
+            <Card>
           <h2 className="mb-2 font-bold">{demoLabel("NRS convert capture", "Priority convert capture")}</h2>
           <p className="mb-3 text-xs text-[var(--color-text-muted)]">
             {demoLabel(
@@ -341,9 +362,11 @@ export default function AdminPage() {
             </Button>
           </div>
         </Card>
-      </div>
-
-      <Card>
+          </div>
+        );
+      case "customer-credit-control":
+        return (
+          <Card>
         <h2 className="mb-3 font-bold">Customer credit control</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
@@ -416,8 +439,10 @@ export default function AdminPage() {
           ))}
         </ul>
       </Card>
-
-      <Card>
+        );
+      case "firebase-reconnect":
+        return (
+          <Card>
         <h2 className="mb-2 font-bold">Firebase config / reconnect</h2>
         <p className="mb-3 text-xs text-[var(--color-text-muted)]">
           Paste a Firebase web config JSON to override env defaults (legacy gl_firebase_config).
@@ -478,6 +503,11 @@ export default function AdminPage() {
           </Button>
         </div>
       </Card>
-    </div>
-  );
+        );
+      default:
+        return null;
+    }
+  };
+
+  return <AdminShell ctx={ctx} username={user?.username ?? ""} resets={resetSignal} render={render} />;
 }

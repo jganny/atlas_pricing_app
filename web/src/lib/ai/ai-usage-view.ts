@@ -144,3 +144,12 @@ export function readBalanceForm(f: { balance: string; lowAt: string; rate: strin
   if (!Number.isFinite(inrPerUsd) || inrPerUsd < 1 || inrPerUsd > 1000) return { ok: false, message: "The rupee rate must be between 1 and 1000." };
   return { ok: true, balanceUsd, lowAtUsd, inrPerUsd };
 }
+
+/** A tidy top for a bar chart: the smallest of 1, 2, 5 or 10 (times a power of ten) that holds every bar, and where to draw the grid lines. */
+export function chartScale(values: number[]): { max: number; ticks: number[] } {
+  const mx = Math.max(0.1, ...values.map((v) => Number(v) || 0));
+  const mag = 10 ** Math.floor(Math.log10(mx));
+  const round = (x: number) => Math.round(x * 1e6) / 1e6;
+  const max = round([1, 2, 5, 10].map((m) => m * mag).find((v) => v >= mx) ?? mx);
+  return { max, ticks: [0, round(max / 2), max] };
+}

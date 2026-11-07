@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   RELOAD_GUARD_KEY,
   SEEN_VERSION_KEY,
+  acknowledgeVersion,
   bannerVisibleAfterLoad,
   beginRefreshReload,
 } from "./app-update";
@@ -54,3 +55,23 @@ function memoryKV(initial: Record<string, string> = {}) {
 }
 
 console.log("app-update tests passed");
+
+// "Got it" remembers the version, so the banner stays away on later loads until the next release
+{
+  const local = memoryKV();
+  const session = memoryKV();
+  assert.equal(bannerVisibleAfterLoad("0.3.135-test-app", local, session), true);
+  acknowledgeVersion("0.3.135-test-app", local);
+  assert.equal(local.snapshot()[SEEN_VERSION_KEY], "0.3.135-test-app");
+  assert.equal(bannerVisibleAfterLoad("0.3.135-test-app", local, memoryKV()), false);
+  assert.equal(bannerVisibleAfterLoad("0.3.136-test-app", local, memoryKV()), true, "a newer release shows the banner again");
+}
+// a storage that refuses writes must not throw
+assert.doesNotThrow(() =>
+  acknowledgeVersion("0.3.135", {
+    getItem: () => null,
+    setItem: () => {
+      throw new Error("blocked");
+    },
+  }),
+);

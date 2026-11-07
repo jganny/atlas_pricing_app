@@ -45,3 +45,15 @@ export function beginRefreshReload(appVersion: string, local: KV, session: KV): 
     return true;
   }
 }
+
+/**
+ * "Got it": remember that this version has been seen, so the banner stays away until the next release.
+ * The banner announces a version that has already loaded; it never asks anyone to update.
+ */
+export function acknowledgeVersion(appVersion: string, local: KV): void {
+  try {
+    persistSeen(appVersion, local);
+  } catch {
+    /* private window: the banner may show again on the next visit, nothing breaks */
+  }
+}

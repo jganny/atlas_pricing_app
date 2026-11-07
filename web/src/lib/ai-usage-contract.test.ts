@@ -25,8 +25,9 @@ assert.equal((usage.match(/^\s+requireAdmin\(request\);/gm) ?? []).length, 2, "b
 const rules = fs.readFileSync(path.join(web, "..", "firestore.rules"), "utf8");
 for (const c of ["aiUsage", "aiStatus", "aiBilling"]) assert.ok(!rules.includes(`match /${c}/`), `${c} must have no client rule`);
 
-// The screen is shown to ganny only, in the live app.
-const admin = read("src/app/(workspace)/admin/page.tsx");
-assert.match(admin, /username\?\.toLowerCase\(\) === "ganny" && useLiveData \? <AiUsageAdmin \/>/);
+// The screen is shown to ganny only, in the live app: the rule lives in the Admin section list.
+const sections = read("src/lib/admin/sections.ts");
+assert.match(sections, /id: "ai-credit-and-cost"[^\n]*rule: "ganny-live"/);
+assert.match(read("src/app/(workspace)/admin/page.tsx"), /case "ai-credit-and-cost":\s*return <AiUsageAdmin \/>/);
 
 console.log("ai usage contract ok");

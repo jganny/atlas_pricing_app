@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.136",
+    date: "2026-11-07",
+    items: [
+      "Admin console, reorganised: a search box at the top (type password, holiday, money, email; press / to jump to it), four status tiles (AI credit, password resets, app errors, chat-only staff) that open their section, and a grouped list of every section with small counters beside anything waiting. Only one section is open at a time, so nothing is buried under a long scroll.",
+      "Each Admin section has its own link (Copy link), the list remembers what you opened last, and on a phone the list becomes one tidy Section picker.",
+      "Admin → AI credit and cost looks cleaner: a ring showing what is left, this month's cost, a bar for each feature that used it, and a cost-per-day chart.",
+      "The yellow banner after a release now says \"Updated to v…\" with a Got it button. It used to say \"Update ready\" even when you were already on the new version.",
+    ],
+  },
+  {
     version: "0.3.135",
     date: "2026-11-07",
     items: [

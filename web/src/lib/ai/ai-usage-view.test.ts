@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { creditStatus, featureLabel, fmtInr, fmtTokens, fmtUsd, modelLabel, monthLabel, readBalanceForm, type AiSummaryView } from "./ai-usage-view";
+import { chartScale, creditStatus, featureLabel, fmtInr, fmtTokens, fmtUsd, modelLabel, monthLabel, readBalanceForm, type AiSummaryView } from "./ai-usage-view";
 
 // friendly names, including the lower-case names the server may report
 assert.equal(featureLabel("vertexChat"), "Ask Vertex");
@@ -59,5 +59,13 @@ assert.equal(readBalanceForm({ balance: "abc", lowAt: "", rate: "" }).ok, false)
 assert.equal(readBalanceForm({ balance: "-5", lowAt: "", rate: "" }).ok, false);
 assert.equal(readBalanceForm({ balance: "10", lowAt: "x", rate: "" }).ok, false);
 assert.equal(readBalanceForm({ balance: "10", lowAt: "", rate: "0" }).ok, false);
+
+// chart scale: the top always holds the tallest bar, on a round number
+assert.deepEqual(chartScale([0.42, 0.9, 1.1, 0.35, 1.6, 1.25, 0.78]), { max: 2, ticks: [0, 1, 2] });
+assert.deepEqual(chartScale([6.4, 3]), { max: 10, ticks: [0, 5, 10] });
+assert.deepEqual(chartScale([0.03, 0.04]), { max: 0.1, ticks: [0, 0.05, 0.1] });
+assert.deepEqual(chartScale([]), { max: 0.1, ticks: [0, 0.05, 0.1] });
+assert.deepEqual(chartScale([100]), { max: 100, ticks: [0, 50, 100] });
+assert.ok(chartScale([37]).max >= 37);
 
 console.log("ai-usage-view tests passed");
