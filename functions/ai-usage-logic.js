@@ -192,6 +192,98 @@ function summarizeMonth(doc) {
   };
 }
 
+// ───────────────────────── budgets and spikes ─────────────────────────
+
+/** What each feature is called in a phone alert (the key is the name of the function that calls the AI). */
+const FEATURE_LABELS = {
+  vertexChat: "Ask Vertex",
+  atlasCopilot: "App help assistant",
+  atlasCopilotStream: "App help assistant",
+  extractAirTariffFromCircular: "Air circular upload",
+  extractSeaTariffFromCircular: "Sea circular upload",
+  extractCourierTariffFromCircular: "Courier circular upload",
+  extractVendorRateFromDocument: "Vendor rate from a document",
+  draftEnquiryReply: "Enquiry reply drafts",
+  extractShipmentFromDocuments: "Quote Hub documents",
+  parseQuoteInstruction: "Quote by instruction",
+  pollPricingInboxes: "Mailbox reading",
+  readCarrierCircular: "Carrier Board reader",
+  weeklyAgencyListEmail: "Agency list check",
+  triggerAgencyListNow: "Agency list check",
+};
+const featureLabel = (k) => FEATURE_LABELS[k] || String(k || "this feature");
+
+const BUDGET_NAME = /^[A-Za-z0-9_]{1,60}$/;
+const budgetNumber = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
+
+/** Admin input for the budget form -> clean numbers, or a plain-words problem. Empty means "no limit"; 0 means "paused". */
+function parseBudgetsInput(data) {
+  const d = data || {};
+  const total = budgetNumber(d.totalUsd);
+  if (total !== null && (!Number.isFinite(total) || total < 0 || total > 100000)) return { error: "The overall monthly budget must be a number of dollars (0 or more), or empty for no limit." };
+  const perFeature = {};
+  for (const [k, v] of Object.entries(d.perFeature || {})) {
+    if (!BUDGET_NAME.test(k)) return { error: `"${k}" is not a feature name.` };
+    const n = budgetNumber(v);
+    if (n === null) continue;
+    if (!Number.isFinite(n) || n < 0 || n > 100000) return { error: `The budget for ${featureLabel(k)} must be a number of dollars (0 or more), or empty for no limit.` };
+    perFeature[k] = round6(n);
+  }
+  return { totalUsd: total === null ? null : round6(total), perFeature };
+}
+
+/** A month document -> what has been spent so far this month: { total, byFeature }. */
+function monthSpend(doc) {
+  const m = summarizeMonth(doc);
+  return { total: m.total.costUsd, byFeature: Object.fromEntries(m.features.map((f) => [f.key, f.costUsd])) };
+}
+
+/**
+ * May this feature call the AI right now? `budgets` is { totalUsd, perFeature }; `spend` is { total, byFeature } for this month.
+ * No budgets set means always allowed. A budget is reached when spend is AT or over it (so a budget of 0 pauses a feature).
+ */
+function budgetVerdict(budgets, feature, spend) {
+  if (!budgets) return { allowed: true };
+  const fLimit = budgets.perFeature && Number.isFinite(budgets.perFeature[feature]) ? budgets.perFeature[feature] : null;
+  const fUsed = num(spend && spend.byFeature && spend.byFeature[feature]);
+  if (fLimit !== null && fUsed >= fLimit) return { allowed: false, scope: "feature", feature, usedUsd: round6(fUsed), limitUsd: fLimit };
+  const tLimit = Number.isFinite(budgets.totalUsd) ? budgets.totalUsd : null;
+  const tUsed = num(spend && spend.total);
+  if (tLimit !== null && tUsed >= tLimit) return { allowed: false, scope: "total", feature, usedUsd: round6(tUsed), limitUsd: tLimit };
+  return { allowed: true };
+}
+
+/** The reason in plain words, for a log line, a phone alert or the message a caller receives. */
+function budgetMessage(v) {
+  const money = (n) => `$${num(n).toFixed(2)}`;
+  return v.scope === "total"
+    ? `The overall AI budget for this month (${money(v.limitUsd)}) has been reached, so AI features are paused until next month or until the budget is raised in Admin.`
+    : `The AI budget for ${featureLabel(v.feature)} this month (${money(v.limitUsd)}) has been reached, so it is paused until next month or until the budget is raised in Admin.`;
+}
+
+/** Which features (and whether the whole thing) are paused right now. */
+function pausedNow(budgets, spend) {
+  if (!budgets) return { total: false, features: [] };
+  const total = budgetVerdict({ totalUsd: budgets.totalUsd, perFeature: {} }, "", spend).allowed === false;
+  const features = Object.keys(budgets.perFeature || {}).filter((f) => budgetVerdict({ totalUsd: null, perFeature: budgets.perFeature }, f, spend).allowed === false);
+  return { total, features };
+}
+
+/**
+ * Is today's AI spend unusually high? `days` is [{ day: "07", costUsd }] for this month. Warn when today is at least `floorUsd`
+ * and `factor` times the average of the earlier days with any use. With fewer than `minDays` earlier days to compare against,
+ * only a higher figure (2.5 × the floor) counts.
+ */
+function spikeCheck(days, today, { floorUsd = 2, factor = 3, minDays = 3 } = {}) {
+  const todayUsd = round6(num((days || []).find((d) => d.day === today)?.costUsd));
+  const prev = (days || []).filter((d) => d.day < today && num(d.costUsd) > 0);
+  const avgUsd = prev.length ? round6(prev.reduce((t, d) => t + num(d.costUsd), 0) / prev.length) : 0;
+  const base = { todayUsd, avgUsd, times: avgUsd > 0 ? Math.round((todayUsd / avgUsd) * 10) / 10 : null };
+  if (todayUsd < floorUsd) return { alert: false, ...base };
+  if (prev.length >= minDays ? todayUsd < factor * avgUsd : todayUsd < floorUsd * 2.5) return { alert: false, ...base };
+  return { alert: true, ...base };
+}
+
 module.exports = {
   PRICES,
   WEB_SEARCH_USD_EACH,
@@ -209,4 +301,12 @@ module.exports = {
   lowBalanceCheck,
   parseBillingInput,
   summarizeMonth,
+  FEATURE_LABELS,
+  featureLabel,
+  parseBudgetsInput,
+  monthSpend,
+  budgetVerdict,
+  budgetMessage,
+  pausedNow,
+  spikeCheck,
 };

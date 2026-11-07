@@ -20,8 +20,9 @@ const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 
 const ALLOWED_ORIGINS = [/^https:\/\/vertex-35d95\.web\.app$/, /^http:\/\/localhost:\d+$/];
 const MODELS = { deep: "claude-sonnet-5-5", quick: "claude-haiku-4-5-20251001" };
-const DEFAULT_DAILY_LIMIT = 50;
-const ADMIN_DAILY_LIMIT = 300;
+// Kept low on purpose: every question is paid for. Raise only if people run into it.
+const DEFAULT_DAILY_LIMIT = 10;
+const ADMIN_DAILY_LIMIT = 50;
 const MAX_HISTORY_TURNS = 30;
 const MAX_HISTORY_CHARS = 60000;
 const MAX_USER_CHARS = 20000;
@@ -335,8 +336,9 @@ async function claimQuestion(db, uid, username, limit) {
 }
 
 async function runChat({ apiKey, db, user, body, write, signal }) {
-  const mode = body.mode === "quick" ? "quick" : "deep";
-  const web = body.web !== false;
+  // The cheaper model and no web search unless the person asks for them (Deep and Web search are switches on the screen).
+  const mode = body.mode === "deep" ? "deep" : "quick";
+  const web = body.web === true;
   const text = typeof body.text === "string" ? body.text.trim().slice(0, MAX_USER_CHARS) : "";
   if (!text) throw Object.assign(new Error("Type a question first."), { status: 400 });
   const attachments = Array.isArray(body.attachments) && body.attachments.length ? hub.validateDocs(body.attachments) : [];

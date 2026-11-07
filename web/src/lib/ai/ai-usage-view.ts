@@ -35,6 +35,9 @@ export interface AiSummaryView {
     alertedAt: number | null;
   };
   defaults: { lowAtUsd: number; inrPerUsd: number };
+  budgets?: { totalUsd: number | null; perFeature: Record<string, number> } | null;
+  paused?: { total: boolean; features: string[] };
+  today?: { alert: boolean; todayUsd: number; avgUsd: number; times: number | null };
 }
 
 /** What each feature is called to the people who run the company (the key is the name of the server function). */
@@ -152,4 +155,86 @@ export function chartScale(values: number[]): { max: number; ticks: number[] } {
   const round = (x: number) => Math.round(x * 1e6) / 1e6;
   const max = round([1, 2, 5, 10].map((m) => m * mag).find((v) => v >= mx) ?? mx);
   return { max, ticks: [0, round(max / 2), max] };
+}
+
+/** The features a monthly budget can be set for, in the order shown (each is the name of the function that calls the AI). */
+export const AI_FEATURE_KEYS = [
+  "vertexChat",
+  "readCarrierCircular",
+  "extractAirTariffFromCircular",
+  "extractSeaTariffFromCircular",
+  "extractCourierTariffFromCircular",
+  "extractShipmentFromDocuments",
+  "parseQuoteInstruction",
+  "extractVendorRateFromDocument",
+  "draftEnquiryReply",
+  "pollPricingInboxes",
+  "atlasCopilotStream",
+  "weeklyAgencyListEmail",
+] as const;
+
+export type BudgetState = "none" | "ok" | "near" | "paused";
+
+export interface BudgetRow {
+  key: string;
+  label: string;
+  usedUsd: number;
+  limitUsd: number | null;
+  pct: number | null; // 0..1, capped at 1
+  state: BudgetState;
+}
+
+export function budgetState(used: number, limit: number | null): BudgetState {
+  if (limit === null) return "none";
+  if (used >= limit) return "paused";
+  return used >= limit * 0.8 ? "near" : "ok";
+}
+
+/** One row per feature that has a budget, has been used this month, or can be given one; most used first. */
+export function budgetRows(s: AiSummaryView): { total: BudgetRow; features: BudgetRow[] } {
+  const month = s.months[0];
+  const used = new Map((month?.features ?? []).map((f) => [f.key, f.costUsd]));
+  const limits = s.budgets?.perFeature ?? {};
+  const keys = [...new Set([...AI_FEATURE_KEYS, ...used.keys(), ...Object.keys(limits)])];
+  const row = (key: string, label: string, usedUsd: number, limitUsd: number | null): BudgetRow => ({
+    key,
+    label,
+    usedUsd,
+    limitUsd,
+    pct: limitUsd === null ? null : limitUsd <= 0 ? 1 : Math.min(1, usedUsd / limitUsd),
+    state: budgetState(usedUsd, limitUsd),
+  });
+  const features = keys
+    .map((k) => row(k, featureLabel(k), used.get(k) ?? 0, Number.isFinite(limits[k]) ? limits[k] : null))
+    .sort((a, b) => b.usedUsd - a.usedUsd || AI_FEATURE_KEYS.indexOf(a.key as never) - AI_FEATURE_KEYS.indexOf(b.key as never));
+  return { total: row("total", "All AI together", month?.total.costUsd ?? 0, s.budgets && s.budgets.totalUsd !== null && Number.isFinite(s.budgets.totalUsd) ? s.budgets.totalUsd : null), features };
+}
+
+/** The budget form -> what to send, or a plain problem. Empty means no limit; 0 pauses. `rows` maps feature name to the typed text. */
+export function readBudgetForm(f: { total: string; rows: Record<string, string> }):
+  | { ok: true; totalUsd: number | null; perFeature: Record<string, number> }
+  | { ok: false; message: string } {
+  const clean = (t: string) => String(t ?? "").replace(/[$,\s]/g, "");
+  const parse = (t: string): number | null | "bad" => {
+    const c = clean(t);
+    if (c === "") return null;
+    const n = Number(c);
+    return Number.isFinite(n) && n >= 0 && n <= 100000 ? n : "bad";
+  };
+  const total = parse(f.total);
+  if (total === "bad") return { ok: false, message: "The overall budget must be a number of dollars (0 or more), or empty for no limit." };
+  const perFeature: Record<string, number> = {};
+  for (const [k, v] of Object.entries(f.rows)) {
+    const n = parse(v);
+    if (n === "bad") return { ok: false, message: `The budget for ${featureLabel(k)} must be a number of dollars (0 or more), or empty for no limit.` };
+    if (n !== null) perFeature[k] = n;
+  }
+  return { ok: true, totalUsd: total, perFeature };
+}
+
+/** One sentence if today's spending is far above the month's usual, otherwise nothing. */
+export function spikeNote(s: AiSummaryView): string | null {
+  const t = s.today;
+  if (!t || !t.alert) return null;
+  return `Today's AI use is high: ${fmtUsd(t.todayUsd)} so far${t.times ? `, about ${t.times} times a normal day` : ""}. The table below shows what used it.`;
 }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chartScale, creditStatus, featureLabel, fmtInr, fmtTokens, fmtUsd, modelLabel, monthLabel, readBalanceForm, type AiSummaryView } from "./ai-usage-view";
+import { AI_FEATURE_KEYS, budgetRows, budgetState, readBudgetForm, spikeNote, chartScale, creditStatus, featureLabel, fmtInr, fmtTokens, fmtUsd, modelLabel, monthLabel, readBalanceForm, type AiSummaryView } from "./ai-usage-view";
 
 // friendly names, including the lower-case names the server may report
 assert.equal(featureLabel("vertexChat"), "Ask Vertex");
@@ -67,5 +67,47 @@ assert.deepEqual(chartScale([0.03, 0.04]), { max: 0.1, ticks: [0, 0.05, 0.1] });
 assert.deepEqual(chartScale([]), { max: 0.1, ticks: [0, 0.05, 0.1] });
 assert.deepEqual(chartScale([100]), { max: 100, ticks: [0, 50, 100] });
 assert.ok(chartScale([37]).max >= 37);
+
+// budgets
+assert.equal(budgetState(1, null), "none");
+assert.equal(budgetState(1, 10), "ok");
+assert.equal(budgetState(8, 10), "near");
+assert.equal(budgetState(10, 10), "paused");
+assert.equal(budgetState(0, 0), "paused", "a budget of 0 is a pause");
+
+const withBudgets: AiSummaryView = {
+  ...base,
+  months: [{ month: "2026-11", total: { calls: 9, input: 0, output: 0, web: 0, costUsd: 9.5 }, features: [{ key: "readCarrierCircular", calls: 3, input: 0, output: 0, web: 0, costUsd: 8.5 }, { key: "vertexChat", calls: 6, input: 0, output: 0, web: 0, costUsd: 1 }, { key: "brandNewThing", calls: 1, input: 0, output: 0, web: 0, costUsd: 0.2 }], models: [], days: [] }],
+  budgets: { totalUsd: 20, perFeature: { readCarrierCircular: 10, vertexChat: 3, draftEnquiryReply: 0 } },
+};
+const br = budgetRows(withBudgets);
+assert.deepEqual([br.total.label, br.total.usedUsd, br.total.limitUsd, br.total.state], ["All AI together", 9.5, 20, "ok"]);
+assert.deepEqual(br.features.slice(0, 3).map((r) => r.key), ["readCarrierCircular", "vertexChat", "brandNewThing"], "most used first, including a feature the list did not know");
+assert.equal(br.features[0].state, "near");
+assert.equal(br.features[0].pct, 0.85);
+assert.equal(br.features.find((r) => r.key === "vertexChat")!.state, "ok");
+assert.equal(br.features.find((r) => r.key === "draftEnquiryReply")!.state, "paused");
+assert.equal(br.features.find((r) => r.key === "draftEnquiryReply")!.pct, 1);
+assert.equal(br.features.find((r) => r.key === "brandNewThing")!.limitUsd, null);
+assert.equal(br.features.length, new Set(br.features.map((r) => r.key)).size, "no repeats");
+for (const k of AI_FEATURE_KEYS) assert.ok(br.features.some((r) => r.key === k), `${k} can be given a budget`);
+// no data yet: every known feature is listed, none limited
+const empty = budgetRows(base);
+assert.equal(empty.features.length, AI_FEATURE_KEYS.length);
+assert.ok(empty.features.every((r) => r.limitUsd === null && r.state === "none"));
+assert.equal(empty.total.state, "none");
+
+assert.deepEqual(readBudgetForm({ total: "$20", rows: { vertexChat: "3", readCarrierCircular: "", draftEnquiryReply: "0" } }), { ok: true, totalUsd: 20, perFeature: { vertexChat: 3, draftEnquiryReply: 0 } });
+assert.deepEqual(readBudgetForm({ total: "", rows: {} }), { ok: true, totalUsd: null, perFeature: {} });
+assert.equal(readBudgetForm({ total: "abc", rows: {} }).ok, false);
+assert.equal(readBudgetForm({ total: "", rows: { vertexChat: "-1" } }).ok, false);
+const badRow = readBudgetForm({ total: "", rows: { vertexChat: "x" } });
+assert.ok(!badRow.ok && /Ask Vertex/.test(badRow.message));
+
+// a spending spike is one plain sentence, only when there is one
+assert.equal(spikeNote(base), null);
+assert.equal(spikeNote({ ...base, today: { alert: false, todayUsd: 1, avgUsd: 1, times: 1 } }), null);
+assert.match(spikeNote({ ...base, today: { alert: true, todayUsd: 7, avgUsd: 1, times: 7 } })!, /\$7\.00 so far, about 7 times a normal day/);
+assert.match(spikeNote({ ...base, today: { alert: true, todayUsd: 6, avgUsd: 0, times: null } })!, /\$6\.00 so far\. The table/);
 
 console.log("ai-usage-view tests passed");

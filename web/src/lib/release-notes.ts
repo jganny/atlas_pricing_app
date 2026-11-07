@@ -11,6 +11,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.138",
+    date: "2026-11-08",
+    items: [
+      "Admin → AI credit and cost: set a monthly budget in dollars for each AI feature (Ask Vertex, circular reading, mailbox reading and so on), and one for all AI together. When a feature reaches its budget it pauses until next month, or until you raise the limit, and your phone gets one alert. Leave a box empty for no limit.",
+      "A phone alert, once a day, when a day's AI spending is far above the month's usual, and a note on the screen saying so.",
+      "Ask Vertex now starts on the Quick (cheaper) setting with web search off; Deep and Web search are one tap away when a question needs them. Each person can ask 10 questions a day (50 for the administrator), down from 50 and 300.",
+    ],
+  },
+  {
     version: "0.3.137",
     date: "2026-11-08",
     items: [

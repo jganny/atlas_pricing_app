@@ -100,4 +100,49 @@ assert.deepEqual(m.models.map((x) => x.key), ["claude_sonnet_5_5", "claude_haiku
 assert.deepEqual(m.days, [{ day: "02", calls: 2, costUsd: 2 }, { day: "03", calls: 11, costUsd: 11.02 }]);
 assert.equal(L.summarizeMonth(null).total.calls, 0);
 
+// ── budgets ──
+assert.deepEqual(L.parseBudgetsInput({ totalUsd: "20", perFeature: { vertexChat: "3", readCarrierCircular: "", draftEnquiryReply: 0 } }), { totalUsd: 20, perFeature: { vertexChat: 3, draftEnquiryReply: 0 } });
+assert.deepEqual(L.parseBudgetsInput({}), { totalUsd: null, perFeature: {} });
+assert.deepEqual(L.parseBudgetsInput({ totalUsd: "", perFeature: {} }), { totalUsd: null, perFeature: {} });
+assert.ok(L.parseBudgetsInput({ totalUsd: "abc" }).error);
+assert.ok(L.parseBudgetsInput({ totalUsd: -1 }).error);
+assert.ok(L.parseBudgetsInput({ perFeature: { vertexChat: "x" } }).error);
+assert.match(L.parseBudgetsInput({ perFeature: { vertexChat: -5 } }).error, /Ask Vertex/);
+assert.ok(L.parseBudgetsInput({ perFeature: { "bad name!": 1 } }).error);
+
+const spend = L.monthSpend({ month: "2026-11", days: { "02": { vertexChat__claude_sonnet_5_5: { calls: 1, input: 1e6, output: 0, web: 0 } }, "03": { readCarrierCircular__claude_sonnet_5_5: { calls: 1, input: 0, output: 1e6, web: 0 } } } });
+assert.deepEqual(spend, { total: 12, byFeature: { readCarrierCircular: 10, vertexChat: 2 } });
+assert.deepEqual(L.monthSpend(null), { total: 0, byFeature: {} });
+
+// nothing set: always allowed; under: allowed; at or over: paused; zero pauses at once; the overall budget stops everything
+assert.deepEqual(L.budgetVerdict(null, "vertexChat", spend), { allowed: true });
+assert.deepEqual(L.budgetVerdict({ totalUsd: null, perFeature: {} }, "vertexChat", spend), { allowed: true });
+assert.deepEqual(L.budgetVerdict({ totalUsd: null, perFeature: { vertexChat: 3 } }, "vertexChat", spend), { allowed: true });
+const hit = L.budgetVerdict({ totalUsd: null, perFeature: { vertexChat: 2 } }, "vertexChat", spend);
+assert.deepEqual([hit.allowed, hit.scope, hit.usedUsd, hit.limitUsd], [false, "feature", 2, 2]);
+assert.equal(L.budgetVerdict({ totalUsd: null, perFeature: { vertexChat: 2 } }, "readCarrierCircular", spend).allowed, true, "another feature is not affected");
+assert.equal(L.budgetVerdict({ totalUsd: null, perFeature: { draftEnquiryReply: 0 } }, "draftEnquiryReply", spend).allowed, false, "a budget of 0 pauses a feature");
+const tot = L.budgetVerdict({ totalUsd: 12, perFeature: {} }, "draftEnquiryReply", spend);
+assert.deepEqual([tot.allowed, tot.scope], [false, "total"]);
+assert.equal(L.budgetVerdict({ totalUsd: 12.01, perFeature: {} }, "vertexChat", spend).allowed, true);
+assert.match(L.budgetMessage(hit), /Ask Vertex this month \(\$2\.00\) has been reached/);
+assert.match(L.budgetMessage(tot), /overall AI budget .*\$12\.00/);
+assert.deepEqual(L.pausedNow({ totalUsd: 12, perFeature: { vertexChat: 2, readCarrierCircular: 50 } }, spend), { total: true, features: ["vertexChat"] });
+assert.deepEqual(L.pausedNow(null, spend), { total: false, features: [] });
+assert.equal(L.featureLabel("readCarrierCircular"), "Carrier Board reader");
+assert.equal(L.featureLabel("somethingNew"), "somethingNew");
+
+// ── a day that costs far more than usual ──
+const d = (day, costUsd) => ({ day, costUsd });
+assert.equal(L.spikeCheck([d("01", 1), d("02", 1.2), d("03", 0.8), d("04", 1.0), d("05", 7)], "05").alert, true, "7 against an average of 1");
+assert.equal(L.spikeCheck([d("01", 1), d("02", 1.2), d("03", 0.8), d("04", 1.0), d("05", 2.5)], "05").alert, false, "2.5 is under three times the average");
+assert.equal(L.spikeCheck([d("01", 0.1), d("02", 0.1), d("03", 0.1), d("04", 1.9)], "04").alert, false, "below the floor, however many times the average");
+const few = [d("01", 0.2), d("02", 3)];
+assert.equal(L.spikeCheck(few, "02").alert, false, "too little history: needs a bigger amount");
+assert.equal(L.spikeCheck([d("01", 0.2), d("02", 5.5)], "02").alert, true);
+assert.equal(L.spikeCheck([d("01", 6)], "01").alert, true, "first day of the month with a large bill");
+assert.equal(L.spikeCheck([], "01").alert, false);
+assert.deepEqual([L.spikeCheck([d("01", 1), d("02", 1), d("03", 1), d("04", 6)], "04").todayUsd, L.spikeCheck([d("01", 1), d("02", 1), d("03", 1), d("04", 6)], "04").times], [6, 6]);
+assert.equal(L.spikeCheck([d("01", 1), d("02", 0), d("03", 1), d("04", 1), d("05", 4)], "05").avgUsd, 1, "days with no use are not counted in the average");
+
 console.log("ai-usage-logic tests passed");

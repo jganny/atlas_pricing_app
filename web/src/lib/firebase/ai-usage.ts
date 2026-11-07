@@ -15,3 +15,8 @@ export async function getAiUsageSummary(): Promise<AiSummaryView> {
 export async function saveAiBilling(input: { balanceUsd: number; lowAtUsd: number; inrPerUsd: number }): Promise<void> {
   await call<typeof input, { ok: boolean }>("aiBillingSave")(input);
 }
+
+/** Admin only: monthly budgets. Empty means no limit; 0 pauses a feature. The server refuses AI calls once a budget is reached. */
+export async function saveAiBudgets(input: { totalUsd: number | null; perFeature: Record<string, number> }): Promise<void> {
+  await call<typeof input, { ok: boolean }>("aiBudgetsSave")(input);
+}

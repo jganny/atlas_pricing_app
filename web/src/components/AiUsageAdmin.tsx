@@ -5,8 +5,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, CircleHelp, RefreshCw, XCircle } from "lucide-react";
 import { Button, Card, Input, Label } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { getAiUsageSummary, saveAiBilling } from "@/lib/firebase/ai-usage";
+import { getAiUsageSummary, saveAiBilling, saveAiBudgets } from "@/lib/firebase/ai-usage";
 import {
+  budgetRows,
   chartScale,
   creditStatus,
   featureLabel,
@@ -16,6 +17,8 @@ import {
   modelLabel,
   monthLabel,
   readBalanceForm,
+  readBudgetForm,
+  spikeNote,
   type AiSummaryView,
   type CreditTone,
 } from "@/lib/ai/ai-usage-view";
@@ -101,6 +104,9 @@ export function AiUsageAdmin() {
   const [busy, setBusy] = useState(false);
   const [monthIx, setMonthIx] = useState(0);
   const [form, setForm] = useState<{ balance: string; lowAt: string | null; rate: string | null }>({ balance: "", lowAt: null, rate: null });
+  // Budget fields: what has been typed since the last save; anything not typed shows what is saved.
+  const [bEdits, setBEdits] = useState<Record<string, string>>({});
+  const [bBusy, setBBusy] = useState(false);
 
   const lowAt = form.lowAt ?? String(data?.billing?.lowAtUsd ?? data?.defaults.lowAtUsd ?? 10);
   const rateText = form.rate ?? String(data?.billing?.inrPerUsd ?? data?.defaults.inrPerUsd ?? 90);
@@ -124,7 +130,33 @@ export function AiUsageAdmin() {
     }
   }
 
+  async function saveBudgets() {
+    if (!budgetTable) return;
+    const rows: Record<string, string> = {};
+    for (const r of budgetTable.features) rows[r.key] = shownBudget(r.key, r.limitUsd);
+    const r = readBudgetForm({ total: shownBudget("total", budgetTable.total.limitUsd), rows });
+    if (!r.ok) {
+      toast(r.message, "error");
+      return;
+    }
+    setBBusy(true);
+    try {
+      await saveAiBudgets({ totalUsd: r.totalUsd, perFeature: r.perFeature });
+      toast("Budgets saved. They apply to the next AI call.", "success");
+      setBEdits({});
+      await qc.invalidateQueries({ queryKey: ["adminAiSummary"] });
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not save. Try again.", "error");
+    } finally {
+      setBBusy(false);
+    }
+  }
+
   const status = data ? creditStatus(data) : null;
+  const budgetTable = data ? budgetRows(data) : null;
+  const savedText = (limit: number | null) => (limit === null ? "" : String(limit));
+  const shownBudget = (key: string, limit: number | null) => bEdits[key] ?? savedText(limit);
+  const spike = data ? spikeNote(data) : null;
   const rate = data?.billing?.inrPerUsd ?? data?.defaults.inrPerUsd ?? 90;
   const month = data?.months[monthIx] ?? null;
   const est = data?.billing?.estimateUsd ?? null;
@@ -170,6 +202,12 @@ export function AiUsageAdmin() {
             </div>
           </div>
 
+          {spike ? (
+            <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900" data-testid="ai-spike-note">
+              {spike}
+            </p>
+          ) : null}
+
           {/* The one thing to type after each top-up */}
           <div className="rounded-2xl border border-[var(--color-border)] bg-slate-50/70 p-4">
             <p className="text-sm font-semibold">After you add credit, type the balance shown in the Anthropic Console</p>
@@ -200,6 +238,57 @@ export function AiUsageAdmin() {
               The AI service cannot tell the app its balance, so this is an estimate: your number minus what the app has spent since. Small differences are normal. Re-enter it after every top-up.
             </p>
           </div>
+
+          {/* Monthly budgets: a limit per feature, enforced before every AI call */}
+          {budgetTable ? (
+            <div className="rounded-2xl border border-[var(--color-border)] p-4" data-testid="ai-budgets">
+              <p className="text-sm font-semibold">Monthly budgets</p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                Set a limit in dollars for a feature. When it is reached, that feature pauses until next month (or until you raise the limit) and your phone gets one alert. Leave a box empty for no limit; type 0 to pause a feature now. The first row limits everything together.
+              </p>
+              <ul className="mt-3 divide-y divide-[var(--color-border)]">
+                {[budgetTable.total, ...budgetTable.features].map((r) => (
+                  <li key={r.key} className="grid items-center gap-x-4 gap-y-1.5 py-2.5 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_130px]">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={cn("truncate text-sm", r.key === "total" ? "font-bold" : "font-medium")}>{r.label}</span>
+                      {r.state === "paused" ? <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">Paused</span> : null}
+                      {r.state === "near" ? <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Nearly there</span> : null}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden>
+                        <div
+                          className={cn("h-full rounded-full", r.state === "paused" ? "bg-red-500" : r.state === "near" ? "bg-amber-500" : "bg-[var(--color-atlas-sky)]")}
+                          style={{ width: `${r.pct === null ? 0 : Math.max(r.pct > 0 ? 3 : 0, r.pct * 100)}%` }}
+                        />
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        {fmtUsd(r.usedUsd)} used{r.limitUsd !== null ? ` of ${fmtUsd(r.limitUsd)}` : ", no limit"}
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor={`ai-budget-${r.key}`} className="sr-only">
+                        Monthly budget for {r.label} in US dollars
+                      </label>
+                      <Input
+                        id={`ai-budget-${r.key}`}
+                        inputMode="decimal"
+                        placeholder="no limit"
+                        className="!mt-0"
+                        value={shownBudget(r.key, r.limitUsd)}
+                        onChange={(e) => setBEdits({ ...bEdits, [r.key]: e.target.value })}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <Button type="button" disabled={bBusy || Object.keys(bEdits).length === 0} onClick={() => void saveBudgets()} data-testid="ai-save-budgets">
+                  {bBusy ? "Saving…" : "Save budgets"}
+                </Button>
+                <p className="text-xs text-[var(--color-text-muted)]">Budgets are checked before each AI call, so a feature stops at its limit. They reset on the 1st of each month.</p>
+              </div>
+            </div>
+          ) : null}
 
           {/* Where it went */}
           {data.months.length === 0 || !month ? (

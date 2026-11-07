@@ -179,6 +179,12 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   behave = () => ({ status: 400, body: '{"error":{"message":"Your credit balance is too low to access the Anthropic API."}}' });
   await assert.rejects(run({ circularId: "c1", dryRun: true }), /run out of credit/);
 
+  // 7b) the feature's monthly budget is used up: its own plain message comes back, no retries
+  const before = calls.length;
+  behave = () => ({ status: 403, body: JSON.stringify({ type: "error", error: { type: "budget_exceeded", message: "The AI budget for Carrier Board reader this month ($10.00) has been reached, so it is paused until next month or until the budget is raised in Admin." } }) });
+  await assert.rejects(run({ circularId: "c1", dryRun: true }), /AI budget for Carrier Board reader/);
+  assert.ok(calls.length - before <= 12, "a refusal is not retried over and over");
+
   // 8) people who may not run it, and files it cannot read
   behave = () => ({});
   await assert.rejects(run({ circularId: "c1" }, "someone@atlaspricing.com"), /Only the admin/);

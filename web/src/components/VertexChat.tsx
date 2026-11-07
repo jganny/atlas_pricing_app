@@ -59,8 +59,9 @@ export function VertexChat() {
   const [showHistory, setShowHistory] = useState(false);
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<Array<{ name: string; doc: HubDocument }>>([]);
-  const [mode, setMode] = useState<"quick" | "deep">("deep");
-  const [web, setWeb] = useState(true);
+  // Quick (the cheaper model) and no web search to start with; each is one tap away when a question needs it.
+  const [mode, setMode] = useState<"quick" | "deep">("quick");
+  const [web, setWeb] = useState(false);
   const [busy, setBusy] = useState(false);
   const [used, setUsed] = useState<{ count: number; limit: number } | null>(null);
   const abort = useRef<AbortController | null>(null);

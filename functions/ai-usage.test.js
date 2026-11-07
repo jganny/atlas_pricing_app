@@ -150,6 +150,129 @@ const jsonReply = (usage, model = "claude-sonnet-5-5") =>
   assert.equal(db.store.get("aiStatus/spend").calls, callsBefore);
   globalThis.fetch = realFetch;
 
+  // ───────────── monthly budgets ─────────────
+  // One pretend AI service under the counting wrapper for the whole section; only what it replies with changes.
+  let stubUsage = { input_tokens: 1000, output_tokens: 100 };
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    return String(url).startsWith("https://api.anthropic.com") ? jsonReply(stubUsage) : new Response("ok", { status: 200 });
+  };
+  const swapMessaging = () => {
+    const sent = [];
+    Object.defineProperty(admin, "messaging", { value: () => ({ sendEachForMulticast: async (m) => (sent.push(m), { successCount: 1, responses: m.tokens.map(() => ({})) }) }), configurable: true });
+    return sent;
+  };
+  const bdb = makeFakeDb();
+  await bdb.doc("chatState/ganny").set({ tokens: ["tok1"] });
+  const { month: bMonth, day: bDay } = istParts();
+  // this server instance is "draftEnquiryReply"; it has spent $3 and Ask Vertex $1 this month
+  bdb.store.set(`aiUsage/${bMonth}`, { month: bMonth, days: { [bDay]: { draftEnquiryReply__claude_sonnet_5_5: { calls: 1, input: 1_500_000, output: 0, web: 0 }, vertexChat__claude_sonnet_5_5: { calls: 1, input: 500_000, output: 0, web: 0 } } } });
+  const AI = "https://api.anthropic.com/v1/messages";
+  const sent = swapMessaging();
+
+  // no budgets set: everything goes through
+  U._test.setDb(bdb);
+  U._test.resetInstall();
+  U.install();
+  let r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 200);
+  assert.equal(seen.length, 1);
+
+  // this feature's budget ($3) is already reached: refused before any AI call, with a plain reason, and the admin is told once
+  bdb.store.set("aiBilling/budgets", { totalUsd: null, perFeature: { draftEnquiryReply: 3 } });
+  seen.length = 0;
+  U._test.setDb(bdb);
+  r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 403);
+  const refusal = await r.json();
+  assert.equal(refusal.error.type, "budget_exceeded");
+  assert.match(refusal.error.message, /Enquiry reply drafts this month \(\$3\.00\) has been reached/);
+  assert.equal(seen.length, 0, "no AI call was made, so nothing was spent");
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].data.title, /AI budget reached/);
+  assert.deepEqual(sent[0].tokens, ["tok1"]);
+  r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 403);
+  assert.equal(sent.length, 1, "told once, not on every refused call");
+
+  // another feature's budget does not stop this one
+  bdb.store.set("aiBilling/budgets", { totalUsd: null, perFeature: { vertexChat: 0.5 } });
+  U._test.setDb(bdb);
+  r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 200);
+
+  // raising the budget lets it through again
+  bdb.store.set("aiBilling/budgets", { totalUsd: null, perFeature: { draftEnquiryReply: 4 } });
+  U._test.setDb(bdb);
+  r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 200);
+
+  // a budget bites straight away: this instance's own spending counts before the monthly figures are re-read
+  bdb.store.set("aiBilling/budgets", { totalUsd: null, perFeature: { draftEnquiryReply: 3.5 } });
+  stubUsage = { input_tokens: 300_000, output_tokens: 0 }; // $0.60 per call
+  seen.length = 0;
+  U._test.setDb(bdb);
+  r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 200, "3.00 spent of 3.50: allowed");
+  r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 403, "3.60 now spent: refused without waiting for a re-read");
+
+  // an overall budget stops every feature; a budget of 0 pauses at once
+  bdb.store.set("aiBilling/budgets", { totalUsd: 4, perFeature: {} });
+  stubUsage = { input_tokens: 1000, output_tokens: 100 };
+  seen.length = 0;
+  U._test.setDb(bdb);
+  assert.equal((await fetch(AI, { method: "POST", body: "{}" })).status, 403);
+  assert.match((await (await fetch(AI, { method: "POST", body: "{}" })).json()).error.message, /overall AI budget/);
+  bdb.store.set("aiBilling/budgets", { totalUsd: null, perFeature: { draftEnquiryReply: 0 } });
+  U._test.setDb(bdb);
+  assert.equal((await fetch(AI, { method: "POST", body: "{}" })).status, 403);
+
+  // a fault while reading the budgets never stops the app
+  const broken = { ...bdb, doc: (path) => (path.startsWith("aiBilling/budgets") ? { get: async () => { throw new Error("db down"); } } : bdb.doc(path)) };
+  seen.length = 0;
+  U._test.setDb(broken);
+  r = await fetch(AI, { method: "POST", body: "{}" });
+  assert.equal(r.status, 200, "fails open");
+  assert.equal(seen.length, 1);
+
+  // other websites are never held up by a budget
+  bdb.store.set("aiBilling/budgets", { totalUsd: 0, perFeature: {} });
+  U._test.setDb(bdb);
+  assert.equal((await fetch("https://example.com/")).status, 200);
+  assert.ok(seen.includes("https://example.com/"));
+
+  // the admin saves budgets through a function only they can call
+  const save = (data, email = "ganny@atlaspricing.com") => U.aiBudgetsSave.run({ auth: { token: { email } }, data, rawRequest: {} });
+  await assert.rejects(save({ totalUsd: 5 }, "someone@atlaspricing.com"), /Only the admin/);
+  await assert.rejects(save({ totalUsd: "abc" }), /overall monthly budget/);
+  assert.deepEqual(await save({ totalUsd: "20", perFeature: { vertexChat: "3", readCarrierCircular: "" } }), { ok: true });
+  assert.deepEqual([bdb.store.get("aiBilling/budgets").totalUsd, bdb.store.get("aiBilling/budgets").perFeature], [20, { vertexChat: 3 }]);
+  assert.deepEqual(bdb.store.get("aiStatus/budgetAlerts"), { month: "", hit: {} }, "alerts can fire afresh after a change");
+
+  // ───────────── a day that costs far more than usual ─────────────
+  const sdb = makeFakeDb();
+  await sdb.doc("chatState/ganny").set({ tokens: ["tok1"] });
+  const when = Date.UTC(2026, 10, 10, 6, 0); // 10 November, late morning in India
+  const dayCost = (usd) => ({ draftEnquiryReply__claude_sonnet_5_5: { calls: 1, input: (usd / 2) * 1e6, output: 0, web: 0 } });
+  sdb.store.set("aiUsage/2026-11", { month: "2026-11", days: { "06": dayCost(1), "07": dayCost(1.2), "08": dayCost(0.8), "09": dayCost(1), "10": dayCost(7) } });
+  const sent2 = swapMessaging();
+  U._test.setDb(sdb);
+  await U._test.checkSpike(when);
+  assert.equal(sent2.length, 1);
+  assert.match(sent2[0].data.title, /unusually high/);
+  assert.match(sent2[0].data.body, /\$7\.00 so far today/);
+  U._test.setDb(sdb);
+  await U._test.checkSpike(when + 3600_000);
+  assert.equal(sent2.length, 1, "once per day");
+  // an ordinary day does not alert
+  sdb.store.set("aiUsage/2026-11", { month: "2026-11", days: { "06": dayCost(1), "07": dayCost(1.2), "08": dayCost(0.8), "09": dayCost(1), "10": dayCost(1.3) } });
+  sdb.store.delete("aiStatus/spike");
+  U._test.setDb(sdb);
+  await U._test.checkSpike(when);
+  assert.equal(sent2.length, 1, "a normal day sends nothing");
+
   console.log("ai-usage tests passed");
 })().catch((e) => {
   console.error(e);

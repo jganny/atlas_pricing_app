@@ -59,7 +59,7 @@ export function ChatUsageAdmin() {
             </tbody>
           </table>
           <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
-            Cost = tokens and web searches × your AI plan&apos;s prices (see your Anthropic console). Each person has a daily limit of 50 questions.
+            Cost = tokens and web searches × your AI plan&apos;s prices (see your Anthropic console). Each person has a daily limit of 10 questions (50 for the administrator).
           </p>
         </div>
       )}
