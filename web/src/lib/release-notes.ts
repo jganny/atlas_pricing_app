@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.135",
+    date: "2026-11-07",
+    items: [
+      "Admin → AI credit and cost (main administrator only): see how much AI credit is left, and what each month's AI use cost, split by what used it (Ask Vertex, circular upload, mailbox reading and so on) with a cost-per-day bar chart, in dollars and rupees.",
+      "Type the balance shown in the Anthropic Console after each top-up. The app counts down from it and sends a warning to your phone before it runs out (you choose the level), and again straight away if the credit has already run out. The balance is an estimate, because the AI service does not share the real figure.",
+    ],
+  },
+  {
     version: "0.3.134",
     date: "2026-11-03",
     items: [

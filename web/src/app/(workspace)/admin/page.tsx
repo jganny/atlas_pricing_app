@@ -20,6 +20,7 @@ import {
 } from "@/lib/firebase/runtime-config";
 import { DeskSeatsAdmin } from "@/components/DeskSeatsAdmin";
 import { ChatUsageAdmin } from "@/components/ChatUsageAdmin";
+import { AiUsageAdmin } from "@/components/AiUsageAdmin";
 import { QuoteSpeedAdmin } from "@/components/QuoteSpeedAdmin";
 import { MailTestAdmin } from "@/components/MailTestAdmin";
 import { SessionLogAdmin } from "@/components/SessionLogAdmin";
@@ -142,6 +143,8 @@ export default function AdminPage() {
       </div>
 
       <DeskSeatsAdmin />
+      {/* The AI account is the main administrator's: only they see its balance and can enter it. */}
+      {user?.username?.toLowerCase() === "ganny" && useLiveData ? <AiUsageAdmin /> : null}
       <ChatUsageAdmin />
       <QuoteSpeedAdmin />
       {user?.username?.toLowerCase() === "ganny" ? <MailTestAdmin /> : null}

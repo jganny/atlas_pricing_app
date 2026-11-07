@@ -20,7 +20,7 @@ const MAX_SHEET_CHARS = 150_000;
 const FILE_LIFE_DAYS = 30;
 
 function requireAdmin(request) {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  if (!request.auth || request.auth.token.chatOnly === true) throw new HttpsError("unauthenticated", "Sign in is required.");
   if (String(request.auth.token.email || "").toLowerCase() !== ADMIN_EMAIL) throw new HttpsError("permission-denied", "Only the admin can do this.");
 }
 

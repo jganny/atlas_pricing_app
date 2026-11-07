@@ -16,6 +16,12 @@ const { defineSecret } = require("firebase-functions/params");
 
 admin.initializeApp();
 
+// Count every call to the AI service (tokens, searches, cost) and warn the admin when credit runs low.
+const aiUsage = require("./ai-usage");
+aiUsage.install();
+exports.aiUsageSummary = aiUsage.aiUsageSummary;
+exports.aiBillingSave = aiUsage.aiBillingSave;
+
 // Bound only to the global-location lookup function below. It is never sent to
 // the browser or stored in quote data.
 const geoapifyKey = defineSecret("GEOAPIFY_KEY");
