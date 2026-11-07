@@ -50,6 +50,7 @@ async function askOnce(apiKey, system, content, userText) {
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     console.warn("carrier reader: AI request failed", res.status, body.slice(0, 300));
+    if (/credit balance is too low/i.test(body)) throw new HttpsError("failed-precondition", "The AI account has run out of credit. Top it up in the Anthropic console (Plans & Billing), then try again.");
     throw new HttpsError("unavailable", "The AI service did not answer. Try again in a minute.");
   }
   const payload = await res.json();
