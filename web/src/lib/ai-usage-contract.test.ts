@@ -29,10 +29,12 @@ assert.match(usage, /res = await original\(input, init\)/);
 const logic = fn("ai-usage-logic.js");
 assert.match(logic, /const HAIKU_NEW = "claude-haiku-5-5"/);
 assert.match(logic, /KEEP_THINKING = new Set\(\["vertexChat"\]\)/);
-// The circular reader reads twice with the careful model by default; the cheaper second read is opt-in (it failed real circulars with thinking off).
+// The circular reader: careful model first, the much cheaper model (WITH thinking on, which it needs) second; opt out with secondRead: "sonnet".
 const reader = fn("carrier-reader.js");
 assert.match(reader, /const CHEAP_MODEL = "claude-haiku-5-5"/);
-assert.match(reader, /secondRead === "haiku" \? CHEAP_MODEL : MODEL/);
+assert.match(reader, /secondRead === "sonnet" \? MODEL : CHEAP_MODEL/);
+assert.match(reader, /\{ type: "adaptive" \}/);
+assert.doesNotMatch(reader, /type: "disabled"/, "thinking must never be switched off for the cheap model");
 assert.match(reader, /thinkingFor/);
 
 // Ask Vertex costs money per question, so its defaults are the frugal ones: 10 a day each, the cheaper model, no web search unless asked.

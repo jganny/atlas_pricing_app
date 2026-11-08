@@ -17,7 +17,7 @@ const { isRequestRefusal } = require("./ai-usage-logic");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const ADMIN_EMAIL = "ganny@atlaspricing.com";
 const MODEL = "claude-sonnet-5-5";
-// An opt-in cheaper second read (secondRead: "haiku"). Tested 2026-11-09 with thinking OFF it failed on real circulars (wrote its corrections into the answer; stopped after 14 of 110 routes), so the default is two careful reads.
+// The second, independent read uses the much cheaper model WITH thinking on (a different model is a stronger cross-check). Tested live 2026-11-09 on three real circulars: it matched or beat a second careful read (Singapore 110/110 agreed, IndiGo 77/77, Emirates 141/141 vs 132 + 9 held) at 30-41% less cost. With thinking OFF it failed (wrote corrections into its answer; stopped at 14 of 110 routes), so never turn thinking off for it. secondRead: "sonnet" restores two careful reads.
 const CHEAP_MODEL = "claude-haiku-5-5";
 const MAX_PARTS = 60; // a spreadsheet is read in parts; more than this is held for a person to look at
 const PARTS_AT_ONCE = 6;
@@ -118,8 +118,8 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   const userText = `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Extract every route's weight-break rates as instructed.`;
   const [sysA, sysB] = L.systemPrompts();
 
-  // Every part is read twice, independently, a few at a time. Both reads use the careful model unless asked otherwise (secondRead: "haiku").
-  const secondModel = request.data?.secondRead === "haiku" ? CHEAP_MODEL : MODEL;
+  // Every part is read twice, independently, a few at a time: the careful model first, the cheaper one second (secondRead: "sonnet" for two careful reads).
+  const secondModel = request.data?.secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
   const reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
     const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, userText, MODEL), askOnce(apiKey, sysB, part.content, userText, secondModel)]);
     return { label: part.label, a, b };

@@ -102,8 +102,8 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.deepEqual(res.usage, { input: calls.length * 1000, output: calls.length * 100 });
   for (const c of calls) {
     assert.equal(c.body.max_tokens, 16000);
-    assert.deepEqual(c.body.thinking, { type: "between_tools" }, "thinking is off in both careful reads");
-    assert.equal(c.body.model, "claude-sonnet-5-5", "by default both reads are the careful model");
+    assert.equal(c.body.model, c.isB ? "claude-haiku-5-5" : "claude-sonnet-5-5", "careful model first, cheaper model second");
+    assert.deepEqual(c.body.thinking, c.isB ? { type: "adaptive" } : { type: "between_tools" }, "the careful model answers directly; the cheaper one must think first");
   }
   assert.ok(calls.some((c) => c.isB) && calls.some((c) => !c.isB), "two differently-framed reads");
   assert.ok(calls.every((c) => /Origin,Dest,Min,Under45,Plus45/.test(c.text)), "every part carries the column headings");
@@ -207,24 +207,24 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   await assert.rejects(run({ circularId: "c4" }), /too long to read automatically/);
   assert.equal(calls.length, 0, "refused before spending anything");
 
-  // 10) by default both reads are the careful model; secondRead: "haiku" makes the second the cheap model, with thinking on; if the cheap one refuses, the careful one does that read
+  // 10) by default the second read is the cheap model with thinking ON; secondRead: "sonnet" gives two careful reads; if the cheap one refuses, the careful one does that read
   calls.length = 0;
   store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", title: "EK_BLR", fileName: "BLR TARIFF.xlsx", storagePath: "circulars/x/EK.xlsx" });
   bucketFile = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   behave = () => ({});
   res = await run({ circularId: "c1", dryRun: true });
-  assert.ok(calls.every((c) => c.body.model === "claude-sonnet-5-5"), "default: two careful reads");
-  assert.equal(res.models.readB, "claude-sonnet-5-5");
+  assert.ok(calls.filter((c) => c.isB).every((c) => c.body.model === "claude-haiku-5-5" && c.body.thinking.type === "adaptive"), "default: the cheap second read thinks first");
+  assert.ok(calls.filter((c) => c.isB).every((c) => c.body.thinking.type !== "disabled"), "thinking is never switched off for the cheap model");
+  assert.equal(res.models.readB, "claude-haiku-5-5");
   assert.equal(res.applied + res.unchanged, N, "every route read and agreed");
   calls.length = 0;
-  res = await run({ circularId: "c1", dryRun: true, secondRead: "haiku" });
-  assert.ok(calls.filter((c) => !c.isB).every((c) => c.body.model === "claude-sonnet-5-5" && c.body.thinking.type === "between_tools"), "the first read stays careful");
-  assert.ok(calls.filter((c) => c.isB).every((c) => c.body.model === "claude-haiku-5-5" && c.body.thinking.type === "adaptive"), "the cheap second read thinks first");
-  assert.equal(res.models.readB, "claude-haiku-5-5");
+  res = await run({ circularId: "c1", dryRun: true, secondRead: "sonnet" });
+  assert.ok(calls.every((c) => c.body.model === "claude-sonnet-5-5"), "secondRead: sonnet keeps both reads on the careful model");
+  assert.equal(res.models.readB, "claude-sonnet-5-5");
   assert.equal(res.applied + res.unchanged, N);
   calls.length = 0;
   refuseCheap = true;
-  res = await run({ circularId: "c1", dryRun: true, secondRead: "haiku" });
+  res = await run({ circularId: "c1", dryRun: true });
   assert.equal(res.applied + res.unchanged, N, "if the cheaper model refuses, the read is done by the stronger one and still counts");
   assert.equal(res.models.readB, "claude-sonnet-5-5");
   refuseCheap = false;
