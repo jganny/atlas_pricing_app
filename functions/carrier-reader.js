@@ -17,7 +17,7 @@ const { isRequestRefusal } = require("./ai-usage-logic");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const ADMIN_EMAIL = "ganny@atlaspricing.com";
 const MODEL = "claude-sonnet-5-5";
-// The second, independent read uses the much cheaper model: a different model is a stronger cross-check, and anything the two disagree on is held.
+// An opt-in cheaper second read (secondRead: "haiku"). Tested 2026-11-09 with thinking OFF it failed on real circulars (wrote its corrections into the answer; stopped after 14 of 110 routes), so the default is two careful reads.
 const CHEAP_MODEL = "claude-haiku-5-5";
 const MAX_PARTS = 60; // a spreadsheet is read in parts; more than this is held for a person to look at
 const PARTS_AT_ONCE = 6;
@@ -52,8 +52,8 @@ function sumUsage(list) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Thinking is off in both: it would use up the answer allowance, and the two reads plus the checks are what keep this honest. */
-const thinkingFor = (model) => (model === MODEL ? { type: "between_tools" } : { type: "disabled" });
+/** Sonnet answers directly (thinking would use up the answer allowance); the cheaper model needs to think first or it thinks out loud inside its answer. */
+const thinkingFor = (model) => (model === MODEL ? { type: "between_tools" } : { type: "adaptive" });
 
 async function askOnce(apiKey, system, content, userText, model = MODEL) {
   let res;
@@ -118,8 +118,8 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   const userText = `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Extract every route's weight-break rates as instructed.`;
   const [sysA, sysB] = L.systemPrompts();
 
-  // Every part is read twice, independently, a few at a time. The second read uses the cheaper model unless asked otherwise (secondRead: "sonnet").
-  const secondModel = request.data?.secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
+  // Every part is read twice, independently, a few at a time. Both reads use the careful model unless asked otherwise (secondRead: "haiku").
+  const secondModel = request.data?.secondRead === "haiku" ? CHEAP_MODEL : MODEL;
   const reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
     const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, userText, MODEL), askOnce(apiKey, sysB, part.content, userText, secondModel)]);
     return { label: part.label, a, b };
