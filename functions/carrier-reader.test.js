@@ -57,12 +57,14 @@ Object.defineProperty(admin, "storage", { value: () => ({ bucket: () => ({ file:
 // ---- a pretend AI --------------------------------------------------------------------------------------------------------------
 const calls = [];
 let behave = () => ({});
+let refuseCheap = false;
 const line = (...f) => [...f, ...Array(11 - f.length).fill("")].join("|"); // 8 leading fields, 2 rate columns, notes
 const reply = (rows) => ["COLUMNS|0|45", ...rows].join("\n");
 globalThis.fetch = async (url, init) => {
   const body = JSON.parse(init.body);
   const text = body.messages[0].content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
   const isB = /weight-break column in turn/.test(body.system);
+  if (refuseCheap && body.model === "claude-haiku-5-5") return new Response('{"type":"error","error":{"message":"model: not supported"}}', { status: 400 });
   const call = { body, text, isB };
   calls.push(call);
   const special = behave(call, calls.length);
@@ -99,9 +101,9 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(res.held, 0);
   assert.deepEqual(res.usage, { input: calls.length * 1000, output: calls.length * 100 });
   for (const c of calls) {
-    assert.deepEqual(c.body.thinking, { type: "between_tools" }, "thinking is off");
     assert.equal(c.body.max_tokens, 16000);
-    assert.equal(c.body.model, "claude-sonnet-5-5");
+    assert.deepEqual(c.body.thinking, c.isB ? { type: "disabled" } : { type: "between_tools" }, "thinking is off in both reads");
+    assert.equal(c.body.model, c.isB ? "claude-haiku-5-5" : "claude-sonnet-5-5", "first read careful, second read cheap");
   }
   assert.ok(calls.some((c) => c.isB) && calls.some((c) => !c.isB), "two differently-framed reads");
   assert.ok(calls.every((c) => /Origin,Dest,Min,Under45,Plus45/.test(c.text)), "every part carries the column headings");
@@ -204,6 +206,27 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   store.set("circularsLibrary/c4", { category: "airline_tariff", carrier: "EK", fileName: "big.xlsx", storagePath: "x.xlsx" });
   await assert.rejects(run({ circularId: "c4" }), /too long to read automatically/);
   assert.equal(calls.length, 0, "refused before spending anything");
+
+  // 10) the second read uses the cheaper model, with thinking off, unless asked otherwise; if the cheaper model refuses, the stronger one does that read
+  calls.length = 0;
+  store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", title: "EK_BLR", fileName: "BLR TARIFF.xlsx", storagePath: "circulars/x/EK.xlsx" });
+  bucketFile = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  behave = () => ({});
+  res = await run({ circularId: "c1", dryRun: true });
+  assert.ok(calls.filter((c) => !c.isB).every((c) => c.body.model === "claude-sonnet-5-5" && c.body.thinking.type === "between_tools"), "the first read is the careful model");
+  assert.ok(calls.filter((c) => c.isB).every((c) => c.body.model === "claude-haiku-5-5" && c.body.thinking.type === "disabled"), "the second read is the cheap model, thinking off");
+  assert.equal(res.models.readB, "claude-haiku-5-5");
+  assert.equal(res.applied + res.unchanged, N, "every route read and agreed");
+  calls.length = 0;
+  res = await run({ circularId: "c1", dryRun: true, secondRead: "sonnet" });
+  assert.ok(calls.every((c) => c.body.model === "claude-sonnet-5-5"), "secondRead: sonnet keeps both reads on the careful model");
+  assert.equal(res.models.readB, "claude-sonnet-5-5");
+  calls.length = 0;
+  refuseCheap = true;
+  res = await run({ circularId: "c1", dryRun: true });
+  assert.equal(res.applied + res.unchanged, N, "if the cheaper model refuses, the read is done by the stronger one and still counts");
+  assert.equal(res.models.readB, "claude-sonnet-5-5");
+  refuseCheap = false;
 
   console.log("carrier reader end-to-end tests passed");
 })().catch((e) => {

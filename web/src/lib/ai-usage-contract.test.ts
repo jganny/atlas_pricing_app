@@ -21,6 +21,20 @@ assert.match(usage, /globalThis\.fetch = /);
 assert.match(usage, /const verdict = await budgetGuard\(feature\)/);
 assert.match(usage, /return budgetResponse\(verdict\)/);
 assert.match(usage, /allowing the call/);
+// The cost policy: cheaper model and no needless thinking, applied in the one place every AI call passes through, with a fallback that
+// resends the request exactly as the feature wrote it if the AI service refuses the changed one.
+assert.match(usage, /L\.applyModelPolicy\(JSON\.parse\(init\.body\), feature\)/);
+assert.match(usage, /L\.isRequestRefusal\(res\.status, text\)/);
+assert.match(usage, /res = await original\(input, init\)/);
+const logic = fn("ai-usage-logic.js");
+assert.match(logic, /const HAIKU_NEW = "claude-haiku-5-5"/);
+assert.match(logic, /KEEP_THINKING = new Set\(\["vertexChat"\]\)/);
+// The circular reader's second read is the cheap model, thinking off, and falls back to the careful one.
+const reader = fn("carrier-reader.js");
+assert.match(reader, /const CHEAP_MODEL = "claude-haiku-5-5"/);
+assert.match(reader, /secondRead === "sonnet" \? MODEL : CHEAP_MODEL/);
+assert.match(reader, /thinkingFor/);
+
 // Ask Vertex costs money per question, so its defaults are the frugal ones: 10 a day each, the cheaper model, no web search unless asked.
 const chatFn = fn("vertex-chat.js");
 assert.match(chatFn, /DEFAULT_DAILY_LIMIT = 10;/);

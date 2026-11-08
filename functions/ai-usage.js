@@ -272,7 +272,29 @@ function install() {
         return budgetResponse(verdict);
       }
     }
-    const res = await original(input, init);
+    // The cost policy: cheaper model / no needless thinking where that is safe. If the AI service refuses the changed request itself, the
+    // same request is sent once more exactly as the feature wrote it, so saving money can never break a feature.
+    let callInit = init;
+    let changed = null;
+    if (isAi && init && typeof init.body === "string") {
+      try {
+        const pol = L.applyModelPolicy(JSON.parse(init.body), feature);
+        if (pol.changed) {
+          changed = pol.changed;
+          callInit = { ...init, body: JSON.stringify(pol.body) };
+        }
+      } catch {
+        /* not JSON: send as it is */
+      }
+    }
+    let res = await original(input, callInit);
+    if (changed && !res.ok) {
+      const text = await res.clone().text().catch(() => "");
+      if (L.isRequestRefusal(res.status, text)) {
+        logger.warn("ai-usage: the cost policy was refused, sending the original request", { feature, change: changed, status: res.status, body: text.slice(0, 200) });
+        res = await original(input, init);
+      }
+    }
     try {
       if (isAi) {
         const work = observe(res.clone(), feature).catch((e) => logger.warn("ai-usage: could not count a call", { error: String(e) }));

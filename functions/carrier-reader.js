@@ -12,10 +12,13 @@ const admin = require("firebase-admin");
 const XLSX = require("xlsx");
 const { decide } = require("./tariff-checks");
 const L = require("./carrier-reader-logic");
+const { isRequestRefusal } = require("./ai-usage-logic");
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const ADMIN_EMAIL = "ganny@atlaspricing.com";
 const MODEL = "claude-sonnet-5-5";
+// The second, independent read uses the much cheaper model: a different model is a stronger cross-check, and anything the two disagree on is held.
+const CHEAP_MODEL = "claude-haiku-5-5";
 const MAX_PARTS = 60; // a spreadsheet is read in parts; more than this is held for a person to look at
 const PARTS_AT_ONCE = 6;
 const MAX_ATTEMPTS = 3;
@@ -49,15 +52,27 @@ function sumUsage(list) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function askOnce(apiKey, system, content, userText) {
+/** Thinking is off in both: it would use up the answer allowance, and the two reads plus the checks are what keep this honest. */
+const thinkingFor = (model) => (model === MODEL ? { type: "between_tools" } : { type: "disabled" });
+
+async function askOnce(apiKey, system, content, userText, model = MODEL) {
   let res;
+  let used = model;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      // Thinking is off: it would use up the answer allowance, and the two independent reads plus the checks are what keep this honest.
-      body: JSON.stringify({ model: MODEL, max_tokens: 16000, thinking: { type: "between_tools" }, system, messages: [{ role: "user", content: [content, { type: "text", text: userText }] }] }),
+      body: JSON.stringify({ model: used, max_tokens: 16000, thinking: thinkingFor(used), system, messages: [{ role: "user", content: [content, { type: "text", text: userText }] }] }),
     });
+    if (!res.ok && used !== MODEL) {
+      // The cheaper model refused the request itself: do this read with the stronger one instead of failing.
+      const refusal = await res.clone().text().catch(() => "");
+      if (isRequestRefusal(res.status, refusal)) {
+        console.warn("carrier reader: the cheaper model refused, using the stronger one", res.status, refusal.slice(0, 200));
+        used = MODEL;
+        continue;
+      }
+    }
     if (res.ok || ![429, 500, 502, 503, 529].includes(res.status) || attempt === MAX_ATTEMPTS) break;
     await sleep(RETRY_MS * attempt); // busy: wait a little longer each time
   }
@@ -79,7 +94,7 @@ async function askOnce(apiKey, system, content, userText) {
   const payload = await res.json();
   const raw = (payload.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
   const parsed = L.parseRowLines(raw);
-  return { parsed, usage: payload.usage || {}, truncated: payload.stop_reason === "max_tokens", stop: payload.stop_reason || "", chars: raw.length, head: raw.slice(0, 160), rows: parsed ? parsed.rows.length : 0, columns: parsed ? parsed.columns : null };
+  return { parsed, model: used, usage: payload.usage || {}, truncated: payload.stop_reason === "max_tokens", stop: payload.stop_reason || "", chars: raw.length, head: raw.slice(0, 160), rows: parsed ? parsed.rows.length : 0, columns: parsed ? parsed.columns : null };
 }
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
@@ -103,9 +118,10 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   const userText = `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Extract every route's weight-break rates as instructed.`;
   const [sysA, sysB] = L.systemPrompts();
 
-  // Every part is read twice, independently, a few at a time.
+  // Every part is read twice, independently, a few at a time. The second read uses the cheaper model unless asked otherwise (secondRead: "sonnet").
+  const secondModel = request.data?.secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
   const reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
-    const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, userText), askOnce(apiKey, sysB, part.content, userText)]);
+    const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, userText, MODEL), askOnce(apiKey, sysB, part.content, userText, secondModel)]);
     return { label: part.label, a, b };
   });
   const problems = [];
@@ -143,6 +159,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
     held: result.hold.length,
     unchanged: result.unchanged.length,
     parts: { total: reads.length, failed: failed.length + cut.length },
+    models: { readA: MODEL, readB: [...new Set(reads.map((r) => r.b.model))].join(", ") },
     usage,
     dryRun,
     deleteFileAfter: now + FILE_LIFE_DAYS * 86_400_000,

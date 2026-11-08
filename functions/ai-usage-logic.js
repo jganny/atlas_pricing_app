@@ -284,6 +284,48 @@ function spikeCheck(days, today, { floorUsd = 2, factor = 3, minDays = 3 } = {})
   return { alert: true, ...base };
 }
 
+// ───────────────────────── the cost policy: which model, with or without thinking ─────────────────────────
+
+const HAIKU_OLD = /^claude-haiku-4-5/;
+const HAIKU_NEW = "claude-haiku-5-5";
+const SONNET = "claude-sonnet-5-5";
+/** Features whose answers benefit from the model thinking first, so they keep the default. */
+const KEEP_THINKING = new Set(["vertexChat"]);
+
+/**
+ * The money-saving rules, applied to one AI request just before it is sent.
+ *  - A Haiku 4.5 request moves to Haiku 5.5 (about a tenth of the price per word) with thinking off, so its short answer is not used up by thinking.
+ *  - A Sonnet 5.5 request that did not choose a thinking setting gets none, except for the features that keep it: simple extraction and drafting
+ *    do not need it, and thinking is billed as output.
+ * Requests the rules cannot safely change (an assistant prefill, an explicit sampling setting, anything already set) are left exactly as they are.
+ * Returns { body, changed } where changed says what was rewritten, or null.
+ */
+function applyModelPolicy(body, feature) {
+  if (!body || typeof body !== "object" || !Array.isArray(body.messages)) return { body, changed: null };
+  const last = body.messages[body.messages.length - 1];
+  if (last && last.role === "assistant") return { body, changed: null }; // a prefill is refused by the newer model
+  if (typeof body.model === "string" && HAIKU_OLD.test(body.model)) {
+    const next = { ...body, model: HAIKU_NEW };
+    delete next.temperature;
+    delete next.top_p;
+    delete next.top_k;
+    if (!next.thinking) next.thinking = { type: "disabled" };
+    return { body: next, changed: "haiku-5-5" };
+  }
+  if (body.model === SONNET && body.thinking === undefined && !KEEP_THINKING.has(feature)) {
+    return { body: { ...body, thinking: { type: "between_tools" } }, changed: "thinking-off" };
+  }
+  return { body, changed: null };
+}
+
+/** The AI service refused the request itself (not the account or the load): worth retrying the old way once. */
+function isRequestRefusal(status, text) {
+  const s = Number(status);
+  if (s !== 400 && s !== 404) return false;
+  return !isOutOfCredit(s, text);
+}
+
+
 module.exports = {
   PRICES,
   WEB_SEARCH_USD_EACH,
@@ -309,4 +351,6 @@ module.exports = {
   budgetMessage,
   pausedNow,
   spikeCheck,
+  applyModelPolicy,
+  isRequestRefusal,
 };

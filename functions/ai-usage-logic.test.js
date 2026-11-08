@@ -145,4 +145,44 @@ assert.equal(L.spikeCheck([], "01").alert, false);
 assert.deepEqual([L.spikeCheck([d("01", 1), d("02", 1), d("03", 1), d("04", 6)], "04").todayUsd, L.spikeCheck([d("01", 1), d("02", 1), d("03", 1), d("04", 6)], "04").times], [6, 6]);
 assert.equal(L.spikeCheck([d("01", 1), d("02", 0), d("03", 1), d("04", 1), d("05", 4)], "05").avgUsd, 1, "days with no use are not counted in the average");
 
+// ── the cost policy ──
+const req = (o) => ({ model: "claude-sonnet-5-5", max_tokens: 700, messages: [{ role: "user", content: "hi" }], ...o });
+// Haiku 4.5 -> Haiku 5.5, thinking off, sampling settings removed
+let pol = L.applyModelPolicy(req({ model: "claude-haiku-4-5-20251001", temperature: 0, top_p: 0.9, system: "s" }), "pollPricingInboxes");
+assert.equal(pol.changed, "haiku-5-5");
+assert.equal(pol.body.model, "claude-haiku-5-5");
+assert.deepEqual(pol.body.thinking, { type: "disabled" });
+assert.ok(!("temperature" in pol.body) && !("top_p" in pol.body));
+assert.equal(pol.body.system, "s", "everything else is left alone");
+assert.equal(L.applyModelPolicy(req({ model: "claude-haiku-4-5" }), "x").body.model, "claude-haiku-5-5");
+// a thinking choice the caller already made is respected
+assert.deepEqual(L.applyModelPolicy(req({ model: "claude-haiku-4-5-20251001", thinking: { type: "adaptive" } }), "x").body.thinking, { type: "adaptive" });
+// Sonnet 5.5 without a thinking choice: none, except for Ask Vertex
+pol = L.applyModelPolicy(req(), "extractAirTariffFromCircular");
+assert.equal(pol.changed, "thinking-off");
+assert.deepEqual(pol.body.thinking, { type: "between_tools" });
+assert.equal(L.applyModelPolicy(req(), "vertexChat").changed, null, "Ask Vertex keeps its thinking");
+assert.equal(L.applyModelPolicy(req({ thinking: { type: "adaptive" } }), "draftEnquiryReply").changed, null, "an explicit choice stays");
+assert.deepEqual(L.applyModelPolicy(req({ thinking: { type: "between_tools" } }), "readCarrierCircular").body.thinking, { type: "between_tools" });
+// not touched: other models, a prefill, anything that is not a request body
+assert.equal(L.applyModelPolicy(req({ model: "claude-opus-5-5" }), "x").changed, null);
+assert.equal(L.applyModelPolicy(req({ model: "claude-haiku-5-5" }), "x").changed, null, "already the new one");
+const prefilled = req({ model: "claude-haiku-4-5-20251001", messages: [{ role: "user", content: "a" }, { role: "assistant", content: "{" }] });
+assert.equal(L.applyModelPolicy(prefilled, "x").changed, null, "a prefill would be refused by the newer model");
+assert.equal(L.applyModelPolicy(prefilled, "x").body, prefilled);
+assert.equal(L.applyModelPolicy(null, "x").changed, null);
+assert.equal(L.applyModelPolicy({ model: "claude-sonnet-5-5" }, "x").changed, null);
+// the original request object is never changed
+const orig = req({ model: "claude-haiku-4-5-20251001", temperature: 0 });
+L.applyModelPolicy(orig, "x");
+assert.deepEqual([orig.model, orig.temperature, orig.thinking], ["claude-haiku-4-5-20251001", 0, undefined]);
+
+// when to retry the old way: only when the request itself was refused, not for credit, load or other errors
+assert.equal(L.isRequestRefusal(400, '{"error":{"message":"thinking: disabled is not supported"}}'), true);
+assert.equal(L.isRequestRefusal(404, '{"error":{"type":"not_found_error","message":"model: claude-haiku-5-5"}}'), true);
+assert.equal(L.isRequestRefusal(400, '{"error":{"message":"Your credit balance is too low to access the Anthropic API."}}'), false);
+assert.equal(L.isRequestRefusal(429, "slow down"), false);
+assert.equal(L.isRequestRefusal(529, "busy"), false);
+assert.equal(L.isRequestRefusal(200, ""), false);
+
 console.log("ai-usage-logic tests passed");

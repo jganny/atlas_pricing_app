@@ -273,6 +273,59 @@ const jsonReply = (usage, model = "claude-sonnet-5-5") =>
   await U._test.checkSpike(when);
   assert.equal(sent2.length, 1, "a normal day sends nothing");
 
+  // ───────────── the cost policy in the wrapper ─────────────
+  const pdb = makeFakeDb();
+  U._test.setDb(pdb);
+  const sentBodies = [];
+  let refuse = null; // a function deciding whether to refuse a request body
+  globalThis.fetch = async (url, init) => {
+    if (!String(url).startsWith("https://api.anthropic.com")) return new Response("ok", { status: 200 });
+    const body = JSON.parse(init.body);
+    sentBodies.push(body);
+    if (refuse && refuse(body)) return new Response('{"type":"error","error":{"type":"invalid_request_error","message":"thinking: not supported"}}', { status: 400 });
+    return new Response(JSON.stringify({ model: body.model, content: [{ type: "text", text: "ok" }], usage: { input_tokens: 1000, output_tokens: 100 } }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  U._test.resetInstall();
+  U.install();
+  const post = (body) => fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const base = { max_tokens: 400, messages: [{ role: "user", content: "hi" }] };
+
+  // an old Haiku request goes out as Haiku 5.5, thinking off, and is counted at the new, lower price
+  await post({ ...base, model: "claude-haiku-4-5-20251001" });
+  assert.deepEqual([sentBodies[0].model, sentBodies[0].thinking], ["claude-haiku-5-5", { type: "disabled" }]);
+  const monthDoc = pdb.store.get(`aiUsage/${istParts().month}`);
+  assert.ok(JSON.stringify(monthDoc).includes("claude_haiku_5_5"), "counted under the model that actually answered");
+  // this server instance is "draftEnquiryReply": a Sonnet request without a thinking choice goes out with none
+  await post({ ...base, model: "claude-sonnet-5-5" });
+  assert.deepEqual(sentBodies[1].thinking, { type: "between_tools" });
+  // an explicit choice is left alone
+  await post({ ...base, model: "claude-sonnet-5-5", thinking: { type: "adaptive" } });
+  assert.deepEqual(sentBodies[2].thinking, { type: "adaptive" });
+
+  // the AI service refuses the changed request: the original is sent once more, and the caller gets that answer
+  sentBodies.length = 0;
+  refuse = (b) => b.model === "claude-haiku-5-5";
+  const rr = await post({ ...base, model: "claude-haiku-4-5-20251001", temperature: 0 });
+  assert.equal(rr.status, 200, "the feature still works");
+  assert.equal(sentBodies.length, 2, "tried the cheaper way, then the original");
+  assert.deepEqual([sentBodies[1].model, sentBodies[1].temperature, sentBodies[1].thinking], ["claude-haiku-4-5-20251001", 0, undefined], "the retry is exactly the original request");
+  assert.equal((await rr.json()).model, "claude-haiku-4-5-20251001");
+  // a request the policy did not change is not retried
+  sentBodies.length = 0;
+  refuse = () => true;
+  const nr = await post({ ...base, model: "claude-opus-5-5" });
+  assert.equal(nr.status, 400);
+  assert.equal(sentBodies.length, 1);
+  // a refusal for another reason (credit) is not retried either
+  sentBodies.length = 0;
+  globalThis.fetch = async (url, init) => {
+    sentBodies.push(JSON.parse(init.body));
+    return new Response('{"type":"error","error":{"message":"Your credit balance is too low to access the Anthropic API."}}', { status: 400 });
+  };
+  const cr = await post({ ...base, model: "claude-haiku-4-5-20251001" });
+  assert.equal(cr.status, 400);
+  assert.equal(sentBodies.length, 1, "no retry when the account is out of credit");
+
   console.log("ai-usage tests passed");
 })().catch((e) => {
   console.error(e);
