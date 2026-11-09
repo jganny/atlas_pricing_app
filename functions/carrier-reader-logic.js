@@ -74,6 +74,7 @@ const LEADING = ["carrier", "origin", "destination", "currency", "validFrom", "v
 
 const FORMAT =
   "Reply with ONLY plain lines, no markdown, no commentary. " +
+  "We load GENERAL CARGO rates only. When a document carries several rate cards or cargo types for the same route (for example general cargo, dangerous goods DGR, pharma, perishables, valuables, live animals, courier or express), extract ONLY the general cargo rate card (often marked GCR, GEN, GENERAL or NORMAL) and skip every other card, so each route appears once. If the part you are given holds only non-general-cargo cards, reply with exactly: NONE. " +
   "Line 1 is COLUMNS followed by the weight in kg at which each printed per-kg rate column starts, left to right, separated by | , for example COLUMNS|0|100|300|500. " +
   "Use 0 for a column that applies from the first kilo (headed Normal, General, Below 45 and so on). List only per-kg rate columns, never the minimum charge. Read the numbers from the column headings; do not assume them. " +
   "Then one line per route (origin and destination), with these fields separated by | : " +

@@ -221,3 +221,12 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.match(note, /ONLY/);
   assert.match(note, /do not extract any route from it/);
 }
+
+// --- only general cargo is loaded: other rate cards in the same document are skipped ---
+{
+  for (const sys of L.systemPrompts()) {
+    assert.match(sys, /GENERAL CARGO rates only/);
+    assert.match(sys, /dangerous goods DGR, pharma/);
+    assert.match(sys, /each route appears once/);
+  }
+}
