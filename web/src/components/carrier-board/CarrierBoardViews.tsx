@@ -1,16 +1,11 @@
 "use client";
 
-import { MAP_BANDS, PER_KG_BREAKS, CARRIER_RULES, bandIndex, breakKeyFor, ruleFor, ruleText, sourceFor, type LaneView, type PricedRow } from "@/lib/carriers/board";
+import { PER_KG_BREAKS, breakKeyFor, type LaneView, type PricedRow } from "@/lib/carriers/board";
 import { cn } from "@/lib/utils";
 
 const SERIES = ["#2563eb", "#0f8b7e", "#c2410c", "#b45309", "#475569", "#be185d"];
 const fmt = (n: number) => n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
-const SOURCE_STYLE = {
-  Tariff: "bg-emerald-100 text-emerald-800",
-  Portal: "bg-blue-100 text-blue-800",
-  Email: "bg-amber-100 text-amber-900",
-} as const;
 
 /** Rate per kg at each weight break, one step line per airline; the shaded band is the shipment's weight. */
 export function CompareChart({ lane, weightKg }: { lane: LaneView; weightKg: number }) {
@@ -104,43 +99,6 @@ export function ValidityTimeline({ rows, today }: { rows: PricedRow[]; today: Da
         <span className="relative h-4">{months.map((m) => <span key={m.t} className="absolute" style={{ left: `calc(${pct(m.t)}% + 3px)` }}>{m.label}</span>)}</span>
         <span className="text-right">valid to</span>
       </div>
-    </div>
-  );
-}
-
-/** Which source gives the rate for each weight band, airline by airline. The shipment's band is outlined. */
-export function ProcurementMap({ lane, weightKg }: { lane: LaneView; weightKg: number }) {
-  const ci = bandIndex(weightKg);
-  const codes = new Map<string, { name: string; has: boolean }>();
-  for (const r of CARRIER_RULES) codes.set(r.code, { name: r.name, has: false });
-  for (const p of lane.priced) codes.set(p.code, { name: p.name, has: true });
-  for (const o of lane.other) if (!codes.has(o.code)) codes.set(o.code, { name: o.name, has: false });
-  const rows = [...codes.entries()];
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] border-separate border-spacing-y-1 text-xs">
-        <thead>
-          <tr className="text-[var(--color-text-muted)]">
-            <th className="text-left font-normal" />
-            {MAP_BANDS.map((b, i) => <th key={b.label} className={cn("px-1 text-center font-normal", i === ci && "font-semibold text-blue-700")}>{b.label} kg</th>)}
-            <th className="pl-2 text-left font-normal">Rule</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([code, info]) => (
-            <tr key={code}>
-              <td className="whitespace-nowrap pr-3 font-semibold text-[var(--color-atlas-navy)]">{code} <span className="font-normal text-[var(--color-text-muted)]">{info.name.split(" ")[0]}</span></td>
-              {MAP_BANDS.map((b, i) => {
-                // "Tariff" only where a tariff is really on file; otherwise that band is asked by email (the same fallback the list uses).
-                const raw = sourceFor(ruleFor(code), b.rep, info.has);
-                const s = raw === "Tariff" && !info.has ? "Email" : raw;
-                return <td key={b.label} className="px-0.5"><span title={raw === "Tariff" && !info.has ? "The rule says use the tariff, but none is loaded for this lane yet" : undefined} className={cn("block rounded-md py-1 text-center font-semibold", SOURCE_STYLE[s], i === ci && "ring-2 ring-blue-600")}>{s}</span></td>;
-              })}
-              <td className="whitespace-nowrap pl-2 text-[var(--color-text-muted)]">{ruleText(ruleFor(code))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

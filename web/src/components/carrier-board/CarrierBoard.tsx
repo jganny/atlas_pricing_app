@@ -12,7 +12,7 @@ import { isAdminUser } from "@/lib/quotes/team-roles";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { CarrierReaderPanel } from "./CarrierReaderPanel";
-import { CompareChart, ProcurementMap, RateGrid, ValidityTimeline } from "./CarrierBoardViews";
+import { CompareChart, RateGrid, ValidityTimeline } from "./CarrierBoardViews";
 import { TariffBrowser } from "./TariffBrowser";
 import { RateEmailDialog, type RateEmailTarget } from "./RateEmailDialog";
 
@@ -219,20 +219,20 @@ export function CarrierBoard() {
 
       <section className="flex flex-wrap items-end gap-3" aria-label="Lane and weight">
         {[
-          { id: "cb-from", label: "From", value: from, set: setFrom, ph: "BLR", w: "w-28" },
-          { id: "cb-to", label: "To", value: to, set: setTo, ph: "FRA", w: "w-28" },
+          { id: "cb-from", label: "From", value: from, set: setFrom, ph: "Airport code", w: "w-40" },
+          { id: "cb-to", label: "To", value: to, set: setTo, ph: "Airport code", w: "w-40" },
         ].map((f, i) => (
           <div key={f.id} className="flex items-end gap-3">
             {i === 1 ? <span className="pb-2.5 text-lg text-[var(--color-text-muted)]" aria-hidden>→</span> : null}
             <label className="block text-xs font-semibold text-[var(--color-text-muted)]" htmlFor={f.id}>
               {f.label}
-              <input id={f.id} value={f.value} maxLength={3} placeholder={f.ph} onChange={(e) => f.set(e.target.value.toUpperCase())} className={cn("mt-1 block h-11 rounded-xl border border-[var(--color-border-strong)] bg-white px-3 font-mono text-lg font-semibold uppercase text-[var(--color-text)]", f.w)} />
+              <input id={f.id} value={f.value} maxLength={3} placeholder={f.ph} onChange={(e) => f.set(e.target.value.toUpperCase())} className={cn("mt-1 block h-11 rounded-xl border border-[var(--color-border-strong)] bg-white px-3 font-mono text-lg font-semibold uppercase text-[var(--color-text)] placeholder:font-sans placeholder:text-sm placeholder:font-normal placeholder:normal-case", f.w)} />
             </label>
           </div>
         ))}
         <label className="block text-xs font-semibold text-[var(--color-text-muted)]" htmlFor="cb-weight">
           Weight, kg
-          <input id="cb-weight" value={weight} inputMode="decimal" onChange={(e) => setWeight(e.target.value)} className="mt-1 block h-11 w-32 rounded-xl border border-[var(--color-border-strong)] bg-white px-3 font-mono text-lg font-semibold text-[var(--color-text)]" />
+          <input id="cb-weight" value={weight} inputMode="decimal" placeholder="Weight" onChange={(e) => setWeight(e.target.value)} className="mt-1 block h-11 w-32 rounded-xl border border-[var(--color-border-strong)] bg-white px-3 font-mono text-lg font-semibold text-[var(--color-text)] placeholder:font-sans placeholder:text-sm placeholder:font-normal" />
         </label>
         <div className="grow" />
         {lane && lane.currencies.length > 1 ? (
@@ -246,12 +246,7 @@ export function CarrierBoard() {
         ) : null}
       </section>
 
-      {!laneOk ? (
-        <section className="rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-white px-6 py-10 text-center" data-testid="board-empty">
-          <p className="text-base font-semibold text-[var(--color-atlas-navy)]">Type the airports and the weight</p>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">For example BLR to FRA at 300 kg. You will see every airline&apos;s rate, and how to get the ones that are not on file.</p>
-        </section>
-      ) : tariffs.isLoading ? (
+      {!laneOk ? null : tariffs.isLoading ? (
         <p className="text-sm text-[var(--color-text-muted)]">Loading rates…</p>
       ) : lane ? (
         <>
@@ -336,7 +331,6 @@ export function CarrierBoard() {
           <section className="grid gap-4 lg:grid-cols-2" aria-label="Charts">
             <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-cmp"><h2 className="mb-2 text-sm font-bold">Rate per kg by weight break</h2><CompareChart lane={lane} weightKg={w} /></div>
             <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-val"><h2 className="mb-3 text-sm font-bold">Tariff validity</h2><ValidityTimeline rows={lane.priced} today={today} /></div>
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5 lg:col-span-2" data-testid="view-map"><h2 className="mb-1 text-sm font-bold">How each airline&apos;s rate is obtained, by weight</h2><p className="mb-3 text-xs text-[var(--color-text-muted)]">From the remarks in your procurement sheet. An airline not in the sheet is asked by email unless a tariff is on file.</p><ProcurementMap lane={lane} weightKg={w} /></div>
           </section>
 
           <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
