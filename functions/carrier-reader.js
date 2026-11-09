@@ -135,8 +135,9 @@ async function publishToAirDesk(db, applied, circ, circularId) {
   let published = 0;
   const byCarrier = new Map();
   for (const r of applied) {
-    if (!byCarrier.has(r.carrierCode)) byCarrier.set(r.carrierCode, []);
-    byCarrier.get(r.carrierCode).push(r);
+    const key = L.deskCode(r);
+    if (!byCarrier.has(key)) byCarrier.set(key, []);
+    byCarrier.get(key).push(r);
   }
   for (const [code, rows] of byCarrier) {
     const snap = await db.collection("air_tariffs").where("carrierCode", "==", code).get();

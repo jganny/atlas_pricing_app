@@ -57,7 +57,9 @@ export function autoAirlines(
 ): AutoCarriers<AirlineOption> {
   if (!originCode || !destCode) return { options: [], skipped: [] };
   const have = new Set((opts.alreadyNamed ?? []).map(normalizeCarrierName));
-  const rows = latestPerCarrier(tariffs, originCode, destCode).filter((t) => hasAirRate(t) && !have.has(normalizeCarrierName(t.carrier)));
+  // A special rate card (EK-DGR, EK-PHARMA...) is offered on the "This lane" row for the user to pick, never added automatically.
+  const generalCargo = (t: AirTariff) => !t.rateClass || t.rateClass.toUpperCase() === "GCR";
+  const rows = latestPerCarrier(tariffs, originCode, destCode).filter((t) => generalCargo(t) && hasAirRate(t) && !have.has(normalizeCarrierName(t.carrier)));
   const { keep, skipped, currency } = sameCurrency(rows);
   const options = keep.slice(0, MAX_AUTO_CARRIERS).map((t, i) =>
     createAirlineOption({ name: t.carrier, laneId: opts.laneId ?? "", breaks: { ...EMPTY_AIR_BREAKS, ...t.breaks } }, i === 0 && have.size === 0),

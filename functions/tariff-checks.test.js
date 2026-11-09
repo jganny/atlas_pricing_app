@@ -57,5 +57,10 @@ assert.match(r.hold[0].reasons[0], /first read did not find/);
 r = T.decide([row({ currency: "USD" })], [row({ currency: "USD" })], [row()]);
 assert.equal(r.apply.length, 1);
 assert.equal(T.rowKey(row()), "EK|BOM|DXB|INR");
+assert.equal(T.rowKey(row({ rateClass: "GCR" })), "EK|BOM|DXB|INR", "general cargo keeps the old key");
+assert.equal(T.rowKey(row({ rateClass: "dgr" })), "EK|BOM|DXB|INR|DGR", "a special card is its own row");
+// the same route on two cards is not a disagreement: each card is decided on its own
+r = T.decide([row(), row({ rateClass: "DGR" })], [row(), row({ rateClass: "DGR" })], []);
+assert.equal(r.apply.length, 2);
 
 console.log("tariff checks ok");

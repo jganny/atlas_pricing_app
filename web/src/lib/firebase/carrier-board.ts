@@ -15,8 +15,12 @@ function mapTariff(d: Record<string, unknown>): BoardTariff {
   const raw = (d.breaks ?? {}) as Record<string, unknown>;
   const breaks: BoardTariff["breaks"] = {};
   for (const k of KEYS) breaks[k] = num(raw[k]);
+  const base = String(d.carrierCode ?? "").toUpperCase();
+  const cls = String(d.rateClass ?? "").toUpperCase();
   return {
-    carrierCode: String(d.carrierCode ?? "").toUpperCase(),
+    // A special rate card (DGR, PHARMA...) is its own line, tagged on the airline's code: "EK-DGR".
+    carrierCode: cls && cls !== "GCR" ? `${base}-${cls}` : base,
+    rateClass: cls || "GCR",
     origin: String(d.origin ?? "").toUpperCase(),
     destination: String(d.destination ?? "").toUpperCase(),
     currency: String(d.currency ?? "").toUpperCase(),

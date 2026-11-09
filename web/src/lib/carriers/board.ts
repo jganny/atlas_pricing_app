@@ -55,9 +55,25 @@ export const CARRIER_RULES: CarrierRule[] = [
 
 export const ruleFor = (code: string): CarrierRule | undefined => CARRIER_RULES.find((r) => r.code === code.toUpperCase());
 
+/** "EK-DGR" -> { base: "EK", cls: "DGR" }. A general cargo card is just "EK". */
+export function splitClassCode(code: string): { base: string; cls: string } {
+  const i = code.indexOf("-");
+  return i < 0 ? { base: code, cls: "" } : { base: code.slice(0, i), cls: code.slice(i + 1) };
+}
+
+/** The name shown for a code: "Emirates", or "Emirates · DGR" for a special rate card. */
+export function nameForCode(code: string, names: Record<string, string>): string {
+  const { base, cls } = splitClassCode(code);
+  const n = ruleFor(base)?.name || names[base] || base;
+  return cls ? `${n} · ${cls}` : n;
+}
+
 /** One airline route saved by the reader (carrierTariffs). Weight-break rates are the airline's charge per kg; min is a flat minimum. */
 export interface BoardTariff {
+  /** The airline's code; a special rate card carries its class too, e.g. "EK-DGR". */
   carrierCode: string;
+  /** "GCR" for general cargo, or the card's class (DGR, PHARMA, PRIORITY...). */
+  rateClass?: string;
   origin: string;
   destination: string;
   currency: string;
@@ -189,7 +205,7 @@ export function buildLane(tariffs: BoardTariff[], weightKg: number, today: Date,
   const currencies = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c]) => c);
   const currency = preferCurrency && currencies.includes(preferCurrency) ? preferCurrency : (currencies[0] ?? "INR");
 
-  const nameOf = (code: string) => ruleFor(code)?.name || names[code] || code;
+  const nameOf = (code: string) => nameForCode(code, names);
   const priced: PricedRow[] = [];
   const other: OtherRow[] = [];
   const otherCurrency: string[] = [];

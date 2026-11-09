@@ -19,7 +19,7 @@ const rows = L.normalizeRows(
   "TK",
 );
 assert.equal(rows.length, 2, "a row without a route is dropped");
-assert.deepEqual(rows[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: null, plus300: null, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "", rateKind: "contract", notes: "" });
+assert.deepEqual(rows[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: null, plus300: null, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "", rateKind: "contract", rateClass: "GCR", notes: "" });
 assert.equal(rows[1].carrierCode, "TK", "the airline from the circular's own record fills a missing code");
 assert.equal(rows[1].currency, "", "a missing currency is never guessed");
 assert.equal(rows[1].breaks.plus45, 0);
@@ -56,7 +56,7 @@ const ln = (n, ...f) => [...f, ...Array(8 + n + 1 - f.length).fill("")].join("|"
 const ok = L.parseRowLines(["COLUMNS|0|45|100|300", ln(4, "EK", "BOM", "DXB", "INR", "2026-09-01", "2026-12-31", "contract", "1500", "31", "28.5", "26", "24.5", "fuel extra"), ln(4, "EK", "BLR", "LHR", "", "", "", "published")].join("\n"));
 assert.equal(ok.rows.length, 2);
 assert.deepEqual(ok.columns, [0, 45, 100, 300]);
-assert.deepEqual(L.normalizeRows(ok, "EK")[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: 26, plus300: 24.5, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "2026-12-31", rateKind: "contract", notes: "fuel extra" });
+assert.deepEqual(L.normalizeRows(ok, "EK")[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: 26, plus300: 24.5, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "2026-12-31", rateKind: "contract", rateClass: "GCR", notes: "fuel extra" });
 assert.equal(L.normalizeRows(ok, "EK")[1].currency, "", "a missing currency is never guessed");
 assert.equal(L.normalizeRows(ok, "EK")[1].breaks.plus45, null, "an empty field stays empty, never 0");
 
@@ -222,13 +222,38 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.match(note, /do not extract any route from it/);
 }
 
-// --- only general cargo is loaded: other rate cards in the same document are skipped ---
+// --- every rate card is read, each with its class (GCR for general cargo; DGR, PHARMA, ... for special cards) ---
 {
   for (const sys of L.systemPrompts()) {
-    assert.match(sys, /GENERAL CARGO rates only/);
-    assert.match(sys, /dangerous goods DGR, pharma/);
-    assert.match(sys, /each route appears once/);
+    assert.match(sys, /Extract EVERY card/);
+    assert.match(sys, /rateClass/);
+    assert.match(sys, /GCR for the general cargo card/);
   }
+  assert.equal(L.rateClassOf(""), "GCR");
+  assert.equal(L.rateClassOf("General Cargo"), "GCR");
+  assert.equal(L.rateClassOf("normal"), "GCR");
+  assert.equal(L.rateClassOf("DGR"), "DGR");
+  assert.equal(L.rateClassOf("pharma"), "PHARMA");
+  assert.equal(L.rateClassOf("AXD 2°-8°C"), "AXD28C");
+  assert.equal(L.rateClassOf("A very long class name indeed"), "AVERYLONGCLASS");
+  assert.equal(L.deskCode({ carrierCode: "EK" }), "EK");
+  assert.equal(L.deskCode({ carrierCode: "ek", rateClass: "gcr" }), "EK");
+  assert.equal(L.deskCode({ carrierCode: "EK", rateClass: "DGR" }), "EK-DGR");
+  // a line may carry the class as its very last field; a line without it is general cargo
+  const plain = L.parseRowLines(["COLUMNS|0|45", ln(2, "EK", "BOM", "FRA", "INR", "", "", "contract", "5000", "100", "90")].join("\n"));
+  assert.ok(plain && plain.rows[0].rateClass === "GCR", "an old-style line is general cargo");
+  const lineWithClass = ["EK", "BOM", "FRA", "INR", "", "", "contract", "5000", "100", "90", "", "DGR"].join("|");
+  const parsed = L.parseRowLines("COLUMNS|0|45\n" + lineWithClass);
+  assert.ok(parsed && parsed.rows.length === 1 && parsed.rows[0].rateClass === "DGR", "the last field is the class");
+  const rows = L.normalizeRows(parsed, "EK");
+  assert.equal(rows[0].rateClass, "DGR");
+  // a special card has its own record and its own desk entry; general cargo keeps the name it always had
+  assert.equal(L.tariffDocId({ carrierCode: "EK", origin: "BOM", destination: "FRA", currency: "INR" }), "EK_BOM_FRA_INR");
+  assert.equal(L.tariffDocId({ carrierCode: "EK", origin: "BOM", destination: "FRA", currency: "INR", rateClass: "DGR" }), "EK_BOM_FRA_INR_DGR");
+  const gcr = { carrierCode: "EK", origin: "BOM", destination: "FRA", currency: "INR", breaks: { min: 100, minus45: 5 } };
+  assert.equal(L.mergeRows([[gcr], [{ ...gcr, rateClass: "DGR" }], [{ ...gcr, rateClass: "DGR" }]]).length, 2, "the same route on two cards is two rows");
+  const plan = L.planDeskPublish([gcr, { ...gcr, rateClass: "DGR" }], {}, { circularCarrier: "Emirates SkyCargo", names: {} });
+  assert.deepEqual(plan.map((p) => [p.data.carrier, p.data.carrierCode, p.data.rateClass]), [["Emirates SkyCargo", "EK", "GCR"], ["EK-DGR", "EK-DGR", "DGR"]]);
 }
 
 // --- a reply of NONE plus an explanation is "no routes here"; anything with route lines is read normally ---

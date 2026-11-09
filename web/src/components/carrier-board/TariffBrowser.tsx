@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { loadAirlineNames } from "@/lib/carriers/airline-names";
-import { daysLeft, PER_KG_BREAKS, ruleFor, validityOf } from "@/lib/carriers/board";
+import { daysLeft, nameForCode, PER_KG_BREAKS, validityOf } from "@/lib/carriers/board";
 import { fetchAllTariffs } from "@/lib/firebase/carrier-board";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ export function TariffBrowser({ onPick }: { onPick: (from: string, to: string) =
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [rows]);
   const currencies = useMemo(() => [...new Set(rows.map((r) => r.currency).filter(Boolean))].sort(), [rows]);
-  const nameOf = (code: string) => ruleFor(code)?.name || names.data?.[code] || code;
+  const nameOf = (code: string) => nameForCode(code, names.data ?? {});
   const f = from.trim().toUpperCase();
   const t = to.trim().toUpperCase();
   const filtered = useMemo(

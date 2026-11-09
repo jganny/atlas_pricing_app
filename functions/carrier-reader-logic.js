@@ -12,6 +12,19 @@ function toNumber(v) {
 const code = (v, len) => String(v ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, len);
 const iso = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v ?? "").trim()) ? String(v).trim() : "");
 
+/** A rate card's class as printed -> our short tag. Plain general cargo is "GCR"; anything else keeps its own short name (DGR, PHARMA, PRIORITY...). */
+function rateClassOf(v) {
+  const c = String(v ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 14);
+  return !c || ["GCR", "GEN", "GENERAL", "GENERALCARGO", "GENCARGO", "NORMAL", "STD", "STANDARD"].includes(c) ? "GCR" : c;
+}
+
+/** The code the Air desk knows a rate card by: the airline alone for general cargo, "EK-DGR" for a special card. */
+function deskCode(row) {
+  const cls = rateClassOf(row && row.rateClass);
+  const c = String((row && row.carrierCode) || "").toUpperCase();
+  return cls === "GCR" ? c : `${c}-${cls}`;
+}
+
 /**
  * The AI's rows -> clean rows. The currency is never guessed: if the circular does not show it, it stays empty and the
  * checks hold the row. Rows without a route are dropped.
@@ -38,6 +51,7 @@ function normalizeRows(parsed, fallbackCarrier = "") {
       validFrom: iso(r.validFrom),
       validTo: iso(r.validTo),
       rateKind: ["contract", "published"].includes(r.rateKind) ? r.rateKind : "unknown",
+      rateClass: rateClassOf(r.rateClass),
       notes: typeof r.notes === "string" ? r.notes.slice(0, 300) : "",
     });
   }
@@ -46,7 +60,9 @@ function normalizeRows(parsed, fallbackCarrier = "") {
 
 /** The stored record's name: airline, route, currency. Stable, so a new circular replaces the same row. */
 function tariffDocId(row) {
-  return [row.carrierCode, row.origin, row.destination, row.currency || "NA"].join("_").replace(/[^A-Za-z0-9_]/g, "");
+  const cls = rateClassOf(row.rateClass);
+  // General cargo keeps the name it always had; a special card gets its class on the end.
+  return [row.carrierCode, row.origin, row.destination, row.currency || "NA", ...(cls === "GCR" ? [] : [cls])].join("_").replace(/[^A-Za-z0-9_]/g, "");
 }
 
 function fileKind(fileName, storagePath) {
@@ -74,7 +90,8 @@ const LEADING = ["carrier", "origin", "destination", "currency", "validFrom", "v
 
 const FORMAT =
   "Reply with ONLY plain lines, no markdown, no commentary. " +
-  "We load GENERAL CARGO rates only. When a document carries several rate cards or cargo types for the same route (for example general cargo, dangerous goods DGR, pharma, perishables, valuables, live animals, courier or express), extract ONLY the general cargo rate card (often marked GCR, GEN, GENERAL or NORMAL) and skip every other card, so each route appears once. If the part you are given holds only non-general-cargo cards, reply with exactly: NONE. " +
+  "A document may carry several rate cards for the same route, each with its own class (general cargo, dangerous goods DGR, pharma, priority, valuable, perishable, temperature-controlled, AOG and so on). Extract EVERY card, one line per route per card, and give each line its class in the last field. " +
+  "Skip only cards that are not a per-kg weight-break tariff (for example surcharge-only, service-fee or schedule tables). If the part you are given holds no per-kg rates at all, reply with exactly: NONE. " +
   "Line 1 is COLUMNS followed by the weight in kg at which each printed per-kg rate column starts, left to right, separated by | , for example COLUMNS|0|100|300|500. " +
   "Use 0 for a column that applies from the first kilo (headed Normal, General, Below 45 and so on). List only per-kg rate columns, never the minimum charge. Read the numbers from the column headings; do not assume them. " +
   "For example, a table headed MINIMUM | NORMAL | +45 KGS | +100 KGS | +300 KGS | +500 KGS | +1000 KGS gives COLUMNS|0|45|100|300|500|1000, and the row 'BOM LHR INR 25500 1275 1105 1003 935 867 867' gives min 25500 and then the six rates 1275, 1105, 1003, 935, 867, 867 in that order. The MINIMUM column is the flat minimum charge: it goes in the min field and is never a rate column. " +
@@ -82,7 +99,8 @@ const FORMAT =
   "carrier (2-letter airline code) | origin (3-letter airport) | destination (3-letter airport) | currency (3-letter code exactly as the document states it, whether in the rate table, a heading, or a note or footnote such as 'rates in INR' or 'INR 12 per kg' on any page; empty only if the document does not say anywhere) | " +
   "validFrom (YYYY-MM-DD or empty) | validTo (YYYY-MM-DD or empty) | rateKind (contract, published or unknown) | min (flat minimum charge or empty) | " +
   "then one per-kg rate for each column named on the COLUMNS line, in the same order (empty if not shown) | " +
-  "notes (short, only if something is unclear, never contains the | character). " +
+  "notes (short, only if something is unclear, never contains the | character) | " +
+  "rateClass (the very last field: GCR for the general cargo card; otherwise the card's class in short capitals exactly as the document labels it, such as DGR, PHARMA, PRIORITY, VALUABLE, PERISHABLE or AOG; never leave it empty). " +
   "Write numbers plainly, for example 28.5, without currency symbols or thousands separators. Leave a field empty, never write 0 or a guess, when the document does not clearly show it. " +
   "rateKind is contract if the document calls itself an agreement or contract rate, published if it calls itself a published or standard tariff, else unknown. " +
   "Never invent, estimate or calculate a number that is not printed. Do not guess the currency: if it is not stated, leave it empty. " +
@@ -109,15 +127,18 @@ function parseRowLines(text) {
   if (!slots) return null;
   const width = LEADING.length + thresholds.length + 1; // leading fields, one rate per column, notes
   const rows = [];
-  for (const parts of cleaned) {
-    if (parts.length !== width) continue;
+  for (const raw of cleaned) {
+    // The class, when given, is the very last field (after the notes). A line without it is general cargo.
+    if (raw.length !== width && raw.length !== width + 1) continue;
+    const parts = raw.length === width + 1 ? raw.slice(0, width) : raw;
+    const lineClass = raw.length === width + 1 ? raw[width] : "";
     const [carrier, origin, destination, currency, validFrom, validTo, rateKind, min, ...rest] = parts;
     if (!/^[A-Za-z0-9]{2,3}$/.test(carrier) || !/^[A-Za-z]{3}$/.test(origin) || !/^[A-Za-z]{3}$/.test(destination)) continue; // a header or stray line
     const breaks = { min: min === "" ? null : min, minus45: null, plus45: null, plus100: null, plus300: null, plus500: null, plus1000: null };
     slots.forEach((slot, i) => {
       breaks[slot] = rest[i] === "" ? null : rest[i];
     });
-    rows.push({ carrierCode: carrier, origin, destination, currency: currency || null, validFrom: validFrom || null, validTo: validTo || null, rateKind, breaks, notes: rest[thresholds.length] || "" });
+    rows.push({ carrierCode: carrier, origin, destination, currency: currency || null, validFrom: validFrom || null, validTo: validTo || null, rateKind, rateClass: rateClassOf(lineClass), breaks, notes: rest[thresholds.length] || "" });
   }
   return rows.length ? { rows, columns: thresholds } : null;
 }
@@ -196,7 +217,7 @@ function mergeRows(parts) {
   const out = [];
   for (const rows of parts) {
     for (const r of rows) {
-      const k = [r.carrierCode, r.origin, r.destination, r.currency].join("|");
+      const k = [r.carrierCode, r.origin, r.destination, r.currency, rateClassOf(r.rateClass)].join("|");
       if (seen.has(k)) continue;
       seen.add(k);
       out.push(r);
@@ -222,7 +243,7 @@ async function mapLimit(items, limit, fn) {
 
 /** Two differently-framed instructions, so the two reads are independent rather than a copy of each other. */
 function systemPrompts() {
-  const base = "You read airline general-cargo tariff documents (PDF or spreadsheet text) for a freight forwarder and extract the airline's rates. ";
+  const base = "You read airline tariff documents (PDF or spreadsheet text) for a freight forwarder and extract the airline's rates. ";
   return [
     base + "Work row by row in the order the document prints them: for each route line, copy its rates across. " + FORMAT,
     base + "First list every route (origin, destination) the document covers. Then, for each route, go through each weight-break column in turn and read the number from that column. Re-check each number against the page before you write it. " + FORMAT,
@@ -268,8 +289,10 @@ function planDeskPublish(rows, existingByLane, ctx) {
     plan.push({
       docId: (existingByLane && existingByLane[key]) || null,
       data: {
-        carrier: carrierNameFor(r.carrierCode, ctx.circularCarrier, ctx.names),
-        carrierCode: r.carrierCode,
+        // A special card is its own entry on the desk, named "EK-DGR", so the user picks it like any other airline.
+        carrier: rateClassOf(r.rateClass) === "GCR" ? carrierNameFor(r.carrierCode, ctx.circularCarrier, ctx.names) : deskCode(r),
+        carrierCode: deskCode(r),
+        rateClass: rateClassOf(r.rateClass),
         origin: r.origin,
         destination: r.destination,
         currency: r.currency,
@@ -329,4 +352,4 @@ function withDefaultCurrency(rows, currency) {
   return rows.map((r) => (r.currency ? r : { ...r, currency: c }));
 }
 
-module.exports = { originHint, withDefaultCurrency, AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, planPdfChunks, chunkNote, mergeRows, mapLimit };
+module.exports = { originHint, withDefaultCurrency, AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, planPdfChunks, chunkNote, mergeRows, mapLimit, rateClassOf, deskCode };

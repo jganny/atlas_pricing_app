@@ -11,6 +11,8 @@ import {
   findCarrierContact,
   freightFor,
   mailtoLink,
+  nameForCode,
+  splitClassCode,
   ruleFor,
   sourceFor,
   validityOf,
@@ -147,3 +149,19 @@ assert.match(mailtoLink("a@b.c", "Hi there", "line 1\nline 2"), /^mailto:a%40b\.
 }
 
 console.log("carrier board logic ok");
+
+// --- special rate cards: "EK-DGR" is its own line, named with its class ---
+{
+  const mk = (carrierCode: string, freight: number) => ({
+    carrierCode, origin: "DEL", destination: "FRA", currency: "INR", validFrom: "", validTo: "", rateKind: "unknown",
+    breaks: { plus300: freight }, notes: "", updatedAt: 1, sourceFile: "",
+  });
+  assert.deepEqual(splitClassCode("EK-DGR"), { base: "EK", cls: "DGR" });
+  assert.deepEqual(splitClassCode("EK"), { base: "EK", cls: "" });
+  assert.equal(nameForCode("EK-DGR", { EK: "Emirates SkyCargo" }), "Emirates · DGR", "the airline's own rule name wins, with the class after it");
+  assert.equal(nameForCode("XX-PHARMA", { XX: "Some Air" }), "Some Air · PHARMA");
+  assert.equal(nameForCode("XX", { XX: "Some Air" }), "Some Air");
+  const lane = buildLane([mk("EK", 240), mk("EK-DGR", 360), mk("EK-PHARMA", 290)], 300, new Date("2026-11-10"), {});
+  assert.deepEqual(lane.priced.map((p) => p.code).sort(), ["EK", "EK-DGR", "EK-PHARMA"], "each rate card is its own row");
+  assert.equal(lane.priced.find((p) => p.code === "EK-DGR")?.name, "Emirates · DGR");
+}

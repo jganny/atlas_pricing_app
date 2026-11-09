@@ -14,7 +14,10 @@ const AGREE_TOLERANCE = 0.005;
 /** A rate that moves more than this against what is on file is held (a fuel-like jump, or a misread digit). */
 const MAX_JUMP = 0.4;
 
-const rowKey = (r) => [r.carrierCode, r.origin, r.destination, r.currency].map((x) => String(x || "").trim().toUpperCase()).join("|");
+const rowKey = (r) =>
+  [r.carrierCode, r.origin, r.destination, r.currency, ...(r.rateClass && String(r.rateClass).toUpperCase() !== "GCR" ? [r.rateClass] : [])]
+    .map((x) => String(x || "").trim().toUpperCase())
+    .join("|");
 
 const num = (v) => (v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? null : Number(v));
 

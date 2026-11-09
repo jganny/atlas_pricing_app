@@ -115,6 +115,8 @@ export interface AirTariff {
   id: string
   carrier: string
   carrierCode: string
+  /** "GCR" (or empty) for general cargo; a special rate card's class otherwise (DGR, PHARMA...). Its carrier/carrierCode read e.g. "EK-DGR". */
+  rateClass?: string
   origin: string
   destination: string
   breaks: Record<string, { sell: number; buy: number }>

@@ -47,3 +47,13 @@ const s = autoLiners([sea({}), sea({ id: "2", carrier: "Maersk", mode: "lcl" }),
 assert.deepEqual(s.options.map((o) => o.name), ["MSC"], "only FCL carriers with a rate");
 assert.deepEqual(s.options[0].containers, [{ type: "20'GP", qty: 2, sellRate: 0, buyRate: 0 }], "same container, rates left for the tariff fill");
 console.log("auto-carriers tests passed");
+
+// --- a special rate card is never added by the auto-draft ---
+{
+  const tariff = (carrier: string, rateClass?: string) => ({
+    id: carrier, carrier, carrierCode: carrier, ...(rateClass ? { rateClass } : {}), origin: "DEL", destination: "FRA", currency: "INR",
+    breaks: { plus500: { sell: 0, buy: 240 } }, createdAt: "2026-11-09",
+  });
+  const auto = autoAirlines([tariff("Emirates"), tariff("EK-DGR", "DGR"), tariff("EK-PHARMA", "PHARMA")] as never, "DEL", "FRA");
+  assert.deepEqual(auto.options.map((o) => o.name), ["Emirates"]);
+}

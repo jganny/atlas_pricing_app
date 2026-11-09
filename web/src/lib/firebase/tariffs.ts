@@ -31,6 +31,7 @@ export async function fetchLiveAirTariffs(): Promise<AirTariff[]> {
       id: docSnap.id,
       carrier: String(data.carrier ?? ""),
       carrierCode: String(data.carrierCode ?? ""),
+      ...(data.rateClass ? { rateClass: String(data.rateClass) } : {}),
       origin: String(data.origin ?? "").toUpperCase(),
       destination: String(data.destination ?? "").toUpperCase(),
       breaks: (data.breaks as AirTariff["breaks"]) ?? {},
