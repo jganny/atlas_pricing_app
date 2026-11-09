@@ -18,6 +18,10 @@ const admin = require("firebase-admin");
 const crypto = require("crypto");
 const { defineSecret } = require("firebase-functions/params");
 const { ImapFlow } = require("imapflow");
+const P = require("./inbox-poll-logic");
+
+const MAX_PER_RUN = 40; // keeps the AI sorting and the mail server within the time allowed
+const FIRST_RUN_DAYS = 3; // the first time, only the last few days are looked at, never the whole mailbox
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -338,11 +342,26 @@ async function pollOne(mailbox, password, apiKey) {
   try {
     const lock = await client.getMailboxLock(IMAP.folder);
     try {
-      // Prefer unseen; cap batch so AI + IMAP stay within timeout.
-      const unseen = await client.search({ seen: false }, { uid: true });
-      const uids = Array.isArray(unseen) ? unseen.slice(-25) : [];
+      // Read only mail newer than the last one handled (the number is kept in Firestore). Nothing is changed in the mailbox.
+      const stateRef = db.collection("inbox_poll_state").doc(mailbox.key);
+      const state = (await stateRef.get()).data() || {};
+      const firstRun = typeof state.lastUid !== "number";
+      let uids = [];
+      let tip = null;
+      if (firstRun) {
+        const tipMsg = await client.fetchOne("*", { uid: true });
+        tip = tipMsg && tipMsg.uid ? tipMsg.uid : null;
+        const recent = await client.search({ since: new Date(Date.now() - FIRST_RUN_DAYS * 86_400_000) }, { uid: true });
+        uids = P.nextUids(recent, 0, MAX_PER_RUN, true);
+      } else {
+        const newer = await client.fetchAll(`${state.lastUid + 1}:*`, { uid: true }, { uid: true });
+        uids = P.nextUids(newer.map((m) => m.uid), state.lastUid, MAX_PER_RUN, false);
+      }
 
-      for await (const msg of client.fetch(uids, { envelope: true, source: true, uid: true })) {
+      // UIDs, not sequence numbers (the third argument says so). All collected first: no mail-server command runs while reading them.
+      const messages = uids.length ? await client.fetchAll(uids, { envelope: true, source: { maxLength: 120000 }, uid: true }, { uid: true }) : [];
+
+      for (const msg of messages) {
         const messageId = msg.envelope?.messageId || `uid-${mailbox.key}-${msg.uid}`;
         const docId = crypto
           .createHash("sha1")
@@ -351,14 +370,7 @@ async function pollOne(mailbox, password, apiKey) {
           .slice(0, 24);
 
         const existing = await db.collection("inbox_enquiries").doc(docId).get();
-        if (existing.exists) {
-          try {
-            await client.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"]);
-          } catch {
-            /* optional */
-          }
-          continue;
-        }
+        if (existing.exists) continue;
 
         const raw = msg.source ? msg.source.toString("utf8") : "";
         // Work buffer only — never persisted in full.
@@ -370,13 +382,6 @@ async function pollOne(mailbox, password, apiKey) {
             .join(", ") || "";
 
         const classified = await classifyAndExtract(apiKey, subject, bodyWork);
-
-        // Mark seen either way so we do not re-process noise forever.
-        try {
-          await client.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"]);
-        } catch {
-          /* optional */
-        }
 
         if (classified.tag === "noise" || !ACTIONABLE.has(classified.tag)) {
           skippedNoise += 1;
@@ -411,6 +416,7 @@ async function pollOne(mailbox, password, apiKey) {
         });
         imported += 1;
       }
+      await stateRef.set({ lastUid: P.nextCursor(state.lastUid, uids, tip, firstRun), at: Date.now() }, { merge: true });
     } finally {
       lock.release();
     }
