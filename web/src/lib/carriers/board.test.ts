@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {
   bandIndex,
+  findCarrierContacts,
+  noticesFor,
+  type FuelNotice,
   breakKeyFor,
   buildLane,
   buildRateEmail,
@@ -120,5 +123,27 @@ assert.match(mail.body, /1000\+ kg break/);
 assert.match(mail.body, /Priya$/);
 assert.match(buildRateEmail({ airline: "Ethiopian", origin: "BLR", destination: "ADD", weightKg: 300, allBreaks: true }).body, /MIN, under 45 kg/);
 assert.match(mailtoLink("a@b.c", "Hi there", "line 1\nline 2"), /^mailto:a%40b\.c\?subject=Hi%20there&body=line%201%0Aline%202$/);
+
+// Contacts for an airline's detail panel: every matching, active airline contact that can be reached.
+{
+  const dir = [
+    { id: "1", name: "Emirates SkyCargo", category: "airline", email: "cargo@ek.example", contactPerson: "Asha Rao" },
+    { id: "2", name: "Emirates SkyCargo", category: "airline", email: "", phone: "+91 80 000 0000" },
+    { id: "3", name: "Emirates SkyCargo", category: "airline", email: "", phone: "" },
+    { id: "4", name: "Emirates SkyCargo", category: "airline", email: "old@ek.example", suspended: true },
+    { id: "5", name: "Emirates Shipping", category: "agency", email: "x@y.example" },
+    { id: "6", name: "EK", category: "airline", email: "code@ek.example" },
+  ] as unknown as DirectoryContact[];
+  assert.deepEqual(findCarrierContacts(dir, "EK", "Emirates").map((x) => x.id), ["1", "2", "6"], "reachable, active airline contacts only, matched by name or code");
+  assert.deepEqual(findCarrierContacts(dir, "QR", "Qatar Airways"), []);
+}
+
+// Fuel notices belong to an airline by carrier code or by the title's leading code.
+{
+  const mk = (o: Partial<FuelNotice>): FuelNotice => ({ circularId: "x", title: "", carrier: "", at: 1, effectiveFrom: "", validTo: "", summary: [], charges: [], deadlines: [], ...o });
+  const list = [mk({ circularId: "a", carrier: "EK", title: "EK_Fuel", at: 5 }), mk({ circularId: "b", carrier: "", title: "EK_FSC", at: 9 }), mk({ circularId: "c", carrier: "EY", title: "EY_FUEL" }), mk({ circularId: "d", carrier: "", title: "EKX_notes" })];
+  assert.deepEqual(noticesFor(list, "EK").map((n) => n.circularId), ["b", "a"], "newest first; a different airline's or a longer code's notice is not mixed in");
+  assert.deepEqual(noticesFor(list, ""), []);
+}
 
 console.log("carrier board logic ok");

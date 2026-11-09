@@ -3,64 +3,7 @@
 import { PER_KG_BREAKS, breakKeyFor, type LaneView, type PricedRow } from "@/lib/carriers/board";
 import { cn } from "@/lib/utils";
 
-const SERIES = ["#2563eb", "#0f8b7e", "#c2410c", "#b45309", "#475569", "#be185d"];
-const fmt = (n: number) => n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
-
-/** Rate per kg at each weight break, one step line per airline; the shaded band is the shipment's weight. */
-export function CompareChart({ lane, weightKg }: { lane: LaneView; weightKg: number }) {
-  const rows = lane.priced;
-  if (!rows.length) return <p className="text-sm text-[var(--color-text-muted)]">No airline has a tariff on this lane yet.</p>;
-  const L = 48, R = 84, T = 22, B = 44, W = 560, H = 290;
-  const pw = W - L - R, ph = H - T - B, bw = pw / PER_KG_BREAKS.length;
-  let lo = Infinity, hi = 0;
-  for (const r of rows) for (const b of PER_KG_BREAKS) {
-    const v = Number(r.tariff.breaks[b.key]);
-    if (v > 0) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
-  }
-  const step = Math.max(1, Math.ceil((hi - lo) / 4 / 5) * 5) || 1;
-  lo = Math.floor(lo / step) * step;
-  hi = Math.ceil(hi / step) * step;
-  if (hi === lo) hi = lo + step;
-  const Y = (v: number) => T + ph * (1 - (v - lo) / (hi - lo));
-  const ci = PER_KG_BREAKS.findIndex((b) => b.key === breakKeyFor(weightKg));
-  const ticks: number[] = [];
-  for (let v = lo; v <= hi + 1e-9; v += step) ticks.push(v);
-  const labels = rows.map((r, i) => {
-    const last = [...PER_KG_BREAKS].reverse().map((b) => Number(r.tariff.breaks[b.key])).find((v) => v > 0) ?? 0;
-    return { r, i, y: Y(last) + 4, v: last };
-  }).sort((a, b) => a.y - b.y);
-  for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 14) labels[i].y = labels[i - 1].y + 14;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full max-w-[640px]" role="img" aria-label="Rate per kilogram for each airline at each weight break">
-      <rect x={L + ci * bw} y={T} width={bw} height={ph} fill="#e7edfc" />
-      {ticks.map((v) => (
-        <g key={v}>
-          <line x1={L} x2={L + pw} y1={Y(v)} y2={Y(v)} stroke="#e4e8ef" />
-          <text x={L - 8} y={Y(v) + 4} textAnchor="end" fontSize="11" fill="#7d889b">{fmt(v)}</text>
-        </g>
-      ))}
-      {PER_KG_BREAKS.map((b, i) => (
-        <text key={b.key} x={L + i * bw + bw / 2} y={T + ph + 17} textAnchor="middle" fontSize="11.5" fill={i === ci ? "#0e1522" : "#7d889b"} fontWeight={i === ci ? 600 : 400}>{b.label}</text>
-      ))}
-      <text x={L + pw / 2} y={H - 6} textAnchor="middle" fontSize="11" fill="#7d889b">weight break, kg</text>
-      <text x={L} y={T - 8} fontSize="11" fill="#7d889b">{lane.currency} per kg</text>
-      {rows.map((r, i) => {
-        let d = "";
-        PER_KG_BREAKS.forEach((b, k) => {
-          const v = Number(r.tariff.breaks[b.key]);
-          if (!(v > 0)) return;
-          const x0 = L + k * bw, x1 = x0 + bw;
-          d += d ? ` V${Y(v)} H${x1}` : `M${x0} ${Y(v)} H${x1}`;
-        });
-        return <path key={r.code} d={d} fill="none" stroke={SERIES[i % SERIES.length]} strokeWidth={2.25} strokeLinejoin="round" />;
-      })}
-      {labels.map((l) => (
-        <text key={l.r.code} x={L + pw + 8} y={l.y} fontSize="11.5" fontWeight={600} fill={SERIES[l.i % SERIES.length]}>{l.r.code} {fmt(l.v)}</text>
-      ))}
-    </svg>
-  );
-}
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const isoDay = (s: string) => (/^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T00:00:00`).getTime() : null);

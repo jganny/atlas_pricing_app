@@ -5,14 +5,15 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ExternalLink, PlaneTakeoff } from "lucide-react";
 import { loadAirlineNames } from "@/lib/carriers/airline-names";
-import { buildLane, PER_KG_BREAKS, type LaneView, type OtherRow, type PricedRow } from "@/lib/carriers/board";
+import { buildLane, PER_KG_BREAKS, ruleFor, type LaneView, type OtherRow, type PricedRow } from "@/lib/carriers/board";
 import { fetchLaneTariffs } from "@/lib/firebase/carrier-board";
 import { activeSeatForLogin } from "@/lib/auth/desk-seats";
 import { isAdminUser } from "@/lib/quotes/team-roles";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { CarrierReaderPanel } from "./CarrierReaderPanel";
-import { CompareChart, RateGrid, ValidityTimeline } from "./CarrierBoardViews";
+import { RateGrid, ValidityTimeline } from "./CarrierBoardViews";
+import { AirlineDetail } from "./AirlineDetail";
 import { TariffBrowser } from "./TariffBrowser";
 import { RateEmailDialog, type RateEmailTarget } from "./RateEmailDialog";
 
@@ -88,21 +89,7 @@ function PricedRowView({ r, currency, first, open, onToggle }: { r: PricedRow; c
         </span>
         <ChevronDown className={cn("h-4 w-4 text-[var(--color-text-muted)] transition-transform", open && "rotate-180")} />
       </button>
-      {open ? (
-        <div className="pb-5" data-testid={`board-detail-${r.code}`}>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg bg-[var(--color-surface-muted)] px-4 py-3 text-sm sm:grid-cols-4">
-            <div><dt className="text-xs text-[var(--color-text-muted)]">Rate per kg</dt><dd className="font-semibold tabular-nums">{whole(r.freight.perKg)} at {breakLabel} kg</dd></div>
-            <div><dt className="text-xs text-[var(--color-text-muted)]">Freight</dt><dd className="font-semibold tabular-nums">{money(r.freight.freight)}</dd></div>
-            <div><dt className="text-xs text-[var(--color-text-muted)]">Valid</dt><dd className="font-semibold">{r.tariff.validFrom ? `${dateText(r.tariff.validFrom)} to ` : "to "}{dateText(r.tariff.validTo)}</dd></div>
-            <div><dt className="text-xs text-[var(--color-text-muted)]">Rate type</dt><dd className="font-semibold capitalize">{r.tariff.rateKind}</dd></div>
-          </dl>
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-[var(--color-text-muted)]">
-            {r.tariff.breaks.min ? <span>MIN {whole(r.tariff.breaks.min)}</span> : null}
-            {PER_KG_BREAKS.map((b) => <span key={b.key} className={cn(b.key === r.freight.key && "font-semibold text-[var(--color-text)]")}>{b.label} {r.tariff.breaks[b.key] ? whole(Number(r.tariff.breaks[b.key])) : "—"}</span>)}
-          </div>
-          <p className="mt-3 text-sm text-[var(--color-text-muted)]"><b className="font-semibold text-[var(--color-text)]">Checked:</b> read twice, independently; this rate was saved because both reads agreed.{r.tariff.sourceFile ? ` From ${r.tariff.sourceFile}.` : ""}{r.tariff.notes ? ` Note: ${r.tariff.notes}` : ""}</p>
-        </div>
-      ) : null}
+      {open ? <AirlineDetail code={r.code} name={r.name} rule={ruleFor(r.code)} tariff={r.tariff} freight={r.freight} currency={currency} initial="rates" /> : null}
     </div>
   );
 }
@@ -145,11 +132,10 @@ function OtherRowView({ o, weightKg, origin, destination, open, onToggle, onEmai
         )}
       </div>
       {open ? (
-        <div className="pb-5 text-sm text-[var(--color-text-muted)]">
-          <p>{o.rule?.remark ?? "This airline is not in the procurement sheet and has no tariff on file, so it is asked by email for every weight break."}</p>
-          {o.why ? <p className="mt-1">{o.why}</p> : null}
-          {o.source === "Portal" ? <button type="button" onClick={ask} className="mt-2 text-sm font-semibold text-[var(--color-atlas-navy)] underline underline-offset-2">Or ask by email instead</button> : null}
-        </div>
+        <>
+          <AirlineDetail code={o.code} name={o.name} rule={o.rule} currency="" initial={o.source === "Portal" ? "portal" : "contacts"} />
+          {o.why ? <p className="-mt-2 pb-4 text-xs text-[var(--color-text-muted)]">{o.why}</p> : null}
+        </>
       ) : null}
     </div>
   );
@@ -328,8 +314,7 @@ export function CarrierBoard() {
             </section>
           ) : null}
 
-          <section className="grid gap-4 lg:grid-cols-2" aria-label="Charts">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-cmp"><h2 className="mb-2 text-sm font-bold">Rate per kg by weight break</h2><CompareChart lane={lane} weightKg={w} /></div>
+          <section aria-label="Tariff validity">
             <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-val"><h2 className="mb-3 text-sm font-bold">Tariff validity</h2><ValidityTimeline rows={lane.priced} today={today} /></div>
           </section>
 

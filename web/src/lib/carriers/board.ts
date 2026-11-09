@@ -33,6 +33,8 @@ export interface CarrierRule {
   /** The portal answers at any weight (used when no tariff is on file). */
   portalAnyWeight?: boolean;
   portalUrl?: string;
+  /** Stations whose portal logins the team holds (from the procurement sheet). Names only, never credentials. */
+  stations?: string[];
   remark: string;
 }
 
@@ -42,11 +44,12 @@ export const CARRIER_RULES: CarrierRule[] = [
     name: "Emirates",
     tariffBelowKg: 500,
     portalUrl: "https://eskycargo.emirates.com/app/offerandorder/",
+    stations: ["BLR", "AMD", "BOM", "MAA"],
     remark: "Below 500 kg use the tariff. Above 500 kg take the rate online from any station login, but book from the respective station's login.",
   },
-  { code: "LH", name: "Lufthansa", portalUpToKg: 2500, portalUrl: "https://www.lufthansa-cargo.com/en/home", remark: "Online up to 2.5 tonnes. Above that, ask by email." },
-  { code: "QR", name: "Qatar Airways", portalAnyWeight: true, portalUrl: "https://octoloop.com/", remark: "Rates online through the Octoloop portal, at any weight. Logins are held for BOM, BLR, MAA, HYD and AMD. A tariff on file is used first." },
-  { code: "AF", name: "Air France KLM Cargo", portalUpToKg: 5000, portalUrl: "https://www.afklcargo.com/", remark: "Online up to 5 tonnes. Above that, ask by email." },
+  { code: "LH", name: "Lufthansa", portalUpToKg: 2500, portalUrl: "https://www.lufthansa-cargo.com/en/home", stations: ["BLR", "BOM"], remark: "Online up to 2.5 tonnes. Above that, ask by email." },
+  { code: "QR", name: "Qatar Airways", portalAnyWeight: true, portalUrl: "https://octoloop.com/", stations: ["BOM", "BLR", "MAA", "HYD", "AMD"], remark: "Rates online through the Octoloop portal, at any weight. Logins are held for BOM, BLR, MAA, HYD and AMD. A tariff on file is used first." },
+  { code: "AF", name: "Air France KLM Cargo", portalUpToKg: 5000, portalUrl: "https://www.afklcargo.com/", stations: ["BLR", "BOM"], remark: "Online up to 5 tonnes. Above that, ask by email." },
   { code: "AI", name: "Air India", portalUpToKg: 500, portalUrl: "https://aicargoportal.airindia.com/icargoneoportal/app/main/#/app", remark: "Online up to 500 kg. Above that, ask by email." },
 ];
 
@@ -278,4 +281,38 @@ export function buildRateEmail(i: EmailInput): { subject: string; body: string }
 /** A mail link that opens the user's own email program with the draft. */
 export function mailtoLink(to: string, subject: string, body: string): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/** Every active Directory contact that is an airline matching this airline's name or code, with an email or a phone number. */
+export function findCarrierContacts(contacts: DirectoryContact[], code: string, name: string): DirectoryContact[] {
+  const n = normalizeCarrierName(name);
+  const c = normalizeCarrierName(code);
+  return contacts.filter((x) => {
+    if (x.suspended || vendorKind(x) !== "airline") return false;
+    if (!/@/.test(x.email || "") && !(x.phone || "").trim()) return false;
+    const k = normalizeCarrierName(x.name);
+    return !!k && ((n && (k === n || k.startsWith(n) || n.startsWith(k))) || k === c);
+  });
+}
+
+/** A fuel or security notice the reader wrote down (circularDigests), as the Carrier Board needs it. */
+export interface FuelNotice {
+  circularId: string;
+  title: string;
+  carrier: string;
+  at: number;
+  effectiveFrom: string;
+  validTo: string;
+  summary: string[];
+  charges: Array<{ name: string; amount: number | null; currency: string; unit: string; appliesTo: string; note: string }>;
+  deadlines: string[];
+}
+
+/** The notices that belong to one airline: its code is the circular's carrier, or starts the title ("EK_FSC"). Newest first. */
+export function noticesFor(notices: FuelNotice[], code: string): FuelNotice[] {
+  const c = code.trim().toUpperCase();
+  if (!c) return [];
+  return notices
+    .filter((n) => n.carrier.trim().toUpperCase() === c || new RegExp(`^${c}[_ -]`, "i").test(n.title.trim()))
+    .sort((a, b) => b.at - a.at);
 }

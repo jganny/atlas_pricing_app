@@ -14,6 +14,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     version: "0.3.144",
     date: "2026-11-10",
     items: [
+      "Carrier board: open an airline's row and you now get tabs for Rates, Surcharges (the fuel and security notices the reader wrote down), Contacts (from the Directory, with email and phone links), Portal (the link, the rule, and the stations your team has logins for) and Remarks. The rate-per-kg chart has been removed; the weight-break grid shows the same numbers.",
       "Carrier board: the From and To boxes no longer show sample airports in faint grey; they say \u201cAirport code\u201d. The big instruction box under them is gone, and so is the \u201chow each airline's rate is obtained\u201d map, which repeated what each row already says.",
     ],
   },

@@ -4,7 +4,7 @@ import { collection, doc, getDoc, getDocs, limit, onSnapshot, query, where } fro
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useLiveData } from "@/lib/api";
 import { SAMPLE_TARIFFS } from "@/lib/carriers/board-sample";
-import type { BoardTariff, BreakKey } from "@/lib/carriers/board";
+import type { BoardTariff, BreakKey, FuelNotice } from "@/lib/carriers/board";
 import { getFirebaseApp, getFirebaseDb } from "./client";
 
 const KEYS: BreakKey[] = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
@@ -224,4 +224,24 @@ export interface LibraryReadResult {
 export async function readLibraryCircular(circularId: string): Promise<LibraryReadResult> {
   const call = httpsCallable<{ circularId: string }, LibraryReadResult>(getFunctions(getFirebaseApp()), "readLibraryCircular", { timeout: 900_000 });
   return (await call({ circularId })).data;
+}
+
+/** The fuel and security notices the reader has written down for airlines (any signed-in user can read them). */
+export async function fetchFuelNotices(): Promise<FuelNotice[]> {
+  if (!useLiveData) return [];
+  const snap = await getDocs(query(collection(getFirebaseDb(), "circularDigests"), where("category", "==", "fuel_circular_airline"), limit(60)));
+  return snap.docs.map((x) => {
+    const d = x.data();
+    return {
+      circularId: x.id,
+      title: String(d.title ?? ""),
+      carrier: String(d.carrier ?? ""),
+      at: num(d.at) ?? 0,
+      effectiveFrom: String(d.effectiveFrom ?? ""),
+      validTo: String(d.validTo ?? ""),
+      summary: Array.isArray(d.summary) ? d.summary.map(String) : [],
+      charges: Array.isArray(d.charges) ? (d.charges as FuelNotice["charges"]) : [],
+      deadlines: Array.isArray(d.deadlines) ? d.deadlines.map(String) : [],
+    };
+  });
 }
