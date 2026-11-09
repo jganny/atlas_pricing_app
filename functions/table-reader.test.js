@@ -83,6 +83,36 @@ const lines = (cards) => [HEAD, ...cards.flatMap((c) => dests.map((d) => row(c, 
   assert.deepEqual(T.samplePartIndexes(0), []);
 }
 
+// --- a heading taken for an origin does not fail the check when the numbers agree ---
+{
+  const rows = T.readTable(lines(["BOMGCRTKURGENT"]), { fallbackCarrier: "TK" }).rows;
+  const confused = rows.slice(0, 6).map((r) => ({ ...r, origin: "AXA" }));
+  assert.equal(T.verifySample(rows, confused).mismatches, 0, "one origin in the file: the AI's origin is not what is checked");
+  const wrongNumbers = confused.map((r) => ({ ...r, breaks: { ...r.breaks, min: 1 } }));
+  assert.equal(T.verifySample(rows, wrongNumbers).mismatches, 6, "but the numbers still must match");
+  // with several origins in one file the origin does matter
+  const two = [...rows.slice(0, 6), ...rows.slice(0, 6).map((r) => ({ ...r, origin: "DEL" }))];
+  assert.equal(T.verifySample(two, [{ ...rows[0], origin: "AXA" }]).mismatches, 1);
+}
+
+// --- more EK layouts: numbered headings, no Region column, labels wrapped onto their own lines ---
+{
+  const opt = { fallbackCarrier: "EK", origin: "MAA", currency: "INR" };
+  assert.deepEqual(T.sectionClasses("1. GCR"), ["GCR"]);
+  assert.deepEqual(T.sectionClasses("2. AXS - CRT / VUN"), ["AXSCRT", "VUN"]);
+  assert.deepEqual(T.sectionClasses("11. GCR - Offline Tariff"), ["GCR"], "words like Offline and Tariff are not part of the class");
+  assert.deepEqual(T.sectionClasses("OFFLINE"), []);
+  assert.deepEqual(T.sectionClasses("DEST"), []);
+  assert.deepEqual(T.sectionClasses("MAA STANDARD T ARIFF"), [], "a title is not a heading");
+  assert.deepEqual(T.sectionClasses("Effective 1 2 Jul to 3 0 Sep 2026"), []);
+  const noRegion = ["GCR", "Dest. Amount N +45 +100 +300 +500", ...dests.map((d) => `${d} 18,800.00 940.00 850.00 775.00 730.00 590.00`), "DG PAX", "Dest. Amount N +45 +100 +300 +500", ...dests.map((d) => `${d} 20,700.00 1,035.00 935.00 855.00 805.00 650.00`)];
+  const r = T.readSectionTable(noRegion, opt);
+  assert.deepEqual([r.ok, r.rows.length, r.rows[0].breaks.min, r.rows[12].rateClass, r.rows[12].breaks.minus45], [true, 24, 18800, "DGPAX", 1035], "decimals and thousands separators");
+  const wrapped = ["11. GCR - Offline Tariff", "OFFLINE", "Amount N 45 100 300 500", "DEST", ...dests.map((d) => `${d} 13,200 590 475 430 355 250`)];
+  const w = T.readSectionTable(wrapped, opt);
+  assert.deepEqual([w.ok, w.rows.length, w.rows[0].rateClass, w.rows[0].breaks.plus500], [true, 12, "GCR", 250], "a header split over separate lines");
+}
+
 console.log("table reader ok");
 
 // --- sections: the rate class is a heading above each table, the origin is in the title, no currency is printed ---

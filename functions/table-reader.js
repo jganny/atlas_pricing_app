@@ -156,14 +156,17 @@ function parseSectionHeader(tokens) {
     return t.length === 7 ? { cols: [{ kind: "min" }, { kind: "rate", kg: 0 }, { kind: "rate", kg: 45 }, { kind: "rate", kg: 100 }, { kind: "rate", kg: 300 }, { kind: "rate", kg: 500 }], kgs: [0, 45, 100, 300, 500], hasOrigin: false } : { unsupported: "dest cells" };
   }
   const iA = t.indexOf("AMOUNT");
+  if (iA < 0) return null;
   const iD = t.findIndex((x) => x === "DEST." || x === "DEST");
-  if (iA < 0 || iD < 0 || !t.includes("REGION") || iD > iA) return null;
+  // Either "Dest. [Region] Amount N +45 ..." or, when the labels wrapped onto separate lines, just "Amount N 45 100 ...".
+  if (iD >= 0 ? iD > iA : iA !== 0) return null;
   const cols = [{ kind: "min" }];
   for (const w of t.slice(iA + 1)) {
     if (w === "N" || w === "NORMAL") cols.push({ kind: "rate", kg: 0 });
-    else if (/^\+\d+$/.test(w)) cols.push({ kind: "rate", kg: Number(w.slice(1)) });
+    else if (/^\+?\d+$/.test(w)) cols.push({ kind: "rate", kg: Number(w.replace("+", "")) });
     else return { unsupported: w };
   }
+  if (cols.length < 2) return null;
   const kgs = cols.filter((c) => c.kind === "rate").map((c) => c.kg);
   if (!kgs.length || !L.mapThresholds(kgs)) return { unsupported: "weights" };
   return { cols, kgs, hasOrigin: iD > 0 && t[0].startsWith("ORIG") };
@@ -171,10 +174,19 @@ function parseSectionHeader(tokens) {
 
 /** A class heading line ("GCR", "AXS-COL / DG PAX / AXM", "GC R/ O ffline") -> the classes it names. "Offline" only says these are offline stations. */
 function sectionClasses(line) {
-  // A heading is a short run of letters; a blank line, a page number or a line of figures is not one.
-  if (!/[A-Za-z]/.test(line) || /\d{3}|,/.test(line) || String(line).length > 60) return [];
-  const parts = String(line || "").split("/").map((x) => L.rateClassOf(x.replace(/\s+/g, "")));
-  return [...new Set(parts.filter((c) => c && c !== "OFFLINE" && c !== "ONLINE"))];
+  const l = String(line || "");
+  // A heading is a short run of letters; a blank line, a page number, a title or a line of figures is not one.
+  if (!/[A-Za-z]/.test(l) || /\d{3}|,/.test(l) || l.length > 50) return [];
+  const cleaned = l.replace(/^\s*\d+\.\s*/, "").replace(/\b(offline|online|tariff|rates?|dest\.?)\b/gi, " ").trim();
+  if (!cleaned || cleaned.split(/\s+/).length > 12) return [];
+  const out = [];
+  for (const part of cleaned.split("/")) {
+    const raw = part.replace(/[^A-Za-z0-9]/g, "");
+    if (!raw || raw.length > 10) return []; // a long run of letters is a title, not a class
+    out.push(L.rateClassOf(raw));
+  }
+  // "Offline" only says these are offline stations; it is not a rate class.
+  return [...new Set(out)].filter((c) => c !== "OFFLINE" && c !== "ONLINE");
 }
 
 /**
@@ -192,7 +204,7 @@ function readSectionTable(lines, { fallbackCarrier = "", origin = "", currency =
   const dates = !validFrom && !validTo ? effectiveDates(lines) : { validFrom, validTo };
   let spec = null;
   let classes = [];
-  let prev = "";
+  let heading = [];
   let sections = 0;
   let bad = 0;
   const badSamples = [];
@@ -203,14 +215,14 @@ function readSectionTable(lines, { fallbackCarrier = "", origin = "", currency =
     const h = parseSectionHeader(tokens);
     if (h) {
       if (h.unsupported) return { ok: false, reason: `a table header this reader does not handle (${h.unsupported})` };
-      const cls = sectionClasses(prev);
-      if (!cls.length) return { ok: false, reason: "a table has no rate class heading above it" };
+      if (!heading.length) return { ok: false, reason: "a table has no rate class heading above it" };
       spec = h;
-      classes = cls;
+      classes = heading;
       sections += 1;
       continue;
     }
-    prev = line;
+    const named = sectionClasses(line);
+    if (named.length) heading = named;
     if (!spec) continue;
     const k = spec.cols.length;
     const numeric = tokens.filter((x) => NUM.test(x)).length;
@@ -254,9 +266,12 @@ const sameBreaks = (a, b) => ["min", "minus45", "plus45", "plus100", "plus300", 
  * did not match. A table read that is wrong in structure (shifted columns) fails nearly every row.
  */
 function verifySample(tableRows, aiRows) {
+  // A file with one origin (the usual case) is checked on destination, currency and numbers: the AI sometimes takes a rate-class
+  // heading (like AXA) for an origin, and that is not a reason to distrust numbers that are otherwise identical.
+  const oneOrigin = new Set(tableRows.map((r) => r.origin)).size === 1;
   const byRoute = new Map();
   for (const r of tableRows) {
-    const k = `${r.origin}|${r.destination}|${r.currency}`;
+    const k = `${oneOrigin ? "" : r.origin}|${r.destination}|${r.currency}`;
     if (!byRoute.has(k)) byRoute.set(k, []);
     byRoute.get(k).push(r);
   }
@@ -264,7 +279,7 @@ function verifySample(tableRows, aiRows) {
   const examples = [];
   for (const a of aiRows) {
     // An AI row with no currency (the page did not state one) is compared on the route alone.
-    const mine = a.currency ? byRoute.get(`${a.origin}|${a.destination}|${a.currency}`) || [] : tableRows.filter((r) => r.origin === a.origin && r.destination === a.destination);
+    const mine = a.currency ? byRoute.get(`${oneOrigin ? "" : a.origin}|${a.destination}|${a.currency}`) || [] : tableRows.filter((r) => (oneOrigin || r.origin === a.origin) && r.destination === a.destination);
     if (!mine.some((r) => sameBreaks(r.breaks, a.breaks))) {
       mismatches += 1;
       if (examples.length < 3) examples.push(`${a.origin}→${a.destination}`);
