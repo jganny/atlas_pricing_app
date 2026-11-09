@@ -181,7 +181,13 @@ async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, de
   } catch (err) {
     return { ok: false, reason: "the PDF text could not be read" };
   }
-  const res = T.readTable(lines, { fallbackCarrier: fallback, title: circ.title || circ.fileName, validFrom: isoDay(circ.effectiveDate), validTo: isoDay(circ.expiryDate) });
+  const dates = { validFrom: isoDay(circ.effectiveDate), validTo: isoDay(circ.expiryDate) };
+  let res = T.readTable(lines, { fallbackCarrier: fallback, title: circ.title || circ.fileName, ...dates });
+  if (!res.ok) {
+    // The other common layout: rate classes as headings, origin from the title, no currency printed (the company default applies).
+    const sec = T.readSectionTable(lines, { fallbackCarrier: fallback, origin: L.originHint(circ.title || circ.fileName) || "", currency: defaultCurrency, ...dates });
+    res = sec.ok ? sec : { ok: false, reason: `${res.reason}; as sections: ${sec.reason}` };
+  }
   if (!res.ok) return res;
   const rows = L.withDefaultCurrency(res.rows, defaultCurrency);
   const parts = await partsFor(circ, { split: true, buffer });
@@ -198,7 +204,8 @@ async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, de
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
 /** { circularId, dryRun?, secondRead?, auto? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency, fullAi }, apiKey) {
+async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency: askedCurrency, fullAi }, apiKey) {
+  const defaultCurrency = L.currencyOrDefault(askedCurrency); // a circular that prints no currency is in INR
   const db = admin.firestore();
   const snap = await db.collection("circularsLibrary").doc(circularId).get();
   if (!snap.exists) throw new HttpsError("not-found", "That circular does not exist.");

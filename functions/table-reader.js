@@ -19,17 +19,20 @@ async function pdfTextLines(buffer) {
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const tc = await page.getTextContent();
-    const rows = new Map();
+    // Items on one printed line sit at nearly the same height, but not exactly (a cell can be a point or two off): group by closeness.
+    const items = [];
     for (const it of tc.items) {
-      const s = String(it.str || "");
-      if (!s.trim()) continue;
-      const y = Math.round(it.transform[5] / 2) * 2; // items on one printed line share a height, give or take a point
-      if (!rows.has(y)) rows.set(y, []);
-      rows.get(y).push({ x: it.transform[4], s: s.trim() });
+      const str = String(it.str || "");
+      if (str.trim()) items.push({ x: it.transform[4], y: it.transform[5], s: str.trim() });
     }
-    for (const y of [...rows.keys()].sort((a, b) => b - a)) {
-      lines.push(rows.get(y).sort((a, b) => a.x - b.x).map((c) => c.s).join(" ").replace(/\s+/g, " ").trim());
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    const rows = [];
+    for (const it of items) {
+      const last = rows[rows.length - 1];
+      if (last && Math.abs(last.y - it.y) <= 4) last.cells.push(it);
+      else rows.push({ y: it.y, cells: [it] });
     }
+    for (const r of rows) lines.push(r.cells.sort((a, b) => a.x - b.x).map((c) => c.s).join(" ").replace(/\s+/g, " ").trim());
   }
   return lines;
 }
@@ -127,6 +130,118 @@ function readTable(lines, { fallbackCarrier = "", title = "", validFrom = "", va
   return { ok: true, rows: L.normalizeRows(raw, carrier), lines: raw.length, skipped: bad };
 }
 
+/** "Effective 12 Jul to 30 Sep 2026" -> { validFrom, validTo } (YYYY-MM-DD), or empty strings when the lines carry no such sentence. */
+function effectiveDates(lines) {
+  const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  for (const raw of lines.slice(0, 40)) {
+    // Letter-spaced titles split numbers (like 1 2 Jul): rejoin single digits.
+    const line = raw.replace(/\b(\d) (?=\d\b)/g, "$1");
+    const m = /effective\s+(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(?:(\d{4})\s+)?(?:to|-|until)\s+(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})/i.exec(line);
+    if (!m) continue;
+    const m1 = MON[m[2].toLowerCase()];
+    const m2 = MON[m[5].toLowerCase()];
+    if (!m1 || !m2) continue;
+    const y2 = Number(m[6]);
+    const y1 = m[3] ? Number(m[3]) : m1 > m2 ? y2 - 1 : y2;
+    const p = (n) => String(n).padStart(2, "0");
+    return { validFrom: `${y1}-${p(m1)}-${p(Number(m[1]))}`, validTo: `${y2}-${p(m2)}-${p(Number(m[4]))}` };
+  }
+  return { validFrom: "", validTo: "" };
+}
+
+/** A section header of the "Dest. Region Amount N +45 ..." kind, or null. Seven bare "Dest." cells are the same table with its labels lost. */
+function parseSectionHeader(tokens) {
+  const t = tokens.map((x) => x.toUpperCase());
+  if (t.length >= 6 && t.every((x) => x === "DEST." || x === "DEST")) {
+    return t.length === 7 ? { cols: [{ kind: "min" }, { kind: "rate", kg: 0 }, { kind: "rate", kg: 45 }, { kind: "rate", kg: 100 }, { kind: "rate", kg: 300 }, { kind: "rate", kg: 500 }], kgs: [0, 45, 100, 300, 500], hasOrigin: false } : { unsupported: "dest cells" };
+  }
+  const iA = t.indexOf("AMOUNT");
+  const iD = t.findIndex((x) => x === "DEST." || x === "DEST");
+  if (iA < 0 || iD < 0 || !t.includes("REGION") || iD > iA) return null;
+  const cols = [{ kind: "min" }];
+  for (const w of t.slice(iA + 1)) {
+    if (w === "N" || w === "NORMAL") cols.push({ kind: "rate", kg: 0 });
+    else if (/^\+\d+$/.test(w)) cols.push({ kind: "rate", kg: Number(w.slice(1)) });
+    else return { unsupported: w };
+  }
+  const kgs = cols.filter((c) => c.kind === "rate").map((c) => c.kg);
+  if (!kgs.length || !L.mapThresholds(kgs)) return { unsupported: "weights" };
+  return { cols, kgs, hasOrigin: iD > 0 && t[0].startsWith("ORIG") };
+}
+
+/** A class heading line ("GCR", "AXS-COL / DG PAX / AXM", "GC R/ O ffline") -> the classes it names. "Offline" only says these are offline stations. */
+function sectionClasses(line) {
+  // A heading is a short run of letters; a blank line, a page number or a line of figures is not one.
+  if (!/[A-Za-z]/.test(line) || /\d{3}|,/.test(line) || String(line).length > 60) return [];
+  const parts = String(line || "").split("/").map((x) => L.rateClassOf(x.replace(/\s+/g, "")));
+  return [...new Set(parts.filter((c) => c && c !== "OFFLINE" && c !== "ONLINE"))];
+}
+
+/**
+ * The other common layout: sections, each headed by its rate class(es) on the line above a "Dest. Region Amount N +45 ..." header,
+ * with the origin in the file's title and no currency printed. The origin and currency are given by the caller (the currency is
+ * the company default when the file prints none). Declines on anything it does not recognise, like readTable.
+ */
+function readSectionTable(lines, { fallbackCarrier = "", origin = "", currency = "", validFrom = "", validTo = "" } = {}) {
+  const carrier = String(fallbackCarrier || "").toUpperCase();
+  const from = String(origin || "").toUpperCase();
+  const cur = String(currency || "").toUpperCase();
+  if (!/^[A-Z0-9]{2,3}$/.test(carrier)) return { ok: false, reason: "the airline code is not known" };
+  if (!CODE3.test(from)) return { ok: false, reason: "the origin station is not known" };
+  if (!CODE3.test(cur)) return { ok: false, reason: "the currency is not known" };
+  const dates = !validFrom && !validTo ? effectiveDates(lines) : { validFrom, validTo };
+  let spec = null;
+  let classes = [];
+  let prev = "";
+  let sections = 0;
+  let bad = 0;
+  const badSamples = [];
+  const raw = [];
+  for (const line of lines) {
+    const tokens = line.split(/\s+/).filter(Boolean);
+    if (!tokens.length) continue;
+    const h = parseSectionHeader(tokens);
+    if (h) {
+      if (h.unsupported) return { ok: false, reason: `a table header this reader does not handle (${h.unsupported})` };
+      const cls = sectionClasses(prev);
+      if (!cls.length) return { ok: false, reason: "a table has no rate class heading above it" };
+      spec = h;
+      classes = cls;
+      sections += 1;
+      continue;
+    }
+    prev = line;
+    if (!spec) continue;
+    const k = spec.cols.length;
+    const numeric = tokens.filter((x) => NUM.test(x)).length;
+    if (numeric < 2) continue;
+    const tail = tokens.slice(-k);
+    let lead = tokens.slice(0, -k);
+    if (spec.hasOrigin && lead.length && /^[A-Z]{2}$/.test(lead[0])) lead = lead.slice(1);
+    const okRow = tokens.length > k && tail.every((x) => NUM.test(x)) && lead.length >= 1 && CODE3.test(lead[0]) && lead.slice(1).every((x) => !NUM.test(x));
+    if (!okRow) {
+      // A heading line has no numbers; a line that starts like a route and has figures but does not fit the table is a problem.
+      if (numeric >= 3 || (numeric >= 1 && CODE3.test(tokens[0]))) {
+        bad += 1;
+        if (badSamples.length < 3) badSamples.push(line.slice(0, 80));
+      }
+      continue;
+    }
+    const breaks = {};
+    const slots = L.mapThresholds(spec.kgs);
+    let ri = 0;
+    spec.cols.forEach((col, i) => {
+      const n = L.toNumber(tail[i]);
+      if (col.kind === "min") breaks.min = n;
+      else breaks[slots[ri++]] = n;
+    });
+    for (const rateClass of classes) raw.push({ carrierCode: carrier, origin: from, destination: lead[0], currency: cur, breaks, validFrom: dates.validFrom, validTo: dates.validTo, rateKind: "unknown", rateClass });
+  }
+  if (sections < 1 || raw.length < 10) return { ok: false, reason: "too few table lines were found" };
+  if (bad > 0 && bad / (bad + raw.length) > 0.01) return { ok: false, reason: `${bad} lines did not fit the table (e.g. "${badSamples[0] || ""}")` };
+  return { ok: true, rows: L.normalizeRows(raw, carrier), lines: raw.length, skipped: bad, sections };
+}
+
 const sameBreaks = (a, b) => ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"].every((k) => {
   const x = a && a[k] != null ? Number(a[k]) : null;
   const y = b && b[k] != null ? Number(b[k]) : null;
@@ -164,4 +279,4 @@ function samplePartIndexes(n) {
   return [...new Set([0, Math.floor((n - 1) / 2), n - 1])];
 }
 
-module.exports = { pdfTextLines, parseHeader, classFromCardId, titleClass, readTable, verifySample, samplePartIndexes };
+module.exports = { pdfTextLines, parseHeader, parseSectionHeader, sectionClasses, effectiveDates, readSectionTable, classFromCardId, titleClass, readTable, verifySample, samplePartIndexes };

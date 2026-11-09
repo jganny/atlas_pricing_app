@@ -346,10 +346,17 @@ function originHint(title) {
 }
 
 /** The admin may say which currency a circular that prints none is in. Only rows with no currency are filled; anything printed stays. */
+/** When a circular does not print a currency, it is rupees (the company's rule). An explicit code from the admin still wins. */
+const DEFAULT_CURRENCY = "INR";
+function currencyOrDefault(v) {
+  const c = String(v ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(c) ? c : DEFAULT_CURRENCY;
+}
+
 function withDefaultCurrency(rows, currency) {
   const c = String(currency || "").trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(c)) return rows;
   return rows.map((r) => (r.currency ? r : { ...r, currency: c }));
 }
 
-module.exports = { originHint, withDefaultCurrency, AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, planPdfChunks, chunkNote, mergeRows, mapLimit, rateClassOf, deskCode };
+module.exports = { originHint, withDefaultCurrency, AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, planPdfChunks, chunkNote, mergeRows, mapLimit, rateClassOf, deskCode, DEFAULT_CURRENCY, currencyOrDefault };

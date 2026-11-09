@@ -84,3 +84,36 @@ const lines = (cards) => [HEAD, ...cards.flatMap((c) => dests.map((d) => row(c, 
 }
 
 console.log("table reader ok");
+
+// --- sections: the rate class is a heading above each table, the origin is in the title, no currency is printed ---
+{
+  const secHead = "Dest. Region Amount N +45 +100 +300 +500";
+  const sec = (cls, tag) => [cls, secHead, ...dests.map((d, i) => `${d} Africa 8,600 ${430 + i} ${400 + i} 370 360 ${350 + i}`)];
+  const lines2 = ["AMD STANDARD T ARIFF", "Effective 1 2 Jul to 3 0 Sep 2026", ...sec("GCR"), ...sec("AXS-COL / DG PAX / AXM"), "GC R/ O ffline", "Dest. Dest. Dest. Dest. Dest. Dest. Dest.", ...dests.map((d) => `${d} 13,200 590 475 430 355 250`)];
+  const r = T.readSectionTable(lines2, { fallbackCarrier: "ek", origin: "amd", currency: "INR" });
+  assert.equal(r.ok, true);
+  assert.equal(r.sections, 3);
+  assert.deepEqual([...new Set(r.rows.map((x) => x.rateClass))], ["GCR", "AXSCOL", "DGPAX", "AXM"], "one heading can name several classes; Offline only describes the stations");
+  assert.equal(r.rows.length, 12 + 36 + 12, "a shared table is one row per class; the offline table is general cargo");
+  assert.deepEqual(r.rows[0], { carrierCode: "EK", origin: "AMD", destination: "ABJ", currency: "INR", breaks: { min: 8600, minus45: 430, plus45: 400, plus100: 370, plus300: 360, plus500: 350, plus1000: null }, validFrom: "2026-07-12", validTo: "2026-09-30", rateKind: "unknown", rateClass: "GCR", notes: "" });
+  const offline = r.rows.filter((x) => x.rateClass === "GCR").slice(-1)[0];
+  assert.deepEqual([offline.breaks.min, offline.breaks.minus45, offline.breaks.plus500], [13200, 590, 250], "offline rows read the same six columns");
+  // a two-column table (Amount and N only) and the country-coded one
+  const two = ["HUM", "Dest. Region Amount N", ...dests.map((d) => `${d} Africa 8,600 430`)];
+  const r2 = T.readSectionTable([...lines2.slice(0, 2), ...two], { fallbackCarrier: "EK", origin: "AMD", currency: "INR" });
+  assert.deepEqual([r2.ok, r2.rows[0].rateClass, r2.rows[0].breaks.min, r2.rows[0].breaks.minus45, r2.rows[0].breaks.plus45], [true, "HUM", 8600, 430, null]);
+  const val = ["VAL", "Orig. Dest. Region Amount N", ...dests.map((d) => `IN ${d} Africa 17,200 800`)];
+  assert.equal(T.readSectionTable(val, { fallbackCarrier: "EK", origin: "AMD", currency: "INR" }).rows[0].destination, "ABJ");
+  // dates
+  assert.deepEqual(T.effectiveDates(["Effective 1 Oct to 31 Dec 2026"]), { validFrom: "2026-10-01", validTo: "2026-12-31" });
+  assert.deepEqual(T.effectiveDates(["Effective 15 Dec to 15 Jan 2027"]), { validFrom: "2026-12-15", validTo: "2027-01-15" }, "across a year end");
+  assert.deepEqual(T.effectiveDates(["Nothing here"]), { validFrom: "", validTo: "" });
+  // declines
+  assert.equal(T.readSectionTable(lines2, { fallbackCarrier: "EK", origin: "", currency: "INR" }).ok, false, "no origin station");
+  assert.equal(T.readSectionTable(lines2, { fallbackCarrier: "EK", origin: "AMD", currency: "" }).ok, false, "no currency");
+  assert.equal(T.readSectionTable([secHead, ...dests.map((d) => `${d} Africa 8,600 430 400 370 360 350`)], { fallbackCarrier: "EK", origin: "AMD", currency: "INR" }).ok, false, "a table with no class heading above it");
+  assert.equal(T.readSectionTable(["GCR", "Dest. Region Amount N +45 FSC", ...dests.map((d) => `${d} Africa 8,600 430 400 1`)], { fallbackCarrier: "EK", origin: "AMD", currency: "INR" }).ok, false, "an unknown column");
+  const broken = [...lines2];
+  broken[5] = "ADD Africa 8,600 430"; // a cell is missing
+  assert.equal(T.readSectionTable(broken, { fallbackCarrier: "EK", origin: "AMD", currency: "INR" }).ok, false, "a line that does not fit the table stops it being trusted");
+}

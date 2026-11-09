@@ -20,3 +20,15 @@ const many = D.parseDigest(JSON.stringify({ summary: Array.from({ length: 20 }, 
 assert.equal(many.summary.length, 8);
 assert.equal(many.charges.length, 40);
 console.log("circular digest logic ok");
+
+// --- a charge with an amount and no currency is in rupees; a percentage or an empty amount gets none ---
+{
+  const D = require("./circular-digest-logic");
+  const d = D.parseDigest(JSON.stringify({ kind: "airline", company: "X", summary: ["s"], charges: [
+    { name: "Fuel surcharge", amount: 12.5, unit: "per kg" },
+    { name: "Fuel percent", amount: 8, unit: "percent" },
+    { name: "USD one", amount: 3, currency: "usd", unit: "per kg" },
+    { name: "No amount", amount: null, unit: "per kg" },
+  ] }));
+  assert.deepEqual(d.charges.map((c) => c.currency), ["INR", "", "USD", ""]);
+}

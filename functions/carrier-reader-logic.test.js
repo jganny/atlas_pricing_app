@@ -265,3 +265,14 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.ok(kept && kept.rows.length === 1, "a reply that has route lines is read, whatever it starts with");
   for (const sys of L.systemPrompts()) assert.match(sys, /MINIMUM column is the flat minimum charge/);
 }
+
+// --- a circular that prints no currency is in rupees; an explicit code still wins ---
+{
+  assert.equal(L.DEFAULT_CURRENCY, "INR");
+  assert.equal(L.currencyOrDefault(undefined), "INR");
+  assert.equal(L.currencyOrDefault(""), "INR");
+  assert.equal(L.currencyOrDefault("rupees"), "INR", "not a currency code");
+  assert.equal(L.currencyOrDefault("usd"), "USD");
+  const rows = [{ carrierCode: "EK", origin: "AMD", destination: "DXB", currency: "", breaks: {} }, { carrierCode: "EK", origin: "AMD", destination: "LHR", currency: "GBP", breaks: {} }];
+  assert.deepEqual(L.withDefaultCurrency(rows, L.currencyOrDefault()).map((r) => r.currency), ["INR", "GBP"], "only the missing one is filled; a printed currency stays");
+}

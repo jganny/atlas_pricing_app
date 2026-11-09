@@ -8,6 +8,7 @@
 const DIGEST_CATEGORIES = ["line_circular", "sea_tariff", "courier_tariff", "fuel_circular_airline", "fuel_circular_shipping", "general"];
 /** What one digest costs, roughly (a few cents). */
 const DIGEST_COST_USD = 0.05;
+const DEFAULT_CURRENCY = "INR";
 const KINDS = ["liner", "coloader", "transporter", "warehouse", "courier", "airline", "other"];
 
 const SYSTEM =
@@ -42,7 +43,10 @@ function parseDigest(text) {
   const charges = (Array.isArray(obj.charges) ? obj.charges : [])
     .map((c) => {
       const amount = Number(String(c && c.amount !== undefined && c.amount !== null ? c.amount : "").replace(/,/g, ""));
-      return { name: str(c && c.name, 120), amount: c && c.amount !== null && c.amount !== "" && Number.isFinite(amount) ? amount : null, currency: str(c && c.currency, 8).toUpperCase(), unit: str(c && c.unit, 60), appliesTo: str(c && c.appliesTo, 160), note: str(c && c.note, 200) };
+      const hasAmount = !!c && c.amount !== undefined && c.amount !== null && c.amount !== "" && Number.isFinite(amount);
+      // A charge with an amount but no currency is in rupees (the company's rule); a percentage has no currency.
+      const currency = str(c && c.currency, 8).toUpperCase() || (hasAmount && !/percent|%/i.test(str(c && c.unit, 60)) ? DEFAULT_CURRENCY : "");
+      return { name: str(c && c.name, 120), amount: hasAmount ? amount : null, currency, unit: str(c && c.unit, 60), appliesTo: str(c && c.appliesTo, 160), note: str(c && c.note, 200) };
     })
     .filter((c) => c.name)
     .slice(0, 40);
