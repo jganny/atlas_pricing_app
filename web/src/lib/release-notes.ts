@@ -11,6 +11,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.142",
+    date: "2026-11-10",
+    items: [
+      "Whoever uploads a circular is now told straight away, on screen wherever they are in the app, when its automatic read starts, finishes, is waiting (and why) or runs into a problem (and why). The same status shows under the circular on the Circulars page.",
+      "Circulars from shipping lines, coloaders, transporters, warehouses, couriers and airline notices (anything that is not an airline rate table) are now read too. Press \u201cWhat it says\u201d under one to see who it is from, when it applies, a short plain-words summary, the charges it lists and the dates to act by. A summary costs a few cents. Replacing the file of an existing circular reads it again.",
+      "The administrator no longer sees read status in the Carrier board's administrator tools; that box is now just the automatic-reading switch, the monthly limit, and a manual read.",
+    ],
+  },
+  {
     version: "0.3.141",
     date: "2026-11-09",
     items: [

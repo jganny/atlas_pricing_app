@@ -267,11 +267,11 @@ function parseAutoInput(data) {
 }
 
 /** Should this upload be read automatically? spentUsd is what circular reading has cost so far this month. */
-function autoDecision(settings, spentUsd) {
+function autoDecision(settings, spentUsd, estimateUsd = AUTO_READ_COST_USD) {
   const s = parseAutoSettings(settings);
   if (!s.enabled) return { run: false, reason: "Auto-read is switched off. Read it from the Carrier board's administrator tools." };
   const spent = Number(spentUsd) || 0;
-  if (spent + AUTO_READ_COST_USD > s.monthlyCapUsd) {
+  if (spent + estimateUsd > s.monthlyCapUsd) {
     return { run: false, reason: `This month's circular-reading limit ($${s.monthlyCapUsd.toFixed(2)}, $${spent.toFixed(2)} used) would be passed. Raise the limit, or read it yourself from the Carrier board's administrator tools.` };
   }
   return { run: true };

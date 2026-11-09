@@ -60,6 +60,7 @@ import { SessionTracker } from "@/components/SessionTracker";
 import { PremiumPip, PremiumPipToggle } from "./PremiumPip";
 import { WorkspaceMore } from "./WorkspaceMore";
 import { BrandMark } from "./BrandMark";
+import { CircularReadNotifier } from "./CircularReadNotifier";
 
 type NavItem = {
   href: string;
@@ -555,6 +556,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ChatProvider>
       <SessionTracker />
+      <CircularReadNotifier />
       <AppShellInner>{children}</AppShellInner>
     </ChatProvider>
   );

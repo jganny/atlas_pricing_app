@@ -2,9 +2,11 @@
 
 import { CircularFolders, RoleChip } from "@/components/CircularFolders";
 import { StationSuggestions } from "@/components/StationSuggestions";
+import { CircularReadNote } from "@/components/CircularReadNote";
+import { subscribeCarrierReads, type CarrierReadSummary } from "@/lib/firebase/carrier-board";
 import { buildFolders } from "@/lib/circulars/folders";
 import { STATION_NAMES, stationByName, stationForOrigin, stationLabel } from "@/lib/circulars/stations";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
@@ -42,6 +44,10 @@ import { cn } from "@/lib/utils";
 export default function CircularsPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  // Live read status for every circular (reading, read, waiting, failed), shown under each row.
+  const [readList, setReadList] = useState<CarrierReadSummary[]>([]);
+  useEffect(() => subscribeCarrierReads(setReadList), []);
+  const readsById = useMemo(() => new Map(readList.map((r) => [r.circularId, r])), [readList]);
   const canManage = canManageCirculars(user?.username, user?.role);
   const [editingStationId, setEditingStationId] = useState<string | null>(null);
   const [flat, setFlat] = useState(false);
@@ -394,6 +400,7 @@ export default function CircularsPage() {
                   <div className="text-[var(--color-text-muted)]">
                     {[c.carrier, c.category, c.fileName].filter(Boolean).join(" · ") || "—"}
                   </div>
+                  <CircularReadNote read={readsById.get(c.id)} />
                 </div>
                 <div className="flex items-center gap-2">
                   {c.downloadURL ? (

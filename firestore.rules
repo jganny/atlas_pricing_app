@@ -169,6 +169,8 @@ service cloud.firestore {
     match /carrierTariffHolds/{id} { allow read: if isSignedIn(); allow write: if false; }
     match /carrierReadUsage/{id} { allow read: if isSignedIn(); allow write: if false; }
     // Auto-read on/off and its monthly limit. Anyone signed in can see it; only the server (admin callable) writes it.
+    // Plain-words summaries of non-airline circulars (shipping lines, coloaders, transporters, warehouses...). Server writes only.
+    match /circularDigests/{id} { allow read: if isSignedIn(); allow write: if false; }
     match /carrierReadSettings/{id} { allow read: if isSignedIn(); allow write: if false; }
     match /chatProfiles/{login} {
       allow read: if isChatUser();

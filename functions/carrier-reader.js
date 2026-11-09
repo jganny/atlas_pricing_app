@@ -7,7 +7,7 @@
  * carrierTariffHolds/{circularId} (what was held and why), carrierReadUsage/{yyyy-mm} (AI usage, for the cost line in Admin).
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const XLSX = require("xlsx");
@@ -16,6 +16,7 @@ const L = require("./carrier-reader-logic");
 const aiUsageLogic = require("./ai-usage-logic");
 const { isRequestRefusal } = aiUsageLogic;
 const AIRLINE_NAMES = require("./airline-names.json");
+const D = require("./circular-digest-logic");
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const ADMIN_EMAIL = "ganny@atlaspricing.com";
@@ -182,7 +183,10 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto }, apiKey) 
   const summary = {
     circularId,
     status: "read",
+    kind: "rates",
     auto: auto === true,
+    uploadedBy: circ.uploadedBy || "",
+    storagePath: circ.storagePath || "",
     title: circ.title || circ.fileName || "",
     carrier: circ.carrier || "",
     fileName: circ.fileName || "",
@@ -243,38 +247,115 @@ exports.carrierAutoReadSave = onCall({ invoker: "public" }, async (request) => {
   return { ok: true, ...parsed };
 });
 
+/** One plain request to the AI service with the same patience as askOnce; returns the reply text and usage. */
+async function askDigest(apiKey, content) {
+  let res;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: CHEAP_MODEL, max_tokens: 8000, thinking: { type: "adaptive" }, system: D.SYSTEM, messages: [{ role: "user", content }] }),
+    });
+    if (res.ok || ![429, 500, 502, 503, 529].includes(res.status) || attempt === MAX_ATTEMPTS) break;
+    await sleep(RETRY_MS * attempt);
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.warn("circular digest: AI request failed", res.status, body.slice(0, 300));
+    if (/budget_exceeded/.test(body)) throw new HttpsError("resource-exhausted", "The AI budget for reading circulars has been reached for this month.");
+    if (/credit balance is too low/i.test(body)) throw new HttpsError("failed-precondition", "The AI account has run out of credit.");
+    throw new HttpsError("unavailable", "The AI service did not answer.");
+  }
+  const payload = await res.json();
+  return { text: (payload.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim(), usage: payload.usage || {}, stop: payload.stop_reason || "" };
+}
+
+/** Reads a circular that is not an airline rate table and writes its digest (circularDigests/{id}) and a status line (carrierReads/{id}). */
+async function runCircularDigest({ circularId, circ }, apiKey) {
+  const db = admin.firestore();
+  const parts = await partsFor(circ);
+  if (!parts.length) throw new HttpsError("failed-precondition", "Nothing readable was found in this file.");
+  if (parts.length > 14) throw new HttpsError("failed-precondition", `This file is too long to summarise automatically (${parts.length} parts).`);
+  const intro = `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Write its digest as instructed.`;
+  const reply = await askDigest(apiKey, [...parts.map((p) => p.content), { type: "text", text: intro }]);
+  const digest = D.parseDigest(reply.text);
+  if (!digest) throw new HttpsError("failed-precondition", reply.stop === "max_tokens" ? "The document was too long to summarise." : "Nothing useful could be written from this file.");
+  const now = Date.now();
+  await db.collection("circularDigests").doc(circularId).set({ ...digest, circularId, title: circ.title || circ.fileName || "", carrier: circ.carrier || "", category: circ.category || "", at: now });
+  await db.collection("carrierReads").doc(circularId).set({
+    circularId,
+    status: "read",
+    kind: "digest",
+    auto: true,
+    uploadedBy: circ.uploadedBy || "",
+    storagePath: circ.storagePath || "",
+    title: circ.title || circ.fileName || "",
+    carrier: circ.carrier || "",
+    fileName: circ.fileName || "",
+    at: now,
+    points: digest.summary.length,
+    charges: digest.charges.length,
+    applied: 0,
+    held: 0,
+    unchanged: 0,
+  });
+  return digest;
+}
+
 /**
- * Auto-read: the moment an airline tariff circular is saved to the library, read it (unless switched off or the monthly limit would be
- * passed). Whatever happens is written to carrierReads/{id} so the admin can see it: read, skipped (and why) or failed (and why).
- * Circulars are uploaded rarely (a revision every month or two), so this costs a dollar or two a month.
+ * Auto-read. When a circular is saved to the library with a new file (a first upload, or a replacement file), read it unless auto-read is
+ * switched off or the month's limit would be passed:
+ *   airline tariff  -> rates, saved to the Carrier Board and the Air desk (about $0.25)
+ *   anything else   -> a plain-words digest of what it says and the charges it lists (a few cents)
+ * Whatever happens is written to carrierReads/{id}, including who uploaded it, so that person is told straight away in the app:
+ * reading, read, waiting (and why) or failed (and why). Circulars are uploaded rarely, so this costs a dollar or two a month.
  */
-exports.autoReadCarrierCircular = onDocumentCreated({ document: "circularsLibrary/{circularId}", region: "asia-south1", secrets: [anthropicApiKey], timeoutSeconds: 540, memory: "1GiB", retry: false }, async (event) => {
-  const circ = event.data && event.data.data ? event.data.data() : null;
-  const circularId = event.params.circularId;
-  if (!circ || circ.category !== "airline_tariff" || !circ.storagePath) return;
+async function handleCircularFile(circ, circularId) {
+  if (!circ || !circ.storagePath) return;
+  const rates = circ.category === "airline_tariff";
+  if (!rates && !D.DIGEST_CATEGORIES.includes(circ.category)) return;
   const db = admin.firestore();
   const now = Date.now();
-  const note = (status, reason) => db.collection("carrierReads").doc(circularId).set({ circularId, status, auto: true, reason, title: circ.title || circ.fileName || "", carrier: circ.carrier || "", fileName: circ.fileName || "", at: now, applied: 0, held: 0, unchanged: 0 });
+  const note = (status, reason) =>
+    db.collection("carrierReads").doc(circularId).set({ circularId, status, kind: rates ? "rates" : "digest", auto: true, reason, uploadedBy: circ.uploadedBy || "", storagePath: circ.storagePath, title: circ.title || circ.fileName || "", carrier: circ.carrier || "", fileName: circ.fileName || "", at: now, applied: 0, held: 0, unchanged: 0 });
   try {
     const existing = await db.collection("carrierReads").doc(circularId).get();
-    if (existing.exists && existing.data().status === "read") return;
+    if (existing.exists && existing.data().status === "read" && existing.data().storagePath === circ.storagePath) return;
     const settingsSnap = await db.collection("carrierReadSettings").doc("auto").get();
     const monthDoc = await db.collection("aiUsage").doc(aiUsageLogic.istParts().month).get();
     const spend = aiUsageLogic.monthSpend(monthDoc.exists ? monthDoc.data() : {});
-    const spent = (spend.byFeature.readCarrierCircular || 0) + (spend.byFeature.autoReadCarrierCircular || 0);
-    const verdict = L.autoDecision(settingsSnap.exists ? settingsSnap.data() : null, spent);
+    const spent = ["readCarrierCircular", "autoReadCarrierCircular", "autoReadReplacedCircular"].reduce((t, k) => t + (spend.byFeature[k] || 0), 0);
+    const verdict = L.autoDecision(settingsSnap.exists ? settingsSnap.data() : null, spent, rates ? L.AUTO_READ_COST_USD : D.DIGEST_COST_USD);
     if (!verdict.run) {
       await note("skipped", verdict.reason);
       return;
     }
     const apiKey = anthropicApiKey.value();
     if (!apiKey) {
-      await note("failed", "The AI key is not set up.");
+      await note("failed", "The AI key is not set up. Tell the administrator.");
       return;
     }
-    await runCarrierRead({ circularId, dryRun: false, auto: true }, apiKey);
+    await note("reading", "");
+    if (rates) await runCarrierRead({ circularId, dryRun: false, auto: true }, apiKey);
+    else await runCircularDigest({ circularId, circ }, apiKey);
   } catch (e) {
-    console.warn("carrier auto-read failed", circularId, e && e.message);
-    await note("failed", (e && e.message) || "The read did not finish.").catch(() => undefined);
+    console.warn("circular auto-read failed", circularId, e && e.message);
+    await note("failed", (e && e.message) || "The read did not finish. Try uploading it again.").catch(() => undefined);
   }
+}
+
+const TRIGGER = { region: "asia-south1", secrets: [anthropicApiKey], timeoutSeconds: 540, memory: "1GiB", retry: false };
+
+/** A circular saved to the library for the first time. */
+exports.autoReadCarrierCircular = onDocumentCreated({ document: "circularsLibrary/{circularId}", ...TRIGGER }, async (event) => {
+  const circ = event.data && event.data.data ? event.data.data() : null;
+  await handleCircularFile(circ, event.params.circularId);
+});
+
+/** A circular whose file was replaced (a revised tariff uploaded over the old entry). Other edits (notes, station) do nothing. */
+exports.autoReadReplacedCircular = onDocumentUpdated({ document: "circularsLibrary/{circularId}", ...TRIGGER }, async (event) => {
+  const before = event.data && event.data.before ? event.data.before.data() : null;
+  const after = event.data && event.data.after ? event.data.after.data() : null;
+  if (!after || !after.storagePath || (before && before.storagePath === after.storagePath)) return;
+  await handleCircularFile(after, event.params.circularId);
 });

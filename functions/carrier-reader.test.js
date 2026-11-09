@@ -60,12 +60,17 @@ Object.defineProperty(admin, "storage", { value: () => ({ bucket: () => ({ file:
 const calls = [];
 let behave = () => ({});
 let refuseCheap = false;
+let digestReply = "```json\n" + JSON.stringify({ kind: "liner", company: "Maersk", effectiveFrom: "2026-12-01", validTo: "2026-12-31", appliesTo: "India to Europe", summary: ["Peak season surcharge applies from 1 Dec.", "Bookings after 25 Nov are charged the new rate."], charges: [{ name: "Peak season surcharge", amount: "450", currency: "usd", unit: "per 20ft", appliesTo: "INNSA to NLRTM", note: "" }, { name: "", amount: 1 }], deadlines: ["25 Nov 2026: last day for the old rate."] }) + "\n```";
 const line = (...f) => [...f, ...Array(11 - f.length).fill("")].join("|"); // 8 leading fields, 2 rate columns, notes
 const reply = (rows) => ["COLUMNS|0|45", ...rows].join("\n");
 globalThis.fetch = async (url, init) => {
   const body = JSON.parse(init.body);
   const text = body.messages[0].content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
   const isB = /weight-break column in turn/.test(body.system);
+  if (/CIRCULAR DIGEST/.test(body.system)) {
+    calls.push({ body, text, isB: false, digest: true });
+    return new Response(JSON.stringify({ content: [{ type: "text", text: digestReply }], usage: { input_tokens: 2000, output_tokens: 300 }, stop_reason: "end_turn" }), { status: 200 });
+  }
   if (refuseCheap && body.model === "claude-haiku-5-5") return new Response('{"type":"error","error":{"message":"model: not supported"}}', { status: 400 });
   const call = { body, text, isB };
   calls.push(call);
@@ -80,7 +85,7 @@ globalThis.fetch = async (url, init) => {
   return new Response(JSON.stringify({ content: [{ type: "text", text: out.length ? reply(out) : "NONE" }], usage: { input_tokens: 1000, output_tokens: 100 }, stop_reason: "end_turn" }), { status: 200 });
 };
 
-const { readCarrierCircular, autoReadCarrierCircular, carrierAutoReadSave } = require("./carrier-reader");
+const { readCarrierCircular, autoReadCarrierCircular, autoReadReplacedCircular, carrierAutoReadSave } = require("./carrier-reader");
 const run = (data, email = "ganny@atlaspricing.com") => readCarrierCircular.run({ auth: { token: { email } }, data, rawRequest: {} });
 
 // a spreadsheet of 1,500 routes: a title block, column headings, then one line per route
@@ -242,19 +247,55 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   // 8) auto-read: an uploaded airline circular is read by itself; switched off, over the limit, or the wrong kind it is not
   const upload = (id, data) => { store.set("circularsLibrary/" + id, data); return autoReadCarrierCircular.run({ data: { data: () => data }, params: { circularId: id } }); };
   const wipe = () => { [...store.keys()].filter((k) => /^(carrierTariffs|air_tariffs|carrierReads|carrierTariffHolds)\//.test(k)).forEach((k) => store.delete(k)); calls.length = 0; };
-  const sheet = { category: "airline_tariff", carrier: "EK", title: "EK_BLR rev", fileName: "BLR TARIFF.xlsx", storagePath: "circulars/x/EK.xlsx" };
+  const sheet = { category: "airline_tariff", carrier: "EK", title: "EK_BLR rev", fileName: "BLR TARIFF.xlsx", storagePath: "circulars/x/EK.xlsx", uploadedBy: "ganny" };
   wipe();
   await upload("a1", sheet);
   assert.equal(store.get("carrierReads/a1").status, "read", "no settings saved yet: auto-read is on");
   assert.equal(store.get("carrierReads/a1").auto, true);
+  assert.equal(store.get("carrierReads/a1").uploadedBy, "ganny", "the uploader is recorded on the read");
   assert.equal(store.get("carrierReads/a1").applied, N);
   assert.ok([...store.keys()].some((k) => k.startsWith("air_tariffs/")), "an auto-read also feeds the Air desk");
   const readCalls = calls.length;
   await upload("a1", sheet);
   assert.equal(calls.length, readCalls, "an already-read circular is not read twice");
   wipe();
-  await upload("a2", { ...sheet, category: "general" });
-  assert.ok(!store.has("carrierReads/a2") && calls.length === 0, "only airline tariffs are read");
+  await upload("a2", { ...sheet, category: "line_circular", carrier: "Maersk", title: "Peak season notice", uploadedBy: "priya" });
+  assert.equal(store.get("carrierReads/a2").status, "read", "a liner circular is summarised");
+  assert.equal(store.get("carrierReads/a2").kind, "digest");
+  assert.equal(store.get("carrierReads/a2").uploadedBy, "priya", "the uploader is recorded so they can be told");
+  const dg = store.get("circularDigests/a2");
+  assert.equal(dg.kind, "liner");
+  assert.equal(dg.validTo, "2026-12-31");
+  assert.deepEqual(dg.charges, [{ name: "Peak season surcharge", amount: 450, currency: "USD", unit: "per 20ft", appliesTo: "INNSA to NLRTM", note: "" }], "a charge with no name is dropped, numbers become numbers");
+  assert.equal(dg.summary.length, 2);
+  assert.equal(calls.length, 1, "a digest is one read, not two");
+  assert.equal(calls[0].body.model, "claude-haiku-5-5", "digests use the cheap model");
+  assert.notEqual(calls[0].body.thinking.type, "disabled");
+  assert.ok(!store.has("carrierTariffs/a2") && ![...store.keys()].some((k) => k.startsWith("air_tariffs/")), "a digest never touches rates");
+  wipe();
+  await upload("a2b", { ...sheet, category: "something_else" });
+  assert.ok(!store.has("carrierReads/a2b") && calls.length === 0, "unknown kinds of circular are left alone");
+  digestReply = "I could not read this.";
+  await upload("a2c", { ...sheet, category: "general" });
+  assert.equal(store.get("carrierReads/a2c").status, "failed", "a reply with no digest in it is reported, not hidden");
+  assert.match(store.get("carrierReads/a2c").reason, /Nothing useful/);
+  digestReply = "{}";
+  await upload("a2d", { ...sheet, category: "general" });
+  assert.equal(store.get("carrierReads/a2d").status, "failed", "an empty digest counts as nothing");
+  // a replaced file is read again; other edits are not
+  wipe();
+  digestReply = JSON.stringify({ kind: "other", summary: ["New rates apply."], charges: [] });
+  const replace = (id, before, after) => autoReadReplacedCircular.run({ data: { before: { data: () => before }, after: { data: () => after } }, params: { circularId: id } });
+  const lib = { ...sheet, category: "line_circular", storagePath: "circulars/x/old.xlsx" };
+  await replace("a2e", lib, { ...lib, notes: "edited" });
+  assert.ok(!store.has("carrierReads/a2e") && calls.length === 0, "editing notes or station does not read again");
+  await replace("a2e", lib, { ...lib, storagePath: "circulars/x/new.xlsx" });
+  assert.equal(store.get("carrierReads/a2e").status, "read", "a replacement file is read");
+  assert.equal(store.get("carrierReads/a2e").storagePath, "circulars/x/new.xlsx");
+  await replace("a2e", lib, { ...lib, storagePath: "circulars/x/new.xlsx" });
+  assert.equal(calls.length, 1, "the same replacement is not read twice");
+  digestReply = "x";
+  wipe();
   await upload("a3", { ...sheet, storagePath: "" });
   assert.ok(!store.has("carrierReads/a3") && calls.length === 0, "no file, nothing to read");
   store.set("carrierReadSettings/auto", { enabled: false, monthlyCapUsd: 3 });

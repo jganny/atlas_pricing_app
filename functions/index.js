@@ -1459,3 +1459,4 @@ const carrierReader = require("./carrier-reader");
 exports.readCarrierCircular = carrierReader.readCarrierCircular;
 exports.carrierAutoReadSave = carrierReader.carrierAutoReadSave;
 exports.autoReadCarrierCircular = carrierReader.autoReadCarrierCircular;
+exports.autoReadReplacedCircular = carrierReader.autoReadReplacedCircular;

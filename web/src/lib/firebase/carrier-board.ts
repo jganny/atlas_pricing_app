@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, doc, getDoc, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, limit, onSnapshot, query, where } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useLiveData } from "@/lib/api";
 import { SAMPLE_TARIFFS } from "@/lib/carriers/board-sample";
@@ -56,34 +56,107 @@ export interface CarrierReadSummary {
   held: number;
   unchanged: number;
   publishedToAirDesk: number;
-  /** read = rates saved; skipped = auto-read chose not to run; failed = it ran into a problem. */
-  status: "read" | "skipped" | "failed";
+  /** reading = in progress; read = done; skipped = not started (and why); failed = ran into a problem (and why). */
+  status: "reading" | "read" | "skipped" | "failed";
+  /** rates = an airline tariff read into the Carrier board; digest = a plain-words summary of any other circular. */
+  kind: "rates" | "digest";
   reason: string;
   auto: boolean;
+  uploadedBy: string;
+  points: number;
+  charges: number;
+}
+
+function mapRead(id: string, d: Record<string, unknown>): CarrierReadSummary {
+  const st = d.status;
+  return {
+    circularId: id,
+    title: String(d.title ?? ""),
+    carrier: String(d.carrier ?? ""),
+    at: num(d.at) ?? 0,
+    applied: num(d.applied) ?? 0,
+    held: num(d.held) ?? 0,
+    unchanged: num(d.unchanged) ?? 0,
+    publishedToAirDesk: num(d.publishedToAirDesk) ?? 0,
+    status: st === "reading" || st === "skipped" || st === "failed" ? st : "read",
+    kind: d.kind === "digest" ? "digest" : "rates",
+    reason: String(d.reason ?? ""),
+    auto: d.auto === true,
+    uploadedBy: String(d.uploadedBy ?? ""),
+    points: num(d.points) ?? 0,
+    charges: num(d.charges) ?? 0,
+  };
 }
 
 /** What the reader did with each circular (newest first). */
 export async function fetchCarrierReads(): Promise<CarrierReadSummary[]> {
   if (!useLiveData) return [];
   const snap = await getDocs(query(collection(getFirebaseDb(), "carrierReads"), limit(200)));
-  return snap.docs
-    .map((x) => {
-      const d = x.data();
-      return {
-        circularId: x.id,
-        title: String(d.title ?? ""),
-        carrier: String(d.carrier ?? ""),
-        at: num(d.at) ?? 0,
-        applied: num(d.applied) ?? 0,
-        held: num(d.held) ?? 0,
-        unchanged: num(d.unchanged) ?? 0,
-        publishedToAirDesk: num(d.publishedToAirDesk) ?? 0,
-        status: d.status === "skipped" || d.status === "failed" ? d.status : "read",
-        reason: String(d.reason ?? ""),
-        auto: d.auto === true,
-      };
-    })
-    .sort((a, b) => b.at - a.at);
+  return snap.docs.map((x) => mapRead(x.id, x.data())).sort((a, b) => b.at - a.at);
+}
+
+/** Live: every circular's read status, so each row on the Circulars page shows it as it changes. Returns the unsubscribe. */
+export function subscribeCarrierReads(onData: (reads: CarrierReadSummary[]) => void): () => void {
+  if (!useLiveData) return () => undefined;
+  return onSnapshot(
+    query(collection(getFirebaseDb(), "carrierReads"), limit(300)),
+    (snap) => onData(snap.docs.map((x) => mapRead(x.id, x.data()))),
+    () => undefined,
+  );
+}
+
+/**
+ * Live: the reads of circulars THIS person uploaded. onChange is called for each change after the first load, so the person is told the
+ * moment a read starts, finishes, waits or fails (and never re-told about old ones).
+ */
+export function subscribeMyCarrierReads(username: string, onChange: (read: CarrierReadSummary) => void): () => void {
+  if (!useLiveData || !username) return () => undefined;
+  let first = true;
+  const known = new Map<string, string>();
+  return onSnapshot(
+    query(collection(getFirebaseDb(), "carrierReads"), where("uploadedBy", "==", username), limit(30)),
+    (snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") return;
+        const r = mapRead(ch.doc.id, ch.doc.data());
+        const key = `${r.status}:${r.at}`;
+        const before = known.get(r.circularId);
+        known.set(r.circularId, key);
+        if (!first && before !== key) onChange(r);
+      });
+      first = false;
+    },
+    () => undefined,
+  );
+}
+
+export interface CircularDigest {
+  kind: string;
+  company: string;
+  effectiveFrom: string;
+  validTo: string;
+  appliesTo: string;
+  summary: string[];
+  charges: Array<{ name: string; amount: number | null; currency: string; unit: string; appliesTo: string; note: string }>;
+  deadlines: string[];
+}
+
+/** The plain-words summary the reader wrote for one circular, or null. */
+export async function fetchDigest(circularId: string): Promise<CircularDigest | null> {
+  if (!useLiveData) return null;
+  const snap = await getDoc(doc(getFirebaseDb(), "circularDigests", circularId));
+  if (!snap.exists()) return null;
+  const d = snap.data();
+  return {
+    kind: String(d.kind ?? "other"),
+    company: String(d.company ?? ""),
+    effectiveFrom: String(d.effectiveFrom ?? ""),
+    validTo: String(d.validTo ?? ""),
+    appliesTo: String(d.appliesTo ?? ""),
+    summary: Array.isArray(d.summary) ? d.summary.map(String) : [],
+    charges: Array.isArray(d.charges) ? (d.charges as CircularDigest["charges"]) : [],
+    deadlines: Array.isArray(d.deadlines) ? d.deadlines.map(String) : [],
+  };
 }
 
 export interface AutoReadSettings {
