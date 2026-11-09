@@ -208,6 +208,12 @@ service cloud.firestore {
     match /resetRequests/{userId} { allow read, write: if isSignedIn(); }
     match /leads/{leadId} { allow read, write: if isSignedIn(); }
     match /activities/{activityId} { allow read, write: if isSignedIn(); }
+    // Visit report: the option lists the admin edits, and what people typed under "something else" (counted, offered back to the admin).
+    match /salesVisitConfig/{docId} { allow read: if isSignedIn(); allow write: if isAdmin() || isSalesAdmin(); }
+    match /salesVisitSuggestions/{id} {
+      allow create, update: if isSignedIn() && request.resource.data.keys().hasOnly(['question', 'text', 'count', 'lastBy', 'at']);
+      allow read, delete: if isAdmin() || isSalesAdmin();
+    }
     match /wonFollowUps/{quoteId} { allow read, write: if isSignedIn(); }
     // Saved drafts of a desk's quote in progress. Not quotes: never listed in Enquiry DB. Visibility by desk is applied in the app, like wonFollowUps.
     match /quoteDrafts/{draftId} { allow read, write: if isSignedIn(); }

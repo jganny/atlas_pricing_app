@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
+import { VisitReportCard } from "@/components/sales/VisitReportCard";
 import { activityDay, formatDay, sortActivities, todayISO, visitProblem } from "@/lib/sales/activity-log";
 import { toast } from "@/components/Toast";
 import { useAccounts, useEnquiries, useLeads, useSalesContacts } from "@/hooks/use-atlas-data";
@@ -89,6 +90,7 @@ export function PipelineView() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activities, setActivities] = useState<LeadActivity[]>([]);
+  const [panelReport, setPanelReport] = useState(false);
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState<LeadActivity["type"]>("meeting");
   const [noteDate, setNoteDate] = useState(() => todayISO());
@@ -585,7 +587,20 @@ export function PipelineView() {
                   Change company
                 </button>
               </p>
-              <div className="mt-1">{renderVisitForm("new", visitTarget.id)}</div>
+              <div className="mt-1">
+                <VisitReportCard
+                  leadId={visitTarget.id}
+                  company={visitTarget.company}
+                  username={user?.username || "desk"}
+                  onCancel={() => { setVisiting(false); setVisitTarget(null); setVisitQuery(""); }}
+                  onSaved={(a) => {
+                    if (selected?.id === visitTarget.id) setActivities((prev) => sortActivities([a, ...prev]));
+                    setVisiting(false);
+                    setVisitTarget(null);
+                    setVisitQuery("");
+                  }}
+                />
+              </div>
             </>
           ) : (
             <>
@@ -1192,7 +1207,24 @@ export function PipelineView() {
             </p>
           ) : null}
 
-          <h3 className="mt-4 border-t border-[var(--color-border)] pt-3 text-sm font-bold">Log a visit</h3>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] pt-3">
+            <h3 className="text-sm font-bold">Log a visit</h3>
+            <Button type="button" variant="secondary" className="h-8" aria-pressed={panelReport} onClick={() => setPanelReport((v) => !v)} data-testid="panel-visit-report">
+              {panelReport ? "Close guided report" : "Guided visit report"}
+            </Button>
+          </div>
+          {panelReport ? (
+            <VisitReportCard
+              leadId={selected.id}
+              company={selected.company}
+              username={user?.username || "desk"}
+              onCancel={() => setPanelReport(false)}
+              onSaved={(a) => {
+                setActivities((prev) => sortActivities([a, ...prev]));
+                setPanelReport(false);
+              }}
+            />
+          ) : null}
           {renderVisitForm("panel", selected.id)}
           <ul className="mt-3 space-y-2 text-sm">
             {activities.length === 0 ? (

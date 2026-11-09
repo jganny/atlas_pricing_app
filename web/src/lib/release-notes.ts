@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.146",
+    date: "2026-11-10",
+    items: [
+      "Sales: \u201cNew visit\u201d is now a short guided conversation. The app knows if it is a first visit (7 quick questions) or a follow-up (4), every question has tap-to-pick answers, can be typed or spoken, and can be skipped. A follow-up asks whether last time\u2019s plan happened. The answers become the visit note, with the next action and its reminder date. Admin \u2192 Visit report options lets you add, rename, reorder or hide any option, and shows what people typed under \u201csomething else\u201d.",
+      "Rate cards: the circular reader now keeps every rate card, not only general cargo, tagged with its class (GCR, DGR, PHARMA, PRIORITY\u2026). On the Carrier Board and the Air desk a special card appears as its own line, named like EK-DGR or EK-PHARMA. The Air desk never adds them by itself; you pick them from the lane list.",
+    ],
+  },
+  {
     version: "0.3.145",
     date: "2026-11-10",
     items: [

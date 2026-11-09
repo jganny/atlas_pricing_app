@@ -74,6 +74,7 @@ function mapActivity(id: string, data: Record<string, unknown>): LeadActivity {
     ...(data.activityDate ? { activityDate: String(data.activityDate) } : {}),
     ...(data.nextStep ? { nextStep: String(data.nextStep) } : {}),
     ...(data.followUpDate ? { followUpDate: String(data.followUpDate) } : {}),
+    ...(data.report && typeof data.report === "object" ? { report: data.report as LeadActivity["report"] } : {}),
   };
 }
 
@@ -199,7 +200,7 @@ export async function addLeadActivity(
   body: string,
   createdBy: string,
   type: LeadActivity["type"] = "note",
-  extra: Pick<LeadActivity, "activityDate" | "nextStep" | "followUpDate"> = {},
+  extra: Pick<LeadActivity, "activityDate" | "nextStep" | "followUpDate" | "report"> = {},
 ): Promise<string> {
   const db = getFirebaseDb();
   // Extra fields are added only when filled in, so entries stay readable by the legacy app.
@@ -212,6 +213,7 @@ export async function addLeadActivity(
     ...(extra.activityDate ? { activityDate: extra.activityDate } : {}),
     ...(extra.nextStep?.trim() ? { nextStep: extra.nextStep.trim() } : {}),
     ...(extra.followUpDate ? { followUpDate: extra.followUpDate } : {}),
+    ...(extra.report ? { report: extra.report } : {}),
   });
   return ref.id;
 }

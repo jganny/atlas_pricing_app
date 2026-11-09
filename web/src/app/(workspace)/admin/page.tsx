@@ -1,5 +1,6 @@
 "use client";
 
+import { VisitOptionsAdmin } from "@/components/sales/VisitOptionsAdmin";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { KeyRound, UserPlus } from "lucide-react";
@@ -150,6 +151,8 @@ export default function AdminPage() {
     switch (id) {
       case "desk-seats":
         return <DeskSeatsAdmin />;
+      case "visit-report-options":
+        return <VisitOptionsAdmin />;
       case "ai-credit-and-cost":
         return <AiUsageAdmin />;
       case "ask-vertex-usage":

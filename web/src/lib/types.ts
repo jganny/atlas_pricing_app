@@ -340,6 +340,8 @@ export interface LeadActivity {
   /** What happens next, and by when (YYYY-MM-DD). */
   nextStep?: string
   followUpDate?: string
+  /** Set when the visit was logged through the guided visit report: the structured answers behind the note. */
+  report?: import('@/lib/sales/visit-report').VisitReport
 }
 
 export interface CreditControl {
