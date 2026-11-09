@@ -230,3 +230,13 @@ assert.deepEqual(L.mergeRows([]), []);
     assert.match(sys, /each route appears once/);
   }
 }
+
+// --- a reply of NONE plus an explanation is "no routes here"; anything with route lines is read normally ---
+{
+  assert.deepEqual(L.parseRowLines("NONE\nThis part only holds DGR rates."), { rows: [], columns: [] });
+  assert.deepEqual(L.parseRowLines("None."), { rows: [], columns: [] });
+  assert.equal(L.parseRowLines("None of these routes are listed."), null, "still not an empty read");
+  const kept = L.parseRowLines("NONE\nCOLUMNS|0|100\nTK|BOM|LHR|INR|||contract|25500|12|10|");
+  assert.ok(kept && kept.rows.length === 1, "a reply that has route lines is read, whatever it starts with");
+  for (const sys of L.systemPrompts()) assert.match(sys, /MINIMUM column is the flat minimum charge/);
+}

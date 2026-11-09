@@ -77,6 +77,7 @@ const FORMAT =
   "We load GENERAL CARGO rates only. When a document carries several rate cards or cargo types for the same route (for example general cargo, dangerous goods DGR, pharma, perishables, valuables, live animals, courier or express), extract ONLY the general cargo rate card (often marked GCR, GEN, GENERAL or NORMAL) and skip every other card, so each route appears once. If the part you are given holds only non-general-cargo cards, reply with exactly: NONE. " +
   "Line 1 is COLUMNS followed by the weight in kg at which each printed per-kg rate column starts, left to right, separated by | , for example COLUMNS|0|100|300|500. " +
   "Use 0 for a column that applies from the first kilo (headed Normal, General, Below 45 and so on). List only per-kg rate columns, never the minimum charge. Read the numbers from the column headings; do not assume them. " +
+  "For example, a table headed MINIMUM | NORMAL | +45 KGS | +100 KGS | +300 KGS | +500 KGS | +1000 KGS gives COLUMNS|0|45|100|300|500|1000, and the row 'BOM LHR INR 25500 1275 1105 1003 935 867 867' gives min 25500 and then the six rates 1275, 1105, 1003, 935, 867, 867 in that order. The MINIMUM column is the flat minimum charge: it goes in the min field and is never a rate column. " +
   "Then one line per route (origin and destination), with these fields separated by | : " +
   "carrier (2-letter airline code) | origin (3-letter airport) | destination (3-letter airport) | currency (3-letter code exactly as the document states it, whether in the rate table, a heading, or a note or footnote such as 'rates in INR' or 'INR 12 per kg' on any page; empty only if the document does not say anywhere) | " +
   "validFrom (YYYY-MM-DD or empty) | validTo (YYYY-MM-DD or empty) | rateKind (contract, published or unknown) | min (flat minimum charge or empty) | " +
@@ -97,6 +98,8 @@ function parseRowLines(text) {
   const raw = String(text ?? "").trim();
   if (!raw) return null; // an empty reply is not a read: it is flagged, never taken to mean "no routes"
   if (/^none[.!]?$/i.test(raw)) return { rows: [], columns: [] };
+  // "NONE" followed by an explanation, with no COLUMNS line and no route lines, still means this part holds no general cargo routes.
+  if (/^none[.!]?[ \t]*\r?\n/i.test(raw) && !/^\W*columns\s*\|/im.test(raw) && !/^[^\n|]*\|[^\n|]*\|/m.test(raw)) return { rows: [], columns: [] };
   const cleaned = raw.split(/\r?\n/).map((l) => l.replace(/^[\s`*>\-]+/, "").split("|").map((x) => x.trim()));
   const head = cleaned.find((p) => /^columns$/i.test(p[0]));
   if (!head) return null;
