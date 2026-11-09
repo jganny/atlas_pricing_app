@@ -6,10 +6,16 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { fetchLiveCirculars } from "@/lib/firebase/circulars";
-import { fetchAutoReadSettings, readCarrierCircular, saveAutoReadSettings, type ReadResult } from "@/lib/firebase/carrier-board";
+import { getAiUsageSummary } from "@/lib/firebase/ai-usage";
+import { fetchAutoReadSettings, fetchCarrierReads, readCarrierCircular, readLibraryCircular, saveAutoReadSettings, type ReadResult } from "@/lib/firebase/carrier-board";
 
 /** Roughly what one airline circular costs to read twice (practice reads cost the same). */
 export const READ_COST_NOTE = "about $0.25";
+const RATES_COST = 0.25;
+const DIGEST_COST = 0.04;
+/** Credit kept back so a bulk read never uses up the last of it (running out pauses Ask Vertex for everyone). */
+const KEEP_USD = 0.5;
+const DIGEST_CATEGORIES = ["line_circular", "sea_tariff", "courier_tariff", "fuel_circular_airline", "fuel_circular_shipping", "general"];
 
 
 /**
@@ -32,6 +38,69 @@ export function CarrierReaderPanel() {
     } catch (e) {
       toast(e instanceof Error ? e.message : "Could not save.", "error");
     }
+  }
+  const [lib, setLib] = useState<{ running: boolean; text: string }>({ running: false, text: "" });
+  async function readLibrary() {
+    const all = (circulars.data ?? []).filter((c) => !!c.storagePath && (c.category === "airline_tariff" || DIGEST_CATEGORIES.includes(c.category ?? "")));
+    const reads = await fetchCarrierReads();
+    const done = new Set(reads.filter((r) => r.status === "read").map((r) => r.circularId));
+    const todo = all.filter((c) => !done.has(c.id)).sort((a, b) => Number(b.category === "airline_tariff") - Number(a.category === "airline_tariff"));
+    if (!todo.length) {
+      toast("Everything in the library has already been read.", "info");
+      return;
+    }
+    const rates = todo.filter((c) => c.category === "airline_tariff").length;
+    const cost = rates * RATES_COST + (todo.length - rates) * DIGEST_COST;
+    let credit: number | null = null;
+    try {
+      const sum = await getAiUsageSummary();
+      credit = typeof sum.billing?.estimateUsd === "number" ? sum.billing.estimateUsd : null;
+    } catch {
+      credit = null;
+    }
+    const budget = credit === null ? Infinity : Math.max(0, credit - KEEP_USD);
+    const partial = cost > budget;
+    const ok = window.confirm(
+      `${rates} airline tariff circular${rates === 1 ? "" : "s"} (about $0.25 each) and ${todo.length - rates} other circular${todo.length - rates === 1 ? "" : "s"} (a few cents each) have not been read. Reading them all costs about $${cost.toFixed(2)}.` +
+        (credit !== null ? `\n\nYour AI credit left is about $${credit.toFixed(2)}.` : "") +
+        (partial ? `\n\nThat is not enough for all of them, so it will read airline circulars first and stop while about $${KEEP_USD.toFixed(2)} is left. Top up the credit and press this again for the rest.` : "") +
+        "\n\nNobody who uploaded them is notified. Continue?",
+    );
+    if (!ok) return;
+    setLib({ running: true, text: "Starting…" });
+    let spent = 0;
+    let read = 0;
+    let held = 0;
+    let failed = 0;
+    let stopped = "";
+    for (let i = 0; i < todo.length; i++) {
+      const c = todo[i];
+      const est = c.category === "airline_tariff" ? RATES_COST : DIGEST_COST;
+      if (spent + est > budget) {
+        stopped = "Stopped to keep some AI credit. Top up and press again for the rest.";
+        break;
+      }
+      setLib({ running: true, text: `Reading ${i + 1} of ${todo.length}: ${c.title || c.fileName}…` });
+      try {
+        const res = await readLibraryCircular(c.id);
+        if (!res.skipped) {
+          spent += est;
+          read += 1;
+          held += res.held ?? 0;
+        }
+      } catch (e) {
+        failed += 1;
+        const msg = e instanceof Error ? e.message : "";
+        if (/credit|budget/i.test(msg)) {
+          stopped = msg;
+          break;
+        }
+      }
+    }
+    await Promise.all([qc.invalidateQueries({ queryKey: ["carrier-board"] }), qc.invalidateQueries({ queryKey: ["airTariffs"] })]);
+    const summary = `${read} read${held ? `, ${held} routes held for checking` : ""}${failed ? `, ${failed} could not be read (see each circular on the Circulars page)` : ""}. ${stopped}`.trim();
+    setLib({ running: false, text: summary });
+    toast(summary, failed || stopped ? "info" : "success");
   }
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<{ title: string; res: ReadResult } | null>(null);
@@ -60,6 +129,13 @@ export function CarrierReaderPanel() {
       <div className="border-b border-[var(--color-border)] px-5 py-3">
         <h2 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">Automatic reading and manual reads</h2>
         <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">Administrators only. Whoever uploads a circular is told on screen, straight away, how its read went. This box is only for the switch and the limit, and for reading one by hand if you ever need to.</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-5 py-3" data-testid="read-library">
+        <Button size="sm" onClick={readLibrary} disabled={lib.running || busy !== null}>
+          {lib.running ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+          Read the circulars already in the library
+        </Button>
+        <span className="text-xs text-[var(--color-text-muted)]">{lib.text || "Reads every circular that has not been read yet, so nobody has to upload them again. Asks you first, with the cost."}</span>
       </div>
       <div className="flex flex-wrap items-end gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-5 py-3" data-testid="auto-read-settings">
         <label className="flex items-center gap-2 text-sm font-semibold text-[var(--color-atlas-navy)]">

@@ -210,3 +210,18 @@ export async function readCarrierCircular(circularId: string, dryRun: boolean): 
   const call = httpsCallable<{ circularId: string; dryRun: boolean }, ReadResult>(getFunctions(getFirebaseApp()), "readCarrierCircular", { timeout: 900_000 });
   return (await call({ circularId, dryRun })).data;
 }
+
+export interface LibraryReadResult {
+  circularId: string;
+  skipped?: boolean;
+  kind?: "rates" | "digest";
+  applied?: number;
+  held?: number;
+  points?: number;
+}
+
+/** Admin only (the server checks): read ONE circular that is already in the library, without notifying whoever uploaded it. */
+export async function readLibraryCircular(circularId: string): Promise<LibraryReadResult> {
+  const call = httpsCallable<{ circularId: string }, LibraryReadResult>(getFunctions(getFirebaseApp()), "readLibraryCircular", { timeout: 900_000 });
+  return (await call({ circularId })).data;
+}

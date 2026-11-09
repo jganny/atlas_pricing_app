@@ -15,6 +15,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: "2026-11-10",
     items: [
       "The Standards section has been removed from the menu and from the app.",
+      "Under Administrator tools on the Carrier board, a new button reads every circular already in the library that has not been read (airline rate tables into the Carrier board and the Air desk, everything else into a short summary), so nobody has to upload them again. It tells you the cost first, shows your AI credit, and stops before the credit runs out.",
       "On the Carrier board, the \u201chow each airline's rate is obtained\u201d map now shows Email, not Tariff, for an airline whose tariff has not been loaded yet, so it matches the list above it.",
     ],
   },
