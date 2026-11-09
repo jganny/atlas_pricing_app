@@ -18,6 +18,7 @@ import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Input, Label, NumberInput, Select, Tabs, Textarea } from "@/components/ui";
 import { DeskResetDialog } from "@/components/DeskResetDialog";
+import { ShowNamesBar } from "@/components/desks/ClientCopyOptions";
 import { AirlineEditorOverlay, AirlineOptionForm, CompactFreight } from "@/components/desks/AirlineOptionForm";
 import { QuotePreviewModal } from "@/components/QuotePreviewModal";
 import { VendorCompareList } from "@/components/VendorCompareList";
@@ -1712,6 +1713,12 @@ function AirDeskInner() {
                 First option stays on this page with the weight break that matches chargeable kg.
                 Extra airlines open in a popup so you do not scroll a full page per carrier.
               </p>
+              <ShowNamesBar
+                onAll={(show) => {
+                  const ids = new Set(laneAirlines.map((a) => a.id));
+                  setAirlines((prev) => prev.map((a) => (ids.has(a.id) ? { ...a, hideName: !show } : a)));
+                }}
+              />
 
               {laneAirlines.map((opt, idx) => {
                 const tot = totalsById[opt.id];
@@ -1793,6 +1800,8 @@ function AirDeskInner() {
                           }))
                         }
                         lastDestTabTarget="air-next-terms"
+                        position={idx + 1}
+                        showAgent={module === "import"}
                         onUpdate={(patch) => updateAirline(opt.id, patch)}
                         onUpdateBreak={(name, field, value) =>
                           updateBreak(opt.id, name, field, value)
@@ -1926,6 +1935,20 @@ function AirDeskInner() {
                   <dt className="text-[var(--color-text-muted)]">Airline</dt>
                   <dd className="text-right font-bold">{selected.name || "—"}</dd>
                 </div>
+                {selected.hideName ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Client sees</dt>
+                    <dd className="text-right font-bold">Name hidden</dd>
+                  </div>
+                ) : null}
+                {module === "import" && selected.agentRate ? (
+                  <div className="flex justify-between gap-2" data-testid="summary-agent">
+                    <dt className="text-[var(--color-text-muted)]">Rate source</dt>
+                    <dd className="text-right font-bold text-violet-800">
+                      Agent{selected.agentName ? `: ${selected.agentName}` : ""} <span className="font-normal">(internal)</span>
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-[var(--color-text-muted)]">Chargeable</dt>
                   <dd className="font-bold">
@@ -2064,6 +2087,8 @@ function AirDeskInner() {
                       [opt.id]: !prev[opt.id],
                     }))
                   }
+                  position={idx >= 0 ? idx + 1 : 1}
+                  showAgent={module === "import"}
                   onUpdate={(patch) => updateAirline(opt.id, patch)}
                   onUpdateBreak={(name, field, value) => updateBreak(opt.id, name, field, value)}
                 />

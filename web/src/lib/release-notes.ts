@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.145",
+    date: "2026-11-10",
+    items: [
+      "Air and Sea desks: every airline, liner and coloader card now has a \u201cClient copy\u201d box. Untick \u201cShow this carrier\u2019s name on the quote\u201d and the client sees \u201cAirline option 2\u201d (or Liner / Coloader) instead, on the quote, PDF, email and WhatsApp text. \u201cShow all\u201d and \u201cHide all\u201d sit above the cards.",
+      "Import desks: \u201cRates procured from an Agent\u201d with the agent\u2019s name, kept inside the company. It never appears on anything the client receives, even if typed into a note or the terms. The staff preview shows it as internal.",
+    ],
+  },
+  {
     version: "0.3.144",
     date: "2026-11-10",
     items: [

@@ -14,6 +14,16 @@ export function newCarrierId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** The two client-copy settings, only when they are set (keeps old quotes and Firestore documents free of empty keys). */
+function clientCopyFields(p: { hideName?: boolean; agentRate?: boolean; agentName?: string }) {
+  const agentName = (p.agentName ?? "").trim();
+  return {
+    ...(p.hideName ? { hideName: true } : {}),
+    ...(p.agentRate ? { agentRate: true } : {}),
+    ...(p.agentRate && agentName ? { agentName } : {}),
+  };
+}
+
 export interface AirlineOption {
   id: string;
   name: string;
@@ -40,6 +50,12 @@ export interface AirlineOption {
   selected: boolean;
   /** Rates were set by a Quote Hub instruction: the tariff fill must not add the other weight breaks after them. */
   rateLock?: boolean;
+  /** The airline's name is replaced by a neutral label ("Airline option 2") on everything the client receives. */
+  hideName?: boolean;
+  /** Import only: the rate was procured from an overseas agent. */
+  agentRate?: boolean;
+  /** The agent's name. Internal only: never on the client's quote, PDF, email or share text. */
+  agentName?: string;
 }
 
 export function createAirlineOption(
@@ -69,6 +85,7 @@ export function createAirlineOption(
     destSurcharges: partial.destSurcharges ?? defaultAirDestSurcharges(),
     selected,
     ...(partial.rateLock ? { rateLock: true } : {}),
+    ...clientCopyFields(partial),
   };
 }
 
@@ -115,6 +132,12 @@ export interface LinerOption {
   originSurcharges: SurchargeRow[];
   destSurcharges: SurchargeRow[];
   selected: boolean;
+  /** The liner/coloader's name is replaced by a neutral label ("Liner option 2") on everything the client receives. */
+  hideName?: boolean;
+  /** Import only: the rate was procured from an overseas agent. */
+  agentRate?: boolean;
+  /** The agent's name. Internal only: never on the client's quote, PDF, email or share text. */
+  agentName?: string;
 }
 
 export function createLinerOption(
@@ -139,6 +162,7 @@ export function createLinerOption(
     originSurcharges: partial.originSurcharges ?? defaultSeaOriginSurcharges(),
     destSurcharges: partial.destSurcharges ?? defaultSeaDestSurcharges(),
     selected,
+    ...clientCopyFields(partial),
   };
 }
 
@@ -276,6 +300,7 @@ export function serializeAirlineOption(a: AirlineOption): Record<string, unknown
     originSurcharges: a.originSurcharges,
     destSurcharges: a.destSurcharges,
     selected: Boolean(a.selected),
+    ...clientCopyFields(a),
   };
   if (a.laneId) row.laneId = a.laneId;
   return row;
@@ -297,6 +322,7 @@ export function serializeLinerOption(l: LinerOption): Record<string, unknown> {
     originSurcharges: l.originSurcharges,
     destSurcharges: l.destSurcharges,
     selected: Boolean(l.selected),
+    ...clientCopyFields(l),
   };
   if (l.laneId) row.laneId = l.laneId;
   return row;

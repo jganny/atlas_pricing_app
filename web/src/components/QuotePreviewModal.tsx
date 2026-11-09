@@ -7,6 +7,7 @@ import type { SavedQuote } from "@/lib/types";
 import { toast } from "@/components/Toast";
 import { GuideNote } from "@/components/GuideNote";
 import { buildClientQuoteDocument } from "@/lib/quotes/quote-document";
+import { agentsUsed, clientCopyPlan } from "@/lib/quotes/client-copy";
 import {
   downloadBlob,
   emailQuotePdf,
@@ -132,6 +133,8 @@ export function QuotePreviewModal({
   );
 
   const rows = identityRows(quote);
+  const agentRows = agentsUsed(quote);
+  const hiddenCount = clientCopyPlan(quote).hidden.length;
   const terms = String(quote.details?.termsAndConditions ?? "");
   const type = (quote.type || "").toLowerCase();
   const d = quote.details ?? {};
@@ -366,6 +369,18 @@ export function QuotePreviewModal({
               ) : null}
             </div>
           </div>
+
+          {agentRows.length || hiddenCount ? (
+            <div className="mb-4 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900 print:hidden" data-testid="quote-internal-client-copy">
+              <strong className="mb-0.5 block">Internal only · not on the client&apos;s copy</strong>
+              {agentRows.map((a) => (
+                <div key={`${a.carrier}-${a.agent}`}>
+                  {a.carrier || "Option"}: rate procured from an agent{a.agent ? ` — ${a.agent}` : " (name not entered)"}
+                </div>
+              ))}
+              {hiddenCount ? <div>{hiddenCount} carrier name{hiddenCount > 1 ? "s are" : " is"} hidden from the client and shown as a neutral label.</div> : null}
+            </div>
+          ) : null}
 
           {showCompare ? (
             <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 print:hidden">

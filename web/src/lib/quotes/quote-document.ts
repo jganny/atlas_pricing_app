@@ -3,6 +3,7 @@ import { getQuoteRefId } from "./ref-id";
 import { formatCurrency } from "../utils";
 import { quoteOwnerLabel } from "../auth/desk-seats";
 import { identityRows } from "./quote-identity";
+import { quoteForClient } from "./client-copy";
 import { formatValidity } from "./validity";
 import {
   formatRoutingPreview,
@@ -107,9 +108,11 @@ export interface ClientQuoteDocument {
 }
 
 export function buildClientQuoteDocument(
-  quote: SavedQuote,
+  staffQuote: SavedQuote,
   holidays: CustomsHoliday[] = [],
 ): ClientQuoteDocument {
+  // Everything below is what the client receives, so carrier names that are switched off and agent names are removed first.
+  const quote = quoteForClient(staffQuote);
   const ref = getQuoteRefId(quote);
   const upcomingHolidays = relevantHolidaysForUserBranch(
     String(quote.details?.creatorBranch ?? ""),

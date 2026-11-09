@@ -47,6 +47,7 @@ import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
+import { ClientCopyOptions, ShowNamesBar } from "@/components/desks/ClientCopyOptions";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { relaxedShipmentSchema, seaShipmentSchema } from "@/lib/pricing/desk-schemas";
 import {
@@ -1736,6 +1737,12 @@ function SeaDeskInner() {
                   </Button>
                 </div>
               </div>
+              <ShowNamesBar
+                onAll={(show) => {
+                  const ids = new Set(laneLiners.map((l) => l.id));
+                  setLiners((prev) => prev.map((l) => (ids.has(l.id) ? { ...l, hideName: !show } : l)));
+                }}
+              />
 
               {laneLiners.map((opt, idx) => {
                 const tot = totalsById[opt.id];
@@ -1789,6 +1796,19 @@ function SeaDeskInner() {
                           onChange={(v) => updateLiner(opt.id, { name: v })}
                           kind="ocean+coloader"
                           placeholder="MAEU, MSC, ECU…"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <ClientCopyOptions
+                          id={opt.id}
+                          carrierWord={opt.kind === "coloader" ? "coloader" : "liner"}
+                          position={idx + 1}
+                          hideName={Boolean(opt.hideName)}
+                          onHideName={(hide) => updateLiner(opt.id, { hideName: hide })}
+                          showAgent={module === "import"}
+                          agentRate={Boolean(opt.agentRate)}
+                          agentName={opt.agentName ?? ""}
+                          onAgent={(agentRate, agentName) => updateLiner(opt.id, { agentRate, agentName })}
                         />
                       </div>
                       <div>
@@ -2082,6 +2102,20 @@ function SeaDeskInner() {
                   <dt className="text-[var(--color-text-muted)]">Liner</dt>
                   <dd className="text-right font-bold">{selected.name || "—"}</dd>
                 </div>
+                {selected.hideName ? (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-text-muted)]">Client sees</dt>
+                    <dd className="text-right font-bold">Name hidden</dd>
+                  </div>
+                ) : null}
+                {module === "import" && selected.agentRate ? (
+                  <div className="flex justify-between gap-2" data-testid="summary-agent">
+                    <dt className="text-[var(--color-text-muted)]">Rate source</dt>
+                    <dd className="text-right font-bold text-violet-800">
+                      Agent{selected.agentName ? `: ${selected.agentName}` : ""} <span className="font-normal">(internal)</span>
+                    </dd>
+                  </div>
+                ) : null}
                 {mode !== "fcl" ? (
                   <div className="flex justify-between">
                     <dt className="text-[var(--color-text-muted)]">Chargeable RT</dt>

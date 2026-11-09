@@ -1,5 +1,6 @@
 "use client";
 
+import { ClientCopyOptions } from "@/components/desks/ClientCopyOptions";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { Badge, Input, Label, NumberInput } from "@/components/ui";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
@@ -37,6 +38,8 @@ export function AirlineOptionForm({
   lastDestTabTarget,
   onUpdate,
   onUpdateBreak,
+  position = 1,
+  showAgent = false,
 }: {
   opt: AirlineOption;
   tot: AirlineTotals | undefined;
@@ -47,6 +50,10 @@ export function AirlineOptionForm({
   lastDestTabTarget?: string;
   onUpdate: (patch: Partial<AirlineOption>) => void;
   onUpdateBreak: (name: WeightBreakName, field: "sell" | "buy", value: number) => void;
+  /** Place of this card on its lane, for the neutral label shown to the client when the name is hidden. */
+  position?: number;
+  /** Import desk: show "Rates procured from an Agent". */
+  showAgent?: boolean;
 }) {
   const amsId = `air-ams-fee-${opt.id}`;
   const dgId = `air-dg-fee-${opt.id}`;
@@ -64,6 +71,19 @@ export function AirlineOptionForm({
             onChange={(v) => onUpdate({ name: v })}
             kind="airline"
             placeholder="EK, Emirates, QR…"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <ClientCopyOptions
+            id={opt.id}
+            carrierWord={opt.kind === "coloader" ? "coloader" : "airline"}
+            position={position}
+            hideName={Boolean(opt.hideName)}
+            onHideName={(hide) => onUpdate({ hideName: hide })}
+            showAgent={showAgent}
+            agentRate={Boolean(opt.agentRate)}
+            agentName={opt.agentName ?? ""}
+            onAgent={(agentRate, agentName) => onUpdate({ agentRate, agentName })}
           />
         </div>
         <div>
