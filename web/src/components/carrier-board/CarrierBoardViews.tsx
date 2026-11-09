@@ -142,3 +142,38 @@ export function ProcurementMap({ lane, weightKg }: { lane: LaneView; weightKg: n
     </div>
   );
 }
+
+/** The FreightLook-style grid: one row per airline, one column per weight break, the shipment's break shaded. */
+export function RateGrid({ lane, weightKg }: { lane: LaneView; weightKg: number }) {
+  const hit = breakKeyFor(weightKg);
+  const money = (n: number) => n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] border-collapse text-sm tabular-nums">
+        <thead>
+          <tr className="border-b border-[var(--color-border-strong)] text-xs font-semibold text-[var(--color-text-muted)]">
+            <th className="py-2 pr-3 text-left">Airline</th>
+            <th className="px-3 py-2 text-right">MIN</th>
+            {PER_KG_BREAKS.map((b) => (
+              <th key={b.key} className={cn("px-3 py-2 text-right", b.key === hit && "bg-blue-50 text-blue-800")}>{b.label} kg</th>
+            ))}
+            <th className="px-3 py-2 text-right">Valid to</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lane.priced.map((r) => (
+            <tr key={r.code} className="border-b border-[var(--color-border)] last:border-b-0">
+              <td className="whitespace-nowrap py-2.5 pr-3 font-semibold text-[var(--color-atlas-navy)]">{r.code} <span className="font-normal text-[var(--color-text-muted)]">{r.name}</span></td>
+              <td className="px-3 py-2.5 text-right text-[var(--color-text-muted)]">{r.tariff.breaks.min ? money(Number(r.tariff.breaks.min)) : "—"}</td>
+              {PER_KG_BREAKS.map((b) => {
+                const v = Number(r.tariff.breaks[b.key]);
+                return <td key={b.key} className={cn("px-3 py-2.5 text-right", b.key === hit && "bg-blue-50 font-semibold")}>{v > 0 ? money(v) : "—"}</td>;
+              })}
+              <td className={cn("whitespace-nowrap px-3 py-2.5 text-right text-xs", r.validity === "expired" ? "font-semibold text-red-700" : r.validity === "soon" ? "font-semibold text-amber-700" : "text-[var(--color-text-muted)]")}>{r.tariff.validTo || "no date"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

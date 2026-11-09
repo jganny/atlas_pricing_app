@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.140",
+    date: "2026-11-09",
+    items: [
+      "The Carrier board now has one view only, with everything on the page (the Simple/Detailed switch is gone).",
+      "New weight-break grid on the Carrier board: one row per airline, one column per weight break (MIN, <45, 45+, 100+, 300+, 500+, 1000+), your weight's column shaded, like a rate shop.",
+      "New Airline tariffs table at the bottom of the Carrier board: pick an airline, narrow by From and To airport, and read every saved route's rate at every weight break. Click a route to rank the airlines for it.",
+      "The administrator's Read airline circulars box is now tucked away under Administrator tools; it is optional and nothing runs unless the administrator presses it.",
+    ],
+  },
+  {
     version: "0.3.139",
     date: "2026-11-09",
     items: [

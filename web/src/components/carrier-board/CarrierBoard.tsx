@@ -12,12 +12,10 @@ import { isAdminUser } from "@/lib/quotes/team-roles";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { CarrierReaderPanel } from "./CarrierReaderPanel";
-import { CompareChart, ProcurementMap, ValidityTimeline } from "./CarrierBoardViews";
+import { CompareChart, ProcurementMap, RateGrid, ValidityTimeline } from "./CarrierBoardViews";
+import { TariffBrowser } from "./TariffBrowser";
 import { RateEmailDialog, type RateEmailTarget } from "./RateEmailDialog";
 
-type Mode = "simple" | "detailed";
-type View = "cmp" | "val" | "map";
-const MODE_KEY = "atlas-carrier-board-mode";
 const LANE_KEY = "atlas-carrier-board-lane";
 
 // Remembered choices (the screen's detail level and the last lane) live in this browser only. Read through
@@ -71,19 +69,19 @@ function validityNote(r: PricedRow): { text: string; tone: string } {
   return { text: `valid to ${dateText(r.tariff.validTo)}`, tone: "text-[var(--color-text-muted)]" };
 }
 
-function PricedRowView({ r, currency, first, open, detailed, onToggle }: { r: PricedRow; currency: string; first: boolean; open: boolean; detailed: boolean; onToggle: () => void }) {
+function PricedRowView({ r, currency, first, open, onToggle }: { r: PricedRow; currency: string; first: boolean; open: boolean; onToggle: () => void }) {
   const v = validityNote(r);
   const breakLabel = PER_KG_BREAKS.find((b) => b.key === r.freight.key)?.label ?? "";
   return (
     <div className="border-b border-[var(--color-border)] last:border-b-0" data-testid={`board-row-${r.code}`}>
-      <button type="button" onClick={onToggle} aria-expanded={open} className={cn("grid w-full grid-cols-[minmax(0,1fr)_auto_16px] items-center gap-x-4 gap-y-1 py-4 text-left sm:grid-cols-[minmax(0,1.4fr)_88px_minmax(170px,1fr)_16px]", detailed && "lg:grid-cols-[minmax(0,1.4fr)_88px_100px_minmax(170px,1fr)_16px]")}>
+      <button type="button" onClick={onToggle} aria-expanded={open} className="grid w-full grid-cols-[minmax(0,1fr)_auto_16px] items-center gap-x-4 gap-y-1 py-4 text-left sm:grid-cols-[minmax(0,1.4fr)_88px_minmax(170px,1fr)_16px] lg:grid-cols-[minmax(0,1.4fr)_88px_100px_minmax(170px,1fr)_16px]">
         <span className="flex min-w-0 items-center gap-2.5">
           <span className="rounded-md border border-[var(--color-border-strong)] px-1.5 py-0.5 font-mono text-[11.5px] font-semibold text-[var(--color-text-muted)]">{r.code}</span>
           <b className="truncate text-[15px] font-semibold text-[var(--color-text)]">{r.name}</b>
           {first && r.validity !== "expired" ? <em className="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold not-italic text-emerald-800">Lowest</em> : null}
         </span>
         <span className="hidden sm:block"><Source s="Tariff" /></span>
-        {detailed ? <span className="hidden text-right text-sm tabular-nums lg:block">{whole(r.freight.perKg)} <span className="text-[var(--color-text-muted)]">{breakLabel}</span></span> : null}
+        <span className="hidden text-right text-sm tabular-nums lg:block">{whole(r.freight.perKg)} <span className="text-[var(--color-text-muted)]">{breakLabel}</span></span>
         <span className="whitespace-nowrap text-right tabular-nums">
           <span className="block text-base font-semibold">{currency} {money(r.freight.freight)}</span>
           <small className={cn("block text-xs", v.tone)}>{v.text}</small>
@@ -165,7 +163,6 @@ export function CarrierBoard() {
   const today = useMemo(() => new Date(), []);
   const laneRaw = useStored(LANE_KEY);
 
-  const mode: Mode = useStored(MODE_KEY) === "detailed" ? "detailed" : "simple";
   const storedLane = useMemo(() => {
     try {
       return (JSON.parse(laneRaw || "null") ?? {}) as { from?: string; to?: string; weight?: string };
@@ -187,10 +184,7 @@ export function CarrierBoard() {
   const setWeight = (v: string) => setLane({ weight: v });
   const [currency, setCurrency] = useState<string | undefined>();
   const [open, setOpen] = useState<string | null>(null);
-  const [view, setView] = useState<View | null>(null);
-  const [attnOpen, setAttnOpen] = useState(false);
   const [email, setEmail] = useState<RateEmailTarget | null>(null);
-  const pickMode = (m: Mode) => writeStore(MODE_KEY, m);
 
   const o = from.trim().toUpperCase();
   const d = to.trim().toUpperCase();
@@ -202,7 +196,6 @@ export function CarrierBoard() {
 
   const live = lane?.priced.filter((p) => p.validity !== "expired") ?? [];
   const best = live[0];
-  const detailed = mode === "detailed";
   const attn: Array<{ key: string; text: string; sub: string }> = [];
   for (const p of lane?.priced ?? []) {
     if (p.validity === "expired") attn.push({ key: `e${p.code}`, text: `${p.name} tariff expired`, sub: `Ended ${dateText(p.tariff.validTo)}. Ask the admin to upload the new circular.` });
@@ -210,11 +203,9 @@ export function CarrierBoard() {
   }
   if (lane?.otherCurrency.length) attn.push({ key: "cur", text: `${lane.otherCurrency.join(", ")} quote in another currency`, sub: "Switch currency above to see them." });
 
-  const toggleView = (v: View) => setView((cur) => (cur === v ? null : v));
-  const showView = (v: View) => detailed || view === v;
 
   return (
-    <div className="mx-auto w-full space-y-7 transition-[max-width]" style={{ maxWidth: detailed ? 1180 : 920 }} data-testid="carrier-board">
+    <div className="mx-auto w-full max-w-[1180px] space-y-7" data-testid="carrier-board">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Library</p>
@@ -223,13 +214,7 @@ export function CarrierBoard() {
             Airline rates, read from the circulars. You do not need to come here to quote: the Air desk adds these airlines and fills their rates by itself. Look here when you want to compare.
           </p>
         </div>
-        <div className="inline-flex rounded-lg border border-[var(--color-border-strong)] bg-white p-0.5" role="group" aria-label="Screen detail">
-          {(["simple", "detailed"] as Mode[]).map((m) => (
-            <button key={m} type="button" aria-pressed={mode === m} onClick={() => pickMode(m)} className={cn("rounded-md px-3 py-1.5 text-xs font-semibold capitalize", mode === m ? "bg-[var(--color-atlas-navy)] text-white" : "text-[var(--color-text-muted)]")}>
-              {m}
-            </button>
-          ))}
-        </div>
+
       </header>
 
       <section className="flex flex-wrap items-end gap-3" aria-label="Lane and weight">
@@ -292,26 +277,17 @@ export function CarrierBoard() {
           </section>
 
           {attn.length ? (
-            <div>
-              {!detailed ? (
-                <button type="button" onClick={() => setAttnOpen((x) => !x)} aria-expanded={attnOpen} className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
-                  {attn.length} item{attn.length === 1 ? "" : "s"} need attention {attnOpen ? "▴" : "▾"}
-                </button>
-              ) : null}
-              {detailed || attnOpen ? (
-                <ul className={cn("rounded-xl bg-amber-50 px-4 py-1", !detailed && "mt-3")} data-testid="board-attention">
-                  {attn.map((a) => (
-                    <li key={a.key} className="border-b border-amber-200 py-2.5 text-sm last:border-b-0">
-                      {a.text}
-                      <small className="block text-xs text-[var(--color-text-muted)]">{a.sub}</small>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
+            <ul className="rounded-xl bg-amber-50 px-4 py-1" data-testid="board-attention">
+              {attn.map((a) => (
+                <li key={a.key} className="border-b border-amber-200 py-2.5 text-sm last:border-b-0">
+                  {a.text}
+                  <small className="block text-xs text-[var(--color-text-muted)]">{a.sub}</small>
+                </li>
+              ))}
+            </ul>
           ) : null}
 
-          {detailed ? (
+          {(
             <section className="grid gap-px overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-border)] sm:grid-cols-2 lg:grid-cols-4" aria-label="Key figures">
               {[
                 { k: "Lowest buy total", v: best ? `${lane.currency} ${money(best.freight.freight)}` : "—", s: best?.name ?? "no tariff at this weight" },
@@ -326,14 +302,14 @@ export function CarrierBoard() {
                 </div>
               ))}
             </section>
-          ) : null}
+          )}
 
           {lane.priced.length ? (
             <section>
               <div className="mb-2 flex justify-between text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]"><span>Priced from tariff</span><span>{lane.priced.length}</span></div>
               <div className="rounded-2xl border border-[var(--color-border)] bg-white px-5">
                 {lane.priced.map((r) => (
-                  <PricedRowView key={r.code} r={r} currency={lane.currency} first={r === best} open={open === r.code} detailed={detailed} onToggle={() => setOpen(open === r.code ? null : r.code)} />
+                  <PricedRowView key={r.code} r={r} currency={lane.currency} first={r === best} open={open === r.code} onToggle={() => setOpen(open === r.code ? null : r.code)} />
                 ))}
               </div>
             </section>
@@ -349,21 +325,18 @@ export function CarrierBoard() {
             </section>
           ) : null}
 
-          <section aria-label="More views">
-            {!detailed ? (
-              <div className="flex gap-1 border-b border-[var(--color-border)]" role="tablist">
-                {([["cmp", "Compare by weight"], ["val", "Tariff validity"], ["map", "How rates are obtained"]] as Array<[View, string]>).map(([v, label]) => (
-                  <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => toggleView(v)} className={cn("-mb-px border-b-2 px-3.5 py-2.5 text-sm", view === v ? "border-[var(--color-atlas-ink)] font-semibold text-[var(--color-text)]" : "border-transparent text-[var(--color-text-muted)]")}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <div className={cn("mt-4 grid gap-4", detailed && "lg:grid-cols-2")}>
-              {showView("cmp") ? <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-cmp"><h2 className="mb-2 text-sm font-bold">Rate per kg by weight break</h2><CompareChart lane={lane} weightKg={w} /></div> : null}
-              {showView("val") ? <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-val"><h2 className="mb-3 text-sm font-bold">Tariff validity</h2><ValidityTimeline rows={lane.priced} today={today} /></div> : null}
-              {showView("map") ? <div className={cn("rounded-2xl border border-[var(--color-border)] bg-white p-5", detailed && "lg:col-span-2")} data-testid="view-map"><h2 className="mb-1 text-sm font-bold">How each airline&apos;s rate is obtained, by weight</h2><p className="mb-3 text-xs text-[var(--color-text-muted)]">From the remarks in your procurement sheet. An airline not in the sheet is asked by email unless a tariff is on file.</p><ProcurementMap lane={lane} weightKg={w} /></div> : null}
-            </div>
+          {lane.priced.length ? (
+            <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5" aria-label="Weight-break rates" data-testid="view-grid">
+              <h2 className="text-sm font-bold">Weight-break rates · {o} to {d}</h2>
+              <p className="mb-3 mt-0.5 text-xs text-[var(--color-text-muted)]">The airline&apos;s rate per kg at each weight break, {lane.currency}. Your {whole(w)} kg falls in the shaded column.</p>
+              <RateGrid lane={lane} weightKg={w} />
+            </section>
+          ) : null}
+
+          <section className="grid gap-4 lg:grid-cols-2" aria-label="Charts">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-cmp"><h2 className="mb-2 text-sm font-bold">Rate per kg by weight break</h2><CompareChart lane={lane} weightKg={w} /></div>
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5" data-testid="view-val"><h2 className="mb-3 text-sm font-bold">Tariff validity</h2><ValidityTimeline rows={lane.priced} today={today} /></div>
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-5 lg:col-span-2" data-testid="view-map"><h2 className="mb-1 text-sm font-bold">How each airline&apos;s rate is obtained, by weight</h2><p className="mb-3 text-xs text-[var(--color-text-muted)]">From the remarks in your procurement sheet. An airline not in the sheet is asked by email unless a tariff is on file.</p><ProcurementMap lane={lane} weightKg={w} /></div>
           </section>
 
           <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
@@ -374,7 +347,14 @@ export function CarrierBoard() {
         </>
       ) : null}
 
-      {admin ? <CarrierReaderPanel /> : null}
+      <TariffBrowser onPick={(from_, to_) => { setLane({ from: from_, to: to_ }); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+
+      {admin ? (
+        <details className="rounded-2xl border border-[var(--color-border)] bg-white" data-testid="admin-tools">
+          <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-[var(--color-atlas-navy)]">Administrator tools: put a circular&apos;s rates on this board <span className="font-normal text-[var(--color-text-muted)]">(optional, uses AI)</span></summary>
+          <div className="border-t border-[var(--color-border)] p-4"><CarrierReaderPanel /></div>
+        </details>
+      ) : null}
       <RateEmailDialog target={email} onClose={() => setEmail(null)} />
     </div>
   );

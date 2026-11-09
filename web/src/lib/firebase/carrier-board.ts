@@ -40,6 +40,13 @@ export async function fetchLaneTariffs(origin: string, destination: string): Pro
   return snap.docs.map((x) => mapTariff(x.data()));
 }
 
+/** Every saved airline route (for browsing a whole tariff). Capped; a lane search is the way to reach one route quickly. */
+export async function fetchAllTariffs(): Promise<BoardTariff[]> {
+  if (!useLiveData) return SAMPLE_TARIFFS;
+  const snap = await getDocs(query(collection(getFirebaseDb(), "carrierTariffs"), limit(4000)));
+  return snap.docs.map((x) => mapTariff(x.data()));
+}
+
 export interface CarrierReadSummary {
   circularId: string;
   title: string;
