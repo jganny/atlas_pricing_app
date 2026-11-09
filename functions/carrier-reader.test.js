@@ -108,7 +108,7 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(res.held, 0);
   assert.deepEqual(res.usage, { input: calls.length * 1000, output: calls.length * 100 });
   for (const c of calls) {
-    assert.equal(c.body.max_tokens, 16000);
+    assert.equal(c.body.max_tokens, 20000);
     assert.equal(c.body.model, c.isB ? "claude-haiku-5-5" : "claude-sonnet-5-5", "careful model first, cheaper model second");
     assert.deepEqual(c.body.thinking, c.isB ? { type: "adaptive" } : { type: "between_tools" }, "the careful model answers directly; the cheaper one must think first");
   }

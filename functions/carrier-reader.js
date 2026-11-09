@@ -91,7 +91,7 @@ async function askOnce(apiKey, system, content, userText, model = MODEL) {
     res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: used, max_tokens: 16000, thinking: thinkingFor(used), system, messages: [{ role: "user", content: [content, { type: "text", text: userText }] }] }),
+      body: JSON.stringify({ model: used, max_tokens: 20000, thinking: thinkingFor(used), system, messages: [{ role: "user", content: [content, { type: "text", text: userText }] }] }),
     });
     if (!res.ok && used !== MODEL) {
       // The cheaper model refused the request itself: do this read with the stronger one instead of failing.

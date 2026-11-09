@@ -153,8 +153,8 @@ function chunkSheets(sheets, { maxChars = 8000, headerLines = 6, overlap = 3 } =
 
 /**
  * A long PDF -> groups of pages the AI can read in full. A short PDF is one group (the file as it is).
- * Every group after the first also carries page 1 (the cover: currency, validity, notes, column headings) and the last page of
- * the group before it, so a table that carries on from one page to the next is seen whole at least once.
+ * Every group after the first also carries page 1 (the cover: currency, validity, notes, column headings), given for reference only:
+ * the AI is told to read routes from the group's own pages alone, so nothing is read twice and the reply stays short.
  * Page numbers are 1-based and in order.
  */
 function planPdfChunks(pageCount, { single = 3, size = 2 } = {}) {
@@ -166,7 +166,6 @@ function planPdfChunks(pageCount, { single = 3, size = 2 } = {}) {
     const last = Math.min(n, first + size - 1);
     const pages = [];
     if (first > 1) pages.push(1);
-    if (first > 2) pages.push(first - 1);
     for (let p = first; p <= last; p++) pages.push(p);
     out.push({ pages, first, last, whole: false });
   }
@@ -176,11 +175,14 @@ function planPdfChunks(pageCount, { single = 3, size = 2 } = {}) {
 /** What the AI is told about a group of pages (empty when the PDF is read whole). */
 function chunkNote(chunk, pageCount) {
   if (!chunk || chunk.whole) return "";
-  const extra = chunk.pages.filter((p) => p < chunk.first);
+  const own = chunk.first === chunk.last ? `page ${chunk.first}` : `pages ${chunk.first} to ${chunk.last}`;
+  const ref = chunk.pages.filter((p) => p < chunk.first);
   return (
-    ` This is only part of a longer document of ${pageCount} pages: the pages given are ${chunk.pages.join(", ")}.` +
-    (extra.length ? ` Page${extra.length > 1 ? "s" : ""} ${extra.join(" and ")} ${extra.length > 1 ? "are" : "is"} repeated from earlier in the document for context (currency, validity, notes, column headings); the new pages are ${chunk.first} to ${chunk.last}.` : "") +
-    ` Read the rates on every page you are given. Any route that is not on these pages will be read from the other parts, so do not guess at routes you cannot see.`
+    ` This is only part of a longer document of ${pageCount} pages. The part you are given holds ${own} of it` +
+    (ref.length ? `, preceded by page ${ref.join(", ")} repeated from the start of the document` : "") +
+    `. Extract routes from ${own} ONLY.` +
+    (ref.length ? ` Page ${ref.join(", ")} is there only so you can see the column headings, currency, validity and notes; do not extract any route from it.` : "") +
+    ` The other pages are read in other parts, so do not guess at routes you cannot see.`
   );
 }
 

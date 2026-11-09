@@ -196,18 +196,15 @@ assert.deepEqual(L.mergeRows([]), []);
   }
 }
 
-// --- long PDFs are read a few pages at a time, each group with the cover and the page before it ---
+// --- long PDFs are read a few pages at a time, each group with the cover page for reference ---
 {
   assert.deepEqual(L.planPdfChunks(0), []);
-  assert.deepEqual(L.planPdfChunks(6, { single: 6, size: 4 }).map((c) => c.pages), [[1, 2, 3, 4, 5, 6]], "a short PDF is read whole");
-  assert.equal(L.planPdfChunks(6, { single: 6, size: 4 })[0].whole, true);
   assert.equal(L.planPdfChunks(3)[0].whole, true, "up to 3 pages is read whole");
-  assert.deepEqual(L.planPdfChunks(7).map((c) => c.pages), [[1, 2], [1, 2, 3, 4], [1, 4, 5, 6], [1, 6, 7]], "normally two new pages at a time");
-  const plan = L.planPdfChunks(10, { single: 6, size: 4 });
-  assert.deepEqual(plan.map((c) => c.pages), [[1, 2, 3, 4], [1, 4, 5, 6, 7, 8], [1, 8, 9, 10]]);
-  assert.deepEqual(plan.map((c) => [c.first, c.last]), [[1, 4], [5, 8], [9, 10]]);
-  // every page of the document is the "new" page of exactly one group, so nothing is skipped
-  for (const n of [7, 8, 9, 13, 25, 47]) {
+  assert.deepEqual(L.planPdfChunks(3)[0].pages, [1, 2, 3]);
+  assert.deepEqual(L.planPdfChunks(7).map((c) => c.pages), [[1, 2], [1, 3, 4], [1, 5, 6], [1, 7]], "two new pages at a time, each after the cover");
+  assert.deepEqual(L.planPdfChunks(10, { single: 6, size: 4 }).map((c) => c.pages), [[1, 2, 3, 4], [1, 5, 6, 7, 8], [1, 9, 10]]);
+  // every page of the document is the "new" page of exactly one group, so nothing is skipped and nothing is read twice
+  for (const n of [4, 7, 8, 9, 13, 22, 25, 47]) {
     const p = L.planPdfChunks(n);
     const covered = p.flatMap((c) => Array.from({ length: c.last - c.first + 1 }, (_, i) => c.first + i));
     assert.deepEqual(covered, Array.from({ length: n }, (_, i) => i + 1), `all ${n} pages are covered once`);
@@ -218,8 +215,9 @@ assert.deepEqual(L.mergeRows([]), []);
     }
   }
   assert.equal(L.chunkNote(L.planPdfChunks(3)[0], 3), "");
-  const note = L.chunkNote(L.planPdfChunks(10, { single: 6, size: 4 })[1], 10);
-  assert.match(note, /10 pages/);
-  assert.match(note, /Pages 1 and 4 are repeated/);
-  assert.match(note, /new pages are 5 to 8/);
+  const note = L.chunkNote(L.planPdfChunks(22)[2], 22);
+  assert.match(note, /22 pages/);
+  assert.match(note, /pages 5 to 6/);
+  assert.match(note, /ONLY/);
+  assert.match(note, /do not extract any route from it/);
 }
