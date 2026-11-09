@@ -77,7 +77,7 @@ const FORMAT =
   "Line 1 is COLUMNS followed by the weight in kg at which each printed per-kg rate column starts, left to right, separated by | , for example COLUMNS|0|100|300|500. " +
   "Use 0 for a column that applies from the first kilo (headed Normal, General, Below 45 and so on). List only per-kg rate columns, never the minimum charge. Read the numbers from the column headings; do not assume them. " +
   "Then one line per route (origin and destination), with these fields separated by | : " +
-  "carrier (2-letter airline code) | origin (3-letter airport) | destination (3-letter airport) | currency (3-letter code exactly as the document states, or empty if it does not say) | " +
+  "carrier (2-letter airline code) | origin (3-letter airport) | destination (3-letter airport) | currency (3-letter code exactly as the document states it, whether in the rate table, a heading, or a note or footnote such as "rates in INR" or "INR 12 per kg" on any page; empty only if the document does not say anywhere) | " +
   "validFrom (YYYY-MM-DD or empty) | validTo (YYYY-MM-DD or empty) | rateKind (contract, published or unknown) | min (flat minimum charge or empty) | " +
   "then one per-kg rate for each column named on the COLUMNS line, in the same order (empty if not shown) | " +
   "notes (short, only if something is unclear, never contains the | character). " +

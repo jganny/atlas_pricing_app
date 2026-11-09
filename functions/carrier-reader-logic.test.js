@@ -187,3 +187,11 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.deepEqual(L.withDefaultCurrency(rows, "").map((r) => r.currency), ["", "USD"], "no default, nothing changes");
   assert.deepEqual(L.withDefaultCurrency(rows, "rupees").map((r) => r.currency), ["", "USD"], "a default that is not a currency code is ignored");
 }
+
+// --- both prompts tell the reader where a currency may be stated ---
+{
+  for (const sys of L.systemPrompts()) {
+    assert.match(sys, /note or footnote/, "the currency may be stated in a note or footnote");
+    assert.match(sys, /Do not guess the currency/, "but it is never guessed");
+  }
+}
