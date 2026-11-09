@@ -247,4 +247,34 @@ function planDeskPublish(rows, existingByLane, ctx) {
   return plan;
 }
 
-module.exports = { DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };
+/** Auto-read: when an airline tariff circular is uploaded the server reads it by itself, within a monthly spending limit. */
+const AUTO_DEFAULTS = { enabled: true, monthlyCapUsd: 3 };
+/** What one circular costs to read twice, roughly. A read is not started if it could take the month past the limit. */
+const AUTO_READ_COST_USD = 0.3;
+
+function parseAutoSettings(data) {
+  const d = data || {};
+  const cap = Number(d.monthlyCapUsd);
+  return { enabled: d.enabled !== false, monthlyCapUsd: Number.isFinite(cap) && cap >= 0 ? cap : AUTO_DEFAULTS.monthlyCapUsd };
+}
+
+/** The admin's input -> clean settings, or a plain-words problem. */
+function parseAutoInput(data) {
+  const d = data || {};
+  const cap = Number(d.monthlyCapUsd);
+  if (!Number.isFinite(cap) || cap < 0 || cap > 100) return { error: "The monthly limit must be an amount in dollars, from 0 to 100." };
+  return { enabled: d.enabled === true, monthlyCapUsd: Math.round(cap * 100) / 100 };
+}
+
+/** Should this upload be read automatically? spentUsd is what circular reading has cost so far this month. */
+function autoDecision(settings, spentUsd) {
+  const s = parseAutoSettings(settings);
+  if (!s.enabled) return { run: false, reason: "Auto-read is switched off. Read it from the Carrier board's administrator tools." };
+  const spent = Number(spentUsd) || 0;
+  if (spent + AUTO_READ_COST_USD > s.monthlyCapUsd) {
+    return { run: false, reason: `This month's circular-reading limit ($${s.monthlyCapUsd.toFixed(2)}, $${spent.toFixed(2)} used) would be passed. Raise the limit, or read it yourself from the Carrier board's administrator tools.` };
+  }
+  return { run: true };
+}
+
+module.exports = { AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };

@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, limit, query, where } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useLiveData } from "@/lib/api";
 import { SAMPLE_TARIFFS } from "@/lib/carriers/board-sample";
@@ -56,6 +56,10 @@ export interface CarrierReadSummary {
   held: number;
   unchanged: number;
   publishedToAirDesk: number;
+  /** read = rates saved; skipped = auto-read chose not to run; failed = it ran into a problem. */
+  status: "read" | "skipped" | "failed";
+  reason: string;
+  auto: boolean;
 }
 
 /** What the reader did with each circular (newest first). */
@@ -74,9 +78,32 @@ export async function fetchCarrierReads(): Promise<CarrierReadSummary[]> {
         held: num(d.held) ?? 0,
         unchanged: num(d.unchanged) ?? 0,
         publishedToAirDesk: num(d.publishedToAirDesk) ?? 0,
+        status: d.status === "skipped" || d.status === "failed" ? d.status : "read",
+        reason: String(d.reason ?? ""),
+        auto: d.auto === true,
       };
     })
     .sort((a, b) => b.at - a.at);
+}
+
+export interface AutoReadSettings {
+  enabled: boolean;
+  monthlyCapUsd: number;
+}
+
+/** Auto-read on/off and the monthly limit. Before the admin saves anything it is on, with a $3 limit. */
+export async function fetchAutoReadSettings(): Promise<AutoReadSettings> {
+  const fallback = { enabled: true, monthlyCapUsd: 3 };
+  if (!useLiveData) return fallback;
+  const snap = await getDoc(doc(getFirebaseDb(), "carrierReadSettings", "auto"));
+  if (!snap.exists()) return fallback;
+  const d = snap.data();
+  return { enabled: d.enabled !== false, monthlyCapUsd: num(d.monthlyCapUsd) ?? 3 };
+}
+
+/** Admin only (the server checks). */
+export async function saveAutoReadSettings(input: AutoReadSettings): Promise<void> {
+  await httpsCallable<AutoReadSettings, { ok: boolean }>(getFunctions(getFirebaseApp()), "carrierAutoReadSave")(input);
 }
 
 export interface OpenHold {

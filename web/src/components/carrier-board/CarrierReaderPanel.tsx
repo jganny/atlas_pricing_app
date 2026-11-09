@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { fetchLiveCirculars } from "@/lib/firebase/circulars";
-import { fetchCarrierReads, fetchOpenHolds, readCarrierCircular, type ReadResult } from "@/lib/firebase/carrier-board";
+import { fetchAutoReadSettings, fetchCarrierReads, fetchOpenHolds, readCarrierCircular, saveAutoReadSettings, type ReadResult } from "@/lib/firebase/carrier-board";
 
 /** Roughly what one airline circular costs to read twice (practice reads cost the same). */
 export const READ_COST_NOTE = "about $0.25";
@@ -22,6 +22,20 @@ export function CarrierReaderPanel() {
   const circulars = useQuery({ queryKey: ["carrier-board", "circulars"], queryFn: fetchLiveCirculars, staleTime: 60_000 });
   const reads = useQuery({ queryKey: ["carrier-board", "reads"], queryFn: fetchCarrierReads, staleTime: 30_000 });
   const holds = useQuery({ queryKey: ["carrier-board", "holds"], queryFn: fetchOpenHolds, staleTime: 30_000 });
+  const settings = useQuery({ queryKey: ["carrier-board", "auto-settings"], queryFn: fetchAutoReadSettings, staleTime: 30_000 });
+  const [autoEdit, setAutoEdit] = useState<{ enabled?: boolean; cap?: string }>({});
+  const autoOn = autoEdit.enabled ?? settings.data?.enabled ?? true;
+  const autoCap = autoEdit.cap ?? String(settings.data?.monthlyCapUsd ?? 3);
+  async function saveAuto() {
+    try {
+      await saveAutoReadSettings({ enabled: autoOn, monthlyCapUsd: Number(autoCap) });
+      await qc.invalidateQueries({ queryKey: ["carrier-board", "auto-settings"] });
+      setAutoEdit({});
+      toast("Auto-read settings saved.", "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not save.", "error");
+    }
+  }
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<{ title: string; res: ReadResult } | null>(null);
 
@@ -51,6 +65,18 @@ export function CarrierReaderPanel() {
         <h2 className="text-sm font-extrabold text-[var(--color-atlas-navy)]">Read airline circulars</h2>
         <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">Administrators only. Each airline circular is read twice by the AI; only rates both reads agree on are saved, the rest are held and keep their old rate. Upload circulars on the Circulars page.</p>
       </div>
+      <div className="flex flex-wrap items-end gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-5 py-3" data-testid="auto-read-settings">
+        <label className="flex items-center gap-2 text-sm font-semibold text-[var(--color-atlas-navy)]">
+          <input type="checkbox" checked={autoOn} onChange={(e) => setAutoEdit((x) => ({ ...x, enabled: e.target.checked }))} />
+          Read automatically when an airline circular is uploaded
+        </label>
+        <label className="text-xs font-semibold text-[var(--color-text-muted)]">
+          Monthly limit, US dollars
+          <input value={autoCap} onChange={(e) => setAutoEdit((x) => ({ ...x, cap: e.target.value }))} inputMode="decimal" className="mt-1 block h-9 w-24 rounded-lg border border-[var(--color-border-strong)] bg-white px-2 text-sm text-[var(--color-text)]" aria-label="Monthly limit in dollars" />
+        </label>
+        <Button size="sm" onClick={saveAuto} disabled={autoEdit.enabled === undefined && autoEdit.cap === undefined}>Save</Button>
+        <p className="basis-full text-xs text-[var(--color-text-muted)]">Each circular costs {READ_COST_NOTE}. When the month&apos;s circular reading would pass the limit, a new upload waits here for you to read it yourself or raise the limit.</p>
+      </div>
       <ul className="divide-y divide-[var(--color-border)]">
         {list.map((c) => {
           const r = readFor(c.id);
@@ -58,7 +84,7 @@ export function CarrierReaderPanel() {
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-[var(--color-text)]">{c.title || c.fileName}</div>
-                <div className="text-xs text-[var(--color-text-muted)]">{c.carrier || "Airline"} · {r ? `read ${when(r.at)}: ${r.applied} saved, ${r.held} held, ${r.unchanged} unchanged` : "not read yet"}</div>
+                <div className="text-xs text-[var(--color-text-muted)]">{c.carrier || "Airline"} · {r ? (r.status === "read" ? `${r.auto ? "read automatically" : "read"} ${when(r.at)}: ${r.applied} saved, ${r.held} held, ${r.unchanged} unchanged` : `${r.status === "skipped" ? "waiting" : "did not finish"}: ${r.reason}`) : "not read yet"}</div>
               </div>
               <div className="flex gap-2">
                 <Button variant="secondary" size="sm" disabled={busy !== null} onClick={() => run(c.id, c.title || c.fileName || c.id, true)}>Check only</Button>

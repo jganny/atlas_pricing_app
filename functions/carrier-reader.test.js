@@ -80,7 +80,7 @@ globalThis.fetch = async (url, init) => {
   return new Response(JSON.stringify({ content: [{ type: "text", text: out.length ? reply(out) : "NONE" }], usage: { input_tokens: 1000, output_tokens: 100 }, stop_reason: "end_turn" }), { status: 200 });
 };
 
-const { readCarrierCircular } = require("./carrier-reader");
+const { readCarrierCircular, autoReadCarrierCircular, carrierAutoReadSave } = require("./carrier-reader");
 const run = (data, email = "ganny@atlaspricing.com") => readCarrierCircular.run({ auth: { token: { email } }, data, rawRequest: {} });
 
 // a spreadsheet of 1,500 routes: a title block, column headings, then one line per route
@@ -237,6 +237,48 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(res.applied + res.unchanged, N, "if the cheaper model refuses, the read is done by the stronger one and still counts");
   assert.equal(res.models.readB, "claude-sonnet-5-5");
   refuseCheap = false;
+
+
+  // 8) auto-read: an uploaded airline circular is read by itself; switched off, over the limit, or the wrong kind it is not
+  const upload = (id, data) => { store.set("circularsLibrary/" + id, data); return autoReadCarrierCircular.run({ data: { data: () => data }, params: { circularId: id } }); };
+  const wipe = () => { [...store.keys()].filter((k) => /^(carrierTariffs|air_tariffs|carrierReads|carrierTariffHolds)\//.test(k)).forEach((k) => store.delete(k)); calls.length = 0; };
+  const sheet = { category: "airline_tariff", carrier: "EK", title: "EK_BLR rev", fileName: "BLR TARIFF.xlsx", storagePath: "circulars/x/EK.xlsx" };
+  wipe();
+  await upload("a1", sheet);
+  assert.equal(store.get("carrierReads/a1").status, "read", "no settings saved yet: auto-read is on");
+  assert.equal(store.get("carrierReads/a1").auto, true);
+  assert.equal(store.get("carrierReads/a1").applied, N);
+  assert.ok([...store.keys()].some((k) => k.startsWith("air_tariffs/")), "an auto-read also feeds the Air desk");
+  const readCalls = calls.length;
+  await upload("a1", sheet);
+  assert.equal(calls.length, readCalls, "an already-read circular is not read twice");
+  wipe();
+  await upload("a2", { ...sheet, category: "general" });
+  assert.ok(!store.has("carrierReads/a2") && calls.length === 0, "only airline tariffs are read");
+  await upload("a3", { ...sheet, storagePath: "" });
+  assert.ok(!store.has("carrierReads/a3") && calls.length === 0, "no file, nothing to read");
+  store.set("carrierReadSettings/auto", { enabled: false, monthlyCapUsd: 3 });
+  await upload("a4", sheet);
+  assert.equal(store.get("carrierReads/a4").status, "skipped");
+  assert.match(store.get("carrierReads/a4").reason, /switched off/);
+  assert.equal(calls.length, 0, "switched off: the AI is not called");
+  store.set("carrierReadSettings/auto", { enabled: true, monthlyCapUsd: 3 });
+  const monthKey = new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 7);
+  store.set("aiUsage/" + monthKey, { month: monthKey, days: { "09": { "readCarrierCircular__claude-sonnet-5-5": { calls: 10, input: 1000000, output: 80000, web: 0 } } } });
+  await upload("a5", sheet);
+  assert.equal(store.get("carrierReads/a5").status, "skipped");
+  assert.match(store.get("carrierReads/a5").reason, /limit \(\$3\.00/);
+  assert.equal(calls.length, 0, "over the monthly limit: the AI is not called");
+  store.delete("aiUsage/" + monthKey);
+  bucketFile = Buffer.from("not a spreadsheet");
+  await upload("a6", { ...sheet, fileName: "weird.docx", storagePath: "circulars/x/weird.docx" });
+  assert.equal(store.get("carrierReads/a6").status, "failed", "an unreadable file is recorded as failed, not lost");
+  assert.match(store.get("carrierReads/a6").reason, /Only PDF and Excel/);
+  // the admin's settings callable
+  assert.deepEqual(await carrierAutoReadSave.run({ auth: { token: { email: "ganny@atlaspricing.com" } }, data: { enabled: true, monthlyCapUsd: 5 }, rawRequest: {} }), { ok: true, enabled: true, monthlyCapUsd: 5 });
+  assert.equal(store.get("carrierReadSettings/auto").monthlyCapUsd, 5);
+  await assert.rejects(carrierAutoReadSave.run({ auth: { token: { email: "someone@else.com" } }, data: { enabled: true, monthlyCapUsd: 5 }, rawRequest: {} }), /Only the admin/);
+  await assert.rejects(carrierAutoReadSave.run({ auth: { token: { email: "ganny@atlaspricing.com" } }, data: { enabled: true, monthlyCapUsd: 500 }, rawRequest: {} }), /monthly limit/);
 
   console.log("carrier reader end-to-end tests passed");
 })().catch((e) => {

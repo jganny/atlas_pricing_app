@@ -155,3 +155,19 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.equal(plan[0].data.published, true);
   assert.equal(plan[0].data.validTo, "2026-12-31");
 }
+
+// --- auto-read decisions ---
+{
+  assert.deepEqual(L.parseAutoSettings(null), { enabled: true, monthlyCapUsd: 3 }, "no settings saved yet: on, $3 a month");
+  assert.deepEqual(L.parseAutoSettings({ enabled: false, monthlyCapUsd: 5 }), { enabled: false, monthlyCapUsd: 5 });
+  assert.deepEqual(L.parseAutoInput({ enabled: true, monthlyCapUsd: "4.505" }), { enabled: true, monthlyCapUsd: 4.51 });
+  assert.match(L.parseAutoInput({ enabled: true, monthlyCapUsd: -1 }).error, /monthly limit/);
+  assert.match(L.parseAutoInput({ enabled: true, monthlyCapUsd: "abc" }).error, /monthly limit/);
+  assert.equal(L.autoDecision({ enabled: true, monthlyCapUsd: 3 }, 0).run, true);
+  assert.equal(L.autoDecision({ enabled: true, monthlyCapUsd: 3 }, 2.69).run, true, "still room for one more read");
+  const over = L.autoDecision({ enabled: true, monthlyCapUsd: 3 }, 2.8);
+  assert.equal(over.run, false, "a read that could pass the limit is not started");
+  assert.match(over.reason, /limit \(\$3\.00, \$2\.80 used\)/);
+  assert.equal(L.autoDecision({ enabled: false, monthlyCapUsd: 3 }, 0).run, false);
+  assert.equal(L.autoDecision({ enabled: true, monthlyCapUsd: 0 }, 0).run, false, "a limit of 0 pauses auto-read");
+}

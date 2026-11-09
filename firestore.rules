@@ -168,6 +168,8 @@ service cloud.firestore {
     match /carrierReads/{id} { allow read: if isSignedIn(); allow write: if false; }
     match /carrierTariffHolds/{id} { allow read: if isSignedIn(); allow write: if false; }
     match /carrierReadUsage/{id} { allow read: if isSignedIn(); allow write: if false; }
+    // Auto-read on/off and its monthly limit. Anyone signed in can see it; only the server (admin callable) writes it.
+    match /carrierReadSettings/{id} { allow read: if isSignedIn(); allow write: if false; }
     match /chatProfiles/{login} {
       allow read: if isChatUser();
       // A person can create their own record and change only their photo and status. The name and the chat-only flag are

@@ -1457,3 +1457,5 @@ exports.chatInviteRedeem = chatStaff.chatInviteRedeem;
 // Carrier Board: read uploaded airline tariff circulars automatically (two independent reads must agree).
 const carrierReader = require("./carrier-reader");
 exports.readCarrierCircular = carrierReader.readCarrierCircular;
+exports.carrierAutoReadSave = carrierReader.carrierAutoReadSave;
+exports.autoReadCarrierCircular = carrierReader.autoReadCarrierCircular;

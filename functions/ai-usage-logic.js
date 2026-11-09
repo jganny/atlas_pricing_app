@@ -208,6 +208,7 @@ const FEATURE_LABELS = {
   parseQuoteInstruction: "Quote by instruction",
   pollPricingInboxes: "Mailbox reading",
   readCarrierCircular: "Carrier Board reader",
+  autoReadCarrierCircular: "Carrier Board auto-read",
   weeklyAgencyListEmail: "Agency list check",
   triggerAgencyListNow: "Agency list check",
 };

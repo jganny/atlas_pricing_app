@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.141",
+    date: "2026-11-09",
+    items: [
+      "Airline tariff circulars are now read automatically the moment they are uploaded to Circulars (category Airline Tariff). Rates appear on the Carrier board and the Air desk a few minutes later. It costs about $0.25 a circular, with a monthly limit of $3 that the administrator can change or switch off under Administrator tools on the Carrier board. A read that would pass the limit waits there for the administrator.",
+      "Carrier board rules now include Air France KLM Cargo (online up to 5 tonnes, then email) and Qatar Airways (a tariff on file is used first; otherwise the Octoloop portal at any weight).",
+    ],
+  },
+  {
     version: "0.3.140",
     date: "2026-11-09",
     items: [

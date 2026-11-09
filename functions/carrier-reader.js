@@ -7,12 +7,14 @@
  * carrierTariffHolds/{circularId} (what was held and why), carrierReadUsage/{yyyy-mm} (AI usage, for the cost line in Admin).
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const XLSX = require("xlsx");
 const { decide } = require("./tariff-checks");
 const L = require("./carrier-reader-logic");
-const { isRequestRefusal } = require("./ai-usage-logic");
+const aiUsageLogic = require("./ai-usage-logic");
+const { isRequestRefusal } = aiUsageLogic;
 const AIRLINE_NAMES = require("./airline-names.json");
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
@@ -132,12 +134,8 @@ async function publishToAirDesk(db, applied, circ, circularId) {
 }
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApiKey], timeoutSeconds: 900, memory: "1GiB" }, async (request) => {
-  requireAdmin(request);
-  const circularId = String(request.data?.circularId || "");
-  const dryRun = request.data?.dryRun === true;
-  const apiKey = anthropicApiKey.value();
-  if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
+/** { circularId, dryRun?, secondRead?, auto? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
+async function runCarrierRead({ circularId, dryRun, secondRead, auto }, apiKey) {
   const db = admin.firestore();
   const snap = await db.collection("circularsLibrary").doc(circularId).get();
   if (!snap.exists) throw new HttpsError("not-found", "That circular does not exist.");
@@ -153,7 +151,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   const [sysA, sysB] = L.systemPrompts();
 
   // Every part is read twice, independently, a few at a time: the careful model first, the cheaper one second (secondRead: "sonnet" for two careful reads).
-  const secondModel = request.data?.secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
+  const secondModel = secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
   const reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
     const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, userText, MODEL), askOnce(apiKey, sysB, part.content, userText, secondModel)]);
     return { label: part.label, a, b };
@@ -183,6 +181,8 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   const usage = { input: a.usage.input + b.usage.input, output: a.usage.output + b.usage.output };
   const summary = {
     circularId,
+    status: "read",
+    auto: auto === true,
     title: circ.title || circ.fileName || "",
     carrier: circ.carrier || "",
     fileName: circ.fileName || "",
@@ -224,4 +224,57 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   // What each of the first parts' two reads said, in brief: lets the admin see why two reads disagreed. Not stored.
   const diagnostics = reads.slice(0, 3).map((r) => ({ part: r.label, readA: { rows: r.a.rows, columns: r.a.columns, stop: r.a.stop, chars: r.a.chars, head: r.a.head }, readB: { rows: r.b.rows, columns: r.b.columns, stop: r.b.stop, chars: r.b.chars, head: r.b.head } }));
   return { ...summary, diagnostics, holdDetails: result.hold.slice(0, 20).map((h) => ({ route: h.row.origin ? `${h.row.carrierCode} ${h.row.origin}→${h.row.destination} ${h.row.currency || "?"}` : "", reasons: h.reasons })), sample: result.apply.slice(0, 3) };
+}
+
+/** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
+exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApiKey], timeoutSeconds: 900, memory: "1GiB" }, async (request) => {
+  requireAdmin(request);
+  const apiKey = anthropicApiKey.value();
+  if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
+  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead }, apiKey);
+});
+
+/** Admin only: switch auto-read on or off and set the monthly limit in dollars. */
+exports.carrierAutoReadSave = onCall({ invoker: "public" }, async (request) => {
+  requireAdmin(request);
+  const parsed = L.parseAutoInput(request.data);
+  if (parsed.error) throw new HttpsError("invalid-argument", parsed.error);
+  await admin.firestore().collection("carrierReadSettings").doc("auto").set({ ...parsed, updatedAt: Date.now() });
+  return { ok: true, ...parsed };
+});
+
+/**
+ * Auto-read: the moment an airline tariff circular is saved to the library, read it (unless switched off or the monthly limit would be
+ * passed). Whatever happens is written to carrierReads/{id} so the admin can see it: read, skipped (and why) or failed (and why).
+ * Circulars are uploaded rarely (a revision every month or two), so this costs a dollar or two a month.
+ */
+exports.autoReadCarrierCircular = onDocumentCreated({ document: "circularsLibrary/{circularId}", region: "asia-south1", secrets: [anthropicApiKey], timeoutSeconds: 540, memory: "1GiB", retry: false }, async (event) => {
+  const circ = event.data && event.data.data ? event.data.data() : null;
+  const circularId = event.params.circularId;
+  if (!circ || circ.category !== "airline_tariff" || !circ.storagePath) return;
+  const db = admin.firestore();
+  const now = Date.now();
+  const note = (status, reason) => db.collection("carrierReads").doc(circularId).set({ circularId, status, auto: true, reason, title: circ.title || circ.fileName || "", carrier: circ.carrier || "", fileName: circ.fileName || "", at: now, applied: 0, held: 0, unchanged: 0 });
+  try {
+    const existing = await db.collection("carrierReads").doc(circularId).get();
+    if (existing.exists && existing.data().status === "read") return;
+    const settingsSnap = await db.collection("carrierReadSettings").doc("auto").get();
+    const monthDoc = await db.collection("aiUsage").doc(aiUsageLogic.istParts().month).get();
+    const spend = aiUsageLogic.monthSpend(monthDoc.exists ? monthDoc.data() : {});
+    const spent = (spend.byFeature.readCarrierCircular || 0) + (spend.byFeature.autoReadCarrierCircular || 0);
+    const verdict = L.autoDecision(settingsSnap.exists ? settingsSnap.data() : null, spent);
+    if (!verdict.run) {
+      await note("skipped", verdict.reason);
+      return;
+    }
+    const apiKey = anthropicApiKey.value();
+    if (!apiKey) {
+      await note("failed", "The AI key is not set up.");
+      return;
+    }
+    await runCarrierRead({ circularId, dryRun: false, auto: true }, apiKey);
+  } catch (e) {
+    console.warn("carrier auto-read failed", circularId, e && e.message);
+    await note("failed", (e && e.message) || "The read did not finish.").catch(() => undefined);
+  }
 });
