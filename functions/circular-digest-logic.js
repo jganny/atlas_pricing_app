@@ -5,7 +5,7 @@
  */
 
 /** Everything except an airline rate table, which has its own reader. */
-const DIGEST_CATEGORIES = ["line_circular", "sea_tariff", "courier_tariff", "fuel_circular_airline", "general"];
+const DIGEST_CATEGORIES = ["line_circular", "sea_tariff", "courier_tariff", "fuel_circular_airline", "fuel_circular_shipping", "general"];
 /** What one digest costs, roughly (a few cents). */
 const DIGEST_COST_USD = 0.05;
 const KINDS = ["liner", "coloader", "transporter", "warehouse", "courier", "airline", "other"];

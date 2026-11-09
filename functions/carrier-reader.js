@@ -136,7 +136,7 @@ async function publishToAirDesk(db, applied, circ, circularId) {
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
 /** { circularId, dryRun?, secondRead?, auto? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-async function runCarrierRead({ circularId, dryRun, secondRead, auto }, apiKey) {
+async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet }, apiKey) {
   const db = admin.firestore();
   const snap = await db.collection("circularsLibrary").doc(circularId).get();
   if (!snap.exists) throw new HttpsError("not-found", "That circular does not exist.");
@@ -185,7 +185,7 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto }, apiKey) 
     status: "read",
     kind: "rates",
     auto: auto === true,
-    uploadedBy: circ.uploadedBy || "",
+    uploadedBy: quiet ? "" : circ.uploadedBy || "",
     storagePath: circ.storagePath || "",
     title: circ.title || circ.fileName || "",
     carrier: circ.carrier || "",
@@ -358,4 +358,36 @@ exports.autoReadReplacedCircular = onDocumentUpdated({ document: "circularsLibra
   const after = event.data && event.data.after ? event.data.after.data() : null;
   if (!after || !after.storagePath || (before && before.storagePath === after.storagePath)) return;
   await handleCircularFile(after, event.params.circularId);
+});
+
+/**
+ * Admin only: read ONE circular already in the library (a rate table for an airline tariff, a plain-words digest for anything else), without
+ * telling the person who uploaded it long ago. Already-read circulars are skipped unless force is true. Failures are recorded on the
+ * circular (so its row shows why) and also returned.
+ */
+exports.readLibraryCircular = onCall({ invoker: "public", secrets: [anthropicApiKey], timeoutSeconds: 900, memory: "1GiB" }, async (request) => {
+  requireAdmin(request);
+  const circularId = String(request.data?.circularId || "");
+  const db = admin.firestore();
+  const snap = await db.collection("circularsLibrary").doc(circularId).get();
+  if (!snap.exists) throw new HttpsError("not-found", "That circular does not exist.");
+  const circ = snap.data();
+  if (!circ.storagePath) throw new HttpsError("failed-precondition", "This circular has no file attached.");
+  const rates = circ.category === "airline_tariff";
+  if (!rates && !D.DIGEST_CATEGORIES.includes(circ.category)) throw new HttpsError("failed-precondition", "This kind of circular is not read automatically.");
+  const existing = await db.collection("carrierReads").doc(circularId).get();
+  if (existing.exists && existing.data().status === "read" && existing.data().storagePath === circ.storagePath && request.data?.force !== true) return { circularId, skipped: true, reason: "already read" };
+  const apiKey = anthropicApiKey.value();
+  if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
+  try {
+    if (rates) {
+      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true }, apiKey);
+      return { circularId, kind: "rates", applied: res.applied, held: res.held, unchanged: res.unchanged };
+    }
+    const d = await runCircularDigest({ circularId, circ: { ...circ, uploadedBy: "" } }, apiKey);
+    return { circularId, kind: "digest", points: d.summary.length, charges: d.charges.length };
+  } catch (e) {
+    await db.collection("carrierReads").doc(circularId).set({ circularId, status: "failed", kind: rates ? "rates" : "digest", auto: false, reason: (e && e.message) || "The read did not finish.", uploadedBy: "", storagePath: circ.storagePath, title: circ.title || circ.fileName || "", carrier: circ.carrier || "", fileName: circ.fileName || "", at: Date.now(), applied: 0, held: 0, unchanged: 0 }).catch(() => undefined);
+    throw e;
+  }
 });

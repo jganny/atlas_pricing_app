@@ -85,7 +85,7 @@ globalThis.fetch = async (url, init) => {
   return new Response(JSON.stringify({ content: [{ type: "text", text: out.length ? reply(out) : "NONE" }], usage: { input_tokens: 1000, output_tokens: 100 }, stop_reason: "end_turn" }), { status: 200 });
 };
 
-const { readCarrierCircular, autoReadCarrierCircular, autoReadReplacedCircular, carrierAutoReadSave } = require("./carrier-reader");
+const { readCarrierCircular, autoReadCarrierCircular, autoReadReplacedCircular, carrierAutoReadSave, readLibraryCircular } = require("./carrier-reader");
 const run = (data, email = "ganny@atlaspricing.com") => readCarrierCircular.run({ auth: { token: { email } }, data, rawRequest: {} });
 
 // a spreadsheet of 1,500 routes: a title block, column headings, then one line per route
@@ -320,6 +320,38 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(store.get("carrierReadSettings/auto").monthlyCapUsd, 5);
   await assert.rejects(carrierAutoReadSave.run({ auth: { token: { email: "someone@else.com" } }, data: { enabled: true, monthlyCapUsd: 5 }, rawRequest: {} }), /Only the admin/);
   await assert.rejects(carrierAutoReadSave.run({ auth: { token: { email: "ganny@atlaspricing.com" } }, data: { enabled: true, monthlyCapUsd: 500 }, rawRequest: {} }), /monthly limit/);
+
+
+  // 9) reading what is already in the library (admin only, quiet, skips what is done)
+  const readLib = (id, data, email = "ganny@atlaspricing.com", extra = {}) => readLibraryCircular.run({ auth: { token: { email } }, data: { circularId: id, ...extra }, rawRequest: {} });
+  wipe();
+  digestReply = JSON.stringify({ kind: "airline", summary: ["Fuel surcharge changes."], charges: [{ name: "Fuel surcharge", amount: 12.5, currency: "INR", unit: "per kg" }] });
+  bucketFile = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  store.set("circularsLibrary/L1", { ...sheet, category: "airline_tariff", uploadedBy: "someone" });
+  store.set("circularsLibrary/L2", { ...sheet, category: "fuel_circular_shipping", title: "Line notice", uploadedBy: "someone" });
+  store.set("circularsLibrary/L3", { ...sheet, category: "airline_tariff", storagePath: "" });
+  store.set("circularsLibrary/L4", { ...sheet, category: "courier_tariff_unknown" });
+  await assert.rejects(readLib("L1", null, "someone@else.com"), /Only the admin/);
+  let l1 = await readLib("L1");
+  assert.equal(l1.kind, "rates");
+  assert.equal(l1.applied, N);
+  assert.equal(store.get("carrierReads/L1").uploadedBy, "", "a backfill does not notify the original uploader");
+  assert.equal(store.get("carrierReads/L1").status, "read");
+  const callsAfterL1 = calls.length;
+  l1 = await readLib("L1");
+  assert.deepEqual([l1.skipped, calls.length], [true, callsAfterL1], "an already-read circular is skipped and costs nothing");
+  const l2 = await readLib("L2");
+  assert.equal(l2.kind, "digest");
+  assert.equal(store.get("carrierReads/L2").uploadedBy, "");
+  assert.equal(store.get("circularDigests/L2").charges[0].amount, 12.5);
+  await assert.rejects(readLib("L3"), /no file/);
+  await assert.rejects(readLib("L4"), /not read automatically/);
+  await assert.rejects(readLib("nope"), /does not exist/);
+  digestReply = "no json";
+  store.set("circularsLibrary/L5", { ...sheet, category: "general", uploadedBy: "someone" });
+  await assert.rejects(readLib("L5"), /Nothing useful/);
+  assert.equal(store.get("carrierReads/L5").status, "failed", "a failed backfill is recorded on the circular, quietly");
+  assert.equal(store.get("carrierReads/L5").uploadedBy, "");
 
   console.log("carrier reader end-to-end tests passed");
 })().catch((e) => {
