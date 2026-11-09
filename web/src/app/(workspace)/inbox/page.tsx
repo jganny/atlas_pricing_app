@@ -10,7 +10,10 @@ import { useAuthStore } from "@/store/auth";
 import { EnquiryReplyDrafter } from "@/components/EnquiryReplyDrafter";
 import { IS_DEMO_BUILD } from "@/lib/demo-mode";
 import { useLiveData } from "@/lib/api";
-import { patchInboxEnquiry } from "@/lib/firebase/inbox";
+import { fetchInboxEml, patchInboxEnquiry } from "@/lib/firebase/inbox";
+import { setHubJobStatus } from "@/lib/firebase/hub-jobs";
+import { useHubReader } from "@/hooks/use-hub-reader";
+import { openJobHref } from "@/lib/hub/prefill";
 import { canSeeInboxItem, detectEnquiryMode } from "@/lib/mail/inbox-assign";
 import { ATLAS_IMAP, MAILBOX_TEAMS, deskDisplayName } from "@/lib/quotes/team-roles";
 import { parseAirEnquiry, parseSeaEnquiry } from "@/lib/pricing/parse-enquiry";
@@ -39,6 +42,7 @@ export default function EnquiryInboxPage() {
   const { data: rows = [], isLoading } = useInbox();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { readEmailBytes } = useHubReader();
   const [modeOverride, setModeOverride] = useState<"air" | "sea" | null>(null);
   const [filter, setFilter] = useState<FilterTab>("action");
 
@@ -84,7 +88,37 @@ export default function EnquiryInboxPage() {
     return resolvedMode === "sea" ? parseSeaEnquiry(text) : parseAirEnquiry(text);
   }, [selected, resolvedMode]);
 
+  /**
+   * Action an email: the whole email (body and attachments) is read once and the chosen desk opens filled in.
+   * The AI is used only here, for emails someone actually actions. If the full email cannot be read, the short preview
+   * saved with the item is used instead, as before.
+   */
   async function applyToDesk(item: InboxEnquiry, desk: "air" | "sea") {
+    if (useLiveData) {
+      setBusy(true);
+      try {
+        toast("Reading the full email…", "info");
+        const bytes = await fetchInboxEml(item.id);
+        const job = await readEmailBytes(`${(item.subject || "enquiry").replace(/[\\/:*?"<>|]+/g, " ").slice(0, 80)}.eml`, bytes);
+        if (job) {
+          // The desk you chose wins over the reader's guess.
+          const forDesk = { ...job, mode: desk, extraction: { ...job.extraction, mode: desk } };
+          try {
+            await patchInboxEnquiry(item.id, { status: "applied", claimedBy: user?.username ?? null, actionRequired: false });
+          } catch {
+            /* rules */
+          }
+          void setHubJobStatus(job.id, "opened").catch(() => undefined);
+          toast(`Opening ${desk === "sea" ? "Sea" : "Air"} desk`, "success");
+          router.push(openJobHref(forDesk));
+          return;
+        }
+      } catch (e) {
+        toast(e instanceof Error ? `${e.message} Using the short preview instead.` : "Could not read the full email. Using the short preview instead.", "info");
+      } finally {
+        setBusy(false);
+      }
+    }
     const text = `${item.subject}\n${item.bodyPreview || item.body || ""}`;
     const fromText = desk === "sea" ? parseSeaEnquiry(text) : parseAirEnquiry(text);
     const parsed = {
@@ -326,6 +360,11 @@ export default function EnquiryInboxPage() {
                   {selected.bodyPreview || selected.body || "—"}
                 </pre>
               </div>
+              {useLiveData ? (
+                <p className="text-xs text-[var(--color-text-muted)]" data-testid="inbox-ai-note">
+                  &ldquo;Quote on {resolvedMode === "sea" ? "Sea" : "Air"} desk&rdquo; reads the whole email and its attachments once and fills the desk. That uses a little AI credit (a few rupees at most). Emails nobody opens cost nothing.
+                </p>
+              ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"

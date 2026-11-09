@@ -8,7 +8,7 @@ import { currentDeskSeatId } from "@/lib/auth/desk-seats";
 import { fetchDirectoryContacts } from "@/lib/firebase/directory";
 import { readDocuments } from "@/lib/firebase/hub-jobs";
 import { normalizeExtraction, type AgentRef } from "@/lib/hub/normalize";
-import { prepareJobs, type PreparedJob } from "@/lib/hub/prepare-documents";
+import { prepareEmail, prepareJobs, type PreparedJob } from "@/lib/hub/prepare-documents";
 import type { HubJob } from "@/lib/hub/types";
 import { OWN_EMAIL_DOMAINS } from "@/lib/quotes/team-roles";
 import { useAuthStore } from "@/store/auth";
@@ -40,7 +40,7 @@ export function useHubReader() {
     return agents.current;
   }
 
-  async function readJob(job: PreparedJob, instructionText = "") {
+  async function readJob(job: PreparedJob, instructionText = ""): Promise<HubJob | null> {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setItems((prev) => [{ id, label: job.label, state: "reading" as const, message: "Reading…" }, ...prev].slice(0, 8));
     try {
@@ -66,9 +66,16 @@ export function useHubReader() {
       };
       await add(hubJob);
       patch(id, { state: "done", message: `${hubJob.summary} — waiting in Quote hub` });
+      return hubJob;
     } catch (e) {
       patch(id, { state: "error", message: e instanceof Error ? e.message : "Could not read this one." });
+      return null;
     }
+  }
+
+  /** One email already in hand (for example fetched from a mailbox): body and attachments are read into a filled draft. */
+  async function readEmailBytes(name: string, bytes: Uint8Array): Promise<HubJob | null> {
+    return readJob(await prepareEmail(name, bytes));
   }
 
   async function readFiles(files: File[], typed = "") {
@@ -95,5 +102,5 @@ export function useHubReader() {
     await readJob({ label: t.slice(0, 50), documents: [{ name: "Pasted enquiry", kind: "text", text: t }], fileNames: ["Pasted enquiry"] }, typed);
   }
 
-  return { items, readFiles, readText };
+  return { items, readFiles, readText, readEmailBytes };
 }

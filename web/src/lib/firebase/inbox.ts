@@ -11,7 +11,8 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import type { InboxEnquiry, InboxTag } from "@/lib/types";
-import { getFirebaseDb } from "./client";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFirebaseApp, getFirebaseDb } from "./client";
 
 const TAGS = new Set(["new_enquiry", "follow_up", "needs_human"]);
 
@@ -82,4 +83,18 @@ export async function patchInboxEnquiry(
     ...patch,
     updatedAt: Date.now(),
   });
+}
+
+/**
+ * The whole email behind an Inbox item (body and attachments, as a raw .eml), fetched from the mailbox when somebody actions it.
+ * No AI credit: the reading comes after, once, in the Quote Hub reader.
+ */
+export async function fetchInboxEml(id: string): Promise<Uint8Array> {
+  const call = httpsCallable<{ id: string }, { eml: string; size: number; truncated: boolean }>(getFunctions(getFirebaseApp(), "us-central1"), "fetchInboxEmail", { timeout: 90_000 });
+  const res = await call({ id });
+  if (res.data.truncated) throw new Error("This email is too large to read in full.");
+  const bin = atob(res.data.eml);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
 }

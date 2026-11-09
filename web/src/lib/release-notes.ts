@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.147",
+    date: "2026-11-10",
+    items: [
+      "Inbox: the pricing and pricingsales mailboxes are now sorted before anything is kept. Newsletters, automatic mail, bounces and mail with no enquiry in it are dropped for free; clear quote requests are kept; only the unclear ones are asked of a small AI model. Nothing in the mailbox is marked read or moved.",
+      "Inbox: \u201cQuote on Air / Sea desk\u201d now reads the whole email and its attachments (once, only when you action it) and fills the desk with the customer, lane, cargo, weight and incoterm. It uses a little AI credit; emails nobody opens cost nothing.",
+    ],
+  },
+  {
     version: "0.3.146",
     date: "2026-11-10",
     items: [

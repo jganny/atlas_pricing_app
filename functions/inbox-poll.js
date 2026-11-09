@@ -19,6 +19,10 @@ const crypto = require("crypto");
 const { defineSecret } = require("firebase-functions/params");
 const { ImapFlow } = require("imapflow");
 const P = require("./inbox-poll-logic");
+const F = require("./inbox-filter");
+const { simpleParser } = require("mailparser");
+
+const MAX_AI_PER_RUN = 20; // a safety ceiling: the free rules already keep the AI to the unclear few
 
 const MAX_PER_RUN = 40; // keeps the AI sorting and the mail server within the time allowed
 const FIRST_RUN_DAYS = 3; // the first time, only the last few days are looked at, never the whole mailbox
@@ -338,6 +342,10 @@ async function pollOne(mailbox, password, apiKey) {
   let imported = 0;
   let skippedNoise = 0;
   let failedMessages = 0;
+  let scanned = 0;
+  let ruleNoise = 0;
+  let aiNoise = 0;
+  let aiUsed = 0;
 
   await client.connect();
   try {
@@ -360,7 +368,7 @@ async function pollOne(mailbox, password, apiKey) {
       }
 
       // UIDs, not sequence numbers (the third argument says so). All collected first: no mail-server command runs while reading them.
-      const messages = uids.length ? await client.fetchAll(uids, { envelope: true, source: { maxLength: 120000 }, uid: true }, { uid: true }) : [];
+      const messages = uids.length ? await client.fetchAll(uids, { envelope: true, source: { maxLength: 150000 }, uid: true }, { uid: true }) : [];
 
       for (const msg of messages) {
         try {
@@ -374,18 +382,46 @@ async function pollOne(mailbox, password, apiKey) {
         const existing = await db.collection("inbox_enquiries").doc(docId).get();
         if (existing.exists) continue;
 
-        const raw = msg.source ? msg.source.toString("utf8") : "";
-        // Work buffer only — never persisted in full.
-        const bodyWork = stripHtml(raw).slice(0, 8000);
+        scanned += 1;
+        // The mail's own readable text (decoded), not its raw source. A work buffer only: never stored in full.
+        let parsedMail = null;
+        try {
+          parsedMail = msg.source ? await simpleParser(msg.source) : null;
+        } catch {
+          parsedMail = null;
+        }
+        const bodyWork = (parsedMail && (parsedMail.text || stripHtml(parsedMail.html || ""))
+          ? String(parsedMail.text || stripHtml(parsedMail.html || ""))
+          : stripHtml(msg.source ? msg.source.toString("utf8") : "")
+        )
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 8000);
         const subject = msg.envelope?.subject || "(no subject)";
         const from =
           (msg.envelope?.from || [])
             .map((a) => a.address || [a.name, a.address].filter(Boolean).join(" "))
             .join(", ") || "";
 
-        const classified = await classifyAndExtract(apiKey, subject, bodyWork);
+        // 1) Free rules first: automatic mail, newsletters, bounces and mail with no enquiry in it are dropped here, with no AI credit.
+        const verdict = F.prefilter({ headers: parsedMail ? parsedMail.headers : null, from: msg.envelope?.from?.[0]?.address || "", subject, body: bodyWork });
+        if (verdict.verdict === "noise") {
+          ruleNoise += 1;
+          skippedNoise += 1;
+          continue;
+        }
+        // 2) A clear enquiry is kept without the AI. Only the unclear ones are sent to the small AI model.
+        const askAi = verdict.verdict === "maybe" && aiUsed < MAX_AI_PER_RUN;
+        if (askAi) aiUsed += 1;
+        const classified = await classifyAndExtract(askAi ? apiKey : "", subject, bodyWork);
+        if (verdict.verdict === "sure" && !ACTIONABLE.has(classified.tag)) {
+          classified.tag = "new_enquiry";
+          classified.actionRequired = true;
+          classified.reason = verdict.reason;
+        }
 
         if (classified.tag === "noise" || !ACTIONABLE.has(classified.tag)) {
+          aiNoise += 1;
           skippedNoise += 1;
           continue;
         }
@@ -397,6 +433,7 @@ async function pollOne(mailbox, password, apiKey) {
           mailbox: mailbox.key,
           mailboxEmail: mailbox.user,
           messageId,
+          uid: msg.uid,
           from,
           subject: subject.slice(0, 300),
           receivedAt: (msg.envelope?.date || new Date()).toISOString(),
@@ -425,6 +462,12 @@ async function pollOne(mailbox, password, apiKey) {
         }
       }
       await stateRef.set({ lastUid: P.nextCursor(state.lastUid, uids, tip, firstRun), at: Date.now() }, { merge: true });
+      // A running count per day, so the admin can see how many mails were sorted out for free and how many needed the AI.
+      if (scanned) {
+        const day = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+        const inc = admin.firestore.FieldValue.increment;
+        await db.collection("inbox_stats").doc(`${day}_${mailbox.key}`).set({ day, mailbox: mailbox.key, scanned: inc(scanned), ruleNoise: inc(ruleNoise), aiAsked: inc(aiUsed), aiNoise: inc(aiNoise), kept: inc(imported), updatedAt: Date.now() }, { merge: true });
+      }
     } finally {
       lock.release();
     }
@@ -475,4 +518,59 @@ exports.pollPricingInboxes = functions
     }
     functions.logger.info("IMAP slim intake complete", { results, ai: Boolean(apiKey) });
     return results;
+  });
+
+/**
+ * One email, whole, fetched from the mailbox when somebody chooses to action it (the app keeps only a short preview).
+ * Returns the raw message as base64, which the app reads like a dropped .eml file: body and attachments.
+ * Reading it costs no AI credit; the AI is used afterwards, once, only for the emails people action.
+ */
+const MAX_EML_BYTES = 6.5 * 1024 * 1024; // a callable's reply is capped at 10 MB, and base64 adds a third
+exports.fetchInboxEmail = functions
+  .runWith({ secrets: [pricingPassword, salesPassword], timeoutSeconds: 60, memory: "512MB" })
+  .https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token.chatOnly === true) {
+      throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+    }
+    const id = String((data && data.id) || "");
+    if (!id) throw new functions.https.HttpsError("invalid-argument", "Which email?");
+    const snap = await admin.firestore().collection("inbox_enquiries").doc(id).get();
+    if (!snap.exists) throw new functions.https.HttpsError("not-found", "That enquiry is no longer in the list.");
+    const item = snap.data();
+    const box = MAILBOXES.find((b) => b.key === item.mailbox);
+    if (!box) throw new functions.https.HttpsError("failed-precondition", "That mailbox is not set up.");
+    const password = String(box.secret.value() || "").trim();
+    if (!password) throw new functions.https.HttpsError("failed-precondition", "The mailbox password is not set up.");
+
+    const client = new ImapFlow({ host: IMAP.host, port: IMAP.port, secure: IMAP.secure, auth: { user: box.user, pass: password }, logger: false });
+    try {
+      await client.connect();
+    } catch (err) {
+      functions.logger.warn("fetchInboxEmail: could not connect", { message: err instanceof Error ? err.message : String(err) });
+      throw new functions.https.HttpsError("unavailable", "The mailbox did not answer. Try again in a minute.");
+    }
+    try {
+      const lock = await client.getMailboxLock(IMAP.folder);
+      try {
+        let uid = null;
+        if (item.messageId && !String(item.messageId).startsWith("uid-")) {
+          const found = await client.search({ header: { "message-id": item.messageId } }, { uid: true });
+          if (Array.isArray(found) && found.length) uid = found[found.length - 1];
+        }
+        if (!uid && Number.isInteger(item.uid)) uid = item.uid;
+        if (!uid) throw new functions.https.HttpsError("not-found", "The email is no longer in the mailbox.");
+        const msg = await client.fetchOne(String(uid), { source: { maxLength: MAX_EML_BYTES }, uid: true }, { uid: true });
+        if (!msg || !msg.source) throw new functions.https.HttpsError("not-found", "The email is no longer in the mailbox.");
+        const truncated = msg.source.length >= MAX_EML_BYTES;
+        return { eml: msg.source.toString("base64"), size: msg.source.length, truncated };
+      } finally {
+        lock.release();
+      }
+    } finally {
+      try {
+        await client.logout();
+      } catch {
+        client.close();
+      }
+    }
   });

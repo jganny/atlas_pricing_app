@@ -1435,6 +1435,7 @@ exports.parseQuoteInstruction = instructionParse.parseQuoteInstruction;
 const vertexChat = require("./vertex-chat");
 exports.vertexChat = vertexChat.vertexChat;
 exports.pollPricingInboxes = inboxPoll.pollPricingInboxes;
+exports.fetchInboxEmail = inboxPoll.fetchInboxEmail;
 
 // Team chat: delete messages and files 100 days after they were sent, and alert people who are away.
 const chatRetention = require("./chat-retention");
