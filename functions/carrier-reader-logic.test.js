@@ -171,3 +171,19 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.equal(L.autoDecision({ enabled: false, monthlyCapUsd: 3 }, 0).run, false);
   assert.equal(L.autoDecision({ enabled: true, monthlyCapUsd: 0 }, 0).run, false, "a limit of 0 pauses auto-read");
 }
+
+// --- title hints and default currency ---
+{
+  assert.equal(L.originHint("ET_AMD"), "AMD");
+  assert.equal(L.originHint("6E-BOM"), "BOM");
+  assert.equal(L.originHint("EK_MAA_PXS AND PXD"), "MAA");
+  assert.equal(L.originHint("EY_BLR(GCR)"), "BLR");
+  assert.equal(L.originHint("EK_Fuel"), null, "a word after the airline code is not an airport");
+  assert.equal(L.originHint("EK_LONG/SHORT/MEDIUM HAUL"), null);
+  assert.equal(L.originHint(""), null);
+  assert.equal(L.originHint("Air India Agreement"), null);
+  const rows = [{ carrierCode: "6E", origin: "BLR", destination: "AUH", currency: "", breaks: {} }, { carrierCode: "6E", origin: "BLR", destination: "BKK", currency: "USD", breaks: {} }];
+  assert.deepEqual(L.withDefaultCurrency(rows, "inr").map((r) => r.currency), ["INR", "USD"], "only a missing currency is filled; a printed one stays");
+  assert.deepEqual(L.withDefaultCurrency(rows, "").map((r) => r.currency), ["", "USD"], "no default, nothing changes");
+  assert.deepEqual(L.withDefaultCurrency(rows, "rupees").map((r) => r.currency), ["", "USD"], "a default that is not a currency code is ignored");
+}

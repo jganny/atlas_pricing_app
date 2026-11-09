@@ -125,6 +125,8 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(res.publishedToAirDesk, N);
   assert.deepEqual([deskRows[0].carrier, deskRows[0].carrierCode, deskRows[0].source, deskRows[0].published, deskRows[0].breaks.min.sell, deskRows[0].breaks.min.buy], ["Emirates", "EK", "carrier_board", true, 0, 1500]);
 
+  assert.match(calls[0].text, /origin is BLR, taken from the file title/, "the title's station is offered to both reads when the document prints none");
+
   // 2) a practice read changes nothing
   [...store.keys()].filter((k) => k.startsWith("carrierTariffs/")).forEach((k) => store.delete(k));
   store.delete("carrierReads/c1");

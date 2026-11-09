@@ -136,7 +136,7 @@ async function publishToAirDesk(db, applied, circ, circularId) {
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
 /** { circularId, dryRun?, secondRead?, auto? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet }, apiKey) {
+async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency }, apiKey) {
   const db = admin.firestore();
   const snap = await db.collection("circularsLibrary").doc(circularId).get();
   if (!snap.exists) throw new HttpsError("not-found", "That circular does not exist.");
@@ -148,7 +148,10 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet }, a
   if (!parts.length) throw new HttpsError("failed-precondition", "Nothing readable was found in this file.");
   if (parts.length > MAX_PARTS) throw new HttpsError("failed-precondition", `This circular is too long to read automatically (${parts.length} parts; the limit is ${MAX_PARTS}).`);
   const fallback = /^[A-Za-z0-9]{2,3}$/.test(String(circ.carrier || "").trim()) ? circ.carrier : "";
-  const userText = `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Extract every route's weight-break rates as instructed.`;
+  const hint = L.originHint(circ.title || circ.fileName);
+  const userText =
+    `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Extract every route's weight-break rates as instructed.` +
+    (hint ? ` If the document itself prints no origin station for its routes, the origin is ${hint}, taken from the file title (use it only when the document prints none; never override a printed origin).` : "");
   const [sysA, sysB] = L.systemPrompts();
 
   // Every part is read twice, independently, a few at a time: the careful model first, the cheaper one second (secondRead: "sonnet" for two careful reads).
@@ -164,8 +167,8 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet }, a
   if (cut.length) problems.push(`${cut.length} of ${reads.length} part(s) were so long that a read was cut short (${cut.slice(0, 3).map((r) => r.label).join(", ")}), so routes in them were not updated.`);
   // A part that failed either read contributes nothing: its routes are neither applied nor lost, they simply keep their old rates.
   const good = reads.filter((r) => r.a.parsed && r.b.parsed && !r.a.truncated && !r.b.truncated);
-  const readA = L.mergeRows(good.map((r) => L.normalizeRows(r.a.parsed, fallback)));
-  const readB = L.mergeRows(good.map((r) => L.normalizeRows(r.b.parsed, fallback)));
+  const readA = L.mergeRows(good.map((r) => L.withDefaultCurrency(L.normalizeRows(r.a.parsed, fallback), defaultCurrency)));
+  const readB = L.mergeRows(good.map((r) => L.withDefaultCurrency(L.normalizeRows(r.b.parsed, fallback), defaultCurrency)));
   const a = { usage: sumUsage(reads.map((r) => r.a.usage)) };
   const b = { usage: sumUsage(reads.map((r) => r.b.usage)) };
 
@@ -235,7 +238,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   requireAdmin(request);
   const apiKey = anthropicApiKey.value();
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
-  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead }, apiKey);
+  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead, defaultCurrency: request.data?.defaultCurrency }, apiKey);
 });
 
 /** Admin only: switch auto-read on or off and set the monthly limit in dollars. */
@@ -381,7 +384,7 @@ exports.readLibraryCircular = onCall({ invoker: "public", secrets: [anthropicApi
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
   try {
     if (rates) {
-      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true }, apiKey);
+      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true, defaultCurrency: request.data?.defaultCurrency }, apiKey);
       return { circularId, kind: "rates", applied: res.applied, held: res.held, unchanged: res.unchanged };
     }
     const d = await runCircularDigest({ circularId, circ: { ...circ, uploadedBy: "" } }, apiKey);

@@ -277,4 +277,17 @@ function autoDecision(settings, spentUsd, estimateUsd = AUTO_READ_COST_USD) {
   return { run: true };
 }
 
-module.exports = { AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };
+/** Many circulars name their origin only in the file title ("ET_AMD", "6E-BOM", "EK_MAA_PXS AND PXD"). The three letters after the airline code, or null. */
+function originHint(title) {
+  const m = /^\s*[A-Z0-9]{2}[_ -]([A-Z]{3})(?![A-Za-z])/.exec(String(title || "").toUpperCase());
+  return m ? m[1] : null;
+}
+
+/** The admin may say which currency a circular that prints none is in. Only rows with no currency are filled; anything printed stays. */
+function withDefaultCurrency(rows, currency) {
+  const c = String(currency || "").trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(c)) return rows;
+  return rows.map((r) => (r.currency ? r : { ...r, currency: c }));
+}
+
+module.exports = { originHint, withDefaultCurrency, AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };
