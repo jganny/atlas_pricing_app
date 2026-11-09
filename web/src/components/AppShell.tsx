@@ -100,7 +100,6 @@ const libraryNav: NavItem[] = [
   { href: "/carriers", label: "Carriers", icon: Ship, route: "directory" },
   { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
   { href: "/directory", label: "Directory", icon: Users, route: "directory" },
-  { href: "/integrations", label: "Standards", icon: Sparkles, route: "directory" },
 ];
 
 const adminMoreNav: NavItem[] = [

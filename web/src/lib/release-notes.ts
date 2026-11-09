@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.143",
+    date: "2026-11-10",
+    items: [
+      "The Standards section has been removed from the menu and from the app.",
+      "On the Carrier board, the \u201chow each airline's rate is obtained\u201d map now shows Email, not Tariff, for an airline whose tariff has not been loaded yet, so it matches the list above it.",
+    ],
+  },
+  {
     version: "0.3.142",
     date: "2026-11-10",
     items: [

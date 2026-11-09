@@ -212,7 +212,7 @@ export function routeIdFromPath(pathname: string): AppRouteId | null {
   if (p.startsWith("/nrs")) return "nrs";
   if (p.startsWith("/won-followups")) return "won-followups";
   if (p.startsWith("/chat")) return "chat";
-  if (p.startsWith("/carriers") || p.startsWith("/integrations")) return "directory";
+  if (p.startsWith("/carriers")) return "directory";
   if (p === "/m" || p.startsWith("/m/")) return "dashboard";
   return null;
 }

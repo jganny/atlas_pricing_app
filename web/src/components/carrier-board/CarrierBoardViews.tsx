@@ -131,8 +131,10 @@ export function ProcurementMap({ lane, weightKg }: { lane: LaneView; weightKg: n
             <tr key={code}>
               <td className="whitespace-nowrap pr-3 font-semibold text-[var(--color-atlas-navy)]">{code} <span className="font-normal text-[var(--color-text-muted)]">{info.name.split(" ")[0]}</span></td>
               {MAP_BANDS.map((b, i) => {
-                const s = sourceFor(ruleFor(code), b.rep, info.has);
-                return <td key={b.label} className="px-0.5"><span className={cn("block rounded-md py-1 text-center font-semibold", SOURCE_STYLE[s], i === ci && "ring-2 ring-blue-600")}>{s}</span></td>;
+                // "Tariff" only where a tariff is really on file; otherwise that band is asked by email (the same fallback the list uses).
+                const raw = sourceFor(ruleFor(code), b.rep, info.has);
+                const s = raw === "Tariff" && !info.has ? "Email" : raw;
+                return <td key={b.label} className="px-0.5"><span title={raw === "Tariff" && !info.has ? "The rule says use the tariff, but none is loaded for this lane yet" : undefined} className={cn("block rounded-md py-1 text-center font-semibold", SOURCE_STYLE[s], i === ci && "ring-2 ring-blue-600")}>{s}</span></td>;
               })}
               <td className="whitespace-nowrap pl-2 text-[var(--color-text-muted)]">{ruleText(ruleFor(code))}</td>
             </tr>
