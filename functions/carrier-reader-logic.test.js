@@ -199,9 +199,11 @@ assert.deepEqual(L.mergeRows([]), []);
 // --- long PDFs are read a few pages at a time, each group with the cover and the page before it ---
 {
   assert.deepEqual(L.planPdfChunks(0), []);
-  assert.deepEqual(L.planPdfChunks(6).map((c) => c.pages), [[1, 2, 3, 4, 5, 6]], "a short PDF is read whole");
-  assert.equal(L.planPdfChunks(6)[0].whole, true);
-  const plan = L.planPdfChunks(10);
+  assert.deepEqual(L.planPdfChunks(6, { single: 6, size: 4 }).map((c) => c.pages), [[1, 2, 3, 4, 5, 6]], "a short PDF is read whole");
+  assert.equal(L.planPdfChunks(6, { single: 6, size: 4 })[0].whole, true);
+  assert.equal(L.planPdfChunks(3)[0].whole, true, "up to 3 pages is read whole");
+  assert.deepEqual(L.planPdfChunks(7).map((c) => c.pages), [[1, 2], [1, 2, 3, 4], [1, 4, 5, 6], [1, 6, 7]], "normally two new pages at a time");
+  const plan = L.planPdfChunks(10, { single: 6, size: 4 });
   assert.deepEqual(plan.map((c) => c.pages), [[1, 2, 3, 4], [1, 4, 5, 6, 7, 8], [1, 8, 9, 10]]);
   assert.deepEqual(plan.map((c) => [c.first, c.last]), [[1, 4], [5, 8], [9, 10]]);
   // every page of the document is the "new" page of exactly one group, so nothing is skipped
@@ -215,8 +217,8 @@ assert.deepEqual(L.mergeRows([]), []);
       if (c.first > 1) assert.equal(c.pages[0], 1, "every later group carries the cover");
     }
   }
-  assert.equal(L.chunkNote(L.planPdfChunks(5)[0], 5), "");
-  const note = L.chunkNote(L.planPdfChunks(10)[1], 10);
+  assert.equal(L.chunkNote(L.planPdfChunks(3)[0], 3), "");
+  const note = L.chunkNote(L.planPdfChunks(10, { single: 6, size: 4 })[1], 10);
   assert.match(note, /10 pages/);
   assert.match(note, /Pages 1 and 4 are repeated/);
   assert.match(note, /new pages are 5 to 8/);

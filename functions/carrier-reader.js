@@ -25,9 +25,9 @@ const MODEL = "claude-sonnet-5-5";
 // The second, independent read uses the much cheaper model WITH thinking on (a different model is a stronger cross-check). Tested live 2026-11-09 on three real circulars: it matched or beat a second careful read (Singapore 110/110 agreed, IndiGo 77/77, Emirates 141/141 vs 132 + 9 held) at 30-41% less cost. With thinking OFF it failed (wrote corrections into its answer; stopped at 14 of 110 routes), so never turn thinking off for it. secondRead: "sonnet" restores two careful reads.
 const CHEAP_MODEL = "claude-haiku-5-5";
 const MAX_PARTS = 60; // a spreadsheet is read in parts; more than this is held for a person to look at
-const PARTS_AT_ONCE = 6;
-const MAX_ATTEMPTS = 3;
-const RETRY_MS = Number(process.env.CARRIER_RETRY_MS) || 4000;
+const PARTS_AT_ONCE = 2; // the AI account limits how many requests run at once and how many words it may write a minute, so parts are read a couple at a time
+const MAX_ATTEMPTS = 6;
+const RETRY_MS = Number(process.env.CARRIER_RETRY_MS) || 8000;
 const FILE_LIFE_DAYS = 30;
 
 function requireAdmin(request) {

@@ -157,7 +157,7 @@ function chunkSheets(sheets, { maxChars = 8000, headerLines = 6, overlap = 3 } =
  * the group before it, so a table that carries on from one page to the next is seen whole at least once.
  * Page numbers are 1-based and in order.
  */
-function planPdfChunks(pageCount, { single = 6, size = 4 } = {}) {
+function planPdfChunks(pageCount, { single = 3, size = 2 } = {}) {
   const n = Math.max(0, Math.floor(Number(pageCount) || 0));
   if (n === 0) return [];
   if (n <= single) return [{ pages: Array.from({ length: n }, (_, i) => i + 1), first: 1, last: n, whole: true }];
