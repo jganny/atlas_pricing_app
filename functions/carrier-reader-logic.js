@@ -151,6 +151,39 @@ function chunkSheets(sheets, { maxChars = 8000, headerLines = 6, overlap = 3 } =
   return out;
 }
 
+/**
+ * A long PDF -> groups of pages the AI can read in full. A short PDF is one group (the file as it is).
+ * Every group after the first also carries page 1 (the cover: currency, validity, notes, column headings) and the last page of
+ * the group before it, so a table that carries on from one page to the next is seen whole at least once.
+ * Page numbers are 1-based and in order.
+ */
+function planPdfChunks(pageCount, { single = 6, size = 4 } = {}) {
+  const n = Math.max(0, Math.floor(Number(pageCount) || 0));
+  if (n === 0) return [];
+  if (n <= single) return [{ pages: Array.from({ length: n }, (_, i) => i + 1), first: 1, last: n, whole: true }];
+  const out = [];
+  for (let first = 1; first <= n; first += size) {
+    const last = Math.min(n, first + size - 1);
+    const pages = [];
+    if (first > 1) pages.push(1);
+    if (first > 2) pages.push(first - 1);
+    for (let p = first; p <= last; p++) pages.push(p);
+    out.push({ pages, first, last, whole: false });
+  }
+  return out;
+}
+
+/** What the AI is told about a group of pages (empty when the PDF is read whole). */
+function chunkNote(chunk, pageCount) {
+  if (!chunk || chunk.whole) return "";
+  const extra = chunk.pages.filter((p) => p < chunk.first);
+  return (
+    ` This is only part of a longer document of ${pageCount} pages: the pages given are ${chunk.pages.join(", ")}.` +
+    (extra.length ? ` Page${extra.length > 1 ? "s" : ""} ${extra.join(" and ")} ${extra.length > 1 ? "are" : "is"} repeated from earlier in the document for context (currency, validity, notes, column headings); the new pages are ${chunk.first} to ${chunk.last}.` : "") +
+    ` Read the rates on every page you are given. Any route that is not on these pages will be read from the other parts, so do not guess at routes you cannot see.`
+  );
+}
+
 /** Rows read from the parts of one circular -> one list. A route seen twice (the parts overlap) keeps its first reading. */
 function mergeRows(parts) {
   const seen = new Set();
@@ -290,4 +323,4 @@ function withDefaultCurrency(rows, currency) {
   return rows.map((r) => (r.currency ? r : { ...r, currency: c }));
 }
 
-module.exports = { originHint, withDefaultCurrency, AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };
+module.exports = { originHint, withDefaultCurrency, AUTO_DEFAULTS, AUTO_READ_COST_USD, parseAutoSettings, parseAutoInput, autoDecision, DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, planPdfChunks, chunkNote, mergeRows, mapLimit };

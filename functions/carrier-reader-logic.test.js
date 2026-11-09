@@ -195,3 +195,29 @@ assert.deepEqual(L.mergeRows([]), []);
     assert.match(sys, /Do not guess the currency/, "but it is never guessed");
   }
 }
+
+// --- long PDFs are read a few pages at a time, each group with the cover and the page before it ---
+{
+  assert.deepEqual(L.planPdfChunks(0), []);
+  assert.deepEqual(L.planPdfChunks(6).map((c) => c.pages), [[1, 2, 3, 4, 5, 6]], "a short PDF is read whole");
+  assert.equal(L.planPdfChunks(6)[0].whole, true);
+  const plan = L.planPdfChunks(10);
+  assert.deepEqual(plan.map((c) => c.pages), [[1, 2, 3, 4], [1, 4, 5, 6, 7, 8], [1, 8, 9, 10]]);
+  assert.deepEqual(plan.map((c) => [c.first, c.last]), [[1, 4], [5, 8], [9, 10]]);
+  // every page of the document is the "new" page of exactly one group, so nothing is skipped
+  for (const n of [7, 8, 9, 13, 25, 47]) {
+    const p = L.planPdfChunks(n);
+    const covered = p.flatMap((c) => Array.from({ length: c.last - c.first + 1 }, (_, i) => c.first + i));
+    assert.deepEqual(covered, Array.from({ length: n }, (_, i) => i + 1), `all ${n} pages are covered once`);
+    for (const c of p) {
+      assert.deepEqual(c.pages, [...c.pages].sort((x, y) => x - y), "pages stay in order");
+      assert.equal(new Set(c.pages).size, c.pages.length, "no page twice in a group");
+      if (c.first > 1) assert.equal(c.pages[0], 1, "every later group carries the cover");
+    }
+  }
+  assert.equal(L.chunkNote(L.planPdfChunks(5)[0], 5), "");
+  const note = L.chunkNote(L.planPdfChunks(10)[1], 10);
+  assert.match(note, /10 pages/);
+  assert.match(note, /Pages 1 and 4 are repeated/);
+  assert.match(note, /new pages are 5 to 8/);
+}

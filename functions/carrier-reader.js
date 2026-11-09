@@ -7,6 +7,7 @@
  * carrierTariffHolds/{circularId} (what was held and why), carrierReadUsage/{yyyy-mm} (AI usage, for the cost line in Admin).
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { PDFDocument } = require("pdf-lib");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
@@ -35,12 +36,36 @@ function requireAdmin(request) {
 }
 
 /** The circular as parts the AI can read in full: the whole PDF as one part, or a spreadsheet cut into small parts of text. */
-async function partsFor(circ) {
+async function partsFor(circ, { split = true } = {}) {
   const [buffer] = await admin.storage().bucket().file(circ.storagePath).download();
   const kind = L.fileKind(circ.fileName, circ.storagePath);
   if (kind === "pdf") {
     if (buffer.length > 28 * 1024 * 1024) throw new HttpsError("invalid-argument", "This PDF is too large to read (28 MB limit).");
-    return [{ label: "document", content: { type: "document", source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") } } }];
+    const whole = [{ label: "document", content: { type: "document", source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") } }, note: "" }];
+    if (!split) return whole;
+    let src;
+    try {
+      src = await PDFDocument.load(buffer, { ignoreEncryption: true });
+    } catch (err) {
+      console.warn("carrier reader: the PDF could not be split, reading it whole", err && err.message);
+      return whole;
+    }
+    const pageCount = src.getPageCount();
+    const chunks = L.planPdfChunks(pageCount);
+    if (chunks.length <= 1) return whole;
+    const parts = [];
+    for (const chunk of chunks) {
+      const doc = await PDFDocument.create();
+      const copied = await doc.copyPages(src, chunk.pages.map((p) => p - 1));
+      copied.forEach((pg) => doc.addPage(pg));
+      const bytes = await doc.save();
+      parts.push({
+        label: `pages ${chunk.first}-${chunk.last} of ${pageCount}`,
+        content: { type: "document", source: { type: "base64", media_type: "application/pdf", data: Buffer.from(bytes).toString("base64") } },
+        note: L.chunkNote(chunk, pageCount),
+      });
+    }
+    return parts;
   }
   if (kind === "sheet") {
     const wb = XLSX.read(buffer, { type: "buffer" });
@@ -157,7 +182,8 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, def
   // Every part is read twice, independently, a few at a time: the careful model first, the cheaper one second (secondRead: "sonnet" for two careful reads).
   const secondModel = secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
   const reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
-    const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, userText, MODEL), askOnce(apiKey, sysB, part.content, userText, secondModel)]);
+    const partText = userText + (part.note || "");
+    const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, partText, MODEL), askOnce(apiKey, sysB, part.content, partText, secondModel)]);
     return { label: part.label, a, b };
   });
   const problems = [];
@@ -276,7 +302,7 @@ async function askDigest(apiKey, content) {
 /** Reads a circular that is not an airline rate table and writes its digest (circularDigests/{id}) and a status line (carrierReads/{id}). */
 async function runCircularDigest({ circularId, circ }, apiKey) {
   const db = admin.firestore();
-  const parts = await partsFor(circ);
+  const parts = await partsFor(circ, { split: false });
   if (!parts.length) throw new HttpsError("failed-precondition", "Nothing readable was found in this file.");
   if (parts.length > 14) throw new HttpsError("failed-precondition", `This file is too long to summarise automatically (${parts.length} parts).`);
   const intro = `This document is "${circ.title || circ.fileName || ""}"${circ.carrier ? ` from ${circ.carrier}` : ""}. Write its digest as instructed.`;
