@@ -18,6 +18,7 @@
     "imapflow": "^1.0.186",
     "nodemailer": "^10.1.7",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
     "xlsx": "^0.18.5"
   },
   "private": true

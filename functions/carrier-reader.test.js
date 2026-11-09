@@ -355,6 +355,56 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(store.get("carrierReads/L5").status, "failed", "a failed backfill is recorded on the circular, quietly");
   assert.equal(store.get("carrierReads/L5").uploadedBy, "");
 
+  // ---- a clean text table in a real PDF is read with fixed rules, and the AI only checks it ----
+  {
+    const { PDFDocument, StandardFonts } = require("pdf-lib");
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const page = pdf.addPage([900, 1000]);
+    const put = (cells, y) => cells.forEach((c, i) => page.drawText(String(c), { x: 20 + i * 70, y, size: 9, font }));
+    put(["RATE CARD ID", "ORIGIN", "DESTINATION", "CURRENCY", "MINIMUM", "NORMAL", "+45 KGS", "+100 KGS"], 960);
+    const dests = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "GGG", "HHH", "III", "JJJ", "KKK", "LLL"];
+    let y = 940;
+    for (const card of ["BOMGCRTKURGENT", "BOMDGRTKURGENT"]) {
+      dests.forEach((d, i) => {
+        const base = card.includes("DGR") ? 130 : 100;
+        put([card, "BOM", d, "INR", 5000 + i * 10, base + i, base - 10 + i, base - 20 + i], y);
+        y -= 14;
+      });
+    }
+    bucketFile = Buffer.from(await pdf.save());
+    store.set("circularsLibrary/T1", { category: "airline_tariff", carrier: "TK", title: "TK_BOM URGENT", fileName: "TK_BOM.pdf", storagePath: "circulars/x/TK.pdf", effectiveDate: "2026-06-04", expiryDate: "2026-12-31" });
+    // the pretend AI checks the page: the same general cargo routes, written the way the reader asks for them
+    const aiLine = (d, i, normal) => ["TK", "BOM", d, "INR", "", "", "unknown", String(5000 + i * 10), String(normal + i), String(normal - 10 + i), String(normal - 20 + i), ""].join("|");
+    const aiReply = (normal) => ["COLUMNS|0|45|100", ...dests.map((d, i) => aiLine(d, i, normal))].join("\n");
+    behave = () => ({ reply: aiReply(100) });
+    calls.length = 0;
+    const tr = await run({ circularId: "T1" });
+    assert.equal(tr.applied, 24, "both rate cards, every route");
+    assert.equal(calls.length, 1, "one AI check of the page, no AI reading");
+    const rd = store.get("carrierReads/T1");
+    assert.equal(rd.method, "table");
+    assert.equal(rd.tableRoutes, 24);
+    assert.equal(rd.models.readA, "fixed rules");
+    const gcr = store.get("carrierTariffs/TK_BOM_AAA_INR");
+    const dgr = store.get("carrierTariffs/TK_BOM_AAA_INR_DGR");
+    assert.deepEqual([gcr.rateClass, gcr.breaks.min, gcr.breaks.minus45, gcr.breaks.plus45, gcr.breaks.plus100, gcr.validFrom, gcr.validTo], ["GCR", 5000, 100, 90, 80, "2026-06-04", "2026-12-31"]);
+    assert.deepEqual([dgr.rateClass, dgr.breaks.minus45], ["DGR", 130]);
+    const desk = [...store.entries()].filter(([k, v]) => k.startsWith("air_tariffs/") && v.carrierCode.startsWith("TK")).map(([, v]) => v);
+    assert.ok(desk.some((d) => d.carrierCode === "TK-DGR" && d.carrier === "TK-DGR" && d.rateClass === "DGR"), "the special card is its own desk entry: TK-DGR");
+    assert.ok(desk.some((d) => d.carrierCode === "TK"), "general cargo keeps the plain airline");
+
+    // a check that disagrees (shifted numbers) means the fixed-rules read is NOT used: the usual two AI reads take over
+    [...store.keys()].filter((k) => k.startsWith("carrierTariffs/") || k.startsWith("air_tariffs/")).forEach((k) => store.delete(k));
+    behave = () => ({ reply: aiReply(999) });
+    calls.length = 0;
+    const tr2 = await run({ circularId: "T1" });
+    assert.equal(store.get("carrierReads/T1").method, "ai");
+    assert.match(store.get("carrierReads/T1").tableNote, /disagreed on 12 of 12/);
+    assert.ok(calls.length >= 3, "the AI read it twice after declining");
+    assert.ok(tr2.applied >= 0);
+  }
+
   console.log("carrier reader end-to-end tests passed");
 })().catch((e) => {
   console.error(e);

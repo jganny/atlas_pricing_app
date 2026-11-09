@@ -13,6 +13,7 @@ const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const XLSX = require("xlsx");
 const { decide } = require("./tariff-checks");
+const T = require("./table-reader");
 const L = require("./carrier-reader-logic");
 const aiUsageLogic = require("./ai-usage-logic");
 const { isRequestRefusal } = aiUsageLogic;
@@ -36,8 +37,8 @@ function requireAdmin(request) {
 }
 
 /** The circular as parts the AI can read in full: the whole PDF as one part, or a spreadsheet cut into small parts of text. */
-async function partsFor(circ, { split = true } = {}) {
-  const [buffer] = await admin.storage().bucket().file(circ.storagePath).download();
+async function partsFor(circ, { split = true, buffer: have } = {}) {
+  const buffer = have || (await admin.storage().bucket().file(circ.storagePath).download())[0];
   const kind = L.fileKind(circ.fileName, circ.storagePath);
   if (kind === "pdf") {
     if (buffer.length > 28 * 1024 * 1024) throw new HttpsError("invalid-argument", "This PDF is too large to read (28 MB limit).");
@@ -160,9 +161,44 @@ async function publishToAirDesk(db, applied, circ, circularId) {
   return published;
 }
 
+/** A date from the library record (text or a Firestore timestamp) -> YYYY-MM-DD, or "". */
+function isoDay(v) {
+  if (!v) return "";
+  if (typeof v === "string") return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : "";
+  if (typeof v.toDate === "function") return v.toDate().toISOString().slice(0, 10);
+  return "";
+}
+
+/**
+ * Clean text tables are read with fixed rules (table-reader.js): exact, free and the same every time. The AI then reads a few
+ * pages (first, middle, last) as a check, and the fixed-rules read is used only if every route the AI gave matches it.
+ * Anything else (an unfamiliar layout, a failed check) returns { ok: false, reason } and the usual two-AI read takes over.
+ */
+async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, defaultCurrency }) {
+  let lines;
+  try {
+    lines = await T.pdfTextLines(buffer);
+  } catch (err) {
+    return { ok: false, reason: "the PDF text could not be read" };
+  }
+  const res = T.readTable(lines, { fallbackCarrier: fallback, title: circ.title || circ.fileName, validFrom: isoDay(circ.effectiveDate), validTo: isoDay(circ.expiryDate) });
+  if (!res.ok) return res;
+  const rows = L.withDefaultCurrency(res.rows, defaultCurrency);
+  const parts = await partsFor(circ, { split: true, buffer });
+  const picks = T.samplePartIndexes(parts.length).map((i) => parts[i]);
+  const checks = await L.mapLimit(picks, PARTS_AT_ONCE, async (part) => ({ label: part.label, a: await askOnce(apiKey, sysA, part.content, userText + (part.note || ""), MODEL) }));
+  if (checks.some((c) => !c.a.parsed || c.a.truncated)) return { ok: false, reason: "the AI check of a few pages could not be completed" };
+  const aiRows = L.mergeRows(checks.map((c) => L.withDefaultCurrency(L.normalizeRows(c.a.parsed, fallback), defaultCurrency)));
+  const v = T.verifySample(rows, aiRows);
+  const usage = sumUsage(checks.map((c) => c.a.usage));
+  if (v.checked < 5) return { ok: false, reason: "the AI check found too few routes to prove anything", usage };
+  if (v.mismatches / v.checked > 0.02) return { ok: false, reason: `the AI check disagreed on ${v.mismatches} of ${v.checked} routes (e.g. ${v.examples.join(", ")})`, usage };
+  return { ok: true, rows, usage, checked: v.checked, mismatches: v.mismatches, lines: res.lines, pages: parts.length };
+}
+
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
 /** { circularId, dryRun?, secondRead?, auto? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency }, apiKey) {
+async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency, fullAi }, apiKey) {
   const db = admin.firestore();
   const snap = await db.collection("circularsLibrary").doc(circularId).get();
   if (!snap.exists) throw new HttpsError("not-found", "That circular does not exist.");
@@ -170,9 +206,6 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, def
   if (circ.category !== "airline_tariff") throw new HttpsError("failed-precondition", "Only airline tariff circulars are read here for now.");
   if (!circ.storagePath) throw new HttpsError("failed-precondition", "This circular has no file attached.");
 
-  const parts = await partsFor(circ);
-  if (!parts.length) throw new HttpsError("failed-precondition", "Nothing readable was found in this file.");
-  if (parts.length > MAX_PARTS) throw new HttpsError("failed-precondition", `This circular is too long to read automatically (${parts.length} parts; the limit is ${MAX_PARTS}).`);
   const fallback = /^[A-Za-z0-9]{2,3}$/.test(String(circ.carrier || "").trim()) ? circ.carrier : "";
   const hint = L.originHint(circ.title || circ.fileName);
   const userText =
@@ -180,24 +213,55 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, def
     (hint ? ` If the document itself prints no origin station for its routes, the origin is ${hint}, taken from the file title (use it only when the document prints none; never override a printed origin).` : "");
   const [sysA, sysB] = L.systemPrompts();
 
-  // Every part is read twice, independently, a few at a time: the careful model first, the cheaper one second (secondRead: "sonnet" for two careful reads).
-  const secondModel = secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
-  const reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
-    const partText = userText + (part.note || "");
-    const [a, b] = await Promise.all([askOnce(apiKey, sysA, part.content, partText, MODEL), askOnce(apiKey, sysB, part.content, partText, secondModel)]);
-    return { label: part.label, a, b };
-  });
+  // A clean text table is read with fixed rules and only checked by the AI; anything else is read twice by the AI.
+  let table = null;
+  let tableNote = "";
+  if (L.fileKind(circ.fileName, circ.storagePath) === "pdf" && !fullAi) {
+    const [buffer] = await admin.storage().bucket().file(circ.storagePath).download();
+    table = await tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, defaultCurrency });
+    if (!table.ok) {
+      tableNote = table.reason;
+      console.log("carrier reader: fixed-rules read declined:", table.reason);
+    }
+  }
+
+  let reads = [];
   const problems = [];
-  const failed = reads.filter((r) => !r.a.parsed || !r.b.parsed);
-  const cut = reads.filter((r) => r.a.truncated || r.b.truncated);
-  if (failed.length) problems.push(`${failed.length} of ${reads.length} part(s) could not be understood in one of the two reads (${failed.slice(0, 3).map((r) => r.label).join(", ")}), so routes in them were not updated.`);
-  if (cut.length) problems.push(`${cut.length} of ${reads.length} part(s) were so long that a read was cut short (${cut.slice(0, 3).map((r) => r.label).join(", ")}), so routes in them were not updated.`);
-  // A part that failed either read contributes nothing: its routes are neither applied nor lost, they simply keep their old rates.
-  const good = reads.filter((r) => r.a.parsed && r.b.parsed && !r.a.truncated && !r.b.truncated);
-  const readA = L.mergeRows(good.map((r) => L.withDefaultCurrency(L.normalizeRows(r.a.parsed, fallback), defaultCurrency)));
-  const readB = L.mergeRows(good.map((r) => L.withDefaultCurrency(L.normalizeRows(r.b.parsed, fallback), defaultCurrency)));
-  const a = { usage: sumUsage(reads.map((r) => r.a.usage)) };
-  const b = { usage: sumUsage(reads.map((r) => r.b.usage)) };
+  let failed = [];
+  let cut = [];
+  let readA;
+  let readB;
+  let a;
+  let b;
+  if (table && table.ok) {
+    readA = table.rows;
+    readB = table.rows;
+    a = { usage: table.usage };
+    b = { usage: { input: 0, output: 0 } };
+  } else {
+    const parts = await partsFor(circ);
+    if (!parts.length) throw new HttpsError("failed-precondition", "Nothing readable was found in this file.");
+    if (parts.length > MAX_PARTS) throw new HttpsError("failed-precondition", `This circular is too long to read automatically (${parts.length} parts; the limit is ${MAX_PARTS}).`);
+    const secondModel = secondRead === "sonnet" ? MODEL : CHEAP_MODEL;
+    reads = await L.mapLimit(parts, PARTS_AT_ONCE, async (part) => {
+      const partText = userText + (part.note || "");
+      const [ra, rb] = await Promise.all([askOnce(apiKey, sysA, part.content, partText, MODEL), askOnce(apiKey, sysB, part.content, partText, secondModel)]);
+      return { label: part.label, a: ra, b: rb };
+    });
+    failed = reads.filter((r) => !r.a.parsed || !r.b.parsed);
+    cut = reads.filter((r) => r.a.truncated || r.b.truncated);
+    if (failed.length) problems.push(`${failed.length} of ${reads.length} part(s) could not be understood in one of the two reads (${failed.slice(0, 3).map((r) => r.label).join(", ")}), so routes in them were not updated.`);
+    if (cut.length) problems.push(`${cut.length} of ${reads.length} part(s) were so long that a read was cut short (${cut.slice(0, 3).map((r) => r.label).join(", ")}), so routes in them were not updated.`);
+    // A part that failed either read contributes nothing: its routes are neither applied nor lost, they simply keep their old rates.
+    const good = reads.filter((r) => r.a.parsed && r.b.parsed && !r.a.truncated && !r.b.truncated);
+    readA = L.mergeRows(good.map((r) => L.withDefaultCurrency(L.normalizeRows(r.a.parsed, fallback), defaultCurrency)));
+    readB = L.mergeRows(good.map((r) => L.withDefaultCurrency(L.normalizeRows(r.b.parsed, fallback), defaultCurrency)));
+    a = { usage: sumUsage(reads.map((r) => r.a.usage)) };
+    b = { usage: sumUsage(reads.map((r) => r.b.usage)) };
+    if (table && table.usage) {
+      a.usage = { input: a.usage.input + table.usage.input, output: a.usage.output + table.usage.output };
+    }
+  }
 
   const carriers = [...new Set([...readA, ...readB].map((r) => r.carrierCode).filter(Boolean))].slice(0, 10);
   const onFile = [];
@@ -226,8 +290,11 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, def
     applied: result.apply.length,
     held: result.hold.length,
     unchanged: result.unchanged.length,
-    parts: { total: reads.length, failed: failed.length + cut.length },
-    models: { readA: MODEL, readB: [...new Set(reads.map((r) => r.b.model))].join(", ") },
+    parts: table && table.ok ? { total: table.pages, failed: 0 } : { total: reads.length, failed: failed.length + cut.length },
+    models: table && table.ok ? { readA: "fixed rules", readB: `${MODEL} (check of ${table.checked} routes)` } : { readA: MODEL, readB: [...new Set(reads.map((r) => r.b.model))].join(", ") },
+    method: table && table.ok ? "table" : "ai",
+    ...(table && table.ok ? { tableRoutes: table.rows.length, checkMismatches: table.mismatches } : {}),
+    ...(tableNote ? { tableNote: tableNote.slice(0, 240) } : {}),
     usage,
     dryRun,
     deleteFileAfter: now + FILE_LIFE_DAYS * 86_400_000,
@@ -265,7 +332,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   requireAdmin(request);
   const apiKey = anthropicApiKey.value();
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
-  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead, defaultCurrency: request.data?.defaultCurrency }, apiKey);
+  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true }, apiKey);
 });
 
 /** Admin only: switch auto-read on or off and set the monthly limit in dollars. */
@@ -411,7 +478,7 @@ exports.readLibraryCircular = onCall({ invoker: "public", secrets: [anthropicApi
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
   try {
     if (rates) {
-      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true, defaultCurrency: request.data?.defaultCurrency }, apiKey);
+      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true }, apiKey);
       return { circularId, kind: "rates", applied: res.applied, held: res.held, unchanged: res.unchanged };
     }
     const d = await runCircularDigest({ circularId, circ: { ...circ, uploadedBy: "" } }, apiKey);
