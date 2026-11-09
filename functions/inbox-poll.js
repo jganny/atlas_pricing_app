@@ -218,7 +218,8 @@ function classifyHeuristic(subject, body) {
 
 async function classifyWithAi(apiKey, subject, body) {
   if (!apiKey) return null;
-  const excerpt = body.slice(0, 3500);
+  // The first lines say what the mail is. A shorter question and answer cost less on every unclear mail.
+  const excerpt = body.slice(0, 1400);
   const prompt = `You classify freight pricing mailbox emails for Atlas Logistics (India forwarder).
 Return ONLY compact JSON (no markdown) with keys:
 tag: new_enquiry | follow_up | noise | needs_human
@@ -248,7 +249,7 @@ Body: ${excerpt}`;
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
+      max_tokens: 160,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -323,6 +324,33 @@ async function classifyAndExtract(apiKey, subject, body) {
   };
 }
 
+/** Has this mail replied to one we already kept? (In-Reply-To / References carry the earlier mail's id.) Costs a few reads, no AI. */
+async function repliesToKept(db, mailboxKey, parsedMail) {
+  if (!parsedMail) return false;
+  const refs = [parsedMail.inReplyTo, ...(Array.isArray(parsedMail.references) ? parsedMail.references : [parsedMail.references])].filter((x) => typeof x === "string" && x).slice(-5);
+  for (const ref of new Set(refs)) {
+    const id = crypto.createHash("sha1").update(`${mailboxKey}:${ref}`).digest("hex").slice(0, 24);
+    const hit = await db.collection("inbox_enquiries").doc(id).get();
+    if (hit.exists) return true;
+  }
+  return false;
+}
+
+async function getSenderStats(db, key, cache) {
+  if (cache.has(key)) return cache.get(key);
+  const snap = await db.collection("inbox_senders").doc(key).get();
+  const st = snap.exists ? snap.data() : { asked: 0, kept: 0 };
+  cache.set(key, st);
+  return st;
+}
+
+async function recordSender(db, key, kept, cache) {
+  const st = await getSenderStats(db, key, cache);
+  const next = { asked: (st.asked || 0) + 1, kept: (st.kept || 0) + (kept ? 1 : 0), updatedAt: Date.now() };
+  cache.set(key, next);
+  await db.collection("inbox_senders").doc(key).set(next, { merge: true });
+}
+
 async function pollOne(mailbox, password, apiKey) {
   if (!password) {
     functions.logger.warn("IMAP password secret empty — skip", { mailbox: mailbox.key });
@@ -346,6 +374,7 @@ async function pollOne(mailbox, password, apiKey) {
   let ruleNoise = 0;
   let aiNoise = 0;
   let aiUsed = 0;
+  const senderCache = new Map();
 
   await client.connect();
   try {
@@ -390,30 +419,52 @@ async function pollOne(mailbox, password, apiKey) {
         } catch {
           parsedMail = null;
         }
-        const bodyWork = (parsedMail && (parsedMail.text || stripHtml(parsedMail.html || ""))
-          ? String(parsedMail.text || stripHtml(parsedMail.html || ""))
-          : stripHtml(msg.source ? msg.source.toString("utf8") : "")
-        )
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 8000);
         const subject = msg.envelope?.subject || "(no subject)";
+        const fullText = parsedMail && (parsedMail.text || stripHtml(parsedMail.html || "")) ? String(parsedMail.text || stripHtml(parsedMail.html || "")) : stripHtml(msg.source ? msg.source.toString("utf8") : "");
+        // Only what is new in the mail: a reply's old conversation underneath is left out, so it neither looks like a new enquiry nor costs AI words.
+        const bodyWork = F.latestText(subject, fullText).replace(/\s+/g, " ").trim().slice(0, 8000);
         const from =
           (msg.envelope?.from || [])
             .map((a) => a.address || [a.name, a.address].filter(Boolean).join(" "))
             .join(", ") || "";
 
         // 1) Free rules first: automatic mail, newsletters, bounces and mail with no enquiry in it are dropped here, with no AI credit.
-        const verdict = F.prefilter({ headers: parsedMail ? parsedMail.headers : null, from: msg.envelope?.from?.[0]?.address || "", subject, body: bodyWork });
+        const verdict = F.prefilter({ headers: parsedMail ? parsedMail.headers : null, from: msg.envelope?.from?.[0]?.address || "", subject, body: bodyWork, attachments: parsedMail ? parsedMail.attachments : [] });
         if (verdict.verdict === "noise") {
           ruleNoise += 1;
           skippedNoise += 1;
           continue;
         }
-        // 2) A clear enquiry is kept without the AI. Only the unclear ones are sent to the small AI model.
-        const askAi = verdict.verdict === "maybe" && aiUsed < MAX_AI_PER_RUN;
+        // 2) A clear enquiry is kept without the AI. Only the unclear ones can be sent to the small AI model, and even then
+        //    not when the mail is a reply on a thread already kept, or comes from someone who has never sent an enquiry.
+        let askAi = verdict.verdict === "maybe" && aiUsed < MAX_AI_PER_RUN;
+        let replyOnKept = false;
+        const senderAddr = String(msg.envelope?.from?.[0]?.address || "").toLowerCase();
+        const senderKey = P.senderKey(senderAddr);
+        if (verdict.verdict === "maybe") {
+          replyOnKept = await repliesToKept(db, mailbox.key, parsedMail);
+          if (replyOnKept) askAi = false;
+          else if (senderKey) {
+            const st = await getSenderStats(db, senderKey, senderCache);
+            if (P.senderNeverEnquires(st)) {
+              ruleNoise += 1;
+              skippedNoise += 1;
+              continue;
+            }
+          }
+        }
         if (askAi) aiUsed += 1;
         const classified = await classifyAndExtract(askAi ? apiKey : "", subject, bodyWork);
+        if (replyOnKept && !ACTIONABLE.has(classified.tag)) {
+          classified.tag = "follow_up";
+          classified.actionRequired = /\b(urgent|pending|awaiting|still waiting|follow.?up|any update)\b/i.test(`${subject} ${bodyWork}`);
+          classified.reason = "A reply on an enquiry already in the list";
+        }
+        if (askAi && senderKey) {
+          // Remember how this sender turned out, so a sender who only ever sends noise stops costing AI credit.
+          const kept = ACTIONABLE.has(classified.tag);
+          await recordSender(db, senderKey, kept, senderCache);
+        }
         if (verdict.verdict === "sure" && !ACTIONABLE.has(classified.tag)) {
           classified.tag = "new_enquiry";
           classified.actionRequired = true;

@@ -16,3 +16,17 @@ assert.equal(P.nextCursor(undefined, [7, 9], 500, true), 500, "first run: jump t
 assert.equal(P.nextCursor(undefined, [7, 9], null, true), 9);
 assert.equal(P.nextCursor(undefined, [], null, true), null);
 console.log("inbox poll logic ok");
+
+// --- learning who never sends enquiries ---
+{
+  const Q = require("./inbox-poll-logic");
+  assert.equal(Q.senderKey("Buyer@Acme.com"), "acme.com", "a company is known by its domain");
+  assert.equal(Q.senderKey("someone@gmail.com"), "someone@gmail.com", "a shared mail host is never judged as a whole");
+  assert.equal(Q.senderKey("not an address"), "");
+  assert.equal(Q.senderKey(""), "");
+  assert.equal(Q.senderNeverEnquires({ asked: 5, kept: 0 }), true);
+  assert.equal(Q.senderNeverEnquires({ asked: 4, kept: 0 }), false, "not yet");
+  assert.equal(Q.senderNeverEnquires({ asked: 9, kept: 1 }), false, "one real enquiry is enough to keep asking");
+  assert.equal(Q.senderNeverEnquires(undefined), false);
+  assert.equal(Q.senderNeverEnquires({}), false);
+}

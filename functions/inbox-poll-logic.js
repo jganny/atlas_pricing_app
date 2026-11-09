@@ -18,4 +18,20 @@ function nextCursor(lastUid, readUids, tip, firstRun) {
   return readUids.length ? Math.max(lastUid, ...readUids) : lastUid;
 }
 
-module.exports = { nextUids, nextCursor };
+/** A sender's identity for learning: the whole address for an ordinary person, never a shared mail host (gmail.com and the like). */
+const SHARED_HOSTS = new Set(["gmail.com", "yahoo.com", "yahoo.co.in", "outlook.com", "hotmail.com", "rediffmail.com", "live.com", "icloud.com", "protonmail.com"]);
+function senderKey(address) {
+  const a = String(address || "").trim().toLowerCase();
+  const m = /^[^@\s]+@([^@\s]+)$/.exec(a);
+  if (!m) return "";
+  const raw = SHARED_HOSTS.has(m[1]) ? a : m[1];
+  return raw.replace(/[^a-z0-9@.\-_]/g, "").replace(/\//g, "").slice(0, 120);
+}
+
+/** After a handful of the AI's answers about a sender, none of them an enquiry: stop asking. Five unclear mails, none kept. */
+const NEVER_AFTER = 5;
+function senderNeverEnquires(stats) {
+  return !!stats && Number(stats.asked) >= NEVER_AFTER && !Number(stats.kept);
+}
+
+module.exports = { nextUids, nextCursor, senderKey, senderNeverEnquires, NEVER_AFTER };

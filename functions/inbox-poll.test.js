@@ -105,6 +105,9 @@ const { pollPricingInboxes, fetchInboxEmail } = require("./inbox-poll");
   const stats = [...store.entries()].filter(([k]) => k.startsWith("inbox_stats/")).map(([, v]) => v);
   const p = stats.find((s) => s.mailbox === "pricing");
   assert.deepEqual([p.scanned, p.ruleNoise, p.aiAsked, p.kept], [5, 3, 1, 2], "5 mails: 3 dropped by the free rules, 1 asked of the AI, 2 kept");
+  // who answered what is remembered, so a sender who only ever sends noise stops costing AI credit
+  const sender = store.get("inbox_senders/acme.com");
+  assert.deepEqual([sender.asked, sender.kept], [2, 2], "the AI was asked about acme.com twice (once per mailbox) and both were enquiries");
   // the cursor moves on, so the same mails are not read again
   assert.equal(store.get("inbox_poll_state/pricing").lastUid, 100);
   // ---- actioning one: the whole mail comes back on request, and costs no AI credit ----

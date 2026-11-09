@@ -46,3 +46,31 @@ assert.deepEqual(headerFlags(new Map([["x-autoreply", "yes"]])), { bulk: false, 
   assert.deepEqual([count("noise"), count("sure"), count("maybe")], [440, 30, 20], "490 of 490 sorted; only 20 go to the AI");
 }
 console.log("inbox filter ok");
+
+// --- an enquiry with the details only in an attachment ---
+{
+  const pdf = (name = "packing list.pdf", size = 80_000) => ({ filename: name, contentType: "application/pdf", size });
+  const logo = { filename: "logo.png", contentType: "image/png", size: 3_000, inline: true };
+  const pf = (o) => prefilter({ from: "buyer@acme.com", subject: "", body: "", ...o });
+  assert.equal(pf({ subject: "Rates", body: "Pls quote as per attached packing list", attachments: [pdf()] }).verdict, "sure", "asks in a line, details attached");
+  assert.equal(pf({ subject: "Quote", body: "Rates?", attachments: [{ filename: "enq.xlsx", contentType: "application/vnd.ms-excel", size: 20_000 }] }).verdict, "sure", "a one-word ask with a sheet");
+  assert.equal(pf({ subject: "Kindly share best rates", body: "see attached", attachments: [pdf("shipment.jpg", 300_000)] }).verdict, "sure");
+  assert.equal(pf({ subject: "FYI", body: "Hi", attachments: [pdf("RFQ_Nov.pdf")] }).verdict, "maybe", "no words, but the file looks like an enquiry");
+  assert.equal(pf({ subject: "Tariff", body: "Please find attached our tariff for this month.", attachments: [pdf("tariff.pdf")] }).verdict, "noise", "a carrier sending rates is not an enquiry");
+  assert.equal(pf({ subject: "Thanks", body: "Thanks and regards", attachments: [logo] }).verdict, "noise", "a signature logo is not an attachment");
+  assert.equal(pf({ subject: "Invite", body: "Please quote", attachments: [{ filename: "invite.ics", contentType: "text/calendar", size: 900 }] }).verdict, "maybe", "a calendar file does not make it sure: the ask alone is left to the AI");
+  assert.equal(pf({ subject: "Please share rates", body: "", attachments: [] }).verdict, "maybe", "an ask with nothing attached and no details is left to the AI");
+  assert.equal(pf({ subject: "Hello", body: "just checking", attachments: [pdf("contract.pdf")] }).verdict, "noise", "an attachment alone is not an enquiry");
+  assert.equal(pf({ headers: new Map([["list-unsubscribe", "x"]]), subject: "Pls quote", body: "rates", attachments: [pdf()] }).verdict, "noise", "a mailing list is still noise");
+  assert.deepEqual(require("./inbox-filter").realAttachments([logo, pdf(), { filename: "", contentType: "" }]).map((a) => a.filename), ["packing list.pdf"]);
+}
+
+// --- a reply is judged on what is new, not on the conversation underneath ---
+{
+  const { latestText } = require("./inbox-filter");
+  const reply = "Thanks, noted.\n\nOn Mon, 9 Nov 2026 at 10:00, Sales <s@x.com> wrote:\n> Please quote 500 kg from BLR to FRA\n> ex works";
+  assert.equal(latestText("Re: Rates", reply).trim(), "Thanks, noted.");
+  assert.equal(prefilter({ from: "a@b.com", subject: "Re: Rates", body: reply }).verdict, "noise", "an old quote underneath does not make a thank-you an enquiry");
+  assert.match(latestText("Fwd: Rates", reply), /Please quote 500 kg/, "a forward keeps the forwarded enquiry");
+  assert.equal(latestText("Re: x", "line\n> quoted\nmore").trim(), "line\nmore");
+}

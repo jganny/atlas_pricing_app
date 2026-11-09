@@ -15,6 +15,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: "2026-11-10",
     items: [
       "Inbox: the pricing and pricingsales mailboxes are now sorted before anything is kept. Newsletters, automatic mail, bounces and mail with no enquiry in it are dropped for free; clear quote requests are kept; only the unclear ones are asked of a small AI model. Nothing in the mailbox is marked read or moved.",
+      "Inbox: a mail that only says \u201cplease quote\u201d and puts the details in an attachment (a packing list, a sheet, a photo) counts as an enquiry. The AI is asked even less: replies on a thread already kept, and senders who have never sent an enquiry, are not sent to it, and its question and answer are shorter.",
       "Inbox: \u201cQuote on Air / Sea desk\u201d now reads the whole email and its attachments (once, only when you action it) and fills the desk with the customer, lane, cargo, weight and incoterm. It uses a little AI credit; emails nobody opens cost nothing.",
     ],
   },
