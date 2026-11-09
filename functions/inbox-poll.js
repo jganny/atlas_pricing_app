@@ -325,7 +325,8 @@ async function pollOne(mailbox, password, apiKey) {
     host: IMAP.host,
     port: IMAP.port,
     secure: IMAP.secure,
-    auth: { user: mailbox.user, pass: password },
+    // A secret saved from a terminal often carries a hidden new-line or space at the end, which the mail server rejects.
+    auth: { user: mailbox.user, pass: String(password).trim() },
     logger: false,
   });
 
@@ -444,14 +445,18 @@ exports.pollPricingInboxes = functions
       try {
         results.push(await pollOne(box, box.secret.value(), apiKey));
       } catch (err) {
-        functions.logger.error("IMAP poll failed", {
-          mailbox: box.key,
+        // imapflow's own message is only "Command failed"; the mail server's actual reason is on the error object.
+        const why = {
           message: err instanceof Error ? err.message : String(err),
-        });
-        results.push({
-          mailbox: box.key,
-          error: err instanceof Error ? err.message : String(err),
-        });
+          serverSays: err && err.responseText ? String(err.responseText).slice(0, 200) : "",
+          serverStatus: err && err.responseStatus ? String(err.responseStatus) : "",
+          serverCode: err && err.serverResponseCode ? String(err.serverResponseCode) : "",
+          loginRefused: Boolean(err && err.authenticationFailed),
+          where: err && err.executedCommand ? String(err.executedCommand).split(" ")[0] : "",
+          code: err && err.code ? String(err.code) : "",
+        };
+        functions.logger.error("IMAP poll failed", { mailbox: box.key, ...why });
+        results.push({ mailbox: box.key, error: why.serverSays || why.message, ...why });
       }
     }
     functions.logger.info("IMAP slim intake complete", { results, ai: Boolean(apiKey) });
