@@ -43,6 +43,7 @@ export const CARRIER_RULES: CarrierRule[] = [
     remark: "Below 500 kg use the tariff. Above 500 kg take the rate online from any station login, but book from the respective station's login.",
   },
   { code: "LH", name: "Lufthansa", portalUpToKg: 2500, portalUrl: "https://www.lufthansa-cargo.com/en/home", remark: "Online up to 2.5 tonnes. Above that, ask by email." },
+  { code: "AF", name: "Air France KLM Cargo", portalUpToKg: 5000, portalUrl: "https://www.afklcargo.com/", remark: "Online up to 5 tonnes. Above that, ask by email." },
   { code: "AI", name: "Air India", portalUpToKg: 500, portalUrl: "https://aicargoportal.airindia.com/icargoneoportal/app/main/#/app", remark: "Online up to 500 kg. Above that, ask by email." },
 ];
 
