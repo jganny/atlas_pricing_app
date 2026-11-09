@@ -127,3 +127,31 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.deepEqual(await L.mapLimit([], 3, async () => 1), []);
   console.log("carrier reader logic ok");
 })();
+
+// --- Carrier Board -> Air desk: what gets published ---
+{
+  const b = L.deskBreaksFromRow({ breaks: { min: 8600, minus45: 430, plus45: null, plus100: 340, plus300: 300, plus500: "290", plus1000: 0 } });
+  assert.deepEqual(b.min, { sell: 0, buy: 8600 }, "the airline's rate is BUY; SELL is never filled");
+  assert.deepEqual(b.plus45, { sell: 0, buy: 0 }, "an empty break stays zero");
+  assert.deepEqual(b.plus500, { sell: 0, buy: 290 });
+  assert.equal(L.deskBreaksFromRow({ breaks: { min: null } }), null, "no usable rate: nothing to publish");
+  assert.equal(L.deskBreaksFromRow(null), null);
+  assert.equal(L.carrierNameFor("EK", "Emirates SkyCargo", {}), "Emirates SkyCargo");
+  assert.equal(L.carrierNameFor("EK", "EK", { EK: "Emirates" }), "Emirates", "a code-only circular record uses the airline list");
+  assert.equal(L.carrierNameFor("ZZ", "", {}), "ZZ");
+  const plan = L.planDeskPublish(
+    [
+      { carrierCode: "EK", origin: "BLR", destination: "FRA", currency: "INR", validFrom: "2026-07-01", validTo: "2026-12-31", breaks: { min: 8600, plus300: 300 } },
+      { carrierCode: "EK", origin: "BLR", destination: "LHR", currency: "INR", breaks: { min: null } },
+      { carrierCode: "EK", origin: "BLR", destination: "CDG", currency: "", breaks: { plus300: 300 } },
+    ],
+    { "BLR|FRA": "docA" },
+    { circularCarrier: "EK", circularId: "c1", names: { EK: "Emirates" } },
+  );
+  assert.equal(plan.length, 1, "rows with no rate or no currency are skipped");
+  assert.equal(plan[0].docId, "docA", "the existing record for the lane is replaced, not duplicated");
+  assert.equal(plan[0].data.carrier, "Emirates");
+  assert.equal(plan[0].data.source, "carrier_board");
+  assert.equal(plan[0].data.published, true);
+  assert.equal(plan[0].data.validTo, "2026-12-31");
+}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, ExternalLink, Mail } from "lucide-react";
+import { RateEmailDialog, type RateEmailTarget } from "@/components/carrier-board/RateEmailDialog";
+import { ruleFor, sourceFor } from "@/lib/carriers/board";
 import { useDirectory } from "@/hooks/use-atlas-data";
 import { loadAirportCountries } from "@/lib/directory/airport-countries";
 import { countryOfPlace } from "@/lib/directory/coverage";
@@ -39,6 +41,7 @@ export function LaneCarriers({
   seaTariffs,
   existing,
   onAdd,
+  weightKg,
 }: {
   mode: "air" | "sea";
   origin: string;
@@ -48,6 +51,8 @@ export function LaneCarriers({
   seaTariffs: SeaTariff[];
   existing: string[];
   onAdd: (name: string) => void;
+  /** The shipment's chargeable weight: decides whether an airline's rate comes from its tariff, its portal or an email. */
+  weightKg?: number;
 }) {
   const { data } = useDirectory();
   const contacts = data ?? NONE;
@@ -76,6 +81,15 @@ export function LaneCarriers({
   );
   const shown = chips.slice(0, MAX_LANE_CHIPS);
   const added = new Set(existing.map(normalizeCarrierName));
+  const [email, setEmail] = useState<RateEmailTarget | null>(null);
+  // Airlines whose rate is not simply on file for this weight: take it from the portal or ask by email, right here.
+  const w = weightKg ?? 0;
+  const steps = shown
+    .map((c) => {
+      const rule = ruleFor(c.code);
+      return { chip: c, rule, src: sourceFor(rule, w, c.status === "rate") };
+    })
+    .filter((x) => x.src !== "Tariff" && (x.chip.status === "none" || x.rule));
 
   // Shift+1…9 adds the numbered carrier (never while typing in a field).
   useEffect(() => {
@@ -96,6 +110,7 @@ export function LaneCarriers({
 
   if (!shown.length) return null;
   return (
+    <div className="space-y-1.5">
     <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2" data-testid="lane-carriers">
       <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">This lane</span>
       {shown.map((c, i) => {
@@ -121,6 +136,30 @@ export function LaneCarriers({
       })}
       {chips.length > shown.length ? <span className="text-[11px] text-[var(--color-text-muted)]">+{chips.length - shown.length}</span> : null}
       <span className="ml-auto hidden text-[10px] text-[var(--color-text-muted)] sm:inline">green rate on file · red none yet · Shift+1–9</span>
+    </div>
+    {steps.length ? (
+      <ul className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950" data-testid="lane-rate-steps">
+        {steps.map(({ chip, rule, src }) => (
+          <li key={chip.code} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <b>{chip.code}</b>
+            <span>{src === "Portal" ? "take the rate online" : "ask the airline for a rate"}{rule ? ` (${rule.remark.split(".")[0].toLowerCase()})` : ""}</span>
+            {src === "Portal" && rule?.portalUrl ? (
+              <a href={rule.portalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded border border-amber-300 bg-white px-1.5 py-0.5 font-semibold hover:bg-amber-100">
+                Open portal <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setEmail({ code: chip.code, name: chip.name, origin: codeOf(origin), destination: codeOf(destination), weightKg: w || 100, allBreaks: !rule, aboveKg: rule?.portalUpToKg !== undefined && w > rule.portalUpToKg ? rule.portalUpToKg : undefined })}
+              className="inline-flex items-center gap-1 rounded border border-amber-300 bg-white px-1.5 py-0.5 font-semibold hover:bg-amber-100"
+            >
+              <Mail className="h-3 w-3" /> Draft email
+            </button>
+          </li>
+        ))}
+      </ul>
+    ) : null}
+    <RateEmailDialog target={email} onClose={() => setEmail(null)} />
     </div>
   );
 }

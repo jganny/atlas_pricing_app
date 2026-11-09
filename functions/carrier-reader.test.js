@@ -9,6 +9,7 @@ const admin = require("firebase-admin");
 
 // ---- a pretend database and storage -------------------------------------------------------------------------------------------
 const store = new Map(); // "collection/doc" -> data
+let autoId = 0;
 const fakeDb = {
   collection(name) {
     const docRef = (id, parent = name) => ({
@@ -29,11 +30,12 @@ const fakeDb = {
       },
     });
     return {
-      doc: (id) => docRef(id),
+      doc: (id) => docRef(id || `auto${++autoId}`),
       where(field, op, values) {
+        const want = op === "==" ? [values] : values;
         return {
           async get() {
-            const docs = [...store.entries()].filter(([k, v]) => k.startsWith(`${name}/`) && !k.slice(name.length + 1).includes("/") && values.includes(v[field])).map(([, v]) => ({ data: () => v }));
+            const docs = [...store.entries()].filter(([k, v]) => k.startsWith(`${name}/`) && !k.slice(name.length + 1).includes("/") && want.includes(v[field])).map(([k, v]) => ({ id: k.slice(name.length + 1), data: () => v }));
             return { forEach: (cb) => docs.forEach(cb) };
           },
         };
@@ -49,7 +51,7 @@ const fakeDb = {
   },
 };
 const fsFn = () => fakeDb;
-fsFn.FieldValue = { increment: (n) => ({ __inc: n }) };
+fsFn.FieldValue = { increment: (n) => ({ __inc: n }), serverTimestamp: () => ({ __ts: true }) };
 let bucketFile = null;
 Object.defineProperty(admin, "firestore", { value: fsFn, configurable: true });
 Object.defineProperty(admin, "storage", { value: () => ({ bucket: () => ({ file: () => ({ download: async () => [bucketFile] }) }) }), configurable: true });
@@ -112,6 +114,11 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(store.get("carrierReads/c1").applied, N);
   assert.ok(!store.has("carrierTariffHolds/c1"));
   assert.ok(store.get("carrierReadUsage/" + new Date().toISOString().slice(0, 7)).reads.__inc === 1);
+  // the Air desk's own rate list gets every applied route as BUY (never SELL), named as the desk names the airline
+  const deskRows = [...store.entries()].filter(([k]) => k.startsWith("air_tariffs/")).map(([, v]) => v);
+  assert.equal(deskRows.length, N, "every applied route is published to the Air desk");
+  assert.equal(res.publishedToAirDesk, N);
+  assert.deepEqual([deskRows[0].carrier, deskRows[0].carrierCode, deskRows[0].source, deskRows[0].published, deskRows[0].breaks.min.sell, deskRows[0].breaks.min.buy], ["Emirates", "EK", "carrier_board", true, 0, 1500]);
 
   // 2) a practice read changes nothing
   [...store.keys()].filter((k) => k.startsWith("carrierTariffs/")).forEach((k) => store.delete(k));
@@ -121,6 +128,8 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
   assert.equal(res.applied, N);
   assert.equal([...store.keys()].filter((k) => k.startsWith("carrierTariffs/")).length, 0, "dry run writes no rates");
   assert.ok(!store.has("carrierReads/c1"));
+  assert.equal([...store.keys()].filter((k) => k.startsWith("air_tariffs/")).length, N, "a practice read publishes nothing new");
+  assert.equal(res.publishedToAirDesk, undefined);
 
   // 3) the second read disagrees about one route: that route is held, the rest are applied
   calls.length = 0;

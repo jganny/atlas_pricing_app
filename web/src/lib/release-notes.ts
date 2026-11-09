@@ -11,6 +11,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.139",
+    date: "2026-11-09",
+    items: [
+      "New Carrier board in the Library menu, open to everyone: type the airports and a weight (for example BLR to FRA, 300 kg) and see every airline's rate, lowest first, with how long each tariff stays valid. Simple view shows just the answer; Detailed view adds the figures, a rate-by-weight chart, a validity timeline and a map of how each airline's rate is obtained.",
+      "You do not need to leave the Air desk to use it: when an airline circular is read, its rates are sent to the Air desk by themselves, so the airlines are added to the quote with their weight-break rates already filled (as BUY; you still enter SELL).",
+      "Airlines that give rates online or by email are handled right on the Air desk's lane row: Emirates uses its tariff below 500 kg and its portal above, Lufthansa and Air India answer online up to a weight and by email above it. Open the portal, or press Draft email for a message already addressed from the Directory.",
+      "Administrators see a Read airline circulars box on the Carrier board: Check only (saves nothing) or Read and save for each airline tariff circular. Each read uses the AI, about $0.25.",
+      "Fuel and security surcharges are not included in the Carrier board yet.",
+    ],
+  },
+  {
     version: "0.3.138",
     date: "2026-11-08",
     items: [

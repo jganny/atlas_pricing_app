@@ -60,6 +60,7 @@ const NAV_COMMANDS: Omit<CommandItem, "action">[] = [
   { id: "sq-sea", label: "Smart Quote · Sea (standalone)", hint: "optional", href: "/smart-quote/sea", icon: Anchor, group: "Tools", route: "smart-quote" },
   { id: "inbox", label: "Enquiry inbox", href: "/inbox", icon: Inbox, group: "Tools", route: "inbox" },
   { id: "edb", label: "Enquiry database", href: "/enquiries", icon: Database, group: "Tools", route: "enquiries" },
+  { id: "carrier-board", label: "Carrier board (airline rates)", href: "/carrier-board", icon: PlaneTakeoff, group: "Tools", route: "carrier-board" },
   { id: "circulars", label: "Circulars library", href: "/circulars", icon: FileText, group: "Tools", route: "circulars" },
   { id: "directory", label: "Directory CRM", href: "/directory", icon: Users, group: "Tools", route: "directory" },
   { id: "sales", label: "Sales pipeline", href: "/sales", icon: Briefcase, group: "Tools", route: "sales" },

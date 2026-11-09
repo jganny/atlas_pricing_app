@@ -1631,7 +1631,7 @@ function AirDeskInner() {
                     existing={laneAirlines.map((a) => a.name)}
                     onAdd={addLaneAirline}
                   />
-                  <LaneCarriers mode="air" origin={origin} destination={destination} airTariffs={tariffs} seaTariffs={NO_SEA_TARIFFS_AIR} existing={laneAirlines.map((a) => a.name)} onAdd={addLaneAirline} />
+                  <LaneCarriers mode="air" origin={origin} destination={destination} airTariffs={tariffs} seaTariffs={NO_SEA_TARIFFS_AIR} existing={laneAirlines.map((a) => a.name)} onAdd={addLaneAirline} weightKg={selectedTotals?.freight.chargeableWeightKg} />
                 </>
               ) : null}
               {isRelaxedImportQuote(module, incoterm) ? (

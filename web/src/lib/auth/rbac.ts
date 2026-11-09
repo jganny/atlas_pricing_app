@@ -15,6 +15,7 @@ export type AppRouteId =
   | "inbox"
   | "enquiries"
   | "circulars"
+  | "carrier-board"
   | "directory"
   | "sales"
   | "admin"
@@ -146,7 +147,7 @@ function routesForSeat(seatId: DeskSeatId): AppRouteId[] | null {
   return null;
 }
 
-export function allowedRoutesForUser(
+function baseRoutesForUser(
   username: string | undefined | null,
   role?: string,
 ): AppRouteId[] {
@@ -166,6 +167,15 @@ export function allowedRoutesForUser(
   if (TEAM_ROLES[u]?.type === "member") return CORE;
   // Named people (e.g. Goutham) get the desk, not Admin.
   return CORE;
+}
+
+/**
+ * The Carrier Board (airline rates read from circulars) is open to every Pricing app user whenever they want to look; only the
+ * Vertex Chat-only login is kept out. Reading circulars into it is limited to the admin on the server.
+ */
+export function allowedRoutesForUser(username: string | undefined | null, role?: string): AppRouteId[] {
+  const base = baseRoutesForUser(username, role);
+  return base.includes("chat") && base.length === 1 ? base : base.includes("carrier-board") ? base : [...base, "carrier-board"];
 }
 
 export function canAccessRoute(
@@ -188,6 +198,7 @@ export function routeIdFromPath(pathname: string): AppRouteId | null {
   if (p.startsWith("/inbox")) return "inbox";
   if (p.startsWith("/enquiries")) return "enquiries";
   if (p.startsWith("/circulars")) return "circulars";
+  if (p.startsWith("/carrier-board")) return "carrier-board";
   if (p.startsWith("/directory")) return "directory";
   if (p.startsWith("/sales")) return "sales";
   if (p.startsWith("/admin")) return "admin";

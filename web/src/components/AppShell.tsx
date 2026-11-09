@@ -95,6 +95,7 @@ const officeNav: NavItem[] = [
 ];
 
 const libraryNav: NavItem[] = [
+  { href: "/carrier-board", label: "Carrier board", icon: PlaneTakeoff, route: "carrier-board" },
   { href: "/carriers", label: "Carriers", icon: Ship, route: "directory" },
   { href: "/circulars", label: "Circulars", icon: FileText, route: "circulars" },
   { href: "/directory", label: "Directory", icon: Users, route: "directory" },

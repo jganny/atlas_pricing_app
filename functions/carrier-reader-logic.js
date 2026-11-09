@@ -190,4 +190,61 @@ function systemPrompts() {
   ];
 }
 
-module.exports = { toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };
+
+/** The Air desk's own weight-break names, in order (see AIR_WEIGHT_BREAKS in the app). */
+const DESK_BREAKS = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+
+/** An airline's rates are what the airline charges us, so on the desk they are BUY; SELL is the desk's own and stays empty. null when no rate at all. */
+function deskBreaksFromRow(row) {
+  const out = {};
+  let any = false;
+  for (const k of DESK_BREAKS) {
+    const n = Number(row && row.breaks ? row.breaks[k] : null);
+    const v = Number.isFinite(n) && n > 0 ? n : 0;
+    if (v > 0) any = true;
+    out[k] = { sell: 0, buy: v };
+  }
+  return any ? out : null;
+}
+
+/** The airline's name as the desk shows it: the circular's own record if it is a name, else the airline list, else the code. */
+function carrierNameFor(code, circularCarrier, names) {
+  const c = String(circularCarrier || "").trim();
+  const upper = String(code || "").toUpperCase();
+  if (c && !/^[A-Za-z0-9]{2,3}$/.test(c) && c.toUpperCase() !== upper) return c;
+  return (names && names[upper]) || c || upper;
+}
+
+/**
+ * What to write into the desk's published rate list (air_tariffs) for the rows just applied: one record per airline and
+ * lane, replacing whatever the desk already had for that airline on that lane. existing is { "ORIGIN|DEST": docId }.
+ * Rows with no usable rate are skipped. Never touches SELL.
+ */
+function planDeskPublish(rows, existingByLane, ctx) {
+  const plan = [];
+  for (const r of rows) {
+    const breaks = deskBreaksFromRow(r);
+    if (!breaks || !r.currency) continue;
+    const key = `${r.origin}|${r.destination}`;
+    plan.push({
+      docId: (existingByLane && existingByLane[key]) || null,
+      data: {
+        carrier: carrierNameFor(r.carrierCode, ctx.circularCarrier, ctx.names),
+        carrierCode: r.carrierCode,
+        origin: r.origin,
+        destination: r.destination,
+        currency: r.currency,
+        breaks,
+        validFrom: r.validFrom || "",
+        validTo: r.validTo || "",
+        source: "carrier_board",
+        sourceCircularId: ctx.circularId || "",
+        uploadedBy: "carrier-board",
+        published: true,
+      },
+    });
+  }
+  return plan;
+}
+
+module.exports = { DESK_BREAKS, deskBreaksFromRow, carrierNameFor, planDeskPublish, toNumber, normalizeRows, tariffDocId, fileKind, systemPrompts, parseRowLines, breakForThreshold, mapThresholds, chunkSheets, mergeRows, mapLimit };

@@ -13,6 +13,7 @@ const XLSX = require("xlsx");
 const { decide } = require("./tariff-checks");
 const L = require("./carrier-reader-logic");
 const { isRequestRefusal } = require("./ai-usage-logic");
+const AIRLINE_NAMES = require("./airline-names.json");
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const ADMIN_EMAIL = "ganny@atlaspricing.com";
@@ -97,6 +98,39 @@ async function askOnce(apiKey, system, content, userText, model = MODEL) {
   return { parsed, model: used, usage: payload.usage || {}, truncated: payload.stop_reason === "max_tokens", stop: payload.stop_reason || "", chars: raw.length, head: raw.slice(0, 160), rows: parsed ? parsed.rows.length : 0, columns: parsed ? parsed.columns : null };
 }
 
+
+/**
+ * The Air desk reads its rates from air_tariffs. Every airline route just applied is published there too (as BUY, never SELL),
+ * replacing that airline's record for the lane, so users never have to copy a rate across. Done a carrier at a time.
+ */
+async function publishToAirDesk(db, applied, circ, circularId) {
+  let published = 0;
+  const byCarrier = new Map();
+  for (const r of applied) {
+    if (!byCarrier.has(r.carrierCode)) byCarrier.set(r.carrierCode, []);
+    byCarrier.get(r.carrierCode).push(r);
+  }
+  for (const [code, rows] of byCarrier) {
+    const snap = await db.collection("air_tariffs").where("carrierCode", "==", code).get();
+    const existing = {};
+    snap.forEach((d) => {
+      const v = d.data();
+      existing[`${v.origin}|${v.destination}`] = d.id;
+    });
+    const plan = L.planDeskPublish(rows, existing, { circularCarrier: circ.carrier, circularId, names: AIRLINE_NAMES });
+    for (let i = 0; i < plan.length; i += 200) {
+      const batch = db.batch();
+      for (const p of plan.slice(i, i + 200)) {
+        const ref = p.docId ? db.collection("air_tariffs").doc(p.docId) : db.collection("air_tariffs").doc();
+        batch.set(ref, { ...p.data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+      }
+      await batch.commit();
+    }
+    published += plan.length;
+  }
+  return published;
+}
+
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
 exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApiKey], timeoutSeconds: 900, memory: "1GiB" }, async (request) => {
   requireAdmin(request);
@@ -176,6 +210,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
       }
       await batch.commit();
     }
+    summary.publishedToAirDesk = await publishToAirDesk(db, result.apply, circ, circularId);
     const holdRef = db.collection("carrierTariffHolds").doc(circularId);
     if (result.hold.length) {
       await holdRef.set({ circularId, carrier: circ.carrier || "", title: summary.title, createdAt: now, status: "open", rows: result.hold.slice(0, 100).map((h) => ({ route: h.row.origin ? `${h.row.carrierCode} ${h.row.origin}→${h.row.destination} ${h.row.currency || ""}`.trim() : "", reasons: h.reasons })) });
