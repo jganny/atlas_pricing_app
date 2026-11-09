@@ -337,6 +337,7 @@ async function pollOne(mailbox, password, apiKey) {
   const db = admin.firestore();
   let imported = 0;
   let skippedNoise = 0;
+  let failedMessages = 0;
 
   await client.connect();
   try {
@@ -362,6 +363,7 @@ async function pollOne(mailbox, password, apiKey) {
       const messages = uids.length ? await client.fetchAll(uids, { envelope: true, source: { maxLength: 120000 }, uid: true }, { uid: true }) : [];
 
       for (const msg of messages) {
+        try {
         const messageId = msg.envelope?.messageId || `uid-${mailbox.key}-${msg.uid}`;
         const docId = crypto
           .createHash("sha1")
@@ -412,9 +414,15 @@ async function pollOne(mailbox, password, apiKey) {
           reason: classified.reason,
           summary: classified.summary,
           classifier: classified.classifier,
-          parsed: classified.parsed,
+          // Firestore refuses fields that are undefined (e.g. a missing package length): drop them.
+          parsed: JSON.parse(JSON.stringify(classified.parsed)),
         });
         imported += 1;
+        } catch (err) {
+          // One bad message must not stop the rest, or hold the cursor back for ever.
+          failedMessages += 1;
+          functions.logger.error("Inbox message skipped", { mailbox: mailbox.key, uid: msg.uid, message: err instanceof Error ? err.message : String(err) });
+        }
       }
       await stateRef.set({ lastUid: P.nextCursor(state.lastUid, uids, tip, firstRun), at: Date.now() }, { merge: true });
     } finally {
@@ -428,13 +436,13 @@ async function pollOne(mailbox, password, apiKey) {
     }
   }
 
-  return { mailbox: mailbox.key, imported, skippedNoise };
+  return { mailbox: mailbox.key, imported, skippedNoise, failedMessages };
 }
 
 exports.pollPricingInboxes = functions
   .runWith({
     secrets: [pricingPassword, salesPassword, anthropicApiKey],
-    timeoutSeconds: 180,
+    timeoutSeconds: 300,
     memory: "512MB",
   })
   .pubsub.schedule("every 2 minutes")
