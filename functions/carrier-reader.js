@@ -174,7 +174,7 @@ function isoDay(v) {
  * pages (first, middle, last) as a check, and the fixed-rules read is used only if every route the AI gave matches it.
  * Anything else (an unfamiliar layout, a failed check) returns { ok: false, reason } and the usual two-AI read takes over.
  */
-async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, defaultCurrency }) {
+async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, defaultCurrency, skipCheck }) {
   let lines;
   try {
     lines = await T.pdfTextLines(buffer);
@@ -190,6 +190,8 @@ async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, de
   }
   if (!res.ok) return res;
   const rows = L.withDefaultCurrency(res.rows, defaultCurrency);
+  // The admin has checked this file's rows against the PDF itself (not the AI): no AI check, no AI credit.
+  if (skipCheck) return { ok: true, rows, usage: { input: 0, output: 0 }, checked: 0, mismatches: 0, lines: res.lines, pages: 0, verifiedBy: "admin" };
   const parts = await partsFor(circ, { split: true, buffer });
   const picks = T.samplePartIndexes(parts.length).map((i) => parts[i]);
   const checks = await L.mapLimit(picks, PARTS_AT_ONCE, async (part) => ({ label: part.label, a: await askOnce(apiKey, sysA, part.content, userText + (part.note || ""), MODEL) }));
@@ -204,7 +206,7 @@ async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, de
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
 /** { circularId, dryRun?, secondRead?, auto? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency: askedCurrency, fullAi }, apiKey) {
+async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency: askedCurrency, fullAi, trustTable }, apiKey) {
   const defaultCurrency = L.currencyOrDefault(askedCurrency); // a circular that prints no currency is in INR
   const db = admin.firestore();
   const snap = await db.collection("circularsLibrary").doc(circularId).get();
@@ -225,7 +227,7 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, def
   let tableNote = "";
   if (L.fileKind(circ.fileName, circ.storagePath) === "pdf" && !fullAi) {
     const [buffer] = await admin.storage().bucket().file(circ.storagePath).download();
-    table = await tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, defaultCurrency });
+    table = await tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, defaultCurrency, skipCheck: trustTable === true });
     if (!table.ok) {
       tableNote = table.reason;
       console.log("carrier reader: fixed-rules read declined:", table.reason);
@@ -298,7 +300,7 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, def
     held: result.hold.length,
     unchanged: result.unchanged.length,
     parts: table && table.ok ? { total: table.pages, failed: 0 } : { total: reads.length, failed: failed.length + cut.length },
-    models: table && table.ok ? { readA: "fixed rules", readB: `${MODEL} (check of ${table.checked} routes)` } : { readA: MODEL, readB: [...new Set(reads.map((r) => r.b.model))].join(", ") },
+    models: table && table.ok ? { readA: "fixed rules", readB: table.verifiedBy === "admin" ? "checked against the PDF by the admin" : `${MODEL} (check of ${table.checked} routes)` } : { readA: MODEL, readB: [...new Set(reads.map((r) => r.b.model))].join(", ") },
     method: table && table.ok ? "table" : "ai",
     ...(table && table.ok ? { tableRoutes: table.rows.length, checkMismatches: table.mismatches } : {}),
     ...(tableNote ? { tableNote: tableNote.slice(0, 240) } : {}),
@@ -339,7 +341,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   requireAdmin(request);
   const apiKey = anthropicApiKey.value();
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
-  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true }, apiKey);
+  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true, trustTable: request.data?.trustTable === true }, apiKey);
 });
 
 /** Admin only: switch auto-read on or off and set the monthly limit in dollars. */
@@ -485,7 +487,7 @@ exports.readLibraryCircular = onCall({ invoker: "public", secrets: [anthropicApi
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
   try {
     if (rates) {
-      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true }, apiKey);
+      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true, trustTable: request.data?.trustTable === true }, apiKey);
       return { circularId, kind: "rates", applied: res.applied, held: res.held, unchanged: res.unchanged };
     }
     const d = await runCircularDigest({ circularId, circ: { ...circ, uploadedBy: "" } }, apiKey);

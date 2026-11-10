@@ -394,6 +394,16 @@ store.set("circularsLibrary/c1", { category: "airline_tariff", carrier: "EK", ti
     assert.ok(desk.some((d) => d.carrierCode === "TK-DGR" && d.carrier === "TK-DGR" && d.rateClass === "DGR"), "the special card is its own desk entry: TK-DGR");
     assert.ok(desk.some((d) => d.carrierCode === "TK"), "general cargo keeps the plain airline");
 
+    // the admin has checked the rows against the PDF: no AI check at all (and no AI credit)
+    [...store.keys()].filter((k) => k.startsWith("carrierTariffs/") || k.startsWith("air_tariffs/")).forEach((k) => store.delete(k));
+    calls.length = 0;
+    const trusted = await run({ circularId: "T1", trustTable: true });
+    assert.equal(trusted.applied, 24);
+    assert.equal(calls.length, 0, "no AI call when the admin vouches for the table");
+    assert.equal(store.get("carrierReads/T1").method, "table");
+    assert.match(store.get("carrierReads/T1").models.readB, /admin/);
+    behave = () => ({ reply: aiReply(100) });
+
     // a check that disagrees (shifted numbers) means the fixed-rules read is NOT used: the usual two AI reads take over
     [...store.keys()].filter((k) => k.startsWith("carrierTariffs/") || k.startsWith("air_tariffs/")).forEach((k) => store.delete(k));
     behave = () => ({ reply: aiReply(999) });
