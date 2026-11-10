@@ -65,6 +65,8 @@ import { marginLabel, planInstruction, type PlanChoice } from "@/lib/hub/instruc
 import { readInstructionWithAI } from "@/lib/ai/instruction-ai";
 import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { chargeableWeightKg, summarizeCargo } from "@atlas/pricing-core";
+import { activeSeatForLogin } from "@/lib/auth/desk-seats";
+import { airExwApplies, airExwFillDecision, buildAirExwRows, isAirExwRow } from "@/lib/pricing/exw-air-charges";
 import {
   AIR_WEIGHT_BREAKS,
   EMPTY_AIR_BREAKS,
@@ -233,6 +235,33 @@ function AirDeskInner() {
     hasContent: (s) => Boolean(s.customer.trim()) || s.lanes.some((l) => l.origin.trim() || l.destination.trim()),
   });
   const prefillApplied = useRef(false);
+
+  // Air Nom desk: on EXW or FCA terms (in USD, EUR or GBP) the local origin charges fill in by themselves: Pickup (EXW only),
+  // Handling / C.Clr by the chargeable weight, and Fumigation. Typed or edited charges are never overwritten, and a saved
+  // quote that is being opened or edited is left exactly as it was saved.
+  const isAirNom = activeSeatForLogin(user?.username)?.id === "air-nom";
+  const airExwTerm = airExwApplies(incoterm, currency);
+  const cargoChargeableKg = useMemo(() => chargeableWeightKg(summarizeCargo(cargo.map((r) => ({ length: r.l, width: r.w, height: r.h, qty: r.qty, grossWeightKg: r.gw })), dimUnit)), [cargo, dimUnit]);
+  const airExwKey = isAirNom && airExwTerm ? `${airExwTerm}|${Math.round(cargoChargeableKg * 100)}` : "";
+  const airExwRowsRef = useRef(localOriginCharges);
+  useEffect(() => {
+    airExwRowsRef.current = localOriginCharges;
+  });
+  const airExwFilled = useRef<SurchargeRow[] | null>(null);
+  useEffect(() => {
+    if (!loader.ready || loader.sourceQuote || loader.editingQuoteId) return;
+    const next = airExwKey && airExwTerm ? buildAirExwRows(airExwTerm, cargoChargeableKg) : null;
+    const decision = airExwFillDecision({ current: airExwRowsRef.current, previous: airExwFilled.current, next });
+    if (decision === "fill" && next) {
+      airExwFilled.current = next;
+      setLocalOriginCharges(next);
+    } else if (decision === "clear") {
+      airExwFilled.current = null;
+      setLocalOriginCharges(airExwRowsRef.current.filter((r) => !isAirExwRow(r)));
+    }
+    // airExwTerm and cargoChargeableKg are captured through airExwKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [airExwKey, loader.ready]);
 
   useEffect(() => {
     if (!activeLaneId && lanes[0]) setActiveLaneId(lanes[0].id);
@@ -1972,7 +2001,7 @@ function AirDeskInner() {
                           "Minimum charge (flat)"
                         ) : (
                           <>
-                            {selectedTotals.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
+                            {selectedTotals.freight.billedWeightKg.toFixed(2)} kg ×{" "}
                             {formatCurrency(
                               (selectedTotals.freight.activeRate > 0
                                 ? selectedTotals.freight.activeRate

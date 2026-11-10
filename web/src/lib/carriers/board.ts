@@ -11,12 +11,13 @@ import { normalizeCarrierName } from "@/lib/quotes/historical-autofill";
 import type { DirectoryContact } from "@/lib/types";
 
 export type RateSource = "Tariff" | "Portal" | "Email";
-export type BreakKey = "min" | "minus45" | "plus45" | "plus100" | "plus300" | "plus500" | "plus1000";
+export type BreakKey = "min" | "minus45" | "plus45" | "plus100" | "plus250" | "plus300" | "plus500" | "plus1000";
 
 export const PER_KG_BREAKS: Array<{ key: Exclude<BreakKey, "min">; label: string; from: number }> = [
   { key: "minus45", label: "<45", from: 0 },
   { key: "plus45", label: "45+", from: 45 },
   { key: "plus100", label: "100+", from: 100 },
+  { key: "plus250", label: "250+", from: 250 },
   { key: "plus300", label: "300+", from: 300 },
   { key: "plus500", label: "500+", from: 500 },
   { key: "plus1000", label: "1000+", from: 1000 },
@@ -130,17 +131,42 @@ export interface Freight {
   perKg: number;
   /** Rate x weight, but never below the flat minimum. */
   freight: number;
+  /** The weight the freight is billed on: the shipment's weight, or the next break's start weight when that costs less. */
+  billedKg?: number;
 }
 
-/** null when the airline has no rate for this weight's break: nothing is guessed from a neighbouring break. */
+const rateOk = (n: number) => Number.isFinite(n) && n > 0;
+
+/**
+ * null when the airline has no rate for this weight's break: nothing is guessed from a neighbouring break. Two exceptions, both
+ * the same as on the Air desk: most tariffs have no +250 column, so 250 to 299 kg use their +100 rate; and when the next break up
+ * (the next one the tariff has a rate for) costs less for this weight, the shipment is billed on that break's start weight
+ * (breakeven weight = next rate x next start weight / current rate).
+ */
 export function freightFor(breaks: BoardTariff["breaks"], weightKg: number): Freight | null {
   if (!(weightKg > 0)) return null;
-  const key = breakKeyFor(weightKg);
-  const perKg = Number(breaks[key]);
-  if (!Number.isFinite(perKg) || perKg <= 0) return null;
+  let key = breakKeyFor(weightKg);
+  let perKg = Number(breaks[key]);
+  if (!rateOk(perKg) && key === "plus250") {
+    key = "plus100";
+    perKg = Number(breaks[key]);
+  }
+  if (!rateOk(perKg)) return null;
+  let billedKg = weightKg;
+  const at = PER_KG_BREAKS.findIndex((b) => b.key === key);
+  for (const next of PER_KG_BREAKS.slice(at + 1)) {
+    const r = Number(breaks[next.key]);
+    if (!rateOk(r)) continue;
+    if (next.from > weightKg && next.from * r < weightKg * perKg) {
+      key = next.key;
+      perKg = r;
+      billedKg = next.from;
+    }
+    break;
+  }
   const min = Number(breaks.min);
-  const raw = perKg * weightKg;
-  return { key, perKg, freight: Number.isFinite(min) && min > 0 ? Math.max(min, raw) : raw };
+  const raw = perKg * billedKg;
+  return { key, perKg, freight: Number.isFinite(min) && min > 0 ? Math.max(min, raw) : raw, billedKg };
 }
 
 /** Whole days from today to a YYYY-MM-DD date: negative once past. null when there is no date. */

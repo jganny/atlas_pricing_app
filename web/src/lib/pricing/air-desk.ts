@@ -20,6 +20,7 @@ export const AIR_WEIGHT_BREAKS: WeightBreakName[] = [
   "minus45",
   "plus45",
   "plus100",
+  "plus250",
   "plus300",
   "plus500",
   "plus1000",
@@ -30,6 +31,7 @@ export const EMPTY_AIR_BREAKS: WeightBreaks = {
   minus45: { sell: 0, buy: 0 },
   plus45: { sell: 0, buy: 0 },
   plus100: { sell: 0, buy: 0 },
+  plus250: { sell: 0, buy: 0 },
   plus300: { sell: 0, buy: 0 },
   plus500: { sell: 0, buy: 0 },
   plus1000: { sell: 0, buy: 0 },
@@ -171,7 +173,8 @@ export function computeAirlineTotals(
 const NEXT_BREAK: Partial<Record<WeightBreakName, WeightBreakName>> = {
   minus45: "plus45",
   plus45: "plus100",
-  plus100: "plus300",
+  plus100: "plus250",
+  plus250: "plus300",
   plus300: "plus500",
   plus500: "plus1000",
 };
@@ -181,6 +184,7 @@ const AIR_BREAK_MIN_KG: Record<WeightBreakName, number> = {
   minus45: 0,
   plus45: 45,
   plus100: 100,
+  plus250: 250,
   plus300: 300,
   plus500: 500,
   plus1000: 1000,
@@ -211,12 +215,21 @@ export function computeAdjacentBreakComparison(
   breaks: WeightBreaks,
 ): AdjacentBreakComparison | null {
   if (!(chargeableWeightKg > 0)) return null;
-  const currentBreak = getWeightBreakBracket(chargeableWeightKg);
-  const nextBreak = NEXT_BREAK[currentBreak];
+  const rateOf = (b: WeightBreakName) => quoteSideRate(breaks[b]?.sell || 0, breaks[b]?.buy || 0);
+  // The break the weight falls in; when the tariff has no rate there (no +250 column, say), the highest lower break that has one.
+  let currentBreak = getWeightBreakBracket(chargeableWeightKg);
+  while (rateOf(currentBreak) <= 0) {
+    const lower = (Object.keys(NEXT_BREAK) as WeightBreakName[]).find((k) => NEXT_BREAK[k] === currentBreak);
+    if (!lower) return null;
+    currentBreak = lower;
+  }
+  // The next break up that holds a rate.
+  let nextBreak = NEXT_BREAK[currentBreak];
+  while (nextBreak && rateOf(nextBreak) <= 0) nextBreak = NEXT_BREAK[nextBreak];
   if (!nextBreak) return null;
 
-  const currentRate = quoteSideRate(breaks[currentBreak]?.sell || 0, breaks[currentBreak]?.buy || 0);
-  const nextRate = quoteSideRate(breaks[nextBreak]?.sell || 0, breaks[nextBreak]?.buy || 0);
+  const currentRate = rateOf(currentBreak);
+  const nextRate = rateOf(nextBreak);
   if (currentRate <= 0 || nextRate <= 0) return null;
 
   const nextWeightUsedKg = Math.max(chargeableWeightKg, AIR_BREAK_MIN_KG[nextBreak]);

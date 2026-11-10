@@ -17,9 +17,9 @@ export function calculateAirFreight(input: AirFreightInput): AirFreightResult {
   const buySide = selectActiveBreakForSide(chargeable, input.breaks, "buy");
 
   let baseFreightSell =
-    tariffsEnabled && weightBreaksEnabled ? chargeable * sellSide.rate : 0;
+    tariffsEnabled && weightBreaksEnabled ? sellSide.billedWeightKg * sellSide.rate : 0;
   let baseFreightBuy =
-    tariffsEnabled && weightBreaksEnabled ? chargeable * buySide.rate : 0;
+    tariffsEnabled && weightBreaksEnabled ? buySide.billedWeightKg * buySide.rate : 0;
   let isMinActive = false;
 
   const minSell = input.breaks.min?.sell || 0;
@@ -41,6 +41,8 @@ export function calculateAirFreight(input: AirFreightInput): AirFreightResult {
     activeBuyRate: buySide.rate,
     usingBuyFallback: sellSide.rate <= 0 && buySide.rate > 0,
     isMinActive,
+    billedWeightKg: sellSide.rate > 0 ? sellSide.billedWeightKg : buySide.rate > 0 ? buySide.billedWeightKg : chargeable,
+    weightBreakAdvantage: sellSide.rate > 0 ? sellSide.advantage : buySide.advantage,
     baseFreightSell,
     baseFreightBuy,
   };

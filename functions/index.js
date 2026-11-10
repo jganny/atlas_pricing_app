@@ -913,7 +913,7 @@ exports.atlasCopilotStream = functions
 // Circulars page shows the draft for review and calls the existing
 // publishAirTariffBreaks path once the desk confirms it.
 // ─────────────────────────────────────────────────────────────────────────────
-const AIR_BREAK_KEYS = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+const AIR_BREAK_KEYS = ["min", "minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"];
 
 /** Shared by every "read a circular PDF, ask Claude to extract rates" function below. */
 function requireCircularInput(data, context) {
@@ -999,7 +999,7 @@ exports.extractAirTariffFromCircular = functions
       "You read airline general cargo rate circulars (PDF) for a freight-forwarding pricing tool and extract " +
       "the real per-weight-break sell and buy (cost) rates — never invent or estimate a number that isn't on the page.\n\n" +
       "Weight breaks, in this exact order: min (minimum charge), minus45 (under 45kg), plus45 (45kg+), " +
-      "plus100 (100kg+), plus300 (300kg+), plus500 (500kg+), plus1000 (1000kg+). A circular may label these " +
+      "plus100 (100kg+), plus250 (250kg+), plus300 (300kg+), plus500 (500kg+), plus1000 (1000kg+). A circular may label these " +
       "differently (e.g. 'N', 'Q', '+45', '+100') — map them onto this set by weight threshold, not by label text.\n\n" +
       "Respond with ONLY a single JSON object, no markdown fences, no prose, matching exactly:\n" +
       '{"carrier":"<airline name>","carrierCode":"<2-letter IATA code if shown, else best guess>",' +
@@ -1007,7 +1007,7 @@ exports.extractAirTariffFromCircular = functions
       '"currency":"<3-letter currency code>","sourcePage":<page number the rate table is on>,' +
       '"breaks":{"<break key>":{"sell":<number or null>,"buy":<number or null>,' +
       '"confidence":"high"|"needs_check","note":"<short reason, only when needs_check>"}, ...}}\n\n' +
-      "Include all 7 break keys even if a value is missing. Use null (never 0 or a guess) and " +
+      "Include all 8 break keys even if a value is missing. Use null (never 0 or a guess) and " +
       '"confidence":"needs_check" with a short note for any value that is not clearly printed on the page. ' +
       "If the circular covers more than one lane or carrier, extract only the first lane's rates and say so in a note.";
 

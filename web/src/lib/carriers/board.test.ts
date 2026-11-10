@@ -29,7 +29,9 @@ const tariff = (o: Partial<BoardTariff>): BoardTariff => ({
 // Weight -> break, as the Air desk reads them.
 assert.equal(breakKeyFor(10), "minus45");
 assert.equal(breakKeyFor(45), "plus45");
-assert.equal(breakKeyFor(299), "plus100");
+assert.equal(breakKeyFor(249), "plus100");
+assert.equal(breakKeyFor(250), "plus250");
+assert.equal(breakKeyFor(299), "plus250");
 assert.equal(breakKeyFor(300), "plus300");
 assert.equal(breakKeyFor(1200), "plus1000");
 assert.equal(bandIndex(499), 3);
@@ -37,10 +39,17 @@ assert.equal(bandIndex(500), 4);
 assert.equal(bandIndex(2500), 6);
 
 // Freight is rate x weight, never below the flat minimum, and never guessed from a neighbouring break.
-assert.deepEqual(freightFor(tariff({}).breaks, 300), { key: "plus300", perKg: 300, freight: 90000 });
+assert.deepEqual(freightFor(tariff({}).breaks, 300), { key: "plus300", perKg: 300, freight: 90000, billedKg: 300 });
 assert.equal(freightFor(tariff({}).breaks, 10)?.freight, 8600, "a small shipment pays the minimum");
 assert.equal(freightFor({ plus300: null, plus100: 340 }, 300), null, "a missing break is not borrowed from another");
 assert.equal(freightFor(tariff({}).breaks, 0), null);
+// No +250 column: 250 to 299 kg use +100, and the breakeven rule moves a heavier one up to +300 on 300 kg.
+assert.equal(freightFor({ min: 100, plus100: 5.2, plus300: 4.9 }, 250)?.key, "plus100");
+assert.equal(freightFor({ min: 100, plus100: 5.2, plus300: 4.9 }, 250)?.freight, 1300);
+const up = freightFor({ min: 100, plus100: 5.2, plus300: 4.9 }, 290);
+assert.deepEqual([up?.key, up?.billedKg, Math.round((up?.freight ?? 0) * 100) / 100], ["plus300", 300, 1470]);
+// With a +250 rate it is used directly.
+assert.equal(freightFor({ min: 100, plus100: 5.2, plus250: 5.0, plus300: 4.9 }, 250)?.key, "plus250");
 
 // How the rate is obtained: the sheet's remarks, then the tariff on file, else ask.
 const ek = ruleFor("EK");

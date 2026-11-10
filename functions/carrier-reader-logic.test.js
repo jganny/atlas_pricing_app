@@ -19,7 +19,7 @@ const rows = L.normalizeRows(
   "TK",
 );
 assert.equal(rows.length, 2, "a row without a route is dropped");
-assert.deepEqual(rows[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: null, plus300: null, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "", rateKind: "contract", rateClass: "GCR", notes: "" });
+assert.deepEqual(rows[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: null, plus250: null, plus300: null, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "", rateKind: "contract", rateClass: "GCR", notes: "" });
 assert.equal(rows[1].carrierCode, "TK", "the airline from the circular's own record fills a missing code");
 assert.equal(rows[1].currency, "", "a missing currency is never guessed");
 assert.equal(rows[1].breaks.plus45, 0);
@@ -43,12 +43,14 @@ assert.match(a, /Do not guess the currency/);
 assert.equal(L.breakForThreshold(0), "minus45");
 assert.equal(L.breakForThreshold(44), "minus45");
 assert.deepEqual([45, 100, 300, 500, 1000].map(L.breakForThreshold), ["plus45", "plus100", "plus300", "plus500", "plus1000"]);
-assert.equal(L.breakForThreshold(250), null, "a weight we hold no column for is never guessed");
+assert.equal(L.breakForThreshold(250), "plus250", "250 kg now has its own column");
+assert.equal(L.breakForThreshold(275), null, "a weight we hold no column for is never guessed");
 assert.equal(L.breakForThreshold(-1), null);
 assert.equal(L.breakForThreshold(NaN), null);
 assert.deepEqual(L.mapThresholds([0, 100, 300]), ["minus45", "plus100", "plus300"]);
 assert.deepEqual(L.mapThresholds([45, 100]), ["plus45", "plus100"]);
-assert.equal(L.mapThresholds([0, 250]), null);
+assert.deepEqual(L.mapThresholds([0, 45, 100, 250]), ["minus45", "plus45", "plus100", "plus250"]);
+assert.equal(L.mapThresholds([0, 275]), null);
 assert.equal(L.mapThresholds([0, 10]), null, "two columns on the same break are ambiguous");
 
 // compact answers: a COLUMNS line, then one line per route (8 leading fields, one rate per column, notes)
@@ -56,7 +58,7 @@ const ln = (n, ...f) => [...f, ...Array(8 + n + 1 - f.length).fill("")].join("|"
 const ok = L.parseRowLines(["COLUMNS|0|45|100|300", ln(4, "EK", "BOM", "DXB", "INR", "2026-09-01", "2026-12-31", "contract", "1500", "31", "28.5", "26", "24.5", "fuel extra"), ln(4, "EK", "BLR", "LHR", "", "", "", "published")].join("\n"));
 assert.equal(ok.rows.length, 2);
 assert.deepEqual(ok.columns, [0, 45, 100, 300]);
-assert.deepEqual(L.normalizeRows(ok, "EK")[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: 26, plus300: 24.5, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "2026-12-31", rateKind: "contract", rateClass: "GCR", notes: "fuel extra" });
+assert.deepEqual(L.normalizeRows(ok, "EK")[0], { carrierCode: "EK", origin: "BOM", destination: "DXB", currency: "INR", breaks: { min: 1500, minus45: 31, plus45: 28.5, plus100: 26, plus250: null, plus300: 24.5, plus500: null, plus1000: null }, validFrom: "2026-09-01", validTo: "2026-12-31", rateKind: "contract", rateClass: "GCR", notes: "fuel extra" });
 assert.equal(L.normalizeRows(ok, "EK")[1].currency, "", "a missing currency is never guessed");
 assert.equal(L.normalizeRows(ok, "EK")[1].breaks.plus45, null, "an empty field stays empty, never 0");
 
@@ -67,7 +69,7 @@ assert.deepEqual([three([100, 300, 500]).plus100, three([100, 300, 500]).plus300
 
 // unreadable replies are flagged, never taken to mean "no routes"
 assert.equal(L.parseRowLines(ln(2, "EK", "BOM", "DXB")), null, "route lines without a COLUMNS line");
-assert.equal(L.parseRowLines("COLUMNS|0|250\n" + ln(2, "EK", "BOM", "DXB", "INR")), null, "a weight we have no column for");
+assert.equal(L.parseRowLines("COLUMNS|0|275\n" + ln(2, "EK", "BOM", "DXB", "INR")), null, "a weight we have no column for");
 assert.equal(L.parseRowLines("COLUMNS|0|abc\n" + ln(2, "EK", "BOM", "DXB", "INR")), null);
 assert.equal(L.parseRowLines("COLUMNS\n" + ln(0, "EK", "BOM", "DXB")), null, "no column weights at all");
 assert.equal(L.parseRowLines("COLUMNS|0|45"), null, "only the COLUMNS line");
@@ -125,7 +127,12 @@ assert.deepEqual(L.mergeRows([]), []);
   assert.deepEqual(res, [50, 10, 40, 20, 30, 60]);
   assert.ok(peak <= 3 && peak >= 2);
   assert.deepEqual(await L.mapLimit([], 3, async () => 1), []);
-  console.log("carrier reader logic ok");
+  assert.equal(L.originHint("EY_BLR(GCR)"), "BLR");
+assert.equal(L.originHint("EY_PHARMA (RANGE15'-25')_BLR"), "BLR", "a title that ends with the station");
+assert.equal(L.originHint("EK_MAA"), "MAA");
+assert.equal(L.originHint("WY_BOM"), "BOM");
+
+console.log("carrier reader logic ok");
 })();
 
 // --- Carrier Board -> Air desk: what gets published ---

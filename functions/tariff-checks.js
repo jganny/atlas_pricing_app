@@ -6,7 +6,7 @@
  */
 
 /** Per-kg weight breaks in order, then the flat minimum. The per-kg ones must not go UP as the weight grows. */
-const PER_KG_BREAKS = ["minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+const PER_KG_BREAKS = ["minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"];
 const ALL_BREAKS = ["min", ...PER_KG_BREAKS];
 
 /** Two reads agree on a number when they are within half a percent (or both empty). */

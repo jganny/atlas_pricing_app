@@ -7,7 +7,7 @@ import { SAMPLE_TARIFFS } from "@/lib/carriers/board-sample";
 import type { BoardTariff, BreakKey, FuelNotice } from "@/lib/carriers/board";
 import { getFirebaseApp, getFirebaseDb } from "./client";
 
-const KEYS: BreakKey[] = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+const KEYS: BreakKey[] = ["min", "minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"];
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 

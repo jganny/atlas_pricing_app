@@ -66,7 +66,7 @@ export interface Plan {
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
-const BREAK_ORDER: BreakKey[] = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+const BREAK_ORDER: BreakKey[] = ["min", "minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"];
 export const breakLabel = (k: BreakKey) => (k === "min" ? "Minimum" : k === "minus45" ? "-45" : k.replace("plus", "+"));
 
 export function marginLabel(m: MarginOption): string {

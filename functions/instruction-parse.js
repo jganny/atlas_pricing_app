@@ -10,7 +10,7 @@ const { defineSecret } = require("firebase-functions/params");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 
 const MAX_TEXT = 600;
-const BREAKS = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+const BREAKS = ["min", "minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"];
 const MARGIN_KINDS = ["perKg", "percent", "perContainer", "perCbm"];
 const CONTAINERS = ["20GP", "40GP", "40HC", "20RF", "40RF", "20OT", "40OT", "20FR", "40FR"];
 
@@ -19,7 +19,7 @@ const SYSTEM_PROMPT =
   "Record ONLY what is clearly written. Never invent a value and never suggest a price, carrier or margin.\n" +
   "- carrier: the airline or shipping line named (a 2-letter airline code such as EK, or the name as written).\n" +
   "- originCode: an origin airport/port code if one is named (for example 'BLR').\n" +
-  "- weightBreak: one of min, minus45, plus45, plus100, plus300, plus500, plus1000 when a weight slab is named " +
+  "- weightBreak: one of min, minus45, plus45, plus100, plus250, plus300, plus500, plus1000 when a weight slab is named " +
   "('100 kg and above', '+100', 'hundred kilo slab' = plus100; 'minimum' = min).\n" +
   "- margins: every margin or mark-up stated. kind perKg (per kilo), percent, perContainer or perCbm. When the person gives " +
   "two options ('10/kg or 10%') record both.\n" +

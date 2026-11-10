@@ -232,7 +232,8 @@ export function airlineSnapshot(
     localOriginTotal: t.localOriginTotal,
     destClearanceTotal: t.destClearanceTotal,
     appliedRate: t.freight.activeRate || t.freight.activeBuyRate || 0,
-    chargeableWeight: t.freight.chargeableWeightKg,
+    // The weight the freight is billed on (the chargeable weight, or a higher break's start weight when that costs less).
+    chargeableWeight: t.freight.billedWeightKg,
     quoteUsingBuyFreight: t.quoteUsingBuyFreight,
     laneId: a.laneId || fallbackLaneId,
     laneLabel: lane ? laneRouteLabel(lane, laneIndex) : "",
@@ -509,7 +510,7 @@ function totalsFromRaw(
     ),
     chargeableWeight:
       num(raw.chargeableWeight) ||
-      computed?.freight.chargeableWeightKg ||
+      computed?.freight.billedWeightKg ||
       (selected ? selectedFallback.chargeableWeight : 0),
     validity: String(raw.validity ?? (selected ? selectedFallback.validity : "") ?? ""),
     quoteUsingBuyFreight: Boolean(

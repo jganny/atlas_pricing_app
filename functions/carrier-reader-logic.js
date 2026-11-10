@@ -76,7 +76,7 @@ function fileKind(fileName, storagePath) {
 function breakForThreshold(t) {
   if (!Number.isFinite(t) || t < 0) return null;
   if (t < 45) return "minus45"; // the base rate: "Normal", "General", "Below 45", or a column that applies from the first kilo
-  return { 45: "plus45", 100: "plus100", 300: "plus300", 500: "plus500", 1000: "plus1000" }[t] ?? null;
+  return { 45: "plus45", 100: "plus100", 250: "plus250", 300: "plus300", 500: "plus500", 1000: "plus1000" }[t] ?? null;
 }
 
 /** [0, 100, 300] -> ["minus45", "plus100", "plus300"], or null when a weight is one we have no column for or two columns land on the same break. */
@@ -134,7 +134,7 @@ function parseRowLines(text) {
     const lineClass = raw.length === width + 1 ? raw[width] : "";
     const [carrier, origin, destination, currency, validFrom, validTo, rateKind, min, ...rest] = parts;
     if (!/^[A-Za-z0-9]{2,3}$/.test(carrier) || !/^[A-Za-z]{3}$/.test(origin) || !/^[A-Za-z]{3}$/.test(destination)) continue; // a header or stray line
-    const breaks = { min: min === "" ? null : min, minus45: null, plus45: null, plus100: null, plus300: null, plus500: null, plus1000: null };
+    const breaks = { min: min === "" ? null : min, minus45: null, plus45: null, plus100: null, plus250: null, plus300: null, plus500: null, plus1000: null };
     slots.forEach((slot, i) => {
       breaks[slot] = rest[i] === "" ? null : rest[i];
     });
@@ -252,7 +252,7 @@ function systemPrompts() {
 
 
 /** The Air desk's own weight-break names, in order (see AIR_WEIGHT_BREAKS in the app). */
-const DESK_BREAKS = ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"];
+const DESK_BREAKS = ["min", "minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"];
 
 /** An airline's rates are what the airline charges us, so on the desk they are BUY; SELL is the desk's own and stays empty. null when no rate at all. */
 function deskBreaksFromRow(row) {
@@ -341,8 +341,12 @@ function autoDecision(settings, spentUsd, estimateUsd = AUTO_READ_COST_USD) {
 
 /** Many circulars name their origin only in the file title ("ET_AMD", "6E-BOM", "EK_MAA_PXS AND PXD"). The three letters after the airline code, or null. */
 function originHint(title) {
-  const m = /^\s*[A-Z0-9]{2}[_ -]([A-Z]{3})(?![A-Za-z])/.exec(String(title || "").toUpperCase());
-  return m ? m[1] : null;
+  const t = String(title || "").toUpperCase();
+  const m = /^\s*[A-Z0-9]{2}[_ -]([A-Z]{3})(?![A-Za-z])/.exec(t);
+  if (m) return m[1];
+  // A title that ends with the station: "EY_PHARMA (RANGE15'-25')_BLR".
+  const e = /^\s*[A-Z0-9]{2}[_ -].*[_ -]([A-Z]{3})\s*$/.exec(t);
+  return e ? e[1] : null;
 }
 
 /** The admin may say which currency a circular that prints none is in. Only rows with no currency are filled; anything printed stays. */

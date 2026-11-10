@@ -187,7 +187,12 @@ async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, de
   if (!res.ok) {
     // The other common layout: rate classes as headings, origin from the title, no currency printed (the company default applies).
     const sec = T.readSectionTable(lines, { fallbackCarrier: fallback, origin: L.originHint(circ.title || circ.fileName) || "", currency: defaultCurrency, ...dates });
-    res = sec.ok ? sec : { ok: false, reason: `${res.reason}; as sections: ${sec.reason}` };
+    if (sec.ok) res = sec;
+    else {
+      // The simplest layout: one "DESTINATION Min N 45 100 250" list, origin and class from the file's title.
+      const list = T.readListTable(lines, { fallbackCarrier: fallback, origin: L.originHint(circ.title || circ.fileName) || "", rateClass: T.titleClass(circ.title || circ.fileName), currency: defaultCurrency, validFrom: dates.validFrom, validTo: dates.validTo });
+      res = list.ok ? list : { ok: false, reason: `${res.reason}; as sections: ${sec.reason}; as a list: ${list.reason}` };
+    }
   }
   if (!res.ok) return res;
   const rows = L.withDefaultCurrency(res.rows, defaultCurrency);

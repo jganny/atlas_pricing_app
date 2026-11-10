@@ -3,7 +3,8 @@ import type { InterimRate, RatePair, WeightBreakName, WeightBreaks } from "../ty
 export function getWeightBreakBracket(weightKg: number): WeightBreakName {
   if (weightKg < 45) return "minus45";
   if (weightKg < 100) return "plus45";
-  if (weightKg < 300) return "plus100";
+  if (weightKg < 250) return "plus100";
+  if (weightKg < 300) return "plus250";
   if (weightKg < 500) return "plus300";
   if (weightKg < 1000) return "plus500";
   return "plus1000";
@@ -35,13 +36,22 @@ const BRACKET_LIMITS: Array<{ name: WeightBreakName; limit: number }> = [
   { name: "minus45", limit: 0 },
   { name: "plus45", limit: 45 },
   { name: "plus100", limit: 100 },
+  { name: "plus250", limit: 250 },
   { name: "plus300", limit: 300 },
   { name: "plus500", limit: 500 },
   { name: "plus1000", limit: 1000 },
 ];
 
-/** Active break using only sell OR only buy — money sides never cross. */
-export function selectActiveBreakForSide(
+export interface ActiveBreak {
+  usedBreak: WeightBreakName;
+  rate: number;
+  /** The weight the freight is billed on: the chargeable weight, or a higher break's starting weight when that is cheaper. */
+  billedWeightKg: number;
+  /** True when a higher break was chosen because it costs less (weight-break advantage). */
+  advantage: boolean;
+}
+
+function bracketChoice(
   chargeableWeightKg: number,
   breaks: WeightBreaks,
   side: "sell" | "buy",
@@ -66,6 +76,37 @@ export function selectActiveBreakForSide(
     };
   }
   return { usedBreak: autoBreak, rate: 0 };
+}
+
+/**
+ * Active break using only sell OR only buy — money sides never cross.
+ *
+ * Weight-break advantage: a shipment just below a break can cost less if it is billed at the next break's rate on that break's
+ * starting weight. Breakeven weight = (next rate x next start weight) / current rate. If the shipment weighs more than the breakeven
+ * weight the next break is cheaper and is used (billed on its start weight); otherwise the current break stays. Example: +100 at
+ * 5.2 and +300 at 4.9 give a breakeven of 282.7 kg, so 250 kg stays on +100 and 290 kg is billed as 300 kg at 4.9. The next break
+ * is the next higher one that holds a rate, so a tariff without +250 compares +100 with +300 directly. Equal totals keep the
+ * current break.
+ */
+export function selectActiveBreakForSide(
+  chargeableWeightKg: number,
+  breaks: WeightBreaks,
+  side: "sell" | "buy",
+): ActiveBreak {
+  const base = bracketChoice(chargeableWeightKg, breaks, side);
+  const plain: ActiveBreak = { ...base, billedWeightKg: chargeableWeightKg, advantage: false };
+  if (!(base.rate > 0) || !(chargeableWeightKg > 0)) return plain;
+  const idx = BRACKET_LIMITS.findIndex((b) => b.name === base.usedBreak);
+  if (idx < 0) return plain;
+  for (const next of BRACKET_LIMITS.slice(idx + 1)) {
+    const nextRate = sideRate(breaks[next.name], side);
+    if (!(nextRate > 0)) continue;
+    if (next.limit > chargeableWeightKg && next.limit * nextRate < chargeableWeightKg * base.rate) {
+      return { usedBreak: next.name, rate: nextRate, billedWeightKg: next.limit, advantage: true };
+    }
+    break; // only the next break that holds a rate is compared
+  }
+  return plain;
 }
 
 /** UI hint helper — display rate may still show buy when sell blank. */

@@ -22,6 +22,7 @@ const BREAK_LABELS: Record<WeightBreakName, string> = {
   minus45: "−45 kg",
   plus45: "+45 kg",
   plus100: "+100 kg",
+  plus250: "+250 kg",
   plus300: "+300 kg",
   plus500: "+500 kg",
   plus1000: "+1000 kg",

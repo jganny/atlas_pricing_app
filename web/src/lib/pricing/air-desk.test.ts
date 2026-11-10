@@ -75,7 +75,7 @@ assert.deepEqual(visibleAirBreaks(150, "plus300", false, savedRates), ["plus300"
 const wholeTariff: WeightBreaks = { ...EMPTY_AIR_BREAKS, min: { sell: 90, buy: 80 }, minus45: { sell: 6, buy: 5 }, plus45: { sell: 5.5, buy: 4.6 }, plus100: { sell: 5.2, buy: 4.4 }, plus300: { sell: 4.9, buy: 4.1 }, plus500: { sell: 4.6, buy: 3.9 } };
 assert.deepEqual(visibleAirBreaks(150, "plus100", false, wholeTariff), ["plus100"], "tariff-filled card: only the break for the weight entered");
 assert.deepEqual(visibleAirBreaks(40, "minus45", false, wholeTariff), ["minus45"], "same for a small shipment");
-assert.equal(visibleAirBreaks(150, "plus100", true, wholeTariff).length, 7, "show-all still lists the whole card");
-assert.equal(visibleAirBreaks(150, "plus100", true, savedRates).length, 7, "show-all still shows every break");
+assert.equal(visibleAirBreaks(150, "plus100", true, wholeTariff).length, 8, "show-all still lists the whole card");
+assert.equal(visibleAirBreaks(150, "plus100", true, savedRates).length, 8, "show-all still shows every break");
 
 console.log("air-desk.test.ts: all assertions passed");

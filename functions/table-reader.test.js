@@ -36,7 +36,7 @@ const lines = (cards) => [HEAD, ...cards.flatMap((c) => dests.map((d) => row(c, 
   assert.equal(r.ok, true);
   assert.equal(r.rows.length, 36);
   assert.deepEqual(r.rows.map((x) => x.rateClass).filter((c, i, a) => a.indexOf(c) === i), ["GCR", "DGR", "DGRCOL"]);
-  assert.deepEqual(r.rows[0], { carrierCode: "TK", origin: "BOM", destination: "ABJ", currency: "INR", breaks: { min: 24900, minus45: 1245, plus45: 1095, plus100: 1005, plus300: 945, plus500: 885, plus1000: 885 }, validFrom: "2026-06-04", validTo: "2026-12-31", rateKind: "unknown", rateClass: "GCR", notes: "" });
+  assert.deepEqual(r.rows[0], { carrierCode: "TK", origin: "BOM", destination: "ABJ", currency: "INR", breaks: { min: 24900, minus45: 1245, plus45: 1095, plus100: 1005, plus250: null, plus300: 945, plus500: 885, plus1000: 885 }, validFrom: "2026-06-04", validTo: "2026-12-31", rateKind: "unknown", rateClass: "GCR", notes: "" });
   // a header repeated on every page, and page numbers and notes between, change nothing
   const noisy = [];
   for (let i = 0; i < 12; i++) {
@@ -113,6 +113,48 @@ const lines = (cards) => [HEAD, ...cards.flatMap((c) => dests.map((d) => row(c, 
   assert.deepEqual([w.ok, w.rows.length, w.rows[0].rateClass, w.rows[0].breaks.plus500], [true, 12, "GCR", 250], "a header split over separate lines");
 }
 
+
+// --- the list layout: "DESTINATION Min N 45 100 250", region headings, blank-lead offline tables ---
+{
+  const online = ["ATL", "BOS", "CLT", "IAD", "ORD", "JFK", "AMS", "ATH", "BCN", "BRU", "CDG", "CPH"].map((c) => `${c} 16028 752 673 605 542`);
+  const sheet = [
+    "Dear Customers ,",
+    "Please find Net Net Rates for GCR shipments below 500 kgs Break Point . Rate valid for shipments booked",
+    "from 12 th Jul 202 6 . Other surcharges such as MSC and local char ges will be additional.",
+    "Rates quoted in INR. Rates subject to space.",
+    "DESTINATION Min N 45 100 250",
+    "USA ONLINE",
+    ...online.slice(0, 6),
+    "EUROPE ONLINE",
+    ...online.slice(6),
+    "USA OFFLINE",
+    "AUS 830 699 636",
+    "BHM 865 691 610",
+    "EUROPE ONLINE",
+    "VIE 9863 425 380 335 298",
+    "2",
+  ];
+  const r = T.readListTable(sheet, { fallbackCarrier: "ey", origin: "BLR", rateClass: "GCR", currency: "INR" });
+  assert.equal(r.ok, true, r.reason);
+  assert.equal(r.rows.length, 15);
+  assert.equal(r.offlineRows, 2);
+  assert.deepEqual(r.rows[0], { carrierCode: "EY", origin: "BLR", destination: "ATL", currency: "INR", breaks: { min: 16028, minus45: 752, plus45: 673, plus100: 605, plus250: 542, plus300: null, plus500: null, plus1000: null }, validFrom: "2026-07-12", validTo: "", rateKind: "unknown", rateClass: "GCR", notes: "" });
+  const aus = r.rows.find((x) => x.destination === "AUS");
+  assert.deepEqual([aus.breaks.min, aus.breaks.minus45, aus.breaks.plus45, aus.breaks.plus100, aus.breaks.plus250], [null, null, 830, 699, 636], "offline: only the last three columns are printed");
+  assert.equal(r.rows.find((x) => x.destination === "VIE").breaks.min, 9863, "an ONLINE heading after an OFFLINE one switches back to full rows");
+  // a three-figure row outside an OFFLINE table is a problem, never a guess
+  const wrong = T.readListTable([...sheet.slice(0, 5), ...online, "AUS 830 699 636", "BHM 865 691 610"], { fallbackCarrier: "ey", origin: "BLR", currency: "INR" });
+  assert.equal(wrong.ok, false);
+  // class and origin come from the caller; no origin, no read
+  assert.equal(T.readListTable(sheet, { fallbackCarrier: "ey", origin: "", currency: "INR" }).ok, false);
+  assert.equal(T.readListTable(sheet.slice(5), { fallbackCarrier: "ey", origin: "BLR", currency: "INR" }).ok, false, "no header, no read");
+  // a stated currency wins over the default
+  assert.equal(T.readListTable(sheet.map((l) => l.replace("quoted in INR", "quoted in USD")), { fallbackCarrier: "ey", origin: "BLR", currency: "INR" }).rows[0].currency, "USD");
+  // a header column this reader does not know declines the whole table
+  assert.equal(T.readListTable(sheet.map((l) => l.replace("DESTINATION Min N 45 100 250", "DESTINATION Min N 45 100 275")), { fallbackCarrier: "ey", origin: "BLR", currency: "INR" }).ok, false);
+  assert.equal(T.parseListHeader(["DESTINATION", "Min", "N", "45", "100", "250"]).kgs.join(","), "0,45,100,250");
+}
+
 console.log("table reader ok");
 
 // --- sections: the rate class is a heading above each table, the origin is in the title, no currency is printed ---
@@ -125,7 +167,7 @@ console.log("table reader ok");
   assert.equal(r.sections, 3);
   assert.deepEqual([...new Set(r.rows.map((x) => x.rateClass))], ["GCR", "AXSCOL", "DGPAX", "AXM"], "one heading can name several classes; Offline only describes the stations");
   assert.equal(r.rows.length, 12 + 36 + 12, "a shared table is one row per class; the offline table is general cargo");
-  assert.deepEqual(r.rows[0], { carrierCode: "EK", origin: "AMD", destination: "ABJ", currency: "INR", breaks: { min: 8600, minus45: 430, plus45: 400, plus100: 370, plus300: 360, plus500: 350, plus1000: null }, validFrom: "2026-07-12", validTo: "2026-09-30", rateKind: "unknown", rateClass: "GCR", notes: "" });
+  assert.deepEqual(r.rows[0], { carrierCode: "EK", origin: "AMD", destination: "ABJ", currency: "INR", breaks: { min: 8600, minus45: 430, plus45: 400, plus100: 370, plus250: null, plus300: 360, plus500: 350, plus1000: null }, validFrom: "2026-07-12", validTo: "2026-09-30", rateKind: "unknown", rateClass: "GCR", notes: "" });
   const offline = r.rows.filter((x) => x.rateClass === "GCR").slice(-1)[0];
   assert.deepEqual([offline.breaks.min, offline.breaks.minus45, offline.breaks.plus500], [13200, 590, 250], "offline rows read the same six columns");
   // a two-column table (Amount and N only) and the country-coded one

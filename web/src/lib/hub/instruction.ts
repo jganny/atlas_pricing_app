@@ -5,7 +5,7 @@
  * (two margins, two currencies) is returned as a choice for the person to settle with one tap — never guessed.
  */
 
-export type BreakKey = "min" | "minus45" | "plus45" | "plus100" | "plus300" | "plus500" | "plus1000";
+export type BreakKey = "min" | "minus45" | "plus45" | "plus100" | "plus250" | "plus300" | "plus500" | "plus1000";
 export type MarginKind = "perKg" | "percent" | "perContainer" | "perCbm";
 
 export interface MarginOption {
@@ -39,7 +39,7 @@ const CUR = CURRENCIES.join("|");
 // Short capital words that are not airline codes.
 const COMMON_WORDS = new Set(["IN", "TO", "OF", "AT", "IF", "OR", "AN", "AS", "ON", "BY", "NO", "SO", "UP", "US", "ME", "MY", "IT", "BE", "DO", "GO", "WE", "OK", "IS", "AM", "HE", "HI", "PM", "OH", "KG", "PC", "RS", "ALL"]);
 const STOP_WORDS = new Set(["the", "this", "that", "our", "your", "same", "current", "normal", "standard", "latest", "new", "old", "all", "any", "some", "rate", "rates", "margin", "tariff", "price", "prices", "freight", "airline", "carrier", "liner", "line"]);
-const BREAK_BY_NUMBER: Record<string, BreakKey> = { "45": "plus45", "100": "plus100", "300": "plus300", "500": "plus500", "1000": "plus1000" };
+const BREAK_BY_NUMBER: Record<string, BreakKey> = { "45": "plus45", "100": "plus100", "250": "plus250", "300": "plus300", "500": "plus500", "1000": "plus1000" };
 
 export function parseInstruction(text: string): Instruction {
   const out: Instruction = { margins: [], currencies: [] };

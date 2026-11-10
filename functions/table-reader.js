@@ -254,7 +254,109 @@ function readSectionTable(lines, { fallbackCarrier = "", origin = "", currency =
   return { ok: true, rows: L.normalizeRows(raw, carrier), lines: raw.length, skipped: bad, sections };
 }
 
-const sameBreaks = (a, b) => ["min", "minus45", "plus45", "plus100", "plus300", "plus500", "plus1000"].every((k) => {
+/** A list-table header: "DESTINATION Min N 45 100 250" (no origin, currency or amount column), or null. */
+function parseListHeader(tokens) {
+  const t = tokens.map((x) => x.toUpperCase());
+  if (!(t[0] === "DESTINATION" || t[0] === "DEST." || t[0] === "DEST")) return null;
+  if (t.length < 4 || !(t[1] === "MIN" || t[1] === "MINIMUM")) return null;
+  const cols = [{ kind: "min" }];
+  for (const w of t.slice(2)) {
+    if (w === "N" || w === "NORMAL" || w === "GENERAL") cols.push({ kind: "rate", kg: 0 });
+    else if (/^\+?\d+$/.test(w)) cols.push({ kind: "rate", kg: Number(w.replace("+", "")) });
+    else return { unsupported: w };
+  }
+  const kgs = cols.filter((c) => c.kind === "rate").map((c) => c.kg);
+  if (!kgs.length || !L.mapThresholds(kgs)) return { unsupported: "weights" };
+  return { cols, kgs };
+}
+
+/** "from 12 th Jul 202 6" (letter-spaced) -> "2026-07-12", or "". */
+function bookedFromDate(lines) {
+  const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  for (const raw of lines.slice(0, 15)) {
+    const line = raw.replace(/(\d) (?=\d)/g, "$1");
+    const m = /(?:booked\s+)?from\s+(\d{1,2})\s*(?:st|nd|rd|th)?\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})/i.exec(line);
+    if (!m || !MON[m[2].toLowerCase()]) continue;
+    const p = (n) => String(n).padStart(2, "0");
+    return `${m[3]}-${p(MON[m[2].toLowerCase()])}-${p(Number(m[1]))}`;
+  }
+  return "";
+}
+
+/** "Rates quoted in INR" -> "INR", or "". */
+function statedCurrency(lines) {
+  for (const line of lines.slice(0, 20)) {
+    const m = /rates?\s+(?:are\s+)?quoted\s+in\s+([A-Z]{3})\b/i.exec(line);
+    if (m) return m[1].toUpperCase();
+  }
+  return "";
+}
+
+/**
+ * The simplest layout: one table, "DESTINATION Min N 45 100 250", region headings (USA ONLINE, EUROPE ONLINE...) and one line per
+ * destination. The origin and rate class come from the file's title, the currency from "Rates quoted in INR" (or the company
+ * default). Declines on anything it does not recognise, like the other readers.
+ */
+function readListTable(lines, { fallbackCarrier = "", origin = "", rateClass = "GCR", currency = "", validFrom = "", validTo = "" } = {}) {
+  const carrier = String(fallbackCarrier || "").toUpperCase();
+  const from = String(origin || "").toUpperCase();
+  if (!/^[A-Z0-9]{2,3}$/.test(carrier)) return { ok: false, reason: "the airline code is not known" };
+  if (!CODE3.test(from)) return { ok: false, reason: "the origin station is not known" };
+  const cur = statedCurrency(lines) || String(currency || "").toUpperCase();
+  if (!CODE3.test(cur)) return { ok: false, reason: "the currency is not known" };
+  const dateFrom = validFrom || bookedFromDate(lines);
+  let spec = null;
+  let bad = 0;
+  let offline = false;
+  let offlineRows = 0;
+  const badSamples = [];
+  const raw = [];
+  for (const line of lines) {
+    const tokens = line.split(/\s+/).filter(Boolean);
+    if (!tokens.length) continue;
+    const h = parseListHeader(tokens);
+    if (h) {
+      if (h.unsupported) return { ok: false, reason: `a table header this reader does not handle (${h.unsupported})` };
+      spec = h;
+      offline = false;
+      continue;
+    }
+    if (!spec) continue;
+    const k = spec.cols.length;
+    const numeric = tokens.filter((x) => NUM.test(x)).length;
+    if (numeric < 2) {
+      // A heading (USA ONLINE, EUROPE OFFLINE...). The offline tables of the airline leave the first columns blank.
+      if (numeric === 0 && /[A-Za-z]/.test(line)) offline = /\bOFFLINE\b/i.test(line);
+      continue;
+    }
+    const full = tokens.length === k + 1 && CODE3.test(tokens[0]) && tokens.slice(1).every((x) => NUM.test(x));
+    // Offline stations: the printed table has empty Min and Normal cells, so the text holds only the last three figures.
+    const blankLead = offline && k === 5 && tokens.length === 4 && CODE3.test(tokens[0]) && tokens.slice(1).every((x) => NUM.test(x));
+    if (!full && !blankLead) {
+      if (numeric >= 3) {
+        bad += 1;
+        if (badSamples.length < 3) badSamples.push(line.slice(0, 80));
+      }
+      continue;
+    }
+    const figures = blankLead ? [null, null, ...tokens.slice(1)] : tokens.slice(1);
+    if (blankLead) offlineRows += 1;
+    const breaks = {};
+    const slots = L.mapThresholds(spec.kgs);
+    let ri = 0;
+    spec.cols.forEach((col, i) => {
+      const n = figures[i] === null ? null : L.toNumber(figures[i]);
+      if (col.kind === "min") breaks.min = n;
+      else breaks[slots[ri++]] = n;
+    });
+    raw.push({ carrierCode: carrier, origin: from, destination: tokens[0], currency: cur, breaks, validFrom: dateFrom, validTo, rateKind: "unknown", rateClass });
+  }
+  if (raw.length < 10) return { ok: false, reason: "too few table lines were found" };
+  if (bad > 0 && bad / (bad + raw.length) > 0.01) return { ok: false, reason: `${bad} lines did not fit the table (e.g. "${badSamples[0] || ""}")` };
+  return { ok: true, rows: L.normalizeRows(raw, carrier), lines: raw.length, skipped: bad, offlineRows };
+}
+
+const sameBreaks = (a, b) => ["min", "minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"].every((k) => {
   const x = a && a[k] != null ? Number(a[k]) : null;
   const y = b && b[k] != null ? Number(b[k]) : null;
   return x === y || (x !== null && y !== null && Math.abs(x - y) < 1e-9);
@@ -294,4 +396,4 @@ function samplePartIndexes(n) {
   return [...new Set([0, Math.floor((n - 1) / 2), n - 1])];
 }
 
-module.exports = { pdfTextLines, parseHeader, parseSectionHeader, sectionClasses, effectiveDates, readSectionTable, classFromCardId, titleClass, readTable, verifySample, samplePartIndexes };
+module.exports = { pdfTextLines, parseListHeader, readListTable, bookedFromDate, parseHeader, parseSectionHeader, sectionClasses, effectiveDates, readSectionTable, classFromCardId, titleClass, readTable, verifySample, samplePartIndexes };

@@ -23,6 +23,7 @@ export const BREAK_LABELS: Record<WeightBreakName, string> = {
   minus45: "−45 kg",
   plus45: "+45 kg",
   plus100: "+100 kg",
+  plus250: "+250 kg",
   plus300: "+300 kg",
   plus500: "+500 kg",
   plus1000: "+1000 kg",
@@ -281,7 +282,7 @@ export function AirlineOptionForm({
                 "minimum charge (flat)"
               ) : (
                 <>
-                  {tot.freight.chargeableWeightKg.toFixed(2)} kg ×{" "}
+                  {tot.freight.billedWeightKg.toFixed(2)} kg ×{" "}
                   {formatCurrency(
                     (tot.freight.activeRate > 0
                       ? tot.freight.activeRate
@@ -293,6 +294,11 @@ export function AirlineOptionForm({
               )}{" "}
               ={" "}
               <strong>{formatCurrency(tot.baseFreightQuote, currency)}</strong>
+              {tot.freight.weightBreakAdvantage ? (
+                <span className="block text-xs font-semibold text-emerald-800">
+                  Billed on {tot.freight.billedWeightKg.toFixed(0)} kg at the {BREAK_LABELS[tot.freight.usedBreak]} rate because that costs less than {tot.freight.chargeableWeightKg.toFixed(2)} kg at the lower break (weight-break advantage, applied automatically).
+                </span>
+              ) : null}
             </p>
           ) : null}
           {breakComparison ? (
@@ -334,8 +340,8 @@ export function AirlineOptionForm({
               {breakComparison.cheaper !== "equal" ? (
                 <p className="sm:col-span-2 text-[11px] font-semibold text-emerald-700">
                   {breakComparison.cheaper === "current"
-                    ? `The ${BREAK_LABELS[breakComparison.current.breakName]} rate is cheaper here — quoting at the next tier would cost more.`
-                    : `Quoting at ${BREAK_LABELS[breakComparison.next.breakName]} instead would save ${formatCurrency(
+                    ? `The ${BREAK_LABELS[breakComparison.current.breakName]} rate is cheaper here, so it is used. Billing at the next tier would cost more.`
+                    : `Billed at ${BREAK_LABELS[breakComparison.next.breakName]} (automatic): it saves ${formatCurrency(
                         Math.abs(breakComparison.current.total - breakComparison.next.total),
                         currency,
                       )}.`}

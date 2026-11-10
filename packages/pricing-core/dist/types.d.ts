@@ -1,5 +1,5 @@
 export type DimUnit = "cms" | "inches";
-export type WeightBreakName = "min" | "minus45" | "plus45" | "plus100" | "plus300" | "plus500" | "plus1000";
+export type WeightBreakName = "min" | "minus45" | "plus45" | "plus100" | "plus250" | "plus300" | "plus500" | "plus1000";
 export interface RatePair {
     sell: number;
     buy: number;
@@ -38,6 +38,14 @@ export interface AirFreightResult {
     activeBuyRate: number;
     usingBuyFallback: boolean;
     isMinActive: boolean;
+    /**
+     * The weight the freight is actually billed on. Normally the chargeable weight; when the next weight break gives a lower
+     * total (weight-break advantage, see selectActiveBreakForSide) it is that break's starting weight, e.g. 300 for a 290 kg shipment.
+     * Sell side, or the buy side when only a buy rate exists.
+     */
+    billedWeightKg: number;
+    /** True when the freight is billed at a higher break's rate and starting weight because that costs less. */
+    weightBreakAdvantage: boolean;
     baseFreightSell: number;
     baseFreightBuy: number;
 }

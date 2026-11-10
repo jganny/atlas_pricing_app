@@ -11,6 +11,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.153",
+    date: "2026-11-10",
+    items: [
+      "Air desk, Air Nom seat: on EXW terms the local origin charges now fill in by themselves as Pickup (you enter the amount), Handling / C.Clr and Fumigation. On FCA terms it is the same without Pickup. Handling is the higher of 0.15 per kg and 75 below 500 kg, then 0.10 per kg from 500 kg and 0.07 per kg from 1000 kg, on the chargeable weight, in USD, EUR or GBP (the same figures in each). Fumigation is 35 per invoice. Anything you type or change is never overwritten.",
+      "Air desk: the cheaper weight break is now chosen automatically. If billing the next break on its starting weight costs less (for example 290 kg billed as 300 kg at the +300 rate), the freight is billed that way and the line says so. 250 kg with +100 at 5.2 and +300 at 4.9 stays on +100, because the breakeven weight is 282.7 kg. The Carrier Board uses the same rule.",
+      "Weight breaks: a +250 kg break now exists on the Air desk, the Circulars screen and the Carrier Board, for airlines such as Etihad and Malaysia that print a 250 kg rate. Tariffs without a +250 rate behave as before.",
+    ],
+  },
+  {
     version: "0.3.152",
     date: "2026-11-10",
     items: [
