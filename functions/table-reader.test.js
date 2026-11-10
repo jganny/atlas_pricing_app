@@ -155,6 +155,84 @@ const lines = (cards) => [HEAD, ...cards.flatMap((c) => dests.map((d) => row(c, 
   assert.equal(T.parseListHeader(["DESTINATION", "Min", "N", "45", "100", "250"]).kgs.join(","), "0,45,100,250");
 }
 
+
+// --- grouped commodity blocks (Sharaf/WY style): destinations in a tall cell, a row per commodity ---
+{
+  const sheet = [
+    "Standard Tariff for BOM",
+    "Effective 01st Nov '26 - 31st Mar '27",
+    "Destination Commodity Min Normal +45 +100 +250",
+    "Middle East",
+    "GCR 7000 295 250 240 235",
+    "XPS 9100 384 325 312 310",
+    "MCT/AMM/BAH/CAI/ DGR - PAX 7700 325 275 264 259",
+    "DMM/DXB/JED/KWI/RUH/SLL COL ( 2 to 8 degree) 9100 384 325 312 310",
+    "CRT(15 to 25 degree) 8400 354 300 288 282",
+    "VAL 35000",
+    "Asia",
+    "GCR 5760 288 248 240 235",
+    "XPS 7488 374 322 312 306",
+    "DGR - PAX - - - - -",
+    "DAC",
+    "COL ( 2 to 8 degree) - - - - -",
+    "CRT(15 to 25 degree) 6912 346 298 288 282",
+    "Europe",
+    "CDG/FRA/IST/LHR/MUC/ GCR 6500 335 320 320 310",
+    "MXP/FCO/AMS XPS 9750 518 503 495 480",
+    "DGR - PAX 7150 380 369 363 352",
+    "COL ( 2 to 8 degree) 9750 518 503 495 480",
+    "CRT(15 to 25 degree) 8125 431 419 413 400",
+    "VAL 15000 658",
+    "Russia",
+    "GCR 10000 500 350 330 320",
+    "XPS 12000 675 600 525 500",
+    "DGR - PAX 12000 675 600 525 500",
+    "SVO II COL ( 2 to 8 degree) 12000 675 600 525 500",
+    "CRT(15 to 25 degree) 12000 625",
+    "550 475 450",
+    "VAL 60000",
+    "Far East",
+    "GCR 6860 343 303 210 205",
+    "XPS 8918 446 394 273 267",
+    "DGR - PAX 7546 377 333 231 226",
+    "CGK",
+    "COL ( 2 to 8 degree) 8918 446 394 273 267",
+    "CRT(15 to 25 degree) 8232 412 364 252 246",
+    "VAL 12390 470",
+    "GCR 3560 328 288 210 205",
+    "MNL/SIN",
+    "XPS 4654 426 374.4 273 266.5",
+    "VAL 12390 470",
+    "Africa",
+    "DAR",
+    "CHECK WITH SALES FOR RATES AND SPACE",
+    "ZNZ",
+    "General Information",
+    "Cut Off Time for Products GCR COU/PER/XPS- Smalls/Val XPS - Heavy /Big lots",
+  ];
+  const r = T.readCommodityTable(sheet, { fallbackCarrier: "wy", origin: "BOM", currency: "INR" });
+  assert.equal(r.ok, true, r.reason);
+  const row = (d, c) => r.rows.find((x) => x.destination === d && x.rateClass === c);
+  assert.deepEqual(row("MCT", "GCR").breaks, { min: 7000, minus45: 295, plus45: 250, plus100: 240, plus250: 235, plus300: null, plus500: null, plus1000: null });
+  assert.equal(row("SLL", "COL").breaks.plus250, 310, "a destination in the second half of the cell list");
+  assert.equal(row("MXP", "XPS").breaks.min, 9750, "destinations split over several lines belong to the same block");
+  assert.equal(row("SVO", "CRT").breaks.plus45, 550, "a wrapped row joins its figures");
+  assert.equal(row("MNL", "XPS").breaks.plus45, 374.4);
+  assert.equal(row("SIN", "XPS").breaks.plus250, 266.5);
+  assert.equal(row("DAC", "DGR"), undefined, "dashes mean no rate");
+  assert.equal(row("DAC", "COL"), undefined);
+  assert.deepEqual([row("FRA", "VAL").breaks.min, row("FRA", "VAL").breaks.minus45, row("FRA", "VAL").breaks.plus45], [15000, 658, null]);
+  assert.equal(row("MCT", "VAL").breaks.minus45, null, "a VAL row with only a minimum");
+  assert.equal(row("DAR", "GCR"), undefined, "no rates for Africa");
+  assert.equal(r.rows[0].validFrom, "2026-11-01");
+  assert.equal(r.rows[0].validTo, "2027-03-31");
+  assert.equal(new Set(r.rows.map((x) => x.rateClass)).size, 6);
+  // a commodity row that does not fit declines the whole table
+  assert.equal(T.readCommodityTable(sheet.map((l) => l.replace("XPS 9100 384 325 312 310", "XPS 9100 384 325 312")), { fallbackCarrier: "wy", origin: "BOM", currency: "INR" }).ok, false);
+  assert.equal(T.readCommodityTable(sheet, { fallbackCarrier: "wy", origin: "", currency: "INR" }).ok, false);
+  assert.deepEqual(T.effectiveShort(["Effective 01st Nov '26 - 31st Mar '27"]), { validFrom: "2026-11-01", validTo: "2027-03-31" });
+}
+
 console.log("table reader ok");
 
 // --- sections: the rate class is a heading above each table, the origin is in the title, no currency is printed ---

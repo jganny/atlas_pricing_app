@@ -191,7 +191,12 @@ async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, de
     else {
       // The simplest layout: one "DESTINATION Min N 45 100 250" list, origin and class from the file's title.
       const list = T.readListTable(lines, { fallbackCarrier: fallback, origin: L.originHint(circ.title || circ.fileName) || "", rateClass: T.titleClass(circ.title || circ.fileName), currency: defaultCurrency, validFrom: dates.validFrom, validTo: dates.validTo });
-      res = list.ok ? list : { ok: false, reason: `${res.reason}; as sections: ${sec.reason}; as a list: ${list.reason}` };
+      if (list.ok) res = list;
+      else {
+        // Blocks of commodity rows (GCR, XPS, DGR, COL, CRT, VAL) per destination group.
+        const com = T.readCommodityTable(lines, { fallbackCarrier: fallback, origin: L.originHint(circ.title || circ.fileName) || "", currency: defaultCurrency, ...dates });
+        res = com.ok ? com : { ok: false, reason: `${res.reason}; as sections: ${sec.reason}; as a list: ${list.reason}; as commodity blocks: ${com.reason}` };
+      }
     }
   }
   if (!res.ok) return res;

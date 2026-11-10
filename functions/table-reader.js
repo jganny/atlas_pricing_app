@@ -356,6 +356,158 @@ function readListTable(lines, { fallbackCarrier = "", origin = "", rateClass = "
   return { ok: true, rows: L.normalizeRows(raw, carrier), lines: raw.length, skipped: bad, offlineRows };
 }
 
+/** "Effective 01st Nov '26 - 31st Mar '27" -> { validFrom, validTo }, or empty strings. */
+function effectiveShort(lines) {
+  const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  for (const line of lines.slice(0, 12)) {
+    const m = /effective\s+(\d{1,2})\s*(?:st|nd|rd|th)?\s+([A-Za-z]{3})[a-z]*\.?\s*'?(\d{2,4})\s*(?:-|to|until)\s*(\d{1,2})\s*(?:st|nd|rd|th)?\s+([A-Za-z]{3})[a-z]*\.?\s*'?(\d{2,4})/i.exec(line);
+    if (!m || !MON[m[2].toLowerCase()] || !MON[m[5].toLowerCase()]) continue;
+    const yr = (y) => (String(y).length === 2 ? 2000 + Number(y) : Number(y));
+    const p = (n) => String(n).padStart(2, "0");
+    return { validFrom: `${yr(m[3])}-${p(MON[m[2].toLowerCase()])}-${p(Number(m[1]))}`, validTo: `${yr(m[6])}-${p(MON[m[5].toLowerCase()])}-${p(Number(m[4]))}` };
+  }
+  return { validFrom: "", validTo: "" };
+}
+
+/** "Destination Commodity Min Normal +45 +100 +250" -> columns, or null. */
+function parseCommodityHeader(tokens) {
+  const t = tokens.map((x) => x.toUpperCase());
+  if (t[0] !== "DESTINATION" || t[1] !== "COMMODITY" || !(t[2] === "MIN" || t[2] === "MINIMUM")) return null;
+  const cols = [{ kind: "min" }];
+  for (const w of t.slice(3)) {
+    if (w === "N" || w === "NORMAL" || w === "GENERAL") cols.push({ kind: "rate", kg: 0 });
+    else if (/^\+?\d+$/.test(w)) cols.push({ kind: "rate", kg: Number(w.replace("+", "")) });
+    else return { unsupported: w };
+  }
+  const kgs = cols.filter((c) => c.kind === "rate").map((c) => c.kg);
+  if (!kgs.length || !L.mapThresholds(kgs)) return { unsupported: "weights" };
+  return { cols, kgs };
+}
+
+const COMMODITY = /(GCR|XPS|DGR\s*-\s*PAX|COL\s*\([^)]*\)|CRT\s*\([^)]*\)|VAL)(?![A-Za-z])/;
+const commodityClass = (c) => (/^DGR/.test(c) ? "DGR" : /^COL/.test(c) ? "COL" : /^CRT/.test(c) ? "CRT" : c);
+const isDestFragment = (line) => /^[A-Z]{3}(?:\s*II)?(?:\s*\/\s*[A-Z]{3}(?:\s*II)?)*\/?$/.test(line.trim());
+
+/**
+ * A grouped commodity table: one block per destination (or list of destinations, "MCT/AMM/BAH/..."), a row per commodity
+ * (GCR, XPS, DGR - PAX, COL, CRT, VAL) under "Destination Commodity Min Normal +45 +100 +250". The destinations sit in a tall cell
+ * beside the rows, so in the text they appear on any line of their block. A block starts at its GCR row and ends at VAL, the next
+ * region heading or the next GCR row. "-" means no rate. Declines on any commodity row that does not fit.
+ */
+function readCommodityTable(lines, { fallbackCarrier = "", origin = "", currency = "", validFrom = "", validTo = "" } = {}) {
+  const carrier = String(fallbackCarrier || "").toUpperCase();
+  const from = String(origin || "").toUpperCase();
+  const cur = String(currency || "").toUpperCase();
+  if (!/^[A-Z0-9]{2,3}$/.test(carrier)) return { ok: false, reason: "the airline code is not known" };
+  if (!CODE3.test(from)) return { ok: false, reason: "the origin station is not known" };
+  if (!CODE3.test(cur)) return { ok: false, reason: "the currency is not known" };
+  const dates = validFrom || validTo ? { validFrom, validTo } : effectiveShort(lines);
+  let spec = null;
+  let group = null; // { dests: [], rows: [] }
+  let pending = []; // destinations seen while no block is open
+  const out = [];
+  const problems = [];
+  let blocks = 0;
+  const close = () => {
+    if (group) {
+      if (group.rows.length) {
+        if (!group.dests.length) problems.push("a block of rates has no destination");
+        for (const d of group.dests) for (const r of group.rows) out.push({ carrierCode: carrier, origin: from, destination: d, currency: cur, breaks: r.breaks, validFrom: dates.validFrom, validTo: dates.validTo, rateKind: "unknown", rateClass: r.rateClass });
+        blocks += 1;
+      }
+    }
+    group = null;
+  };
+  const addDests = (frag) => {
+    const codes = frag.replace(/\bII\b/g, " ").split(/[\/\s]+/).filter(Boolean);
+    if (!codes.every((c) => CODE3.test(c))) {
+      problems.push(`a destination cell this reader does not understand ("${frag.slice(0, 40)}")`);
+      return;
+    }
+    (group ? group.dests : pending).push(...codes);
+  };
+  const raw = lines.map((l) => l.trim()).filter(Boolean);
+  for (let i = 0; i < raw.length; i++) {
+    let line = raw[i];
+    if (/^General Information/i.test(line)) break;
+    const tokens = line.split(/\s+/);
+    const h = parseCommodityHeader(tokens);
+    if (h) {
+      if (h.unsupported) return { ok: false, reason: `a table header this reader does not handle (${h.unsupported})` };
+      spec = h;
+      continue;
+    }
+    if (!spec) continue;
+    const m = COMMODITY.exec(line);
+    if (!m) {
+      if (isDestFragment(line)) addDests(line);
+      else if (/^[A-Za-z][A-Za-z ]*$/.test(line) && !/CHECK WITH SALES/i.test(line)) {
+        // a region heading (Middle East, Europe, Africa...) closes the block and forgets any unattached destinations
+        close();
+        pending = [];
+      }
+      continue;
+    }
+    const frag = line.slice(0, m.index).trim();
+    const cls = commodityClass(m[1].replace(/\s+/g, " "));
+    if (cls === "GCR") {
+      close();
+      group = { dests: [...pending], rows: [] };
+      pending = [];
+    }
+    if (frag) {
+      if (isDestFragment(frag)) addDests(frag);
+      else {
+        problems.push(`unexpected text before a commodity ("${frag.slice(0, 40)}")`);
+        continue;
+      }
+    }
+    if (!group) {
+      problems.push(`a ${cls} row with no GCR row above it`);
+      continue;
+    }
+    let rest = line.slice(m.index + m[0].length).trim().split(/\s+/).filter(Boolean);
+    // a wrapped row: the rest of the figures sit on the next line
+    while (rest.length < spec.cols.length && cls !== "VAL" && i + 1 < raw.length && raw[i + 1].split(/\s+/).every((x) => NUM.test(x) || x === "-")) {
+      rest = rest.concat(raw[i + 1].split(/\s+/));
+      i += 1;
+    }
+    if (!rest.every((x) => NUM.test(x) || x === "-")) {
+      problems.push(`a ${cls} row has text where figures belong ("${rest.join(" ").slice(0, 40)}")`);
+      continue;
+    }
+    if (cls === "VAL") {
+      // valuable cargo: a flat minimum and sometimes one rate; no weight breaks
+      if (rest.length < 1 || rest.length > 2) {
+        problems.push(`a VAL row with ${rest.length} figures`);
+        continue;
+      }
+      const minus45 = rest[1] !== undefined && rest[1] !== "-" ? L.toNumber(rest[1]) : null;
+      group.rows.push({ rateClass: "VAL", breaks: { min: rest[0] === "-" ? null : L.toNumber(rest[0]), minus45 } });
+      close();
+      continue;
+    }
+    if (rest.length !== spec.cols.length) {
+      problems.push(`a ${cls} row has ${rest.length} figures, the table has ${spec.cols.length}`);
+      continue;
+    }
+    if (rest.every((x) => x === "-")) continue; // no rate on offer for this commodity
+    const breaks = {};
+    const slots = L.mapThresholds(spec.kgs);
+    let ri = 0;
+    spec.cols.forEach((col, k) => {
+      const n = rest[k] === "-" ? null : L.toNumber(rest[k]);
+      if (col.kind === "min") breaks.min = n;
+      else breaks[slots[ri++]] = n;
+    });
+    group.rows.push({ rateClass: cls, breaks });
+  }
+  close();
+  if (problems.length) return { ok: false, reason: `${problems.length} problem(s), e.g. ${problems[0]}` };
+  if (blocks < 5 || out.length < 20) return { ok: false, reason: "too few table lines were found" };
+  return { ok: true, rows: L.normalizeRows(out, carrier), lines: out.length, skipped: 0, blocks };
+}
+
 const sameBreaks = (a, b) => ["min", "minus45", "plus45", "plus100", "plus250", "plus300", "plus500", "plus1000"].every((k) => {
   const x = a && a[k] != null ? Number(a[k]) : null;
   const y = b && b[k] != null ? Number(b[k]) : null;
@@ -396,4 +548,4 @@ function samplePartIndexes(n) {
   return [...new Set([0, Math.floor((n - 1) / 2), n - 1])];
 }
 
-module.exports = { pdfTextLines, parseListHeader, readListTable, bookedFromDate, parseHeader, parseSectionHeader, sectionClasses, effectiveDates, readSectionTable, classFromCardId, titleClass, readTable, verifySample, samplePartIndexes };
+module.exports = { pdfTextLines, readCommodityTable, effectiveShort, parseListHeader, readListTable, bookedFromDate, parseHeader, parseSectionHeader, sectionClasses, effectiveDates, readSectionTable, classFromCardId, titleClass, readTable, verifySample, samplePartIndexes };
