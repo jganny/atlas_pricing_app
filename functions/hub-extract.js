@@ -11,6 +11,8 @@ const { defineSecret } = require("firebase-functions/params");
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 
+const MODEL = "claude-sonnet-5-5";
+const CHEAP_MODEL = "claude-haiku-5-5";
 const MAX_DOCS = 12;
 const MAX_BASE64_TOTAL = 9 * 1024 * 1024; // callable requests are capped at 10 MB
 const MAX_TEXT_PER_DOC = 60000;
@@ -148,7 +150,7 @@ function cleanDomains(list) {
 }
 
 /** The request body sent to the model. Exported for tests. */
-function buildRequestBody(docs, ctx) {
+function buildRequestBody(docs, ctx, model = "claude-sonnet-5-5") {
   const domains = cleanDomains(ctx?.ownDomains);
   const header = ctx?.headerSender && ctx.headerSender.email
     ? `The email file's own sender header is: ${String(ctx.headerSender.name || "").slice(0, 80)} <${String(ctx.headerSender.email).slice(0, 120)}>. `
@@ -168,8 +170,10 @@ function buildRequestBody(docs, ctx) {
       "Read the documents above together as ONE enquiry and record the quote draft by calling record_shipment.",
   });
   return {
-    model: "claude-sonnet-5-5",
-    max_tokens: 3000,
+    model,
+    // The cheaper model must think first (it fills fields wrongly without), and thinking uses part of the allowance.
+    max_tokens: model === CHEAP_MODEL ? 6000 : 3000,
+    ...(model === CHEAP_MODEL ? { thinking: { type: "adaptive" } } : {}),
     system: SYSTEM_PROMPT,
     tools: [TOOL],
     // This model does not accept a forced tool call; "auto" plus the instruction below makes it call the tool.
@@ -230,6 +234,46 @@ function pickExtraction(payload) {
   return null;
 }
 
+/**
+ * Is the reading complete enough to fill a desk? The cheaper model is trusted only when it is: a known mode, an origin and a
+ * destination, and some cargo (packages, weight, volume or containers) or, for road and storage, their own details.
+ * Anything less is read again by the stronger model, so a cheaper read can never leave a desk emptier than before.
+ */
+function isCompleteEnough(x) {
+  if (!x || typeof x !== "object") return false;
+  const place = (p) => !!(p && (String(p.text || "").trim() || String(p.code || "").trim()));
+  const mode = String(x.mode || "");
+  if (!["air", "sea", "courier", "transport", "warehouse"].includes(mode)) return false;
+  if (mode === "warehouse") return !!(String(x.storageLocation || "").trim() || place(x.destination)) && (Number(x.storageCbm) > 0 || Number(x.volumeCbm) > 0 || Number(x.storageDays) > 0 || (x.packages || []).length > 0);
+  if (!place(x.origin) || !place(x.destination)) return false;
+  if (mode === "transport") return !!(String(x.vehicleType || "").trim() || Number(x.grossWeightKg) > 0 || (x.packages || []).length > 0 || (x.containers || []).length > 0);
+  return (x.packages || []).length > 0 || Number(x.grossWeightKg) > 0 || Number(x.volumeCbm) > 0 || (x.containers || []).length > 0;
+}
+
+let policyCache = { at: 0, cheapFirst: false };
+/** The admin's switch (aiSettings/hubExtract.cheapFirst). Off until it has been tested on real enquiries. */
+async function cheapFirstEnabled() {
+  if (Date.now() - policyCache.at < 5 * 60 * 1000) return policyCache.cheapFirst;
+  let on = false;
+  try {
+    const snap = await require("firebase-admin").firestore().collection("aiSettings").doc("hubExtract").get();
+    on = snap.exists && snap.data().cheapFirst === true;
+  } catch {
+    on = false;
+  }
+  policyCache = { at: Date.now(), cheapFirst: on };
+  return on;
+}
+
+async function callModel(apiKey, docs, ctx, model) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify(buildRequestBody(docs, ctx, model)),
+  });
+  return response;
+}
+
 exports.extractShipmentFromDocuments = functions
   .runWith({ secrets: [anthropicApiKey], timeoutSeconds: 150, memory: "1GB" })
   .https.onCall(async (data, context) => {
@@ -239,15 +283,28 @@ exports.extractShipmentFromDocuments = functions
       throw new functions.https.HttpsError("failed-precondition", "Reading documents is not set up yet. Ask your admin to set ANTHROPIC_API_KEY.");
     }
     const docs = validateDocs(data?.documents);
-    const body = buildRequestBody(docs, { ownDomains: data?.ownDomains, headerSender: data?.headerSender });
+    const ctx = { ownDomains: data?.ownDomains, headerSender: data?.headerSender };
 
     let response;
+    // Cheaper model first when the admin has switched that on; the stronger model reads it again whenever the cheaper read is
+    // missing something a desk needs, or the cheaper model cannot be used.
+    if (await cheapFirstEnabled()) {
+      try {
+        const cheap = await callModel(apiKey, docs, ctx, CHEAP_MODEL);
+        if (cheap.ok) {
+          const cheapPayload = await cheap.json();
+          const cheapRead = pickExtraction(cheapPayload);
+          if (isCompleteEnough(cheapRead)) return { extraction: cheapRead };
+          functions.logger.info("extractShipmentFromDocuments: cheaper read incomplete, reading again with the stronger model");
+        } else {
+          functions.logger.warn("extractShipmentFromDocuments: cheaper model unavailable", { status: cheap.status });
+        }
+      } catch (err) {
+        functions.logger.warn("extractShipmentFromDocuments: cheaper read failed", { message: err.message });
+      }
+    }
     try {
-      response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify(body),
-      });
+      response = await callModel(apiKey, docs, ctx, MODEL);
     } catch (err) {
       functions.logger.warn("extractShipmentFromDocuments: request failed", { message: err.message });
       throw new functions.https.HttpsError("unavailable", "Reading documents is temporarily unavailable. Try again.");
@@ -271,4 +328,4 @@ exports.extractShipmentFromDocuments = functions
     return { extraction };
   });
 
-exports._test = { validateDocs, buildRequestBody, cleanDomains, pickExtraction, toNested, cleanValue, SYSTEM_PROMPT, TOOL };
+exports._test = { isCompleteEnough, CHEAP_MODEL, MODEL, validateDocs, buildRequestBody, cleanDomains, pickExtraction, toNested, cleanValue, SYSTEM_PROMPT, TOOL };

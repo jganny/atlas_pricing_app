@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.150",
+    date: "2026-11-10",
+    items: [
+      "Admin > AI credit and cost: a switch to read enquiry emails with a cheaper AI model first. If the cheaper read misses the mode, the lane or the cargo, the stronger model reads the email again, so a desk is never left emptier than before. Off until you have tried it on a few real enquiries.",
+    ],
+  },
+  {
     version: "0.3.149",
     date: "2026-11-10",
     items: [
