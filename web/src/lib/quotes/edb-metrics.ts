@@ -120,3 +120,26 @@ export function formatDateCell(row: EnquiryRecord): string {
   if (!t) return "—";
   return new Date(t).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
+
+/**
+ * Total tonnage of the quotes in view, in tonnes, for the summary strip. Each quote's own billing weight is used:
+ * kilograms (and gross kilograms) are divided by 1,000; a sea revenue tonne (RT) already is a tonne. Quotes with no weight add nothing.
+ */
+export function totalTonnage(rows: EnquiryRecord[]): { tonnes: number; counted: number } {
+  let tonnes = 0;
+  let counted = 0;
+  for (const r of rows) {
+    const w = r.billingWeight;
+    if (w == null || !Number.isFinite(w) || w <= 0) continue;
+    tonnes += r.billingUnit === "rt" ? w : w / 1000;
+    counted += 1;
+  }
+  return { tonnes, counted };
+}
+
+/** "12.4 t", "850 kg" for under a tonne, or "—" when nothing in view has a weight. */
+export function formatTonnage(tonnes: number): string {
+  if (!(tonnes > 0)) return "—";
+  if (tonnes < 1) return `${Math.round(tonnes * 1000).toLocaleString("en-IN")} kg`;
+  return `${tonnes.toLocaleString("en-IN", { maximumFractionDigits: tonnes < 100 ? 2 : 1 })} t`;
+}

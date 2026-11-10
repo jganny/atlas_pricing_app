@@ -40,8 +40,10 @@ import {
 } from "@/lib/quotes/edb-reports";
 import {
   DEFAULT_EDB_METRIC_MODES,
+  formatTonnage,
   gpNumeric,
   parseRowDate,
+  totalTonnage,
   type EdbMetricModes,
 } from "@/lib/quotes/edb-metrics";
 import {
@@ -444,7 +446,7 @@ function EnquiryDatabaseInner() {
     const open = filtered.filter((e) => e.status === "open" || e.status === "quoted").length;
     const overdue = filtered.filter((e) => e.slaHoursOpen > 8).length;
     const fin = summarizeEnquiryFinancials(filtered);
-    return { open, overdue, total: filtered.length, ...fin };
+    return { open, overdue, total: filtered.length, ...fin, ...totalTonnage(filtered) };
   }, [filtered]);
 
   useEffect(() => {
@@ -641,7 +643,7 @@ function EnquiryDatabaseInner() {
       </div>
 
       <div
-        className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm sm:grid-cols-5"
+        className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm sm:grid-cols-6"
         data-testid="edb-kpi-strip"
       >
         <div>
@@ -664,6 +666,12 @@ function EnquiryDatabaseInner() {
           <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">GP (INR)</div>
           <div className="text-sm font-extrabold tabular-nums text-emerald-700">
             {formatCurrency(stats.gp, "INR")}
+          </div>
+        </div>
+        <div title="Total billing weight of the quotes in view. Kilograms are shown in tonnes; a sea revenue tonne (RT) counts as one tonne.">
+          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Tonnage</div>
+          <div className="text-sm font-extrabold tabular-nums text-sky-700" data-testid="edb-tonnage">
+            {formatTonnage(stats.tonnes)}
           </div>
         </div>
       </div>

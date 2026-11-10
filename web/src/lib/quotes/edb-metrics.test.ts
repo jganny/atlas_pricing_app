@@ -5,8 +5,10 @@ import {
   formatDateCell,
   formatGpCell,
   formatSellCell,
+  formatTonnage,
   formatTonnageCell,
   parseRowDate,
+  totalTonnage,
 } from "./edb-metrics";
 
 function row(partial: Partial<EnquiryRecord>): EnquiryRecord {
@@ -69,6 +71,20 @@ function row(partial: Partial<EnquiryRecord>): EnquiryRecord {
   assert.ok(parseRowDate("1758844800000") > 0, "epoch-ms fallback string must parse too");
   assert.equal(formatDateCell(row({ createdAt: "" })), "—");
   assert.match(formatDateCell(row({ createdAt: "2026-09-26" })), /2026/);
+}
+
+// --- the summary strip's total tonnage ---
+{
+  const air = (kg: number) => row({ billingWeight: kg, billingUnit: "kg" });
+  assert.deepEqual(totalTonnage([air(1200), air(800)]), { tonnes: 2, counted: 2 }, "kilograms are divided by 1,000");
+  assert.deepEqual(totalTonnage([row({ billingWeight: 12.5, billingUnit: "rt" })]), { tonnes: 12.5, counted: 1 }, "a sea revenue tonne already is a tonne");
+  assert.deepEqual(totalTonnage([row({ billingWeight: 3000, billingUnit: "gw" })]), { tonnes: 3, counted: 1 }, "gross kilograms too");
+  assert.deepEqual(totalTonnage([air(500), row({ billingWeight: undefined }), row({ billingWeight: 0, billingUnit: "kg" }), row({ billingWeight: Number.NaN, billingUnit: "kg" })]), { tonnes: 0.5, counted: 1 }, "quotes with no weight add nothing");
+  assert.deepEqual(totalTonnage([]), { tonnes: 0, counted: 0 });
+  assert.equal(formatTonnage(0), "—");
+  assert.equal(formatTonnage(0.85), "850 kg");
+  assert.equal(formatTonnage(12.456), "12.46 t");
+  assert.equal(formatTonnage(1234.56), "1,234.6 t");
 }
 
 console.log("edb-metrics tests passed");

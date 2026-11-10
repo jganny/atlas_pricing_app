@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.151",
+    date: "2026-11-10",
+    items: [
+      "Enquiry DB: the summary strip at the top now also shows the total Tonnage of the quotes in view, next to SELL and GP. Kilograms are shown in tonnes, and a sea revenue tonne counts as one tonne. It follows your filters.",
+    ],
+  },
+  {
     version: "0.3.150",
     date: "2026-11-10",
     items: [
