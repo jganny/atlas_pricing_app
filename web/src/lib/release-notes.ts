@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.149",
+    date: "2026-11-10",
+    items: [
+      "Shipment confirmations: an email that confirms a shipment and names the shipper and consignee (in the text, or in an attached invoice and packing list) is recorded in NRS and the NRS desk is notified. The email is not kept in the Inbox. The documents are read by the AI only when the text does not name both parties.",
+      "Automatic replies (Admin > Automatic replies, both off until you turn them on): every real enquiry is acknowledged by its desk, and every confirmation is acknowledged to the agent with the right branch team copied (Indian end of the shipment) and the documents received attached. Once per email thread, never to machines, mailing lists or your own people, with a daily ceiling, a test mode that sends everything to one address, a test button and a log of what was sent.",
+    ],
+  },
+  {
     version: "0.3.148",
     date: "2026-11-10",
     items: [

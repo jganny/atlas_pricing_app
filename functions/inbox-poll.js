@@ -21,6 +21,9 @@ const { ImapFlow } = require("imapflow");
 const P = require("./inbox-poll-logic");
 const F = require("./inbox-filter");
 const C = require("./inbox-circular");
+const R = require("./inbox-reply");
+const K = require("./inbox-confirm");
+const nodemailer = require("nodemailer");
 const { simpleParser } = require("mailparser");
 
 const MAX_AI_PER_RUN = 20; // a safety ceiling: the free rules already keep the AI to the unclear few
@@ -402,6 +405,228 @@ async function fileCircular(client, db, msg, mailbox, circ, meta) {
   return filed;
 }
 
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Automatic acknowledgements and shipment confirmations
+// ---------------------------------------------------------------------------------------------------------------------
+
+const SMTP = { host: "czipop.logix.in", port: 465, secure: true };
+const DEFAULT_AUTO = { ackEnquiry: false, ackConfirmation: false, testRedirect: "", dailyCap: 150, branchTeams: [], nrsDesk: "NRS Desk" };
+const ISTDAY = () => new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+const sha = (x) => crypto.createHash("sha1").update(String(x)).digest("hex").slice(0, 24);
+
+/** The admin's switches. Everything is OFF until the admin turns it on (Admin > Automatic replies). */
+async function loadAutoSettings(db) {
+  try {
+    const snap = await db.collection("inboxAutoReply").doc("settings").get();
+    const v = snap.exists ? snap.data() : {};
+    return {
+      ackEnquiry: v.ackEnquiry === true,
+      ackConfirmation: v.ackConfirmation === true,
+      testRedirect: R.isAddress(v.testRedirect) ? String(v.testRedirect).trim() : "",
+      dailyCap: Number.isFinite(Number(v.dailyCap)) && Number(v.dailyCap) > 0 ? Math.min(Number(v.dailyCap), 500) : DEFAULT_AUTO.dailyCap,
+      branchTeams: Array.isArray(v.branchTeams) ? v.branchTeams : [],
+      nrsDesk: String(v.nrsDesk || DEFAULT_AUTO.nrsDesk).slice(0, 40),
+    };
+  } catch {
+    return { ...DEFAULT_AUTO };
+  }
+}
+
+/**
+ * Sends one automatic reply, once. Guards: one reply per thread and kind; a daily ceiling; a test address that takes every
+ * message instead of the real recipients while the admin is testing. Never throws: a failure is logged and the mail is simply
+ * not answered. Returns "sent" | "skipped" | "failed".
+ */
+async function sendAuto(ctx, o) {
+  const { db, mailbox, password, settings } = ctx;
+  try {
+    const dedupeId = sha(`${mailbox.key}|${o.kind}|${o.threadKey}`);
+    const seen = await db.collection("inbox_acks").doc(dedupeId).get();
+    if (seen.exists) return "skipped";
+    const capRef = db.collection("inbox_ack_caps").doc(ISTDAY());
+    const used = ((await capRef.get()).data() || {}).count || 0;
+    if (used >= settings.dailyCap) {
+      functions.logger.warn("automatic reply ceiling reached", { cap: settings.dailyCap });
+      return "skipped";
+    }
+    await db.collection("inbox_acks").doc(dedupeId).set({ kind: o.kind, mailbox: mailbox.key, at: Date.now() }); // before sending, so a failure never repeats
+    await capRef.set({ count: used + 1, day: ISTDAY() }, { merge: true });
+
+    const redirected = !!settings.testRedirect;
+    const to = redirected ? settings.testRedirect : o.to;
+    const cc = redirected ? [] : (o.cc || []);
+    const subject = redirected ? `[TEST - would go to ${o.to}${o.cc && o.cc.length ? ` cc ${o.cc.join(", ")}` : ""}] ${o.subject}` : o.subject;
+    const transport = ctx.transport || (ctx.transport = nodemailer.createTransport({ host: SMTP.host, port: SMTP.port, secure: SMTP.secure, auth: { user: mailbox.user, pass: String(password).trim() } }));
+    let status = "sent";
+    let error = "";
+    try {
+      await transport.sendMail({
+        from: `"${o.desk} - Atlas Logistics" <${mailbox.user}>`,
+        to,
+        ...(cc.length ? { cc } : {}),
+        replyTo: mailbox.user,
+        subject,
+        text: o.text,
+        inReplyTo: o.inReplyTo || undefined,
+        references: o.references || undefined,
+        attachments: (o.attachments || []).map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType })),
+        headers: { "Auto-Submitted": "auto-replied", "X-Auto-Response-Suppress": "All" },
+      });
+    } catch (err) {
+      status = "failed";
+      error = String((err && err.message) || err).slice(0, 200);
+      functions.logger.warn("automatic reply failed", { mailbox: mailbox.key, kind: o.kind, message: error });
+    }
+    await db.collection("inbox_ack_log").add({ at: Date.now(), mailbox: mailbox.key, kind: o.kind, to, wouldGoTo: o.to, cc, subject: String(subject).slice(0, 160), attachments: (o.attachments || []).length, status, error, test: redirected });
+    return status;
+  } catch (err) {
+    functions.logger.warn("automatic reply skipped", { message: err instanceof Error ? err.message : String(err) });
+    return "failed";
+  }
+}
+
+/** One AI call to read a confirmation (a small model; counted in AI usage as Mailbox reading). Returns the reply text or "". */
+async function askConfirmAi(apiKey, content) {
+  if (!apiKey) return "";
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({ model: "claude-haiku-5-5", max_tokens: 2500, thinking: { type: "adaptive" }, system: K.SYSTEM, messages: [{ role: "user", content }] }),
+      });
+      if (res.ok) {
+        const j = await res.json();
+        return (j.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+      }
+      if (![429, 500, 502, 503, 529].includes(res.status)) return "";
+    } catch {
+      /* try once more */
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return "";
+}
+
+const MAX_REPLY_ATTACH_BYTES = 15 * 1024 * 1024;
+
+/**
+ * A shipment confirmation: read the parties, record the shipment in NRS, tell the NRS desk, and (when the admin has turned it
+ * on) answer the sender with the right branch team copied and the documents attached. The mail is not kept in the Inbox.
+ * Returns true when it was handled (so the Inbox skips it).
+ */
+async function handleConfirmation(ctx, msg, parsedMail, meta) {
+  const { db, client, mailbox, settings, apiKey } = ctx;
+  let full = parsedMail;
+  let fullLoaded = false;
+  const loadFull = async () => {
+    if (fullLoaded) return full;
+    fullLoaded = true;
+    try {
+      const one = await client.fetchOne(String(msg.uid), { source: { maxLength: MAX_CIRCULAR_BYTES }, uid: true }, { uid: true });
+      if (one && one.source) full = await simpleParser(one.source);
+    } catch (err) {
+      functions.logger.warn("confirmation mail could not be fetched in full", { message: err instanceof Error ? err.message : String(err) });
+    }
+    return full;
+  };
+
+  // 1) Read the parties from the text; the invoice and packing list only when the text does not name both.
+  let shipment = K.parseConfirmation(await askConfirmAi(apiKey, [{ type: "text", text: `Subject: ${meta.subject}\nFrom: ${meta.fromName} <${meta.fromAddr}>\n\n${meta.bodyWork.slice(0, 6000)}` }]));
+  let readDocuments = false;
+  if (!K.partiesNamed(shipment)) {
+    const docs = K.shipmentDocuments(meta.attachments);
+    if (docs.length) {
+      const f = await loadFull();
+      const blocks = [];
+      let bytes = 0;
+      for (const a of (f && f.attachments) || []) {
+        if (!K.shipmentDocuments([{ filename: a.filename, contentType: a.contentType, size: a.size }]).length) continue;
+        if (!/pdf/i.test(a.contentType || "") && !/\.pdf$/i.test(a.filename || "")) continue; // images and sheets are left to a person
+        if (bytes + a.size > 12 * 1024 * 1024 || blocks.length >= 3) break;
+        bytes += a.size;
+        blocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: a.content.toString("base64") } });
+      }
+      if (blocks.length) {
+        const again = K.parseConfirmation(await askConfirmAi(apiKey, [...blocks, { type: "text", text: `The confirmation email (subject: ${meta.subject}):\n${meta.bodyWork.slice(0, 3000)}\n\nRead the parties and the shipment from the documents and the email.` }]));
+        if (again) shipment = again;
+        readDocuments = true;
+      }
+    }
+  }
+  const s = shipment || K.parseConfirmation("{}");
+
+  // 2) NRS: the booking, and a notice for the NRS desk.
+  const id = `email_${sha(`${mailbox.key}|${meta.messageId}`)}`;
+  const today = ISTDAY();
+  const named = K.partiesNamed(s);
+  await db.collection("nrs_registry").doc(id).set(
+    {
+      id,
+      refId: s.reference || "",
+      mode: s.mode,
+      agent: s.agent.name || s.agent.company || meta.fromName || meta.fromAddr,
+      pol: s.pol,
+      pod: s.pod,
+      shipperName: s.shipper.name,
+      shipperPhone: s.shipper.phone,
+      shipperEmail: s.shipper.email,
+      shipperAddress: s.shipper.address,
+      consigneeName: s.consignee.name,
+      consigneePhone: s.consignee.phone,
+      consigneeEmail: s.consignee.email,
+      consigneeAddress: s.consignee.address,
+      commodity: s.commodity,
+      dateWon: today,
+      creator: "email",
+      pendingShipperDetails: !named,
+      source: "email",
+      fromEmail: meta.fromAddr,
+      subject: String(meta.subject || "").slice(0, 200),
+      followUps: [{ date: today, time: new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(11, 16), status: "Booking Confirmed by Shipper", note: `Confirmation received by email from ${meta.fromName || meta.fromAddr}.`, by: "email" }],
+    },
+    { merge: true },
+  );
+  const route = [s.pol, s.pod].filter(Boolean).join(" -> ");
+  await db.collection("nrs_alerts").doc(id).set({
+    id,
+    date: today,
+    message: `Shipment confirmed by email from ${meta.fromName || meta.fromAddr}${s.shipper.name || s.consignee.name ? `: ${s.shipper.name || "shipper not stated"} to ${s.consignee.name || "consignee not stated"}` : ""}${route ? ` (${route})` : ""}. Added to NRS${named ? "" : "; shipper or consignee details still needed"}.`,
+    quoteRef: s.reference || "",
+    dismissed: false,
+  });
+
+  // 3) The acknowledgement, with the branch team copied and the documents attached.
+  let reply = "off";
+  if (settings.ackConfirmation) {
+    const ok = R.canAutoReply({ fromAddr: meta.fromAddr, headers: parsedMail ? parsedMail.headers : null, subject: meta.subject });
+    if (!ok.ok) reply = `not sent: ${ok.reason}`;
+    else {
+      const team = R.branchFor(settings.branchTeams, { direction: s.direction, pol: s.pol, pod: s.pod });
+      const cc = team ? R.splitEmails((team.emails || []).join(",")).filter((e) => e.toLowerCase() !== meta.fromAddr.toLowerCase()) : [];
+      let attachments = [];
+      if (meta.attachments.length) {
+        const f = await loadFull();
+        let total = 0;
+        attachments = ((f && f.attachments) || [])
+          .filter((a) => !a.related && a.filename)
+          .filter((a) => {
+            total += a.size || 0;
+            return total <= MAX_REPLY_ATTACH_BYTES;
+          })
+          .map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType }));
+      }
+      const ack = R.confirmationAck({ fromName: meta.fromName, fromAddr: meta.fromAddr, subject: meta.subject, desk: settings.nrsDesk, branch: team ? team.branch : "", hasTeam: cc.length > 0, attached: attachments.length > 0, shipper: s.shipper.name, consignee: s.consignee.name, route: route.replace("->", "to") });
+      reply = await sendAuto(ctx, { kind: "confirmation", threadKey: R.threadRoot(parsedMail || { messageId: meta.messageId }), to: meta.fromAddr, cc, desk: settings.nrsDesk, subject: ack.subject, text: ack.text, inReplyTo: meta.messageId, references: [...(parsedMail && Array.isArray(parsedMail.references) ? parsedMail.references : []), meta.messageId].filter(Boolean), attachments });
+      if (!team) {
+        await db.collection("nrs_alerts").doc(`${id}_team`).set({ id: `${id}_team`, date: today, message: `No branch team is set up for ${s.pod || s.pol || "this shipment"}: the acknowledgement went without a branch team copied. Add the branch in Admin > Automatic replies.`, quoteRef: s.reference || "", dismissed: false });
+      }
+    }
+  }
+  return { handled: true, reply, readDocuments, named };
+}
+
 async function pollOne(mailbox, password, apiKey) {
   if (!password) {
     functions.logger.warn("IMAP password secret empty — skip", { mailbox: mailbox.key });
@@ -418,6 +643,8 @@ async function pollOne(mailbox, password, apiKey) {
   });
 
   const db = admin.firestore();
+  const autoSettings = await loadAutoSettings(db);
+  const autoCtx = { db, client, mailbox, password, settings: autoSettings, apiKey };
   let imported = 0;
   let skippedNoise = 0;
   let failedMessages = 0;
@@ -426,6 +653,8 @@ async function pollOne(mailbox, password, apiKey) {
   let aiNoise = 0;
   let aiUsed = 0;
   let circularsFiled = 0;
+  let confirmationsHandled = 0;
+  let acksSent = 0;
   const senderCache = new Map();
 
   await client.connect();
@@ -497,6 +726,24 @@ async function pollOne(mailbox, password, apiKey) {
             if (filed > 0) continue; // filed: nothing is kept in the Inbox
             // nothing could be filed (a duplicate or no usable file): it still is not an enquiry
             continue;
+          }
+        }
+
+        // 0b) A shipment confirmation (with the parties or the shipping documents) goes to NRS and is acknowledged.
+        if (!F.headerFlags(parsedMail ? parsedMail.headers : null).auto) {
+          const asked = F.ASK.test(`${subject}\n${bodyWork}`) || F.ASK_SHORT.test(`${subject}\n${bodyWork}`);
+          const conf = K.detectConfirmation({ subject, body: bodyWork, attachments, askedForQuote: asked });
+          if (conf.isConfirmation) {
+            try {
+              const done = await handleConfirmation(autoCtx, msg, parsedMail, { subject, bodyWork, attachments, fromAddr, fromName, messageId });
+              if (done && done.handled) {
+                confirmationsHandled += 1;
+                continue;
+              }
+            } catch (err) {
+              // Never lose a confirmation: if NRS could not be updated, it falls through and is kept in the Inbox for a person.
+              functions.logger.error("confirmation could not be processed", { mailbox: mailbox.key, message: err instanceof Error ? err.message : String(err) });
+            }
           }
         }
 
@@ -578,6 +825,17 @@ async function pollOne(mailbox, password, apiKey) {
           parsed: JSON.parse(JSON.stringify(classified.parsed)),
         });
         imported += 1;
+        // An acknowledgement goes to a real enquiry (not to a follow-up or an unclear one), once per thread, when the admin has turned it on.
+        if (autoSettings.ackEnquiry && classified.tag === "new_enquiry") {
+          const ok = R.canAutoReply({ fromAddr, headers: parsedMail ? parsedMail.headers : null, subject });
+          if (ok.ok) {
+            const desk = R.deskLabel(mailbox.key, classified.mode);
+            const ack = R.enquiryAck({ fromName, fromAddr, subject, desk });
+            const refs = parsedMail && Array.isArray(parsedMail.references) ? parsedMail.references : [];
+            const r = await sendAuto(autoCtx, { kind: "enquiry", threadKey: R.threadRoot(parsedMail || { messageId }), to: fromAddr, cc: [], desk, subject: ack.subject, text: ack.text, inReplyTo: messageId, references: [...refs, messageId] });
+            if (r === "sent") acksSent += 1;
+          }
+        }
         } catch (err) {
           // One bad message must not stop the rest, or hold the cursor back for ever.
           failedMessages += 1;
@@ -586,10 +844,10 @@ async function pollOne(mailbox, password, apiKey) {
       }
       await stateRef.set({ lastUid: P.nextCursor(state.lastUid, uids, tip, firstRun), at: Date.now() }, { merge: true });
       // A running count per day, so the admin can see how many mails were sorted out for free and how many needed the AI.
-      if (scanned || circularsFiled) {
+      if (scanned || circularsFiled || confirmationsHandled) {
         const day = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
         const inc = admin.firestore.FieldValue.increment;
-        await db.collection("inbox_stats").doc(`${day}_${mailbox.key}`).set({ day, mailbox: mailbox.key, scanned: inc(scanned), ruleNoise: inc(ruleNoise), aiAsked: inc(aiUsed), aiNoise: inc(aiNoise), kept: inc(imported), circulars: inc(circularsFiled), updatedAt: Date.now() }, { merge: true });
+        await db.collection("inbox_stats").doc(`${day}_${mailbox.key}`).set({ day, mailbox: mailbox.key, scanned: inc(scanned), ruleNoise: inc(ruleNoise), aiAsked: inc(aiUsed), aiNoise: inc(aiNoise), kept: inc(imported), circulars: inc(circularsFiled), confirmations: inc(confirmationsHandled), acks: inc(acksSent), updatedAt: Date.now() }, { merge: true });
       }
     } finally {
       lock.release();
@@ -602,7 +860,7 @@ async function pollOne(mailbox, password, apiKey) {
     }
   }
 
-  return { mailbox: mailbox.key, imported, skippedNoise, failedMessages, circularsFiled };
+  return { mailbox: mailbox.key, imported, skippedNoise, failedMessages, circularsFiled, confirmationsHandled, acksSent };
 }
 
 exports.pollPricingInboxes = functions
@@ -748,4 +1006,37 @@ exports.inboxCleanup = functions
     done.jobs = oldJobs.length;
     done.stats = await deleteOld(db, "inbox_stats", "updatedAt", 90 * DAY, null, "daily counters");
     return done;
+  });
+
+/**
+ * Admin only: sends a sample enquiry acknowledgement and a sample confirmation acknowledgement (with a pretend branch team
+ * copied and a small attachment) to ONE address the admin types, from the chosen mailbox, to prove sending works before the
+ * switches are turned on. Nothing goes to anyone else.
+ */
+exports.autoReplyTest = functions
+  .runWith({ secrets: [pricingPassword, salesPassword], timeoutSeconds: 60, memory: "256MB" })
+  .https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token.chatOnly === true || String(context.auth.token.email || "").toLowerCase() !== "ganny@atlaspricing.com") {
+      throw new functions.https.HttpsError("permission-denied", "Only the admin can do this.");
+    }
+    const to = String((data && data.to) || "").trim();
+    if (!R.isAddress(to)) throw new functions.https.HttpsError("invalid-argument", "Type an email address to send the test to.");
+    const box = MAILBOXES.find((b) => b.key === String((data && data.mailbox) || "pricing")) || MAILBOXES[0];
+    const transport = nodemailer.createTransport({ host: SMTP.host, port: SMTP.port, secure: SMTP.secure, auth: { user: box.user, pass: String(box.secret.value() || "").trim() } });
+    try {
+      await transport.verify();
+    } catch (err) {
+      throw new functions.https.HttpsError("unavailable", `The mail server did not accept the login: ${String((err && err.message) || err).slice(0, 160)}`);
+    }
+    const desk = R.deskLabel(box.key, "air");
+    const a = R.enquiryAck({ fromName: "Sample Customer", fromAddr: "sample@customer.com", subject: "Rates BLR to FRA, 3 cartons 180 kg", desk });
+    const c = R.confirmationAck({ fromName: "Sample Agent", fromAddr: "agent@example.com", subject: "Booking confirmed FRA to BLR", desk: "NRS Desk", branch: "Bangalore", hasTeam: true, attached: true, shipper: "ABC GmbH", consignee: "XYZ India Pvt Ltd", route: "FRA to BLR" });
+    try {
+      for (const m of [{ ...a, cc: [], att: [] }, { ...c, cc: [], att: [{ filename: "sample-packing-list.txt", content: Buffer.from("Sample attachment: the documents received with a confirmation are attached like this.") }] }]) {
+        await transport.sendMail({ from: `"${desk} - Atlas Logistics" <${box.user}>`, to, subject: `[TEST] ${m.subject}`, text: `${m.text}\n\n(This is a test message. Nothing was sent to anyone else.)`, attachments: m.att, headers: { "Auto-Submitted": "auto-replied" } });
+      }
+    } catch (err) {
+      throw new functions.https.HttpsError("unavailable", `The mail server refused the test: ${String((err && err.message) || err).slice(0, 160)}`);
+    }
+    return { ok: true, sent: 2, from: box.user };
   });

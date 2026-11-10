@@ -208,6 +208,9 @@ service cloud.firestore {
     match /resetRequests/{userId} { allow read, write: if isSignedIn(); }
     match /leads/{leadId} { allow read, write: if isSignedIn(); }
     match /activities/{activityId} { allow read, write: if isSignedIn(); }
+    // Automatic acknowledgements: the admin's switches and branch teams, and the log of what was sent. Admin only.
+    match /inboxAutoReply/{docId} { allow read, write: if isAdmin(); }
+    match /inbox_ack_log/{logId} { allow read: if isAdmin(); }
     // Visit report: the option lists the admin edits, and what people typed under "something else" (counted, offered back to the admin).
     match /salesVisitConfig/{docId} { allow read: if isSignedIn(); allow write: if isAdmin() || isSalesAdmin(); }
     match /salesVisitSuggestions/{id} {
