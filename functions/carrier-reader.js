@@ -118,6 +118,7 @@ async function askOnce(apiKey, system, content, userText, model = MODEL) {
       }
       throw new HttpsError("resource-exhausted", msg);
     }
+    if (/usage limits?/i.test(body)) throw new HttpsError("resource-exhausted", "The AI account has reached its usage limit. Raise the limit in the Anthropic Console (Settings, Limits).");
     if (/credit balance is too low/i.test(body)) throw new HttpsError("failed-precondition", "The AI account has run out of credit. Top it up in the Anthropic console (Plans & Billing), then try again.");
     throw new HttpsError("unavailable", "The AI service did not answer. Try again in a minute.");
   }

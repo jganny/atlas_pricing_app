@@ -11,6 +11,7 @@ const { defineSecret } = require("firebase-functions/params");
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 
+const AI_LIMIT_MESSAGE = "The AI account has reached its usage limit or has no credit left, so documents cannot be read right now. Ask the admin to raise the limit or add credit in the Anthropic Console (Settings, Limits). Until then, fill the desk by hand.";
 const MODEL = "claude-sonnet-5-5";
 const CHEAP_MODEL = "claude-haiku-5-5";
 const MAX_DOCS = 12;
@@ -317,6 +318,10 @@ exports.extractShipmentFromDocuments = functions
         /* ignore */
       }
       functions.logger.warn("extractShipmentFromDocuments: API error", { status: response.status, detail });
+      // Say what is wrong when it is the AI account (a spending limit or no credit), so the admin knows what to fix.
+      if (/usage limits?|credit balance|budget_exceeded/i.test(detail)) {
+        throw new functions.https.HttpsError("resource-exhausted", AI_LIMIT_MESSAGE);
+      }
       throw new functions.https.HttpsError("unavailable", "Reading documents is temporarily unavailable. Try again.");
     }
     const payload = await response.json();
@@ -328,4 +333,4 @@ exports.extractShipmentFromDocuments = functions
     return { extraction };
   });
 
-exports._test = { isCompleteEnough, CHEAP_MODEL, MODEL, validateDocs, buildRequestBody, cleanDomains, pickExtraction, toNested, cleanValue, SYSTEM_PROMPT, TOOL };
+exports._test = { AI_LIMIT_MESSAGE, isCompleteEnough, CHEAP_MODEL, MODEL, validateDocs, buildRequestBody, cleanDomains, pickExtraction, toNested, cleanValue, SYSTEM_PROMPT, TOOL };

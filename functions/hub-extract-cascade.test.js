@@ -77,6 +77,24 @@ const run = () => hub.extractShipmentFromDocuments.run({ documents: [{ name: "ma
   r = await runFresh();
   assert.equal(r.extraction.summary, "full");
   void hub2;
+
+  // --- a usage limit or no credit at Anthropic: the user is told what to do, not "try again" ---
+  cheapFirst = false;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "You have reached your specified API usage limits. You will regain access on 2026-12-01 at 00:00 UTC." } }), { status: 400 });
+  delete require.cache[require.resolve("./hub-extract")];
+  const limited = require("./hub-extract");
+  await assert.rejects(
+    limited.extractShipmentFromDocuments.run({ documents: [{ name: "mail", kind: "text", text: "Please quote" }], ownDomains: [] }, { auth: { uid: "u", token: {} } }),
+    (e) => e.code === "resource-exhausted" && /Anthropic Console/.test(e.message) && /fill the desk by hand/.test(e.message),
+  );
+  globalThis.fetch = async () => new Response("overloaded", { status: 529 });
+  await assert.rejects(
+    limited.extractShipmentFromDocuments.run({ documents: [{ name: "mail", kind: "text", text: "Please quote" }], ownDomains: [] }, { auth: { uid: "u", token: {} } }),
+    (e) => e.code === "unavailable" && /temporarily unavailable/.test(e.message),
+    "an ordinary outage still says try again",
+  );
+  globalThis.fetch = realFetch;
   console.log("hub extract cascade ok");
 })().catch((e) => {
   console.error(e);
