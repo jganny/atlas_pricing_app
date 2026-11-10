@@ -70,7 +70,7 @@ function changesAgainst(row, old) {
  *  hold:  { row, reasons[] } rows to keep OUT, with plain-words reasons, so the admin can be alerted
  *  unchanged: rows identical to what is on file (nothing to do)
  */
-function decide(readA, readB, onFile = []) {
+function decide(readA, readB, onFile = [], opts = {}) {
   const byKeyB = new Map(readB.map((r) => [rowKey(r), r]));
   const stored = new Map(onFile.map((r) => [rowKey(r), r]));
   const apply = [];
@@ -94,7 +94,8 @@ function decide(readA, readB, onFile = []) {
     reasons.push(...rowProblems(a));
     const old = stored.get(key);
     const { changes, biggest } = changesAgainst(a, old);
-    if (old && biggest > MAX_JUMP) {
+    // An admin who has seen the jump (a revised tariff) can accept it; every other check still applies.
+    if (old && biggest > MAX_JUMP && opts.acceptJumps !== true) {
       reasons.push(`A rate moved by ${Math.round(biggest * 100)}% against the rates on file, which is more than normal.`);
     }
     if (reasons.length) {

@@ -206,7 +206,7 @@ async function tryTableRead({ circ, buffer, fallback, userText, sysA, apiKey, de
 
 /** { circularId, dryRun? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
 /** { circularId, dryRun?, secondRead?, auto? } -> what was applied, held and unchanged. dryRun reads and checks but writes nothing. */
-async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency: askedCurrency, fullAi, trustTable }, apiKey) {
+async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, defaultCurrency: askedCurrency, fullAi, trustTable, acceptJumps }, apiKey) {
   const defaultCurrency = L.currencyOrDefault(askedCurrency); // a circular that prints no currency is in INR
   const db = admin.firestore();
   const snap = await db.collection("circularsLibrary").doc(circularId).get();
@@ -278,7 +278,7 @@ async function runCarrierRead({ circularId, dryRun, secondRead, auto, quiet, def
     const stored = await db.collection("carrierTariffs").where("carrierCode", "in", carriers).get();
     stored.forEach((d) => onFile.push(d.data()));
   }
-  const decided = decide(readA, readB, onFile);
+  const decided = decide(readA, readB, onFile, { acceptJumps: acceptJumps === true });
   const result = problems.length ? { ...decided, hold: [{ row: {}, reasons: problems }, ...decided.hold] } : decided;
 
   const now = Date.now();
@@ -341,7 +341,7 @@ exports.readCarrierCircular = onCall({ invoker: "public", secrets: [anthropicApi
   requireAdmin(request);
   const apiKey = anthropicApiKey.value();
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
-  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true, trustTable: request.data?.trustTable === true }, apiKey);
+  return runCarrierRead({ circularId: String(request.data?.circularId || ""), dryRun: request.data?.dryRun === true, secondRead: request.data?.secondRead, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true, trustTable: request.data?.trustTable === true, acceptJumps: request.data?.acceptJumps === true }, apiKey);
 });
 
 /** Admin only: switch auto-read on or off and set the monthly limit in dollars. */
@@ -487,7 +487,7 @@ exports.readLibraryCircular = onCall({ invoker: "public", secrets: [anthropicApi
   if (!apiKey) throw new HttpsError("failed-precondition", "The AI key is not set up.");
   try {
     if (rates) {
-      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true, trustTable: request.data?.trustTable === true }, apiKey);
+      const res = await runCarrierRead({ circularId, dryRun: false, auto: false, quiet: true, defaultCurrency: request.data?.defaultCurrency, fullAi: request.data?.fullAi === true, trustTable: request.data?.trustTable === true, acceptJumps: request.data?.acceptJumps === true }, apiKey);
       return { circularId, kind: "rates", applied: res.applied, held: res.held, unchanged: res.unchanged };
     }
     const d = await runCircularDigest({ circularId, circ: { ...circ, uploadedBy: "" } }, apiKey);

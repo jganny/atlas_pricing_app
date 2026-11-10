@@ -63,4 +63,17 @@ assert.equal(T.rowKey(row({ rateClass: "dgr" })), "EK|BOM|DXB|INR|DGR", "a speci
 r = T.decide([row(), row({ rateClass: "DGR" })], [row(), row({ rateClass: "DGR" })], []);
 assert.equal(r.apply.length, 2);
 
+// --- an admin who has seen a big jump (a revised tariff) can accept it; nothing else is relaxed ---
+{
+  const old = row({ breaks: { min: 100, minus45: 10, plus45: 9, plus100: 8, plus300: 7, plus500: 6, plus1000: null } });
+  const jumped = row({ breaks: { min: 100, minus45: 16, plus45: 14, plus100: 12, plus300: 10, plus500: 9, plus1000: null } });
+  assert.equal(T.decide([jumped], [jumped], [old]).hold.length, 1, "held by default: 60% is more than normal");
+  const ok = T.decide([jumped], [jumped], [old], { acceptJumps: true });
+  assert.equal(ok.apply.length, 1);
+  const rising = row({ breaks: { min: 100, minus45: 10, plus45: 12, plus100: 8, plus300: 7, plus500: 6, plus1000: null } });
+  assert.equal(T.decide([rising], [rising], [old], { acceptJumps: true }).hold.length, 1, "a rate that rises with weight is still held");
+  const unlike = row({ breaks: { min: 100, minus45: 99, plus45: 14, plus100: 12, plus300: 10, plus500: 9, plus1000: null } });
+  assert.equal(T.decide([jumped], [unlike], [old], { acceptJumps: true }).hold.length, 1, "and two reads that disagree are still held");
+}
+
 console.log("tariff checks ok");
