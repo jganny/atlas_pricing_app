@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.152",
+    date: "2026-11-10",
+    items: [
+      "Air desk: on the carriers page, each airline now shows only the weight break that matches the weight entered (for example the +100 kg rate for 150 kg), instead of the whole slab card. \"Show all breaks\" still opens the full card. If the matching break has no rate yet, the other breaks that do hold a rate stay visible so a quote never looks as if its freight went missing.",
+    ],
+  },
+  {
     version: "0.3.151",
     date: "2026-11-10",
     items: [

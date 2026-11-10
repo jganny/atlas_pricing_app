@@ -237,8 +237,9 @@ export function computeAdjacentBreakComparison(
 }
 
 /**
- * One active break for the chargeable kg — full tariff card is opt-in.
- * Any other break that already holds a saved rate stays in view too, so an amended or duplicated quote
+ * One active break for the chargeable kg — the full tariff card is opt-in ("Show all breaks").
+ * A tariff fills EVERY break of a lane, so the other breaks that hold a rate are hidden whenever the active break has its own.
+ * Only when the active break is empty do the other filled breaks stay in view, so an amended or duplicated quote
  * never looks as if its freight went missing (the rate was just sitting on a break other than the active one).
  */
 export function visibleAirBreaks(
@@ -251,6 +252,7 @@ export function visibleAirBreaks(
   const active = usedBreak || getWeightBreakBracket(chargeableWeightKg);
   if (!AIR_WEIGHT_BREAKS.includes(active)) return AIR_WEIGHT_BREAKS;
   const filled = (name: WeightBreakName) => (saved?.[name]?.sell ?? 0) > 0 || (saved?.[name]?.buy ?? 0) > 0;
+  if (filled(active)) return [active];
   return AIR_WEIGHT_BREAKS.filter((name) => name === active || filled(name));
 }
 
