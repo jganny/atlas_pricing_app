@@ -11,6 +11,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.148",
+    date: "2026-11-10",
+    items: [
+      "Inbox: a tariff or circular emailed by an airline, liner, courier or transporter is filed into the Circulars tab by itself (the circular reader then picks it up) and the email is not kept in the app. The same file arriving twice is filed once.",
+      "Nothing stays longer than it is needed. An enquiry is removed from the app as soon as its quote is saved, or when you set it aside; a daily clean-up removes anything left over (opened more than 7 days ago, or unopened for 30 days). The emails themselves always stay in the mailbox.",
+      "Quotes made from an Inbox email remember it: the quote preview has \u201cReply to \u2026\u201d, which opens a draft addressed to the sender, with \u201cRe: \u2026\u201d, the cover text and the quote PDF attached, ready to send.",
+    ],
+  },
+  {
     version: "0.3.147",
     date: "2026-11-10",
     items: [

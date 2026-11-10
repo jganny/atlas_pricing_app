@@ -10,14 +10,15 @@ import { useAuthStore } from "@/store/auth";
 import { EnquiryReplyDrafter } from "@/components/EnquiryReplyDrafter";
 import { IS_DEMO_BUILD } from "@/lib/demo-mode";
 import { useLiveData } from "@/lib/api";
-import { fetchInboxEml, patchInboxEnquiry } from "@/lib/firebase/inbox";
+import { fetchInboxEml, patchInboxEnquiry, removeInboxItem } from "@/lib/firebase/inbox";
+import type { InboxRef } from "@/lib/types";
 import { setHubJobStatus } from "@/lib/firebase/hub-jobs";
 import { useHubReader } from "@/hooks/use-hub-reader";
 import { openJobHref } from "@/lib/hub/prefill";
 import { canSeeInboxItem, detectEnquiryMode } from "@/lib/mail/inbox-assign";
 import { ATLAS_IMAP, MAILBOX_TEAMS, deskDisplayName } from "@/lib/quotes/team-roles";
 import { parseAirEnquiry, parseSeaEnquiry } from "@/lib/pricing/parse-enquiry";
-import { storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
+import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import type { InboxEnquiry, InboxTag } from "@/lib/types";
 
 type FilterTab = "action" | "all" | "follow_up";
@@ -88,6 +89,18 @@ export default function EnquiryInboxPage() {
     return resolvedMode === "sea" ? parseSeaEnquiry(text) : parseAirEnquiry(text);
   }, [selected, resolvedMode]);
 
+  /** What a quote remembers about this email: who to reply to, and the subject. */
+  function inboxRefOf(item: InboxEnquiry): InboxRef {
+    const m = /^(.*?)\s*<([^>]+)>\s*$/.exec(item.from || "");
+    return { id: item.id, fromEmail: (m ? m[2] : item.from || "").trim(), ...(m && m[1].trim() ? { fromName: m[1].trim().replace(/^"|"$/g, "") } : {}), subject: item.subject || "" };
+  }
+
+  /** The Quote Hub path stores its own prefill: add the email link to it. */
+  function stampInboxRef(item: InboxEnquiry) {
+    const p = peekSmartQuotePrefill();
+    if (p) storeSmartQuotePrefill({ ...p, inboxRef: inboxRefOf(item) });
+  }
+
   /**
    * Action an email: the whole email (body and attachments) is read once and the chosen desk opens filled in.
    * The AI is used only here, for emails someone actually actions. If the full email cannot be read, the short preview
@@ -110,7 +123,9 @@ export default function EnquiryInboxPage() {
           }
           void setHubJobStatus(job.id, "opened").catch(() => undefined);
           toast(`Opening ${desk === "sea" ? "Sea" : "Air"} desk`, "success");
-          router.push(openJobHref(forDesk));
+          const href = openJobHref(forDesk);
+          stampInboxRef(item);
+          router.push(href);
           return;
         }
       } catch (e) {
@@ -140,6 +155,7 @@ export default function EnquiryInboxPage() {
       carrierLabel: parsed.airlineLabel || parsed.linerLabel || "From enquiry intake",
       tariffFound: false,
       createdAt: Date.now(),
+      inboxRef: inboxRefOf(item),
     });
     if (useLiveData) {
       setBusy(true);
@@ -183,8 +199,9 @@ export default function EnquiryInboxPage() {
     }
     setBusy(true);
     try {
-      await patchInboxEnquiry(item.id, { status: "ignored", actionRequired: false });
-      toast("Marked ignored (mail still on IMAP)", "success");
+      await removeInboxItem(item.id);
+      setSelectedId(null);
+      toast("Removed from the app (the email is still in the mailbox)", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Update failed", "error");
     } finally {

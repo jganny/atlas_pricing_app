@@ -89,6 +89,8 @@ import { closeAllComboboxes } from "@/lib/ui/close-comboboxes";
 import { focusById, lastFieldTab } from "@/lib/ui/desk-keyboard";
 import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { removeInboxItem } from "@/lib/firebase/inbox";
+import type { InboxRef } from "@/lib/types";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
@@ -185,6 +187,8 @@ function AirDeskInner() {
   const hideAgreement = shouldHideAgencyAgreement(user?.username);
   const [agreementName, setAgreementName] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | undefined>(undefined);
+  /** The Inbox email this quote answers (set when the desk was opened from the Inbox). */
+  const [inboxRef, setInboxRef] = useState<InboxRef | undefined>(undefined);
 
   // Keeps the quote being worked on, so a power cut or crash never loses it (see useDeskDraft).
   const draft = useDeskDraft({
@@ -535,6 +539,7 @@ function AirDeskInner() {
       message: "Prefill from Smart Quote / Inbox",
     });
     if (loader.smartPrefill.leadId) setLeadId(loader.smartPrefill.leadId);
+    if (loader.smartPrefill.inboxRef) setInboxRef(loader.smartPrefill.inboxRef);
     clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
@@ -960,8 +965,11 @@ function AirDeskInner() {
               quotedLanes,
               allLanesAmount: amount,
               leadId,
+              inboxRef,
             });
             if (leadId) void linkQuoteToLead(leadId, quoteId);
+            // The quote is done: the email no longer needs to stay in the app (it stays in the mailbox).
+            if (inboxRef) void removeInboxItem(inboxRef.id);
             cloud = "live";
             cacheOfflineQuote({
               id: quoteId,

@@ -209,6 +209,23 @@ export function QuotePreviewModal({
     }
   }
 
+  /** The enquiry this quote answers: a draft reply (To, "Re: subject", cover text, quote PDF attached) is opened in the mail app. */
+  async function handleReply() {
+    const r = quote.inboxRef;
+    if (!r?.fromEmail) return;
+    setShareBusy("Preparing reply…");
+    try {
+      const file = await pdfFile();
+      const subject = /^re\s*:/i.test(r.subject) ? r.subject : `Re: ${r.subject || clientDoc.shareSubject}`;
+      await emailQuotePdf({ file, subject, to: r.fromEmail, body: clientDoc.emailCover });
+      toast(`Reply to ${r.fromName || r.fromEmail} saved as a draft with the quote attached. Open it and press send.`, "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not prepare the reply", "error");
+    } finally {
+      setShareBusy(null);
+    }
+  }
+
   /** Sends the customer copy (PDF) plus a quote card into the chosen Team Chat conversations. Prices never go in the card; the PDF is the customer document, so it has no buy rates or GP. */
   async function handleTeamChat(targets: ChatRoom[]) {
     if (!teamChat?.me) return;
@@ -305,6 +322,11 @@ export function QuotePreviewModal({
               <Download className="mr-1 h-4 w-4" />
               Download quote
             </Button>
+            {quote.inboxRef?.fromEmail ? (
+              <Button type="button" className="text-xs" data-testid="quote-reply-btn" onClick={() => void handleReply()} disabled={Boolean(shareBusy)}>
+                Reply to {quote.inboxRef.fromName || quote.inboxRef.fromEmail}
+              </Button>
+            ) : null}
             <Button type="button" variant="secondary" className="text-xs" data-testid="quote-email-btn" onClick={() => void handleEmail()} disabled={Boolean(shareBusy)}>
               <Share2 className="mr-1 h-4 w-4" />
               {shareBusy === "Preparing PDF…" ? "Preparing PDF…" : "Share"}

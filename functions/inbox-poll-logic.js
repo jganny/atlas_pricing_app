@@ -34,4 +34,25 @@ function senderNeverEnquires(stats) {
   return !!stats && Number(stats.asked) >= NEVER_AFTER && !Number(stats.kept);
 }
 
-module.exports = { nextUids, nextCursor, senderKey, senderNeverEnquires, NEVER_AFTER };
+/**
+ * The attachments of a mail, read from the mail server's description of its parts (no download of the files).
+ * [{ filename, contentType, size, inline }]
+ */
+function attachmentsFromStructure(node, out = []) {
+  if (!node || typeof node !== "object") return out;
+  const children = Array.isArray(node.childNodes) ? node.childNodes : [];
+  if (children.length) {
+    children.forEach((c) => attachmentsFromStructure(c, out));
+    return out;
+  }
+  const type = String(node.type || "").toLowerCase();
+  if (type.startsWith("text/") && !node.dispositionParameters && !(node.parameters && node.parameters.name)) return out; // the body itself
+  if (type.startsWith("multipart/")) return out;
+  const filename = String((node.dispositionParameters && node.dispositionParameters.filename) || (node.parameters && node.parameters.name) || "");
+  const disposition = String(node.disposition || "").toLowerCase();
+  if (!filename && disposition !== "attachment") return out;
+  out.push({ filename, contentType: type, size: Number(node.size) || 0, inline: disposition === "inline" });
+  return out;
+}
+
+module.exports = { nextUids, nextCursor, senderKey, senderNeverEnquires, NEVER_AFTER, attachmentsFromStructure };

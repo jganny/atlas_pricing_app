@@ -167,6 +167,8 @@ export function buildQuoteEmailDraft(opts: {
   body: string;
   filename: string;
   pdfBytes: Uint8Array;
+  /** The recipient. Empty for a plain share; the enquiry's sender for a reply. */
+  to?: string;
 }): string {
   const boundary = "----=_VertexQuotePdf";
   const safeName = opts.filename.replace(/["\r\n]/g, "_");
@@ -175,7 +177,7 @@ export function buildQuoteEmailDraft(opts: {
     "X-Unsent: 1",
     "MIME-Version: 1.0",
     `Subject: ${opts.subject.replace(/[\r\n]+/g, " ")}`,
-    "To: ",
+    `To: ${(opts.to ?? "").replace(/[\r\n<>,;]+/g, " ").trim()}`,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",
     `--${boundary}`,
@@ -369,12 +371,15 @@ export function quoteEmailSharePayload(file: File, subject: string): ShareData {
 export async function emailQuotePdf(opts: {
   file: File;
   subject: string;
+  /** A reply: the sender's address and the cover text. The share sheet cannot carry these, so a reply is always a draft file. */
+  to?: string;
+  body?: string;
 }): Promise<"shared" | "draft"> {
   const nav = navigator as Navigator & {
     canShare?: (data: ShareData) => boolean;
     share?: (data: ShareData) => Promise<void>;
   };
-  if (typeof nav.canShare === "function" && typeof nav.share === "function") {
+  if (!opts.to && typeof nav.canShare === "function" && typeof nav.share === "function") {
     const payload = quoteEmailSharePayload(opts.file, opts.subject);
     try {
       if (nav.canShare({ files: payload.files })) {
@@ -389,9 +394,10 @@ export async function emailQuotePdf(opts: {
   const pdfBytes = new Uint8Array(await opts.file.arrayBuffer());
   const eml = buildQuoteEmailDraft({
     subject: opts.subject,
-    body: "",
+    body: opts.body ?? "",
     filename: opts.file.name,
     pdfBytes,
+    ...(opts.to ? { to: opts.to } : {}),
   });
   const emlName = opts.file.name.replace(/\.pdf$/i, ".eml");
   downloadBlob(emlName, new Blob([eml], { type: "message/rfc822" }));

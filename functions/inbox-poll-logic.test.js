@@ -30,3 +30,21 @@ console.log("inbox poll logic ok");
   assert.equal(Q.senderNeverEnquires(undefined), false);
   assert.equal(Q.senderNeverEnquires({}), false);
 }
+
+// --- attachments from the mail server's description of the parts ---
+{
+  const Q = require("./inbox-poll-logic");
+  const bs = { type: "multipart/mixed", childNodes: [
+    { type: "multipart/alternative", childNodes: [{ type: "text/plain", size: 120 }, { type: "text/html", size: 900 }] },
+    { type: "application/pdf", disposition: "attachment", dispositionParameters: { filename: "TK_BOM_TARIFF.pdf" }, size: 880000 },
+    { type: "image/png", disposition: "inline", parameters: { name: "logo.png" }, size: 2400 },
+    { type: "application/octet-stream", disposition: "attachment", size: 10 },
+  ] };
+  assert.deepEqual(Q.attachmentsFromStructure(bs), [
+    { filename: "TK_BOM_TARIFF.pdf", contentType: "application/pdf", size: 880000, inline: false },
+    { filename: "logo.png", contentType: "image/png", size: 2400, inline: true },
+    { filename: "", contentType: "application/octet-stream", size: 10, inline: false },
+  ]);
+  assert.deepEqual(Q.attachmentsFromStructure({ type: "text/plain", size: 50 }), [], "a plain mail has none");
+  assert.deepEqual(Q.attachmentsFromStructure(undefined), []);
+}

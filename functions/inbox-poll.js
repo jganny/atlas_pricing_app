@@ -20,6 +20,7 @@ const { defineSecret } = require("firebase-functions/params");
 const { ImapFlow } = require("imapflow");
 const P = require("./inbox-poll-logic");
 const F = require("./inbox-filter");
+const C = require("./inbox-circular");
 const { simpleParser } = require("mailparser");
 
 const MAX_AI_PER_RUN = 20; // a safety ceiling: the free rules already keep the AI to the unclear few
@@ -351,6 +352,56 @@ async function recordSender(db, key, kept, cache) {
   await db.collection("inbox_senders").doc(key).set(next, { merge: true });
 }
 
+const MAX_CIRCULAR_BYTES = 20 * 1024 * 1024;
+
+/**
+ * Files the document attachments of a circular/tariff mail into the Circulars library: stored in the bucket, recorded in
+ * circularsLibrary (which starts the circular reader), and skipped when the very same file is already there.
+ * Returns how many files were filed. Reading a file costs no AI credit; the reader decides what it needs.
+ */
+async function fileCircular(client, db, msg, mailbox, circ, meta) {
+  let full = null;
+  try {
+    const one = await client.fetchOne(String(msg.uid), { source: { maxLength: MAX_CIRCULAR_BYTES }, uid: true }, { uid: true });
+    full = one && one.source ? await simpleParser(one.source) : null;
+  } catch (err) {
+    functions.logger.warn("circular mail could not be fetched", { mailbox: mailbox.key, uid: msg.uid, message: err instanceof Error ? err.message : String(err) });
+  }
+  if (!full) return 0;
+  const docs = (full.attachments || []).filter((a) => C.documentAttachments([{ filename: a.filename, contentType: a.contentType, size: a.size }]).length).slice(0, 4);
+  let filed = 0;
+  for (const a of docs) {
+    const hash = crypto.createHash("sha1").update(a.content).digest("hex");
+    const dup = await db.collection("circularsLibrary").where("contentHash", "==", hash).limit(1).get();
+    if (!dup.empty) continue;
+    const safeName = String(a.filename || "circular").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `circulars/${circ.category || "general"}/${Date.now()}_${safeName}`;
+    const bucket = admin.storage().bucket();
+    const token = crypto.randomUUID();
+    await bucket.file(storagePath).save(a.content, { contentType: a.contentType || "application/octet-stream", metadata: { metadata: { firebaseStorageDownloadTokens: token } } });
+    const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
+    await db.collection("circularsLibrary").add({
+      title: docs.length > 1 ? `${circ.title} (${a.filename})`.slice(0, 120) : circ.title,
+      carrier: circ.carrier,
+      category: circ.category,
+      notes: `Received by email from ${meta.fromName ? `${meta.fromName} <${meta.fromAddr}>` : meta.fromAddr}: ${String(meta.subject || "").slice(0, 120)}`,
+      effectiveDate: "",
+      expiryDate: "",
+      validTo: "",
+      fileName: a.filename || safeName,
+      downloadURL,
+      storagePath,
+      uploadedBy: "",
+      source: "email",
+      contentHash: hash,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    filed += 1;
+  }
+  return filed;
+}
+
 async function pollOne(mailbox, password, apiKey) {
   if (!password) {
     functions.logger.warn("IMAP password secret empty — skip", { mailbox: mailbox.key });
@@ -374,6 +425,7 @@ async function pollOne(mailbox, password, apiKey) {
   let ruleNoise = 0;
   let aiNoise = 0;
   let aiUsed = 0;
+  let circularsFiled = 0;
   const senderCache = new Map();
 
   await client.connect();
@@ -397,7 +449,7 @@ async function pollOne(mailbox, password, apiKey) {
       }
 
       // UIDs, not sequence numbers (the third argument says so). All collected first: no mail-server command runs while reading them.
-      const messages = uids.length ? await client.fetchAll(uids, { envelope: true, source: { maxLength: 150000 }, uid: true }, { uid: true }) : [];
+      const messages = uids.length ? await client.fetchAll(uids, { envelope: true, bodyStructure: true, source: { maxLength: 150000 }, uid: true }, { uid: true }) : [];
 
       for (const msg of messages) {
         try {
@@ -428,8 +480,28 @@ async function pollOne(mailbox, password, apiKey) {
             .map((a) => a.address || [a.name, a.address].filter(Boolean).join(" "))
             .join(", ") || "";
 
+        // 0) A tariff or circular from an airline, liner, courier or transporter is filed into the Circulars tab by itself
+        //    (the circular reader then picks it up) and the mail is not kept in the app at all.
+        const attachments = (() => {
+          const fromStructure = P.attachmentsFromStructure(msg.bodyStructure);
+          return fromStructure.length ? fromStructure : parsedMail ? parsedMail.attachments : [];
+        })();
+        const fromAddr = String(msg.envelope?.from?.[0]?.address || "");
+        const fromName = String(msg.envelope?.from?.[0]?.name || "");
+        if (!F.headerFlags(parsedMail ? parsedMail.headers : null).auto) {
+          const askedForQuote = F.ASK.test(`${subject}\n${bodyWork}`) || F.ASK_SHORT.test(`${subject}\n${bodyWork}`);
+          const circ = C.classifyCircularMail({ from: fromAddr, fromName, subject, body: bodyWork, attachments, askedForQuote });
+          if (circ.isCircular) {
+            const filed = await fileCircular(client, db, msg, mailbox, circ, { fromAddr, fromName, subject });
+            circularsFiled += filed;
+            if (filed > 0) continue; // filed: nothing is kept in the Inbox
+            // nothing could be filed (a duplicate or no usable file): it still is not an enquiry
+            continue;
+          }
+        }
+
         // 1) Free rules first: automatic mail, newsletters, bounces and mail with no enquiry in it are dropped here, with no AI credit.
-        const verdict = F.prefilter({ headers: parsedMail ? parsedMail.headers : null, from: msg.envelope?.from?.[0]?.address || "", subject, body: bodyWork, attachments: parsedMail ? parsedMail.attachments : [] });
+        const verdict = F.prefilter({ headers: parsedMail ? parsedMail.headers : null, from: msg.envelope?.from?.[0]?.address || "", subject, body: bodyWork, attachments });
         if (verdict.verdict === "noise") {
           ruleNoise += 1;
           skippedNoise += 1;
@@ -514,10 +586,10 @@ async function pollOne(mailbox, password, apiKey) {
       }
       await stateRef.set({ lastUid: P.nextCursor(state.lastUid, uids, tip, firstRun), at: Date.now() }, { merge: true });
       // A running count per day, so the admin can see how many mails were sorted out for free and how many needed the AI.
-      if (scanned) {
+      if (scanned || circularsFiled) {
         const day = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
         const inc = admin.firestore.FieldValue.increment;
-        await db.collection("inbox_stats").doc(`${day}_${mailbox.key}`).set({ day, mailbox: mailbox.key, scanned: inc(scanned), ruleNoise: inc(ruleNoise), aiAsked: inc(aiUsed), aiNoise: inc(aiNoise), kept: inc(imported), updatedAt: Date.now() }, { merge: true });
+        await db.collection("inbox_stats").doc(`${day}_${mailbox.key}`).set({ day, mailbox: mailbox.key, scanned: inc(scanned), ruleNoise: inc(ruleNoise), aiAsked: inc(aiUsed), aiNoise: inc(aiNoise), kept: inc(imported), circulars: inc(circularsFiled), updatedAt: Date.now() }, { merge: true });
       }
     } finally {
       lock.release();
@@ -530,14 +602,14 @@ async function pollOne(mailbox, password, apiKey) {
     }
   }
 
-  return { mailbox: mailbox.key, imported, skippedNoise, failedMessages };
+  return { mailbox: mailbox.key, imported, skippedNoise, failedMessages, circularsFiled };
 }
 
 exports.pollPricingInboxes = functions
   .runWith({
     secrets: [pricingPassword, salesPassword, anthropicApiKey],
     timeoutSeconds: 300,
-    memory: "512MB",
+    memory: "1GB",
   })
   .pubsub.schedule("every 2 minutes")
   .onRun(async () => {
@@ -624,4 +696,56 @@ exports.fetchInboxEmail = functions
         client.close();
       }
     }
+  });
+
+/**
+ * Nothing stays in the app longer than it is needed. Run once a day:
+ *  - an enquiry still unopened after 30 days, or opened (applied, claimed, dismissed) more than 7 days ago, is removed;
+ *    an enquiry whose quote is saved is removed at once by the app, this is the safety net
+ *  - Quote Hub jobs already opened or dismissed more than 7 days ago are removed
+ *  - the small daily counters are kept 90 days
+ * Mail itself is never touched: it stays on the mail server.
+ */
+const DAY = 24 * 3600 * 1000;
+async function deleteOld(db, collection, field, olderThanMs, filterFn, label) {
+  const cutoff = Date.now() - olderThanMs;
+  const snap = await db.collection(collection).where(field, "<", cutoff).limit(400).get();
+  const docs = [];
+  snap.forEach((d) => {
+    if (!filterFn || filterFn(d.data())) docs.push(d);
+  });
+  for (let i = 0; i < docs.length; i += 200) {
+    const batch = db.batch();
+    docs.slice(i, i + 200).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  functions.logger.info("inbox cleanup", { label, removed: docs.length });
+  return docs.length;
+}
+
+exports.inboxCleanup = functions
+  .runWith({ timeoutSeconds: 120, memory: "256MB" })
+  .pubsub.schedule("every day 03:00")
+  .timeZone("Asia/Kolkata")
+  .onRun(async () => {
+    const db = admin.firestore();
+    const done = {};
+    done.opened = await deleteOld(db, "inbox_enquiries", "timestamp", 7 * DAY, (d) => d.status && d.status !== "new", "opened enquiries");
+    done.unopened = await deleteOld(db, "inbox_enquiries", "timestamp", 30 * DAY, null, "unopened enquiries");
+    // Quote Hub jobs keep their date as text (ISO), which sorts the same way.
+    const isoCut = new Date(Date.now() - 7 * DAY).toISOString();
+    const jobSnap = await db.collection("quoteHubJobs").where("createdAt", "<", isoCut).limit(400).get();
+    const oldJobs = [];
+    jobSnap.forEach((d) => {
+      const v = d.data();
+      if (v.status === "opened" || v.status === "dismissed") oldJobs.push(d);
+    });
+    for (let i = 0; i < oldJobs.length; i += 200) {
+      const batch = db.batch();
+      oldJobs.slice(i, i + 200).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+    done.jobs = oldJobs.length;
+    done.stats = await deleteOld(db, "inbox_stats", "updatedAt", 90 * DAY, null, "daily counters");
+    return done;
   });

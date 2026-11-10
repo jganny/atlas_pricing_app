@@ -66,3 +66,15 @@ assert.match(wa, /^https:\/\/wa\.me\/\?text=/);
 assert.doesNotMatch(wa, /api\.whatsapp\.com/);
 
 console.log("quote-print draft tests passed");
+
+// --- a reply to an enquiry: addressed to the sender, with the cover text, the quote still attached ---
+{
+  const reply = buildQuoteEmailDraft({ subject: "Re: Rates BLR-FRA", body: "Dear Ravi,\nPlease find our quotation.", filename: "Quote.pdf", pdfBytes: new Uint8Array([1, 2, 3]), to: "ravi@acme.com" });
+  assert.match(reply, /^To: ravi@acme\.com$/m);
+  assert.match(reply, /Subject: Re: Rates BLR-FRA/);
+  assert.match(reply, /Dear Ravi,/);
+  assert.match(reply, /filename="Quote\.pdf"/);
+  const injected = buildQuoteEmailDraft({ subject: "x", body: "", filename: "q.pdf", pdfBytes: new Uint8Array([1]), to: "a@b.com\r\nBcc: spy@evil.com" });
+  assert.ok(!/^Bcc:/m.test(injected), "an address cannot add a header");
+  assert.match(buildQuoteEmailDraft({ subject: "x", body: "", filename: "q.pdf", pdfBytes: new Uint8Array([1]) }), /^To:\s*$/m, "a plain share has no recipient");
+}

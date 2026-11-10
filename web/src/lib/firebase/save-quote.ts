@@ -5,6 +5,7 @@ import { deskSeatForSave } from "./desk-stamp";
 import { doc, setDoc } from "firebase/firestore";
 import type { CourierFreightResult, DimUnit, SeaMode } from "@atlas/pricing-core";
 import type { AirlineOption, CourierOption, LinerOption } from "@/lib/pricing/carrier-options";
+import type { InboxRef } from "@/lib/types";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
 import type { LinerTotals } from "@/lib/pricing/sea-desk";
@@ -37,6 +38,8 @@ interface SaveMeta {
   status?: string;
   /** Real link back to the SalesLead this quote was created from, when any. */
   leadId?: string;
+  /** The Inbox email this quote answers. */
+  inboxRef?: InboxRef;
 }
 
 export interface SavedQuoteLane {
@@ -313,6 +316,7 @@ export async function saveAirQuote(input: SaveAirInput): Promise<string> {
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     leadId: input.leadId,
+    ...(input.inboxRef ? { inboxRef: input.inboxRef } : {}),
     type: "air",
     route,
     amount,
@@ -497,6 +501,7 @@ export async function saveSeaQuote(input: SaveSeaInput): Promise<string> {
     status: input.status ?? "quoted",
     quoteNumber: input.quoteNumber ?? nextQuoteNumber(),
     leadId: input.leadId,
+    ...(input.inboxRef ? { inboxRef: input.inboxRef } : {}),
     type: "sea",
     route,
     amount,

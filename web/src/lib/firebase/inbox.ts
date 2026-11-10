@@ -9,6 +9,7 @@ import {
   orderBy,
   query,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import type { InboxEnquiry, InboxTag } from "@/lib/types";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -97,4 +98,16 @@ export async function fetchInboxEml(id: string): Promise<Uint8Array> {
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
+}
+
+/**
+ * Removes an item from the app (the email itself stays in the mailbox). Used when its quote is saved or it is set aside, so
+ * nothing stays stored longer than it is needed. Never throws: a failure just leaves it for the daily clean-up.
+ */
+export async function removeInboxItem(id: string): Promise<void> {
+  try {
+    await deleteDoc(doc(getFirebaseDb(), "inbox_enquiries", id));
+  } catch {
+    /* the daily clean-up removes it */
+  }
 }

@@ -63,6 +63,8 @@ export interface EnquiryRecord {
   billingUnit?: 'kg' | 'rt' | 'gw'
   /** Real link back to the SalesLead this quote was created from, when any. */
   leadId?: string
+  /** The Inbox email this quote answers (so the quote can be sent as a reply, and the email removed when the quote is saved). */
+  inboxRef?: InboxRef
   /** Per-lane origin/destination/carrier facts for reporting. */
   legs?: EnquiryLeg[]
 }
@@ -107,6 +109,8 @@ export interface SavedQuote {
   conversionDate?: string
   /** Real link back to the SalesLead this quote was created from, when any. */
   leadId?: string
+  /** The Inbox email this quote answers (so the quote can be sent as a reply, and the email removed when the quote is saved). */
+  inboxRef?: InboxRef
 }
 
 export type QuoteFirestoreStatus = 'quoted' | 'converted' | 'lost' | 'cancelled'
@@ -360,6 +364,17 @@ export type InboxMailboxKey = 'pricing' | 'pricingsales'
 export type InboxStatus = 'new' | 'claimed' | 'applied' | 'ignored'
 /** AI / heuristic intake tag — noise is never stored. */
 export type InboxTag = 'new_enquiry' | 'follow_up' | 'needs_human'
+
+/** What a quote remembers about the email it answers. */
+export interface InboxRef {
+  /** The Inbox item (removed when the quote is saved). */
+  id: string
+  /** The sender's address: where the reply goes. */
+  fromEmail: string
+  fromName?: string
+  /** The original subject, so the reply can say "Re: …". */
+  subject: string
+}
 
 export interface InboxEnquiry {
   id: string

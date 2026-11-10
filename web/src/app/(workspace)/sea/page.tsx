@@ -67,6 +67,8 @@ import {
   normalizeRouting,
 } from "@/lib/pricing/terms";
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
+import { removeInboxItem } from "@/lib/firebase/inbox";
+import type { InboxRef } from "@/lib/types";
 import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
 import { planSeaInstruction, type SeaChoice } from "@/lib/hub/instruction-sea";
@@ -147,6 +149,8 @@ function SeaDeskInner() {
   const loader = useQuoteDeskLoader("sea");
   const customerFieldName = useAntiAutofillName("atlas-party-sea");
   const [leadId, setLeadId] = useState<string | undefined>(undefined);
+  /** The Inbox email this quote answers (set when the desk was opened from the Inbox). */
+  const [inboxRef, setInboxRef] = useState<InboxRef | undefined>(undefined);
 
   const [step, setStep] = useState<Step>("shipment");
   /** The saved draft this desk was opened from, or last parked as — saving the quote retires it. */
@@ -566,6 +570,7 @@ function SeaDeskInner() {
       message: "Prefill from Smart Quote / Inbox",
     });
     if (loader.smartPrefill.leadId) setLeadId(loader.smartPrefill.leadId);
+    if (loader.smartPrefill.inboxRef) setInboxRef(loader.smartPrefill.inboxRef);
     clearSmartQuotePrefill();
   }, [loader.smartPrefill]);
 
@@ -955,8 +960,11 @@ function SeaDeskInner() {
               quotedLanes,
               allLanesAmount: amount,
               leadId,
+              inboxRef,
             });
             if (leadId) void linkQuoteToLead(leadId, quoteId);
+            // The quote is done: the email no longer needs to stay in the app (it stays in the mailbox).
+            if (inboxRef) void removeInboxItem(inboxRef.id);
             cloud = "live";
             cacheOfflineQuote({
               id: quoteId,

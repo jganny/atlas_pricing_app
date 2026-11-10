@@ -1,4 +1,4 @@
-import type { AirTariff, ParsedEnquiry, SeaTariff, SmartQuoteDraft } from "@/lib/types";
+import type { AirTariff, InboxRef, ParsedEnquiry, SeaTariff, SmartQuoteDraft } from "@/lib/types";
 
 export const SMART_QUOTE_PREFILL_KEY = "atlas-smart-quote-prefill";
 
@@ -15,6 +15,8 @@ export interface SmartQuotePrefill {
   leadId?: string;
   /** What the person typed with a Quote Hub drop; the Air desk reads it and applies it. */
   instruction?: string;
+  /** Set when this prefill came from an Inbox email: threaded through to the saved quote so it can be sent as a reply. */
+  inboxRef?: InboxRef;
 }
 
 export function storeSmartQuotePrefill(prefill: SmartQuotePrefill) {
