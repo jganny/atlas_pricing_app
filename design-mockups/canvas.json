@@ -81,6 +81,14 @@
       "h": 1240,
       "title": "9. Search, a tidier Inbox, and your questions answered",
       "expand": "fill"
+    },
+    "Alerts.dc.html": {
+      "x": 13680,
+      "y": 0,
+      "w": 1440,
+      "h": 1180,
+      "title": "10. Alerts and reminders for everyone, not only Admin",
+      "expand": "fill"
     }
   },
   "order": [
@@ -92,15 +100,16 @@
     "DrillDown.dc.html",
     "Thread.dc.html",
     "AirDeskEmail.dc.html",
-    "SearchInbox.dc.html"
+    "SearchInbox.dc.html",
+    "Alerts.dc.html"
   ],
   "notes": {
     "t1": {
       "x": 0,
       "y": -260,
-      "text": "Atlas Pricing: screens 1 to 6 (built) and 7 to 9 (proposed: threads, rates by email, search)",
+      "text": "Atlas Pricing: screens 1 to 6 (built) and 7 to 10 (proposed: threads, rates by email, search, alerts for everyone)",
       "kind": "title1",
-      "maxW": 13600
+      "maxW": 15200
     },
     "n1": {
       "x": 0,
