@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.164",
+    date: "2026-11-11",
+    items: [
+      "Inbox looks like Outlook. Folders on the left, the mail list in the middle, the letter on the right, with space between them. Each mail is three lines: who sent it, the subject, and one preview. Quote is the only large button. Extra folders, labels, Team board and Search stay, but they are not piled on the main screen.",
+    ],
+  },
+  {
     version: "0.3.163",
     date: "2026-11-12",
     items: [

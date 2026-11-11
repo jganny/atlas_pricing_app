@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Import agent rates — picture only</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.45 "Segoe UI", system-ui, sans-serif; color: #201f1e; background: #f3f2f1; }
+    .banner { background: #fff4ce; color: #6e5c14; padding: 8px 20px; font-size: 13px; border-bottom: 1px solid #efe3b4; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+    h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+    .sub { color: #605e5c; margin-bottom: 22px; }
+    .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 28px; }
+    .card { background: #fff; border: 1px solid #edebe9; padding: 22px 24px 28px; }
+    h2 { font-size: 16px; margin: 0 0 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #605e5c; font-weight: 600; padding: 8px 8px 8px 0; border-bottom: 1px solid #edebe9; }
+    td { padding: 12px 8px 12px 0; border-bottom: 1px solid #f3f2f1; vertical-align: top; }
+    .num { font-variant-numeric: tabular-nums; }
+    .ok { color: #0b6a0b; font-weight: 600; font-size: 12.5px; }
+    .off { color: #605e5c; }
+    .primary { background: #0078d4; color: #fff; border: 0; height: 32px; padding: 0 16px; font: inherit; font-weight: 600; }
+    .ghost { background: transparent; border: 0; height: 32px; padding: 0 12px; font: inherit; }
+    .note { font-size: 12.5px; color: #605e5c; margin-top: 14px; }
+    .cust td { padding: 14px 0; }
+    .cust .name { font-weight: 600; }
+    .cust .who { color: #605e5c; font-size: 12.5px; }
+  </style>
+</head>
+<body>
+  <div class="banner">Picture only. This is how Air Import and Sea Import should work when several overseas agents send rates. Live quote math is not changed until you say go ahead.</div>
+  <div class="wrap">
+    <h1>Air import · AMD → LRD · 463 kg</h1>
+    <p class="sub">Staff see every agent. The customer never sees an agent name — only airline options after your margin.</p>
+    <div class="grid">
+      <div class="card">
+        <h2>Inside the company</h2>
+        <p class="note">Two agent emails uploaded. Each line is one agent’s buy rate. Tick which ones may go on the quote after your margin.</p>
+        <table>
+          <thead>
+            <tr><th></th><th>Agent (internal)</th><th>Buy</th><th>Margin</th><th>Sell</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="checkbox" checked></td>
+              <td>Air Logistics Group<br><span class="who">+500 kg · all-in · NH</span></td>
+              <td class="num">INR 730 /kg</td>
+              <td class="num">+5%</td>
+              <td class="num">INR 766.50 /kg<br><span class="ok">Send on quote</span></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" checked></td>
+              <td>Kintetsu World Express<br><span class="who">+500 kg · all-in · EK</span></td>
+              <td class="num">INR 710 /kg</td>
+              <td class="num">+5%</td>
+              <td class="num">INR 745.50 /kg<br><span class="ok">Send on quote · lowest</span></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td>Third agent, origin<br><span class="who">+500 kg · freight only · QR</span></td>
+              <td class="num">INR 780 /kg</td>
+              <td class="num">+5%</td>
+              <td class="num">INR 819 /kg<br><span class="off">Kept off the quote</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">Margin is typed once and applied to every buy rate. You can still change one sell rate before send.</p>
+      </div>
+      <div class="card cust">
+        <h2>What the customer receives</h2>
+        <p class="note">Comparison table. Agent names stripped. Airline names only if you keep them on.</p>
+        <table>
+          <tbody>
+            <tr><td class="name">Airline option 1 · Emirates</td><td class="num">INR 745.50 /kg</td></tr>
+            <tr><td class="name">Airline option 2 · ANA</td><td class="num">INR 766.50 /kg</td></tr>
+          </tbody>
+        </table>
+        <p class="note">QR is not on this PDF because it was left unticked. No “Kintetsu”, no “Air Logistics Group”.</p>
+        <p style="margin-top:22px">
+          <button class="primary" type="button">Send quote</button>
+          <button class="ghost" type="button">Preview PDF</button>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
