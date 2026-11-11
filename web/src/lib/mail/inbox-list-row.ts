@@ -1,5 +1,3 @@
-import type { InboxEnquiry } from "@/lib/types";
-
 /** Clock time if the mail arrived today, otherwise a short date — Outlook list style. */
 export function inboxListWhen(iso: string | undefined | null, now: number = Date.now()): string {
   const t = Date.parse(iso || "");
@@ -14,9 +12,12 @@ export function inboxListWhen(iso: string | undefined | null, now: number = Date
 }
 
 /** One quiet preview line: lane, mode, then the email's own words. No chips. */
-export function inboxListPreview(
-  row: Pick<InboxEnquiry, "parsed" | "bodyPreview" | "body" | "mode">,
-): string {
+export function inboxListPreview(row: {
+  parsed?: { origin?: string | null; destination?: string | null } | null;
+  bodyPreview?: string | null;
+  body?: string | null;
+  mode?: string | null;
+}): string {
   const origin = row.parsed?.origin?.trim();
   const dest = row.parsed?.destination?.trim();
   const lane = origin && dest ? `${origin} → ${dest}` : "";
