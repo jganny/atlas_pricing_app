@@ -1,6 +1,8 @@
 /**
  * How a conversation is shown: the labels, the plain-language reason a mail was tied in, and the times. Pure, so it is tested.
  */
+import type { RateRead } from "@/lib/rates/rate-email";
+
 export type ThreadRole = "enquiry" | "sent" | "reply";
 
 export interface ThreadMember {
@@ -17,6 +19,9 @@ export interface ThreadMember {
   by: string;
   /** The rules were not certain (two enquiries fitted): a person is asked to confirm. */
   check: boolean;
+  /** Automatic reading of a vendor reply: "read" (rates found), "skipped" (none in it), "failed", or "" (not yet). */
+  rateState?: string;
+  rates?: RateRead | null;
   reason: string;
 }
 

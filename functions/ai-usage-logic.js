@@ -200,6 +200,7 @@ const FEATURE_LABELS = {
   atlasCopilot: "App help assistant",
   atlasCopilotStream: "App help assistant",
   readRateEmail: "Rates from emails",
+  autoReadVendorReplies: "Rates from emails (automatic)",
   extractAirTariffFromCircular: "Air circular upload",
   extractSeaTariffFromCircular: "Sea circular upload",
   extractCourierTariffFromCircular: "Courier circular upload",
@@ -229,7 +230,7 @@ const AI_GROUPS = {
   replyDrafts: ["draftEnquiryReply"],
   instruction: ["parseQuoteInstruction"],
   vendorRate: ["extractVendorRateFromDocument"],
-  rateReplies: ["readRateEmail"],
+  rateReplies: ["readRateEmail", "autoReadVendorReplies"],
   agencyList: ["weeklyAgencyListEmail", "triggerAgencyListNow"],
 };
 const AI_GROUP_LABELS = {

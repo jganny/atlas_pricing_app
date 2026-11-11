@@ -7,7 +7,7 @@ import { toast } from "@/components/Toast";
 import { fetchInboxEml } from "@/lib/firebase/inbox";
 import { fetchThread, linkToEnquiry, unlinkFromThread } from "@/lib/firebase/threads";
 import { parseEmailFile, type ParsedEmail } from "@/lib/hub/email-file";
-import { RATE_EMAILS_KEY, type PendingRateEmail } from "@/lib/rates/rate-email";
+import { RATE_EMAILS_KEY, rateSummary, type PendingRateEmail } from "@/lib/rates/rate-email";
 import { EMPTY_THREAD, isOverdueVendor, linkLabel, linkedCount, memberTitle, vendorSummary, waitingText, whenText, type ThreadMember } from "@/lib/mail/thread-view";
 import type { InboxEnquiry } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -118,7 +118,8 @@ export function EnquiryThread({
       } catch {
         list = [];
       }
-      if (!list.some((x) => x.id === m.id)) list.push({ id: m.id, fromName: mail.fromName, fromEmail: mail.fromEmail, subject: mail.subject, text: mail.bodyText });
+      // A reply that was already read automatically carries its rates along: nothing is read again, nothing is paid twice.
+      if (!list.some((x) => x.id === m.id)) list.push({ id: m.id, fromName: mail.fromName, fromEmail: mail.fromEmail, subject: mail.subject, text: mail.bodyText, ...(m.rates ? { read: m.rates } : {}) });
       window.sessionStorage.setItem(RATE_EMAILS_KEY, JSON.stringify(list));
       toast(`Kept for the desk (${list.length}). Open the ${item.mode === "sea" ? "Sea" : "Air"} desk, step 2 Carriers: it is ready to read into rates.`, "success");
     } catch (e) {
@@ -228,6 +229,13 @@ export function EnquiryThread({
                   {m.role !== "enquiry" && m.check ? (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900" data-testid="thread-check">Please check: more than one enquiry fits, this is the closest</span>
                   ) : null}
+                  {m.role === "reply" && m.rateState === "read" && m.rates ? (
+                    <span className="block w-full rounded-md bg-emerald-50 px-2 py-1 text-[11.5px] text-emerald-900" data-testid="thread-rates-read">
+                      <b className="font-semibold">Rates read automatically:</b> {rateSummary(m.rates).line}
+                      {rateSummary(m.rates).confirm ? <span className="ml-1 font-semibold text-amber-800">{rateSummary(m.rates).confirm}</span> : null}
+                    </span>
+                  ) : null}
+                  {m.role === "reply" && m.rateState === "failed" ? <span className="block w-full text-[11.5px] text-amber-800">The rates in this reply could not be read automatically. Open the email, or use it in the desk and press Read rates.</span> : null}
                   {m.role !== "enquiry" && m.reason ? (
                     <span className="text-[11.5px] text-slate-500" title={m.reason}>
                       <b className="font-semibold text-slate-600">{linkLabel(m.by)}.</b> {m.reason}
@@ -238,7 +246,7 @@ export function EnquiryThread({
                       {inList ? "Show in the list" : "Open"}
                     </button>
                   ) : null}
-                  {m.role === "reply" ? (
+                  {m.role === "reply" && m.rateState !== "skipped" ? (
                     <button type="button" className="text-xs font-semibold text-sky-700 hover:underline disabled:opacity-50" disabled={busy === m.id} onClick={() => void sendToDesk(m)} data-testid="thread-use-rates">
                       Use these rates in the desk
                     </button>

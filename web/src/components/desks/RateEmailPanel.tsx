@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Mail, Upload } from "lucide-react";
 import { Button, Card, Input, Label } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { readRateEmails } from "@/lib/firebase/rate-email";
+import { fetchThread } from "@/lib/firebase/threads";
 import { useAiSwitches } from "@/lib/firebase/ai-switches";
 import { aiAllowed, aiOffMessage } from "@/lib/ai/ai-switches";
 import { parseEmailFile } from "@/lib/hub/email-file";
@@ -41,7 +42,20 @@ function takePending(): PendingRateEmail[] {
   }
 }
 
-const newItem = (e: Omit<PendingRateEmail, "id">, isAgent: boolean): Item => ({ id: `re_${Math.random().toString(36).slice(2, 9)}`, ...e, currency: "", airlineName: "", agentName: "", isAgent, added: false });
+const newItem = (e: Omit<PendingRateEmail, "id"> & { id?: string }, isAgent: boolean): Item => ({
+  id: e.id ?? `re_${Math.random().toString(36).slice(2, 9)}`,
+  fromName: e.fromName,
+  fromEmail: e.fromEmail,
+  subject: e.subject,
+  text: e.text,
+  // Already read by the server: shown straight away, ready to add.
+  read: e.read,
+  currency: e.read?.currency ?? "",
+  airlineName: e.read?.airlineName ?? "",
+  agentName: e.read?.vendor ?? "",
+  isAgent,
+  added: false,
+});
 
 /**
  * Add the rates a vendor, an airline's sales agent or an overseas agent sent by email. Upload the emails (or paste the text); AI copies the rates
@@ -55,6 +69,7 @@ export function RateEmailPanel({
   destination,
   weightKg,
   laneId,
+  inboxId,
   onAdd,
 }: {
   mode: "air" | "sea";
@@ -63,6 +78,8 @@ export function RateEmailPanel({
   destination: string;
   weightKg?: number;
   laneId?: string;
+  /** The Inbox enquiry this quote answers: the rates already read from its conversation appear here by themselves. */
+  inboxId?: string;
   onAdd: (options: Array<AirlineOption | LinerOption>, currency: string) => void;
 }) {
   const switches = useAiSwitches();
@@ -74,6 +91,35 @@ export function RateEmailPanel({
   const [marginMode, setMarginMode] = useState<"perUnit" | "percent">("perUnit");
   const [marginText, setMarginText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const addedIds = useRef<Set<string>>(new Set());
+
+  // The conversation of the enquiry: replies the server has already read appear here by themselves, and new ones as they arrive.
+  useEffect(() => {
+    if (!inboxId) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const t = await fetchThread(inboxId);
+        if (!alive) return;
+        const fresh = t.members.filter((m) => m.role === "reply" && m.rateState === "read" && m.rates && m.rates.hasRates && !addedIds.current.has(m.id));
+        if (!fresh.length) return;
+        fresh.forEach((m) => addedIds.current.add(m.id));
+        setItems((prev) => [
+          ...prev,
+          ...fresh.filter((m) => !prev.some((p) => p.id === m.id)).map((m) => newItem({ id: m.id, fromName: m.who, fromEmail: m.email, subject: m.subject, text: "", read: m.rates ?? undefined }, module === "import")),
+        ]);
+        setOpen(true);
+      } catch {
+        /* the conversation is not available: uploading still works */
+      }
+    };
+    void load();
+    const t = window.setInterval(() => void load(), 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(t);
+    };
+  }, [inboxId, module]);
 
   const marginNum = marginText.trim() === "" ? null : Number(marginText);
   const margin: MarginInput | null = marginNum === null || !Number.isFinite(marginNum) || marginNum < 0 ? null : marginMode === "percent" ? { mode: "percent", percent: marginNum } : { mode: "perUnit", amount: marginNum };
@@ -90,31 +136,37 @@ export function RateEmailPanel({
         toast(`${f.name} could not be opened. Save the email as .eml or .msg and try again.`, "error");
       }
     }
-    if (added.length) setItems((prev) => [...prev, ...added]);
+    if (added.length) {
+      setItems((prev) => [...prev, ...added]);
+      void readItems(added);
+    }
     if (fileRef.current) fileRef.current.value = "";
   }
 
   function addPasted() {
     const text = paste.trim();
     if (text.length < 5) return;
-    setItems((prev) => [...prev, newItem({ fromName: "", fromEmail: "", subject: "Pasted text", text }, module === "import")]);
+    const item = newItem({ fromName: "", fromEmail: "", subject: "Pasted text", text }, module === "import");
+    setItems((prev) => [...prev, item]);
     setPaste("");
+    void readItems([item]);
   }
 
-  async function readAll() {
-    const todo = items.filter((i) => !i.read);
+  /** Reads emails that have not been read yet, by themselves the moment they are added (no button). */
+  async function readItems(list: Item[]) {
+    const todo = list.filter((i) => !i.read && i.text.trim().length >= 5);
     if (!todo.length) return;
+    if (!aiOn) return;
     setBusy(true);
     try {
       const reads = await readRateEmails({ mode, origin, destination, weightKg, emails: todo.map((i) => ({ fromName: i.fromName, fromEmail: i.fromEmail, subject: i.subject, text: i.text })) });
-      setItems((prev) => {
-        let k = 0;
-        return prev.map((i) => {
-          if (i.read) return i;
-          const r = reads[k++];
+      setItems((prev) =>
+        prev.map((i) => {
+          const k = todo.findIndex((t) => t.id === i.id);
+          const r = k >= 0 ? reads[k] : undefined;
           return r ? { ...i, read: r, currency: r.currency, airlineName: r.airlineName, agentName: r.vendor } : i;
-        });
-      });
+        }),
+      );
     } catch (e) {
       toast(e instanceof Error ? e.message : "The emails could not be read. Try again, or type the rates in.", "error");
     } finally {
@@ -140,6 +192,16 @@ export function RateEmailPanel({
     toast("Added to the desk. Check the sell rates, then choose what goes to the customer.", "success");
   }
 
+  const readAll = () => readItems(items);
+
+  // Emails kept from the Inbox conversation that were not read yet are read as soon as the panel opens.
+  useEffect(() => {
+    const waiting = items.filter((i) => !i.read);
+    if (!waiting.length) return;
+    const t = window.setTimeout(() => void readItems(waiting), 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const ready = items.filter((i) => i.read && !i.added && blockers(i.read, { currency: i.currency, airlineName: i.airlineName }).length === 0);
   const clash = currencyClash(ready.map((i) => ({ currency: i.currency || i.read?.currency || "" })));
   function addAllReady() {
@@ -164,7 +226,7 @@ export function RateEmailPanel({
     <Card className="space-y-3 border-sky-200 p-4" data-testid="rate-email-panel">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="mr-auto text-sm font-extrabold text-[var(--color-atlas-navy)]">Rates from emails</h3>
-        <span className="text-xs text-slate-500"><b className="text-sky-700">AI</b> reads each email once, about ₹0.30 or less, only when you press Read rates</span>
+        <span className="text-xs text-slate-500"><b className="text-sky-700">AI</b> reads each email by itself, once, about ₹0.30 or less</span>
         <button type="button" className="text-xs font-semibold text-slate-500 hover:underline" onClick={() => setOpen(false)}>Hide</button>
       </div>
       <p className="text-xs text-slate-600">
@@ -200,7 +262,7 @@ export function RateEmailPanel({
             <span className="flex-1" />
             {!aiOn ? <span className="text-xs font-semibold text-amber-800">{aiOffMessage(switches, "rateReplies")}</span> : null}
             <Button type="button" onClick={() => void readAll()} disabled={busy || !aiOn || !items.some((i) => !i.read)} data-testid="rate-email-read">
-              {busy ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Reading…</> : `Read rates (${items.filter((i) => !i.read).length})`}
+              {busy ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Reading…</> : `Read again (${items.filter((i) => !i.read).length})`}
             </Button>
           </div>
 

@@ -126,4 +126,20 @@ export interface PendingRateEmail {
   fromEmail: string;
   subject: string;
   text: string;
+  /** Already read by the server (automatic reading): no AI is needed again. */
+  read?: RateRead;
+}
+
+/** One line for a conversation: what the automatic reading found in a reply, and what a person still has to confirm. */
+export function rateSummary(r: RateRead): { line: string; confirm: string } {
+  const parts: string[] = [];
+  if (r.mode === "air") {
+    for (const [k, v] of Object.entries(r.breaks) as Array<[WeightBreakName, number]>) parts.push(`${BREAK_LABELS[k].replace(" and above", "+")}: ${v}${k === "min" ? " total" : "/kg"}`);
+  } else {
+    for (const c of r.containers) parts.push(`${c.type || c.label || "container"}: ${c.rate}`);
+    if (r.lclPerCbm) parts.push(`LCL: ${r.lclPerCbm}/cbm`);
+  }
+  const tail = [r.basis === "all-in" ? "all-in" : r.basis === "freight-only" ? "freight only" : "", r.currency ? `${r.currency}${r.currencyAssumed ? " (assumed: sent within India)" : ""}` : "", r.airlineName || "", r.validity ? `valid ${r.validity}` : ""].filter(Boolean);
+  const confirm = r.needsCheck.length ? `Please confirm: ${r.needsCheck.join(", ")}.` : "";
+  return { line: [...parts, ...tail].join(" · "), confirm };
 }

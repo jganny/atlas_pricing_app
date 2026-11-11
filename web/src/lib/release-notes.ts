@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.161",
+    date: "2026-11-11",
+    items: [
+      "Rates are now read by themselves. Every few minutes the app looks at the replies that were tied into a conversation (vendors, airline sales agents, overseas agents). A reply that carries rates is read, including a rate sheet attached as a PDF, and the rates appear in the Conversation box (\"Rates read automatically: 500 kg+: 730/kg · all-in · INR · All Nippon Airways\") without anyone pressing anything. A reply with no rates, such as thanks or will revert, is not read and costs nothing.",
+      "When you open the Air or Sea desk from that enquiry, step 2 (Carriers) already lists the rates read from its conversation, and new ones appear as they arrive. You type your margin, confirm only what the app cannot know (a currency outside India, an unknown airline), choose which options go to the customer, and add them.",
+      "Emails you upload or paste on the desk are read the moment you add them: there is no Read rates button to press any more (a Read again button appears only if a read did not work).",
+      "AI credit: this uses AI (Haiku 5.5, about ₹0.30 or less per reply that carries rates, nothing for the rest). A cap of 100 reads a day applies (the admin can change it), and the AI on/off switch and the monthly budget apply as for every AI feature.",
+    ],
+  },
+  {
     version: "0.3.160",
     date: "2026-11-11",
     items: [

@@ -10,11 +10,11 @@ const L = require("./rate-email-logic");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const MAX_EMAILS = 6;
 
-async function readOne(apiKey, mail, ctx) {
+async function readOne(apiKey, mail, ctx, pdfs = []) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify(L.requestBody(mail, ctx)),
+    body: JSON.stringify(L.requestBody(mail, ctx, "claude-haiku-5-5", pdfs)),
   });
   if (!response.ok) {
     let detail = "";
@@ -62,4 +62,5 @@ exports.readRateEmail = functions.runWith({ secrets: [anthropicApiKey], timeoutS
   return { reads };
 });
 
+exports.readMail = readOne;
 exports._test = { readOne };

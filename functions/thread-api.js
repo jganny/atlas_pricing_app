@@ -32,6 +32,8 @@ function buildThread(rootId, cards, sents) {
       attachments: Number(c.attachmentCount) || 0,
       by: c.id === rootId ? "self" : c.linkedBy || "",
       check: c.id !== rootId && c.needsCheck === true,
+      rateState: c.rateState || "",
+      rates: c.rates || null,
       reason: c.id === rootId ? "" : TH.REASONS[c.linkedBy] || "",
     })),
     ...sents.map((s) => ({

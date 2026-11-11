@@ -50,3 +50,14 @@ assert.equal(sea.agentRate, true);
 assert.equal(currencyClash([{ currency: "INR" }, { currency: "INR" }]), null);
 assert.match(currencyClash([{ currency: "INR" }, { currency: "USD" }]) ?? "", /different currencies/);
 console.log("rate-email web tests passed");
+
+// The conversation's one-line summary of an automatic read.
+{
+  const { rateSummary } = require("./rate-email") as typeof import("./rate-email");
+  const sum = rateSummary({ vendor: "ALG", fromEmail: "p@alg.in", mode: "air", airlineCode: "NH", airlineName: "All Nippon Airways", currency: "INR", currencyAssumed: true, basis: "all-in", breaks: { plus500: 730 }, containers: [], lclPerCbm: null, charges: [], validity: "", transit: "", routing: "", remarks: "", hasRates: true, needsCheck: [] });
+  assert.equal(sum.line, "500 kg+: 730/kg · all-in · INR (assumed: sent within India) · All Nippon Airways");
+  assert.equal(sum.confirm, "");
+  const unsure = rateSummary({ vendor: "A", fromEmail: "a@x.com", mode: "air", airlineCode: "", airlineName: "", currency: "", currencyAssumed: false, basis: "", breaks: { min: 2500 }, containers: [], lclPerCbm: null, charges: [], validity: "", transit: "", routing: "", remarks: "", hasRates: true, needsCheck: ["currency", "airline"] });
+  assert.equal(unsure.confirm, "Please confirm: currency, airline.");
+  console.log("rate summary ok");
+}

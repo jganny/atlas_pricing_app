@@ -53,3 +53,27 @@ assert.equal(L.pickRecord({ content: [] }), null);
 
 // Buy rates never leave: the reader returns the vendor's rates only for the desk; nothing here is a customer document.
 console.log("rate-email tests passed");
+
+// ---- reading by itself: only mails that carry rates reach the AI ----
+{
+  assert.equal(L.looksLikeRates("+500kg=730 allin NH"), true, "the owner's example");
+  assert.equal(L.looksLikeRates("Rates: 20GP USD 1450, 40HC USD 2300, valid till 30 Nov"), true);
+  assert.equal(L.looksLikeRates("45kg+ 3.45 per kg, min 2500"), true);
+  assert.equal(L.looksLikeRates("Thanks, will revert shortly."), false);
+  assert.equal(L.looksLikeRates("Please call me on 98450 12345"), false, "a phone number is not a rate");
+  assert.equal(L.looksLikeRates(""), false);
+  const rows = [
+    { id: "root", threadId: "root", timestamp: 1 },
+    { id: "r1", threadId: "root", timestamp: 5 },
+    { id: "r2", threadId: "root", timestamp: 9, rateState: "read" },
+    { id: "r3", threadId: "root", timestamp: 7, noAutoLink: true },
+    { id: "x", threadId: null, timestamp: 8 },
+    { id: "r4", threadId: "root", timestamp: 8, tag: "escalation" },
+    { id: "r5", threadId: "root", timestamp: 6 },
+  ];
+  assert.deepEqual(L.pickRateCandidates(rows).map((c) => c.id), ["r5", "r1"], "only unread members of a conversation, newest first");
+  assert.equal(L.pickRateCandidates(rows, 1).length, 1);
+  const withPdf = L.buildMessages({ fromEmail: "a@b.com", subject: "s", text: "t" }, { mode: "air" }, [{ name: "rates.pdf", data: "AAAA" }]);
+  assert.equal(withPdf[0].content[1].type, "document", "an attached rate sheet is read too");
+  console.log("auto-read selection ok");
+}

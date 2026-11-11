@@ -1174,6 +1174,108 @@ exports.fetchInboxEmail = functions
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Rates are read by themselves. Every few minutes the mails that were tied into a conversation (vendor, agent and GSA replies) are looked at:
+// the ones that carry rates are read (AI, Haiku 5.5, about ₹0.30 or less each) and a small rates card is kept on the mail, so the conversation
+// and the desks show the rates without anyone pressing anything. Mails with no rates ("thanks, will revert") never reach the AI. A daily cap
+// (default 100 reads, `rateReadDailyCap` in inboxAlerts/settings) and the AI on/off switch both apply; `rateAuto: false` turns it off.
+// ─────────────────────────────────────────────────────────────────────────────
+const RL = require("./rate-email-logic");
+const RE = require("./rate-email");
+const MAX_RATE_MAIL_BYTES = 5 * 1024 * 1024;
+
+exports.autoReadVendorReplies = functions
+  .runWith({ secrets: [pricingPassword, salesPassword, anthropicApiKey], timeoutSeconds: 270, memory: "512MB" })
+  .pubsub.schedule("every 3 minutes")
+  .onRun(async () => {
+    const db = admin.firestore();
+    const settingsSnap = await db.doc("inboxAlerts/settings").get().catch(() => null);
+    const settings = settingsSnap && settingsSnap.exists ? settingsSnap.data() : {};
+    if (settings.rateAuto === false) return null;
+    const cap = Number(settings.rateReadDailyCap) > 0 ? Number(settings.rateReadDailyCap) : 100;
+    const day = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+    const statRef = db.collection("inbox_stats").doc(`${day}_rates`);
+    let used = Number(((await statRef.get()).data() || {}).reads) || 0;
+    if (used >= cap) return null;
+    const apiKey = anthropicApiKey.value() || "";
+    if (!apiKey) return null;
+
+    const snap = await db.collection("inbox_enquiries").where("timestamp", ">", Date.now() - 4 * TH.DAY).limit(600).get();
+    const todo = RL.pickRateCandidates(snap.docs.map((d) => ({ id: d.id, ...d.data() })), 8);
+    if (!todo.length) return null;
+    let read = 0;
+    let stopped = false;
+    for (const box of MAILBOXES) {
+      const mine = todo.filter((c) => c.mailbox === box.key);
+      if (!mine.length || stopped) continue;
+      let client;
+      try {
+        client = await connectMailbox(box);
+      } catch {
+        continue;
+      }
+      try {
+        const lock = await client.getMailboxLock(IMAP.folder);
+        try {
+          for (const c of mine) {
+            if (used >= cap || stopped) break;
+            const ref = db.collection("inbox_enquiries").doc(c.id);
+            try {
+              let uid = null;
+              if (c.messageId && !String(c.messageId).startsWith("uid-")) {
+                const found = await client.search({ header: { "message-id": c.messageId } }, { uid: true });
+                if (Array.isArray(found) && found.length) uid = found[found.length - 1];
+              }
+              if (!uid && Number.isInteger(c.uid)) uid = c.uid;
+              const msg = uid ? await client.fetchOne(String(uid), { source: { maxLength: MAX_RATE_MAIL_BYTES }, uid: true }, { uid: true }) : null;
+              if (!msg || !msg.source) {
+                await ref.set({ rateState: "failed", rateError: "The email was no longer in the mailbox." }, { merge: true });
+                continue;
+              }
+              const parsed = await simpleParser(msg.source);
+              const subject = String(parsed.subject || c.subject || "");
+              const text = F.latestText(subject, String(parsed.text || stripHtml(parsed.html || ""))).replace(/\n{3,}/g, "\n\n").trim().slice(0, 12000);
+              const pdfs = (parsed.attachments || [])
+                .filter((a) => /pdf/i.test(String(a.contentType || "")) && a.content && a.content.length <= 4 * 1024 * 1024)
+                .slice(0, 2)
+                .map((a) => ({ name: String(a.filename || "rates.pdf"), data: a.content.toString("base64") }));
+              if (!RL.looksLikeRates(`${subject}\n${text}`) && !pdfs.length) {
+                await ref.set({ rateState: "skipped" }, { merge: true });
+                continue;
+              }
+              const rootSnap = c.threadId ? await db.collection("inbox_enquiries").doc(c.threadId).get() : null;
+              const root = rootSnap && rootSnap.exists ? rootSnap.data() : {};
+              const fromAddr = (/<([^>]+)>/.exec(String(c.from || "")) || [])[1] || String(c.from || "");
+              const ctx = { mode: root.mode === "sea" ? "sea" : "air", origin: (root.codes || [])[0] || "", destination: (root.codes || [])[1] || "", weightKg: Array.isArray(root.nums) && root.nums.length ? Number(root.nums[0]) : 0 };
+              const result = await RE.readMail(apiKey, { fromName: String(c.from || "").replace(/<[^>]*>/g, "").replace(/"/g, "").trim(), fromEmail: fromAddr.toLowerCase(), subject, text }, ctx, pdfs);
+              used += 1;
+              read += 1;
+              await ref.set(result.hasRates ? { rateState: "read", rates: result, rateAt: Date.now() } : { rateState: "skipped" }, { merge: true });
+            } catch (err) {
+              const code = err && err.code;
+              if (code === "resource-exhausted" || code === "functions/resource-exhausted") {
+                // The AI is switched off, over its budget or out of credit: stop for now, try again later. Nothing is marked.
+                functions.logger.warn("autoReadVendorReplies: AI not available", { message: String((err && err.message) || err).slice(0, 160) });
+                stopped = true;
+                break;
+              }
+              const tries = (Number(c.rateTries) || 0) + 1;
+              await ref.set(tries >= 2 ? { rateState: "failed", rateTries: tries, rateError: String((err && err.message) || err).slice(0, 120) } : { rateTries: tries }, { merge: true }).catch(() => undefined);
+              functions.logger.warn("autoReadVendorReplies: a reply could not be read", { message: String((err && err.message) || err).slice(0, 160) });
+            }
+          }
+        } finally {
+          lock.release();
+        }
+      } finally {
+        await closeMailbox(client);
+      }
+    }
+    if (read) await statRef.set({ day, reads: admin.firestore.FieldValue.increment(read), updatedAt: Date.now() }, { merge: true });
+    functions.logger.info("autoReadVendorReplies", { candidates: todo.length, read, usedToday: used, cap });
+    return null;
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Search the mailboxes, live. Nothing is stored: the mail server does the searching and only a short list (sender, subject, date) comes back.
 // The pricing desks and the admin can search; the sales team's own logins cannot (they see the mails they are copied on in the list).
 // ─────────────────────────────────────────────────────────────────────────────

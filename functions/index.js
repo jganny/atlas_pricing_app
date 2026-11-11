@@ -1452,6 +1452,7 @@ exports.threadGet = require("./thread-api").threadGet;
 exports.threadUnlink = require("./thread-api").threadUnlink;
 exports.threadLink = require("./thread-api").threadLink;
 exports.readRateEmail = require("./rate-email").readRateEmail;
+exports.autoReadVendorReplies = require("./inbox-poll").autoReadVendorReplies;
 
 // Team chat: delete messages and files 100 days after they were sent, and alert people who are away.
 const chatRetention = require("./chat-retention");

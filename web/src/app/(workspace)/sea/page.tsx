@@ -1670,6 +1670,7 @@ function SeaDeskInner() {
                 origin={origin}
                 destination={destination}
                 laneId={lanes.length > 1 ? activeLane?.id : undefined}
+                inboxId={inboxRef?.id}
                 onAdd={(opts, cur) => addEmailRates(opts as LinerOption[], cur)}
               />
               {!isRelaxedImportQuote(module, incoterm) ? (

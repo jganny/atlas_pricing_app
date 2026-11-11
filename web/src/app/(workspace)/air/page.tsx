@@ -1682,6 +1682,7 @@ function AirDeskInner() {
                 destination={destination}
                 weightKg={selectedTotals?.freight.chargeableWeightKg}
                 laneId={lanes.length > 1 ? activeLane?.id : undefined}
+                inboxId={inboxRef?.id}
                 onAdd={(opts, cur) => addEmailRates(opts as AirlineOption[], cur)}
               />
               {!isRelaxedImportQuote(module, incoterm) ? (

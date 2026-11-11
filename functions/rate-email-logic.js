@@ -149,14 +149,36 @@ function finishRead(raw, mail = {}, ctx = {}) {
   };
 }
 
-/** The user message for one email. text: the mail's new text only. */
-function buildMessages(mail, ctx = {}) {
+/**
+ * Does this reply look like it carries rates? Fixed rules, so the AI is only paid for mails that do: a number next to a rate word, a currency,
+ * a weight break, a container size. "Thanks, will revert" and "Please call me" never reach the AI.
+ */
+function looksLikeRates(text) {
+  const t = String(text || "").slice(0, 12000);
+  if (!/\d/.test(t)) return false;
+  return /(\brates?\b|\bper\s*(?:kg|cbm|ton|container)|\/\s*(?:kg|cbm)|\bkgs?\b|\ball[\s-]?in\b|\bnet\b|\busd\b|\binr\b|\beur\b|\baed\b|\bgbp\b|\+\s*\d{2,4}|\bmin(?:imum)?\b|\bcbm\b|\b(?:20|40)\s*'?\s*(?:gp|hc|hq|ft|dc)\b|\bfreight\b|\bsurcharges?\b|\bvalid(?:ity)?\b|=\s*\d)/i.test(t);
+}
+
+/** Which cards still need their rates read: a mail tied into a conversation (not the enquiry itself), not read or skipped yet, newest first. */
+function pickRateCandidates(rows, max = 8) {
+  return rows
+    .filter((c) => c && c.threadId && c.threadId !== c.id && !c.rateState && !c.noAutoLink && c.tag !== "escalation")
+    .sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0))
+    .slice(0, max);
+}
+
+/** The user message for one email. text: the mail's new text only. pdfs: [{ name, data(base64) }] rate sheets attached to it. */
+function buildMessages(mail, ctx = {}, pdfs = []) {
   const lane = [ctx.origin, ctx.destination].filter(Boolean).join(" to ");
   const text = String(mail.text || "").slice(0, 12000);
   return [
     {
       role: "user",
       content: [
+        ...(Array.isArray(pdfs) ? pdfs : []).slice(0, 2).flatMap((p) => [
+          { type: "text", text: `Attachment: ${String((p && p.name) || "rate sheet").slice(0, 80)}` },
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: String((p && p.data) || "") } },
+        ]),
         {
           type: "text",
           text:
@@ -168,8 +190,8 @@ function buildMessages(mail, ctx = {}) {
   ];
 }
 
-function requestBody(mail, ctx = {}, model = "claude-haiku-5-5") {
-  return { model, max_tokens: 4000, thinking: { type: "adaptive" }, system: SYSTEM_PROMPT, tools: [TOOL], tool_choice: { type: "auto" }, messages: buildMessages(mail, ctx) };
+function requestBody(mail, ctx = {}, model = "claude-haiku-5-5", pdfs = []) {
+  return { model, max_tokens: 4000, thinking: { type: "adaptive" }, system: SYSTEM_PROMPT, tools: [TOOL], tool_choice: { type: "auto" }, messages: buildMessages(mail, ctx, pdfs) };
 }
 
 /** The tool call out of the model's answer, or null. */
@@ -178,4 +200,4 @@ function pickRecord(payload) {
   return block && block.input && typeof block.input === "object" ? block.input : null;
 }
 
-module.exports = { AIR_BREAKS, SEA_TYPES, CURRENCIES, SYSTEM_PROMPT, TOOL, finishRead, buildMessages, requestBody, pickRecord, isIndiaSender };
+module.exports = { looksLikeRates, pickRateCandidates, AIR_BREAKS, SEA_TYPES, CURRENCIES, SYSTEM_PROMPT, TOOL, finishRead, buildMessages, requestBody, pickRecord, isIndiaSender };
