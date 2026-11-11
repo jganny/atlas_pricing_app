@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.165",
+    date: "2026-11-12",
+    items: [
+      "Home is a calm desk, not a stack of red and pink boxes. You are greeted by name. One next enquiry sits at the top with a single Open button. The month's numbers sit in a quiet row. Late mail is a short count with Team board — the list is not dumped on Home. Air, Sea and Inbox shortcuts are not repeated; they already live in the menu.",
+    ],
+  },
+  {
     version: "0.3.164",
     date: "2026-11-11",
     items: [

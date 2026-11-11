@@ -27,6 +27,7 @@ assert.equal(fs.existsSync(path.join(web, "src/components/HomeStartBox.tsx")), f
 assert.match(shell, /GlobalSearch variant="desk"/);
 assert.doesNotMatch(home, /motion-sample/);
 assert.match(shell, /normalized === "\/quote"/);
+assert.match(shell, /normalized === "\/"/, "Home is full-bleed like Quote Hub and Inbox");
 assert.match(css, /atlas-frost/);
 assert.match(drop, /atlas-frost/);
 
