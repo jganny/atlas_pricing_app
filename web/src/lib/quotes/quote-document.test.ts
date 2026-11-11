@@ -152,4 +152,21 @@ const lines = optionChargeLines(ek, "USD", 100);
 assert.ok(lines.some((l) => l.label === "Origin fees"));
 assert.equal(lines[lines.length - 1].label, "Option total");
 
+
+// What the customer receives never carries profit or cost, whatever the staff quote holds.
+{
+  const withMargins: SavedQuote = {
+    ...quote,
+    grossProfit: 123457,
+    grossProfitCurrency: "USD",
+    buyTotal: 654321,
+    details: { ...quote.details, grossProfit: 123457, baseBuyFreight: 654321, appliedBuyRate: 9.87, buyTotal: 654321 },
+  };
+  const built = buildClientQuoteDocument(withMargins);
+  // The page's own print styles say "margin"; only what a person reads counts.
+  const html = built.html.replace(/<style[\s\S]*?<\/style>/gi, " ") + " " + built.emailCover;
+  assert.doesNotMatch(html, /gross profit|\bGP\b|margin|buy rate|from buy/i, "no profit or cost wording reaches the customer");
+  for (const secret of ["123457", "123,457", "654321", "654,321", "9.87"]) assert.ok(!html.includes(secret), `the customer copy must not contain ${secret}`);
+}
+
 console.log("quote-document tests passed");
