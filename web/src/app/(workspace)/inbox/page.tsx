@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, Clock, CornerUpLeft, Flag, Inbox, Loader2, Mail, Paperclip, Plane, Search, Ship, Tag, TriangleAlert, User, Users } from "lucide-react";
+import { ChevronDown, CircleCheck, Clock, CornerUpLeft, Flag, Inbox, Loader2, Mail, Paperclip, Plane, Search, Ship, Tag, TriangleAlert, User, Users } from "lucide-react";
 import type { ComponentType } from "react";
 import { Button } from "@/components/ui";
 import { toast } from "@/components/Toast";
@@ -23,6 +23,7 @@ import { parseAirEnquiry, parseSeaEnquiry } from "@/lib/pricing/parse-enquiry";
 import { askRequest, agoText, handOverPatch, markWorking, TAKEOVER_WAIT_MINUTES, workState, type WorkState } from "@/lib/mail/inbox-working";
 import { replyBy, timeLeftText, urgencyOf, type Urgency } from "@/lib/mail/reply-by";
 import { VIEW_LABELS, listView, senderDisplay, viewCounts, type ViewKey } from "@/lib/mail/inbox-views";
+import { inboxListPreview, inboxListWhen } from "@/lib/mail/inbox-list-row";
 import { labelsOf, LABEL_NAMES } from "@/lib/mail/inbox-labels";
 import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import type { InboxEnquiry } from "@/lib/types";
@@ -37,8 +38,9 @@ import { useAiSwitches } from "@/lib/firebase/ai-switches";
 
 type ReadMode = "text" | "ai";
 
-const VIEW_GROUPS: Array<{ title: string; keys: ViewKey[] }> = [
-  { title: "Views", keys: ["all", "mine", "others", "due", "past", "followup", "escalation"] },
+const PRIMARY_VIEWS: ViewKey[] = ["all", "mine", "due", "past"];
+const MORE_GROUPS: Array<{ title: string; keys: ViewKey[] }> = [
+  { title: "Also", keys: ["others", "followup", "escalation"] },
   { title: "By type", keys: ["air", "sea"] },
   { title: "By mailbox", keys: ["mb:pricing", "mb:pricingsales"] },
   { title: "Labels", keys: ["label:dg", "label:pharma", "label:perishable", "label:deadline", "label:attachment"] },
@@ -134,6 +136,8 @@ export default function EnquiryInboxPage() {
   });
   const [searchOpen, setSearchOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const { readEmailBytes } = useHubReader();
   const [modeOverride, setModeOverride] = useState<"air" | "sea" | null>(null);
@@ -296,115 +300,126 @@ export default function EnquiryInboxPage() {
     setSelectedId(null);
   }
 
+
   const quoteBlocked = state.kind === "other" || state.kind === "asked";
   const rb = selected ? replyBy(selected, now) : null;
   const receivedText = selected?.receivedAt ? new Date(selected.receivedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  const unread = (row: InboxEnquiry) => row.status === "new" && !row.workingBy;
+
+  function openFolder(k: ViewKey) {
+    setView(k);
+    setSelectedId(null);
+  }
+
+  function folderButton(k: ViewKey) {
+    const Icon = VIEW_ICONS[k];
+    const on = view === k;
+    return (
+      <button
+        key={k}
+        type="button"
+        onClick={() => openFolder(k)}
+        className={`flex h-10 w-full items-center gap-2.5 rounded px-3 text-left text-[14px] ${on ? "bg-[#e1dfdd] font-semibold text-[#201f1e]" : "font-normal text-[#201f1e] hover:bg-[#edebe9]"}`}
+        data-testid={`inbox-view-${k}`}
+      >
+        <Icon className={`h-4 w-4 shrink-0 ${on ? "text-[#0078d4]" : "text-[#605e5c]"}`} />
+        <span className="min-w-0 flex-1 truncate">{k === "all" ? "Inbox" : VIEW_LABELS[k]}</span>
+        <span className="tabular-nums text-[13px] text-[#605e5c]">{counts[k] || ""}</span>
+      </button>
+    );
+  }
 
   return (
-    <div className="space-y-3">
+    <div className="flex min-h-0 flex-1 flex-col bg-white text-[#201f1e]">
       {searchOpen ? <MailSearch onClose={() => setSearchOpen(false)} /> : null}
       {boardOpen ? <TeamBoard rows={mine} onClose={() => setBoardOpen(false)} /> : null}
-      {today.data && (today.data.circulars.length || today.data.unfiled.length) ? (
-        <div className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-4 py-2 text-xs text-slate-700" data-testid="inbox-circular-strip">
-          {today.data.circulars.length ? (
-            <p>
-              <b className="font-semibold text-emerald-800">Filed to Circulars today: {today.data.circulars.length}.</b>{" "}
-              {today.data.circulars.slice(0, 3).map((c) => `${c.carrier ? `${c.carrier}: ` : ""}${c.title}`).join(" · ")}
-            </p>
-          ) : null}
-          {today.data.unfiled.length ? (
-            <p className="mt-0.5">
-              <b className="font-semibold text-amber-800">Needs filing by hand ({today.data.unfiled.length}):</b>{" "}
-              {today.data.unfiled.slice(0, 3).map((u) => `${u.carrier}: ${u.subject}`).join(" · ")}. It arrived as plain words with no file, so open it in Outlook and add it in the Circulars tab.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-atlas-navy)]">Inbox</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Enquiries in the order they must be answered. Emails are opened live from the mailbox and are not saved here.</p>
-        </div>
-        <span className="ml-auto flex items-center gap-2 text-sm">
-          <Button type="button" variant="secondary" onClick={() => setBoardOpen(true)} data-testid="inbox-board-button">
-            Team board
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => setSearchOpen(true)} data-testid="inbox-search-button">
-            <Search className="mr-1.5 h-4 w-4" /> Search mail
-          </Button>
-          {counts.past ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 font-semibold text-red-700">
-              <span className="h-2 w-2 rounded-full bg-red-600" />
-              {counts.past} past its time
-            </span>
-          ) : null}
-          {counts.due ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-800">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
-              {counts.due} due within the hour
-            </span>
-          ) : null}
-          {!counts.past && !counts.due ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-800"><span className="h-2 w-2 rounded-full bg-emerald-600" />On time</span> : null}
-        </span>
-      </div>
 
-      <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-sm lg:grid lg:h-[calc(100vh-190px)] lg:min-h-[560px] lg:grid-cols-[224px_368px_minmax(0,1fr)]">
-        {/* folders */}
-        <aside aria-label="Folders" className="overflow-y-auto border-b border-[var(--color-border)] bg-slate-50/80 px-2 py-3 lg:border-b-0 lg:border-r">
-          {VIEW_GROUPS.map((g) => (
-            <div key={g.title} className="mb-3">
-              <div className="px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">{g.title}</div>
-              {g.keys.map((k) => {
-                const Icon = VIEW_ICONS[k];
-                const on = view === k;
-                const pill = counts[k] && (k === "past" || k === "escalation") ? "bg-red-100 text-red-700" : counts[k] && k === "due" ? "bg-amber-100 text-amber-800" : counts[k] && (k === "mine" || k === "others") ? "bg-slate-800 text-white" : "text-[var(--color-text-muted)]";
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => {
-                      setView(k);
-                      setSelectedId(null);
-                    }}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13.5px] transition-colors ${on ? "bg-white font-semibold text-[var(--color-atlas-navy)] shadow-sm ring-1 ring-[var(--color-border)]" : "font-medium text-slate-700 hover:bg-white/70"}`}
-                    data-testid={`inbox-view-${k}`}
-                  >
-                    <Icon className={`h-4 w-4 shrink-0 ${on ? "text-[var(--color-atlas-sky)]" : "text-slate-500"}`} />
-                    <span className="flex-1">{VIEW_LABELS[k]}</span>
-                    <span className={`min-w-[1.25rem] rounded-full px-1.5 text-center text-[11px] font-semibold tabular-nums ${pill}`}>{counts[k]}</span>
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[220px_380px_minmax(0,1fr)]">
+        <aside aria-label="Folders" className="overflow-y-auto border-b border-[#edebe9] bg-[#f3f2f1] px-2 py-5 lg:border-b-0 lg:border-r">
+          <div className="px-3 pb-4 text-[20px] font-semibold tracking-tight">Inbox</div>
+          {PRIMARY_VIEWS.map(folderButton)}
+          <div className="mt-7 px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#605e5c]">Folders</div>
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className="flex h-9 w-full items-center gap-2 rounded px-3 text-left text-[13.5px] text-[#605e5c] hover:bg-[#edebe9]"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+            More
+          </button>
+          {moreOpen
+            ? MORE_GROUPS.map((g) => (
+                <div key={g.title} className="mt-2">
+                  <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#605e5c]">{g.title}</div>
+                  {g.keys.map(folderButton)}
+                </div>
+              ))
+            : MORE_GROUPS.flatMap((g) => g.keys).map((k) => (
+                <span key={k} className="sr-only">
+                  <button type="button" onClick={() => openFolder(k)} data-testid={`inbox-view-${k}`}>
+                    {VIEW_LABELS[k]}
                   </button>
-                );
-              })}
+                </span>
+              ))}
+          {today.data && (today.data.circulars.length || today.data.unfiled.length) ? (
+            <div className="mx-2 mt-6 border-t border-[#e1dfdd] px-1 pt-3 text-[12px] leading-5 text-[#605e5c]" data-testid="inbox-circular-strip">
+              {today.data.circulars.length ? (
+                <p>
+                  Filed today: {today.data.circulars.length}. {today.data.circulars.slice(0, 2).map((c) => `${c.carrier ? `${c.carrier}: ` : ""}${c.title}`).join(" · ")}
+                </p>
+              ) : null}
+              {today.data.unfiled.length ? (
+                <p className="mt-1">
+                  Needs filing ({today.data.unfiled.length}): {today.data.unfiled.slice(0, 2).map((u) => `${u.carrier}: ${u.subject}`).join(" · ")}.
+                </p>
+              ) : null}
             </div>
-          ))}
+          ) : null}
         </aside>
 
-        {/* list */}
-        <section aria-label="Emails" className="overflow-y-auto border-b border-[var(--color-border)] lg:border-b-0 lg:border-r">
-          <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-[var(--color-border)] bg-white/95 px-4 py-3 backdrop-blur">
-            <div className="flex-1">
-              <div className="text-[15px] font-semibold">{VIEW_LABELS[view]}</div>
-              <div className="text-xs text-[var(--color-text-muted)]">
-                {visible.length} {visible.length === 1 ? "enquiry" : "enquiries"}, soonest reply-by first
-              </div>
+        <section aria-label="Emails" className="min-h-0 overflow-y-auto border-b border-[#edebe9] bg-white lg:border-b-0 lg:border-r">
+          <div className="flex items-end justify-between gap-3 px-5 pb-1 pt-5">
+            <div className="text-[18px] font-semibold">{view === "all" ? "Inbox" : VIEW_LABELS[view]}</div>
+            <div className="mb-0.5 flex items-center gap-1 text-[13px] text-[#605e5c]">
+              <button type="button" onClick={() => setSearchOpen(true)} data-testid="inbox-search-button" className="inline-flex h-8 items-center gap-1.5 px-2 hover:bg-[#f3f2f1]">
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </button>
+              <button type="button" onClick={() => setBoardOpen(true)} data-testid="inbox-board-button" className="h-8 px-2 hover:bg-[#f3f2f1]">
+                Team board
+              </button>
             </div>
           </div>
+          <div className="mb-1 flex gap-6 border-b border-[#edebe9] px-5 text-[14px]">
+            <span className="border-b-2 border-[#0078d4] py-2.5 font-semibold text-[#201f1e]">Focused</span>
+            <span className="py-2.5 text-[#605e5c]">
+              {visible.length} {visible.length === 1 ? "enquiry" : "enquiries"}
+            </span>
+          </div>
           {isLoading ? (
-            <p className="p-6 text-sm text-[var(--color-text-muted)]">Loading the Inbox…</p>
+            <p className="p-8 text-sm text-[#605e5c]">Loading the Inbox…</p>
           ) : visible.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <Inbox className="mx-auto h-8 w-8 text-slate-300" />
-              <p className="mt-3 text-sm font-medium text-slate-700">Nothing in this folder</p>
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">New enquiries appear here by themselves. Noise is never kept.</p>
+            <div className="px-8 py-16 text-center">
+              <Inbox className="mx-auto h-8 w-8 text-[#d2d0ce]" />
+              <p className="mt-3 text-sm font-medium">Nothing in this folder</p>
+              <p className="mt-1 text-xs text-[#605e5c]">New enquiries appear here by themselves.</p>
             </div>
           ) : (
             <ul>
               {visible.map((row) => {
-                const r = replyBy(row, now);
-                const u = urgencyOf(r.at, now);
                 const st = workState(row, user?.username, now);
                 const sel = selected?.id === row.id;
-                const dot = u === "past" ? "bg-red-500" : u === "soon" ? "bg-amber-500" : "bg-emerald-500";
+                const extra =
+                  labelsOf(row)
+                    .filter((l) => l !== "deadline")
+                    .map((l) => LABEL_NAMES[l]);
+                const previewBits = [
+                  inboxListPreview(row),
+                  ...extra,
+                  st.kind === "mine" ? "You are quoting" : "",
+                  st.kind === "other" || st.kind === "asked" || st.kind === "can-take" ? `${st.worker.name} is quoting` : "",
+                  st.kind === "incoming" ? `${st.request.name} asks to take this` : "",
+                ].filter(Boolean);
                 return (
                   <li key={row.id}>
                     <button
@@ -413,29 +428,16 @@ export default function EnquiryInboxPage() {
                         setSelectedId(row.id);
                         setModeOverride(null);
                         setReadChoice(null);
+                        setReplyOpen(false);
                       }}
-                      className={`block w-full border-b border-[var(--color-border)]/70 px-4 py-3 text-left transition-colors ${sel ? "bg-sky-50" : "hover:bg-slate-50"}`}
+                      className={`block min-h-[92px] w-full border-b border-[#edebe9] px-5 py-4 text-left ${sel ? "bg-[#deecf9]" : "bg-white hover:bg-[#f5f5f5]"}`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
-                        <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-slate-900">{senderDisplay(row.from)}</span>
-                        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] font-semibold tabular-nums ${URGENCY_CLASS[u]}`}>{timeLeftText(r.at, now)}</span>
+                      <div className="flex items-baseline gap-3">
+                        <span className={`min-w-0 flex-1 truncate text-[14px] ${unread(row) ? "font-semibold" : "font-normal"}`}>{senderDisplay(row.from)}</span>
+                        <span className="shrink-0 text-[12.5px] text-[#605e5c]">{inboxListWhen(row.receivedAt, now)}</span>
                       </div>
-                      <div className="mt-1 line-clamp-2 text-[13.5px] leading-snug text-slate-800">{row.subject}</div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--color-text-muted)]">
-                        <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">
-                          {row.mode === "sea" ? <Ship className="h-3 w-3" /> : <Plane className="h-3 w-3" />}
-                          {row.mode === "sea" ? "Sea" : "Air"}
-                        </span>
-                        {row.tag === "escalation" ? <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-800"><TriangleAlert className="h-3 w-3" />Problem on a shipment</span> : <span>{r.basis === "client" ? `Client deadline ${r.localText}` : `${r.zone.city} closes ${r.localText}`}</span>}
-                        {labelsOf(row).filter((l) => l !== "deadline").map((l) => (
-                          <span key={l} className="rounded bg-violet-50 px-1.5 py-0.5 font-medium text-violet-800">{LABEL_NAMES[l]}</span>
-                        ))}
-                        {st.kind === "other" || st.kind === "asked" || st.kind === "can-take" ? <span className="rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800">{st.worker.name} is quoting</span> : null}
-                        {st.kind === "mine" ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800">You are quoting</span> : null}
-                        {row.repliedAt ? <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-800">Replied from Outlook</span> : null}
-                        {st.kind === "incoming" ? <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">{st.request.name} asks to take this</span> : null}
-                      </div>
+                      <div className="mt-1 truncate text-[14px] font-semibold">{row.subject}</div>
+                      <div className="mt-1 truncate text-[13.5px] text-[#605e5c]">{previewBits.join(" · ") || " "}</div>
                     </button>
                   </li>
                 );
@@ -444,95 +446,108 @@ export default function EnquiryInboxPage() {
           )}
         </section>
 
-        {/* reading pane */}
-        <article aria-label="Email" className="flex min-w-0 flex-col overflow-y-auto">
+        <article aria-label="Email" className="flex min-w-0 flex-col overflow-y-auto bg-white">
           {!selected ? (
-            <div className="px-8 py-16 text-center text-sm text-[var(--color-text-muted)]">Select an enquiry to read it.</div>
+            <div className="px-10 py-20 text-sm text-[#605e5c]">Select an enquiry to read it.</div>
           ) : (
             <>
-              <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] bg-slate-50/95 px-5 py-3 backdrop-blur">
+              <div className="sticky top-0 z-10 flex h-[52px] shrink-0 items-center gap-1 border-b border-[#edebe9] bg-white px-7">
                 {selected.tag === "escalation" ? (
                   <Button type="button" disabled={busy} onClick={() => void resolveItem(selected)} data-testid="inbox-resolve-button">
                     <CircleCheck className="mr-2 h-4 w-4" />
                     Mark resolved
                   </Button>
-                ) : null}
-                {selected.tag === "escalation" ? null : <Button type="button" disabled={busy || quoteBlocked} onClick={() => void applyToDesk(selected, resolvedMode, readMode)} data-testid="inbox-quote-button">
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {state.kind === "can-take" ? "Take over and quote" : "Quote"} on {resolvedMode === "sea" ? "Sea" : "Air"} desk
-                </Button>}
-                {selected.tag === "escalation" ? null : <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-xs font-medium shadow-sm" role="group" aria-label="How to read the email">
-                  <button type="button" onClick={() => setReadChoice("text")} className={`px-3 py-2 ${readMode === "text" ? "bg-sky-100 font-semibold text-sky-900" : "text-slate-700 hover:bg-slate-50"}`}>
-                    Text only, free
-                  </button>
-                  <button type="button" onClick={() => setReadChoice("ai")} disabled={!useLiveData || !aiOn} title={aiOn ? undefined : aiOffMessage(aiSwitches, "quoteHub")} className={`border-l border-[var(--color-border)] px-3 py-2 ${readMode === "ai" ? "bg-sky-100 font-semibold text-sky-900" : "text-slate-700 hover:bg-slate-50"}`}>
-                    <span className="font-bold text-sky-700">AI</span> {aiOn ? "text and attachments, about ₹1" : "is switched off by your admin"}
-                  </button>
-                </div>}
-                {selected.tag === "escalation" ? null : <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-xs font-semibold shadow-sm" role="group" aria-label="Which desk">
-                  <button type="button" className={`px-3 py-2 ${resolvedMode === "air" ? "bg-amber-500 text-white" : "text-slate-700 hover:bg-slate-50"}`} onClick={() => setModeOverride("air")}>
-                    Air
-                  </button>
-                  <button type="button" className={`border-l border-[var(--color-border)] px-3 py-2 ${resolvedMode === "sea" ? "bg-sky-600 text-white" : "text-slate-700 hover:bg-slate-50"}`} onClick={() => setModeOverride("sea")}>
-                    Sea
-                  </button>
-                </div>}
-                <Button type="button" variant="ghost" disabled={busy} onClick={() => void dismiss(selected)} className="ml-auto">
+                ) : (
+                  <Button
+                    type="button"
+                    disabled={busy || quoteBlocked}
+                    onClick={() => void applyToDesk(selected, resolvedMode, readMode)}
+                    data-testid="inbox-quote-button"
+                    className="h-8 rounded bg-[#0078d4] px-4 text-[13.5px] shadow-none hover:bg-[#106ebe]"
+                  >
+                    {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {state.kind === "can-take" ? "Take over and quote" : "Quote"}
+                  </Button>
+                )}
+                <Button type="button" variant="ghost" disabled={busy} onClick={() => void dismiss(selected)} className="h-8 px-3 text-[13.5px]">
                   Ignore
                 </Button>
+                {selected.tag === "escalation" ? null : (
+                  <Button type="button" variant="ghost" className="h-8 px-3 text-[13.5px]" onClick={() => setReplyOpen((v) => !v)}>
+                    {replyOpen ? "Hide reply" : "Reply"}
+                  </Button>
+                )}
+                {selected.tag === "escalation" ? null : (
+                  <>
+                    <div className="ml-2 hidden items-center text-[13px] text-[#605e5c] sm:flex" role="group" aria-label="Which desk">
+                      <button type="button" className={`h-8 px-3 ${resolvedMode === "air" ? "font-semibold text-[#201f1e]" : "hover:bg-[#f3f2f1]"}`} onClick={() => setModeOverride("air")}>
+                        Air
+                      </button>
+                      <button type="button" className={`h-8 px-3 ${resolvedMode === "sea" ? "font-semibold text-[#201f1e]" : "hover:bg-[#f3f2f1]"}`} onClick={() => setModeOverride("sea")}>
+                        Sea
+                      </button>
+                    </div>
+                    <div className="hidden items-center text-[13px] text-[#605e5c] lg:flex" role="group" aria-label="How to read the email">
+                      <button type="button" onClick={() => setReadChoice("text")} className={`h-8 px-3 ${readMode === "text" ? "font-semibold text-[#201f1e]" : "hover:bg-[#f3f2f1]"}`}>
+                        Text only
+                      </button>
+                      <button type="button" onClick={() => setReadChoice("ai")} disabled={!useLiveData || !aiOn} title={aiOn ? undefined : aiOffMessage(aiSwitches, "quoteHub")} className={`h-8 px-3 ${readMode === "ai" ? "font-semibold text-[#201f1e]" : "hover:bg-[#f3f2f1]"}`}>
+                        Attachments {aiOn ? "· ₹1" : "off"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div className="space-y-4 px-6 py-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  {rb ? (
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${URGENCY_CLASS[urgencyOf(rb.at, now)]}`}>
-                      <Clock className="h-3.5 w-3.5" />
+              <div className="mx-auto w-full max-w-[720px] px-10 pb-16 pt-8">
+                {rb ? (
+                  <p className="mb-6 text-[13px] text-[#605e5c]">
+                    {rb.basis === "client" ? "The client gave this deadline" : `${rb.zone.city} office closes at 18:00`}
+                    {" · "}
+                    <span className={urgencyOf(rb.at, now) === "ok" ? "" : URGENCY_CLASS[urgencyOf(rb.at, now)] + " rounded px-1.5 py-0.5"}>
                       Reply by {rb.localText} · {timeLeftText(rb.at, now)}
-                    </span>
-                  ) : null}
-                  <span className="text-xs text-[var(--color-text-muted)]">{rb?.basis === "client" ? "The client gave this deadline" : `${rb?.zone.city} office closes at 18:00`}</span>
-                </div>
-
-                {selected.tag === "escalation" ? (
-                  <p className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-900" data-testid="inbox-escalation-note">
-                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>
-                      A problem on a shipment. {selected.reason ? `${selected.reason}. ` : ""}It stays here for everyone on {selected.mailboxEmail || selected.mailbox} until someone marks it resolved. Reply from Outlook as usual.
                     </span>
                   </p>
                 ) : null}
-                <h2 className="text-xl font-semibold leading-snug tracking-tight text-slate-900">{selected.subject}</h2>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-atlas-navy)] text-sm font-semibold text-white">
+                {selected.tag === "escalation" ? (
+                  <p className="mb-6 text-sm text-[#201f1e]" data-testid="inbox-escalation-note">
+                    A problem on a shipment. {selected.reason ? `${selected.reason}. ` : ""}It stays here for everyone on {selected.mailboxEmail || selected.mailbox} until someone marks it resolved. Reply from Outlook as usual.
+                  </p>
+                ) : null}
+
+                <h2 className="text-[22px] font-semibold leading-snug tracking-tight">{selected.subject}</h2>
+
+                <div className="mt-7 mb-8 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#486991] text-sm font-semibold text-white">
                     {senderDisplay(selected.from).split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
-                  <div className="min-w-0 text-sm leading-5">
-                    <div>
-                      <span className="font-semibold text-slate-900">{senderDisplay(selected.from)}</span>{" "}
-                      <span className="text-[var(--color-text-muted)]">{/<([^>]+)>/.exec(selected.from || "")?.[1] ?? ""}</span>
+                  <div className="min-w-0 text-[14px] leading-5">
+                    <div className="font-semibold">
+                      {senderDisplay(selected.from)}
+                      <span className="ml-2 font-normal text-[#605e5c]">{/<([^>]+)>/.exec(selected.from || "")?.[1] ?? ""}</span>
                       {savedContact ? (
-                        <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800" data-testid="inbox-contact-saved" title="This address is in the contact directory">
+                        <span className="ml-2 text-[12px] font-normal text-[#605e5c]" data-testid="inbox-contact-saved" title="This address is in the contact directory">
                           Contact saved{savedContact.type && savedContact.type !== "unknown" ? `: ${CONTACT_TYPE_LABELS[savedContact.type as ContactType] ?? savedContact.type}` : ""}
                         </span>
                       ) : null}
                     </div>
-                    <div className="text-xs text-[var(--color-text-muted)]">
+                    <div className="mt-0.5 text-[13px] text-[#605e5c]">
                       to {selected.mailboxEmail || selected.mailbox}
-                      {receivedText ? ` · ${receivedText}` : ""}
                       {selected.suggestedUser ? ` · usual desk ${deskDisplayName(selected.suggestedUser)}` : ""}
                     </div>
                   </div>
+                  <div className="text-right text-[13px] text-[#605e5c]">{receivedText}</div>
                 </div>
 
                 {state.kind === "mine" ? (
-                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-900" data-testid="inbox-mine-note">
+                  <p className="mb-6 text-sm text-[#201f1e]" data-testid="inbox-mine-note">
                     You are quoting this. Your colleague on the mailbox can see that.
                   </p>
                 ) : null}
                 {state.kind === "other" ? (
-                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900" data-testid="inbox-working-note">
-                    <span className="font-medium">
+                  <div className="mb-6 flex flex-wrap items-center gap-3 text-sm" data-testid="inbox-working-note">
+                    <span>
                       {state.worker.name} is quoting this (opened {agoText(state.worker.at, now)}).
                     </span>
                     <Button type="button" variant="secondary" disabled={busy} onClick={() => void updateItem(selected, { takeoverRequest: askRequest({ username: user?.username ?? "", displayName: user?.displayName }) }, `Asked ${state.worker.name} to hand it over`)}>
@@ -541,18 +556,18 @@ export default function EnquiryInboxPage() {
                   </div>
                 ) : null}
                 {state.kind === "asked" ? (
-                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-900" data-testid="inbox-working-note">
+                  <p className="mb-6 text-sm" data-testid="inbox-working-note">
                     You asked {state.worker.name} to hand this over. If there is no answer you can take it over in {state.waitLeftMin} min.
                   </p>
                 ) : null}
                 {state.kind === "can-take" ? (
-                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-900" data-testid="inbox-working-note">
+                  <p className="mb-6 text-sm" data-testid="inbox-working-note">
                     {state.worker.name} did not answer in {TAKEOVER_WAIT_MINUTES} minutes. You can take it over now.
                   </p>
                 ) : null}
                 {state.kind === "incoming" ? (
-                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900" data-testid="inbox-takeover-request">
-                    <span className="font-medium">{state.request.name} asks to take this enquiry over.</span>
+                  <div className="mb-6 flex flex-wrap items-center gap-3 text-sm" data-testid="inbox-takeover-request">
+                    <span>{state.request.name} asks to take this enquiry over.</span>
                     <Button type="button" disabled={busy} onClick={() => void updateItem(selected, handOverPatch(state.request), `Handed over to ${state.request.name}`)}>
                       Hand over
                     </Button>
@@ -571,65 +586,45 @@ export default function EnquiryInboxPage() {
                     .map((r) => ({ id: r.id, label: `${senderDisplay(r.from)}: ${r.subject}`.slice(0, 80) }))}
                 />
 
-                <div className="border-t border-[var(--color-border)] pt-4">
+                <div className="mt-6">
                   {full.status === "loading" ? (
-                    <p className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                    <p className="flex items-center gap-2 text-sm text-[#605e5c]">
                       <Loader2 className="h-4 w-4 animate-spin" /> Opening the email…
                     </p>
                   ) : (
-                    <div className="max-w-[72ch] whitespace-pre-wrap text-[15px] leading-7 text-slate-800" data-testid="inbox-email-body">
+                    <div className="whitespace-pre-wrap text-[15px] leading-[1.7] text-[#323130]" data-testid="inbox-email-body">
                       {full.status === "ready" ? full.mail?.bodyText || "(no text in this email)" : selected.bodyPreview || selected.body || "—"}
                     </div>
                   )}
-                  {full.status === "error" ? <p className="mt-2 text-xs text-amber-800">{full.message} Showing the short preview.</p> : null}
+                  {full.status === "error" ? <p className="mt-2 text-xs text-[#605e5c]">{full.message} Showing the short preview.</p> : null}
                 </div>
 
                 {full.status === "ready" && full.mail && full.mail.attachments.length ? (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="mt-8 flex flex-wrap gap-2">
                     {full.mail.attachments.map((a, i) => (
-                      <button key={`${a.name}-${i}`} type="button" onClick={() => openAttachment(a)} className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs shadow-sm hover:bg-slate-50">
-                        <Paperclip className="h-4 w-4 text-slate-500" />
-                        <span className="font-semibold text-slate-800">{a.name}</span>
-                        <span className="text-[var(--color-text-muted)]">{Math.max(1, Math.round(a.bytes.length / 1024))} KB · open</span>
+                      <button key={`${a.name}-${i}`} type="button" onClick={() => openAttachment(a)} className="inline-flex items-center gap-2 border border-[#edebe9] px-3 py-2 text-[13.5px] hover:bg-[#f5f5f5]">
+                        <Paperclip className="h-4 w-4 text-[#605e5c]" />
+                        <span className="font-semibold">{a.name}</span>
+                        <span className="text-[#605e5c]">{Math.max(1, Math.round(a.bytes.length / 1024))} KB</span>
                       </button>
                     ))}
                   </div>
                 ) : null}
 
-                <div className="rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-4">
-                  <div className="flex flex-wrap items-baseline gap-x-3">
-                    <h3 className="text-sm font-semibold text-slate-900">What the {resolvedMode === "sea" ? "Sea" : "Air"} desk will start with</h3>
-                    <span className="text-xs text-[var(--color-text-muted)]">Anything missing is marked before the desk opens.</span>
-                  </div>
-                  <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-                    <div>
-                      <dt className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Customer</dt>
-                      <dd className="mt-0.5 font-medium">{deskParsed?.customer || senderDisplay(selected.from)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Lane</dt>
-                      <dd className="mt-0.5 font-medium">
-                        {deskParsed?.origin || "—"} → {deskParsed?.destination || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Read with</dt>
-                      <dd className="mt-0.5 font-medium">{readMode === "ai" ? "AI, text and attachments" : "Text only"}</dd>
-                    </div>
-                  </dl>
-                  <p className="mt-3 text-xs text-[var(--color-text-muted)]" data-testid="inbox-ai-note">
-                    {readMode === "ai"
-                      ? "AI reads the words and the attachments once and fills the desk. That uses a little AI credit (about ₹1). Emails nobody opens cost nothing."
-                      : "The desk is filled from the words of the email by fixed rules. No AI credit is used. Choose AI if the details are in an attachment."}
-                  </p>
-                </div>
+                <p className="mt-10 text-[13px] text-[#605e5c]" data-testid="inbox-ai-note">
+                  Desk starts with {deskParsed?.customer || senderDisplay(selected.from)} · {deskParsed?.origin || "—"} → {deskParsed?.destination || "—"} · {readMode === "ai" ? "AI reads words and attachments once (about ₹1)." : "Filled from the words of the email. No AI credit."}
+                </p>
 
-                <EnquiryReplyDrafter
-                  key={selected.id}
-                  item={deskParsed ? { ...selected, parsed: deskParsed } : selected}
-                  mode={resolvedMode === "sea" ? "sea" : "air"}
-                  signOff={user?.displayName && !IS_DEMO_BUILD ? user.displayName : "Pricing Team"}
-                />
+                {replyOpen ? (
+                  <div className="mt-8">
+                    <EnquiryReplyDrafter
+                      key={selected.id}
+                      item={deskParsed ? { ...selected, parsed: deskParsed } : selected}
+                      mode={resolvedMode === "sea" ? "sea" : "air"}
+                      signOff={user?.displayName && !IS_DEMO_BUILD ? user.displayName : "Pricing Team"}
+                    />
+                  </div>
+                ) : null}
               </div>
             </>
           )}

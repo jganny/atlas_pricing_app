@@ -18,5 +18,6 @@ assert.doesNotMatch(banner, /awaiting cutover approval/);
 assert.doesNotMatch(banner, /Live Firebase/);
 assert.match(banner, /demo data only/);
 assert.match(shell, /FxConverter compact/);
+assert.match(shell, /normalized === "\/inbox"/, "Inbox is a full Outlook pane, not the padded page card");
 
 console.log("workspace chrome: quiet header — no ticker, no cutover banner, tools clustered");
