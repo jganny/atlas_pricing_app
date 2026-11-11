@@ -1,7 +1,8 @@
 /**
  * "Who is quoting this?" for an Inbox item. Both people who share a mailbox see the same list, so the first one to open a desk from
  * an enquiry leaves a mark on it (their name and the time). The other sees "Shaheer is quoting this" and is asked before taking it
- * over. A mark goes stale after 45 minutes, so an enquiry that was opened and forgotten is free again.
+ * over. The mark NEVER expires by itself: someone may be away from the desk, working from home or held up, and the enquiry is still
+ * theirs. It goes when the quote is saved (the enquiry leaves the list) or when the other person deliberately takes it over.
  */
 export interface WorkingBy {
   username: string;
@@ -9,14 +10,11 @@ export interface WorkingBy {
   at: number;
 }
 
-export const WORKING_MINUTES = 45;
-
-/** The other person who is currently on this enquiry, or null when nobody else is (or the mark has gone stale). */
-export function activeWorker(item: { workingBy?: WorkingBy | null }, me: string | undefined | null, now: number = Date.now()): WorkingBy | null {
+/** The other person who is on this enquiry, or null when nobody else is. How long ago they opened it is shown, never used to drop the mark. */
+export function activeWorker(item: { workingBy?: WorkingBy | null }, me: string | undefined | null): WorkingBy | null {
   const w = item.workingBy;
   if (!w || !w.username || !Number.isFinite(w.at)) return null;
   if (me && w.username.toLowerCase() === me.toLowerCase()) return null;
-  if (now - w.at > WORKING_MINUTES * 60_000) return null;
   return w;
 }
 
@@ -26,6 +24,7 @@ export function agoText(at: number, now: number = Date.now()): string {
   if (min < 1) return "just now";
   if (min < 60) return `${min} min ago`;
   const h = Math.floor(min / 60);
+  if (h >= 24) return `${Math.floor(h / 24)} d ${h % 24} h ago`;
   return `${h} h ${min % 60} min ago`;
 }
 

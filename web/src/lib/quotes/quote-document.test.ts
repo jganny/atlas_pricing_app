@@ -168,4 +168,21 @@ assert.equal(lines[lines.length - 1].label, "Option total");
   for (const secret of ["123457", "123,457", "654321", "654,321", "9.87"]) assert.ok(!html.includes(secret), `the customer copy must not contain ${secret}`);
 }
 
+
+// A nomination desk (Air Nom, Sea Nom) quotes from the buy rate and enters the sell rate after confirmation. That figure is the price
+// the customer is quoted, so it prints as the price, but nothing ever calls it a buy rate or shows a profit or a separate cost.
+{
+  const nom: SavedQuote = {
+    ...quote,
+    details: {
+      ...quote.details,
+      airlines: (quote.details?.airlines as Array<Record<string, unknown>>).map((a) => (a.selected ? { ...a, quoteUsingBuyFreight: true, appliedRate: 7.8, appliedBuyRate: 7.8 } : a)),
+    },
+  };
+  const built = buildClientQuoteDocument(nom);
+  const visible = built.html.replace(/<style[\s\S]*?<\/style>/gi, " ") + " " + built.emailCover;
+  assert.match(visible, /820/, "the figure the desk quoted is the price on the document");
+  assert.doesNotMatch(visible, /from buy|\(buy\)|buy rate|\bbuy\b|gross profit|\bGP\b|profit/i, "a quote made from a buy rate never says so");
+}
+
 console.log("quote-document tests passed");
