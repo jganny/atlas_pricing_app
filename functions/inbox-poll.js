@@ -26,6 +26,12 @@ const K = require("./inbox-confirm");
 const E = require("./inbox-escalation");
 const DIR = require("./inbox-directory");
 const TH = require("./inbox-thread");
+const NT = require("./notifications");
+
+/** One card in the bell of everyone on the mailbox. Never throws. */
+async function notifyTeam(db, mailboxKey, card, mode) {
+  await NT.notifyLogins(db, NT.teamFor(mailboxKey, mode), card);
+}
 const nodemailer = require("nodemailer");
 const { simpleParser } = require("mailparser");
 
@@ -937,8 +943,19 @@ async function pollOne(mailbox, password, apiKey) {
           if (circ.isCircular) {
             const filed = await fileCircular(client, db, msg, mailbox, circ, { fromAddr, fromName, subject });
             circularsFiled += filed;
-            if (filed > 0) continue; // filed: nothing is kept in the Inbox
+            if (filed > 0) {
+              await notifyTeam(db, mailbox.key, { kind: "circular", level: "update", title: "Circular filed in the Circulars tab", body: `${circ.carrier || ""} ${circ.title || ""}`.trim().slice(0, 120), itemId: "" });
+              continue; // filed: nothing is kept in the Inbox
+            }
             // nothing could be filed (a duplicate or no usable file): it still is not an enquiry
+            continue;
+          }
+          // A circular in the words of the email with no file: noted for a person to file by hand, never lost and never an "enquiry".
+          const plain = C.looksLikePlainTextCircular({ from: fromAddr, fromName, subject, askedForQuote });
+          if (plain.isCircular) {
+            await db.collection("circular_unfiled").doc(docId).set({ mailbox: mailbox.key, subject: subject.slice(0, 160), from: fromName ? `${fromName} <${fromAddr}>` : fromAddr, carrier: plain.carrier, category: plain.category, at: (msg.envelope?.date || new Date()).getTime(), timestamp: Date.now() });
+            await notifyTeam(db, mailbox.key, { kind: "circular", level: "update", title: "A circular needs filing by hand", body: `${plain.carrier}: ${subject.slice(0, 90)}`, itemId: "" });
+            circularsFiled += 0;
             continue;
           }
         }
@@ -1250,6 +1267,7 @@ exports.autoReadVendorReplies = functions
               used += 1;
               read += 1;
               await ref.set(result.hasRates ? { rateState: "read", rates: result, rateAt: Date.now() } : { rateState: "skipped" }, { merge: true });
+              if (result.hasRates) await notifyTeam(db, c.mailbox, { kind: "rates", level: "update", title: `Rates read: ${result.vendor || fromAddr}`, body: String(subject).slice(0, 100), itemId: c.threadId || c.id }, root.mode);
             } catch (err) {
               const code = err && err.code;
               if (code === "resource-exhausted" || code === "functions/resource-exhausted") {
@@ -1432,6 +1450,8 @@ exports.inboxCleanup = functions
     done.opened = await deleteOld(db, "inbox_enquiries", "timestamp", 7 * DAY, (d, id) => d.status && d.status !== "new" && !inConversation(d, id), "opened enquiries");
     done.conversations = await deleteOld(db, "inbox_enquiries", "timestamp", 15 * DAY, (d, id) => inConversation(d, id), "enquiries in a conversation");
     done.sent = await deleteOld(db, "inbox_sent", "timestamp", 15 * DAY, null, "sent-mail cards");
+    done.unfiled = await deleteOld(db, "circular_unfiled", "timestamp", 15 * DAY, null, "unfiled circular notes");
+    done.notes = await deleteOld(db, "notifications", "at", 7 * DAY, null, "notifications");
     done.unopened = await deleteOld(db, "inbox_enquiries", "timestamp", 30 * DAY, null, "unopened enquiries");
     // Quote Hub jobs keep their date as text (ISO), which sorts the same way.
     const isoCut = new Date(Date.now() - 7 * DAY).toISOString();

@@ -37,3 +37,25 @@ const pdf = (name, size = 90_000) => ({ filename: name, contentType: "applicatio
 assert.deepEqual(documentAttachments([pdf("a.pdf"), { filename: "x.docx", size: 5000 }, { filename: "p.png", contentType: "image/png", size: 99999 }]).map((a) => a.filename), ["a.pdf", "x.docx"]);
 assert.equal(airlineIn("nothing relevant"), null);
 console.log("inbox circular ok");
+
+// A circular in the words of the email, with no file: noted for a person, never lost.
+{
+  const C = require("./inbox-circular");
+  const plain = C.looksLikePlainTextCircular({ from: "cargo@etihad.com", fromName: "Etihad Cargo", subject: "Fuel Surcharge Circular effective 15 Nov" });
+  assert.equal(plain.isCircular, true);
+  assert.equal(plain.category, "fuel_circular_airline");
+  assert.equal(C.looksLikePlainTextCircular({ from: "a@etihad.com", fromName: "Etihad Cargo", subject: "Fuel circular", askedForQuote: true }).isCircular, false, "a request for a quote is an enquiry");
+  assert.equal(C.looksLikePlainTextCircular({ from: "a@random.com", fromName: "Random", subject: "Fuel surcharge circular" }).isCircular, false, "not a known airline or liner");
+  assert.equal(C.looksLikePlainTextCircular({ from: "a@etihad.com", fromName: "Etihad Cargo", subject: "Hello" }).isCircular, false, "no circular word");
+  console.log("plain-text circular ok");
+}
+
+// Etihad Cargo's fuel circular with its PDF is an airline fuel circular (it used to be filed as "general").
+{
+  const C = require("./inbox-circular");
+  const r = C.classifyCircularMail({ from: "cargo.pricing@etihad.com", fromName: "Etihad Cargo", subject: "Fuel Surcharge Circular", body: "", attachments: [{ filename: "EY_Fuel_Circular_Nov.pdf", contentType: "application/pdf", size: 90000 }] });
+  assert.equal(r.isCircular, true);
+  assert.equal(r.category, "fuel_circular_airline");
+  assert.equal(r.carrier, "EY");
+  console.log("etihad cargo circular ok");
+}

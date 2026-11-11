@@ -6,6 +6,7 @@
  * credit, whether a mail is one of those and how to label it.
  */
 const AIRLINES = require("./airline-names.json");
+const DIR = require("./inbox-directory");
 
 const DOC_TYPE = /(pdf|msword|wordprocessingml|spreadsheetml|ms-excel|excel|csv|opendocument)/i;
 const DOC_NAME = /\.(pdf|xlsx|xlsm|xls|csv|docx|doc)$/i;
@@ -72,10 +73,12 @@ function classifyCircularMail({ from = "", fromName = "", subject = "", body = "
   let category = "general";
   let carrier = "";
   // A liner's name can also be an airline's (Maersk Air): a liner name with no air wording is a liner.
-  if ((airline || AIR_WORDS.test(hay)) && !(liner && !AIR_WORDS.test(hay))) {
+  // The contact directory knows carriers by address too ("Etihad Cargo" from etihad.com is an airline even though the name table says "Etihad Airways").
+  const known = DIR.guessType(from, fromName);
+  if ((airline || AIR_WORDS.test(hay) || known.type === "airline") && !(liner && !AIR_WORDS.test(hay))) {
     category = isFuel ? "fuel_circular_airline" : "airline_tariff";
-    carrier = airline ? airline.code : "";
-  } else if (liner || SEA_WORDS.test(hay)) {
+    carrier = airline ? airline.code : known.type === "airline" ? known.carrierCode || known.org : "";
+  } else if (liner || known.type === "liner" || SEA_WORDS.test(hay)) {
     category = isFuel ? "fuel_circular_shipping" : /\btariff|rate ?sheet|rates?\b/i.test(`${subj} ${names.join(" ")}`) ? "sea_tariff" : "line_circular";
     carrier = liner ? liner.toUpperCase() : "";
   } else if (COURIER_WORDS.test(hay)) {
@@ -91,4 +94,25 @@ function classifyCircularMail({ from = "", fromName = "", subject = "", body = "
   return { isCircular: true, category, carrier, title, reason: `A ${category.replace(/_/g, " ")} sent by email` };
 }
 
-module.exports = { classifyCircularMail, documentAttachments, airlineIn };
+/**
+ * A circular that came as plain words with no file (for example an airline's fuel surcharge notice in the body of the email). There is nothing
+ * to file into the Circulars tab, so it is noted as "needs filing by hand" instead of being lost. Needs: a circular word in the subject,
+ * a sender that is a known airline or liner (or says so in its name), and no request for a quote.
+ */
+function looksLikePlainTextCircular({ from = "", fromName = "", subject = "", askedForQuote = false }) {
+  if (askedForQuote) return { isCircular: false };
+  const subj = String(subject || "");
+  if (!CIRCULAR_WORDS.test(subj)) return { isCircular: false };
+  const hay = `${fromName} ${subj} ${String(from).split("@")[1] || ""}`;
+  const airline = airlineIn(`${fromName} ${subj}`);
+  const liner = LINERS.find((l) => norm(hay).includes(l));
+  // The contact directory knows many carriers by address ("Etihad Cargo" is not in the airline name table, but etihad.com is a known airline).
+  const guess = DIR.guessType(from, fromName);
+  const kind = airline ? "airline" : liner ? "liner" : guess.type === "airline" || guess.type === "liner" ? guess.type : "";
+  if (!kind) return { isCircular: false };
+  const fuel = FUEL_WORDS.test(subj);
+  const carrier = airline ? airline.name : liner ? liner.toUpperCase() : guess.org || String(fromName || "").trim() || String(from).split("@")[1] || "";
+  return { isCircular: true, carrier, category: kind === "airline" ? (fuel ? "fuel_circular_airline" : "airline_tariff") : fuel ? "fuel_circular_shipping" : "line_circular" };
+}
+
+module.exports = { classifyCircularMail, looksLikePlainTextCircular, documentAttachments, airlineIn };

@@ -9,6 +9,7 @@
  */
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const NT = require("./notifications");
 
 const DEFAULTS = {
   remindAfterMin: 20,
@@ -92,6 +93,8 @@ exports.inboxAlerts = functions
     let sent = 0;
     for (const a of plan) {
       sent += await sendToLogins(db, a.recipients, a);
+      // The same alert, kept in everyone's bell (phones only get the pop-up if they accepted notifications).
+      await NT.notifyLogins(db, a.recipients, { kind: a.kind, level: "need", title: a.title, body: a.body, itemId: a.id });
       await db.collection("inbox_enquiries").doc(a.id).set({ [FIELD[a.kind]]: Date.now() }, { merge: true }).catch(() => undefined);
     }
     functions.logger.info("inbox alerts", { checked: items.length, alerts: plan.length, sent });
@@ -103,14 +106,14 @@ exports.inboxAlerts = functions
  * The Manager's end-of-day line, pushed to the phone: how many enquiries came in today, and which are still waiting for someone.
  * "Waiting" = new, nobody has a desk open on it, nobody has replied. Pure: no Firebase.
  */
-function daySummary(items, received, now = Date.now()) {
+function daySummary(items, received, now = Date.now(), answered = 0) {
   const waiting = items.filter((it) => it && it.status === "new" && !it.workingBy && !it.repliedAt && it.actionRequired !== false && (!it.tag || ["new_enquiry", "needs_human", "escalation"].includes(it.tag)) && now - (Date.parse(it.receivedAt || "") || Number(it.timestamp) || now) < 24 * 60 * MIN);
   const who = (it) => String(it.from || "").replace(/<[^>]*>/g, "").replace(/["]/g, "").trim() || "A customer";
   const names = [...new Set(waiting.map(who))].slice(0, 4);
   const body = waiting.length
     ? `${waiting.length} still waiting: ${names.join(", ")}${waiting.length > names.length ? " and more" : ""}.`
     : "Nothing is waiting. Everyone is on top of it.";
-  const title = `Today: ${received} enquir${received === 1 ? "y" : "ies"} in`;
+  const title = `Today: ${received} enquir${received === 1 ? "y" : "ies"} in${answered ? `, ${answered} answered` : ""}`;
   return { title, body, waiting: waiting.length };
 }
 
@@ -128,7 +131,10 @@ exports.inboxDaySummary = functions
     const stats = await Promise.all(["pricing", "pricingsales"].map((k) => db.collection("inbox_stats").doc(`${day}_${k}`).get().catch(() => null)));
     const received = stats.reduce((n, s) => n + (s && s.exists ? Number(s.data().kept) || 0 : 0), 0);
     const snap = await db.collection("inbox_enquiries").where("status", "==", "new").limit(300).get();
-    const sum = daySummary(snap.docs.map((d) => ({ id: d.id, ...d.data() })), received, Date.now());
+    // Answered today: replies the Sent folder showed (the quote saved in the app removes its card, so this is a floor).
+    const dayStart = Math.floor((Date.now() + 5.5 * 3600 * 1000) / 86_400_000) * 86_400_000 - 5.5 * 3600 * 1000;
+    const answeredSnap = await db.collection("inbox_enquiries").where("repliedAt", ">", dayStart).limit(300).get().catch(() => null);
+    const sum = daySummary(snap.docs.map((d) => ({ id: d.id, ...d.data() })), received, Date.now(), answeredSnap ? answeredSnap.size : 0);
     const managers = settings.managers || DEFAULTS.managers;
     const sent = await sendToLogins(db, managers, { id: `day-${day}`, title: sum.title, body: sum.body });
     functions.logger.info("inbox day summary", { received, waiting: sum.waiting, sent });

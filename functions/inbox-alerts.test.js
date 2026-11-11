@@ -63,6 +63,7 @@ console.log("inbox-alerts tests passed");
   assert.equal(s1.waiting, 2);
   assert.match(s1.body, /^2 still waiting: Omar K, Briseyda Cruz\.$/);
   assert.match(daySummary([], 1, now).title, /1 enquiry in/);
+  assert.equal(daySummary([], 31, now, 24).title, "Today: 31 enquiries in, 24 answered");
   assert.match(daySummary([], 0, now).body, /Nothing is waiting/);
   console.log("day summary ok");
 }

@@ -30,6 +30,9 @@ import { aiAllowed, aiOffMessage } from "@/lib/ai/ai-switches";
 import { EnquiryThread } from "@/components/EnquiryThread";
 import { MailSearch } from "@/components/MailSearch";
 import { TeamBoard } from "@/components/TeamBoard";
+import { fetchInboxToday } from "@/lib/firebase/notifications";
+import { CONTACT_TYPE_LABELS, type ContactType } from "@/lib/directory/email-directory";
+import { useQuery } from "@tanstack/react-query";
 import { useAiSwitches } from "@/lib/firebase/ai-switches";
 
 type ReadMode = "text" | "ai";
@@ -145,6 +148,10 @@ export default function EnquiryInboxPage() {
   const counts = useMemo(() => viewCounts(mine, user?.username, now), [mine, user?.username, now]);
   const visible = useMemo(() => listView(mine, view, user?.username, now), [mine, view, user?.username, now]);
   const selected = visible.find((r) => r.id === selectedId) ?? visible[0] ?? null;
+  // What happened in the mailboxes today (circulars filed, circulars to file by hand) and whether the sender is a saved contact.
+  const senderEmail = (/<([^>]+)>/.exec(selected?.from ?? "") || [])[1]?.toLowerCase() ?? String(selected?.from ?? "").toLowerCase();
+  const today = useQuery({ queryKey: ["inboxToday", senderEmail], queryFn: () => fetchInboxToday(senderEmail ? [senderEmail] : []), staleTime: 60_000, refetchInterval: 120_000, retry: 0, enabled: useLiveData });
+  const savedContact = today.data?.saved.find((s) => s.email === senderEmail);
   const full = useFullEmail(selected?.id ?? null, useLiveData);
   const state: WorkState = selected ? workState(selected, user?.username, now) : { kind: "free" };
 
@@ -297,6 +304,22 @@ export default function EnquiryInboxPage() {
     <div className="space-y-3">
       {searchOpen ? <MailSearch onClose={() => setSearchOpen(false)} /> : null}
       {boardOpen ? <TeamBoard rows={mine} onClose={() => setBoardOpen(false)} /> : null}
+      {today.data && (today.data.circulars.length || today.data.unfiled.length) ? (
+        <div className="rounded-lg border border-[var(--color-border)] bg-slate-50 px-4 py-2 text-xs text-slate-700" data-testid="inbox-circular-strip">
+          {today.data.circulars.length ? (
+            <p>
+              <b className="font-semibold text-emerald-800">Filed to Circulars today: {today.data.circulars.length}.</b>{" "}
+              {today.data.circulars.slice(0, 3).map((c) => `${c.carrier ? `${c.carrier}: ` : ""}${c.title}`).join(" · ")}
+            </p>
+          ) : null}
+          {today.data.unfiled.length ? (
+            <p className="mt-0.5">
+              <b className="font-semibold text-amber-800">Needs filing by hand ({today.data.unfiled.length}):</b>{" "}
+              {today.data.unfiled.slice(0, 3).map((u) => `${u.carrier}: ${u.subject}`).join(" · ")}. It arrived as plain words with no file, so open it in Outlook and add it in the Circulars tab.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-atlas-navy)]">Inbox</h1>
@@ -488,6 +511,11 @@ export default function EnquiryInboxPage() {
                     <div>
                       <span className="font-semibold text-slate-900">{senderDisplay(selected.from)}</span>{" "}
                       <span className="text-[var(--color-text-muted)]">{/<([^>]+)>/.exec(selected.from || "")?.[1] ?? ""}</span>
+                      {savedContact ? (
+                        <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800" data-testid="inbox-contact-saved" title="This address is in the contact directory">
+                          Contact saved{savedContact.type && savedContact.type !== "unknown" ? `: ${CONTACT_TYPE_LABELS[savedContact.type as ContactType] ?? savedContact.type}` : ""}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="text-xs text-[var(--color-text-muted)]">
                       to {selected.mailboxEmail || selected.mailbox}

@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.162",
+    date: "2026-11-11",
+    items: [
+      "The bell. A bell in the top bar keeps your own list of what happened: new enquiries and ones nobody has opened (Needs you), and rates read from a vendor's reply, a circular filed or a circular to file by hand (Updates). It shows how many are unread, opens the enquiry when you click one, and keeps 7 days. Only a title and one line are kept, never the email.",
+      "Circulars never go missing silently. A strip at the top of the Inbox says what was filed into the Circulars tab today, and lists any circular that came as plain words with no file so you can file it by hand. An airline circular such as Etihad Cargo's fuel circular is now recognised as an airline fuel circular (it used to be filed as general).",
+      "On every email, a Contact saved tag shows when the sender is in the contact directory, with what kind of contact it is.",
+      "The evening line to the Manager now also says how many were answered today.",
+    ],
+  },
+  {
     version: "0.3.161",
     date: "2026-11-11",
     items: [
