@@ -19,6 +19,9 @@ import {
   formatBuyCell,
   formatDateCell,
   formatGpCell,
+  gpTone,
+  GP_TONE_CLASS,
+  GP_TONE_MEANING,
   formatSellCell,
   formatTonnageCell,
   parseRowDate,
@@ -224,7 +227,15 @@ export function EnquiryTable({
           accessorFn: (r) => r.grossProfit ?? 0,
           cell: ({ row }) => {
             const text = formatGpCell(row.original, metricModes.gp);
-            return <span className={moneyCellClass(text === "—", true)}>{text}</span>;
+            const tone = gpTone(row.original);
+            return (
+              <span
+                className={cn("whitespace-nowrap font-semibold tabular-nums", text === "—" ? "text-slate-400" : GP_TONE_CLASS[tone])}
+                title={GP_TONE_MEANING[tone]}
+              >
+                {text}
+              </span>
+            );
           },
         });
       }

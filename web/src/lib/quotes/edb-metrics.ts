@@ -90,6 +90,25 @@ export function formatGpCell(row: EnquiryRecord, mode: GpMode): string {
   return formatCurrency(gp, row.grossProfitCurrency || row.currency || "USD");
 }
 
+/**
+ * What a GP figure means, by the quote's outcome. Won: earned. Open or quoted: an estimate from the buy and sell on the desk.
+ * Lost or cancelled: the margin that was offered. The Enquiry DB shows all three, each in its own colour. Staff only: a customer
+ * document never carries any of them.
+ */
+export type GpTone = "won" | "open" | "lost";
+export function gpTone(row: { status?: string | null }): GpTone {
+  const s = String(row.status || "").toLowerCase();
+  if (s === "won") return "won";
+  if (s === "lost" || s === "cancelled") return "lost";
+  return "open";
+}
+export const GP_TONE_CLASS: Record<GpTone, string> = { won: "text-emerald-700", open: "text-sky-700", lost: "text-red-700" };
+export const GP_TONE_MEANING: Record<GpTone, string> = {
+  won: "Won: profit earned",
+  open: "Open or quoted: estimated profit",
+  lost: "Lost or cancelled: the margin that was offered",
+};
+
 export function gpNumeric(row: EnquiryRecord): number | null {
   if (typeof row.grossProfit === "number" && !Number.isNaN(row.grossProfit)) return row.grossProfit;
   const buy = computeBuyTotal(row);

@@ -87,4 +87,25 @@ function row(partial: Partial<EnquiryRecord>): EnquiryRecord {
   assert.equal(formatTonnage(1234.56), "1,234.6 t");
 }
 
+
+// GP by outcome: won is earned, open or quoted is estimated, lost or cancelled is the margin offered.
+import { GP_TONE_CLASS, gpTone } from "./edb-metrics";
+assert.equal(gpTone({ status: "won" }), "won");
+assert.equal(gpTone({ status: "WON" }), "won");
+assert.equal(gpTone({ status: "open" }), "open");
+assert.equal(gpTone({ status: "quoted" }), "open");
+assert.equal(gpTone({ status: "lost" }), "lost");
+assert.equal(gpTone({ status: "cancelled" }), "lost");
+assert.equal(gpTone({}), "open", "no status: treated as open, never as earned");
+assert.notEqual(GP_TONE_CLASS.won, GP_TONE_CLASS.open);
+assert.notEqual(GP_TONE_CLASS.open, GP_TONE_CLASS.lost);
+
+
+import { summarizeGpByOutcome } from "./edb-csv";
+{
+  const mk = (status: string, gp: number) => ({ status, grossProfitINR: gp, grossProfit: gp, currency: "INR", grandTotal: gp * 10 }) as unknown as EnquiryRecord;
+  const split = summarizeGpByOutcome([mk("won", 100), mk("won", 50), mk("quoted", 30), mk("open", 20), mk("lost", 7), mk("cancelled", 3)]);
+  assert.deepEqual(split, { won: 150, open: 50, lost: 10 }, "the three GP totals never mix");
+}
+
 console.log("edb-metrics tests passed");

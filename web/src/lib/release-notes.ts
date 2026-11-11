@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.154",
+    date: "2026-11-11",
+    items: [
+      "Enquiry DB: GP now shows in three colours by outcome. Green is Won (profit earned), blue is Open or quoted (estimated), red is Lost or cancelled (the margin that was offered). The top strip shows the three GP totals side by side, so earned profit is no longer mixed with estimates. Everyone can see all of them. GP is never shown on anything a customer receives.",
+      "Inbox: when two people share a mailbox (Air Nom and Sea Nom on pricing@, Free Hand and NRS on pricingsales@), an enquiry shows who is already quoting it, for example \"Shaheer is quoting\". If you press Quote on one someone else has open, you are told first and can open it anyway. The note clears by itself after 45 minutes.",
+    ],
+  },
+  {
     version: "0.3.153",
     date: "2026-11-10",
     items: [

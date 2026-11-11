@@ -1040,3 +1040,105 @@ exports.autoReplyTest = functions
     }
     return { ok: true, sent: 2, from: box.user };
   });
+
+// ───────────────────────── Reply and forward from the app's Inbox, with a copy in the real mailbox ─────────────────────────
+const SEND = require("./inbox-send");
+
+const sendSecrets = [pricingPassword, salesPassword];
+const ADMIN_EMAIL = "ganny@atlaspricing.com";
+
+/** Admin test: one message from the chosen mailbox to an address, and a copy saved in that mailbox's Sent folder. */
+exports.mailCopyTest = functions.runWith({ secrets: sendSecrets, timeoutSeconds: 90, memory: "256MB" }).https.onCall(async (data, context) => {
+  if (!context.auth || context.auth.token.chatOnly === true || String(context.auth.token.email || "").toLowerCase() !== ADMIN_EMAIL) {
+    throw new functions.https.HttpsError("permission-denied", "Only the admin can do this.");
+  }
+  const to = SEND.parseAddresses(data && data.to).good;
+  if (to.length !== 1) throw new functions.https.HttpsError("invalid-argument", "Type one email address to send the test to.");
+  const box = MAILBOXES.find((b) => b.key === String((data && data.mailbox) || "pricing")) || MAILBOXES[0];
+  const password = String(box.secret.value() || "").trim();
+  if (!password) throw new functions.https.HttpsError("failed-precondition", "The mailbox password is not set up.");
+  const desk = R.deskLabel(box.key, "air");
+  let result;
+  try {
+    result = await SEND.sendWithCopy({
+      imap: IMAP,
+      smtp: SMTP,
+      user: box.user,
+      password,
+      kind: "reply",
+      mail: {
+        from: `"${desk} - Atlas Logistics" <${box.user}>`,
+        to,
+        replyTo: box.user,
+        subject: "[TEST] Reply sent from the app, copy kept in Sent",
+        text: "This is a test from the Atlas Pricing app.\n\nIf you can read this, sending works. The same message should also be in the Sent items of " + box.user + " in Outlook.\n\nNothing was sent to anyone else.",
+      },
+    });
+  } catch (err) {
+    throw new functions.https.HttpsError("unavailable", `The mail server refused the test: ${String((err && err.message) || err).slice(0, 160)}`);
+  }
+  return { ok: true, from: box.user, to: to[0], copiedToSent: result.copied, sentFolder: result.folder, problem: result.copyError };
+});
+
+/** A signed-in user answers or forwards an Inbox item. Goes out as the shared mailbox; a copy is saved in its Sent folder. */
+exports.sendInboxReply = functions.runWith({ secrets: sendSecrets, timeoutSeconds: 120, memory: "512MB" }).https.onCall(async (data, context) => {
+  if (!context.auth || context.auth.token.chatOnly === true) {
+    throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+  }
+  const id = String((data && data.id) || "");
+  const kind = (data && data.kind) === "forward" ? "forward" : "reply";
+  if (!id) throw new functions.https.HttpsError("invalid-argument", "Which email?");
+  const db = admin.firestore();
+  const snap = await db.collection("inbox_enquiries").doc(id).get();
+  if (!snap.exists) throw new functions.https.HttpsError("not-found", "That enquiry is no longer in the list.");
+  const item = snap.data();
+  const box = MAILBOXES.find((b) => b.key === item.mailbox);
+  if (!box) throw new functions.https.HttpsError("failed-precondition", "That mailbox is not set up.");
+
+  const to = SEND.parseAddresses(data.to);
+  const cc = SEND.parseAddresses(data.cc);
+  if (!to.good.length) throw new functions.https.HttpsError("invalid-argument", "Add at least one recipient.");
+  if (to.bad.length || cc.bad.length) throw new functions.https.HttpsError("invalid-argument", `These are not email addresses: ${[...to.bad, ...cc.bad].join(", ")}`);
+  if (to.good.length + cc.good.length > SEND.MAX_RECIPIENTS) throw new functions.https.HttpsError("invalid-argument", `Too many recipients (the limit is ${SEND.MAX_RECIPIENTS}).`);
+  const text = String((data && data.text) || "").trim();
+  if (!text) throw new functions.https.HttpsError("invalid-argument", "Write the message first.");
+  if (text.length > 20000) throw new functions.https.HttpsError("invalid-argument", "The message is too long.");
+
+  let bytes = 0;
+  const attachments = (Array.isArray(data.attachments) ? data.attachments : []).slice(0, 10).map((a) => {
+    const content = Buffer.from(String((a && a.contentBase64) || ""), "base64");
+    bytes += content.length;
+    return { filename: String((a && a.filename) || "attachment").slice(0, 120), content, contentType: String((a && a.contentType) || "application/octet-stream") };
+  });
+  if (bytes > SEND.MAX_ATTACH_BYTES) throw new functions.https.HttpsError("invalid-argument", "The attachments are too large (the limit is 12 MB).");
+
+  const password = String(box.secret.value() || "").trim();
+  if (!password) throw new functions.https.HttpsError("failed-precondition", "The mailbox password is not set up.");
+
+  // The original's place in the mailbox, to flag it replied or forwarded.
+  let uid = Number.isInteger(item.uid) ? item.uid : null;
+  const original = item.messageId && !String(item.messageId).startsWith("uid-") ? String(item.messageId) : "";
+  const desk = R.deskLabel(box.key, item.mode);
+  const mail = {
+    from: `"${desk} - Atlas Logistics" <${box.user}>`,
+    to: to.good,
+    ...(cc.good.length ? { cc: cc.good } : {}),
+    replyTo: box.user,
+    subject: SEND.subjectFor(kind, (data && data.subject) || item.subject),
+    text,
+    attachments,
+    ...(kind === "reply" && original ? { inReplyTo: original, references: [original] } : {}),
+  };
+
+  let result;
+  const log = { at: Date.now(), by: String(context.auth.token.email || context.auth.uid || ""), mailbox: box.key, kind, to: to.good, cc: cc.good, subject: mail.subject, attachments: attachments.length, itemId: id };
+  try {
+    result = await SEND.sendWithCopy({ imap: IMAP, smtp: SMTP, user: box.user, password, mail, originalUid: uid, originalMessageId: original, kind });
+  } catch (err) {
+    await db.collection("inbox_send_log").add({ ...log, status: "failed", error: String((err && err.message) || err).slice(0, 200) }).catch(() => undefined);
+    throw new functions.https.HttpsError("unavailable", "The mail server did not accept the message, so nothing was sent. Try again in a minute.");
+  }
+  await db.collection("inbox_send_log").add({ ...log, status: "sent", copiedToSent: result.copied, problem: result.copyError }).catch(() => undefined);
+  await snap.ref.set({ repliedAt: Date.now(), repliedBy: log.by, repliedKind: kind }, { merge: true }).catch(() => undefined);
+  return { ok: true, copiedToSent: result.copied, sentFolder: result.folder, problem: result.copyError };
+});

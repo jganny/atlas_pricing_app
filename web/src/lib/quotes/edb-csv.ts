@@ -1,5 +1,5 @@
 import type { EnquiryRecord } from "@/lib/types";
-import { computeBuyTotal, formatTonnageCell, gpNumeric } from "@/lib/quotes/edb-metrics";
+import { computeBuyTotal, formatTonnageCell, gpNumeric, gpTone, type GpTone } from "@/lib/quotes/edb-metrics";
 import { summarizeInr } from "@/lib/quotes/money";
 import { quoteDeskLabel } from "@/lib/quotes/team-roles";
 
@@ -64,6 +64,13 @@ export function downloadEnquiryCsv(rows: EnquiryRecord[], filename?: string): vo
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+/** GP in INR split by what it means: earned (won), estimated (open or quoted) and offered (lost or cancelled). */
+export function summarizeGpByOutcome(rows: EnquiryRecord[]): Record<GpTone, number> {
+  const out: Record<GpTone, number> = { won: 0, open: 0, lost: 0 };
+  for (const tone of Object.keys(out) as GpTone[]) out[tone] = summarizeInr(rows.filter((r) => gpTone(r) === tone)).gp;
+  return out;
 }
 
 export function summarizeEnquiryFinancials(rows: EnquiryRecord[]) {

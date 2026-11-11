@@ -399,5 +399,9 @@ export interface InboxEnquiry {
   reason?: string
   summary?: string
   classifier?: 'anthropic' | 'heuristic' | string
+  /** Who has a desk open on this enquiry right now (see lib/mail/inbox-working.ts). */
+  workingBy?: { username: string; name: string; at: number } | null
+  /** Set when a reply or forward from the app went out. */
+  repliedAt?: number
   parsed: ParsedEnquiry
 }

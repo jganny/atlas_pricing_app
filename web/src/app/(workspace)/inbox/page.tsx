@@ -18,6 +18,7 @@ import { openJobHref } from "@/lib/hub/prefill";
 import { canSeeInboxItem, detectEnquiryMode } from "@/lib/mail/inbox-assign";
 import { ATLAS_IMAP, MAILBOX_TEAMS, deskDisplayName } from "@/lib/quotes/team-roles";
 import { parseAirEnquiry, parseSeaEnquiry } from "@/lib/pricing/parse-enquiry";
+import { activeWorker, markWorking, workingNote } from "@/lib/mail/inbox-working";
 import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import type { InboxEnquiry, InboxTag } from "@/lib/types";
 
@@ -46,6 +47,8 @@ export default function EnquiryInboxPage() {
   const { readEmailBytes } = useHubReader();
   const [modeOverride, setModeOverride] = useState<"air" | "sea" | null>(null);
   const [filter, setFilter] = useState<FilterTab>("action");
+  /** The enquiry whose "someone else is quoting this" warning was already shown once: pressing the button again opens it anyway. */
+  const [takeoverOk, setTakeoverOk] = useState<string | null>(null);
 
   const visible = useMemo(() => {
     const mine = rows.filter((r) => canSeeInboxItem(user?.username, user?.role, r));
@@ -107,6 +110,20 @@ export default function EnquiryInboxPage() {
    * saved with the item is used instead, as before.
    */
   async function applyToDesk(item: InboxEnquiry, desk: "air" | "sea") {
+    // Air Nom and Sea Nom share pricing@ (and Free Hand and NRS share pricingsales@): say so when the other one is already on it.
+    const other = activeWorker(item, user?.username);
+    if (other && takeoverOk !== item.id) {
+      setTakeoverOk(item.id);
+      toast(`${workingNote(other)}. Press the button again to open it anyway.`, "info");
+      return;
+    }
+    if (useLiveData && user) {
+      try {
+        await patchInboxEnquiry(item.id, { workingBy: markWorking({ username: user.username, displayName: user.displayName }) });
+      } catch {
+        /* the mark is a courtesy: never stop the work for it */
+      }
+    }
     if (useLiveData) {
       setBusy(true);
       try {
@@ -290,6 +307,7 @@ export default function EnquiryInboxPage() {
                       {row.actionRequired !== false && row.status === "new" ? (
                         <Badge tone="warn">action</Badge>
                       ) : null}
+                      {activeWorker(row, user?.username) ? <Badge tone="info">{activeWorker(row, user?.username)?.name} is quoting</Badge> : null}
                     </div>
                     <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                       {row.from || row.mailboxEmail} · {row.status}
@@ -377,6 +395,11 @@ export default function EnquiryInboxPage() {
                   {selected.bodyPreview || selected.body || "—"}
                 </pre>
               </div>
+              {activeWorker(selected, user?.username) ? (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" data-testid="inbox-working-note">
+                  {workingNote(activeWorker(selected, user?.username)!)}. Press Quote again to open it anyway.
+                </p>
+              ) : null}
               {useLiveData ? (
                 <p className="text-xs text-[var(--color-text-muted)]" data-testid="inbox-ai-note">
                   &ldquo;Quote on {resolvedMode === "sea" ? "Sea" : "Air"} desk&rdquo; reads the whole email and its attachments once and fills the desk. That uses a little AI credit (a few rupees at most). Emails nobody opens cost nothing.

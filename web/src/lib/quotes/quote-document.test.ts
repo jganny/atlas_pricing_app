@@ -159,7 +159,6 @@ assert.equal(lines[lines.length - 1].label, "Option total");
     ...quote,
     grossProfit: 123457,
     grossProfitCurrency: "USD",
-    buyTotal: 654321,
     details: { ...quote.details, grossProfit: 123457, baseBuyFreight: 654321, appliedBuyRate: 9.87, buyTotal: 654321 },
   };
   const built = buildClientQuoteDocument(withMargins);

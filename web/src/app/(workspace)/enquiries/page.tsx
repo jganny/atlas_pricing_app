@@ -25,6 +25,7 @@ import type { EnquiryRecord } from "@/lib/types";
 import {
   downloadEnquiryCsv,
   summarizeEnquiryFinancials,
+  summarizeGpByOutcome,
 } from "@/lib/quotes/edb-csv";
 import { searchQuotes } from "@/lib/quotes/find-quotes";
 import {
@@ -41,6 +42,8 @@ import {
 import {
   DEFAULT_EDB_METRIC_MODES,
   formatTonnage,
+  GP_TONE_CLASS,
+  GP_TONE_MEANING,
   gpNumeric,
   parseRowDate,
   totalTonnage,
@@ -446,7 +449,7 @@ function EnquiryDatabaseInner() {
     const open = filtered.filter((e) => e.status === "open" || e.status === "quoted").length;
     const overdue = filtered.filter((e) => e.slaHoursOpen > 8).length;
     const fin = summarizeEnquiryFinancials(filtered);
-    return { open, overdue, total: filtered.length, ...fin, ...totalTonnage(filtered) };
+    return { open, overdue, total: filtered.length, ...fin, gpBy: summarizeGpByOutcome(filtered), ...totalTonnage(filtered) };
   }, [filtered]);
 
   useEffect(() => {
@@ -664,8 +667,13 @@ function EnquiryDatabaseInner() {
         </div>
         <div>
           <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">GP (INR)</div>
-          <div className="text-sm font-extrabold tabular-nums text-emerald-700">
-            {formatCurrency(stats.gp, "INR")}
+          <div className="flex flex-wrap gap-x-3 text-sm font-extrabold tabular-nums" data-testid="edb-gp-split">
+            <span className={GP_TONE_CLASS.won} title={GP_TONE_MEANING.won}>{formatCurrency(stats.gpBy.won, "INR")}</span>
+            <span className={GP_TONE_CLASS.open} title={GP_TONE_MEANING.open}>{formatCurrency(stats.gpBy.open, "INR")}</span>
+            <span className={GP_TONE_CLASS.lost} title={GP_TONE_MEANING.lost}>{formatCurrency(stats.gpBy.lost, "INR")}</span>
+          </div>
+          <div className="text-[10px] text-[var(--color-text-muted)]">
+            <span className={GP_TONE_CLASS.won}>Won</span> · <span className={GP_TONE_CLASS.open}>Open</span> · <span className={GP_TONE_CLASS.lost}>Lost</span>
           </div>
         </div>
         <div title="Total billing weight of the quotes in view. Kilograms are shown in tonnes; a sea revenue tonne (RT) counts as one tonne.">
