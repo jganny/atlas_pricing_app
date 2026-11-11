@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { activeWorker, agoText, markWorking, workingNote } from "./inbox-working";
+import { activeWorker, agoText, askRequest, handOverPatch, markWorking, TAKEOVER_WAIT_MINUTES, workingNote, workState } from "./inbox-working";
 
 const NOW = 1_800_000_000_000;
 const min = (n: number) => n * 60_000;
@@ -23,5 +23,28 @@ assert.equal(agoText(NOW - min(60 * 26), NOW), "1 d 2 h ago");
 assert.equal(workingNote(shaheer, NOW), "Shaheer is quoting this (opened 6 min ago)");
 assert.deepEqual(markWorking({ username: "shashank", displayName: "Shashank" }, NOW), { username: "shashank", name: "Shashank", at: NOW });
 assert.equal(markWorking({ username: "ganny" }, NOW).name, "ganny");
+
+
+// Taking over by consent.
+{
+  const holder = { username: "shaheer", name: "Shaheer", at: NOW - min(30) };
+  assert.deepEqual(workState({}, "shashank", NOW), { kind: "free" });
+  assert.deepEqual(workState({ workingBy: holder }, "shaheer", NOW), { kind: "mine" });
+  assert.deepEqual(workState({ workingBy: holder }, "shashank", NOW), { kind: "other", worker: holder });
+  const ask = askRequest({ username: "shashank", displayName: "Shashank" }, NOW - min(5));
+  const asked = workState({ workingBy: holder, takeoverRequest: ask }, "shashank", NOW);
+  assert.equal(asked.kind, "asked");
+  assert.equal(asked.kind === "asked" ? asked.waitLeftMin : 0, TAKEOVER_WAIT_MINUTES - 5, "15 more minutes to wait");
+  assert.equal(workState({ workingBy: holder, takeoverRequest: { ...ask, at: NOW - min(TAKEOVER_WAIT_MINUTES) } }, "shashank", NOW).kind, "can-take", "20 minutes without an answer: free to take over");
+  assert.equal(workState({ workingBy: holder, takeoverRequest: { ...ask, at: NOW - min(19) } }, "shashank", NOW).kind, "asked");
+  // The holder sees the request; a bystander just sees who is quoting.
+  assert.equal(workState({ workingBy: holder, takeoverRequest: ask }, "shaheer", NOW).kind, "incoming");
+  assert.equal(workState({ workingBy: holder, takeoverRequest: ask }, "ganny", NOW).kind, "other");
+  // Handing over moves the mark to the person who asked and clears the request.
+  const h = handOverPatch(ask, NOW);
+  assert.deepEqual(h, { workingBy: { username: "shashank", name: "Shashank", at: NOW }, takeoverRequest: null });
+  assert.equal(workState(h, "shashank", NOW).kind, "mine");
+  assert.equal(workState(h, "shaheer", NOW).kind, "other");
+}
 
 console.log("inbox-working tests passed");

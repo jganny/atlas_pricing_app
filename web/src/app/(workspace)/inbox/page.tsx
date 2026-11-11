@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flag, Inbox, Loader2, Plane, Ship } from "lucide-react";
+import { Clock, Flag, Inbox, Loader2, Paperclip, Plane, Ship } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useInbox } from "@/hooks/use-atlas-data";
@@ -15,82 +15,125 @@ import type { InboxRef } from "@/lib/types";
 import { setHubJobStatus } from "@/lib/firebase/hub-jobs";
 import { useHubReader } from "@/hooks/use-hub-reader";
 import { openJobHref } from "@/lib/hub/prefill";
+import { parseEmailFile, type EmailAttachment, type ParsedEmail } from "@/lib/hub/email-file";
 import { canSeeInboxItem, detectEnquiryMode } from "@/lib/mail/inbox-assign";
-import { ATLAS_IMAP, MAILBOX_TEAMS, deskDisplayName } from "@/lib/quotes/team-roles";
+import { deskDisplayName } from "@/lib/quotes/team-roles";
 import { parseAirEnquiry, parseSeaEnquiry } from "@/lib/pricing/parse-enquiry";
-import { activeWorker, markWorking, workingNote } from "@/lib/mail/inbox-working";
+import { askRequest, agoText, handOverPatch, markWorking, TAKEOVER_WAIT_MINUTES, workState, type WorkState } from "@/lib/mail/inbox-working";
+import { replyBy, timeLeftText, urgencyOf, type Urgency } from "@/lib/mail/reply-by";
+import { VIEW_LABELS, listView, senderDisplay, viewCounts, type ViewKey } from "@/lib/mail/inbox-views";
 import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
-import type { InboxEnquiry, InboxTag } from "@/lib/types";
+import type { InboxEnquiry } from "@/lib/types";
 
-type FilterTab = "action" | "all" | "follow_up";
+type ReadMode = "text" | "ai";
 
-function tagTone(tag?: InboxTag): "neutral" | "success" | "warn" | "info" {
-  if (tag === "new_enquiry") return "success";
-  if (tag === "needs_human") return "warn";
-  if (tag === "follow_up") return "info";
-  return "neutral";
-}
+const VIEW_GROUPS: Array<{ title: string; keys: ViewKey[] }> = [
+  { title: "Views", keys: ["all", "mine", "others", "due", "past", "followup"] },
+  { title: "By type", keys: ["air", "sea"] },
+  { title: "By mailbox", keys: ["mb:pricing", "mb:pricingsales"] },
+];
 
-function tagLabel(tag?: InboxTag) {
+const URGENCY_CLASS: Record<Urgency, string> = {
+  past: "bg-red-50 text-red-700",
+  soon: "bg-amber-50 text-amber-800",
+  ok: "bg-slate-100 text-slate-700",
+};
+
+function tagLabel(tag?: string) {
   if (tag === "new_enquiry") return "New enquiry";
   if (tag === "needs_human") return "Needs review";
   if (tag === "follow_up") return "Follow-up";
   return "Enquiry";
 }
 
+type MailState = { status: "idle" | "loading" | "ready" | "error"; mail?: ParsedEmail; message?: string };
+
+/** Emails opened in this tab, kept in memory only (never saved, never written to disk), a dozen at a time. */
+const OPENED_EMAILS = new Map<string, ParsedEmail>();
+
+/** The whole email behind an Inbox card, fetched live from the mailbox. */
+function useFullEmail(id: string | null, live: boolean): MailState {
+  const [res, setRes] = useState<{ id: string; status: "ready" | "error"; mail?: ParsedEmail; message?: string } | null>(null);
+  useEffect(() => {
+    if (!id || !live || OPENED_EMAILS.has(id)) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const bytes = await fetchInboxEml(id);
+        const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+        const mail = await parseEmailFile("mail.eml", ab);
+        OPENED_EMAILS.set(id, mail);
+        if (OPENED_EMAILS.size > 12) OPENED_EMAILS.delete(OPENED_EMAILS.keys().next().value as string);
+        if (alive) setRes({ id, status: "ready", mail });
+      } catch (e) {
+        if (alive) setRes({ id, status: "error", message: e instanceof Error ? e.message : "The email could not be opened." });
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id, live]);
+  if (!id || !live) return { status: "idle" };
+  const hit = OPENED_EMAILS.get(id);
+  if (hit) return { status: "ready", mail: hit };
+  if (res && res.id === id) return res;
+  return { status: "loading" };
+}
+
+function openAttachment(a: EmailAttachment) {
+  const url = URL.createObjectURL(new Blob([a.bytes as BlobPart], { type: a.mime || "application/octet-stream" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.download = a.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export default function EnquiryInboxPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { data: rows = [], isLoading } = useInbox();
+  const [view, setView] = useState<ViewKey>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { readEmailBytes } = useHubReader();
   const [modeOverride, setModeOverride] = useState<"air" | "sea" | null>(null);
-  const [filter, setFilter] = useState<FilterTab>("action");
-  /** The enquiry whose "someone else is quoting this" warning was already shown once: pressing the button again opens it anyway. */
-  const [takeoverOk, setTakeoverOk] = useState<string | null>(null);
+  const [readChoice, setReadChoice] = useState<ReadMode | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
-  const visible = useMemo(() => {
-    const mine = rows.filter((r) => canSeeInboxItem(user?.username, user?.role, r));
-    if (filter === "action") {
-      return mine.filter(
-        (r) =>
-          r.actionRequired !== false &&
-          (r.tag === "new_enquiry" || r.tag === "needs_human" || !r.tag) &&
-          r.status === "new",
-      );
-    }
-    if (filter === "follow_up") return mine.filter((r) => r.tag === "follow_up");
-    return mine;
-  }, [rows, user?.username, user?.role, filter]);
-
+  const mine = useMemo(() => rows.filter((r) => canSeeInboxItem(user?.username, user?.role, r)), [rows, user?.username, user?.role]);
+  const counts = useMemo(() => viewCounts(mine, user?.username, now), [mine, user?.username, now]);
+  const visible = useMemo(() => listView(mine, view, user?.username, now), [mine, view, user?.username, now]);
   const selected = visible.find((r) => r.id === selectedId) ?? visible[0] ?? null;
-
-  const actionCount = rows.filter(
-    (r) =>
-      canSeeInboxItem(user?.username, user?.role, r) &&
-      r.actionRequired !== false &&
-      (r.tag === "new_enquiry" || r.tag === "needs_human" || !r.tag) &&
-      r.status === "new",
-  ).length;
+  const full = useFullEmail(selected?.id ?? null, useLiveData);
+  const state: WorkState = selected ? workState(selected, user?.username, now) : { kind: "free" };
 
   const resolvedMode: "air" | "sea" = (() => {
     if (modeOverride) return modeOverride;
     if (selected?.mode === "sea") return "sea";
     if (selected?.mode === "air") return "air";
     const blob = `${selected?.subject || ""}\n${selected?.bodyPreview || selected?.body || ""}`;
-    if (detectEnquiryMode(blob) === "sea") return "sea";
-    return "air";
+    return detectEnquiryMode(blob) === "sea" ? "sea" : "air";
   })();
+
+  /** Emails with attachments are worth the AI read; a plain text enquiry is filled free from its words. The person can always choose. */
+  const hasFiles = (full.mail?.attachments.length ?? 0) > 0;
+  const readMode: ReadMode = readChoice ?? (hasFiles ? "ai" : "text");
 
   const deskParsed = useMemo(() => {
     if (!selected) return null;
-    if (selected.parsed?.origin || selected.parsed?.destination || selected.parsed?.customer) {
-      return selected.parsed;
-    }
-    const text = `${selected.subject}\n${selected.bodyPreview || selected.body || ""}`;
+    if (selected.parsed?.origin || selected.parsed?.destination || selected.parsed?.customer) return selected.parsed;
+    const text = `${selected.subject}\n${full.mail?.bodyText || selected.bodyPreview || selected.body || ""}`;
     return resolvedMode === "sea" ? parseSeaEnquiry(text) : parseAirEnquiry(text);
-  }, [selected, resolvedMode]);
+  }, [selected, resolvedMode, full.mail]);
 
   /** What a quote remembers about this email: who to reply to, and the subject. */
   function inboxRefOf(item: InboxEnquiry): InboxRef {
@@ -105,33 +148,24 @@ export default function EnquiryInboxPage() {
   }
 
   /**
-   * Action an email: the whole email (body and attachments) is read once and the chosen desk opens filled in.
-   * The AI is used only here, for emails someone actually actions. If the full email cannot be read, the short preview
-   * saved with the item is used instead, as before.
+   * Quote on a desk. "Text only" fills the desk from the words of the whole email (free). "AI" also reads the attachments, once,
+   * and uses a little AI credit. Either way the person is marked as quoting, so a colleague on the same mailbox sees it.
    */
-  async function applyToDesk(item: InboxEnquiry, desk: "air" | "sea") {
-    // Air Nom and Sea Nom share pricing@ (and Free Hand and NRS share pricingsales@): say so when the other one is already on it.
-    const other = activeWorker(item, user?.username);
-    if (other && takeoverOk !== item.id) {
-      setTakeoverOk(item.id);
-      toast(`${workingNote(other)}. Press the button again to open it anyway.`, "info");
-      return;
-    }
+  async function applyToDesk(item: InboxEnquiry, desk: "air" | "sea", how: ReadMode) {
     if (useLiveData && user) {
       try {
-        await patchInboxEnquiry(item.id, { workingBy: markWorking({ username: user.username, displayName: user.displayName }) });
+        await patchInboxEnquiry(item.id, { workingBy: markWorking({ username: user.username, displayName: user.displayName }), takeoverRequest: null });
       } catch {
         /* the mark is a courtesy: never stop the work for it */
       }
     }
-    if (useLiveData) {
+    if (useLiveData && how === "ai") {
       setBusy(true);
       try {
-        toast("Reading the full email…", "info");
+        toast("Reading the whole email and its attachments…", "info");
         const bytes = await fetchInboxEml(item.id);
         const job = await readEmailBytes(`${(item.subject || "enquiry").replace(/[\\/:*?"<>|]+/g, " ").slice(0, 80)}.eml`, bytes);
         if (job) {
-          // The desk you chose wins over the reader's guess.
           const forDesk = { ...job, mode: desk, extraction: { ...job.extraction, mode: desk } };
           try {
             await patchInboxEnquiry(item.id, { status: "applied", claimedBy: user?.username ?? null, actionRequired: false });
@@ -146,16 +180,16 @@ export default function EnquiryInboxPage() {
           return;
         }
       } catch (e) {
-        toast(e instanceof Error ? `${e.message} Using the short preview instead.` : "Could not read the full email. Using the short preview instead.", "info");
+        toast(e instanceof Error ? `${e.message} Using the words of the email instead.` : "Could not read the attachments. Using the words of the email instead.", "info");
       } finally {
         setBusy(false);
       }
     }
-    const text = `${item.subject}\n${item.bodyPreview || item.body || ""}`;
+    const text = `${item.subject}\n${full.mail?.bodyText || item.bodyPreview || item.body || ""}`;
     const fromText = desk === "sea" ? parseSeaEnquiry(text) : parseAirEnquiry(text);
     const parsed = {
       ...fromText,
-      customer: item.parsed?.customer || fromText.customer,
+      customer: item.parsed?.customer || fromText.customer || senderDisplay(item.from),
       origin: item.parsed?.origin || fromText.origin,
       destination: item.parsed?.destination || fromText.destination,
       packages: item.parsed?.packages?.length ? item.parsed.packages : fromText.packages,
@@ -163,9 +197,7 @@ export default function EnquiryInboxPage() {
       confidence: Math.max(item.parsed?.confidence || 0, fromText.confidence || 0),
       source: "email-imap",
     };
-    if (!parsed.origin || !parsed.destination) {
-      toast("Lane incomplete — open the desk and fill POL/POD manually", "error");
-    }
+    if (!parsed.origin || !parsed.destination) toast("Lane incomplete — open the desk and fill POL/POD manually", "error");
     storeSmartQuotePrefill({
       mode: desk,
       parsed,
@@ -175,35 +207,27 @@ export default function EnquiryInboxPage() {
       inboxRef: inboxRefOf(item),
     });
     if (useLiveData) {
-      setBusy(true);
       try {
-        await patchInboxEnquiry(item.id, {
-          status: "applied",
-          claimedBy: user?.username ?? null,
-          actionRequired: false,
-        });
+        await patchInboxEnquiry(item.id, { status: "applied", claimedBy: user?.username ?? null, actionRequired: false });
       } catch {
         /* mock / rules */
-      } finally {
-        setBusy(false);
       }
     }
     toast(`Opening ${desk === "sea" ? "Sea" : "Air"} desk`, "success");
     router.push(desk === "sea" ? "/sea/?smart=1" : "/air/?smart=1");
   }
 
-  async function claim(item: InboxEnquiry) {
-    if (!user?.username) return;
+  async function updateItem(item: InboxEnquiry, patch: Parameters<typeof patchInboxEnquiry>[1], done: string) {
     if (!useLiveData) {
-      toast("Mock mode — claim is live-only", "info");
+      toast("This works in the live app", "info");
       return;
     }
     setBusy(true);
     try {
-      await patchInboxEnquiry(item.id, { status: "claimed", claimedBy: user.username });
-      toast("Claimed — this enquiry is yours", "success");
+      await patchInboxEnquiry(item.id, patch);
+      toast(done, "success");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Claim failed", "error");
+      toast(e instanceof Error ? e.message : "Update failed", "error");
     } finally {
       setBusy(false);
     }
@@ -211,7 +235,7 @@ export default function EnquiryInboxPage() {
 
   async function dismiss(item: InboxEnquiry) {
     if (!useLiveData) {
-      toast("Mock mode — dismiss is live-only", "info");
+      toast("Mock mode — ignore is live-only", "info");
       return;
     }
     setBusy(true);
@@ -226,143 +250,195 @@ export default function EnquiryInboxPage() {
     }
   }
 
+  const quoteBlocked = state.kind === "other" || state.kind === "asked";
+  const rb = selected ? replyBy(selected, now) : null;
+
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Inbox className="h-5 w-5 text-[var(--color-atlas-sky)]" />
-          <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Enquiry intake</h1>
-          {actionCount ? (
-            <Badge tone="warn">
-              <Flag className="mr-1 inline h-3 w-3" />
-              {actionCount} to action
-            </Badge>
-          ) : (
-            <Badge tone="success">Caught up</Badge>
-          )}
-        </div>
-        <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
-          Classifies mail from {MAILBOX_TEAMS.pricing.email} and {MAILBOX_TEAMS.pricingsales.email} (
-          {ATLAS_IMAP.host}). Only slim enquiry tickets are stored — full messages stay on IMAP.
-          Noise is dropped.
-        </p>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Inbox className="h-5 w-5 text-[var(--color-atlas-sky)]" />
+        <h1 className="text-xl font-extrabold text-[var(--color-atlas-navy)]">Inbox</h1>
+        {counts.past ? (
+          <Badge tone="warn">
+            <Flag className="mr-1 inline h-3 w-3" />
+            {counts.past} past its time
+          </Badge>
+        ) : counts.all ? (
+          <Badge tone="info">{counts.all} open</Badge>
+        ) : (
+          <Badge tone="success">Caught up</Badge>
+        )}
+        <span className="text-xs text-[var(--color-text-muted)]">Soonest reply-by first. Emails are opened live from the mailbox and are not saved here.</span>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ["action", "Needs action"],
-            ["follow_up", "Follow-ups"],
-            ["all", "All tickets"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setFilter(id)}
-            className={`rounded-full px-3 py-1 text-xs font-bold ${
-              filter === id
-                ? "bg-[var(--color-atlas-navy)] text-white"
-                : "border border-[var(--color-border)] bg-white text-[var(--color-atlas-navy)]"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <div className="grid gap-3 lg:grid-cols-[210px_minmax(0,340px)_minmax(0,1fr)]">
+        {/* folders */}
+        <Card className="p-2 lg:self-start">
+          {VIEW_GROUPS.map((g) => (
+            <div key={g.title} className="mb-2">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">{g.title}</div>
+              {g.keys.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    setView(k);
+                    setSelectedId(null);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ${view === k ? "bg-slate-200 font-bold" : "hover:bg-slate-100"}`}
+                  data-testid={`inbox-view-${k}`}
+                >
+                  <span>{VIEW_LABELS[k]}</span>
+                  <span className={`text-xs tabular-nums ${k === "past" && counts[k] ? "rounded-full bg-red-50 px-1.5 font-bold text-red-700" : k === "due" && counts[k] ? "rounded-full bg-amber-50 px-1.5 font-bold text-amber-800" : "text-[var(--color-text-muted)]"}`}>
+                    {counts[k]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </Card>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <Card className="overflow-hidden p-0 lg:col-span-1">
+        {/* list */}
+        <Card className="overflow-hidden p-0">
           {isLoading ? (
-            <p className="p-6 text-sm text-[var(--color-text-muted)]">Loading intake…</p>
+            <p className="p-6 text-sm text-[var(--color-text-muted)]">Loading the Inbox…</p>
           ) : visible.length === 0 ? (
-            <p className="p-6 text-sm text-[var(--color-text-muted)]">
-              No tickets in this view. New enquiries and review flags appear here; noise is not
-              stored.
-            </p>
+            <p className="p-6 text-sm text-[var(--color-text-muted)]">Nothing in this folder. New enquiries appear here by themselves, and noise is never kept.</p>
           ) : (
             <ul>
-              {visible.map((row) => (
-                <li key={row.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedId(row.id);
-                      setModeOverride(null);
-                    }}
-                    className={`w-full border-b border-[var(--color-border)] px-4 py-3 text-left hover:bg-slate-50 ${
-                      selected?.id === row.id ? "bg-sky-50" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {row.mode === "sea" ? (
-                        <Ship className="h-3.5 w-3.5 shrink-0 text-sky-700" />
-                      ) : (
-                        <Plane className="h-3.5 w-3.5 shrink-0 text-violet-700" />
-                      )}
-                      <span className="truncate text-sm font-bold">{row.subject}</span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      <Badge tone={tagTone(row.tag)}>{tagLabel(row.tag)}</Badge>
-                      {row.actionRequired !== false && row.status === "new" ? (
-                        <Badge tone="warn">action</Badge>
-                      ) : null}
-                      {activeWorker(row, user?.username) ? <Badge tone="info">{activeWorker(row, user?.username)?.name} is quoting</Badge> : null}
-                    </div>
-                    <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      {row.from || row.mailboxEmail} · {row.status}
-                    </div>
-                  </button>
-                </li>
-              ))}
+              {visible.map((row) => {
+                const r = replyBy(row, now);
+                const u = urgencyOf(r.at, now);
+                const st = workState(row, user?.username, now);
+                return (
+                  <li key={row.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedId(row.id);
+                        setModeOverride(null);
+                        setReadChoice(null);
+                      }}
+                      className={`w-full border-b border-[var(--color-border)] px-3 py-2.5 text-left hover:bg-slate-50 ${selected?.id === row.id ? "bg-sky-50" : ""}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {row.mode === "sea" ? <Ship className="h-3.5 w-3.5 shrink-0 text-sky-700" /> : <Plane className="h-3.5 w-3.5 shrink-0 text-violet-700" />}
+                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{senderDisplay(row.from)}</span>
+                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${URGENCY_CLASS[u]}`}>
+                          <Clock className="mr-0.5 inline h-3 w-3" />
+                          {timeLeftText(r.at, now)}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 truncate text-sm">{row.subject}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                        <span>{r.basis === "client" ? `Client deadline ${r.localText}` : `${r.zone.city} closes ${r.localText}`}</span>
+                        {st.kind === "other" || st.kind === "asked" || st.kind === "can-take" ? <Badge tone="info">{st.worker.name} is quoting</Badge> : null}
+                        {st.kind === "mine" ? <Badge tone="success">You are quoting</Badge> : null}
+                        {st.kind === "incoming" ? <Badge tone="warn">{st.request.name} asks to take this</Badge> : null}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
 
-        <Card className="space-y-3 py-3 lg:col-span-2">
+        {/* reading pane */}
+        <Card className="min-w-0 space-y-3">
           {!selected ? (
-            <p className="text-sm text-[var(--color-text-muted)]">Select a ticket.</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Select an enquiry to read it.</p>
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={tagTone(selected.tag)}>{tagLabel(selected.tag)}</Badge>
-                <Badge tone={selected.mode === "unknown" ? "warn" : "info"}>{selected.mode}</Badge>
-                <Badge tone="neutral">{selected.confidence}%</Badge>
-                {selected.classifier ? <Badge tone="neutral">{selected.classifier}</Badge> : null}
-                <span className="text-xs text-[var(--color-text-muted)]">Open as:</span>
-                <button
-                  type="button"
-                  className={`rounded-md px-2 py-1 text-xs font-bold ${
-                    resolvedMode === "air" ? "bg-amber-500 text-white" : "border bg-white"
-                  }`}
-                  onClick={() => setModeOverride("air")}
-                >
+                <Badge tone="neutral">{tagLabel(selected.tag)}</Badge>
+                {rb ? (
+                  <span className={`rounded px-2 py-0.5 text-xs font-bold ${URGENCY_CLASS[urgencyOf(rb.at, now)]}`}>
+                    Reply by {rb.localText}, {timeLeftText(rb.at, now)}
+                  </span>
+                ) : null}
+                <span className="text-xs text-[var(--color-text-muted)]">{rb?.basis === "client" ? "The client gave this deadline" : `${rb?.zone.city} office closes at 18:00`}</span>
+                <span className="ml-auto text-xs text-[var(--color-text-muted)]">Open as:</span>
+                <button type="button" className={`rounded-md px-2 py-1 text-xs font-bold ${resolvedMode === "air" ? "bg-amber-500 text-white" : "border bg-white"}`} onClick={() => setModeOverride("air")}>
                   Air
                 </button>
-                <button
-                  type="button"
-                  className={`rounded-md px-2 py-1 text-xs font-bold ${
-                    resolvedMode === "sea" ? "bg-sky-600 text-white" : "border bg-white"
-                  }`}
-                  onClick={() => setModeOverride("sea")}
-                >
+                <button type="button" className={`rounded-md px-2 py-1 text-xs font-bold ${resolvedMode === "sea" ? "bg-sky-600 text-white" : "border bg-white"}`} onClick={() => setModeOverride("sea")}>
                   Sea
                 </button>
               </div>
+
               <h2 className="text-lg font-extrabold text-[var(--color-atlas-navy)]">{selected.subject}</h2>
               <p className="text-sm text-[var(--color-text-muted)]">
-                From {selected.from || "—"} · suggested{" "}
-                {selected.suggestedUser ? deskDisplayName(selected.suggestedUser) : "shared mailbox"}
+                From {selected.from || "—"} · to {selected.mailboxEmail || selected.mailbox}
+                {selected.suggestedUser ? ` · usual desk ${deskDisplayName(selected.suggestedUser)}` : ""}
               </p>
-              {selected.summary || selected.reason ? (
-                <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                  {selected.summary || selected.reason}
+
+              {state.kind === "mine" ? (
+                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900" data-testid="inbox-mine-note">
+                  You are quoting this. Your colleague on the mailbox can see that.
                 </p>
               ) : null}
+              {state.kind === "other" ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" data-testid="inbox-working-note">
+                  <span className="font-semibold">
+                    {state.worker.name} is quoting this (opened {agoText(state.worker.at, now)}).
+                  </span>
+                  <Button type="button" variant="secondary" disabled={busy} onClick={() => void updateItem(selected, { takeoverRequest: askRequest({ username: user?.username ?? "", displayName: user?.displayName }) }, `Asked ${state.worker.name} to hand it over`)}>
+                    Ask {state.worker.name} to hand it over
+                  </Button>
+                </div>
+              ) : null}
+              {state.kind === "asked" ? (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" data-testid="inbox-working-note">
+                  You asked {state.worker.name} to hand this over. If there is no answer you can take it over in {state.waitLeftMin} min.
+                </p>
+              ) : null}
+              {state.kind === "can-take" ? (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" data-testid="inbox-working-note">
+                  {state.worker.name} did not answer in {TAKEOVER_WAIT_MINUTES} minutes. You can take it over now.
+                </p>
+              ) : null}
+              {state.kind === "incoming" ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900" data-testid="inbox-takeover-request">
+                  <span className="font-semibold">{state.request.name} asks to take this enquiry over.</span>
+                  <Button type="button" disabled={busy} onClick={() => void updateItem(selected, handOverPatch(state.request), `Handed over to ${state.request.name}`)}>
+                    Hand over
+                  </Button>
+                  <Button type="button" variant="secondary" disabled={busy} onClick={() => void updateItem(selected, { takeoverRequest: null }, "You keep it")}>
+                    I am on it
+                  </Button>
+                </div>
+              ) : null}
+
+              <div>
+                <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">The email</div>
+                {full.status === "loading" ? (
+                  <p className="mt-1 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Opening the email…
+                  </p>
+                ) : (
+                  <pre className="mt-1 max-h-[22rem] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm" data-testid="inbox-email-body">
+                    {full.status === "ready" ? full.mail?.bodyText || "(no text in this email)" : selected.bodyPreview || selected.body || "—"}
+                  </pre>
+                )}
+                {full.status === "error" ? <p className="mt-1 text-xs text-amber-800">{full.message} Showing the short preview.</p> : null}
+                {full.status === "ready" && full.mail && full.mail.attachments.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {full.mail.attachments.map((a, i) => (
+                      <button key={`${a.name}-${i}`} type="button" onClick={() => openAttachment(a)} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-slate-50">
+                        <Paperclip className="h-3.5 w-3.5" />
+                        {a.name}
+                        <span className="font-normal text-[var(--color-text-muted)]">{Math.max(1, Math.round(a.bytes.length / 1024))} KB · open</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
               <dl className="grid gap-2 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Customer</dt>
-                  <dd className="font-semibold">{deskParsed?.customer || "—"}</dd>
+                  <dd className="font-semibold">{deskParsed?.customer || senderDisplay(selected.from)}</dd>
                 </div>
                 <div>
                   <dt className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Lane</dt>
@@ -370,62 +446,36 @@ export default function EnquiryInboxPage() {
                     {deskParsed?.origin || "—"} → {deskParsed?.destination || "—"}
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Cargo</dt>
-                  <dd className="font-semibold">
-                    {resolvedMode === "air"
-                      ? deskParsed?.packages?.length
-                        ? `${deskParsed.packages.length} pkg line(s)`
-                        : "—"
-                      : deskParsed?.containers?.length
-                        ? deskParsed.containers.map((c) => `${c.qty}×${c.type}`).join(", ")
-                        : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Mailbox</dt>
-                  <dd className="font-semibold">{selected.mailboxEmail || selected.mailbox}</dd>
-                </div>
               </dl>
-              <div>
-                <div className="text-xs font-bold uppercase text-[var(--color-text-muted)]">
-                  Preview only (full mail on IMAP)
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] text-xs font-semibold" role="group" aria-label="How to read the email">
+                  <button type="button" onClick={() => setReadChoice("text")} className={`px-3 py-1.5 ${readMode === "text" ? "bg-sky-100 text-sky-900" : "bg-white"}`}>
+                    Text only, free
+                  </button>
+                  <button type="button" onClick={() => setReadChoice("ai")} disabled={!useLiveData} className={`border-l border-[var(--color-border)] px-3 py-1.5 ${readMode === "ai" ? "bg-sky-100 text-sky-900" : "bg-white"}`}>
+                    <span className="font-bold text-sky-700">AI</span> text and attachments, about ₹1
+                  </button>
                 </div>
-                <pre className="mt-1 max-h-32 overflow-auto rounded-lg bg-slate-50 p-3 text-xs whitespace-pre-wrap">
-                  {selected.bodyPreview || selected.body || "—"}
-                </pre>
-              </div>
-              {activeWorker(selected, user?.username) ? (
-                <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" data-testid="inbox-working-note">
-                  {workingNote(activeWorker(selected, user?.username)!)}. Press Quote again to open it anyway.
-                </p>
-              ) : null}
-              {useLiveData ? (
-                <p className="text-xs text-[var(--color-text-muted)]" data-testid="inbox-ai-note">
-                  &ldquo;Quote on {resolvedMode === "sea" ? "Sea" : "Air"} desk&rdquo; reads the whole email and its attachments once and fills the desk. That uses a little AI credit (a few rupees at most). Emails nobody opens cost nothing.
-                </p>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  disabled={busy}
-                  onClick={() => void applyToDesk(selected, resolvedMode)}
+                  disabled={busy || quoteBlocked}
+                  onClick={() => void applyToDesk(selected, resolvedMode, readMode)}
+                  data-testid="inbox-quote-button"
                 >
                   {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Quote on {resolvedMode === "sea" ? "Sea" : "Air"} desk
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void claim(selected)}
-                >
-                  Claim for me
+                  {state.kind === "can-take" ? "Take over and quote" : "Quote"} on {resolvedMode === "sea" ? "Sea" : "Air"} desk
                 </Button>
                 <Button type="button" variant="ghost" disabled={busy} onClick={() => void dismiss(selected)}>
                   Ignore
                 </Button>
               </div>
+              <p className="text-xs text-[var(--color-text-muted)]" data-testid="inbox-ai-note">
+                {readMode === "ai"
+                  ? "AI reads the words and the attachments once and fills the desk. That uses a little AI credit (about ₹1). Emails nobody opens cost nothing."
+                  : "The desk is filled from the words of the email by fixed rules. No AI credit is used. Choose AI if the details are in an attachment."}
+              </p>
+
               <EnquiryReplyDrafter
                 key={selected.id}
                 item={deskParsed ? { ...selected, parsed: deskParsed } : selected}

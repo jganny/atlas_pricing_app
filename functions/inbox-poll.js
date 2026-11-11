@@ -807,6 +807,7 @@ async function pollOne(mailbox, password, apiKey) {
           from,
           subject: subject.slice(0, 300),
           receivedAt: (msg.envelope?.date || new Date()).toISOString(),
+          senderTzMin: P.dateHeaderOffset(parsedMail),
           timestamp: Date.now(),
           bodyPreview: bodyWork.slice(0, 240),
           body: "", // intentionally empty — storage-safe; mail stays on IMAP

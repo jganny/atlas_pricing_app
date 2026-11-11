@@ -401,6 +401,10 @@ export interface InboxEnquiry {
   classifier?: 'anthropic' | 'heuristic' | string
   /** Who has a desk open on this enquiry right now (see lib/mail/inbox-working.ts). */
   workingBy?: { username: string; name: string; at: number } | null
+  /** A colleague has asked to take this enquiry over (see lib/mail/inbox-working.ts). */
+  takeoverRequest?: { username: string; name: string; at: number } | null
+  /** The sender's clock, minutes east of UTC, from the Date header of the email. */
+  senderTzMin?: number | null
   /** Set when a reply or forward from the app went out. */
   repliedAt?: number
   parsed: ParsedEnquiry

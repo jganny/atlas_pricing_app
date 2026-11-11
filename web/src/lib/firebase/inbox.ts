@@ -77,7 +77,7 @@ export function subscribeInboxEnquiries(
 
 export async function patchInboxEnquiry(
   id: string,
-  patch: Partial<Pick<InboxEnquiry, "status" | "claimedBy" | "actionRequired" | "workingBy">>,
+  patch: Partial<Pick<InboxEnquiry, "status" | "claimedBy" | "actionRequired" | "workingBy" | "takeoverRequest">>,
 ): Promise<void> {
   const db = getFirebaseDb();
   await updateDoc(doc(db, "inbox_enquiries", id), {

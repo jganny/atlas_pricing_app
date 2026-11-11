@@ -55,4 +55,18 @@ function attachmentsFromStructure(node, out = []) {
   return out;
 }
 
-module.exports = { nextUids, nextCursor, senderKey, senderNeverEnquires, NEVER_AFTER, attachmentsFromStructure };
+/**
+ * The sender's clock, in minutes east of UTC, from the Date header exactly as they wrote it ("... +0900"). null when there is none.
+ * Used to work out when their office closes, so an enquiry from Tokyo is answered before one from Bangkok or India.
+ */
+function dateHeaderOffset(parsedMail) {
+  const lines = parsedMail && Array.isArray(parsedMail.headerLines) ? parsedMail.headerLines : [];
+  const hit = lines.find((h) => h && String(h.key).toLowerCase() === "date");
+  const m = hit ? /([+-])(\d{2}):?(\d{2})\s*(?:\(.*\))?\s*$/.exec(String(hit.line || "").trim()) : null;
+  if (!m) return null;
+  const mins = Number(m[2]) * 60 + Number(m[3]);
+  if (mins > 14 * 60) return null;
+  return m[1] === "-" ? -mins : mins;
+}
+
+module.exports = { dateHeaderOffset, nextUids, nextCursor, senderKey, senderNeverEnquires, NEVER_AFTER, attachmentsFromStructure };

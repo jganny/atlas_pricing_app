@@ -11,6 +11,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.155",
+    date: "2026-11-11",
+    items: [
+      "Inbox rebuilt in an Outlook style: folders with counts on the left (All open, I am quoting, Others are quoting, Due within the hour, Past its time, Follow-ups, Air, Sea, and each mailbox), the list in the middle, and the whole email on the right with its attachments, which you can open. The email is opened live from the mailbox and is not saved in the app.",
+      "The list is ordered by when a reply is due. If the email states its own deadline (for example \"by 3 pm IST\" or \"within 2 hours\") that is the time; otherwise the sender's office closes at 18:00 in their country, so Tokyo comes before Bangkok and India. Each row shows the time left.",
+      "Quote now has a choice: Text only (free, filled from the words of the email) or AI (reads the attachments too, about 1 rupee). Emails with attachments start on AI; you can switch. The customer is the sender's name, no longer the email address. Claim for me is gone: nobody has to press it.",
+      "When two people share a mailbox, you see who is quoting an enquiry. You can ask them to hand it over; they see your request with Hand over and I am on it. If they do not answer in 20 minutes you can take it over.",
+      "Alerts (for people who have turned on notifications in chat): the people on a mailbox are told when an enquiry arrives, reminded after 20 minutes if nobody has opened it, and the manager is told after 60 minutes.",
+    ],
+  },
+  {
     version: "0.3.154",
     date: "2026-11-11",
     items: [

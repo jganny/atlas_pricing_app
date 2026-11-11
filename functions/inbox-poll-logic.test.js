@@ -48,3 +48,14 @@ console.log("inbox poll logic ok");
   assert.deepEqual(Q.attachmentsFromStructure({ type: "text/plain", size: 50 }), [], "a plain mail has none");
   assert.deepEqual(Q.attachmentsFromStructure(undefined), []);
 }
+
+// The sender's clock from the Date header.
+{
+  const lines = (line) => ({ headerLines: [{ key: "subject", line: "Subject: x" }, { key: "date", line }] });
+  assert.equal(P.dateHeaderOffset(lines("Date: Tue, 11 Nov 2026 17:31:00 +0900")), 540);
+  assert.equal(P.dateHeaderOffset(lines("Date: Tue, 11 Nov 2026 12:35:00 -0500 (EST)")), -300);
+  assert.equal(P.dateHeaderOffset(lines("Date: Tue, 11 Nov 2026 14:05:00 +0530")), 330);
+  assert.equal(P.dateHeaderOffset(lines("Date: Tue, 11 Nov 2026 14:05:00 GMT")), null, "no numeric offset: unknown");
+  assert.equal(P.dateHeaderOffset({ headerLines: [] }), null);
+  assert.equal(P.dateHeaderOffset(null), null);
+}

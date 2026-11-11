@@ -1440,6 +1440,7 @@ exports.inboxCleanup = inboxPoll.inboxCleanup;
 exports.autoReplyTest = inboxPoll.autoReplyTest;
 exports.mailCopyTest = inboxPoll.mailCopyTest;
 exports.sendInboxReply = inboxPoll.sendInboxReply;
+exports.inboxAlerts = require("./inbox-alerts").inboxAlerts;
 
 // Team chat: delete messages and files 100 days after they were sent, and alert people who are away.
 const chatRetention = require("./chat-retention");
