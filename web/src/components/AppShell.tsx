@@ -50,6 +50,7 @@ import { demoLabel } from "@/lib/demo-mode";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
 import { AiStatusPill, FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
+import { WorkBar } from "./WorkBar";
 import { GlobalSearch } from "./GlobalSearch";
 import { WhatsNewLink } from "./WhatsNew";
 import { MODE_COLORS, type ModeKey } from "@/lib/ui/colors";
@@ -484,6 +485,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               <WorkspaceMore />
             </div>
           </header>
+
+          {showInbox ? <WorkBar /> : null}
 
           <main className={cn("flex-1", normalized === "/quote" ? "relative min-h-0 p-0" : "p-3 md:p-5")}>
             {normalized === "/quote" ? (

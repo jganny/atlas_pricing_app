@@ -31,6 +31,7 @@ function buildThread(rootId, cards, sents) {
       subject: String(c.subject || ""),
       attachments: Number(c.attachmentCount) || 0,
       by: c.id === rootId ? "self" : c.linkedBy || "",
+      check: c.id !== rootId && c.needsCheck === true,
       reason: c.id === rootId ? "" : TH.REASONS[c.linkedBy] || "",
     })),
     ...sents.map((s) => ({
@@ -45,6 +46,7 @@ function buildThread(rootId, cards, sents) {
       subject: String(s.subject || ""),
       attachments: 0,
       by: s.linkedBy || "",
+      check: s.needsCheck === true,
       reason: TH.REASONS[s.linkedBy] || "",
     })),
   ].sort((a, b) => a.at - b.at);
@@ -100,7 +102,8 @@ exports.threadLink = functions.runWith({ timeoutSeconds: 60, memory: "256MB" }).
   const [item, root] = await Promise.all([db.collection(kind === "sent" ? "inbox_sent" : "inbox_enquiries").doc(id).get(), db.collection("inbox_enquiries").doc(rootId).get()]);
   if (!item.exists || !root.exists) throw new functions.https.HttpsError("not-found", "That email or enquiry is no longer in the list.");
   if (!TH.isRootCard(root.data()) || root.data().mailbox !== item.data().mailbox) throw new functions.https.HttpsError("failed-precondition", "That enquiry is in another mailbox, or is not an enquiry.");
-  await item.ref.set({ threadId: rootId, linkedBy: "manual", noAutoLink: false, linkedAt: Date.now(), linkedByUser: String(context.auth.token.email || context.auth.uid || "") }, { merge: true });
+  await item.ref.set({ threadId: rootId, linkedBy: "manual", noAutoLink: false, needsCheck: false, linkedAt: Date.now(), linkedByUser: String(context.auth.token.email || context.auth.uid || "") }, { merge: true });
+  await TH.markRoot(db, rootId);
   return { ok: true };
 });
 

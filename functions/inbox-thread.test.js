@@ -71,10 +71,14 @@ const db0 = { inbox_enquiries: { [ORIG]: enquiry, [T.cardId("pricing", "<other@x
   const early = { ...bare, at: NOW - 5 * 3_600_000 };
   assert.equal(await T.findThread(fakeDb(db0), "pricing", "sent", early, NOW), null);
 
-  // 5. Two enquiries that fit equally: nobody is guessed.
+  // 5. Two enquiries that fit equally: the closest is linked and flagged.
   const twin = { ...enquiry, messageId: "<twin@x>", timestamp: NOW - 1.9 * 3_600_000, receivedAt: hours(1.9) };
   const dbTwin = { ...db0, inbox_enquiries: { ...db0.inbox_enquiries, [T.cardId("pricing", "<twin@x>")]: twin } };
-  assert.equal(await T.findThread(fakeDb(dbTwin), "pricing", "sent", bare, NOW), null, "ambiguous: left for a person");
+  // The twin arrived a little before the original: both fit, so the closest one is taken and a person is asked to check.
+  const r5 = await T.findThread(fakeDb(dbTwin), "pricing", "sent", bare, NOW);
+  assert.equal(r5.check, true, "ambiguous: linked to the closest, flagged for a check");
+  assert.equal(r5.root, T.cardId("pricing", "<twin@x>"), "the enquiry that arrived most recently before the mail");
+  assert.equal(r2.check, false, "a single fit is not flagged");
 
   // 6. The vendor's reply: its References name the mail we sent, which is already tied -> same conversation.
   const SENT = T.cardId("pricing", "<sent1@atlas>");

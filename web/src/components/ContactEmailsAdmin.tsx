@@ -80,7 +80,7 @@ export function ContactEmailsAdmin() {
       <div>
         <h2 className="text-base font-extrabold text-[var(--color-atlas-navy)]">Contact directory</h2>
         <p className="mt-1 max-w-3xl text-xs text-[var(--color-text-muted)]">
-          The app remembers each email address it meets in mail it keeps and in replies that go out: the address, the name and how often it appears, never what was said. Airlines and liners it knows are sorted by themselves; the rest are guesses for you to confirm. The desks use this list to suggest how to ask a carrier for a rate: its portal, an email, or its tariff on file.
+          The app remembers each email address it meets in mail it keeps, in replies that go out, and in the mails you send on from Outlook (the vendors, airlines and agents you ask for rates): the address, the name and how often it appears, never what was said. Airlines and liners it knows are sorted by themselves; the rest are guesses for you to confirm. The desks use this list to suggest how to ask a carrier for a rate: its portal, an email, or its tariff on file. Overseas agents found here are NOT added to the weekly agency list: that list is kept separately and is not changed from this directory.
         </p>
       </div>
 

@@ -14,10 +14,12 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     version: "0.3.160",
     date: "2026-11-11",
     items: [
-      "Conversations. The enquiry that came in, what you sent on to vendors from Outlook, and the vendors' replies are now tied together by themselves. Open an enquiry in the Inbox and a Conversation box shows them in order, with who was asked and who has replied. The app uses the email's own thread marks, Outlook's conversation mark (which survives a changed subject), the original enquiry or its ticket number found inside your forward, and the same airports and weight close in time. If it is not sure, it leaves the email alone.",
-      "Every link can be undone. Press Unlink on any email that does not belong: it is not linked again by itself. A reply that was not tied in can be linked by hand from a list of open enquiries.",
-      "People you send to from Outlook (airlines, agents, vendors) are now saved in the contact directory, not only people who write to you.",
-      "No AI credit is used, and nothing is stored beyond small cards: each email still opens live from the mailbox. Enquiries that are part of a conversation stay in the list for up to 30 days instead of 7, so the conversation is not cut off.",
+      "Conversations. The enquiry that came in, what you sent on to vendors from Outlook, and the vendors' replies are now tied together by themselves. Open an enquiry in the Inbox and a Conversation box shows them in order, with who was asked and who has replied. The app uses the email's own thread marks, Outlook's conversation mark (which survives a changed subject), the original enquiry or its ticket number found inside your forward, and the same airports and weight close in time. When two enquiries fit equally it links the closest one and marks it Please check, so nothing is left unlinked.",
+      "Every link can be corrected. Press Looks right to confirm, Move to send an email to another enquiry, or Unlink if it does not belong (an unlinked email is left alone so it does not jump back; Move puts it where it belongs). A reply that was not tied in can be linked by hand.",
+      "Search mail. A Search mail button in the Inbox searches the real mailboxes (pricing@ and pricingsales@, Inbox and Sent) for any word in the sender, subject or email, last 30 days to start, up to a year. Results are grouped into conversations and open live. Nothing is saved in the app, so mail that already left the list is found too.",
+      "Work bar. A line across the top of every screen shows the enquiry that is waiting: amber when it is new, red when nobody has opened it for 20 minutes or it is past its time. It cannot be closed and goes away when the enquiry is opened. The browser tab shows the count, for example (2) Atlas Pricing, and a short chime plays when something turns red (you can mute it).",
+      "Contact directory: contacts are now sorted into more kinds: GSA, CSA, coloader, packer, customs broker, courier, forwarder, besides airline, liner, NVOCC, transporter, overseas agent and the rest. People you send to from Outlook are saved too. Overseas agents found here are not added to the weekly agency list.",
+      "No AI credit is used. Enquiries that are part of a conversation stay in the list for up to 15 days instead of 7.",
     ],
   },
   {

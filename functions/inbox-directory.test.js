@@ -61,3 +61,17 @@ function fakeDb() {
   console.error(e);
   process.exit(1);
 });
+
+// More kinds of contact are sorted by their name, and an overseas forwarder is told apart from an Indian one.
+{
+  const D = require("./inbox-directory");
+  assert.equal(D.guessType("ops@gulfpackers.ae", "Gulf Packers and Movers").type, "packer");
+  assert.equal(D.guessType("a@skyline-consolidators.com", "Skyline Consol").type, "coloader");
+  assert.equal(D.guessType("a@xyz-customs.in", "XYZ Customs Clearing").type, "customs-broker");
+  assert.equal(D.guessType("a@fastcourier.in", "Fast Courier").type, "courier");
+  assert.equal(D.guessType("a@airmar.com.mx", "Airmar Logistics").type, "overseas-agent");
+  assert.equal(D.guessType("a@bluefreight.in", "Blue Freight").type, "forwarder");
+  assert.equal(D.guessType("a@somewhere.com", "Aero GSA Services").type, "gsa");
+  assert.ok(["gsa", "csa", "coloader", "packer", "customs-broker", "courier", "forwarder"].every((t) => D.TYPES.includes(t)));
+  console.log("directory kinds ok");
+}

@@ -15,6 +15,8 @@ export interface ThreadMember {
   subject: string;
   attachments: number;
   by: string;
+  /** The rules were not certain (two enquiries fitted): a person is asked to confirm. */
+  check: boolean;
   reason: string;
 }
 

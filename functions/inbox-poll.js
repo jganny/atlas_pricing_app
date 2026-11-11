@@ -196,7 +196,7 @@ async function keepInboxItem(db, o) {
   } catch (err) {
     functions.logger.warn("thread: could not look for a conversation", { message: String((err && err.message) || err).slice(0, 120) });
   }
-  const threadFields = link ? { threadId: link.root, linkedBy: link.by, linkedAt: Date.now() } : TH.isRootCard({ tag: classified.tag }) ? { threadId: docId, linkedBy: "self" } : {};
+  const threadFields = link ? { threadId: link.root, linkedBy: link.by, linkedAt: Date.now(), needsCheck: !!link.check } : TH.isRootCard({ tag: classified.tag }) ? { threadId: docId, linkedBy: "self" } : {};
   await db.collection("inbox_enquiries").doc(docId).set({
     refs: sig.refs,
     convRoot: sig.convRoot,
@@ -232,6 +232,7 @@ async function keepInboxItem(db, o) {
     // Firestore refuses fields that are undefined (e.g. a missing package length): drop them.
     parsed: JSON.parse(JSON.stringify(classified.parsed)),
   });
+  if (link) await TH.markRoot(db, link.root);
   try {
     await DIR.learnContacts(db, [{ email: fromAddr, name: fromName, mailbox: mailbox.key, source: "inbox" }]);
   } catch (err) {
@@ -501,8 +502,10 @@ async function indexSentMail(db, mailbox, parsed, uid) {
     threadId: link.root,
     linkedBy: link.by,
     linkedAt: Date.now(),
+    needsCheck: !!link.check,
     timestamp: Date.now(),
   });
+  await TH.markRoot(db, link.root);
   return link;
 }
 
@@ -528,7 +531,8 @@ async function relinkRecent(db, mailbox) {
     const fromAddr = (/<([^>]+)>/.exec(String(c.from || "")) || [])[1] || String(c.from || "");
     const link = await TH.findThread(db, mailbox.key, "card", { ...c, id: d.id, at: Date.parse(c.receivedAt || "") || Number(c.timestamp) || Date.now(), tag: c.tag, fromAddr: fromAddr.toLowerCase() });
     if (link) {
-      await d.ref.set({ threadId: link.root, linkedBy: link.by, linkedAt: Date.now() }, { merge: true });
+      await d.ref.set({ threadId: link.root, linkedBy: link.by, linkedAt: Date.now(), needsCheck: !!link.check }, { merge: true });
+      await TH.markRoot(db, link.root);
       linked += 1;
     }
   }
@@ -1168,6 +1172,127 @@ exports.fetchInboxEmail = functions
     }
   });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Search the mailboxes, live. Nothing is stored: the mail server does the searching and only a short list (sender, subject, date) comes back.
+// The pricing desks and the admin can search; the sales team's own logins cannot (they see the mails they are copied on in the list).
+// ─────────────────────────────────────────────────────────────────────────────
+const SEARCH_PEOPLE = new Set(["shashank", "shaheer", "cathrina", "jabeena", "kavya", "jaya", "pricing", "ganny", "manager", "admin"]);
+function requireSearcher(context) {
+  if (!context.auth || context.auth.token.chatOnly === true) throw new functions.https.HttpsError("unauthenticated", "Sign in is required.");
+  const login = String(context.auth.token.email || "").toLowerCase().split("@")[0];
+  if (!SEARCH_PEOPLE.has(login)) throw new functions.https.HttpsError("permission-denied", "Mailbox search is for the pricing desks and the manager.");
+}
+
+async function connectMailbox(box) {
+  const password = String(box.secret.value() || "").trim();
+  if (!password) throw new functions.https.HttpsError("failed-precondition", "The mailbox password is not set up.");
+  const client = new ImapFlow({ host: IMAP.host, port: IMAP.port, secure: IMAP.secure, auth: { user: box.user, pass: password }, logger: false });
+  try {
+    await client.connect();
+  } catch (err) {
+    functions.logger.warn("mailbox: could not connect", { message: err instanceof Error ? err.message : String(err) });
+    throw new functions.https.HttpsError("unavailable", "The mailbox did not answer. Try again in a minute.");
+  }
+  return client;
+}
+async function closeMailbox(client) {
+  try {
+    await client.logout();
+  } catch {
+    client.close();
+  }
+}
+
+exports.searchMailboxes = functions
+  .runWith({ secrets: [pricingPassword, salesPassword], timeoutSeconds: 120, memory: "512MB" })
+  .https.onCall(async (data, context) => {
+    requireSearcher(context);
+    const raw = String((data && data.query) || "").trim().slice(0, 120);
+    const terms = raw.split(/\s+/).filter((t) => t.length >= 2).slice(0, 5);
+    if (!terms.length) throw new functions.https.HttpsError("invalid-argument", "Type at least two letters to search.");
+    const days = Math.min(365, Math.max(1, Number(data && data.days) || 30));
+    const want = data && data.mailbox === "pricing" ? ["pricing"] : data && data.mailbox === "pricingsales" ? ["pricingsales"] : ["pricing", "pricingsales"];
+    const folders = data && data.folder === "inbox" ? ["inbox"] : data && data.folder === "sent" ? ["sent"] : ["inbox", "sent"];
+    const since = new Date(Date.now() - days * 86_400_000);
+    const results = [];
+    let failed = 0;
+    for (const box of MAILBOXES.filter((b) => want.includes(b.key))) {
+      let client;
+      try {
+        client = await connectMailbox(box);
+      } catch {
+        failed += 1;
+        continue;
+      }
+      try {
+        for (const which of folders) {
+          const folder = which === "sent" ? require("./inbox-send").pickSentFolder(await client.list()) : IMAP.folder;
+          if (!folder) continue;
+          const lock = await client.getMailboxLock(folder);
+          try {
+            // Every word must appear (anywhere in the mail): one search per word, then the common ones.
+            let uids = null;
+            for (const t of terms) {
+              const found = (await client.search({ since, text: t }, { uid: true })) || [];
+              uids = uids === null ? new Set(found) : new Set(found.filter((u) => uids.has(u)));
+              if (!uids.size) break;
+            }
+            const top = [...(uids || [])].sort((a, b) => b - a).slice(0, 40);
+            if (!top.length) continue;
+            for await (const m of client.fetch(top, { uid: true, envelope: true }, { uid: true })) {
+              const env = m.envelope || {};
+              const addr = (list) => (Array.isArray(list) ? list : []).map((a) => ({ email: String(a.address || "").toLowerCase(), name: String(a.name || "") }));
+              results.push({
+                mailbox: box.key,
+                folder: which,
+                uid: m.uid,
+                messageId: String(env.messageId || ""),
+                subject: String(env.subject || "(no subject)").slice(0, 200),
+                from: addr(env.from)[0] || { email: "", name: "" },
+                to: addr(env.to).slice(0, 4),
+                date: env.date ? new Date(env.date).getTime() : 0,
+                key: TH.normalizeSubject(env.subject || ""),
+              });
+            }
+          } finally {
+            lock.release();
+          }
+        }
+      } finally {
+        await closeMailbox(client);
+      }
+    }
+    results.sort((a, b) => b.date - a.date);
+    return { results: results.slice(0, 80), terms, days, failed };
+  });
+
+/** One mail found by the search, opened live (the whole email as .eml). Nothing is stored. */
+exports.openMailboxEmail = functions
+  .runWith({ secrets: [pricingPassword, salesPassword], timeoutSeconds: 60, memory: "512MB" })
+  .https.onCall(async (data, context) => {
+    requireSearcher(context);
+    const box = MAILBOXES.find((b) => b.key === (data && data.mailbox));
+    if (!box) throw new functions.https.HttpsError("invalid-argument", "Which mailbox?");
+    const uid = Number(data && data.uid);
+    if (!Number.isInteger(uid) || uid < 1) throw new functions.https.HttpsError("invalid-argument", "Which email?");
+    const client = await connectMailbox(box);
+    try {
+      const folder = data.folder === "sent" ? require("./inbox-send").pickSentFolder(await client.list()) : IMAP.folder;
+      if (!folder) throw new functions.https.HttpsError("not-found", "The folder could not be found.");
+      const lock = await client.getMailboxLock(folder);
+      try {
+        const msg = await client.fetchOne(String(uid), { source: { maxLength: MAX_EML_BYTES }, uid: true }, { uid: true });
+        if (!msg || !msg.source) throw new functions.https.HttpsError("not-found", "The email is no longer in the mailbox.");
+        return { eml: msg.source.toString("base64"), size: msg.source.length, truncated: msg.source.length >= MAX_EML_BYTES };
+      } finally {
+        lock.release();
+      }
+    } finally {
+      await closeMailbox(client);
+    }
+  });
+
 /**
  * Nothing stays in the app longer than it is needed. Run once a day:
  *  - an enquiry still unopened after 30 days, or opened (applied, claimed, dismissed) more than 7 days ago, is removed;
@@ -1182,7 +1307,7 @@ async function deleteOld(db, collection, field, olderThanMs, filterFn, label) {
   const snap = await db.collection(collection).where(field, "<", cutoff).limit(400).get();
   const docs = [];
   snap.forEach((d) => {
-    if (!filterFn || filterFn(d.data())) docs.push(d);
+    if (!filterFn || filterFn(d.data(), d.id)) docs.push(d);
   });
   for (let i = 0; i < docs.length; i += 200) {
     const batch = db.batch();
@@ -1200,9 +1325,11 @@ exports.inboxCleanup = functions
   .onRun(async () => {
     const db = admin.firestore();
     const done = {};
-    // An enquiry that is part of a conversation (sent on to vendors, replies coming) stays for the full 30 days so its thread is not cut off.
-    done.opened = await deleteOld(db, "inbox_enquiries", "timestamp", 7 * DAY, (d) => d.status && d.status !== "new" && !d.threadId, "opened enquiries");
-    done.sent = await deleteOld(db, "inbox_sent", "timestamp", 30 * DAY, null, "sent-mail cards");
+    // An enquiry that is part of a conversation (sent on to vendors, replies coming) stays 15 days so its thread is not cut off; the rest go 7 days after opening.
+    const inConversation = (d, id) => !!d.hasThread || (!!d.threadId && d.threadId !== id);
+    done.opened = await deleteOld(db, "inbox_enquiries", "timestamp", 7 * DAY, (d, id) => d.status && d.status !== "new" && !inConversation(d, id), "opened enquiries");
+    done.conversations = await deleteOld(db, "inbox_enquiries", "timestamp", 15 * DAY, (d, id) => inConversation(d, id), "enquiries in a conversation");
+    done.sent = await deleteOld(db, "inbox_sent", "timestamp", 15 * DAY, null, "sent-mail cards");
     done.unopened = await deleteOld(db, "inbox_enquiries", "timestamp", 30 * DAY, null, "unopened enquiries");
     // Quote Hub jobs keep their date as text (ISO), which sorts the same way.
     const isoCut = new Date(Date.now() - 7 * DAY).toISOString();

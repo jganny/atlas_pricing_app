@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { linkLabel, linkedCount, memberTitle, vendorSummary, type ThreadMember, type ThreadView } from "./thread-view";
 
-const m = (over: Partial<ThreadMember>): ThreadMember => ({ kind: "card", id: "x", role: "reply", at: 0, who: "Prashant", email: "p@x.in", subject: "RE: x", attachments: 0, by: "headers", reason: "", ...over });
+const m = (over: Partial<ThreadMember>): ThreadMember => ({ kind: "card", id: "x", role: "reply", at: 0, who: "Prashant", email: "p@x.in", subject: "RE: x", attachments: 0, by: "headers", check: false, reason: "", ...over });
 
 assert.equal(memberTitle(m({ role: "enquiry" })), "Enquiry received");
 assert.equal(memberTitle(m({ role: "reply" })), "Reply from Prashant");

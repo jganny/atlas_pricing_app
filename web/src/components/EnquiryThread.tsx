@@ -99,6 +99,18 @@ export function EnquiryThread({
       setBusy(null);
     }
   }
+  async function moveTo(m: ThreadMember, rootId: string, message: string) {
+    setBusy(m.id);
+    try {
+      await linkToEnquiry(m.kind, m.id, rootId);
+      toast(message, "success");
+      await refresh();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not do that. Try again.", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
   async function link(rootId: string) {
     setBusy("link");
     try {
@@ -185,6 +197,9 @@ export function EnquiryThread({
                 </div>
                 <div className="truncate text-xs text-slate-600" title={m.subject}>{m.subject || "(no subject)"}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {m.role !== "enquiry" && m.check ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900" data-testid="thread-check">Please check: more than one enquiry fits, this is the closest</span>
+                  ) : null}
                   {m.role !== "enquiry" && m.reason ? (
                     <span className="text-[11.5px] text-slate-500" title={m.reason}>
                       <b className="font-semibold text-slate-600">{linkLabel(m.by)}.</b> {m.reason}
@@ -194,6 +209,26 @@ export function EnquiryThread({
                     <button type="button" className="text-xs font-semibold text-sky-700 hover:underline" onClick={() => (inList ? onOpenCard(m.id) : setViewing(m))}>
                       {inList ? "Show in the list" : "Open"}
                     </button>
+                  ) : null}
+                  {m.role !== "enquiry" && m.check && thread.rootId ? (
+                    <button type="button" className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-50" disabled={busy === m.id} onClick={() => void moveTo(m, thread.rootId as string, "Confirmed.")} data-testid="thread-confirm">
+                      Looks right
+                    </button>
+                  ) : null}
+                  {m.role !== "enquiry" && enquiryChoices.some((c) => c.id !== thread.rootId) ? (
+                    <select
+                      aria-label="Move this email to another enquiry"
+                      className="max-w-[11rem] rounded border border-[var(--color-border)] bg-white px-1.5 py-0.5 text-[11.5px] text-slate-600"
+                      defaultValue=""
+                      disabled={busy === m.id}
+                      onChange={(e) => (e.target.value ? void moveTo(m, e.target.value, "Moved to that enquiry.") : undefined)}
+                      data-testid="thread-move"
+                    >
+                      <option value="">Move to…</option>
+                      {enquiryChoices.filter((c) => c.id !== thread.rootId).map((c) => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
+                    </select>
                   ) : null}
                   {m.role !== "enquiry" ? (
                     <button
@@ -214,7 +249,7 @@ export function EnquiryThread({
         })}
       </ol>
       <p className="border-t border-[var(--color-border)] px-4 py-2 text-[11px] text-slate-500">
-        Tied together by themselves from the email headers and what they say. Wrong one? Unlink it and it will not come back. Nothing here is stored: each email opens live from the mailbox.
+        Tied together by themselves from the email headers and what they say. Wrong one? Move it to the right enquiry, or Unlink it (it is then left alone, so it does not jump back). Nothing here is stored: each email opens live from the mailbox.
       </p>
       {viewing ? <MailModal member={viewing} onClose={() => setViewing(null)} /> : null}
     </section>

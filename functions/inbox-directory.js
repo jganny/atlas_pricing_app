@@ -7,7 +7,7 @@
  */
 const crypto = require("crypto");
 
-const TYPES = ["airline", "liner", "nvocc", "transporter", "overseas-agent", "exporter", "importer", "trader", "warehouser", "customer", "other", "unknown"];
+const TYPES = ["airline", "gsa", "csa", "liner", "nvocc", "coloader", "transporter", "packer", "customs-broker", "courier", "overseas-agent", "forwarder", "exporter", "importer", "trader", "warehouser", "customer", "other", "unknown"];
 
 const OWN_DOMAINS = ["atlaslogistics.co.in", "atlaspricing.com"];
 
@@ -38,15 +38,22 @@ const LINERS = {
 };
 
 const KEYWORDS = [
+  // An airline's sales agent (GSA) or cargo sales agent (CSA) is named as such; the admin sets the rest by hand.
+  [/\b(gsa|general sales agents?|general sales agency)\b/i, "gsa"],
+  [/\b(csa|cargo sales agents?|carrier sales agents?)\b/i, "csa"],
   [/\b(cargo|airlines?|airways?)\b/i, "airline"],
   [/\b(shipping|lines?|marine|maritime)\b/i, "liner"],
-  [/\b(nvocc|consolidat|co-?load|consol)/i, "nvocc"],
+  [/\b(nvocc)/i, "nvocc"],
+  [/\b(consolidat|co-?load|consol)/i, "coloader"],
+  [/\b(packers?|packing|crating|movers (?:and|&) packers)/i, "packer"],
+  [/\b(customs|cha\b|clearing|clearance|brokers?\b)/i, "customs-broker"],
+  [/\b(courier|parcel|dhl|fedex|aramex|tnt)\b/i, "courier"],
   [/\b(transport|truck|carriers?\b|haulage|roadways?|movers?\b)/i, "transporter"],
   [/\b(warehous|storage|godown|cfs\b|icd\b)/i, "warehouser"],
   [/\b(export|manufactur|industries\b)/i, "exporter"],
   [/\b(import)/i, "importer"],
   [/\b(trading|traders?\b|enterprises\b|impex\b)/i, "trader"],
-  [/\b(forward|freight|logistic|agency\b|agents?\b)/i, "overseas-agent"],
+  [/\b(forward|freight|logistic|agency\b|agents?\b)/i, "forwarder-or-agent"],
 ];
 
 /** { email, name } -> { type, org, carrierCode, confidence }. Fixed rules; "unknown" when nothing fits. */
@@ -55,7 +62,12 @@ function guessType(email, name = "") {
   if (AIRLINES[dom]) return { type: "airline", org: AIRLINES[dom][1], carrierCode: AIRLINES[dom][0], confidence: "high" };
   if (LINERS[dom]) return { type: "liner", org: LINERS[dom], carrierCode: "", confidence: "high" };
   const text = `${name} ${dom.replace(/\.[a-z.]+$/, "").replace(/[-_.]/g, " ")}`;
-  for (const [re, type] of KEYWORDS) if (re.test(text)) return { type, org: "", carrierCode: "", confidence: "guess" };
+  for (const [re, type] of KEYWORDS) {
+    if (!re.test(text)) continue;
+    // A forwarder abroad is an overseas agent; one in India is a forwarder.
+    const resolved = type === "forwarder-or-agent" ? (/\.in$/.test(String(email || "").toLowerCase()) ? "forwarder" : "overseas-agent") : type;
+    return { type: resolved, org: "", carrierCode: "", confidence: "guess" };
+  }
   return { type: "unknown", org: "", carrierCode: "", confidence: "none" };
 }
 
@@ -81,6 +93,11 @@ async function learnContacts(db, list, now = Date.now()) {
     if (snap.exists) {
       const d = snap.data();
       const patch = { lastSeen: now, count: (Number(d.count) || 0) + 1 };
+      // Not sorted yet: try again with what is known now (never over a type the admin set).
+      if ((d.type === "unknown" || d.typeSource === "none") && d.typeSource !== "admin") {
+        const g2 = guessType(email, name || d.name);
+        if (g2.type !== "unknown") Object.assign(patch, { type: g2.type, typeSource: g2.confidence === "high" ? "rules" : "guess", org: d.org || g2.org, carrierCode: d.carrierCode || g2.carrierCode });
+      }
       if (name && !d.name) patch.name = name;
       if (c.mailbox && !(d.mailboxes || []).includes(c.mailbox)) patch.mailboxes = [...(d.mailboxes || []), c.mailbox];
       await ref.set(patch, { merge: true });

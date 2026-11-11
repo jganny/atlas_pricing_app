@@ -2,15 +2,22 @@
  * The directory of email addresses our people deal with (see functions/inbox-directory.js). Plain helpers for the Admin screen and for
  * the desks, which use it to suggest how to ask a carrier for a rate.
  */
-export const CONTACT_TYPES = ["airline", "liner", "nvocc", "transporter", "overseas-agent", "exporter", "importer", "trader", "warehouser", "customer", "other", "unknown"] as const;
+export const CONTACT_TYPES = ["airline", "gsa", "csa", "liner", "nvocc", "coloader", "transporter", "packer", "customs-broker", "courier", "overseas-agent", "forwarder", "exporter", "importer", "trader", "warehouser", "customer", "other", "unknown"] as const;
 export type ContactType = (typeof CONTACT_TYPES)[number];
 
 export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   airline: "Airline",
+  gsa: "GSA (general sales agent)",
+  csa: "CSA (cargo sales agent)",
   liner: "Liner",
   nvocc: "NVOCC",
+  coloader: "Coloader",
   transporter: "Transporter",
+  packer: "Packer",
+  "customs-broker": "Customs broker (CHA)",
+  courier: "Courier",
   "overseas-agent": "Overseas agent",
+  forwarder: "Forwarder (India)",
   exporter: "Exporter",
   importer: "Importer",
   trader: "Trader",

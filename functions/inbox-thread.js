@@ -138,12 +138,31 @@ function scoreAgainst(enquiry, mail) {
   return { score, by };
 }
 
-/** The one enquiry a mail fits, or null when none fits well enough or two fit about equally (then nobody is guessed). */
+/**
+ * The enquiry a mail fits best, or null when none fits at all (a score under 70). When two or more fit about equally the closest one in time
+ * (the enquiry that arrived most recently before the mail was sent) is taken and `check` is set, so the screen asks a person to confirm it.
+ * Nothing is left unlinked for want of a tie-break.
+ */
 function chooseEnquiry(enquiries, mail) {
   const scored = enquiries.map((e) => ({ e, ...scoreAgainst(e, mail) })).filter((x) => x.score >= 70).sort((a, b) => b.score - a.score);
   if (!scored.length) return null;
-  if (scored.length > 1 && scored[0].score - scored[1].score < 20) return null;
-  return { id: scored[0].e.id, by: scored[0].by, score: scored[0].score };
+  const top = scored[0].score;
+  const close = scored.filter((x) => top - x.score < 20);
+  if (close.length === 1) return { id: scored[0].e.id, by: scored[0].by, score: top, check: false };
+  const arrived = (x) => Date.parse(x.e.receivedAt || "") || Number(x.e.timestamp) || 0;
+  const at = Number(mail.at) || Date.now();
+  // The enquiry that arrived most recently before the mail, then the higher score.
+  close.sort((a, b) => Math.abs(at - arrived(a)) - Math.abs(at - arrived(b)) || b.score - a.score);
+  return { id: close[0].e.id, by: close[0].by, score: close[0].score, check: true };
+}
+
+/** Marks an enquiry as the start of a conversation, so it is kept for the conversation's retention and not cleaned up early. */
+async function markRoot(db, rootId) {
+  try {
+    await db.collection("inbox_enquiries").doc(rootId).set({ hasThread: true }, { merge: true });
+  } catch {
+    /* the link itself is already saved */
+  }
 }
 
 /** A card that starts a conversation: an enquiry or a problem, not a follow-up. */
@@ -205,9 +224,9 @@ async function findThread(db, mailboxKey, kind, mail, now = Date.now()) {
       .map((d) => ({ id: d.id, ...d.data() }))
       .filter((d) => d.mailbox === mailboxKey && isRootCard(d) && (!d.threadId || d.threadId === d.id) && !(kind === "card" && d.id === mail.id));
     const hit = chooseEnquiry(candidates, mail);
-    if (hit) return { root: hit.id, by: hit.by };
+    if (hit) return { root: hit.id, by: hit.by, check: hit.check };
   }
   return null;
 }
 
-module.exports = { normalizeSubject, convRootOf, extractTokens, extractCodes, extractWeights, weightsMatch, signalsOf, scoreAgainst, chooseEnquiry, isRootCard, findThread, cardId, REASONS, DAY };
+module.exports = { markRoot, normalizeSubject, convRootOf, extractTokens, extractCodes, extractWeights, weightsMatch, signalsOf, scoreAgainst, chooseEnquiry, isRootCard, findThread, cardId, REASONS, DAY };
