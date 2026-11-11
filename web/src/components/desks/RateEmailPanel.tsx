@@ -6,6 +6,7 @@ import { Button, Card, Input, Label } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { readRateEmails } from "@/lib/firebase/rate-email";
 import { fetchThread } from "@/lib/firebase/threads";
+import { ALL_CURRENCIES, currencyLabel } from "@/lib/desk/currencies";
 import { useAiSwitches } from "@/lib/firebase/ai-switches";
 import { aiAllowed, aiOffMessage } from "@/lib/ai/ai-switches";
 import { parseEmailFile } from "@/lib/hub/email-file";
@@ -13,7 +14,7 @@ import type { AirlineOption, LinerOption } from "@/lib/pricing/carrier-options";
 import { BREAK_LABELS, RATE_EMAILS_KEY, blockers, currencyClash, readToAirOption, readToLinerOption, type MarginInput, type PendingRateEmail, type RateRead } from "@/lib/rates/rate-email";
 import { cn } from "@/lib/utils";
 
-const CURRENCY_CHOICES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "JPY", "CNY", "SAR", "QAR"];
+const CURRENCY_CHOICES = ALL_CURRENCIES;
 
 interface Item {
   id: string;
@@ -303,7 +304,7 @@ export function RateEmailPanel({
                           <Label>Currency{r.currencyAssumed && i.currency === r.currency ? <span className="ml-1 text-amber-700">assumed: sent within India</span> : null}</Label>
                           <select aria-label="Currency" value={i.currency} onChange={(e) => update(i.id, { currency: e.target.value })} className={cn("mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm", i.currency ? "border-[var(--color-border)]" : "border-amber-400")}>
                             <option value="">Choose…</option>
-                            {CURRENCY_CHOICES.map((c) => <option key={c} value={c}>{c}</option>)}
+                            {CURRENCY_CHOICES.map((c) => <option key={c} value={c}>{currencyLabel(c)}</option>)}
                           </select>
                         </div>
                         <label className="flex items-end gap-2 pb-2 text-sm">

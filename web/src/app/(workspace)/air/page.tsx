@@ -27,6 +27,9 @@ import { vendorRowsFromEntries } from "@/lib/quotes/vendor-preview";
 import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
+import { currencyLabel } from "@/lib/desk/currencies";
+import { fxSourceText, resolveInrRate } from "@/lib/quotes/fx";
+import { useInrRates } from "@/hooks/use-inr-rates";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { CustomsHolidayBanner } from "@/components/CustomsHolidayBanner";
 import { toast } from "@/components/Toast";
@@ -155,6 +158,8 @@ function AirDeskInner() {
   const [commodity, setCommodity] = useState("GENERAL");
   const [module, setModule] = useState<"export" | "import">("export");
   const [customFx, setCustomFx] = useState(0);
+  const liveInrRates = useInrRates();
+  const inrFx = resolveInrRate({ currency, customFx, live: liveInrRates });
   const [cargo, setCargo] = useState<AirCargoRow[]>([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
   const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [showRateRequest, setShowRateRequest] = useState(false);
@@ -782,7 +787,11 @@ function AirDeskInner() {
       return;
     }
     const amount = allLanesQuotedTotal || selectedTotals.grandSell;
-    const fx = customFx > 0 ? customFx : 83.5;
+    if (currency !== "INR" && !inrFx.rate) {
+      toast(`No rate is known for ${currency}. Type the ${currency} to INR rate in the rate box first.`, "error");
+      return;
+    }
+    const fx = inrFx.rate ?? 0;
     const quoted = selected;
     const airlineLabel =
       quotedLanes.length > 1
@@ -902,7 +911,11 @@ function AirDeskInner() {
       if (!selected || !selectedTotals) return;
 
       const amount = allLanesQuotedTotal || selectedTotals.grandSell;
-      const fx = customFx > 0 ? customFx : 83.5;
+      if (currency !== "INR" && !inrFx.rate) {
+      toast(`No rate is known for ${currency}. Type the ${currency} to INR rate in the rate box first.`, "error");
+      return;
+    }
+    const fx = inrFx.rate ?? 0;
       const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
       const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
       const lanesNote =
@@ -1487,7 +1500,7 @@ function AirDeskInner() {
                   <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
                     {DESK_CURRENCIES.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {currencyLabel(c)}
                       </option>
                     ))}
                   </Select>
@@ -1506,13 +1519,13 @@ function AirDeskInner() {
                   <CommodityCombobox value={commodity} onChange={setCommodity} />
                 </div>
                 <Label>
-                  Custom USD→INR override (optional)
+                  Custom {currency}→INR rate (optional)
                   <Input
                     type="number"
                     step="0.01"
                     value={customFx || ""}
                     onChange={(e) => setCustomFx(Number(e.target.value))}
-                    placeholder="Leave blank for 83.5"
+                    placeholder={inrFx.rate ? `Blank = ${inrFx.rate.toFixed(inrFx.rate < 1 ? 4 : 2)}` : "Type the rate"}
                   />
                   {currency !== "INR" ? (
                     <span className="mt-1 block text-xs text-[var(--color-text-muted)]" data-testid="custom-fx-preview">
@@ -1520,10 +1533,10 @@ function AirDeskInner() {
                       reporting) — it doesn&apos;t change the {currency} total shown to the
                       customer. ≈{" "}
                       {formatCurrency(
-                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (customFx > 0 ? customFx : 83.5),
+                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (inrFx.rate ?? 0),
                         "INR",
                       )}{" "}
-                      at {customFx > 0 ? customFx.toFixed(2) : "83.5 (default)"}
+                      at {inrFx.rate ? inrFx.rate.toFixed(inrFx.rate < 1 ? 4 : 2) : "?"}: {fxSourceText(inrFx, currency)}
                     </span>
                   ) : null}
                 </Label>

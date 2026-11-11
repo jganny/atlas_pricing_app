@@ -1,5 +1,6 @@
 "use client";
 
+import { ALL_CURRENCIES, currencyLabel } from "@/lib/desk/currencies";
 import { CircularFolders, RoleChip } from "@/components/CircularFolders";
 import { StationSuggestions } from "@/components/StationSuggestions";
 import { CircularReadNote } from "@/components/CircularReadNote";
@@ -768,9 +769,9 @@ export default function CircularsPage() {
                   Currency of this sheet
                   <select value={importCurrency} onChange={(e) => setImportCurrency(e.target.value)} className="rounded-md border px-2 py-1" data-testid="import-currency">
                     <option value="">Choose…</option>
-                    {["INR", "USD", "EUR", "AED", "GBP", "SGD"].map((c) => (
+                    {ALL_CURRENCIES.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {currencyLabel(c)}
                       </option>
                     ))}
                   </select>

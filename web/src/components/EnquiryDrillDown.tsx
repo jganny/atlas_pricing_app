@@ -21,6 +21,7 @@ const COMPARE: Array<{ months: number; label: string }> = [
 
 function show(metric: DrillMetric, v: number): string {
   if (metric === "quotes") return v.toLocaleString("en-IN");
+  if (metric === "gpPct") return `${v.toFixed(1)}%`;
   if (metric === "tonnes") return formatTonnage(v);
   return formatCurrency(v, "INR");
 }
@@ -29,10 +30,15 @@ function pct(f: number): string {
   return `${Math.round(f * 100)}%`;
 }
 
+/** The change against the period before: percentage points for an average GP %, otherwise a percentage. */
+function changeText(metric: DrillMetric, c: number): string {
+  return metric === "gpPct" ? `${Math.abs(c).toFixed(1)} pts` : pct(Math.abs(c));
+}
+
 function csv(rows: DrillRow[], groupLabel: string): string {
   const esc = (v: string | number) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  const head = [groupLabel, "Quotes", "Won", "Win rate %", "Sell (INR)", "GP won (INR)", "GP open (INR)", "GP lost (INR)", "Tonnes"];
-  const lines = rows.map((r) => [r.key, r.quotes, r.won, (r.winRate * 100).toFixed(1), Math.round(r.sell), Math.round(r.gpBy.won), Math.round(r.gpBy.open), Math.round(r.gpBy.lost), r.tonnes.toFixed(2)].map(esc).join(","));
+  const head = [groupLabel, "Quotes", "Won", "Win rate %", "Sell (INR)", "GP % (total GP / total sell)", "GP won (INR)", "GP open (INR)", "GP lost (INR)", "Tonnes"];
+  const lines = rows.map((r) => [r.key, r.quotes, r.won, (r.winRate * 100).toFixed(1), Math.round(r.sell), r.gpPct == null ? "" : r.gpPct.toFixed(2), Math.round(r.gpBy.won), Math.round(r.gpBy.open), Math.round(r.gpBy.lost), r.tonnes.toFixed(2)].map(esc).join(","));
   return [head.map(esc).join(","), ...lines].join("\n");
 }
 
@@ -46,14 +52,17 @@ export function EnquiryDrillDown({
   onMetric,
   onApply,
   onClose,
+  initialDim,
 }: {
   rows: EnquiryRecord[];
   metric: DrillMetric;
   onMetric: (m: DrillMetric) => void;
   onApply: (f: DrillFilter, label: string) => void;
   onClose: () => void;
+  /** The grouping to start with (for example the user, when opened from "Average GP % by user"). */
+  initialDim?: ReportDim;
 }) {
-  const [dim, setDim] = useState<ReportDim>("customer");
+  const [dim, setDim] = useState<ReportDim>(initialDim ?? "customer");
   const [compareMonths, setCompareMonths] = useState(0);
   const [top, setTop] = useState(12);
   const result = useMemo(() => drill(rows, dim, metric, { top, compareMonths }), [rows, dim, metric, top, compareMonths]);
@@ -142,7 +151,7 @@ export function EnquiryDrillDown({
         </div>
         {result.total.change != null ? (
           <div className={cn("text-sm font-bold tabular-nums", result.total.change >= 0 ? "text-emerald-700" : "text-red-700")}>
-            {result.total.change >= 0 ? "▲" : "▼"} {pct(Math.abs(result.total.change))} vs before ({show(metric, result.total.prevValue ?? 0)})
+            {result.total.change >= 0 ? "▲" : "▼"} {changeText(metric, result.total.change)} vs before ({show(metric, result.total.prevValue ?? 0)})
           </div>
         ) : null}
       </div>
@@ -156,8 +165,9 @@ export function EnquiryDrillDown({
               <tr>
                 <th className="py-1 pr-2">{groupLabel}</th>
                 <th className="py-1 pr-2">{DRILL_METRICS.find((m) => m.id === metric)?.label}</th>
-                <th className="py-1 pr-2 text-right">Share</th>
+                {metric === "gpPct" ? null : <th className="py-1 pr-2 text-right">Share</th>}
                 <th className="py-1 pr-2 text-right">Quotes</th>
+                <th className="py-1 pr-2 text-right" title="Total GP of these quotes as a share of their total sell">GP %</th>
                 <th className="py-1 pr-2 text-right">Win rate</th>
                 <th className="py-1 pr-2">GP <span className="font-normal normal-case"><span className={GP_TONE_CLASS.won}>won</span> · <span className={GP_TONE_CLASS.open}>open</span> · <span className={GP_TONE_CLASS.lost}>lost</span></span></th>
                 {result.compare ? <th className="py-1 text-right">Change</th> : null}
@@ -178,8 +188,9 @@ export function EnquiryDrillDown({
                         <span className="font-bold tabular-nums">{show(metric, r.value)}</span>
                       </div>
                     </td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums">{pct(r.share)}</td>
+                    {metric === "gpPct" ? null : <td className="py-1.5 pr-2 text-right tabular-nums">{pct(r.share)}</td>}
                     <td className="py-1.5 pr-2 text-right tabular-nums">{r.quotes}</td>
+                    <td className="py-1.5 pr-2 text-right font-semibold tabular-nums" data-testid="drill-gp-pct">{r.gpPct == null ? "—" : `${r.gpPct.toFixed(1)}%`}</td>
                     <td className="py-1.5 pr-2 text-right tabular-nums">{r.quotes ? pct(r.winRate) : "—"}</td>
                     <td className="py-1.5 pr-2 text-xs font-bold tabular-nums">
                       <span className={GP_TONE_CLASS.won} title={GP_TONE_MEANING.won}>{formatCurrency(r.gpBy.won, "INR")}</span>{" "}
@@ -188,7 +199,7 @@ export function EnquiryDrillDown({
                     </td>
                     {result.compare ? (
                       <td className={cn("py-1.5 text-right text-xs font-bold tabular-nums", r.change == null ? "text-slate-400" : r.change >= 0 ? "text-emerald-700" : "text-red-700")}>
-                        {r.change == null ? (r.value > 0 ? "New" : "—") : `${r.change >= 0 ? "▲" : "▼"} ${pct(Math.abs(r.change))}`}
+                        {r.change == null ? (r.value > 0 ? "New" : "—") : `${r.change >= 0 ? "▲" : "▼"} ${changeText(metric, r.change)}`}
                       </td>
                     ) : null}
                   </tr>
@@ -199,7 +210,7 @@ export function EnquiryDrillDown({
         </div>
       )}
       <p className="text-[11px] text-slate-500">
-        A quote with several lanes counts once in each lane&apos;s group, so group counts can add up to more than the total. Bars: the dark bar is the period before, when comparing. This screen is for staff only.
+        GP % is the group&apos;s total GP divided by its total sell, so a big quote counts for more than a small one (it is not the average of each quote&apos;s percentage). A quote with several lanes counts once in each lane&apos;s group, so group counts can add up to more than the total. Bars: the dark bar is the period before, when comparing. This screen is for staff only.
       </p>
     </Card>
   );

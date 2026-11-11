@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { comparisonWindows, drill, filterForDrillRow } from "./edb-drill";
+import { comparisonWindows, drill, filterForDrillRow, gpPctOf } from "./edb-drill";
 import type { EnquiryRecord } from "../types";
 
 const NOW = Date.parse("2026-11-11T10:00:00");
@@ -60,5 +60,42 @@ assert.deepEqual(filterForDrillRow("month", "2026-02"), { kind: "month", from: "
 assert.deepEqual(filterForDrillRow("seat", "NRS", { NRS: "seat:nrs" }), { kind: "desk", value: "seat:nrs" });
 assert.deepEqual(filterForDrillRow("customer", "Others (3)"), { kind: "none" });
 assert.deepEqual(filterForDrillRow("status", "won"), { kind: "none" });
+
+// ---- average GP % by user ----
+{
+  const mk = (id: string, creator: string, sell: number, gp: number, month = "2026-10-10", status: EnquiryRecord["status"] = "won") =>
+    row({ id, creator, grandTotal: sell, grossProfit: gp, createdAt: month, status, customer: `C${id}` });
+  const data = [
+    mk("a1", "shashank", 10000, 1000),
+    mk("a2", "shashank", 30000, 1500), // 2500 on 40000 = 6.25% weighted (a plain average of 10% and 5% would say 7.5%)
+    mk("b1", "shaheer", 20000, 2000), // 10%
+    mk("c1", "cathrina", 5000, 0), // no profit at all: 0%
+  ];
+  const r = drill(data, "desk", "gpPct", { now: NOW, top: 0 });
+  const by = Object.fromEntries(r.rows.map((x) => [x.key, x.value]));
+  const shashank = r.rows.find((x) => /shashank|Shashank|Air/i.test(x.key));
+  assert.ok(shashank, "a row for each user");
+  assert.equal(shashank!.value, 6.25, "weighted: total GP over total sell, not the average of the percentages");
+  assert.equal(r.rows.find((x) => x.value === 10)?.quotes, 1);
+  assert.equal(r.rows[r.rows.length - 1].value, 0, "lowest last");
+  assert.equal(r.total.value, Math.round((4500 / 65000) * 10_000) / 100, "the overall average is worked out from the totals");
+  assert.ok(r.rows.every((x) => x.share === 0), "a share of an average means nothing");
+  assert.ok(Object.keys(by).length === 3, "three users");
+
+  // Compared with the period before, the change is in percentage POINTS, and a group with nothing before has no change.
+  const prevData = [mk("p1", "shashank", 10000, 500, "2026-06-10")]; // 5% in the earlier months
+  const cmp = drill([...data, ...prevData], "desk", "gpPct", { now: NOW, top: 0, compareMonths: 3 });
+  const sh = cmp.rows.find((x) => /shashank|Shashank|Air/i.test(x.key))!;
+  assert.equal(sh.prevValue, 5);
+  assert.equal(sh.change, 1.25, "6.25% now against 5% before = up 1.25 points");
+  assert.equal(cmp.rows.find((x) => x.value === 10)?.change, null);
+
+  // Folding small groups into "Others" keeps a true weighted average.
+  const folded = drill(data, "desk", "gpPct", { now: NOW, top: 1 });
+  const others = folded.rows.find((x) => /^Others/.test(x.key))!;
+  assert.ok(others, "the rest are folded");
+  assert.ok(Math.abs(others.value - gpPctOf(others.gp, others.sell)) < 1e-9);
+  console.log("average GP % tests passed");
+}
 
 console.log("edb-drill tests passed");

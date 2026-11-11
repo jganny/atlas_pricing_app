@@ -1,5 +1,6 @@
 "use client";
 
+import { ALL_CURRENCIES, currencyLabel } from "@/lib/desk/currencies";
 import { useQuoteTimer } from "@/hooks/use-quote-timer";
 import { useDeskDraft } from "@/hooks/use-desk-draft";
 import { useHubPrefill } from "@/hooks/use-hub-prefill";
@@ -1153,9 +1154,9 @@ function CourierDeskInner() {
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
                 >
-                  {["INR", "USD", "EUR", "GBP"].map((c) => (
+                  {ALL_CURRENCIES.map((c) => (
                     <option key={c} value={c}>
-                      {c}
+                      {currencyLabel(c)}
                     </option>
                   ))}
                 </select>

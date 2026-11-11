@@ -1,6 +1,8 @@
-/** Shared desk currency list — USD / EUR / GBP / INR default everywhere. */
-export const DESK_CURRENCIES = ["USD", "EUR", "GBP", "INR"] as const;
-export type DeskCurrency = (typeof DESK_CURRENCIES)[number];
+import { ALL_CURRENCIES } from "@/lib/desk/currencies";
+
+/** Shared desk currency list: every currency in the world (the common ones first). USD / EUR / GBP / INR stay the usual starting points. */
+export const DESK_CURRENCIES: readonly string[] = ALL_CURRENCIES;
+export type DeskCurrency = string;
 
 export const INDIA_VEHICLE_TYPES = [
   "Tata Ace / Chota Hathi",

@@ -11,6 +11,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.163",
+    date: "2026-11-12",
+    items: [
+      "Every currency. The currency choice on the Air, Sea, Transport, Warehouse and Courier desks, on the Circulars sheet and when adding rates from emails is now every currency in the world (153, with their names), instead of four or five. USD, EUR, GBP and INR still come first.",
+      "The rupee figure saved with a quote now uses the rate of the currency you chose: today's live market rate for that currency, or the rate you type in the rate box, which always wins. Before, any currency other than rupees was converted at the dollar's rate. If no rate is known for a currency and the live service cannot be reached, the desk asks you to type the rate instead of guessing. The customer's total is never changed.",
+      "Enquiry DB: Average GP % by user. Under the GP figure there is now the overall average GP % of sell and a link, Average GP % by user, which breaks it down per user or desk: total GP divided by total sell, so a big quote counts for more than a small one. Every breakdown now also has a GP % column, and you can compare the last 1, 3, 6 or 12 months (the change is shown in percentage points). Choose Average GP % in the breakdown to sort by it.",
+    ],
+  },
+  {
     version: "0.3.162",
     date: "2026-11-11",
     items: [

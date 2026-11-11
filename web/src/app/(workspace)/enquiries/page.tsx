@@ -262,6 +262,8 @@ function EnquiryDatabaseInner() {
   const [showReports, setShowReports] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [drillMetric, setDrillMetric] = useState<DrillMetric | null>(null);
+  // "Average GP % by user" opens the breakdown already grouped by user; the key restarts it each time it is opened that way.
+  const [drillStart, setDrillStart] = useState<{ dim?: "desk"; key: number }>({ key: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
   const [metricModes, setMetricModes] = useState<EdbMetricModes>(DEFAULT_EDB_METRIC_MODES);
   const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
@@ -682,6 +684,20 @@ function EnquiryDatabaseInner() {
           <div className="text-[10px] text-[var(--color-text-muted)]">
             <span className={GP_TONE_CLASS.won}>Won</span> · <span className={GP_TONE_CLASS.open}>Open</span> · <span className={GP_TONE_CLASS.lost}>Lost</span>
           </div>
+          <div className="text-[10px] text-[var(--color-text-muted)]" data-testid="edb-gp-avg">
+            Average GP {stats.revenue > 0 ? `${((stats.gp / stats.revenue) * 100).toFixed(1)}%` : "—"} of sell
+          </div>
+          <button
+            type="button"
+            className="mt-0.5 text-left text-[10px] font-bold text-sky-700 hover:underline"
+            onClick={() => {
+              setDrillMetric("gpPct");
+              setDrillStart((s) => ({ dim: "desk", key: s.key + 1 }));
+            }}
+            data-testid="drill-open-gp-by-user"
+          >
+            Average GP % by user ▾
+          </button>
         </div>
         <div title="Total billing weight of the quotes in view. Kilograms are shown in tonnes; a sea revenue tonne (RT) counts as one tonne.">
           <button type="button" className="text-left hover:opacity-80" onClick={() => setDrillMetric("tonnes")} data-testid="drill-open-tonnes">
@@ -695,6 +711,8 @@ function EnquiryDatabaseInner() {
 
       {drillMetric ? (
         <EnquiryDrillDown
+          key={drillStart.key}
+          initialDim={drillStart.dim}
           rows={filtered}
           metric={drillMetric}
           onMetric={setDrillMetric}

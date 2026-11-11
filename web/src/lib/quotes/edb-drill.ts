@@ -9,12 +9,13 @@ import { buildReport, type ReportDim, type ReportRow } from "./edb-report-builde
 import { gpTone, type GpTone } from "./edb-metrics";
 import { parseCreatedAt } from "./report-periods";
 
-export type DrillMetric = "quotes" | "sell" | "gp" | "tonnes";
+export type DrillMetric = "quotes" | "sell" | "gp" | "gpPct" | "tonnes";
 
 export const DRILL_METRICS: Array<{ id: DrillMetric; label: string }> = [
   { id: "quotes", label: "Quotes" },
   { id: "sell", label: "Sell (INR)" },
   { id: "gp", label: "GP (INR)" },
+  { id: "gpPct", label: "Average GP %" },
   { id: "tonnes", label: "Tonnage" },
 ];
 
@@ -22,6 +23,7 @@ export const DRILL_METRICS: Array<{ id: DrillMetric; label: string }> = [
 export const DRILL_GROUPS: Array<{ id: ReportDim; label: string }> = [
   { id: "mode", label: "Mode (Air / Sea…)" },
   { id: "seat", label: "Desk" },
+  { id: "desk", label: "User / desk" },
   { id: "customer", label: "Customer" },
   { id: "carrier", label: "Carrier" },
   { id: "lane", label: "Lane (from → to)" },
@@ -37,6 +39,8 @@ export interface DrillRow {
   winRate: number;
   sell: number;
   gp: number;
+  /** Total GP as a share of total sell, in percent (a weighted average: big quotes count more). Null when there is no sell. */
+  gpPct: number | null;
   /** GP split by what it means: earned (won), estimated (open or quoted), offered (lost or cancelled). */
   gpBy: Record<GpTone, number>;
   tonnes: number;
@@ -46,6 +50,9 @@ export interface DrillRow {
   share: number;
   /** The same metric for the period just before, when comparing. */
   prevValue?: number;
+  /** The period before's sell and GP, so groups can be folded together without losing a weighted average. */
+  prevSell?: number;
+  prevGp?: number;
   /** Change against the period before, as a fraction (0.25 = up 25%). Null when there was nothing before. */
   change?: number | null;
 }
@@ -57,10 +64,14 @@ export interface DrillResult {
   compare?: { months: number; currentLabel: string; previousLabel: string; previousHasData: boolean };
 }
 
-const valueOf = (r: Pick<DrillRow, "quotes" | "sell" | "gp" | "tonnes">, m: DrillMetric): number =>
-  m === "quotes" ? r.quotes : m === "sell" ? r.sell : m === "gp" ? r.gp : r.tonnes;
+/** Total GP over total sell, in percent (rounded to 2 places). 0 when there is no sell. */
+export const gpPctOf = (gp: number, sell: number): number => (sell > 0 ? Math.round((gp / sell) * 10_000) / 100 : 0);
 
-const changeOf = (now: number, before: number): number | null => (before > 0 ? (now - before) / before : null);
+const valueOf = (r: Pick<DrillRow, "quotes" | "sell" | "gp" | "tonnes">, m: DrillMetric): number =>
+  m === "quotes" ? r.quotes : m === "sell" ? r.sell : m === "gp" ? r.gp : m === "gpPct" ? gpPctOf(r.gp, r.sell) : r.tonnes;
+
+/** The change against the period before: a share (0.25 = up 25%) for amounts, percentage POINTS for an average GP %. */
+const changeOf = (now: number, before: number, points = false): number | null => (points ? (before > 0 ? Math.round((now - before) * 100) / 100 : null) : before > 0 ? (now - before) / before : null);
 
 const mname = (t: number) => new Date(t).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 
@@ -91,7 +102,7 @@ function groupRows(rows: EnquiryRecord[], dim: ReportDim): Map<string, DrillRow>
 }
 
 function fromReport(r: ReportRow): DrillRow {
-  return { key: r.keys[0], quotes: r.quotes, won: r.won, winRate: r.winRate, sell: r.sellInr, gp: r.gpInr, gpBy: { won: 0, open: 0, lost: 0 }, tonnes: r.tonnes, value: 0, share: 0 };
+  return { key: r.keys[0], quotes: r.quotes, won: r.won, winRate: r.winRate, sell: r.sellInr, gp: r.gpInr, gpPct: r.sellInr > 0 ? gpPctOf(r.gpInr, r.sellInr) : null, gpBy: { won: 0, open: 0, lost: 0 }, tonnes: r.tonnes, value: 0, share: 0 };
 }
 
 export interface DrillOptions {
@@ -117,7 +128,7 @@ export function drill(allRows: EnquiryRecord[], dim: ReportDim, metric: DrillMet
   }
   const cur = groupRows(rows, dim);
   const prev = compareMonths ? groupRows(prevRows, dim) : null;
-  if (prev) for (const k of prev.keys()) if (!cur.has(k)) cur.set(k, { ...prev.get(k)!, quotes: 0, won: 0, winRate: 0, sell: 0, gp: 0, gpBy: { won: 0, open: 0, lost: 0 }, tonnes: 0 });
+  if (prev) for (const k of prev.keys()) if (!cur.has(k)) cur.set(k, { ...prev.get(k)!, quotes: 0, won: 0, winRate: 0, sell: 0, gp: 0, gpPct: null, gpBy: { won: 0, open: 0, lost: 0 }, tonnes: 0 });
 
   let list = [...cur.values()];
   const totalSum = { quotes: 0, sell: 0, gp: 0, tonnes: 0 };
@@ -130,20 +141,24 @@ export function drill(allRows: EnquiryRecord[], dim: ReportDim, metric: DrillMet
     if (prev) {
       const p = prev.get(r.key);
       r.prevValue = p ? valueOf(p, metric) : 0;
-      r.change = changeOf(r.value, r.prevValue);
+      r.prevSell = p ? p.sell : 0;
+      r.prevGp = p ? p.gp : 0;
+      r.change = changeOf(r.value, r.prevValue, metric === "gpPct");
     }
   }
   // A quote with several lanes sits in several groups; the total counts each quote once.
   totalSum.quotes = rows.length;
   const total = valueOf(totalSum, metric);
-  const prevTotal = prev ? (metric === "quotes" ? prevRows.length : [...prev.values()].reduce((s, p) => s + valueOf(p, metric), 0)) : undefined;
+  const prevSum = prev ? [...prev.values()].reduce((s, p) => ({ quotes: 0, sell: s.sell + p.sell, gp: s.gp + p.gp, tonnes: s.tonnes + p.tonnes }), { quotes: 0, sell: 0, gp: 0, tonnes: 0 }) : null;
+  // Amounts add up; an average GP % is worked out again from the summed GP and sell, never added.
+  const prevTotal = prevSum ? (metric === "quotes" ? prevRows.length : valueOf(prevSum, metric)) : undefined;
 
   const timeline = dim === "month";
   list.sort(timeline ? (a, b) => a.key.localeCompare(b.key) : (a, b) => b.value - a.value || a.key.localeCompare(b.key));
   if (!timeline && top > 0 && list.length > top + 1) {
     const head = list.slice(0, top);
     const rest = list.slice(top);
-    const others: DrillRow = { key: `Others (${rest.length})`, quotes: 0, won: 0, winRate: 0, sell: 0, gp: 0, gpBy: { won: 0, open: 0, lost: 0 }, tonnes: 0, value: 0, share: 0 };
+    const others: DrillRow = { key: `Others (${rest.length})`, quotes: 0, won: 0, winRate: 0, sell: 0, gp: 0, gpPct: null, gpBy: { won: 0, open: 0, lost: 0 }, tonnes: 0, value: 0, share: 0 };
     for (const r of rest) {
       others.quotes += r.quotes;
       others.won += r.won;
@@ -151,14 +166,22 @@ export function drill(allRows: EnquiryRecord[], dim: ReportDim, metric: DrillMet
       others.gp += r.gp;
       others.tonnes += r.tonnes;
       others.value += r.value;
+      others.prevSell = (others.prevSell ?? 0) + (r.prevSell ?? 0);
+      others.prevGp = (others.prevGp ?? 0) + (r.prevGp ?? 0);
       (Object.keys(others.gpBy) as GpTone[]).forEach((t) => (others.gpBy[t] += r.gpBy[t]));
       if (prev) others.prevValue = (others.prevValue ?? 0) + (r.prevValue ?? 0);
     }
     others.winRate = others.quotes ? others.won / others.quotes : 0;
-    if (prev) others.change = changeOf(others.value, others.prevValue ?? 0);
+    others.gpPct = others.sell > 0 ? gpPctOf(others.gp, others.sell) : null;
+    if (metric === "gpPct") {
+      others.value = valueOf(others, metric);
+      if (prev) others.prevValue = valueOf({ quotes: 0, sell: others.prevSell ?? 0, gp: others.prevGp ?? 0, tonnes: 0 }, metric);
+    }
+    if (prev) others.change = changeOf(others.value, others.prevValue ?? 0, metric === "gpPct");
     list = [...head, others];
   }
-  for (const r of list) r.share = total > 0 ? r.value / total : 0;
+  // A share of an average means nothing: only amounts have one.
+  for (const r of list) r.share = metric === "gpPct" ? 0 : total > 0 ? r.value / total : 0;
 
   return {
     rows: list,

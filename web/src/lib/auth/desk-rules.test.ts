@@ -17,10 +17,10 @@ assert.equal(defaultDeskCurrency(""), "USD", "no/unknown desk falls back to USD,
 assert.equal(defaultIncoterm("cathrina"), "EXW", "NRS incoterm default unchanged");
 assert.equal(defaultIncoterm("kavya"), "CIF", "Free Hand incoterm default unchanged");
 
-assert.deepEqual(
-  [...DESK_CURRENCIES],
-  ["USD", "EUR", "GBP", "INR"],
-  "one shared currency list — no desk (NRS/Free Hand included) sees fewer options than Nomination",
-);
+// One shared list for every desk, and it is every currency in the world: the old four are still there, first.
+assert.deepEqual([...DESK_CURRENCIES].slice(0, 4), ["USD", "EUR", "GBP", "INR"], "the usual four come first");
+assert.ok(DESK_CURRENCIES.length > 140, "the whole ISO list, not four or five");
+assert.equal(new Set(DESK_CURRENCIES).size, DESK_CURRENCIES.length, "no duplicates");
+for (const c of ["JPY", "AED", "MXN", "BRL", "KES", "NGN", "KWD", "ZAR", "TRY", "VND"]) assert.ok(DESK_CURRENCIES.includes(c), `${c} is available`);
 
 console.log("desk-rules tests passed");

@@ -1,6 +1,7 @@
 import type { EnquiryRecord } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { gpNumeric } from "@/lib/quotes/edb-metrics";
+import { FALLBACK_INR } from "@/lib/quotes/fx";
 
 /** Mid-market fallbacks used only when a quote has no amountINR / grossProfitINR. */
 export const FX_TO_INR: Record<string, number> = {
@@ -18,9 +19,16 @@ export function normalizeCurrency(code?: string | null): string {
   return c || "USD";
 }
 
+/** Live rupee rates by currency, set by the rate service hook (hooks/use-inr-rates.ts). */
+let liveInr: Record<string, number> = {};
+export function setLiveInrRates(rates: Record<string, number>): void {
+  liveInr = rates;
+}
+
+/** Rupees per unit, for reporting rows that have no INR figure saved. A quote made on a desk always saves its own INR figure. */
 export function fxToInr(currency?: string | null): number {
   const cur = normalizeCurrency(currency);
-  return FX_TO_INR[cur] ?? 83.25;
+  return FX_TO_INR[cur] ?? liveInr[cur] ?? FALLBACK_INR[cur] ?? 83.25;
 }
 
 function toInr(amount: number, currency?: string | null): number {

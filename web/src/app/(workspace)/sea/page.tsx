@@ -19,6 +19,9 @@ import { LaneChips, newLane, type QuoteLane } from "@/components/LaneChips";
 import { LocationCombobox } from "@/components/LocationCombobox";
 import { ValidityField } from "@/components/ValidityField";
 import { DESK_CURRENCIES } from "@/lib/desk/constants";
+import { currencyLabel } from "@/lib/desk/currencies";
+import { fxSourceText, resolveInrRate } from "@/lib/quotes/fx";
+import { useInrRates } from "@/hooks/use-inr-rates";
 import { TariffIntelHint } from "@/components/TariffIntelHint";
 import { CustomsHolidayBanner } from "@/components/CustomsHolidayBanner";
 import { toast } from "@/components/Toast";
@@ -185,6 +188,8 @@ function SeaDeskInner() {
   const [dimUnit, setDimUnit] = useState<"cms" | "inches">("cms");
   const [chargeableCbmOverride, setChargeableCbmOverride] = useState(0);
   const [customFx, setCustomFx] = useState(0);
+  const liveInrRates = useInrRates();
+  const inrFx = resolveInrRate({ currency, customFx, live: liveInrRates });
   const [attention, setAttention] = useState("");
   const [instr, setInstr] = useState<Instruction | null>(null);
   const [instrChoice, setInstrChoice] = useState<SeaChoice>({});
@@ -773,7 +778,11 @@ function SeaDeskInner() {
     const originCode = origin.split(" - ")[0]?.trim() || origin.trim();
     const destCode = destination.split(" - ")[0]?.trim() || destination.trim();
     const amount = allLanesQuotedTotal || selectedTotals.grandSell;
-    const fx = customFx > 0 ? customFx : 83.5;
+    if (currency !== "INR" && !inrFx.rate) {
+      toast(`No rate is known for ${currency}. Type the ${currency} to INR rate in the rate box first.`, "error");
+      return;
+    }
+    const fx = inrFx.rate ?? 0;
     const linerLabel =
       quotedLanes.length > 1
         ? quotedLanes.map((l) => `${l.laneLabel}: ${l.airline || "—"}`).join(" · ")
@@ -888,7 +897,11 @@ function SeaDeskInner() {
       const quoteNumber = loader.editingQuoteNumber ?? nextQuoteNumber();
       const quoteId = loader.editingQuoteId ?? `Q${Math.random().toString(36).slice(2, 11)}`;
       const amount = allLanesQuotedTotal || selectedTotals.grandSell;
-      const fx = customFx > 0 ? customFx : 83.5;
+      if (currency !== "INR" && !inrFx.rate) {
+      toast(`No rate is known for ${currency}. Type the ${currency} to INR rate in the rate box first.`, "error");
+      return;
+    }
+    const fx = inrFx.rate ?? 0;
       const fallback = lanes[0]?.id || "";
       const linerSnaps = liners.map((l) =>
         linerSnapshot(
@@ -1452,7 +1465,7 @@ function SeaDeskInner() {
                   <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
                     {DESK_CURRENCIES.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {currencyLabel(c)}
                       </option>
                     ))}
                   </Select>
@@ -1631,13 +1644,13 @@ function SeaDeskInner() {
                   </Label>
                 ) : null}
                 <Label>
-                  Custom USD→INR override
+                  Custom {currency}→INR rate (optional)
                   <Input
                     type="number"
                     step="0.01"
                     value={customFx || ""}
                     onChange={(e) => setCustomFx(Number(e.target.value))}
-                    placeholder="Blank = 83.5"
+                    placeholder={inrFx.rate ? `Blank = ${inrFx.rate.toFixed(inrFx.rate < 1 ? 4 : 2)}` : "Type the rate"}
                     onKeyDown={(e) => lastFieldTab(e, goToCarriers)}
                   />
                   {currency !== "INR" ? (
@@ -1646,10 +1659,10 @@ function SeaDeskInner() {
                       reporting) — it doesn&apos;t change the {currency} total shown to the
                       customer. ≈{" "}
                       {formatCurrency(
-                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (customFx > 0 ? customFx : 83.5),
+                        (allLanesQuotedTotal || selectedTotals?.grandSell || 0) * (inrFx.rate ?? 0),
                         "INR",
                       )}{" "}
-                      at {customFx > 0 ? customFx.toFixed(2) : "83.5 (default)"}
+                      at {inrFx.rate ? inrFx.rate.toFixed(inrFx.rate < 1 ? 4 : 2) : "?"}: {fxSourceText(inrFx, currency)}
                     </span>
                   ) : null}
                 </Label>
