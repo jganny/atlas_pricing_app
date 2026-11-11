@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.156",
+    date: "2026-11-11",
+    items: [
+      "Inbox: a cleaner, more professional look. Folders have icons and coloured counts, each enquiry shows a coloured urgency dot and its time left, the actions sit in a bar above the email, and the email reads in a clear, spacious layout with the sender's initials. The three panes scroll on their own so the list stays in view while you read.",
+    ],
+  },
+  {
     version: "0.3.155",
     date: "2026-11-11",
     items: [
