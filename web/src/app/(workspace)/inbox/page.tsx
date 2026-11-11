@@ -27,6 +27,7 @@ import { labelsOf, LABEL_NAMES } from "@/lib/mail/inbox-labels";
 import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import type { InboxEnquiry } from "@/lib/types";
 import { aiAllowed, aiOffMessage } from "@/lib/ai/ai-switches";
+import { EnquiryThread } from "@/components/EnquiryThread";
 import { useAiSwitches } from "@/lib/firebase/ai-switches";
 
 type ReadMode = "text" | "ai";
@@ -510,6 +511,15 @@ export default function EnquiryInboxPage() {
                     </Button>
                   </div>
                 ) : null}
+
+                <EnquiryThread
+                  item={selected}
+                  openIds={new Set(visible.map((r) => r.id))}
+                  onOpenCard={setSelectedId}
+                  enquiryChoices={visible
+                    .filter((r) => r.mailbox === selected.mailbox && r.tag !== "follow_up" && r.id !== selected.id)
+                    .map((r) => ({ id: r.id, label: `${senderDisplay(r.from)}: ${r.subject}`.slice(0, 80) }))}
+                />
 
                 <div className="border-t border-[var(--color-border)] pt-4">
                   {full.status === "loading" ? (

@@ -411,5 +411,9 @@ export interface InboxEnquiry {
   copiedAddresses?: string[]
   /** Set when a reply or forward from the app went out. */
   repliedAt?: number
+  /** The conversation this email belongs to: the id of the enquiry that started it (the enquiry's own id for the enquiry itself). */
+  threadId?: string | null
+  /** How it was tied in: headers, conversation, quoted, token, lane, subject, manual, self, unlinked. */
+  linkedBy?: string
   parsed: ParsedEnquiry
 }

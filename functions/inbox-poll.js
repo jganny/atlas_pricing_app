@@ -25,6 +25,7 @@ const R = require("./inbox-reply");
 const K = require("./inbox-confirm");
 const E = require("./inbox-escalation");
 const DIR = require("./inbox-directory");
+const TH = require("./inbox-thread");
 const nodemailer = require("nodemailer");
 const { simpleParser } = require("mailparser");
 
@@ -176,9 +177,34 @@ function copiedAddressesOf(parsedMail, ownAddress) {
 }
 
 /** Writes the slim Inbox card (never the whole mail) and remembers who sent it in the directory. */
+/** The message IDs a parsed mail answers (In-Reply-To, then References), and Outlook's conversation mark. */
+function threadMarksOf(parsedMail) {
+  const refs = parsedMail ? [parsedMail.inReplyTo, ...(Array.isArray(parsedMail.references) ? parsedMail.references : [parsedMail.references])].filter((x) => typeof x === "string" && x) : [];
+  const ti = parsedMail && parsedMail.headers && typeof parsedMail.headers.get === "function" ? parsedMail.headers.get("thread-index") : "";
+  return { refs, threadIndex: typeof ti === "string" ? ti : "" };
+}
+
 async function keepInboxItem(db, o) {
   const { docId, mailbox, messageId, msg, from, subject, bodyWork, classified, assignment, parsedMail, attachments, fromAddr, fromName } = o;
+  // Which conversation is this part of? Fixed rules, a few small reads, no AI. A new enquiry that ties to nothing starts its own conversation.
+  const marks = threadMarksOf(parsedMail);
+  const sig = TH.signalsOf({ subject, text: bodyWork, threadIndex: marks.threadIndex, refs: marks.refs });
+  const receivedMs = (msg.envelope?.date || new Date()).getTime();
+  let link = null;
+  try {
+    link = await TH.findThread(db, mailbox.key, "card", { ...sig, id: docId, at: receivedMs, tag: classified.tag, fromAddr });
+  } catch (err) {
+    functions.logger.warn("thread: could not look for a conversation", { message: String((err && err.message) || err).slice(0, 120) });
+  }
+  const threadFields = link ? { threadId: link.root, linkedBy: link.by, linkedAt: Date.now() } : TH.isRootCard({ tag: classified.tag }) ? { threadId: docId, linkedBy: "self" } : {};
   await db.collection("inbox_enquiries").doc(docId).set({
+    refs: sig.refs,
+    convRoot: sig.convRoot,
+    subjectKey: sig.subjectKey,
+    tokens: sig.tokens,
+    codes: sig.codes,
+    nums: sig.nums,
+    ...threadFields,
     mailbox: mailbox.key,
     mailboxEmail: mailbox.user,
     messageId,
@@ -396,14 +422,23 @@ async function scanSentForReplies(client, db, mailbox) {
   let marked = 0;
   try {
     const tip = Math.max(0, Number(client.mailbox && client.mailbox.uidNext ? client.mailbox.uidNext : 1) - 1);
-    const from = typeof st.lastUid === "number" ? st.lastUid + 1 : Math.max(1, tip - 49);
+    // The first time after conversations were introduced, the last 100 sent mails are read once so today's work is tied in too.
+    const firstThreadScan = st.threadIndexed !== 1;
+    const from = firstThreadScan ? Math.max(1, tip - 99) : typeof st.lastUid === "number" ? st.lastUid + 1 : Math.max(1, tip - 49);
     if (tip < from) {
       await stateRef.set({ lastUid: Math.max(tip, Number(st.lastUid) || 0), folder, at: Date.now() }, { merge: true });
       return 0;
     }
     const upto = Math.min(tip, from + 199);
-    for await (const m of client.fetch(`${from}:${upto}`, { uid: true, envelope: true, headers: ["references"] }, { uid: true })) {
-      const ids = P.repliedToIds(m.envelope && m.envelope.inReplyTo, m.headers);
+    for await (const m of client.fetch(`${from}:${upto}`, { uid: true, envelope: true, source: { maxLength: 40000 } }, { uid: true })) {
+      let parsed = null;
+      try {
+        parsed = m.source ? await simpleParser(m.source) : null;
+      } catch {
+        parsed = null;
+      }
+      const marks = threadMarksOf(parsed);
+      const ids = [...new Set([...(m.envelope && m.envelope.inReplyTo ? [String(m.envelope.inReplyTo).trim()] : []), ...marks.refs])].slice(-6);
       for (const ref of ids) {
         const id = crypto.createHash("sha1").update(`${mailbox.key}:${ref}`).digest("hex").slice(0, 24);
         const ref2 = db.collection("inbox_enquiries").doc(id);
@@ -414,12 +449,90 @@ async function scanSentForReplies(client, db, mailbox) {
           marked += 1;
         }
       }
+      if (parsed) {
+        try {
+          await indexSentMail(db, mailbox, parsed, m.uid);
+        } catch (err) {
+          functions.logger.warn("thread: a sent mail could not be indexed", { message: String((err && err.message) || err).slice(0, 120) });
+        }
+      }
     }
-    await stateRef.set({ lastUid: upto, folder, at: Date.now() }, { merge: true });
+    await stateRef.set({ lastUid: Math.max(upto, Number(st.lastUid) || 0), folder, at: Date.now(), threadIndexed: 1 }, { merge: true });
   } finally {
     lock.release();
   }
   return marked;
+}
+
+const addrList = (field) => ((field && Array.isArray(field.value) ? field.value : []).map((a) => ({ email: String(a.address || "").toLowerCase(), name: String(a.name || "").slice(0, 80) })).filter((a) => a.email));
+
+/**
+ * A mail the desk sent from Outlook. Its recipients are remembered as contacts (the vendors and airlines it goes to), and when it belongs to an
+ * enquiry in the list it is tied to it. Only a small card is kept, and only for mails that tie to a conversation: who it went to, the subject, the time.
+ */
+async function indexSentMail(db, mailbox, parsed, uid) {
+  const messageId = typeof parsed.messageId === "string" ? parsed.messageId : "";
+  if (!messageId) return null;
+  const id = TH.cardId(mailbox.key, messageId);
+  if ((await db.collection("inbox_sent").doc(id).get()).exists) return null;
+  const to = addrList(parsed.to).slice(0, 12);
+  const cc = addrList(parsed.cc).slice(0, 12);
+  try {
+    await DIR.learnContacts(db, [...to, ...cc].slice(0, 8).map((a) => ({ email: a.email, name: a.name, mailbox: mailbox.key, source: "sent" })));
+  } catch (err) {
+    functions.logger.warn("directory: could not remember a recipient", { message: String((err && err.message) || err).slice(0, 120) });
+  }
+  const text = String(parsed.text || stripHtml(parsed.html || "")).slice(0, 15000);
+  const marks = threadMarksOf(parsed);
+  const subject = String(parsed.subject || "");
+  const sig = TH.signalsOf({ subject, text, threadIndex: marks.threadIndex, refs: marks.refs });
+  const at = parsed.date instanceof Date && Number.isFinite(parsed.date.getTime()) ? parsed.date.getTime() : Date.now();
+  const link = await TH.findThread(db, mailbox.key, "sent", { ...sig, at, quoted: text });
+  if (!link) return null;
+  await db.collection("inbox_sent").doc(id).set({
+    mailbox: mailbox.key,
+    messageId,
+    uid: Number.isInteger(uid) ? uid : null,
+    subject: subject.slice(0, 200),
+    to,
+    cc,
+    at,
+    ...sig,
+    threadId: link.root,
+    linkedBy: link.by,
+    linkedAt: Date.now(),
+    timestamp: Date.now(),
+  });
+  return link;
+}
+
+/** Cards that arrived before conversations existed have no marks: work them out from the subject and short preview. Run before the Sent folder is read. */
+async function backfillMarks(db, mailbox) {
+  const snap = await db.collection("inbox_enquiries").where("timestamp", ">", Date.now() - 4 * TH.DAY).limit(400).get();
+  for (const d of snap.docs) {
+    const c = d.data();
+    if (c.mailbox !== mailbox.key || c.subjectKey !== undefined) continue;
+    const sig = TH.signalsOf({ subject: c.subject, text: c.bodyPreview, refs: c.refs || [] });
+    await d.ref.set({ refs: sig.refs, convRoot: sig.convRoot, subjectKey: sig.subjectKey, tokens: sig.tokens, codes: sig.codes, nums: sig.nums, ...(TH.isRootCard(c) && !c.threadId ? { threadId: d.id, linkedBy: "self" } : {}) }, { merge: true });
+  }
+}
+
+/** Replies that arrived before the mail they answer was indexed (the Sent folder is read after the Inbox): look again for the last two days. */
+async function relinkRecent(db, mailbox) {
+  const snap = await db.collection("inbox_enquiries").where("timestamp", ">", Date.now() - 4 * TH.DAY).limit(400).get();
+  let linked = 0;
+  for (const d of snap.docs) {
+    const c = d.data();
+    if (c.mailbox !== mailbox.key) continue;
+    if (c.tag !== "follow_up" || c.threadId || c.noAutoLink) continue;
+    const fromAddr = (/<([^>]+)>/.exec(String(c.from || "")) || [])[1] || String(c.from || "");
+    const link = await TH.findThread(db, mailbox.key, "card", { ...c, id: d.id, at: Date.parse(c.receivedAt || "") || Number(c.timestamp) || Date.now(), tag: c.tag, fromAddr: fromAddr.toLowerCase() });
+    if (link) {
+      await d.ref.set({ threadId: link.root, linkedBy: link.by, linkedAt: Date.now() }, { merge: true });
+      linked += 1;
+    }
+  }
+  return linked;
 }
 
 async function repliesToKept(db, mailboxKey, parsedMail) {
@@ -429,6 +542,9 @@ async function repliesToKept(db, mailboxKey, parsedMail) {
     const id = crypto.createHash("sha1").update(`${mailboxKey}:${ref}`).digest("hex").slice(0, 24);
     const hit = await db.collection("inbox_enquiries").doc(id).get();
     if (hit.exists) return true;
+    // A reply to something the desk sent on to a vendor, inside a conversation we hold, is part of that work too.
+    const sent = await db.collection("inbox_sent").doc(id).get();
+    if (sent.exists && sent.data().threadId) return true;
   }
   return false;
 }
@@ -938,7 +1054,9 @@ async function pollOne(mailbox, password, apiKey) {
     }
     // Replies sent from Outlook count as actioned: read the Sent folder (never changed, only read).
     try {
+      await backfillMarks(db, mailbox);
       repliedFromOutlook = await scanSentForReplies(client, db, mailbox);
+      await relinkRecent(db, mailbox);
     } catch (err) {
       functions.logger.warn("Sent folder could not be read", { mailbox: mailbox.key, message: String((err && err.message) || err).slice(0, 140) });
     }
@@ -1005,8 +1123,10 @@ exports.fetchInboxEmail = functions
     }
     const id = String((data && data.id) || "");
     if (!id) throw new functions.https.HttpsError("invalid-argument", "Which email?");
-    const snap = await admin.firestore().collection("inbox_enquiries").doc(id).get();
-    if (!snap.exists) throw new functions.https.HttpsError("not-found", "That enquiry is no longer in the list.");
+    // An item of the list, or a mail the desk sent on from Outlook (opened from the Sent folder).
+    const isSent = data && data.kind === "sent";
+    const snap = await admin.firestore().collection(isSent ? "inbox_sent" : "inbox_enquiries").doc(id).get();
+    if (!snap.exists) throw new functions.https.HttpsError("not-found", isSent ? "That sent mail is no longer in the conversation." : "That enquiry is no longer in the list.");
     const item = snap.data();
     const box = MAILBOXES.find((b) => b.key === item.mailbox);
     if (!box) throw new functions.https.HttpsError("failed-precondition", "That mailbox is not set up.");
@@ -1021,7 +1141,9 @@ exports.fetchInboxEmail = functions
       throw new functions.https.HttpsError("unavailable", "The mailbox did not answer. Try again in a minute.");
     }
     try {
-      const lock = await client.getMailboxLock(IMAP.folder);
+      const folder = isSent ? require("./inbox-send").pickSentFolder(await client.list()) : IMAP.folder;
+      if (!folder) throw new functions.https.HttpsError("not-found", "The Sent folder could not be found.");
+      const lock = await client.getMailboxLock(folder);
       try {
         let uid = null;
         if (item.messageId && !String(item.messageId).startsWith("uid-")) {
@@ -1078,7 +1200,9 @@ exports.inboxCleanup = functions
   .onRun(async () => {
     const db = admin.firestore();
     const done = {};
-    done.opened = await deleteOld(db, "inbox_enquiries", "timestamp", 7 * DAY, (d) => d.status && d.status !== "new", "opened enquiries");
+    // An enquiry that is part of a conversation (sent on to vendors, replies coming) stays for the full 30 days so its thread is not cut off.
+    done.opened = await deleteOld(db, "inbox_enquiries", "timestamp", 7 * DAY, (d) => d.status && d.status !== "new" && !d.threadId, "opened enquiries");
+    done.sent = await deleteOld(db, "inbox_sent", "timestamp", 30 * DAY, null, "sent-mail cards");
     done.unopened = await deleteOld(db, "inbox_enquiries", "timestamp", 30 * DAY, null, "unopened enquiries");
     // Quote Hub jobs keep their date as text (ISO), which sorts the same way.
     const isoCut = new Date(Date.now() - 7 * DAY).toISOString();

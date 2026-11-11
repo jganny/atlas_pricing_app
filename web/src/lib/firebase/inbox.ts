@@ -90,9 +90,9 @@ export async function patchInboxEnquiry(
  * The whole email behind an Inbox item (body and attachments, as a raw .eml), fetched from the mailbox when somebody actions it.
  * No AI credit: the reading comes after, once, in the Quote Hub reader.
  */
-export async function fetchInboxEml(id: string): Promise<Uint8Array> {
-  const call = httpsCallable<{ id: string }, { eml: string; size: number; truncated: boolean }>(getFunctions(getFirebaseApp(), "us-central1"), "fetchInboxEmail", { timeout: 90_000 });
-  const res = await call({ id });
+export async function fetchInboxEml(id: string, kind: "card" | "sent" = "card"): Promise<Uint8Array> {
+  const call = httpsCallable<{ id: string; kind: string }, { eml: string; size: number; truncated: boolean }>(getFunctions(getFirebaseApp(), "us-central1"), "fetchInboxEmail", { timeout: 90_000 });
+  const res = await call({ id, kind });
   if (res.data.truncated) throw new Error("This email is too large to read in full.");
   const bin = atob(res.data.eml);
   const bytes = new Uint8Array(bin.length);

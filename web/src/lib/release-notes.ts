@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.160",
+    date: "2026-11-11",
+    items: [
+      "Conversations. The enquiry that came in, what you sent on to vendors from Outlook, and the vendors' replies are now tied together by themselves. Open an enquiry in the Inbox and a Conversation box shows them in order, with who was asked and who has replied. The app uses the email's own thread marks, Outlook's conversation mark (which survives a changed subject), the original enquiry or its ticket number found inside your forward, and the same airports and weight close in time. If it is not sure, it leaves the email alone.",
+      "Every link can be undone. Press Unlink on any email that does not belong: it is not linked again by itself. A reply that was not tied in can be linked by hand from a list of open enquiries.",
+      "People you send to from Outlook (airlines, agents, vendors) are now saved in the contact directory, not only people who write to you.",
+      "No AI credit is used, and nothing is stored beyond small cards: each email still opens live from the mailbox. Enquiries that are part of a conversation stay in the list for up to 30 days instead of 7, so the conversation is not cut off.",
+    ],
+  },
+  {
     version: "0.3.159",
     date: "2026-11-11",
     items: [
