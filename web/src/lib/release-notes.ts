@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.166",
+    date: "2026-11-12",
+    items: [
+      "Quote from an email now opens the priced comparison, not an empty form. Airlines and liners with a circular on that lane are filled in. You check the sell and send. Pop-ups no longer appear for won follow-ups, circular progress, or “opening the desk”. Only a real problem pops up. Install Vertex from the top-right More menu so it sits on the computer like a normal app.",
+    ],
+  },
+  {
     version: "0.3.165",
     date: "2026-11-12",
     items: [

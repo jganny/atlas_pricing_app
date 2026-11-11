@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { toast } from "@/components/Toast";
 import { subscribeMyCarrierReads } from "@/lib/firebase/carrier-board";
-import { noticeFor } from "@/lib/carriers/read-notice";
+import { noticeFor, noticeInterruptsWork } from "@/lib/carriers/read-notice";
 import { useAuthStore } from "@/store/auth";
 
 /**
@@ -16,7 +16,7 @@ export function CircularReadNotifier() {
     if (!username) return;
     return subscribeMyCarrierReads(username, (r) => {
       const n = noticeFor(r);
-      toast(n.text, n.tone);
+      if (noticeInterruptsWork(n)) toast(n.text, n.tone);
     });
   }, [username]);
   return null;

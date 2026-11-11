@@ -53,7 +53,7 @@ import { useLiveData } from "@/lib/api";
 import { saveAirQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupAirTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
-import { autoAirlines } from "@/lib/pricing/auto-carriers";
+import { autoAirlines, hasNamedCarrier, isPlaceholderCarrierName } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
 import { LaneCarriers } from "@/components/LaneCarriers";
 import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
@@ -97,7 +97,7 @@ import { useAntiAutofillName } from "@/lib/ui/anti-autofill";
 import { loadAirDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { removeInboxItem } from "@/lib/firebase/inbox";
 import type { InboxRef } from "@/lib/types";
-import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
+import { clearSmartQuotePrefill, readyForPricedComparison } from "@/lib/pricing/smart-quote-prefill";
 import { useAirTariffs } from "@/hooks/use-atlas-data";
 import { useDeskSaveShortcut } from "@/hooks/use-desk-save-shortcut";
 import { useDeskStepKeys } from "@/hooks/use-desk-step-keys";
@@ -433,16 +433,16 @@ function AirDeskInner() {
     if (autoCarriersKey.current === key) return;
     autoCarriersKey.current = key;
     const onLane = airlines.filter((a) => !a.laneId || a.laneId === laneId);
-    if (onLane.some((a) => a.name.trim())) return; // already working on carriers — leave them alone
-    const res = autoAirlines(tariffs, originCode, destCode, { laneId });
+    const named = onLane.map((a) => a.name);
+    const res = autoAirlines(tariffs, originCode, destCode, { laneId, alreadyNamed: named.filter((n) => !isPlaceholderCarrierName(n)) });
     if (!res.options.length) return;
-    setAirlines((prev) => [...prev.filter((a) => !((!a.laneId || a.laneId === laneId) && !a.name.trim())), ...res.options]);
+    setAirlines((prev) => {
+      const keep = hasNamedCarrier(named)
+        ? prev.filter((a) => !a.laneId || a.laneId !== laneId || !isPlaceholderCarrierName(a.name))
+        : prev.filter((a) => !((!a.laneId || a.laneId === laneId) && isPlaceholderCarrierName(a.name)));
+      return [...keep, ...res.options];
+    });
     if (res.currency) setCurrency(res.currency);
-    toast(
-      `Added ${res.options.length} carrier${res.options.length > 1 ? "s" : ""} with rates on file for ${originCode} → ${destCode}. Remove any you don't want.` +
-        (res.skipped.length ? ` Not added (different currency): ${res.skipped.join(", ")}.` : ""),
-      "success",
-    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, origin, destination, tariffs, module, incoterm]);
 
@@ -615,10 +615,11 @@ function AirDeskInner() {
     } else {
       setCargo([{ l: 0, w: 0, h: 0, qty: 1, gw: 0 }]);
     }
+    const realName = [p.airlineLabel, draft.carrierLabel].find((n) => n && !isPlaceholderCarrierName(n)) || "";
     setAirlines([
       createAirlineOption(
         {
-          name: p.airlineLabel || draft.carrierLabel || "",
+          name: realName,
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
           validity: "",
@@ -630,8 +631,7 @@ function AirDeskInner() {
         true,
       ),
     ]);
-    // Stay on shipment so user verifies POL/POD/cargo; rates stay blank until Circulars
-    setStep("shipment");
+    setStep(readyForPricedComparison(p, "air") ? "carrier" : "shipment");
   }
 
   function applyReset() {

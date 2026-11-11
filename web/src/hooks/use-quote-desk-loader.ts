@@ -141,7 +141,7 @@ export function useQuoteDeskLoader(deskMode?: "air" | "sea") {
       : duplicateId
         ? `Duplicating quote ${duplicateId} — saves as new`
         : smartPrefill
-          ? "Prefill from Smart Quote — review carriers and save"
+          ? "From the enquiry — circulars will price the lane. Check sell, then save"
           : null,
   };
 }

@@ -18,6 +18,11 @@ export interface Notice {
   text: string;
 }
 
+/** Pop-ups only when a circular read failed. Success and progress stay on Circulars / the bell. */
+export function noticeInterruptsWork(n: Notice): boolean {
+  return n.tone === "error";
+}
+
 export function noticeFor(r: ReadLike): Notice {
   const name = r.title ? `\u201c${r.title}\u201d` : "Your circular";
   if (r.status === "reading") return { tone: "info", text: `Reading ${name} now. It takes a few minutes, and I will tell you here when it is done.` };

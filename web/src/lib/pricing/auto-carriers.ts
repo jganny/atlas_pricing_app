@@ -11,6 +11,18 @@ import type { AirTariff, SeaTariff } from "@/lib/types";
 
 export const MAX_AUTO_CARRIERS = 6;
 
+/** Names the intake writes when it does not yet know the airline or liner. Not a carrier the person chose. */
+export function isPlaceholderCarrierName(name: string | undefined | null): boolean {
+  const n = (name || "").trim().toLowerCase();
+  if (!n) return true;
+  return n === "from enquiry intake" || n === "from inbox" || n === "tba" || n === "t.b.a." || n === "to be advised";
+}
+
+/** True when the desk already has a real carrier the person (or the email) named. */
+export function hasNamedCarrier(names: Array<string | undefined | null>): boolean {
+  return names.some((n) => !isPlaceholderCarrierName(n));
+}
+
 export interface AutoCarriers<T> {
   options: T[];
   /** The currency of the added rates (the desk quotes in one currency). */
