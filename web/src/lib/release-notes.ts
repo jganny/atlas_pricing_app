@@ -11,6 +11,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.157",
+    date: "2026-11-11",
+    items: [
+      "Inbox: a new folder, Escalations and discrepancies. A conversation about a problem on a shipment (a discrepancy, shortage, damage, delay or claim) is kept for the team of the mailbox it arrived at, and for anyone copied on the email, until someone marks it resolved. Air Nom and Sea Nom see pricing@, Free Hand and NRS see pricingsales@. It does not clutter the enquiries you need to quote.",
+      "Inbox: labels. Enquiries about dangerous goods, pharma, perishables, with a client deadline, or with the details only in an attachment now carry a tag and have a folder of their own. Worked out by fixed rules, no AI credit.",
+      "Admin > Contact directory: the app now remembers the email addresses it meets (the address, the name and how often, never what was said): airlines, liners, NVOCCs, transporters, overseas agents, exporters, importers, traders, warehousers. Known airlines and liners are sorted by themselves; the admin confirms the rest and sets how a rate is obtained from each (tariff on file, online portal, or by email).",
+      "Air and Sea desks: under a carrier's name, a line says how to get a rate from it, for example the email address to ask, when the directory knows that carrier.",
+    ],
+  },
+  {
     version: "0.3.156",
     date: "2026-11-11",
     items: [

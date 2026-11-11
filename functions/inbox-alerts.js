@@ -27,7 +27,7 @@ function planAlerts(items, settings = DEFAULTS, now = Date.now()) {
   const out = [];
   for (const it of items) {
     if (!it || it.status !== "new" || it.actionRequired === false) continue;
-    if (it.tag && it.tag !== "new_enquiry" && it.tag !== "needs_human") continue;
+    if (it.tag && it.tag !== "new_enquiry" && it.tag !== "needs_human" && it.tag !== "escalation") continue;
     if (it.workingBy || it.repliedAt) continue;
     const team = cfg.teams[it.mailbox] || [];
     if (!team.length) continue;
@@ -41,7 +41,7 @@ function planAlerts(items, settings = DEFAULTS, now = Date.now()) {
     } else if (age >= cfg.remindAfterMin && age < cfg.managerAfterMin && !it.remindedAt) {
       out.push({ id: it.id, kind: "remind", recipients: team, title: `Nobody has opened this enquiry (${age} min)`, body: `${who}: ${subject}` });
     } else if (!it.notifiedAt && age < cfg.remindAfterMin) {
-      out.push({ id: it.id, kind: "arrived", recipients: team, title: "New enquiry", body: `${who}: ${subject}` });
+      out.push({ id: it.id, kind: "arrived", recipients: team, title: it.tag === "escalation" ? "Problem on a shipment" : "New enquiry", body: `${who}: ${subject}` });
     }
   }
   return out;

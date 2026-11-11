@@ -47,6 +47,7 @@ import { canUseRateRequests } from "@/lib/quotes/rate-request";
 import { createLinerOption, type LinerOption } from "@/lib/pricing/carrier-options";
 import type { SurchargeRow } from "@/lib/pricing/surcharges";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
+import { CarrierRateHint } from "@/components/desks/CarrierRateHint";
 import { ClientCopyOptions, ShowNamesBar } from "@/components/desks/ClientCopyOptions";
 import { CommodityCombobox } from "@/components/CommodityCombobox";
 import { relaxedShipmentSchema, seaShipmentSchema } from "@/lib/pricing/desk-schemas";
@@ -1805,6 +1806,7 @@ function SeaDeskInner() {
                           kind="ocean+coloader"
                           placeholder="MAEU, MSC, ECU…"
                         />
+                        <CarrierRateHint name={opt.name} />
                       </div>
                       <div className="md:col-span-2">
                         <ClientCopyOptions

@@ -23,6 +23,8 @@ const F = require("./inbox-filter");
 const C = require("./inbox-circular");
 const R = require("./inbox-reply");
 const K = require("./inbox-confirm");
+const E = require("./inbox-escalation");
+const DIR = require("./inbox-directory");
 const nodemailer = require("nodemailer");
 const { simpleParser } = require("mailparser");
 
@@ -59,7 +61,7 @@ const MAILBOXES = [
   },
 ];
 
-const ACTIONABLE = new Set(["new_enquiry", "follow_up", "needs_human"]);
+const ACTIONABLE = new Set(["new_enquiry", "follow_up", "needs_human", "escalation"]);
 
 function stripHtml(html) {
   return String(html || "")
@@ -160,6 +162,57 @@ function parseLite(text, mode) {
 }
 
 /** Fast rules when Anthropic is unavailable or fails. */
+/** The addresses a mail was sent to or copied to (lowercased, not our own mailbox), so a colleague who is copied can see it too. */
+function copiedAddressesOf(parsedMail, ownAddress) {
+  const out = [];
+  for (const key of ["to", "cc"]) {
+    const v = parsedMail && parsedMail[key] && Array.isArray(parsedMail[key].value) ? parsedMail[key].value : [];
+    for (const a of v) {
+      const addr = String((a && a.address) || "").toLowerCase().trim();
+      if (addr && addr !== String(ownAddress || "").toLowerCase() && !out.includes(addr)) out.push(addr);
+    }
+  }
+  return out.slice(0, 20);
+}
+
+/** Writes the slim Inbox card (never the whole mail) and remembers who sent it in the directory. */
+async function keepInboxItem(db, o) {
+  const { docId, mailbox, messageId, msg, from, subject, bodyWork, classified, assignment, parsedMail, attachments, fromAddr, fromName } = o;
+  await db.collection("inbox_enquiries").doc(docId).set({
+    mailbox: mailbox.key,
+    mailboxEmail: mailbox.user,
+    messageId,
+    uid: msg.uid,
+    from,
+    subject: subject.slice(0, 300),
+    receivedAt: (msg.envelope?.date || new Date()).toISOString(),
+    senderTzMin: P.dateHeaderOffset(parsedMail),
+    timestamp: Date.now(),
+    bodyPreview: bodyWork.slice(0, 240),
+    body: "", // intentionally empty: storage-safe; the mail stays on IMAP
+    attachmentCount: Array.isArray(attachments) ? attachments.length : 0,
+    copiedAddresses: copiedAddressesOf(parsedMail, mailbox.user),
+    mode: classified.mode,
+    confidence: classified.parsed.confidence,
+    assignedUsers: assignment.assignedUsers,
+    suggestedUser: assignment.suggestedUser,
+    claimedBy: null,
+    status: "new",
+    tag: classified.tag,
+    actionRequired: classified.actionRequired,
+    reason: classified.reason,
+    summary: classified.summary,
+    classifier: classified.classifier,
+    // Firestore refuses fields that are undefined (e.g. a missing package length): drop them.
+    parsed: JSON.parse(JSON.stringify(classified.parsed)),
+  });
+  try {
+    await DIR.learnContacts(db, [{ email: fromAddr, name: fromName, mailbox: mailbox.key, source: "inbox" }]);
+  } catch (err) {
+    functions.logger.warn("directory: could not remember a contact", { message: String((err && err.message) || err).slice(0, 120) });
+  }
+}
+
 function classifyHeuristic(subject, body) {
   const text = `${subject}\n${body}`.toLowerCase();
   const subj = subject.toLowerCase();
@@ -747,6 +800,20 @@ async function pollOne(mailbox, password, apiKey) {
           }
         }
 
+        // 0c) A problem raised on a shipment (a discrepancy, shortage, damage, delay or claim) is kept for the team of this mailbox until
+        //     someone marks it resolved. Fixed rules, no AI credit.
+        if (!F.headerFlags(parsedMail ? parsedMail.headers : null).auto) {
+          const esc = E.detectEscalation({ subject, body: bodyWork });
+          if (esc.isEscalation) {
+            const escText = `${subject}\n${bodyWork}`;
+            const escMode = detectMode(escText);
+            const classifiedEsc = { tag: "escalation", mode: escMode, actionRequired: true, reason: esc.reason, summary: "", classifier: "rules", parsed: parseLite(escText, escMode === "sea" ? "sea" : "air") };
+            await keepInboxItem(db, { docId, mailbox, messageId, msg, from, subject, bodyWork, classified: classifiedEsc, assignment: assignUsers(mailbox.key, escMode), parsedMail, attachments, fromAddr, fromName });
+            imported += 1;
+            continue;
+          }
+        }
+
         // 1) Free rules first: automatic mail, newsletters, bounces and mail with no enquiry in it are dropped here, with no AI credit.
         const verdict = F.prefilter({ headers: parsedMail ? parsedMail.headers : null, from: msg.envelope?.from?.[0]?.address || "", subject, body: bodyWork, attachments });
         if (verdict.verdict === "noise") {
@@ -798,33 +865,8 @@ async function pollOne(mailbox, password, apiKey) {
 
         const assignment = assignUsers(mailbox.key, classified.mode);
 
-        // Slim Firestore doc — no full body.
-        await db.collection("inbox_enquiries").doc(docId).set({
-          mailbox: mailbox.key,
-          mailboxEmail: mailbox.user,
-          messageId,
-          uid: msg.uid,
-          from,
-          subject: subject.slice(0, 300),
-          receivedAt: (msg.envelope?.date || new Date()).toISOString(),
-          senderTzMin: P.dateHeaderOffset(parsedMail),
-          timestamp: Date.now(),
-          bodyPreview: bodyWork.slice(0, 240),
-          body: "", // intentionally empty — storage-safe; mail stays on IMAP
-          mode: classified.mode,
-          confidence: classified.parsed.confidence,
-          assignedUsers: assignment.assignedUsers,
-          suggestedUser: assignment.suggestedUser,
-          claimedBy: null,
-          status: "new",
-          tag: classified.tag,
-          actionRequired: classified.actionRequired,
-          reason: classified.reason,
-          summary: classified.summary,
-          classifier: classified.classifier,
-          // Firestore refuses fields that are undefined (e.g. a missing package length): drop them.
-          parsed: JSON.parse(JSON.stringify(classified.parsed)),
-        });
+        // Slim Firestore doc: no full body.
+        await keepInboxItem(db, { docId, mailbox, messageId, msg, from, subject, bodyWork, classified, assignment, parsedMail, attachments, fromAddr, fromName });
         imported += 1;
         // An acknowledgement goes to a real enquiry (not to a follow-up or an unclear one), once per thread, when the admin has turned it on.
         if (autoSettings.ackEnquiry && classified.tag === "new_enquiry") {
@@ -1141,5 +1183,7 @@ exports.sendInboxReply = functions.runWith({ secrets: sendSecrets, timeoutSecond
   }
   await db.collection("inbox_send_log").add({ ...log, status: "sent", copiedToSent: result.copied, problem: result.copyError }).catch(() => undefined);
   await snap.ref.set({ repliedAt: Date.now(), repliedBy: log.by, repliedKind: kind }, { merge: true }).catch(() => undefined);
+  // The people a reply goes to are remembered in the directory (address and name only).
+  await DIR.learnContacts(db, [...to.good, ...cc.good].map((email) => ({ email, mailbox: box.key, source: "reply" }))).catch(() => undefined);
   return { ok: true, copiedToSent: result.copied, sentFolder: result.folder, problem: result.copyError };
 });

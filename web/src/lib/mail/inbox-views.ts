@@ -5,8 +5,12 @@
 import type { InboxEnquiry } from "@/lib/types";
 import { replyBy, urgencyOf } from "./reply-by";
 import { workState } from "./inbox-working";
+import { labelsOf, LABEL_NAMES, type LabelKey } from "./inbox-labels";
 
-export type ViewKey = "all" | "mine" | "others" | "due" | "past" | "followup" | "air" | "sea" | "mb:pricing" | "mb:pricingsales";
+export type ViewKey =
+  | "all" | "mine" | "others" | "due" | "past" | "followup" | "escalation"
+  | "air" | "sea" | "mb:pricing" | "mb:pricingsales"
+  | "label:dg" | "label:pharma" | "label:perishable" | "label:deadline" | "label:attachment";
 
 export const VIEW_LABELS: Record<ViewKey, string> = {
   all: "All open",
@@ -15,10 +19,16 @@ export const VIEW_LABELS: Record<ViewKey, string> = {
   due: "Due within the hour",
   past: "Past its time",
   followup: "Follow-ups",
+  escalation: "Escalations and discrepancies",
   air: "Air",
   sea: "Sea",
   "mb:pricing": "pricing@",
   "mb:pricingsales": "pricingsales@",
+  "label:dg": LABEL_NAMES.dg,
+  "label:pharma": LABEL_NAMES.pharma,
+  "label:perishable": LABEL_NAMES.perishable,
+  "label:deadline": LABEL_NAMES.deadline,
+  "label:attachment": LABEL_NAMES.attachment,
 };
 
 /** A new enquiry, one somebody has claimed, or one a desk has been opened on (it stays until its quote is saved, then it leaves the list). */
@@ -27,6 +37,11 @@ export const isOpenItem = (r: Pick<InboxEnquiry, "status" | "workingBy">): boole
 
 export function inView(r: InboxEnquiry, view: ViewKey, me: string | undefined | null, now: number): boolean {
   if (!isOpenItem(r)) return false;
+  // A problem raised on a shipment is not an enquiry to quote: it lives in its own folder (and in its mailbox's folder).
+  const problem = r.tag === "escalation";
+  if (view === "escalation") return problem;
+  if (problem && !view.startsWith("mb:")) return false;
+  if (view.startsWith("label:")) return labelsOf(r).includes(view.slice(6) as LabelKey);
   switch (view) {
     case "all":
       return true;
@@ -52,6 +67,8 @@ export function inView(r: InboxEnquiry, view: ViewKey, me: string | undefined | 
       return r.mailbox === "pricing";
     case "mb:pricingsales":
       return r.mailbox === "pricingsales";
+    default:
+      return false;
   }
 }
 

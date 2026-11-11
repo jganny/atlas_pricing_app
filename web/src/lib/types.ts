@@ -361,9 +361,9 @@ export interface CreditControl {
 }
 
 export type InboxMailboxKey = 'pricing' | 'pricingsales'
-export type InboxStatus = 'new' | 'claimed' | 'applied' | 'ignored'
+export type InboxStatus = 'new' | 'claimed' | 'applied' | 'ignored' | 'resolved'
 /** AI / heuristic intake tag — noise is never stored. */
-export type InboxTag = 'new_enquiry' | 'follow_up' | 'needs_human'
+export type InboxTag = 'new_enquiry' | 'follow_up' | 'needs_human' | 'escalation'
 
 /** What a quote remembers about the email it answers. */
 export interface InboxRef {
@@ -405,6 +405,10 @@ export interface InboxEnquiry {
   takeoverRequest?: { username: string; name: string; at: number } | null
   /** The sender's clock, minutes east of UTC, from the Date header of the email. */
   senderTzMin?: number | null
+  /** How many files the email carries (known when it arrived). */
+  attachmentCount?: number
+  /** Who the email was sent or copied to (lowercased, not our mailbox): a colleague who is copied can see it too. */
+  copiedAddresses?: string[]
   /** Set when a reply or forward from the app went out. */
   repliedAt?: number
   parsed: ParsedEnquiry

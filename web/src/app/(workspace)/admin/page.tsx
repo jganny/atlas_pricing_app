@@ -1,6 +1,7 @@
 "use client";
 
 import { AutoReplyAdmin } from "@/components/AutoReplyAdmin";
+import { ContactEmailsAdmin } from "@/components/ContactEmailsAdmin";
 import { VisitOptionsAdmin } from "@/components/sales/VisitOptionsAdmin";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -154,6 +155,8 @@ export default function AdminPage() {
         return <DeskSeatsAdmin />;
       case "visit-report-options":
         return <VisitOptionsAdmin />;
+      case "contact-emails":
+        return <ContactEmailsAdmin />;
       case "auto-replies":
         return <AutoReplyAdmin />;
       case "ai-credit-and-cost":

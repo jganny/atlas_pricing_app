@@ -52,10 +52,14 @@ export function canSeeInboxItem(
   username: string | undefined,
   role: string | undefined,
   item: InboxEnquiry,
+  /** The person's own email address: someone who was copied on the email can see it, even from the other team. */
+  email?: string,
 ): boolean {
   if (isAdminUser(username, role)) return true;
   const u = (username || "").toLowerCase();
   if (!u) return false;
+  const mail = (email || "").toLowerCase();
+  if (mail && (item.copiedAddresses || []).includes(mail)) return true;
   if (item.claimedBy && item.claimedBy === u) return true;
   if (item.assignedUsers.map((x) => x.toLowerCase()).includes(u)) return true;
   const seat = activeSeatForLogin(u)?.id;

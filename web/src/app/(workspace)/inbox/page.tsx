@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, CornerUpLeft, Flag, Inbox, Loader2, Mail, Paperclip, Plane, Ship, User, Users } from "lucide-react";
+import { CircleCheck, Clock, CornerUpLeft, Flag, Inbox, Loader2, Mail, Paperclip, Plane, Ship, Tag, TriangleAlert, User, Users } from "lucide-react";
 import type { ComponentType } from "react";
 import { Button } from "@/components/ui";
 import { toast } from "@/components/Toast";
@@ -23,15 +23,17 @@ import { parseAirEnquiry, parseSeaEnquiry } from "@/lib/pricing/parse-enquiry";
 import { askRequest, agoText, handOverPatch, markWorking, TAKEOVER_WAIT_MINUTES, workState, type WorkState } from "@/lib/mail/inbox-working";
 import { replyBy, timeLeftText, urgencyOf, type Urgency } from "@/lib/mail/reply-by";
 import { VIEW_LABELS, listView, senderDisplay, viewCounts, type ViewKey } from "@/lib/mail/inbox-views";
+import { labelsOf, LABEL_NAMES } from "@/lib/mail/inbox-labels";
 import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import type { InboxEnquiry } from "@/lib/types";
 
 type ReadMode = "text" | "ai";
 
 const VIEW_GROUPS: Array<{ title: string; keys: ViewKey[] }> = [
-  { title: "Views", keys: ["all", "mine", "others", "due", "past", "followup"] },
+  { title: "Views", keys: ["all", "mine", "others", "due", "past", "followup", "escalation"] },
   { title: "By type", keys: ["air", "sea"] },
   { title: "By mailbox", keys: ["mb:pricing", "mb:pricingsales"] },
+  { title: "Labels", keys: ["label:dg", "label:pharma", "label:perishable", "label:deadline", "label:attachment"] },
 ];
 
 const VIEW_ICONS: Record<ViewKey, ComponentType<{ className?: string }>> = {
@@ -41,10 +43,16 @@ const VIEW_ICONS: Record<ViewKey, ComponentType<{ className?: string }>> = {
   due: Clock,
   past: Flag,
   followup: CornerUpLeft,
+  escalation: TriangleAlert,
   air: Plane,
   sea: Ship,
   "mb:pricing": Mail,
   "mb:pricingsales": Mail,
+  "label:dg": Tag,
+  "label:pharma": Tag,
+  "label:perishable": Tag,
+  "label:deadline": Tag,
+  "label:attachment": Tag,
 };
 
 const URGENCY_CLASS: Record<Urgency, string> = {
@@ -116,7 +124,7 @@ export default function EnquiryInboxPage() {
     return () => clearInterval(t);
   }, []);
 
-  const mine = useMemo(() => rows.filter((r) => canSeeInboxItem(user?.username, user?.role, r)), [rows, user?.username, user?.role]);
+  const mine = useMemo(() => rows.filter((r) => canSeeInboxItem(user?.username, user?.role, r, user?.email)), [rows, user?.username, user?.role, user?.email]);
   const counts = useMemo(() => viewCounts(mine, user?.username, now), [mine, user?.username, now]);
   const visible = useMemo(() => listView(mine, view, user?.username, now), [mine, view, user?.username, now]);
   const selected = visible.find((r) => r.id === selectedId) ?? visible[0] ?? null;
@@ -257,6 +265,11 @@ export default function EnquiryInboxPage() {
     }
   }
 
+  async function resolveItem(item: InboxEnquiry) {
+    await updateItem(item, { status: "resolved", actionRequired: false }, "Marked resolved");
+    setSelectedId(null);
+  }
+
   const quoteBlocked = state.kind === "other" || state.kind === "asked";
   const rb = selected ? replyBy(selected, now) : null;
   const receivedText = selected?.receivedAt ? new Date(selected.receivedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
@@ -294,7 +307,7 @@ export default function EnquiryInboxPage() {
               {g.keys.map((k) => {
                 const Icon = VIEW_ICONS[k];
                 const on = view === k;
-                const pill = counts[k] && k === "past" ? "bg-red-100 text-red-700" : counts[k] && k === "due" ? "bg-amber-100 text-amber-800" : counts[k] && (k === "mine" || k === "others") ? "bg-slate-800 text-white" : "text-[var(--color-text-muted)]";
+                const pill = counts[k] && (k === "past" || k === "escalation") ? "bg-red-100 text-red-700" : counts[k] && k === "due" ? "bg-amber-100 text-amber-800" : counts[k] && (k === "mine" || k === "others") ? "bg-slate-800 text-white" : "text-[var(--color-text-muted)]";
                 return (
                   <button
                     key={k}
@@ -364,7 +377,10 @@ export default function EnquiryInboxPage() {
                           {row.mode === "sea" ? <Ship className="h-3 w-3" /> : <Plane className="h-3 w-3" />}
                           {row.mode === "sea" ? "Sea" : "Air"}
                         </span>
-                        <span>{r.basis === "client" ? `Client deadline ${r.localText}` : `${r.zone.city} closes ${r.localText}`}</span>
+                        {row.tag === "escalation" ? <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-800"><TriangleAlert className="h-3 w-3" />Problem on a shipment</span> : <span>{r.basis === "client" ? `Client deadline ${r.localText}` : `${r.zone.city} closes ${r.localText}`}</span>}
+                        {labelsOf(row).filter((l) => l !== "deadline").map((l) => (
+                          <span key={l} className="rounded bg-violet-50 px-1.5 py-0.5 font-medium text-violet-800">{LABEL_NAMES[l]}</span>
+                        ))}
                         {st.kind === "other" || st.kind === "asked" || st.kind === "can-take" ? <span className="rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800">{st.worker.name} is quoting</span> : null}
                         {st.kind === "mine" ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800">You are quoting</span> : null}
                         {st.kind === "incoming" ? <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">{st.request.name} asks to take this</span> : null}
@@ -384,26 +400,32 @@ export default function EnquiryInboxPage() {
           ) : (
             <>
               <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] bg-slate-50/95 px-5 py-3 backdrop-blur">
-                <Button type="button" disabled={busy || quoteBlocked} onClick={() => void applyToDesk(selected, resolvedMode, readMode)} data-testid="inbox-quote-button">
+                {selected.tag === "escalation" ? (
+                  <Button type="button" disabled={busy} onClick={() => void resolveItem(selected)} data-testid="inbox-resolve-button">
+                    <CircleCheck className="mr-2 h-4 w-4" />
+                    Mark resolved
+                  </Button>
+                ) : null}
+                {selected.tag === "escalation" ? null : <Button type="button" disabled={busy || quoteBlocked} onClick={() => void applyToDesk(selected, resolvedMode, readMode)} data-testid="inbox-quote-button">
                   {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {state.kind === "can-take" ? "Take over and quote" : "Quote"} on {resolvedMode === "sea" ? "Sea" : "Air"} desk
-                </Button>
-                <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-xs font-medium shadow-sm" role="group" aria-label="How to read the email">
+                </Button>}
+                {selected.tag === "escalation" ? null : <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-xs font-medium shadow-sm" role="group" aria-label="How to read the email">
                   <button type="button" onClick={() => setReadChoice("text")} className={`px-3 py-2 ${readMode === "text" ? "bg-sky-100 font-semibold text-sky-900" : "text-slate-700 hover:bg-slate-50"}`}>
                     Text only, free
                   </button>
                   <button type="button" onClick={() => setReadChoice("ai")} disabled={!useLiveData} className={`border-l border-[var(--color-border)] px-3 py-2 ${readMode === "ai" ? "bg-sky-100 font-semibold text-sky-900" : "text-slate-700 hover:bg-slate-50"}`}>
                     <span className="font-bold text-sky-700">AI</span> text and attachments, about ₹1
                   </button>
-                </div>
-                <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-xs font-semibold shadow-sm" role="group" aria-label="Which desk">
+                </div>}
+                {selected.tag === "escalation" ? null : <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-xs font-semibold shadow-sm" role="group" aria-label="Which desk">
                   <button type="button" className={`px-3 py-2 ${resolvedMode === "air" ? "bg-amber-500 text-white" : "text-slate-700 hover:bg-slate-50"}`} onClick={() => setModeOverride("air")}>
                     Air
                   </button>
                   <button type="button" className={`border-l border-[var(--color-border)] px-3 py-2 ${resolvedMode === "sea" ? "bg-sky-600 text-white" : "text-slate-700 hover:bg-slate-50"}`} onClick={() => setModeOverride("sea")}>
                     Sea
                   </button>
-                </div>
+                </div>}
                 <Button type="button" variant="ghost" disabled={busy} onClick={() => void dismiss(selected)} className="ml-auto">
                   Ignore
                 </Button>
@@ -420,6 +442,14 @@ export default function EnquiryInboxPage() {
                   <span className="text-xs text-[var(--color-text-muted)]">{rb?.basis === "client" ? "The client gave this deadline" : `${rb?.zone.city} office closes at 18:00`}</span>
                 </div>
 
+                {selected.tag === "escalation" ? (
+                  <p className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-900" data-testid="inbox-escalation-note">
+                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      A problem on a shipment. {selected.reason ? `${selected.reason}. ` : ""}It stays here for everyone on {selected.mailboxEmail || selected.mailbox} until someone marks it resolved. Reply from Outlook as usual.
+                    </span>
+                  </p>
+                ) : null}
                 <h2 className="text-xl font-semibold leading-snug tracking-tight text-slate-900">{selected.subject}</h2>
 
                 <div className="flex items-center gap-3">

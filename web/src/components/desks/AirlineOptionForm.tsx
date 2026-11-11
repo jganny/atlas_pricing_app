@@ -4,6 +4,7 @@ import { ClientCopyOptions } from "@/components/desks/ClientCopyOptions";
 import type { WeightBreakName, WeightBreaks } from "@atlas/pricing-core";
 import { Badge, Input, Label, NumberInput } from "@/components/ui";
 import { CarrierCombobox } from "@/components/CarrierCombobox";
+import { CarrierRateHint } from "@/components/desks/CarrierRateHint";
 import { SurchargeTable } from "@/components/desks/SurchargeTable";
 import { ValidityField } from "@/components/ValidityField";
 import type { AirlineTotals } from "@/lib/pricing/air-desk";
@@ -73,6 +74,7 @@ export function AirlineOptionForm({
             kind="airline"
             placeholder="EK, Emirates, QR…"
           />
+          <CarrierRateHint name={opt.name} />
         </div>
         <div className="md:col-span-2">
           <ClientCopyOptions

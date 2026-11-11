@@ -14,11 +14,14 @@ const late = mk("late", { from: "L <l@example.in>", receivedAt: iso(NOW - 6 * 3_
 const sales = mk("sales", { mailbox: "pricingsales", from: "S <s@example.in>" });
 const done = mk("done", { status: "applied" });
 const followUp = mk("fu", { tag: "follow_up", from: "F <f@example.in>" });
-const rows = [delhi, dubai, tokyo, late, sales, done, followUp];
+const problem = mk("problem", { tag: "escalation", subject: "RE: MAWB 176-12345678 damaged cartons", from: "P <p@example.in>" });
+const dg = mk("dg", { subject: "DGR lithium batteries BOM to FRA", from: "D <d@example.in>" });
+const rows = [delhi, dubai, tokyo, late, sales, done, followUp, problem, dg];
 
 // Everything open, soonest reply-by first: the late one, Tokyo, then Dubai's client deadline, then the rest.
 const all = listView(rows, "all", "shashank", NOW).map((r) => r.id);
 assert.deepEqual(all.slice(0, 3), ["late", "tokyo", "dubai"]);
+assert.ok(!all.includes("problem"), "a problem on a shipment is not an enquiry to quote");
 assert.ok(!all.includes("done"), "a quoted enquiry has left the list");
 
 // Folders are filters.
@@ -27,6 +30,14 @@ assert.deepEqual(listView(rows, "due", "shashank", NOW).map((r) => r.id), ["toky
 assert.deepEqual(listView(rows, "sea", "shashank", NOW).map((r) => r.id), ["late", "dubai"]);
 assert.deepEqual(listView(rows, "mb:pricingsales", "shashank", NOW).map((r) => r.id), ["sales"]);
 assert.deepEqual(listView(rows, "followup", "shashank", NOW).map((r) => r.id), ["fu"]);
+
+// Problems on shipments have their own folder, and also show under their mailbox. Labels are folders too.
+assert.deepEqual(listView(rows, "escalation", "shashank", NOW).map((r) => r.id), ["problem"]);
+assert.ok(listView(rows, "mb:pricing", "shashank", NOW).map((r) => r.id).includes("problem"));
+assert.deepEqual(listView(rows, "label:dg", "shashank", NOW).map((r) => r.id), ["dg"]);
+assert.deepEqual(listView(rows, "label:deadline", "shashank", NOW).map((r) => r.id).sort(), ["dubai", "late"]);
+assert.equal(viewCounts(rows, "shashank", NOW).escalation, 1);
+assert.deepEqual(listView([{ ...problem, status: "resolved" } as typeof problem], "escalation", "shashank", NOW), [], "resolved: gone");
 
 // A desk opened on an enquiry keeps it in the list (as being quoted) until the quote is saved and it leaves.
 assert.ok(listView([mk("q", { status: "applied", workingBy: { username: "shaheer", name: "Shaheer", at: NOW - 1000 } })], "all", "shashank", NOW).length === 1);
@@ -40,10 +51,10 @@ assert.deepEqual(listView(withMark, "mine", "shaheer", NOW).map((r) => r.id), ["
 assert.deepEqual(listView(withMark, "mine", "shashank", NOW).map((r) => r.id), []);
 
 const c = viewCounts(rows, "shashank", NOW);
-assert.equal(c.all, 6);
+assert.equal(c.all, 7);
 assert.equal(c.past, 1);
 assert.equal(c.due, 2);
-assert.equal(c.air + c.sea, 6 - 0, "every open enquiry is air or sea here");
+assert.equal(c.air + c.sea, 7, "every open enquiry is air or sea here");
 
 // The customer is the sender's name, never the whole email address.
 assert.equal(senderDisplay("Takeshi Yamada <t.yamada@example.co.jp>"), "Takeshi Yamada");
