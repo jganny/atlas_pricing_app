@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Air desk with rates by email</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:#151c24;background:#f2f5f8;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",monospace}
+.btn{border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 13px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.btn.dark{border:0;background:#2b313b;color:#fff;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 10px}
+.lbl{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#6b7785;font-weight:600}
+</style>
+</helmet>
+<div style="min-height:980px;background:#f2f5f8;padding:26px 28px;box-sizing:border-box">
+  <div style="max-width:1320px;margin:0 auto;background:#fff;border:1px solid #e2e8ee;border-radius:14px;overflow:hidden">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid #e9eef3">
+      <div style="flex:1 1 300px"><div class="lbl">Air desk · Air Nom</div><h1 style="margin:3px 0 0;font-size:19px;font-weight:600">Quote for Airmar (ticket #109196)</h1></div>
+      <span class="chip" style="background:#e8eff5;color:#1d4a6b">Linked to the enquiry email</span>
+      <button class="btn" type="button">Open thread</button><button class="btn" type="button">Save draft</button><button class="btn dark" type="button">Save quote</button>
+    </div>
+    <div style="display:flex;gap:6px;padding:12px 24px 0;font-size:13.5px;font-weight:600">
+      <span style="padding:8px 16px;border-radius:9px;background:#f2f5f8;color:#6b7785">1 · Shipment</span>
+      <span style="padding:8px 16px;border-radius:9px;background:#2b313b;color:#fff">2 · Airlines</span>
+      <span style="padding:8px 16px;border-radius:9px;background:#f2f5f8;color:#6b7785">3 · Terms</span>
+    </div>
+
+    <div style="margin:16px 24px 0;border:1px solid #bcd3e4;background:#eef4f9;border-radius:12px;padding:14px 16px">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <b style="font-weight:600;font-size:14px;color:#1d3d57">Rates that came back by email for this enquiry</b>
+        <span class="chip" style="background:#fff;color:#2a4558;border:1px solid #bcd3e4">1 reply · 2 vendors still to answer</span>
+        <span style="flex:1"></span><button class="btn" type="button">Read rates <span style="color:#2f6a99;font-weight:700">AI ₹0.30</span></button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;background:#fff;border-radius:8px;overflow:hidden">
+        <thead><tr style="text-align:left;background:#f7f9fb"><th class="lbl" style="padding:8px 12px">Vendor</th><th class="lbl">Reply</th><th class="lbl">Read as</th><th class="lbl" style="text-align:right;padding-right:12px"></th></tr></thead>
+        <tbody>
+          <tr style="border-top:1px solid #eef1f5"><td style="padding:10px 12px;font-weight:500">Airlogisticsgroup<br><span style="font-size:11.5px;color:#6b7785;font-weight:400">10:58 IST</span></td><td class="mono" style="font-size:12.5px">+500kg=730 allin NH</td><td style="font-size:13px">+500 kg · 730/kg · all-in<br><span style="color:#b7791f;font-weight:600;font-size:12px">Currency and airline to confirm</span></td><td style="text-align:right;padding-right:12px"><button class="btn dark" type="button">Add as option</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="padding:18px 24px 6px;display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:15px;font-weight:600">Airline options</h2><span style="font-size:12.5px;color:#6b7785">Lowest to highest. Options from email carry a tag so you can always see where a figure came from.</span></div>
+    <div style="padding:0 24px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px">
+      <div style="border:1px solid #e2e8ee;border-radius:12px;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:8px"><b style="font-weight:600;font-size:14.5px">Option 1 · EK Emirates SkyCargo</b><span style="flex:1"></span><span class="chip" style="background:#eef2f6;color:#3b4552">From tariff</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;font-size:13px"><div><div class="lbl">Break</div>+500 kg</div><div><div class="lbl">Buy per kg</div>3.45 USD</div><div><div class="lbl">Valid</div>30 Nov</div></div>
+      </div>
+      <div style="border:2px dashed #b7791f;border-radius:12px;padding:14px 16px;background:#fffbf1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-weight:600;font-size:14.5px">Option 2 · Airlogisticsgroup via NH (unconfirmed)</b><span style="flex:1"></span><span class="chip" style="background:#fcf0d9;color:#7a4a08">From email, 10:58</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;font-size:13px"><div><div class="lbl">Break</div>+500 kg</div><div><div class="lbl">Buy per kg</div><span style="border:2px solid #b7791f;border-radius:6px;padding:1px 8px;font-weight:600;color:#7a4a08">730 · currency?</span></div><div><div class="lbl">Valid</div>not stated</div></div>
+        <div style="margin-top:10px;font-size:12px;color:#7a4a08;line-height:1.5">This option cannot be saved into a quote until the currency and the airline are confirmed. 463 kg is under the +500 kg break: the desk's breakeven check will tell you whether to quote at the break.</div>
+        <div style="margin-top:10px;display:flex;gap:8px"><button class="btn" type="button">Open the email</button><button class="btn" type="button">Remove</button></div>
+      </div>
+    </div>
+    <div style="padding:12px 24px;background:#fafbfd;border-top:1px solid #e9eef3;font-size:12.5px;color:#4b5866">Buy rates and profit stay on this desk. They never appear on anything the customer receives.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

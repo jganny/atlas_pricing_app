@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search and cleaner Inbox</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:#151c24;background:#f2f5f8;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",monospace}
+.btn{border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 13px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.btn.dark{border:0;background:#2b313b;color:#fff;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 10px}
+.lbl{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#6b7785;font-weight:600}
+</style>
+</helmet>
+<div style="min-height:1180px;background:#f2f5f8;display:flex;flex-wrap:wrap">
+  <aside style="flex:0 0 220px;background:#fafbfd;border-right:1px solid #e2e8ee;padding:18px 10px;box-sizing:border-box;font-size:13px">
+    <div style="font-weight:600;font-size:16px;padding:0 10px 12px">Inbox</div>
+    <div style="padding:7px 10px;border-radius:7px;background:#e8eff5;font-weight:600">Needs a reply <span style="float:right;background:#2b313b;color:#fff;border-radius:99px;padding:0 8px;font-size:11px">14</span></div>
+    <div style="padding:7px 10px">Waiting for vendors <span style="float:right;color:#6b7785">6</span></div>
+    <div style="padding:7px 10px">Quoted today <span style="float:right;color:#6b7785">9</span></div>
+    <div style="padding:7px 10px">Problems on shipments <span style="float:right;color:#6b7785">2</span></div>
+    <div style="padding:14px 10px 4px" class="lbl">Mailboxes</div>
+    <div style="padding:6px 10px">pricing@</div><div style="padding:6px 10px">pricingsales@</div>
+    <div style="padding:14px 10px 4px" class="lbl">Labels</div>
+    <div style="padding:6px 10px">Dangerous goods</div><div style="padding:6px 10px">Pharma</div><div style="padding:6px 10px">Perishable</div>
+    <div style="margin-top:16px;padding:10px;border:1px solid #e2e8ee;border-radius:9px;font-size:12px;color:#4b5866;line-height:1.5;background:#fff"><b style="font-weight:600">Why fewer folders?</b> Air, Sea and the 11 other filters are now chips above the list, so the left side stays short.</div>
+  </aside>
+
+  <section style="flex:999 1 700px;min-width:0;padding:22px 28px;box-sizing:border-box">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <div style="flex:1 1 520px;display:flex;align-items:center;gap:10px;border:2px solid #2f6a99;border-radius:11px;padding:10px 14px;background:#fff;font-size:14.5px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f6a99" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="flex:1">AMD LRD</span><span class="mono" style="font-size:11px;border:1px solid #cfd8e0;border-radius:5px;padding:1px 6px;color:#6b7785">Enter</span>
+      </div>
+      <button class="btn" type="button">Mailbox: both ▾</button><button class="btn" type="button">Folder: Inbox + Sent ▾</button><button class="btn" type="button">Last 90 days ▾</button>
+    </div>
+    <div style="margin-top:8px;font-size:12.5px;color:#6b7785">Searches the real mailboxes, sender, subject and the words inside the email. Nothing is saved in the app. Older mail: choose a longer range.</div>
+
+    <div style="margin-top:16px;display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:15px;font-weight:600">3 conversations found</h2><span style="font-size:12.5px;color:#6b7785">newest first</span></div>
+
+    <div style="margin-top:10px;background:#fff;border:1px solid #e2e8ee;border-radius:12px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid #eef1f5">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span style="width:9px;height:9px;border-radius:50%;background:#b7791f"></span><b style="font-weight:600;font-size:14px">AMD - LRD//463Kg</b><span class="chip" style="background:#eef2f6;color:#3b4552">4 messages</span><span class="chip" style="background:#e8eff5;color:#1d4a6b">Enquiry file</span><span style="flex:1"></span><span style="font-size:12px;color:#6b7785">Today, 10:58</span></div>
+        <div style="font-size:13px;color:#4b5866;margin-top:4px">Airlogisticsgroup, you, Briseyda Cruz · "...<mark style="background:#fdeaa8;padding:0 2px">AMD</mark> - <mark style="background:#fdeaa8;padding:0 2px">LRD</mark>//463Kg ... +500kg=730 allin NH"</div>
+      </div>
+      <div style="padding:14px 18px;border-bottom:1px solid #eef1f5">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span style="width:9px;height:9px;border-radius:50%;background:#b8c3ce"></span><b style="font-weight:600;font-size:14px">Cotización aérea ticket #109196</b><span class="chip" style="background:#eef2f6;color:#3b4552">1 message</span><span class="chip" style="background:#e6f4ed;color:#1f7a55">Quoted</span><span style="flex:1"></span><span style="font-size:12px;color:#6b7785">Today, 10:41</span></div>
+        <div style="font-size:13px;color:#4b5866;margin-top:4px">Briseyda Cruz · "...to <mark style="background:#fdeaa8;padding:0 2px">LRD</mark> ... box dimension ... <mark style="background:#fdeaa8;padding:0 2px">AMD</mark>..."</div>
+      </div>
+      <div style="padding:14px 18px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span style="width:9px;height:9px;border-radius:50%;background:#b8c3ce"></span><b style="font-weight:600;font-size:14px">RE: AMD to LRD last month, 300 kg</b><span class="chip" style="background:#eef2f6;color:#3b4552">2 messages</span><span style="flex:1"></span><span style="font-size:12px;color:#6b7785">14 Oct</span></div>
+        <div style="font-size:13px;color:#4b5866;margin-top:4px">Sent items · pricing@ · the original is older than a week, so it is found here by searching the mailbox, not from the app's card.</div>
+      </div>
+    </div>
+
+    <h2 style="margin:26px 0 6px;font-size:15px;font-weight:600">The list itself, tidier</h2>
+    <div style="background:#fff;border:1px solid #e2e8ee;border-radius:12px;overflow:hidden">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px;border-bottom:1px solid #eef1f5;align-items:center">
+        <span class="chip" style="background:#2b313b;color:#fff">All</span><span class="chip" style="background:#eef2f6;color:#3b4552">Air</span><span class="chip" style="background:#eef2f6;color:#3b4552">Sea</span><span class="chip" style="background:#eef2f6;color:#3b4552">Due within the hour</span><span class="chip" style="background:#eef2f6;color:#3b4552">Mine</span><span class="chip" style="background:#eef2f6;color:#3b4552">More filters</span>
+        <span style="flex:1"></span><span style="font-size:12.5px;color:#6b7785">Density: Comfortable ▾ &nbsp; Group by: Conversation ▾</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 220px 1fr 120px 110px;gap:12px;align-items:center;padding:11px 18px;border-bottom:1px solid #f1f4f7;font-size:13px">
+        <span style="width:9px;height:9px;border-radius:50%;background:#c05621"></span><b style="font-weight:600">Takeshi Yamada</b><span>Air BOM to NRT, 220 kg auto parts <span style="color:#6b7785">· 2 messages</span></span><span class="chip" style="background:#fcf0d9;color:#7a4a08;justify-self:start">Reply by 18:00</span><span style="font-size:12px;color:#6b7785;text-align:right">Shaheer quoting</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 220px 1fr 120px 110px;gap:12px;align-items:center;padding:11px 18px;border-bottom:1px solid #f1f4f7;font-size:13px">
+        <span style="width:9px;height:9px;border-radius:50%;background:#2f855a"></span><b style="font-weight:600">Omar K</b><span>Sea JNPT to Jebel Ali, 2x20 <span style="color:#6b7785">· waiting for 2 vendors</span></span><span class="chip" style="background:#e6f4ed;color:#1f7a55;justify-self:start">5 h left</span><span style="font-size:12px;color:#6b7785;text-align:right">Not opened</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 220px 1fr 120px 110px;gap:12px;align-items:center;padding:11px 18px;font-size:13px">
+        <span style="width:9px;height:9px;border-radius:50%;background:#2f855a"></span><b style="font-weight:600">Briseyda Cruz</b><span>Cotización aérea ticket #109196 <span style="color:#6b7785">· 4 messages · 1 vendor reply</span></span><span class="chip" style="background:#e6f4ed;color:#1f7a55;justify-self:start">5 h 20 left</span><span style="font-size:12px;color:#6b7785;text-align:right">Shashank quoting</span>
+      </div>
+    </div>
+  </section>
+
+  <aside style="flex:0 0 330px;padding:22px 20px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+    <div style="background:#fff;border:1px solid #e2e8ee;border-radius:14px;padding:16px 18px;font-size:13px;line-height:1.55">
+      <h2 style="margin:0 0 8px;font-size:15px;font-weight:600">Your questions, answered</h2>
+      <div><b style="font-weight:600">Are emails deleted?</b> Never from the mailbox. Only the app's small card (sender, subject, a short preview) is removed: 7 days after the enquiry was opened or quoted, 30 days if nobody opened it. Search finds the real email at any time.</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8ee;border-radius:14px;padding:16px 18px;font-size:13px;line-height:1.55">
+      <h2 style="margin:0 0 8px;font-size:15px;font-weight:600">Contacts, saved or not</h2>
+      <div>Each email shows a small "Contact saved" tick. Senders, and now the people you send to from Outlook (vendors, airlines), are added to the directory with their name and type. Admin confirms the type.</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8ee;border-radius:14px;padding:16px 18px;font-size:13px;line-height:1.55">
+      <h2 style="margin:0 0 8px;font-size:15px;font-weight:600">Circulars</h2>
+      <div>A strip at the top of the Inbox says "Filed to Circulars today: 1" with the file name and what it was read as, so an airline circular never goes missing silently. If a circular arrives as plain text with no attachment, it is listed there as "Needs filing by hand".</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8ee;border-radius:14px;padding:16px 18px;font-size:13px;line-height:1.55">
+      <h2 style="margin:0 0 8px;font-size:15px;font-weight:600">Cost</h2>
+      <div>Search, tidier list, thread links, contacts and circular strip: <b style="font-weight:600">no AI credit</b>.</div>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24;background:#f2f5f8;-webkit-font-smoothing:antialiased}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1080px;background:#f2f5f8;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24">
+
+  <nav aria-label="Main" style="flex:0 0 232px;background:#242a33;color:#d5dde5;padding:18px 12px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 10px 18px">
+      <div style="width:26px;height:26px;border-radius:7px;background:#f2c230;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:2px;background:#242a33"></div></div>
+      <div><div style="font-weight:700;letter-spacing:.12em;font-size:12px;color:#fff">ATLAS PRICING</div><div style="font-size:10.5px;color:#8b97a5;margin-top:1px">Pricing workspace</div></div>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="14">
+      <div style="{{n.style}}">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{n.iconStyle}}"><path d="{{n.d}}"></path></svg>
+        <span style="flex:1">{{n.label}}</span>
+        <span style="{{n.countStyle}}">{{n.count}}</span>
+      </div>
+    </sc-for>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:11px 28px;background:#fff;border-bottom:1px solid #e2e8ee;box-sizing:border-box">
+      <div style="flex:1 1 360px;max-width:520px;display:flex;align-items:center;gap:10px;border:1px solid #d5dde5;border-radius:9px;padding:8px 12px;background:#f7f9fb;font-size:13.5px;color:#6b7785">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="flex:1">Search apps, quotes, customers and carriers</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid #cfd8e0;border-radius:5px;padding:1px 6px;background:#fff">Ctrl K</span>
+      </div>
+      <span style="flex:1"></span>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1f7a55;background:#e6f4ed;border-radius:99px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#1f7a55"></span>Live</div>
+      <div style="display:flex;align-items:center;gap:9px;border:1px solid #d5dde5;border-radius:99px;padding:4px 6px 4px 12px;font-size:12.5px;font-weight:600;background:#fff">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2f6a99" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4 M12 17v4 M3 12h4 M17 12h4 M6 6l2.5 2.5 M15.5 15.5 18 18 M18 6l-2.5 2.5 M8.5 15.5 6 18"></path></svg>
+        AI
+        <button type="button" role="switch" aria-checked="true" aria-label="AI on" style="width:36px;height:20px;border-radius:99px;border:0;background:#1f7a55;position:relative;padding:0;cursor:pointer"><span style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:50%;background:#fff"></span></button>
+      </div>
+      <button type="button" aria-label="Notifications, 3 new" style="position:relative;width:36px;height:36px;border-radius:9px;border:1px solid #d5dde5;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#3b4552">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9 M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+        <span style="position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:99px;background:#b42323;color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;box-sizing:border-box">3</span>
+      </button>
+      <div style="width:36px;height:36px;border-radius:50%;background:#2b313b;color:#fff;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center">GA</div>
+    </header>
+
+    <main style="padding:26px 28px 32px;display:flex;flex-direction:column;gap:24px;box-sizing:border-box">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px">
+        <div style="flex:1 1 360px;min-width:0">
+          <h1 style="margin:0;font-size:26px;font-weight:600;letter-spacing:-.015em">Good morning, Ganny</h1>
+          <p style="margin:4px 0 0;font-size:14px;color:#4b5866">Tuesday, 11 November 2026. Here is what needs you today.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6b7785"><span style="width:7px;height:7px;border-radius:50%;background:#1f7a55"></span>Last updated 14:05 IST</div>
+      </div>
+
+      <section aria-label="Needs attention" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px">
+        <sc-for list="{{attention}}" as="a" hint-placeholder-count="4">
+          <div style="background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;gap:14px;align-items:flex-start;cursor:pointer">
+            <div style="{{a.iconBox}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.d}}"></path></svg></div>
+            <div style="min-width:0">
+              <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:28px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1">{{a.value}}</span><span style="font-size:13px;font-weight:600;color:#151c24">{{a.label}}</span></div>
+              <div style="font-size:12.5px;color:#6b7785;margin-top:4px;line-height:1.45">{{a.note}}</div>
+              <div style="font-size:12.5px;font-weight:600;color:#2f6a99;margin-top:8px">{{a.link}}</div>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <section aria-label="Today" style="display:flex;flex-wrap:wrap;background:#fff;border:1px solid #e2e8ee;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+        <sc-for list="{{today}}" as="t" hint-placeholder-count="4">
+          <div style="flex:1 1 200px;padding:16px 22px;border-right:1px solid #eef1f5;box-sizing:border-box">
+            <div style="font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#6b7785;font-weight:600">{{t.label}}</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px"><span style="font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{t.value}}</span><span style="font-size:12.5px;{{t.noteStyle}}">{{t.note}}</span></div>
+          </div>
+        </sc-for>
+      </section>
+
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+        <h2 style="margin:0;font-size:17px;font-weight:600;flex:1 1 200px">Your apps</h2>
+        <div style="display:inline-flex;border:1px solid #d5dde5;border-radius:9px;overflow:hidden;background:#fff;font-size:13px;font-weight:500">
+          <button type="button" style="border:0;background:#2b313b;color:#fff;padding:7px 15px;font:inherit;cursor:pointer">All</button>
+          <button type="button" style="border:0;background:#fff;color:#151c24;padding:7px 15px;font:inherit;cursor:pointer">Favourites</button>
+        </div>
+      </div>
+
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
+        <section style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:#6b7785;font-weight:600">{{g.title}}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+            <sc-for list="{{g.apps}}" as="a" hint-placeholder-count="5">
+              <div style="background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:14px 16px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;gap:12px;align-items:center;cursor:pointer;position:relative">
+                <div style="width:40px;height:40px;border-radius:10px;background:#e8eff5;color:#2a557a;display:flex;align-items:center;justify-content:center;flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.d}}"></path></svg></div>
+                <div style="min-width:0"><div style="font-size:14px;font-weight:600">{{a.name}}</div><div style="font-size:12px;color:#6b7785;margin-top:1px">{{a.desc}}</div></div>
+                <span style="{{a.starStyle}}">&#9733;</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </sc-for>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = "display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:#c3ced9;";
+    const on = base + "background:#343b47;color:#fff;font-weight:600;box-shadow:inset 2px 0 0 #8fb3cf";
+    const head = "padding:16px 10px 6px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7f8c9a;font-weight:600;";
+    const P = {
+      home: "M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z",
+      inbox: "M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z",
+      clock: "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20z M12 6v6l4 2",
+      plane: "M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z",
+      ship: "M3 17l1.5 3h15L21 17H3z M5 17l-1-5 8-3 8 3-1 5 M12 9V4",
+      pkg: "M21 8 12 3 3 8v8l9 5 9-5z M3 8l9 5 9-5 M12 13v8",
+      truck: "M1 3h15v13H1z M16 8h4l3 3v5h-7z M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+      wh: "M3 21V9l9-6 9 6v12 M7 21v-8h10v8",
+      chart: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-6",
+      grid: "M3 3h18v18H3z M3 9h18 M9 21V9",
+      doc: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h8",
+      users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M23 21v-2a4 4 0 0 0-3-3.9 M16 3.1a4 4 0 0 1 0 7.8",
+      chat: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+      sliders: "M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 16V3 M1 14h6 M9 8h6 M17 16h6",
+      alert: "M12 9v4 M12 17h.01 M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
+      send: "m22 2-7 20-4-9-9-4z M22 2 11 13",
+      check: "M20 6 9 17l-5-5",
+      shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+      spark: "M12 3v4 M12 17v4 M3 12h4 M17 12h4",
+      map: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M2 12h20 M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20",
+    };
+    const item = (label, d, active, count) => ({ label, d, style: active ? on : base, iconStyle: "flex:none", count: count || "", countStyle: count ? "font-size:11px;font-weight:600;background:#3a4250;color:#e6ecf2;border-radius:99px;padding:1px 8px" : "display:none" });
+    const sec = (label) => ({ label, d: "", style: head, iconStyle: "display:none", count: "", countStyle: "display:none" });
+    const nav = [
+      sec("Work"), item("Home", P.home, true), item("Inbox", P.inbox, false, "14"), item("SLA board", P.clock, false),
+      sec("Quote"), item("Air desk", P.plane, false), item("Sea desk", P.ship, false), item("Courier", P.pkg, false), item("Transport", P.truck, false), item("Warehouse", P.wh, false),
+      sec("Insight"), item("Enquiry DB", P.chart, false), item("Carrier Board", P.grid, false), item("Circulars", P.doc, false),
+      sec("Admin"), item("Settings", P.sliders, false),
+    ];
+    const ib = (bg, fg) => "width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;background:" + bg + ";color:" + fg;
+    const attention = [
+      { value: "3", label: "due within 15 minutes", note: "Tokyo closes in 25 minutes. Two more close within the hour.", link: "Open the SLA board", d: P.clock, iconBox: ib("#fcf0d9", "#9a5b0a") },
+      { value: "1", label: "past its time", note: "Reached the manager 3 h 10 min ago and is still open.", link: "See the enquiry", d: P.alert, iconBox: ib("#fceaea", "#b42323") },
+      { value: "2", label: "moved to you", note: "Shaheer's backup list. Both arrived at pricing@ today.", link: "Open Moved to me", d: P.send, iconBox: ib("#e6eff6", "#24587f") },
+      { value: "2", label: "confirmations recorded", note: "Shipper and consignee captured and added to NRS.", link: "Open in NRS", d: P.check, iconBox: ib("#e6f4ed", "#1f7a55") },
+    ];
+    const today = [
+      { label: "Quotes saved today", value: "18", note: "4 more than yesterday", noteStyle: "color:#1f7a55;font-weight:500" },
+      { label: "Time to first action", value: "22 min", note: "6 min faster", noteStyle: "color:#1f7a55;font-weight:500" },
+      { label: "Open enquiries", value: "14", note: "6 Air, 5 Sea, 3 Sales", noteStyle: "color:#6b7785" },
+      { label: "AI spend today", value: "$0.31", note: "$27.42 this month", noteStyle: "color:#6b7785" },
+    ];
+    const star = (on) => on ? "position:absolute;top:8px;right:11px;font-size:13px;color:#d09a1e" : "position:absolute;top:8px;right:11px;font-size:13px;color:#d5dde5";
+    const app = (name, desc, d, fav) => ({ name, desc, d, starStyle: star(fav) });
+    const groups = [
+      { title: "Work", apps: [app("Inbox", "Enquiries and confirmations", P.inbox, true), app("SLA board", "Who holds what, and when", P.clock, true), app("Rate requests", "Ask agents and carriers", P.send, false)] },
+      { title: "Quote", apps: [app("Air desk", "Quote air freight", P.plane, true), app("Sea desk", "Quote FCL and LCL", P.ship, true), app("Courier", "Parcels and documents", P.pkg, false), app("Transport", "Road and haulage", P.truck, false), app("Warehouse", "Storage quotes", P.wh, false)] },
+      { title: "Insight", apps: [app("Enquiry DB", "Every quote, drill down", P.chart, true), app("Carrier Board", "Tariffs and validity", P.grid, true), app("Circulars", "Airline and liner tariffs", P.doc, false), app("Reports", "FY and custom reports", P.chart, false)] },
+      { title: "People and sales", apps: [app("Sales pipeline", "Leads and visits", P.users, false), app("Visit report", "Guided report chat", P.chat, false), app("Chat", "Team messages", P.chat, false), app("NRS", "Nominations and routing", P.map, false)] },
+      { title: "Admin", apps: [app("Desk seats", "Who holds each desk", P.users, false), app("Enquiry routing", "Chains and rules", P.send, false), app("AI credit and cost", "Switches and limits", P.spark, false), app("Automatic replies", "Acknowledgements", P.shield, false)] },
+    ];
+    return { nav, attention, today, groups };
+  }
+}
+</script>
+</body>
+</html>

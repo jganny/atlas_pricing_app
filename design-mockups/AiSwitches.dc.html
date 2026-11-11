@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI features and switches</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24;background:#f2f5f8;-webkit-font-smoothing:antialiased}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1100px;background:#f2f5f8;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24">
+
+  <nav aria-label="Main" style="flex:0 0 232px;background:#242a33;color:#d5dde5;padding:18px 12px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 10px 18px">
+      <div style="width:26px;height:26px;border-radius:7px;background:#f2c230;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:2px;background:#242a33"></div></div>
+      <div><div style="font-weight:700;letter-spacing:.12em;font-size:12px;color:#fff">ATLAS PRICING</div><div style="font-size:10.5px;color:#8b97a5;margin-top:1px">Pricing workspace</div></div>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="14">
+      <div style="{{n.style}}">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{n.iconStyle}}"><path d="{{n.d}}"></path></svg>
+        <span style="flex:1">{{n.label}}</span>
+        <span style="{{n.countStyle}}">{{n.count}}</span>
+      </div>
+    </sc-for>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:11px 28px;background:#fff;border-bottom:1px solid #e2e8ee;box-sizing:border-box">
+      <div style="flex:1 1 360px;max-width:520px;display:flex;align-items:center;gap:10px;border:1px solid #d5dde5;border-radius:9px;padding:8px 12px;background:#f7f9fb;font-size:13.5px;color:#6b7785">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="flex:1">Search settings</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid #cfd8e0;border-radius:5px;padding:1px 6px;background:#fff">Ctrl K</span>
+      </div>
+      <span style="flex:1"></span>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1f7a55;background:#e6f4ed;border-radius:99px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#1f7a55"></span>Live</div>
+      <div style="display:flex;align-items:center;gap:9px;border:1px solid #d5dde5;border-radius:99px;padding:4px 6px 4px 12px;font-size:12.5px;font-weight:600;background:#fff">AI
+        <button type="button" role="switch" aria-checked="true" aria-label="AI on" style="width:36px;height:20px;border-radius:99px;border:0;background:#1f7a55;position:relative;padding:0;cursor:pointer"><span style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:50%;background:#fff"></span></button>
+      </div>
+      <div style="width:36px;height:36px;border-radius:50%;background:#2b313b;color:#fff;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center">GA</div>
+    </header>
+
+    <main style="padding:26px 28px 32px;display:flex;flex-direction:column;gap:20px;box-sizing:border-box">
+      <div>
+        <div style="font-size:12px;color:#6b7785;font-weight:500">Admin <span style="padding:0 5px">/</span> AI credit and cost</div>
+        <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.015em">AI: what uses it, and the switches</h1>
+        <p style="margin:4px 0 0;font-size:14px;color:#4b5866;max-width:74ch">AI is used in nine places. Everything else in the app works with AI switched off. Each AI feature is marked <span style="font-size:11px;font-weight:700;color:#2f6a99;background:#e6eff6;border-radius:4px;padding:1px 6px">AI</span> wherever people see it, with its cost beside it.</p>
+      </div>
+
+      <section aria-label="Master switch" style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:20px 24px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+        <button type="button" role="switch" aria-checked="true" aria-label="All AI on" style="flex:none;width:56px;height:32px;border-radius:99px;border:0;background:#1f7a55;position:relative;cursor:pointer;padding:0"><span style="position:absolute;top:4px;left:28px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span></button>
+        <div style="flex:1 1 360px;min-width:0"><div style="font-size:17px;font-weight:600">AI is on for everyone</div><div style="font-size:13.5px;color:#6b7785;margin-top:2px;max-width:64ch">Switch it off and every AI feature stops at once. People type or paste details by hand. Nothing else changes.</div></div>
+        <div style="display:flex;gap:30px;flex-wrap:wrap">
+          <div><div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#6b7785;font-weight:600">This month</div><div style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em">$27.42</div></div>
+          <div><div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#6b7785;font-weight:600">Today</div><div style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em">$0.31</div></div>
+        </div>
+      </section>
+
+      <section aria-label="Features that use AI" style="background:#fff;border:1px solid #e2e8ee;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+        <div style="padding:16px 20px;border-bottom:1px solid #e9eef3"><h2 style="margin:0;font-size:15px;font-weight:600">The nine places AI is used</h2><p style="margin:3px 0 0;font-size:12.5px;color:#6b7785">Who can switch each one: the admin for the whole team, or each person for their own use.</p></div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:980px">
+            <thead>
+              <tr style="text-align:left;color:#6b7785;font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:#f7f9fb">
+                <th style="padding:10px 20px;font-weight:600">Feature</th>
+                <th style="padding:10px 8px;font-weight:600">Where people see it</th>
+                <th style="padding:10px 8px;font-weight:600">Cost</th>
+                <th style="padding:10px 8px;font-weight:600">Who switches</th>
+                <th style="padding:10px 8px;font-weight:600">Team switch</th>
+                <th style="padding:10px 8px;font-weight:600;text-align:right">This month</th>
+                <th style="padding:10px 20px 10px 8px;font-weight:600;width:170px">Monthly limit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{features}}" as="f" hint-placeholder-count="9">
+                <tr>
+                  <td style="padding:13px 20px;border-top:1px solid #eef1f5"><div style="font-weight:600">{{f.name}}</div><div style="font-size:12px;color:#6b7785;margin-top:2px;max-width:44ch;line-height:1.4">{{f.desc}}</div></td>
+                  <td style="padding:13px 8px;border-top:1px solid #eef1f5;color:#2c3642">{{f.where}}</td>
+                  <td style="padding:13px 8px;border-top:1px solid #eef1f5;font-family:'IBM Plex Mono',monospace;font-size:12px;white-space:nowrap">{{f.cost}}</td>
+                  <td style="padding:13px 8px;border-top:1px solid #eef1f5"><span style="{{f.whoStyle}}">{{f.who}}</span></td>
+                  <td style="padding:13px 8px;border-top:1px solid #eef1f5">
+                    <div style="display:flex;align-items:center;gap:8px"><button type="button" role="switch" aria-checked="{{f.checked}}" aria-label="{{f.name}}" style="{{f.trackStyle}}"><span style="{{f.knobStyle}}"></span></button><span style="font-size:12.5px;font-weight:600">{{f.onText}}</span></div>
+                  </td>
+                  <td style="padding:13px 8px;border-top:1px solid #eef1f5;text-align:right;font-variant-numeric:tabular-nums;font-weight:600">{{f.spent}}</td>
+                  <td style="padding:13px 20px 13px 8px;border-top:1px solid #eef1f5">
+                    <div style="height:6px;border-radius:99px;background:#e6ecf1;overflow:hidden"><div style="{{f.barStyle}}"></div></div>
+                    <div style="font-size:11.5px;color:#6b7785;margin-top:5px">{{f.limit}}</div>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
+        <section style="flex:1 1 420px;min-width:0;background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:18px 22px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+          <h2 style="margin:0 0 3px;font-size:15px;font-weight:600">What each person sees</h2>
+          <p style="margin:0 0 14px;font-size:12.5px;color:#6b7785">Every user can choose, on the button itself, whether to use AI.</p>
+          <div style="border:1px solid #e2e8ee;border-radius:12px;padding:14px 16px;background:#fafbfd;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+              <button type="button" style="border:0;background:#2b313b;color:#fff;border-radius:9px;padding:9px 16px;font:inherit;font-size:13.5px;font-weight:600">Quote on Air desk</button>
+              <div style="display:inline-flex;border:1px solid #d5dde5;border-radius:9px;overflow:hidden;background:#fff;font-size:12.5px;font-weight:500">
+                <span style="background:#e6eff6;color:#1d4a6b;padding:8px 12px;font-weight:600">Text only, free</span>
+                <span style="border-left:1px solid #d5dde5;padding:8px 12px"><b style="color:#2f6a99">AI</b> text and attachments, about ₹1</span>
+              </div>
+            </div>
+            <div style="font-size:12.5px;color:#4b5866;line-height:1.5">Without AI, the desk is filled from the email text by fixed rules. With AI, the attachments are read too. When the admin switches the feature off, the AI choice is greyed out and says why.</div>
+            <div style="border:1px solid #e3d3a4;background:#fbf4e0;border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:#5f410a">AI reading is switched off by your admin. You can fill the desk by hand. Nothing is lost.</div>
+          </div>
+        </section>
+
+        <section style="flex:1 1 420px;min-width:0;background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:18px 22px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+          <h2 style="margin:0 0 3px;font-size:15px;font-weight:600">Works with AI switched off</h2>
+          <p style="margin:0 0 14px;font-size:12.5px;color:#6b7785">None of these uses AI.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{noAi}}" as="x" hint-placeholder-count="12">
+              <span style="font-size:12.5px;font-weight:500;color:#2c3642;background:#eef2f6;border-radius:99px;padding:5px 12px">{{x}}</span>
+            </sc-for>
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eef1f5;display:flex;gap:12px;align-items:flex-start">
+            <input type="checkbox" id="off-hours" style="margin-top:3px">
+            <label for="off-hours" style="font-size:13px;line-height:1.5"><b style="font-weight:600">Turn AI off outside office hours</b><br><span style="color:#6b7785">On from 09:00 to 19:00, Monday to Saturday. Nothing is read overnight or on Sundays.</span></label>
+          </div>
+        </section>
+      </div>
+      <div style="font-size:12px;color:#6b7785">Example numbers only.</div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = "display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:#c3ced9;";
+    const on = base + "background:#343b47;color:#fff;font-weight:600;box-shadow:inset 2px 0 0 #8fb3cf";
+    const head = "padding:16px 10px 6px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7f8c9a;font-weight:600;";
+    const P = {
+      home: "M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z",
+      inbox: "M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z",
+      clock: "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20z M12 6v6l4 2",
+      plane: "M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z",
+      ship: "M3 17l1.5 3h15L21 17H3z M5 17l-1-5 8-3 8 3-1 5 M12 9V4",
+      pkg: "M21 8 12 3 3 8v8l9 5 9-5z M3 8l9 5 9-5 M12 13v8",
+      truck: "M1 3h15v13H1z M16 8h4l3 3v5h-7z M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+      wh: "M3 21V9l9-6 9 6v12 M7 21v-8h10v8",
+      chart: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-6",
+      grid: "M3 3h18v18H3z M3 9h18 M9 21V9",
+      doc: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h8",
+      sliders: "M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 16V3 M1 14h6 M9 8h6 M17 16h6",
+    };
+    const item = (label, d, active, count) => ({ label, d, style: active ? on : base, iconStyle: "flex:none", count: count || "", countStyle: count ? "font-size:11px;font-weight:600;background:#3a4250;color:#e6ecf2;border-radius:99px;padding:1px 8px" : "display:none" });
+    const sec = (label) => ({ label, d: "", style: head, iconStyle: "display:none", count: "", countStyle: "display:none" });
+    const nav = [
+      sec("Work"), item("Home", P.home, false), item("Inbox", P.inbox, false, "14"), item("SLA board", P.clock, false),
+      sec("Quote"), item("Air desk", P.plane, false), item("Sea desk", P.ship, false), item("Courier", P.pkg, false), item("Transport", P.truck, false), item("Warehouse", P.wh, false),
+      sec("Insight"), item("Enquiry DB", P.chart, false), item("Carrier Board", P.grid, false), item("Circulars", P.doc, false),
+      sec("Admin"), item("Settings", P.sliders, true),
+    ];
+    const track = (on2) => "flex:none;width:40px;height:24px;border-radius:99px;border:0;position:relative;cursor:pointer;padding:0;background:" + (on2 ? "#1f7a55" : "#b5c0cb");
+    const knob = (on2) => "position:absolute;top:3px;left:" + (on2 ? "19" : "3") + "px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)";
+    const bar = (w, c) => "height:100%;width:" + w + "%;background:" + c + ";border-radius:99px";
+    const who = (a) => a ? "display:inline-block;font-size:11px;font-weight:600;border-radius:99px;padding:2px 9px;background:#e6eff6;color:#24587f" : "display:inline-block;font-size:11px;font-weight:600;border-radius:99px;padding:2px 9px;background:#eef2f6;color:#3b4552";
+    const f = (name, desc, where, cost, whoText, on2, spent, limit, w, c) => ({ name, desc, where, cost, who: whoText, whoStyle: who(whoText.indexOf("Each") === 0), checked: on2 ? "true" : "false", trackStyle: track(on2), knobStyle: knob(on2), onText: on2 ? "On" : "Off", spent, limit, barStyle: bar(w, c) });
+    const features = [
+      f("Quote Hub reading", "Reads an enquiry email and its attachments.", "Quote button, AI choice", "about ₹1 a read", "Each person", true, "$1.80", "$1.80 of $15", 12, "#1f7a55"),
+      f("Mailbox sorting", "Decides which incoming emails are enquiries, circulars or confirmations.", "Runs by itself on new mail", "about ₹0.03 a mail", "Admin", true, "$0.14", "$0.14 of $3", 5, "#1f7a55"),
+      f("Shipment confirmation reading", "Reads shipper and consignee from a confirmation.", "Runs by itself on a confirmation", "about ₹0.1 each", "Admin", true, "$0.02", "Inside mailbox limit", 3, "#1f7a55"),
+      f("Circular reading", "Fallback when fixed rules cannot read a tariff layout.", "Circulars, Read button", "about ₹25 a file", "Admin", false, "$24.50", "No limit set", 100, "#6b8499"),
+      f("Ask Vertex", "Answers questions typed into the chat.", "Chat box, AI badge", "about ₹0.4 a question", "Each person", true, "$0.00", "$0.00 of $2", 0, "#1f7a55"),
+      f("App help assistant", "Explains how to use a screen.", "Help button", "about ₹0.3 a question", "Each person", true, "$0.00", "Inside Ask Vertex", 0, "#1f7a55"),
+      f("Enquiry reply drafts", "Drafts a reply to an enquiry for you to edit.", "Draft with AI button", "about ₹0.3 a draft", "Each person", true, "$0.00", "Inside Quote Hub", 0, "#1f7a55"),
+      f("Quote by instruction", "Turns a typed instruction into rates and margins.", "Instruction box on a desk", "about ₹0.3 each", "Each person", true, "$0.00", "Inside Quote Hub", 0, "#1f7a55"),
+      f("Vendor rate from a document", "Reads a vendor's rate sheet you upload.", "Upload on a vendor card", "about ₹2 a file", "Each person", true, "$0.00", "Inside Quote Hub", 0, "#1f7a55"),
+    ];
+    const noAi = ["Air, Sea, Courier, Transport and Warehouse desks", "Weight breaks and breakeven rule", "Local charges and defaults", "Quote documents and PDFs", "Routing and backups", "SLA board", "Inbox folders and threads", "Carrier Board", "Circulars read by fixed rules", "Enquiry DB and drill-down", "Sales pipeline and visit reports", "Shipment documents", "Team chat"];
+    return { nav, features, noAi };
+  }
+}
+</script>
+</body>
+</html>

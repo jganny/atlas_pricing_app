@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Enquiry DB drill-down</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24;background:#f2f5f8;-webkit-font-smoothing:antialiased}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1240px;background:#f2f5f8;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24">
+
+  <nav aria-label="Main" style="flex:0 0 232px;background:#242a33;color:#d5dde5;padding:18px 12px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 10px 18px">
+      <div style="width:26px;height:26px;border-radius:7px;background:#f2c230;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:2px;background:#242a33"></div></div>
+      <div><div style="font-weight:700;letter-spacing:.12em;font-size:12px;color:#fff">ATLAS PRICING</div><div style="font-size:10.5px;color:#8b97a5;margin-top:1px">Pricing workspace</div></div>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="14">
+      <div style="{{n.style}}">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{n.iconStyle}}"><path d="{{n.d}}"></path></svg>
+        <span style="flex:1">{{n.label}}</span>
+        <span style="{{n.countStyle}}">{{n.count}}</span>
+      </div>
+    </sc-for>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:11px 28px;background:#fff;border-bottom:1px solid #e2e8ee;box-sizing:border-box">
+      <div style="flex:1 1 360px;max-width:520px;display:flex;align-items:center;gap:10px;border:1px solid #d5dde5;border-radius:9px;padding:8px 12px;background:#f7f9fb;font-size:13.5px;color:#6b7785">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="flex:1">Search quotes, customers and lanes</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid #cfd8e0;border-radius:5px;padding:1px 6px;background:#fff">Ctrl K</span>
+      </div>
+      <span style="flex:1"></span>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1f7a55;background:#e6f4ed;border-radius:99px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#1f7a55"></span>Live</div>
+      <div style="display:flex;align-items:center;gap:9px;border:1px solid #d5dde5;border-radius:99px;padding:4px 6px 4px 12px;font-size:12.5px;font-weight:600;background:#fff">AI
+        <button type="button" role="switch" aria-checked="true" aria-label="AI on" style="width:36px;height:20px;border-radius:99px;border:0;background:#1f7a55;position:relative;padding:0;cursor:pointer"><span style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:50%;background:#fff"></span></button>
+      </div>
+      <div style="width:36px;height:36px;border-radius:50%;background:#2b313b;color:#fff;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center">GA</div>
+    </header>
+
+    <main style="padding:26px 28px 32px;display:flex;flex-direction:column;gap:18px;box-sizing:border-box">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px">
+        <div style="flex:1 1 360px;min-width:0">
+          <div style="font-size:12px;color:#6b7785;font-weight:500">Insight <span style="padding:0 5px">/</span> Enquiry DB</div>
+          <h1 style="margin:4px 0 0;font-size:26px;font-weight:600;letter-spacing:-.015em">Enquiry DB</h1>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer">Saved views</button>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer">Share link</button>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer">Export CSV</button>
+          <button type="button" style="border:0;background:#2b313b;color:#fff;border-radius:9px;padding:8px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer">Save this view</button>
+        </div>
+      </div>
+
+      <!-- filter bar -->
+      <section aria-label="Filters" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:10px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+        <span style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#6b7785;font-weight:600">Filters</span>
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+          <span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;background:#eef2f6;border-radius:99px;padding:5px 6px 5px 12px"><span style="color:#6b7785">{{c.k}}</span><b style="font-weight:600">{{c.v}}</b><span style="width:18px;height:18px;border-radius:50%;background:#dde4ea;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1">&times;</span></span>
+        </sc-for>
+        <span style="font-size:12.5px;font-weight:600;color:#2f6a99;padding:5px 8px">+ Add filter</span>
+        <span style="flex:1"></span>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500"><input type="checkbox" checked> Compare with the same months last year</label>
+      </section>
+
+      <!-- KPI strip -->
+      <section aria-label="Summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px">
+        <sc-for list="{{kpis}}" as="k" hint-placeholder-count="6">
+          <div style="{{k.style}}">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;{{k.labelStyle}}">{{k.label}}</div>
+            <div style="display:flex;align-items:flex-end;gap:10px;margin-top:6px">
+              <div style="font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1">{{k.value}}</div>
+              <svg width="64" height="24" viewBox="0 0 64 24" fill="none" stroke="{{k.spark}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left:auto"><polyline points="{{k.points}}"></polyline></svg>
+            </div>
+            <div style="font-size:12px;margin-top:6px;{{k.deltaStyle}}">{{k.delta}}</div>
+          </div>
+        </sc-for>
+      </section>
+
+      <!-- breadcrumb and group by -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+        <nav aria-label="Where you are" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13.5px;flex:1 1 360px">
+          <a href="#" style="color:#2f6a99;font-weight:500;text-decoration:none">All quotes</a><span style="color:#93a1af">/</span>
+          <a href="#" style="color:#2f6a99;font-weight:500;text-decoration:none">Tonnage</a><span style="color:#93a1af">/</span>
+          <a href="#" style="color:#2f6a99;font-weight:500;text-decoration:none">Sea</a><span style="color:#93a1af">/</span>
+          <span style="font-weight:600">By desk</span>
+        </nav>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#6b7785">Group by
+          <div style="display:inline-flex;border:1px solid #d5dde5;border-radius:9px;overflow:hidden;background:#fff;font-size:12.5px;font-weight:500">
+            <sc-for list="{{groupBy}}" as="g" hint-placeholder-count="6"><button type="button" style="{{g.style}}">{{g.label}}</button></sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
+        <section aria-label="Sea tonnage by desk" style="flex:1 1 420px;min-width:0;background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:18px 22px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+          <div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:15px;font-weight:600">Sea tonnage by desk</h2><span style="font-size:12.5px;color:#6b7785">9,880 t in view</span><span style="flex:1"></span><span style="font-size:12px;font-weight:600;color:#2f6a99">Explain this number</span></div>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="3">
+              <div style="{{b.style}}">
+                <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:13.5px;font-weight:600">{{b.name}}</span><span style="font-size:12px;color:#6b7785">{{b.share}}</span><span style="flex:1"></span><span style="font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums">{{b.value}}</span><span style="font-size:12px;font-weight:600;color:#1f7a55;min-width:44px;text-align:right">{{b.delta}}</span></div>
+                <div style="position:relative;height:10px;border-radius:99px;background:#e6ecf1;margin-top:8px"><div style="{{b.prior}}"></div><div style="{{b.bar}}"></div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:16px;font-size:11.5px;color:#6b7785"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#2b313b"></span>This year</span><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:3px;background:#8aa0b3"></span>Same months last year</span></div>
+        </section>
+
+        <section aria-label="Monthly tonnage" style="flex:1 1 460px;min-width:0;background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:18px 22px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+          <div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:15px;font-weight:600">Tonnage by month</h2><span style="font-size:12.5px;color:#6b7785">All modes, April to November</span></div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <div style="position:relative;width:38px;height:150px;flex:none">
+              <sc-for list="{{axis}}" as="a" hint-placeholder-count="5"><span style="{{a.style}}">{{a.label}}</span></sc-for>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="position:relative;height:150px;border-bottom:1px solid #cfd8e0;display:flex;align-items:flex-end;gap:10px;padding:0 4px">
+                <sc-for list="{{gridLines}}" as="g" hint-placeholder-count="4"><div style="{{g.style}}"></div></sc-for>
+                <sc-for list="{{months}}" as="m" hint-placeholder-count="8">
+                  <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;gap:3px;position:relative;z-index:1">
+                    <div style="{{m.priorStyle}}" title="{{m.priorTitle}}"></div>
+                    <div style="{{m.nowStyle}}" title="{{m.nowTitle}}"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:10px;padding:6px 4px 0">
+                <sc-for list="{{months}}" as="m" hint-placeholder-count="8"><div style="flex:1;text-align:center;font-size:11.5px;color:#6b7785">{{m.label}}</div></sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:#4b5866">Up 17.4% on the same months last year: 10,461 t against 8,910 t. Hover a bar for its figure. Click a month to drill into it.</div>
+        </section>
+      </div>
+
+      <section aria-label="Quotes" style="background:#fff;border:1px solid #e2e8ee;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid #e9eef3">
+          <div><h2 style="margin:0;font-size:15px;font-weight:600">The quotes behind 6,120 t</h2><div style="font-size:12.5px;color:#6b7785;margin-top:2px">341 quotes. Sorted by tonnes, largest first.</div></div>
+          <span style="flex:1"></span>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Columns</button>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Top 10</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:860px">
+            <thead>
+              <tr style="text-align:left;color:#6b7785;font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:#f7f9fb">
+                <th style="padding:10px 20px;font-weight:600">Quote</th><th style="padding:10px 8px;font-weight:600">Customer</th><th style="padding:10px 8px;font-weight:600">Date</th>
+                <th style="padding:10px 8px;font-weight:600;text-align:right">Tonnes &#9660;</th><th style="padding:10px 8px;font-weight:600;text-align:right">Sell</th><th style="padding:10px 20px 10px 8px;font-weight:600;text-align:right">GP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{quotes}}" as="q" hint-placeholder-count="6">
+                <tr style="{{q.rowStyle}}">
+                  <td style="padding:12px 20px;border-top:1px solid #eef1f5"><div style="font-weight:600">{{q.lane}}</div><div style="font-size:12px;color:#6b7785;margin-top:1px;font-family:'IBM Plex Mono',monospace">{{q.id}}</div></td>
+                  <td style="padding:12px 8px;border-top:1px solid #eef1f5;color:#2c3642">{{q.customer}}</td>
+                  <td style="padding:12px 8px;border-top:1px solid #eef1f5;color:#4b5866">{{q.date}}</td>
+                  <td style="padding:12px 8px;border-top:1px solid #eef1f5;text-align:right;font-variant-numeric:tabular-nums;font-weight:600">{{q.t}}</td>
+                  <td style="padding:12px 8px;border-top:1px solid #eef1f5;text-align:right;font-variant-numeric:tabular-nums">{{q.sell}}</td>
+                  <td style="padding:12px 20px 12px 8px;border-top:1px solid #eef1f5;text-align:right;font-variant-numeric:tabular-nums;{{q.gpStyle}}">{{q.gp}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:14px 20px;border-top:1px solid #e9eef3;background:#fafbfd;display:flex;flex-wrap:wrap;gap:10px 28px;font-size:12.5px;color:#4b5866">
+          <span><b style="font-weight:600;color:#151c24">Click</b> a quote to open it as you do today.</span>
+          <span><b style="font-weight:600;color:#151c24">Right-click</b> a number to filter by it.</span>
+          <span style="display:flex;align-items:center;gap:6px"><b style="color:#1f7a55">GP</b> Won, earned</span>
+          <span style="display:flex;align-items:center;gap:6px"><b style="color:#24587f">GP</b> Open or quoted, estimated</span>
+          <span style="display:flex;align-items:center;gap:6px"><b style="color:#a02020">GP</b> Lost or cancelled, margin offered</span>
+          <span style="color:#a02020;font-weight:600">GP is never shown to customers.</span>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = "display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:#c3ced9;";
+    const on = base + "background:#343b47;color:#fff;font-weight:600;box-shadow:inset 2px 0 0 #8fb3cf";
+    const head = "padding:16px 10px 6px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7f8c9a;font-weight:600;";
+    const P = {
+      home: "M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z",
+      inbox: "M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z",
+      clock: "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20z M12 6v6l4 2",
+      plane: "M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z",
+      ship: "M3 17l1.5 3h15L21 17H3z M5 17l-1-5 8-3 8 3-1 5 M12 9V4",
+      pkg: "M21 8 12 3 3 8v8l9 5 9-5z M3 8l9 5 9-5 M12 13v8",
+      truck: "M1 3h15v13H1z M16 8h4l3 3v5h-7z M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+      wh: "M3 21V9l9-6 9 6v12 M7 21v-8h10v8",
+      chart: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-6",
+      grid: "M3 3h18v18H3z M3 9h18 M9 21V9",
+      doc: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h8",
+      sliders: "M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 16V3 M1 14h6 M9 8h6 M17 16h6",
+    };
+    const item = (label, d, active, count) => ({ label, d, style: active ? on : base, iconStyle: "flex:none", count: count || "", countStyle: count ? "font-size:11px;font-weight:600;background:#3a4250;color:#e6ecf2;border-radius:99px;padding:1px 8px" : "display:none" });
+    const sec = (label) => ({ label, d: "", style: head, iconStyle: "display:none", count: "", countStyle: "display:none" });
+    const nav = [
+      sec("Work"), item("Home", P.home, false), item("Inbox", P.inbox, false, "14"), item("SLA board", P.clock, false),
+      sec("Quote"), item("Air desk", P.plane, false), item("Sea desk", P.ship, false), item("Courier", P.pkg, false), item("Transport", P.truck, false), item("Warehouse", P.wh, false),
+      sec("Insight"), item("Enquiry DB", P.chart, true), item("Carrier Board", P.grid, false), item("Circulars", P.doc, false),
+      sec("Admin"), item("Settings", P.sliders, false),
+    ];
+    const chips = [{ k: "Period", v: "FY 2026-27" }, { k: "Mode", v: "Sea" }, { k: "Status", v: "All" }];
+    const kc = "background:#fff;border:1px solid #e2e8ee;border-radius:12px;padding:14px 16px;box-shadow:0 1px 2px rgba(16,24,40,.04);cursor:pointer;";
+    const kon = "background:#2b313b;border:1px solid #2b313b;border-radius:12px;padding:14px 16px;color:#fff;box-shadow:0 8px 18px rgba(43,49,59,.28);cursor:pointer;";
+    const up = "color:#1f7a55;font-weight:500", upOn = "color:#8fd4b3;font-weight:500", dn = "color:#b42323;font-weight:500";
+    const kpis = [
+      { label: "Quotes in view", value: "1,264", delta: "+9.1% on last year", points: "0,18 10,16 20,17 30,12 40,13 52,8 64,5", spark: "#6b8499", style: kc, labelStyle: "color:#6b7785", deltaStyle: up },
+      { label: "Open", value: "970", delta: "+12 since last week", points: "0,14 10,15 20,11 30,12 40,9 52,10 64,7", spark: "#6b8499", style: kc, labelStyle: "color:#6b7785", deltaStyle: "color:#6b7785" },
+      { label: "Sell (INR)", value: "9.47 cr", delta: "+14.2% on last year", points: "0,19 10,16 20,15 30,13 40,10 52,8 64,4", spark: "#6b8499", style: kc, labelStyle: "color:#6b7785", deltaStyle: up },
+      { label: "GP (INR)", value: "47.1 lakh", delta: "-3.4% on last year", points: "0,8 10,10 20,9 30,13 40,12 52,15 64,16", spark: "#b42323", style: kc, labelStyle: "color:#6b7785", deltaStyle: dn },
+      { label: "Tonnage", value: "10,461 t", delta: "+17.4% on last year", points: "0,19 10,17 20,16 30,12 40,13 52,8 64,5", spark: "#8fb3cf", style: kon, labelStyle: "color:#c3ced9", deltaStyle: upOn },
+      { label: "Average GP", value: "3.7 %", delta: "-0.6 pts on last year", points: "0,6 10,8 20,9 30,10 40,13 52,14 64,15", spark: "#b42323", style: kc, labelStyle: "color:#6b7785", deltaStyle: dn },
+    ];
+    const gb = (label, on2) => ({ label, style: on2 ? "border:0;background:#2b313b;color:#fff;padding:7px 13px;font:inherit;cursor:pointer" : "border:0;background:#fff;color:#151c24;padding:7px 13px;font:inherit;cursor:pointer" });
+    const groupBy = [gb("Mode", false), gb("Desk", true), gb("Customer", false), gb("Carrier", false), gb("Lane", false), gb("Month", false)];
+    const rowOn = "padding:0;";
+    const mkBar = (name, share, value, delta, pct, prior) => ({ name, share, value, delta, style: rowOn, bar: "position:absolute;left:0;top:0;height:10px;border-radius:99px;background:#2b313b;width:" + pct + "%", prior: "position:absolute;left:0;top:4px;height:2px;border-radius:99px;background:#8aa0b3;width:" + prior + "%;z-index:2" });
+    const bars = [
+      mkBar("Sea Nom", "61.9% of Sea", "6,120 t", "+21%", 100, 83),
+      mkBar("Free Hand", "23.4% of Sea", "2,310 t", "+9%", 38, 35),
+      mkBar("NRS", "14.7% of Sea", "1,450 t", "+14%", 24, 21),
+    ];
+    const S = 0.0875;
+    const now = [1120, 1340, 1210, 1380, 1290, 1460, 1520, 1141];
+    const prev = [980, 1050, 1190, 1010, 1230, 1100, 1280, 1070];
+    const lbl = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
+    const months = now.map((v, i) => ({
+      label: lbl[i] + (i === 7 ? "*" : ""),
+      nowStyle: "width:46%;max-width:20px;border-radius:4px 4px 0 0;background:" + (i === 7 ? "#6b8499" : "#2b313b") + ";height:" + Math.round(v * S) + "px",
+      priorStyle: "width:46%;max-width:20px;border-radius:4px 4px 0 0;background:#c3d0da;height:" + Math.round(prev[i] * S) + "px",
+      nowTitle: lbl[i] + ": " + v.toLocaleString("en-IN") + " t", priorTitle: lbl[i] + " last year: " + prev[i].toLocaleString("en-IN") + " t",
+    }));
+    const ticks = [0, 400, 800, 1200, 1600];
+    const axis = ticks.map((t) => ({ label: t.toLocaleString("en-IN"), style: "position:absolute;right:6px;bottom:" + (Math.round(t * S) - 7) + "px;font-size:11px;color:#6b7785;font-variant-numeric:tabular-nums" }));
+    const gridLines = ticks.slice(1).map((t) => ({ style: "position:absolute;left:0;right:0;bottom:" + Math.round(t * S) + "px;height:1px;background:#eef1f5" }));
+    const row = "";
+    const quotes = [
+      { lane: "Nhava Sheva to Rotterdam, 2x40HC", id: "QT-4821", customer: "Customer A", date: "04 Nov 2026", t: "46.8 t", sell: "₹ 6.9 lakh", gp: "₹ 41,200", gpStyle: "color:#1f7a55;font-weight:600", rowStyle: "background:#f3f7fa" },
+      { lane: "Mundra to Hamburg, 40HC", id: "QT-4802", customer: "Customer C", date: "01 Nov 2026", t: "24.0 t", sell: "₹ 3.6 lakh", gp: "₹ 18,900", gpStyle: "color:#24587f;font-weight:500", rowStyle: "" },
+      { lane: "Kolkata to Singapore, FCL 20GP", id: "QT-4788", customer: "Customer E", date: "29 Oct 2026", t: "18.9 t", sell: "₹ 1.4 lakh", gp: "₹ 7,600", gpStyle: "color:#a02020;font-weight:500", rowStyle: "" },
+      { lane: "Chennai to Jebel Ali, FCL 20GP", id: "QT-4817", customer: "Customer B", date: "03 Nov 2026", t: "21.4 t", sell: "₹ 2.1 lakh", gp: "₹ 12,400", gpStyle: "color:#1f7a55;font-weight:600", rowStyle: "" },
+      { lane: "Nhava Sheva to Felixstowe, LCL 9 cbm", id: "QT-4795", customer: "Customer D", date: "30 Oct 2026", t: "6.2 t", sell: "₹ 0.7 lakh", gp: "₹ 5,300", gpStyle: "color:#24587f;font-weight:500", rowStyle: "" },
+    ];
+    return { nav, chips, kpis, groupBy, bars, months, axis, gridLines, quotes };
+  }
+}
+</script>
+</body>
+</html>

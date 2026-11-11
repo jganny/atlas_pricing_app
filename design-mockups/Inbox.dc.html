@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inbox</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24;background:#f2f5f8;-webkit-font-smoothing:antialiased}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1160px;background:#f2f5f8;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#151c24">
+
+  <nav aria-label="Main" style="flex:0 0 232px;background:#242a33;color:#d5dde5;padding:18px 12px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 10px 18px">
+      <div style="width:26px;height:26px;border-radius:7px;background:#f2c230;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:2px;background:#242a33"></div></div>
+      <div><div style="font-weight:700;letter-spacing:.12em;font-size:12px;color:#fff">ATLAS PRICING</div><div style="font-size:10.5px;color:#8b97a5;margin-top:1px">Pricing workspace</div></div>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="14">
+      <div style="{{n.style}}">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{n.iconStyle}}"><path d="{{n.d}}"></path></svg>
+        <span style="flex:1">{{n.label}}</span>
+        <span style="{{n.countStyle}}">{{n.count}}</span>
+      </div>
+    </sc-for>
+  </nav>
+
+  <div style="flex:999 1 640px;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:11px 28px;background:#fff;border-bottom:1px solid #e2e8ee;box-sizing:border-box">
+      <div style="flex:1 1 360px;max-width:520px;display:flex;align-items:center;gap:10px;border:1px solid #d5dde5;border-radius:9px;padding:8px 12px;background:#f7f9fb;font-size:13.5px;color:#6b7785">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="flex:1">Search sender, subject or route</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid #cfd8e0;border-radius:5px;padding:1px 6px;background:#fff">Ctrl K</span>
+      </div>
+      <span style="flex:1"></span>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1f7a55;background:#e6f4ed;border-radius:99px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#1f7a55"></span>Live</div>
+      <div style="display:flex;align-items:center;gap:9px;border:1px solid #d5dde5;border-radius:99px;padding:4px 6px 4px 12px;font-size:12.5px;font-weight:600;background:#fff">AI
+        <button type="button" role="switch" aria-checked="true" aria-label="AI on" style="width:36px;height:20px;border-radius:99px;border:0;background:#1f7a55;position:relative;padding:0;cursor:pointer"><span style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:50%;background:#fff"></span></button>
+      </div>
+      <div style="width:36px;height:36px;border-radius:50%;background:#2b313b;color:#fff;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center">SK</div>
+    </header>
+
+    <div style="display:flex;flex-wrap:wrap;flex:1;min-width:0">
+
+      <!-- folders -->
+      <aside aria-label="Folders" style="flex:0 0 244px;background:#fafbfd;border-right:1px solid #e2e8ee;padding:16px 10px 20px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px">
+        <div style="display:flex;align-items:baseline;gap:8px;padding:0 10px 10px"><span style="font-weight:600;font-size:16px">Inbox</span><span style="font-size:12px;color:#6b7785">Shashank, Air Nom</span></div>
+        <sc-for list="{{folders}}" as="f" hint-placeholder-count="30">
+          <div style="{{f.style}}"><span style="flex:1">{{f.label}}</span><span style="{{f.countStyle}}">{{f.count}}</span></div>
+        </sc-for>
+        <div style="margin-top:12px;padding:8px 10px;font-size:12.5px;font-weight:600;color:#2f6a99">Customise folders</div>
+      </aside>
+
+      <!-- list -->
+      <section aria-label="Emails" style="flex:0 0 392px;border-right:1px solid #e2e8ee;background:#fff;box-sizing:border-box;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;padding:14px 16px 10px">
+          <div style="flex:1"><div style="font-size:15px;font-weight:600">All open</div><div style="font-size:12px;color:#6b7785">14 enquiries, soonest reply-by first</div></div>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:8px;padding:6px 11px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Filter</button>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:8px;padding:6px 11px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Sort</button>
+        </div>
+        <sc-for list="{{mails}}" as="m" hint-placeholder-count="7">
+          <div style="{{m.rowStyle}}">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="{{m.dotStyle}}"></span>
+              <span style="font-size:13px;font-weight:600">{{m.from}}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#eef2f6;color:#3b4552;border-radius:4px;padding:1px 5px">{{m.cc}}</span>
+              <span style="flex:1"></span>
+              <span style="{{m.leftStyle}}">{{m.left}}</span>
+            </div>
+            <div style="font-size:13.5px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{m.subject}}</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7785">
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{m.preview}}</span>
+              <span style="{{m.tagStyle}}">{{m.tag}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <!-- reading pane -->
+      <article aria-label="Email" style="flex:999 1 500px;min-width:0;background:#fff;box-sizing:border-box;display:flex;flex-direction:column">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 22px;border-bottom:1px solid #e9eef3;background:#fafbfd">
+          <div style="display:inline-flex;border-radius:9px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.2)">
+            <button type="button" style="border:0;background:#2b313b;color:#fff;padding:9px 16px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer">Quote on Air desk</button>
+            <button type="button" aria-label="Choose another desk" style="border:0;border-left:1px solid #596270;background:#2b313b;color:#fff;padding:9px 10px;cursor:pointer;display:flex;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+          </div>
+          <div style="display:inline-flex;border:1px solid #d5dde5;border-radius:9px;overflow:hidden;background:#fff;font-size:12.5px;font-weight:500" role="group" aria-label="How to read the email">
+            <button type="button" style="border:0;background:#e6eff6;color:#1d4a6b;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer">Text only, free</button>
+            <button type="button" style="border:0;border-left:1px solid #d5dde5;background:#fff;padding:8px 12px;font:inherit;cursor:pointer"><span style="font-weight:700;color:#2f6a99">AI</span> text and attachments, about ₹1</button>
+          </div>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 13px;font:inherit;font-size:13px;font-weight:500;cursor:pointer">Reply</button>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 13px;font:inherit;font-size:13px;font-weight:500;cursor:pointer">Forward</button>
+          <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 13px;font:inherit;font-size:13px;font-weight:500;cursor:pointer">Ignore</button>
+        </div>
+
+        <div style="padding:20px 24px 0;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;background:#fcf0d9;color:#7a4a08;border-radius:99px;padding:3px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#b7791f"></span>Reply by 18:00 JST, 25 min left</span>
+            <span style="font-size:12.5px;color:#6b7785">Air Nom and Sea Nom both see this. Nobody has opened it yet. A reminder goes to both in 11 minutes.</span>
+          </div>
+          <h1 style="margin:0;font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-.005em">Air BOM to NRT, 220 kg auto parts, please quote</h1>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="width:38px;height:38px;border-radius:50%;background:#5a7388;color:#fff;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none">TY</div>
+            <div style="font-size:13px;line-height:1.5"><b style="font-weight:600">Takeshi Yamada</b> <span style="color:#6b7785">&lt;t.yamada@example.co.jp&gt;</span><br><span style="color:#6b7785">to pricing@ &nbsp;·&nbsp; 17:31 JST (14:01 IST) &nbsp;·&nbsp; 3 messages in this conversation</span></div>
+          </div>
+        </div>
+
+        <div style="margin:14px 24px 0;border:1px solid #e2e8ee;border-radius:10px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:#f7f9fb;font-size:12.5px;color:#4b5866"><span style="font-weight:600">2 earlier messages</span><span style="color:#6b7785">9 Nov 11:20 JST and 10 Nov 16:02 JST</span><span style="flex:1"></span><span style="color:#2f6a99;font-weight:600">Show</span></div>
+        </div>
+
+        <div style="padding:16px 24px;font-size:14.5px;line-height:1.65;max-width:70ch;display:flex;flex-direction:column;gap:12px">
+          <p style="margin:0">Dear Ahmed, please quote ex Mumbai to Narita for 220 kg of automotive parts, 8 cartons, DDP is not required, FCA Mumbai is fine. Packing list attached.</p>
+          <p style="margin:0">We need your rate today before our office closes.</p>
+          <p style="margin:0;color:#6b7785">Takeshi Yamada</p>
+        </div>
+
+        <div style="padding:0 24px 14px;display:flex;flex-wrap:wrap;gap:10px">
+          <sc-for list="{{files}}" as="f" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2e8ee;border-radius:10px;padding:8px 12px;background:#fff">
+              <div style="{{f.iconStyle}}">{{f.ext}}</div>
+              <div><div style="font-size:13px;font-weight:500">{{f.name}}</div><div style="font-size:11.5px;color:#6b7785">{{f.size}} &nbsp;·&nbsp; Open</div></div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin:0 24px 14px;border:1px solid #e2e8ee;border-radius:12px;padding:16px 18px;background:#fafbfd">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:baseline">
+            <h2 style="margin:0;font-size:14px;font-weight:600">What the Air desk will be filled with</h2>
+            <span style="font-size:12px;color:#6b7785">From the email text (free). Anything missing is marked before the desk opens.</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 20px;margin-top:12px">
+            <sc-for list="{{found}}" as="x" hint-placeholder-count="6">
+              <div><div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#6b7785;font-weight:600">{{x.k}}</div><div style="font-size:13.5px;font-weight:500;margin-top:2px;{{x.style}}">{{x.v}}</div></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="margin:0 24px 14px;border:1px solid #d5dde5;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.05)">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;background:#f7f9fb;border-bottom:1px solid #e9eef3;font-size:12.5px">
+            <b style="font-weight:600">Reply</b><span style="color:#6b7785">to Takeshi Yamada, from</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:#fff;border:1px solid #d5dde5;border-radius:6px;padding:1px 7px">pricing@</span>
+            <span style="flex:1"></span><span style="color:#2f6a99;font-weight:600">Reply all</span><span style="color:#2f6a99;font-weight:600">Forward</span>
+          </div>
+          <div style="padding:14px 16px;font-size:14px;line-height:1.6;min-height:92px">
+            <div>Dear Takeshi,</div>
+            <div style="margin-top:6px">Thank you for your enquiry. Please find our quotation attached for 220 kg BOM to NRT, valid until 20 November.</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid #e9eef3">
+            <span style="display:inline-flex;align-items:center;gap:8px;border:1px solid #d5dde5;border-radius:8px;padding:5px 10px;font-size:12.5px"><b style="font-weight:700;color:#b64545;font-size:10.5px">PDF</b> Quotation, customer copy <span style="color:#6b7785">no profit or cost shown</span></span>
+            <span style="flex:1"></span>
+            <button type="button" style="border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer">Save draft</button>
+            <button type="button" style="border:0;background:#2b313b;color:#fff;border-radius:9px;padding:8px 18px;font:inherit;font-size:13px;font-weight:600;cursor:pointer">Send</button>
+          </div>
+          <div style="padding:10px 14px;background:#e8eff5;font-size:12.5px;color:#2a4558;line-height:1.5"><b style="font-weight:600">A copy is saved in the mailbox.</b> Once sent, the reply also appears in the Sent items of pricing@ in Outlook, inside the same conversation, and the original shows as replied.</div>
+        </div>
+
+        <div style="margin:auto 24px 18px;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:#6b7785;border-top:1px solid #eef1f5;padding-top:12px">
+          <span><b style="font-weight:600;color:#3b4552">Not stored in the app.</b> This email is opened live from the mailbox and is never saved here.</span>
+          <span>The list keeps only a small card: sender, subject, a short preview, times and the conversation ID.</span>
+        </div>
+      </article>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = "display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:#c3ced9;";
+    const on = base + "background:#343b47;color:#fff;font-weight:600;box-shadow:inset 2px 0 0 #8fb3cf";
+    const head = "padding:16px 10px 6px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7f8c9a;font-weight:600;";
+    const P = {
+      home: "M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z",
+      inbox: "M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z",
+      clock: "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20z M12 6v6l4 2",
+      plane: "M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z",
+      ship: "M3 17l1.5 3h15L21 17H3z M5 17l-1-5 8-3 8 3-1 5 M12 9V4",
+      pkg: "M21 8 12 3 3 8v8l9 5 9-5z M3 8l9 5 9-5 M12 13v8",
+      truck: "M1 3h15v13H1z M16 8h4l3 3v5h-7z M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+      wh: "M3 21V9l9-6 9 6v12 M7 21v-8h10v8",
+      chart: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-6",
+      grid: "M3 3h18v18H3z M3 9h18 M9 21V9",
+      doc: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h8",
+      sliders: "M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 16V3 M1 14h6 M9 8h6 M17 16h6",
+    };
+    const item = (label, d, active, count) => ({ label, d, style: active ? on : base, iconStyle: "flex:none", count: count || "", countStyle: count ? "font-size:11px;font-weight:600;background:#3a4250;color:#e6ecf2;border-radius:99px;padding:1px 8px" : "display:none" });
+    const sec = (label) => ({ label, d: "", style: head, iconStyle: "display:none", count: "", countStyle: "display:none" });
+    const nav = [
+      sec("Work"), item("Home", P.home, false), item("Inbox", P.inbox, true, "14"), item("SLA board", P.clock, false),
+      sec("Quote"), item("Air desk", P.plane, false), item("Sea desk", P.ship, false), item("Courier", P.pkg, false), item("Transport", P.truck, false), item("Warehouse", P.wh, false),
+      sec("Insight"), item("Enquiry DB", P.chart, false), item("Carrier Board", P.grid, false), item("Circulars", P.doc, false),
+      sec("Admin"), item("Settings", P.sliders, false),
+    ];
+    const fr = "display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;font-size:13px;font-weight:500;color:#2c3642;";
+    const fon = "display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;font-size:13px;font-weight:600;color:#151c24;background:#e8eff5;";
+    const fh = "padding:14px 10px 4px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#6b7785;font-weight:600;";
+    const sub = "display:flex;align-items:center;gap:8px;padding:5px 10px 5px 24px;border-radius:7px;font-size:12.5px;font-weight:500;color:#3b4552;";
+    const cn = "font-size:11.5px;color:#6b7785;font-variant-numeric:tabular-nums";
+    const cw = "font-size:11px;font-weight:700;color:#7a4a08;background:#fcf0d9;border-radius:99px;padding:0 7px;font-variant-numeric:tabular-nums";
+    const cr = "font-size:11px;font-weight:700;color:#a02020;background:#fceaea;border-radius:99px;padding:0 7px;font-variant-numeric:tabular-nums";
+    const cb = "font-size:11px;font-weight:700;color:#fff;background:#2b313b;border-radius:99px;padding:0 7px;font-variant-numeric:tabular-nums";
+    const F = (label, count, style, cs) => ({ label, count, style, countStyle: cs || cn });
+    const folders = [
+      F("VIEWS", "", fh, "display:none"),
+      F("All open", "14", fon, cn), F("I am quoting", "2", fr, cb), F("Others are quoting", "3", fr, cn), F("Due soon", "3", fr, cw), F("Past its time", "1", fr, cr),
+      F("Escalations and discrepancies", "2", fr, cr), F("Reached the manager", "1", fr, cr), F("Waiting on the agent", "3", fr, cn), F("Starred", "1", fr, cn),
+      F("MY MAIL", "", fh, "display:none"),
+      F("Drafts of replies", "2", fr, cn), F("Replies sent", "", fr, cn), F("Done, last 7 days", "31", fr, cn), F("Set aside, last 7 days", "5", fr, cn),
+      F("BY TYPE", "", fh, "display:none"),
+      F("Air", "11", fr, cn), F("Export", "5", sub, cn), F("Import", "3", sub, cn), F("Cross trade", "1", sub, cn), F("EXW", "2", sub, cn),
+      F("Sea", "3", fr, cn), F("Export", "2", sub, cn), F("Import", "1", sub, cn),
+      F("Courier and transport", "0", fr, cn), F("Warehouse", "0", fr, cn),
+      F("Shipment confirmations", "2", fr, cn), F("Circulars and tariffs", "6", fr, cn),
+      F("BY SOURCE", "", fh, "display:none"),
+      F("pricing@", "9", fr, cn), F("pricingsales@", "5", fr, cn), F("WhatsApp, soon", "", fr, cn),
+      F("LABELS", "", fh, "display:none"),
+      F("Client deadline", "3", fr, cn), F("Dangerous goods", "1", fr, cn), F("Pharma", "2", fr, cn), F("Attachment only", "4", fr, cn),
+    ];
+    const row = "padding:13px 16px;border-top:1px solid #eef1f5;display:flex;flex-direction:column;gap:4px;";
+    const dot = (c) => "width:8px;height:8px;border-radius:50%;flex:none;background:" + c;
+    const lf = (c) => "font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:500;color:" + c;
+    const tg = (bg, fg) => "font-size:10.5px;font-weight:600;border-radius:4px;padding:1px 6px;flex:none;background:" + bg + ";color:" + fg;
+    const mails = [
+      { rowStyle: row + "background:#eef4f9;box-shadow:inset 3px 0 0 #2b313b", from: "Takeshi Yamada", cc: "JP", left: "25 min", leftStyle: lf("#9a5b0a"), dotStyle: dot("#b7791f"), subject: "Air BOM to NRT, 220 kg auto parts, please quote", preview: "We need your rate today before our office closes.", tag: "Air export", tagStyle: tg("#e6eff6", "#24587f") },
+      { rowStyle: row, from: "Omar Khalid", cc: "AE", left: "55 min", leftStyle: lf("#9a5b0a"), dotStyle: dot("#b7791f"), subject: "By 3 pm IST please: LCL Chennai to Dubai", preview: "Shaheer is quoting this now.", tag: "Sea export", tagStyle: tg("#dcecee", "#255a5e") },
+      { rowStyle: row, from: "Lim Wei", cc: "SG", left: "1 h 25", leftStyle: lf("#3b4552"), dotStyle: dot("#1f7a55"), subject: "RFQ 3 pallets BLR to SIN", preview: "Please quote best airline options.", tag: "Air export", tagStyle: tg("#e6eff6", "#24587f") },
+      { rowStyle: row, from: "Somchai P.", cc: "TH", left: "2 h 25", leftStyle: lf("#3b4552"), dotStyle: dot("#1f7a55"), subject: "Air DEL to BKK, 85 kg electronics", preview: "Packing list attached.", tag: "Air export", tagStyle: tg("#e6eff6", "#24587f") },
+      { rowStyle: row, from: "Agent, Shanghai", cc: "CN", left: "", leftStyle: lf("#3b4552"), dotStyle: dot("#6b8499"), subject: "Booking confirmed, 12 pcs Shanghai to BLR", preview: "Shipper and consignee details below.", tag: "Confirmation", tagStyle: tg("#e6f4ed", "#1f6a4a") },
+      { rowStyle: row, from: "Customer, Chennai", cc: "IN", left: "3 h 55", leftStyle: lf("#3b4552"), dotStyle: dot("#1f7a55"), subject: "EXW Chennai pickup, 320 kg to Dubai", preview: "Two messages in this conversation.", tag: "Air EXW", tagStyle: tg("#e6eff6", "#24587f") },
+    ];
+    const ic = (bg) => "width:34px;height:34px;border-radius:8px;background:" + bg + ";color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:.03em";
+    const files = [
+      { ext: "PDF", name: "Packing list.pdf", size: "86 KB", iconStyle: ic("#b64545") },
+      { ext: "XLS", name: "Parts schedule.xlsx", size: "41 KB", iconStyle: ic("#2f7a5c") },
+    ];
+    const found = [
+      { k: "Customer", v: "Takeshi Yamada, Tokyo agent", style: "" }, { k: "Lane", v: "BOM to NRT", style: "" }, { k: "Cargo", v: "8 cartons, 220 kg", style: "" },
+      { k: "Commodity", v: "Automotive parts", style: "" }, { k: "Terms", v: "FCA Mumbai", style: "" }, { k: "Dimensions", v: "Missing: in the packing list", style: "color:#9a5b0a" },
+    ];
+    return { nav, folders, mails, files, found };
+  }
+}
+</script>
+</body>
+</html>

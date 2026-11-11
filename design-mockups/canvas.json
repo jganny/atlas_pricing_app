@@ -1,0 +1,114 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-10T12:00:00Z"
+  },
+  "title": "Routing and SLA Design",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1080,
+      "title": "1. Home",
+      "expand": "fill"
+    },
+    "Queue.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1180,
+      "title": "2. SLA board, sorted by closing time",
+      "expand": "fill"
+    },
+    "Inbox.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1420,
+      "title": "3. Inbox: read, reply and forward",
+      "expand": "fill"
+    },
+    "Routing.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 1100,
+      "title": "4. Admin: alerts and reminders",
+      "expand": "fill"
+    },
+    "AiSwitches.dc.html": {
+      "x": 6080,
+      "y": 0,
+      "w": 1440,
+      "h": 1100,
+      "title": "5. AI: what uses it and the switches",
+      "expand": "fill"
+    },
+    "DrillDown.dc.html": {
+      "x": 7600,
+      "y": 0,
+      "w": 1440,
+      "h": 1240,
+      "title": "6. Enquiry DB with drill-down",
+      "expand": "fill"
+    },
+    "Thread.dc.html": {
+      "x": 9120,
+      "y": 0,
+      "w": 1440,
+      "h": 1300,
+      "title": "7. One enquiry, one thread: agent email, vendors, rates",
+      "expand": "fill"
+    },
+    "AirDeskEmail.dc.html": {
+      "x": 10640,
+      "y": 0,
+      "w": 1440,
+      "h": 1040,
+      "title": "8. Air desk: rates that came back by email",
+      "expand": "fill"
+    },
+    "SearchInbox.dc.html": {
+      "x": 12160,
+      "y": 0,
+      "w": 1440,
+      "h": 1240,
+      "title": "9. Search, a tidier Inbox, and your questions answered",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Queue.dc.html",
+    "Inbox.dc.html",
+    "Routing.dc.html",
+    "AiSwitches.dc.html",
+    "DrillDown.dc.html",
+    "Thread.dc.html",
+    "AirDeskEmail.dc.html",
+    "SearchInbox.dc.html"
+  ],
+  "notes": {
+    "t1": {
+      "x": 0,
+      "y": -260,
+      "text": "Atlas Pricing: screens 1 to 6 (built) and 7 to 9 (proposed: threads, rates by email, search)",
+      "kind": "title1",
+      "maxW": 13600
+    },
+    "n1": {
+      "x": 0,
+      "y": -150,
+      "w": 560,
+      "text": "Example names and numbers only. Colours and type follow the live app. None of these screens uses AI credit.",
+      "size": "s"
+    }
+  },
+  "designSystems": []
+}
