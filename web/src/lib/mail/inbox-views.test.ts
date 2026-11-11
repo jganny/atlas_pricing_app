@@ -43,6 +43,10 @@ assert.deepEqual(listView([{ ...problem, status: "resolved" } as typeof problem]
 assert.ok(listView([mk("q", { status: "applied", workingBy: { username: "shaheer", name: "Shaheer", at: NOW - 1000 } })], "all", "shashank", NOW).length === 1);
 assert.equal(listView([mk("old", { status: "applied" })], "all", "shashank", NOW).length, 0, "quoted long ago, no mark: gone");
 
+// Someone replied from Outlook: it is answered, so it is no longer due or past its time (it stays in the list until it is quoted or put aside).
+assert.deepEqual(listView(rows.map((r) => (r.id === "late" ? { ...r, repliedAt: NOW } : r)), "past", "shashank", NOW), []);
+assert.ok(listView(rows.map((r) => (r.id === "late" ? { ...r, repliedAt: NOW } : r)), "all", "shashank", NOW).some((r) => r.id === "late"));
+
 // Who is quoting.
 const w = { username: "shaheer", name: "Shaheer", at: NOW - 600_000 };
 const withMark = rows.map((r) => (r.id === "dubai" ? { ...r, workingBy: w } : r));

@@ -107,6 +107,9 @@ export function AutoReplyAdmin() {
 
   return (
     <section className="mt-6 space-y-5 rounded-xl border border-[var(--color-border)] bg-white p-4" data-testid="auto-reply-admin">
+      <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-testid="auto-reply-paused-note">
+        <b>Sending from the app is paused.</b> The mail server&apos;s certificate for sending expired on 14 April 2026, so mail sent by the app would be refused. This is for the company&apos;s IT manager to fix with the mail provider. Until then people reply from Outlook as usual, and the app notices those replies. Leave both switches off.
+      </p>
       <div>
         <h2 className="text-base font-extrabold text-[var(--color-atlas-navy)]">Automatic replies</h2>
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">

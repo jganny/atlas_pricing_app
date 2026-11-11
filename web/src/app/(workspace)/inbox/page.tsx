@@ -383,6 +383,7 @@ export default function EnquiryInboxPage() {
                         ))}
                         {st.kind === "other" || st.kind === "asked" || st.kind === "can-take" ? <span className="rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800">{st.worker.name} is quoting</span> : null}
                         {st.kind === "mine" ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800">You are quoting</span> : null}
+                        {row.repliedAt ? <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-800">Replied from Outlook</span> : null}
                         {st.kind === "incoming" ? <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">{st.request.name} asks to take this</span> : null}
                       </div>
                     </button>

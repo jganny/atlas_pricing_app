@@ -54,9 +54,9 @@ export function inView(r: InboxEnquiry, view: ViewKey, me: string | undefined | 
       return k === "other" || k === "asked" || k === "can-take";
     }
     case "due":
-      return urgencyOf(replyBy(r, now).at, now) === "soon";
+      return !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "soon";
     case "past":
-      return urgencyOf(replyBy(r, now).at, now) === "past";
+      return !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "past";
     case "followup":
       return r.tag === "follow_up";
     case "air":

@@ -69,4 +69,14 @@ function dateHeaderOffset(parsedMail) {
   return m[1] === "-" ? -mins : mins;
 }
 
-module.exports = { dateHeaderOffset, nextUids, nextCursor, senderKey, senderNeverEnquires, NEVER_AFTER, attachmentsFromStructure };
+/** The message IDs a sent mail answers: its In-Reply-To and the last few of its References, as the IDs appear in the headers. */
+function repliedToIds(inReplyTo, headerBytes) {
+  const ids = [];
+  if (typeof inReplyTo === "string" && inReplyTo.trim()) ids.push(inReplyTo.trim());
+  const text = headerBytes ? Buffer.from(headerBytes).toString("utf8") : "";
+  const refs = /^references:\s*([\s\S]*?)(?:\r?\n(?![ \t])|$)/im.exec(text);
+  if (refs) for (const m of refs[1].matchAll(/<[^>]+>/g)) ids.push(m[0]);
+  return [...new Set(ids)].slice(-6);
+}
+
+module.exports = { repliedToIds, dateHeaderOffset, nextUids, nextCursor, senderKey, senderNeverEnquires, NEVER_AFTER, attachmentsFromStructure };

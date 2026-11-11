@@ -59,3 +59,12 @@ console.log("inbox poll logic ok");
   assert.equal(P.dateHeaderOffset({ headerLines: [] }), null);
   assert.equal(P.dateHeaderOffset(null), null);
 }
+
+// The mails a sent message answers.
+{
+  const headers = Buffer.from("References: <a@x.com> <b@x.com>\r\n <c@x.com>\r\nSubject: x\r\n");
+  assert.deepEqual(P.repliedToIds("<c@x.com>", headers), ["<c@x.com>", "<a@x.com>", "<b@x.com>"], "the in-reply-to first, then the references, each once, including a folded line");
+  assert.deepEqual(P.repliedToIds(undefined, undefined), []);
+  assert.deepEqual(P.repliedToIds("<only@x.com>", Buffer.from("Subject: hi\r\n")), ["<only@x.com>"]);
+  assert.equal(P.repliedToIds(null, Buffer.from("References: " + Array.from({ length: 12 }, (_, i) => `<m${i}@x>`).join(" ") + "\r\n")).length, 6, "only the last few");
+}

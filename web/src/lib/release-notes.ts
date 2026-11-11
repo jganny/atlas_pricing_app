@@ -11,6 +11,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.158",
+    date: "2026-11-11",
+    items: [
+      "Replies you send from Outlook are now noticed by the app. When you answer an enquiry in Outlook, it shows \"Replied from Outlook\" in the Inbox, it stops counting as due or late, and the reminders for it stop. Nothing is changed in the mailbox: the app only reads the Sent items.",
+      "Admin > Automatic replies now says plainly that sending from the app is paused until the mail server's certificate is renewed.",
+    ],
+  },
+  {
     version: "0.3.157",
     date: "2026-11-11",
     items: [

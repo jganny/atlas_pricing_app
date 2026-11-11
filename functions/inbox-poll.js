@@ -382,6 +382,46 @@ async function classifyAndExtract(apiKey, subject, body) {
 }
 
 /** Has this mail replied to one we already kept? (In-Reply-To / References carry the earlier mail's id.) Costs a few reads, no AI. */
+/**
+ * People answer enquiries from Outlook, not from the app. So the mailbox's Sent folder is read (read-only) for new mail, and every sent mail
+ * that answers a kept enquiry marks it replied. That counts as actioned: the reminders stop, and the list shows "Replied from Outlook".
+ * The first time only the last 50 sent mails are looked at. Returns how many enquiries were marked.
+ */
+async function scanSentForReplies(client, db, mailbox) {
+  const stateRef = db.collection("inbox_poll_state").doc(`${mailbox.key}_sent`);
+  const st = (await stateRef.get()).data() || {};
+  const folder = require("./inbox-send").pickSentFolder(await client.list());
+  if (!folder) return 0;
+  const lock = await client.getMailboxLock(folder);
+  let marked = 0;
+  try {
+    const tip = Math.max(0, Number(client.mailbox && client.mailbox.uidNext ? client.mailbox.uidNext : 1) - 1);
+    const from = typeof st.lastUid === "number" ? st.lastUid + 1 : Math.max(1, tip - 49);
+    if (tip < from) {
+      await stateRef.set({ lastUid: Math.max(tip, Number(st.lastUid) || 0), folder, at: Date.now() }, { merge: true });
+      return 0;
+    }
+    const upto = Math.min(tip, from + 199);
+    for await (const m of client.fetch(`${from}:${upto}`, { uid: true, envelope: true, headers: ["references"] }, { uid: true })) {
+      const ids = P.repliedToIds(m.envelope && m.envelope.inReplyTo, m.headers);
+      for (const ref of ids) {
+        const id = crypto.createHash("sha1").update(`${mailbox.key}:${ref}`).digest("hex").slice(0, 24);
+        const ref2 = db.collection("inbox_enquiries").doc(id);
+        const hit = await ref2.get();
+        if (hit.exists && !hit.data().repliedAt) {
+          const when = m.envelope && m.envelope.date ? new Date(m.envelope.date).getTime() : Date.now();
+          await ref2.set({ repliedAt: Number.isFinite(when) ? when : Date.now(), repliedBy: "outlook", repliedKind: "outlook" }, { merge: true });
+          marked += 1;
+        }
+      }
+    }
+    await stateRef.set({ lastUid: upto, folder, at: Date.now() }, { merge: true });
+  } finally {
+    lock.release();
+  }
+  return marked;
+}
+
 async function repliesToKept(db, mailboxKey, parsedMail) {
   if (!parsedMail) return false;
   const refs = [parsedMail.inReplyTo, ...(Array.isArray(parsedMail.references) ? parsedMail.references : [parsedMail.references])].filter((x) => typeof x === "string" && x).slice(-5);
@@ -708,6 +748,7 @@ async function pollOne(mailbox, password, apiKey) {
   let circularsFiled = 0;
   let confirmationsHandled = 0;
   let acksSent = 0;
+  let repliedFromOutlook = 0;
   const senderCache = new Map();
 
   await client.connect();
@@ -895,6 +936,12 @@ async function pollOne(mailbox, password, apiKey) {
     } finally {
       lock.release();
     }
+    // Replies sent from Outlook count as actioned: read the Sent folder (never changed, only read).
+    try {
+      repliedFromOutlook = await scanSentForReplies(client, db, mailbox);
+    } catch (err) {
+      functions.logger.warn("Sent folder could not be read", { mailbox: mailbox.key, message: String((err && err.message) || err).slice(0, 140) });
+    }
   } finally {
     try {
       await client.logout();
@@ -903,7 +950,7 @@ async function pollOne(mailbox, password, apiKey) {
     }
   }
 
-  return { mailbox: mailbox.key, imported, skippedNoise, failedMessages, circularsFiled, confirmationsHandled, acksSent };
+  return { mailbox: mailbox.key, imported, skippedNoise, failedMessages, circularsFiled, confirmationsHandled, acksSent, repliedFromOutlook };
 }
 
 exports.pollPricingInboxes = functions
