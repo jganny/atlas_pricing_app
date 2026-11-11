@@ -58,6 +58,7 @@ import { deleteDraft } from "@/lib/firebase/drafts";
 import { buildAirDraftQuote } from "@/lib/quotes/drafts";
 import { CarrierSuggestions } from "@/components/CarrierSuggestions";
 import { TariffCurrencyNotice } from "@/components/desks/TariffCurrencyNotice";
+import { RateEmailPanel } from "@/components/desks/RateEmailPanel";
 import { currencyClashes, sameCurrency } from "@/lib/pricing/tariff-currency";
 import { placeCode } from "@/lib/quotes/carrier-suggestions";
 import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
@@ -1132,6 +1133,22 @@ function AirDeskInner() {
     });
   }, [instr, tariffs, origin, destination, cargo, dimUnit, instrChoice]);
 
+  /** Rates read from vendors' or agents' emails: each becomes an airline option (the empty starter card is replaced), the first one added is quoted. */
+  function addEmailRates(opts: AirlineOption[], cur: string) {
+    setAirlines((prev) => {
+      const isBlank = (a: AirlineOption) => !a.name.trim() && Object.values(a.breaks).every((b) => (b?.sell || 0) === 0 && (b?.buy || 0) === 0);
+      const laneId = opts[0]?.laneId ?? "";
+      const keep = prev.filter((a) => !(isBlank(a) && (a.laneId ?? "") === laneId));
+      const hasQuoted = keep.some((a) => a.selected && (a.laneId ?? "") === laneId);
+      const added = opts.map((o, i) => ({ ...o, selected: !hasQuoted && i === 0 }));
+      return [...keep, ...added];
+    });
+    if (cur && cur !== currency) {
+      setCurrency(cur);
+      toast(`The desk now quotes in ${cur}, to match the rates added.`, "success");
+    }
+  }
+
   // When the plan is settled, fill the desk: one airline, only the break asked for, the margin and currency applied.
   useEffect(() => {
     if (!instrPlan || instrPlan.status !== "ready" || !instrPlan.carrierLabel || !instrPlan.weightBreak) return;
@@ -1658,6 +1675,15 @@ function AirDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
+              <RateEmailPanel
+                mode="air"
+                module={module}
+                origin={origin}
+                destination={destination}
+                weightKg={selectedTotals?.freight.chargeableWeightKg}
+                laneId={lanes.length > 1 ? activeLane?.id : undefined}
+                onAdd={(opts, cur) => addEmailRates(opts as AirlineOption[], cur)}
+              />
               {!isRelaxedImportQuote(module, incoterm) ? (
                 <>
                   <TariffCurrencyNotice clashes={clashes} quoteCurrency={currency} onSwitch={setCurrency} />

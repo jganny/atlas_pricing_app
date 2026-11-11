@@ -54,10 +54,10 @@ function buildThread(rootId, cards, sents) {
   // Who was asked, and who has answered (the same address, or for a company mailbox the same company).
   const repliers = members.filter((m) => m.role === "reply");
   const asked = new Map();
-  for (const m of members.filter((x) => x.role === "sent")) for (const t of [...(m.to || [])]) if (!asked.has(t.email)) asked.set(t.email, t.name || t.email);
-  const vendors = [...asked.entries()].map(([email, name]) => {
-    const replied = repliers.some((r) => r.email === email || (!SHARED_HOSTS.has(hostOf(email)) && hostOf(r.email) === hostOf(email)));
-    return { email, name, replied };
+  for (const m of members.filter((x) => x.role === "sent")) for (const t of [...(m.to || [])]) if (!asked.has(t.email)) asked.set(t.email, { name: t.name || t.email, at: m.at });
+  const vendors = [...asked.entries()].map(([email, v]) => {
+    const reply = repliers.find((r) => r.email === email || (!SHARED_HOSTS.has(hostOf(email)) && hostOf(r.email) === hostOf(email)));
+    return { email, name: v.name, replied: !!reply, askedAt: v.at, repliedAt: reply ? reply.at : 0 };
   });
   return { rootId, members, vendors };
 }

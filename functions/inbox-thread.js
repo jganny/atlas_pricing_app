@@ -116,7 +116,8 @@ function scoreAgainst(enquiry, mail) {
   const at = Number(mail.at) || 0;
   if (eAt && at && at < eAt - 60_000) return { score: 0, by: "" };
   const hours = eAt && at ? (at - eAt) / 3_600_000 : 0;
-  if (hours > 96) return { score: 0, by: "" };
+  // Vendors can answer a day or two later, or after a call: a mail stays a candidate for the whole 15 days a conversation is kept.
+  if (hours > 15 * 24) return { score: 0, by: "" };
   let score = 0;
   let by = "lane";
   const quoted = squash(mail.quoted || "");
@@ -135,6 +136,7 @@ function scoreAgainst(enquiry, mail) {
   score += Math.min(60, shared * 30);
   if (hours <= 6) score += 10;
   else if (hours <= 24) score += 5;
+  else if (hours <= 72) score += 2;
   return { score, by };
 }
 
@@ -218,8 +220,8 @@ async function findThread(db, mailboxKey, kind, mail, now = Date.now()) {
   }
   // 4. By content: for what we sent, and for replies that no header ties. New enquiries start their own conversation instead.
   if (kind === "sent" || mail.tag === "follow_up") {
-    const since = now - 4 * DAY;
-    const snap = await db.collection("inbox_enquiries").where("timestamp", ">", since).limit(400).get();
+    const since = now - 15 * DAY;
+    const snap = await db.collection("inbox_enquiries").where("timestamp", ">", since).limit(800).get();
     const candidates = snap.docs
       .map((d) => ({ id: d.id, ...d.data() }))
       .filter((d) => d.mailbox === mailboxKey && isRootCard(d) && (!d.threadId || d.threadId === d.id) && !(kind === "card" && d.id === mail.id));

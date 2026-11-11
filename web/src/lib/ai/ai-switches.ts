@@ -4,7 +4,7 @@
  * This file is the list people see: where each AI feature appears, what it costs, and who it is for.
  */
 
-export type AiGroupId = "quoteHub" | "mailbox" | "circulars" | "askVertex" | "help" | "replyDrafts" | "instruction" | "vendorRate" | "agencyList";
+export type AiGroupId = "quoteHub" | "mailbox" | "circulars" | "askVertex" | "help" | "replyDrafts" | "instruction" | "vendorRate" | "rateReplies" | "agencyList";
 
 export interface AiGroupInfo {
   id: AiGroupId;
@@ -26,6 +26,7 @@ export const AI_GROUPS: AiGroupInfo[] = [
   { id: "replyDrafts", name: "Enquiry reply drafts", where: "Inbox: the suggested reply to a customer", cost: "Haiku 5.5 · about ₹1 per draft, only when someone asks", who: "Air and Sea desks" },
   { id: "instruction", name: "Quote by instruction", where: "Quote Hub: typing an instruction such as 'quote 500 kg to Dubai'", cost: "Haiku 5.5 · under ₹1 per instruction", who: "Air and Sea desks" },
   { id: "vendorRate", name: "Vendor rate from a document", where: "Air and Sea desks: reading a rate sheet or email from a vendor", cost: "Haiku 5.5 · about ₹1 to ₹2 per document", who: "Air and Sea desks" },
+  { id: "rateReplies", name: "Vendor and agent rates from emails", where: "Air and Sea desks and the Inbox conversation: reading a vendor's or overseas agent's email into rates", cost: "Haiku 5.5 · about ₹0.30 or less per email, only when someone presses Read rates", who: "Air and Sea desks" },
   { id: "agencyList", name: "Agency list check", where: "Weekly email that checks the agency list", cost: "Haiku 5.5 · a few rupees per week, automatic", who: "Runs by itself" },
 ];
 

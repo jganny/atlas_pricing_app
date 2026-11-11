@@ -108,4 +108,33 @@ function quote(): SavedQuote {
   assert.match(doc.html, /Qatar Airways/);
 }
 
+// --- options the person chose not to send: gone from the customer's comparison, names included; the quoted option always stays ---
+{
+  const q = quote();
+  const list = (q.details as { airlines: Array<Record<string, unknown>> }).airlines;
+  list[0].hideName = false; // Lufthansa shown, but left out
+  list[0].exclude = true;
+  list[0].agentRate = true;
+  list[0].agentName = "Second Agent GmbH";
+  list[2].exclude = true; // Qatar left out
+  (q.details as Record<string, unknown>).termsAndConditions = "Lufthansa will route via FRA. Second Agent GmbH hands over. Kintetsu World Express will hand over at FRA.";
+  const out = quoteForClient(q);
+  const kept = (out.details as { airlines: Array<{ id: string }> }).airlines.map((a) => a.id);
+  assert.deepEqual(kept, ["ek"], "only the quoted option is sent");
+  const doc = buildClientQuoteDocument(q);
+  for (const [label, text] of [["html", doc.html], ["share text", doc.shareText], ["email cover", doc.emailCover]] as const) {
+    assert.ok(!/Lufthansa|Second Agent|Kintetsu|Qatar/.test(text), `${label}: nothing about the options left out`);
+  }
+  // The quoted option cannot be left out, even if it is marked.
+  const q2 = quote();
+  (q2.details as { airlines: Array<Record<string, unknown>> }).airlines[1].exclude = true;
+  assert.equal((quoteForClient(q2).details as { airlines: unknown[] }).airlines.length, 3, "the quoted offer is never dropped");
+  // The staff copy is untouched.
+  assert.equal((q.details as { airlines: unknown[] }).airlines.length, 3);
+  // The flags survive being saved and loaded.
+  const row = serializeAirlineOption(createAirlineOption({ name: "NH", exclude: true, fromEmail: true, agentRate: true, agentName: "A" }));
+  assert.equal(row.exclude, true);
+  assert.equal(row.fromEmail, true);
+}
+
 console.log("client copy ok");

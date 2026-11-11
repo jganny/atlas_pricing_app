@@ -92,9 +92,41 @@ function cleanValue(v: unknown, plan: ClientCopyPlan): unknown {
   return v;
 }
 
+/** Options the person chose not to send are taken out of the lists, whatever else is in them. The quoted option always stays. */
+function withoutExcluded(quote: SavedQuote): SavedQuote {
+  const d = quote.details as Rec | undefined;
+  if (!d) return quote;
+  let changed = false;
+  const details: Rec = { ...d };
+  for (const { key } of OPTION_LISTS) {
+    const list = d[key];
+    if (!Array.isArray(list)) continue;
+    const kept = list.filter((o) => !(isRec(o) && o.exclude === true && o.selected !== true));
+    if (kept.length !== list.length) {
+      details[key] = kept;
+      changed = true;
+    }
+  }
+  return changed ? ({ ...quote, details } as SavedQuote) : quote;
+}
+
 /** The quote as the client may see it. Pure: the original is not changed. */
-export function quoteForClient(quote: SavedQuote): SavedQuote {
+export function quoteForClient(original: SavedQuote): SavedQuote {
+  const quote = withoutExcluded(original);
   const plan = clientCopyPlan(quote);
+  if (quote !== original) {
+    // A name that belongs to an option left out must not turn up in a note either: agents stay hidden, carriers become "another option".
+    plan.agents = [...new Set([...plan.agents, ...clientCopyPlan(original).agents])].sort((x, y) => y.length - x.length);
+    const d = (original.details ?? {}) as Rec;
+    for (const { key } of OPTION_LISTS) {
+      const list = d[key];
+      if (!Array.isArray(list)) continue;
+      for (const o of list) {
+        if (isRec(o) && o.exclude === true && o.selected !== true && String(o.name ?? "").trim()) plan.hidden.push({ name: String(o.name).trim(), label: "another option" });
+      }
+    }
+    plan.hidden.sort((x, y) => y.name.length - x.name.length);
+  }
   if (!plan.hidden.length && !plan.agents.length && !hasAgentKeys(quote.details)) return quote;
   const cleaned = cleanValue(quote, plan) as SavedQuote;
   return cleaned;

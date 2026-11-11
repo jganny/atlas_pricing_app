@@ -48,6 +48,13 @@ export function assignInboxUsers(
   return { assignedUsers: MAILBOX_SEATS.pricingsales.map(occupantLoginForSeat), suggestedUser: null };
 }
 
+/**
+ * While the Sea Nom seat is vacant, sea enquiries that arrive on pricing@ are also seen (and alerted) by NRS and Free Hand, who quote them.
+ * Set to [] when the seat is filled. The same list is `seaCover` in functions/inbox-alerts.js.
+ */
+export const SEA_COVER_SEATS: DeskSeatId[] = ["nrs", "freehand"];
+export const SEA_COVER_LOGINS = ["jabeena", "cathrina"];
+
 export function canSeeInboxItem(
   username: string | undefined,
   role: string | undefined,
@@ -63,6 +70,7 @@ export function canSeeInboxItem(
   if (item.claimedBy && item.claimedBy === u) return true;
   if (item.assignedUsers.map((x) => x.toLowerCase()).includes(u)) return true;
   const seat = activeSeatForLogin(u)?.id;
+  if (item.mailbox === "pricing" && item.mode === "sea" && ((seat && SEA_COVER_SEATS.includes(seat)) || SEA_COVER_LOGINS.includes(u))) return true;
   if (seat && item.mailbox === "pricing" && MAILBOX_SEATS.pricing.includes(seat)) return true;
   if (seat && item.mailbox === "pricingsales" && MAILBOX_SEATS.pricingsales.includes(seat)) return true;
   if (isDisplacedLogin(u)) return false;

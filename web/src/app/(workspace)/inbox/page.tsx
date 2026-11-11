@@ -29,6 +29,7 @@ import type { InboxEnquiry } from "@/lib/types";
 import { aiAllowed, aiOffMessage } from "@/lib/ai/ai-switches";
 import { EnquiryThread } from "@/components/EnquiryThread";
 import { MailSearch } from "@/components/MailSearch";
+import { TeamBoard } from "@/components/TeamBoard";
 import { useAiSwitches } from "@/lib/firebase/ai-switches";
 
 type ReadMode = "text" | "ai";
@@ -129,6 +130,7 @@ export default function EnquiryInboxPage() {
     }
   });
   const [searchOpen, setSearchOpen] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const { readEmailBytes } = useHubReader();
   const [modeOverride, setModeOverride] = useState<"air" | "sea" | null>(null);
@@ -294,12 +296,16 @@ export default function EnquiryInboxPage() {
   return (
     <div className="space-y-3">
       {searchOpen ? <MailSearch onClose={() => setSearchOpen(false)} /> : null}
+      {boardOpen ? <TeamBoard rows={mine} onClose={() => setBoardOpen(false)} /> : null}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-atlas-navy)]">Inbox</h1>
           <p className="text-sm text-[var(--color-text-muted)]">Enquiries in the order they must be answered. Emails are opened live from the mailbox and are not saved here.</p>
         </div>
         <span className="ml-auto flex items-center gap-2 text-sm">
+          <Button type="button" variant="secondary" onClick={() => setBoardOpen(true)} data-testid="inbox-board-button">
+            Team board
+          </Button>
           <Button type="button" variant="secondary" onClick={() => setSearchOpen(true)} data-testid="inbox-search-button">
             <Search className="mr-1.5 h-4 w-4" /> Search mail
           </Button>

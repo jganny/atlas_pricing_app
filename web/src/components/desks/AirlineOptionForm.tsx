@@ -87,6 +87,9 @@ export function AirlineOptionForm({
             agentRate={Boolean(opt.agentRate)}
             agentName={opt.agentName ?? ""}
             onAgent={(agentRate, agentName) => onUpdate({ agentRate, agentName })}
+            exclude={Boolean(opt.exclude)}
+            onExclude={(exclude) => onUpdate({ exclude })}
+            quoted={opt.selected}
           />
         </div>
         <div>

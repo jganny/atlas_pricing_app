@@ -1445,11 +1445,13 @@ exports.autoReplyTest = inboxPoll.autoReplyTest;
 exports.mailCopyTest = inboxPoll.mailCopyTest;
 exports.sendInboxReply = inboxPoll.sendInboxReply;
 exports.inboxAlerts = require("./inbox-alerts").inboxAlerts;
+exports.inboxDaySummary = require("./inbox-alerts").inboxDaySummary;
 exports.directoryList = require("./directory-api").directoryList;
 exports.directoryUpdate = require("./directory-api").directoryUpdate;
 exports.threadGet = require("./thread-api").threadGet;
 exports.threadUnlink = require("./thread-api").threadUnlink;
 exports.threadLink = require("./thread-api").threadLink;
+exports.readRateEmail = require("./rate-email").readRateEmail;
 
 // Team chat: delete messages and files 100 days after they were sent, and alert people who are away.
 const chatRetention = require("./chat-retention");

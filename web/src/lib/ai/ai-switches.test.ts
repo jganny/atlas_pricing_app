@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { AI_GROUPS, aiAllowed, aiOffMessage, aiStatusText, allOn, readSwitches } from "./ai-switches";
 
-// Nine places, each with where/cost/who written out so users know which features use AI.
-assert.equal(AI_GROUPS.length, 9);
+// Ten places, each with where/cost/who written out so users know which features use AI.
+assert.equal(AI_GROUPS.length, 10);
 for (const g of AI_GROUPS) assert.ok(g.name && g.where && g.cost && g.who, `${g.id} is fully described`);
 
 // Missing or odd answers mean ON.

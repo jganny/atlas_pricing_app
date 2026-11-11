@@ -99,6 +99,12 @@ const db0 = { inbox_enquiries: { [ORIG]: enquiry, [T.cardId("pricing", "<other@x
   const odd = { ...T.signalsOf({ subject: "Rates please", text: "hello", threadIndex: b, refs: [] }), at: NOW - 1 * 3_600_000, quoted: "" };
   assert.deepEqual(await T.findThread(fakeDb(dbConv), "pricing", "sent", odd, NOW), { root: ORIG, by: "conversation" });
 
+  // 8b. A vendor who answers days later, or a forward sent a day later: still tied (the window is the whole 15 days a conversation is kept).
+  const lateFwd = { ...bare, at: NOW + 30 * 3_600_000 };
+  assert.equal((await T.findThread(fakeDb(db0), "pricing", "sent", lateFwd, NOW + 30 * 3_600_000))?.root, ORIG, "sent a day and a half after the enquiry");
+  const lateReply = { ...reply, at: NOW + 8 * 24 * 3_600_000 };
+  assert.deepEqual(await T.findThread(fakeDb(db1), "pricing", "card", lateReply, NOW + 8 * 24 * 3_600_000), { root: ORIG, by: "headers" }, "a reply eight days later");
+
   // 9. A different mailbox never ties.
   assert.equal(await T.findThread(fakeDb(db0), "pricingsales", "sent", bare, NOW), null);
 
@@ -120,7 +126,8 @@ const db0 = { inbox_enquiries: { [ORIG]: enquiry, [T.cardId("pricing", "<other@x
     [{ id: "s1", at: Date.parse("2026-11-11T05:23:00Z"), to: [{ email: "prashant@alg.in", name: "Prashant" }, { email: "ops@cargopartners.com", name: "" }], subject: "AMD - LRD//463Kg", linkedBy: "quoted" }],
   );
   assert.deepEqual(out.members.map((m) => m.role), ["enquiry", "sent", "reply"], "oldest first: enquiry, sent on, reply");
-  assert.deepEqual(out.vendors, [{ email: "prashant@alg.in", name: "Prashant", replied: true }, { email: "ops@cargopartners.com", name: "ops@cargopartners.com", replied: false }]);
+  assert.deepEqual(out.vendors.map((v) => [v.email, v.replied]), [["prashant@alg.in", true], ["ops@cargopartners.com", false]]);
+  assert.ok(out.vendors[0].askedAt > 0 && out.vendors[0].repliedAt > out.vendors[0].askedAt, "when each was asked and when they replied");
   assert.match(out.members[1].reason, /original enquiry/);
   console.log("thread-api tests passed");
 }

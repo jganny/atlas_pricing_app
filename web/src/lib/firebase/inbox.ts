@@ -10,6 +10,7 @@ import {
   query,
   updateDoc,
   deleteDoc,
+  getDoc,
 } from "firebase/firestore";
 import type { InboxEnquiry, InboxTag } from "@/lib/types";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -106,7 +107,15 @@ export async function fetchInboxEml(id: string, kind: "card" | "sent" = "card"):
  */
 export async function removeInboxItem(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(getFirebaseDb(), "inbox_enquiries", id));
+    const ref = doc(getFirebaseDb(), "inbox_enquiries", id);
+    // An enquiry that has a conversation (sent on to vendors) is only set aside, so a vendor who answers days later still finds it; the
+    // daily clean-up removes it after 15 days. Anything else is removed at once.
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().hasThread === true) {
+      await updateDoc(ref, { status: "applied", workingBy: null });
+      return;
+    }
+    await deleteDoc(ref);
   } catch {
     /* the daily clean-up removes it */
   }

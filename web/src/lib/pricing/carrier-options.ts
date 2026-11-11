@@ -15,12 +15,14 @@ export function newCarrierId(prefix: string): string {
 }
 
 /** The two client-copy settings, only when they are set (keeps old quotes and Firestore documents free of empty keys). */
-function clientCopyFields(p: { hideName?: boolean; agentRate?: boolean; agentName?: string }) {
+function clientCopyFields(p: { hideName?: boolean; agentRate?: boolean; agentName?: string; fromEmail?: boolean; exclude?: boolean }) {
   const agentName = (p.agentName ?? "").trim();
   return {
     ...(p.hideName ? { hideName: true } : {}),
     ...(p.agentRate ? { agentRate: true } : {}),
     ...(p.agentRate && agentName ? { agentName } : {}),
+    ...(p.fromEmail ? { fromEmail: true } : {}),
+    ...(p.exclude ? { exclude: true } : {}),
   };
 }
 
@@ -56,6 +58,10 @@ export interface AirlineOption {
   agentRate?: boolean;
   /** The agent's name. Internal only: never on the client's quote, PDF, email or share text. */
   agentName?: string;
+  /** The rates were read from an email (vendor, agent or GSA). Shown as a tag on the desk; never on the client copy. */
+  fromEmail?: boolean;
+  /** Left out of the quote the customer receives (the comparison shows the other options). The quoted option is never left out. */
+  exclude?: boolean;
 }
 
 export function createAirlineOption(
@@ -138,6 +144,10 @@ export interface LinerOption {
   agentRate?: boolean;
   /** The agent's name. Internal only: never on the client's quote, PDF, email or share text. */
   agentName?: string;
+  /** The rates were read from an email (vendor, agent or GSA). Shown as a tag on the desk; never on the client copy. */
+  fromEmail?: boolean;
+  /** Left out of the quote the customer receives (the comparison shows the other options). The quoted option is never left out. */
+  exclude?: boolean;
 }
 
 export function createLinerOption(

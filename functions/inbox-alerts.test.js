@@ -38,3 +38,31 @@ p = planAlerts([item("g", { receivedAt: ago(11), notifiedAt: 1 })], { remindAfte
 assert.deepStrictEqual([p[0].kind, p[0].recipients.join()], ["remind", "x"]);
 
 console.log("inbox-alerts tests passed");
+
+// While the Sea Nom seat is vacant, a sea enquiry on pricing@ also alerts NRS and Free Hand; an air one does not.
+{
+  const A = require("./inbox-alerts")._test;
+  const now = Date.parse("2026-11-11T06:00:00Z");
+  const sea = { id: "s", status: "new", tag: "new_enquiry", mailbox: "pricing", mode: "sea", receivedAt: new Date(now - 60_000).toISOString(), from: "O <o@x.ae>", subject: "Sea" };
+  const air = { ...sea, id: "a", mode: "air" };
+  const planSea = A.planAlerts([sea], undefined, now);
+  const planAir = A.planAlerts([air], undefined, now);
+  assert.ok(["jabeena", "cathrina", "shashank"].every((l) => planSea[0].recipients.includes(l)), "sea cover: Jabeena and Cathrina are told");
+  assert.ok(!planAir[0].recipients.includes("jabeena"), "air enquiries stay with the Air Nom team");
+  assert.deepEqual(A.planAlerts([sea], { seaCover: [] }, now)[0].recipients.sort(), ["shaheer", "shashank"], "cover can be switched off");
+  console.log("sea cover ok");
+}
+
+// The Manager's end-of-day line.
+{
+  const { daySummary } = require("./inbox-alerts")._test;
+  const now = Date.parse("2026-11-11T13:00:00Z");
+  const mk = (over) => ({ status: "new", tag: "new_enquiry", from: "Omar K <o@x.ae>", receivedAt: new Date(now - 3600_000).toISOString(), ...over });
+  const s1 = daySummary([mk({}), mk({ from: "Briseyda Cruz <b@x.mx>" }), mk({ workingBy: { username: "x" } }), mk({ repliedAt: now }), mk({ tag: "follow_up" }), mk({ receivedAt: new Date(now - 3 * 86400000).toISOString() })], 31, now);
+  assert.equal(s1.title, "Today: 31 enquiries in");
+  assert.equal(s1.waiting, 2);
+  assert.match(s1.body, /^2 still waiting: Omar K, Briseyda Cruz\.$/);
+  assert.match(daySummary([], 1, now).title, /1 enquiry in/);
+  assert.match(daySummary([], 0, now).body, /Nothing is waiting/);
+  console.log("day summary ok");
+}

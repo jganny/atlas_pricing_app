@@ -199,6 +199,7 @@ const FEATURE_LABELS = {
   vertexChat: "Ask Vertex",
   atlasCopilot: "App help assistant",
   atlasCopilotStream: "App help assistant",
+  readRateEmail: "Rates from emails",
   extractAirTariffFromCircular: "Air circular upload",
   extractSeaTariffFromCircular: "Sea circular upload",
   extractCourierTariffFromCircular: "Courier circular upload",
@@ -228,6 +229,7 @@ const AI_GROUPS = {
   replyDrafts: ["draftEnquiryReply"],
   instruction: ["parseQuoteInstruction"],
   vendorRate: ["extractVendorRateFromDocument"],
+  rateReplies: ["readRateEmail"],
   agencyList: ["weeklyAgencyListEmail", "triggerAgencyListNow"],
 };
 const AI_GROUP_LABELS = {
@@ -239,6 +241,7 @@ const AI_GROUP_LABELS = {
   replyDrafts: "Enquiry reply drafts",
   instruction: "Quote by instruction",
   vendorRate: "Vendor rate from a document",
+  rateReplies: "Vendor and agent rates from emails",
   agencyList: "Agency list check",
 };
 const groupOf = (feature) => Object.keys(AI_GROUPS).find((g) => AI_GROUPS[g].includes(feature)) || null;

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CornerDownRight, Link2, Link2Off, Loader2, Mail, Send, X } from "lucide-react";
 import { toast } from "@/components/Toast";
 import { fetchInboxEml } from "@/lib/firebase/inbox";
 import { fetchThread, linkToEnquiry, unlinkFromThread } from "@/lib/firebase/threads";
 import { parseEmailFile, type ParsedEmail } from "@/lib/hub/email-file";
-import { EMPTY_THREAD, linkLabel, linkedCount, memberTitle, vendorSummary, whenText, type ThreadMember } from "@/lib/mail/thread-view";
+import { RATE_EMAILS_KEY, type PendingRateEmail } from "@/lib/rates/rate-email";
+import { EMPTY_THREAD, isOverdueVendor, linkLabel, linkedCount, memberTitle, vendorSummary, waitingText, whenText, type ThreadMember } from "@/lib/mail/thread-view";
 import type { InboxEnquiry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +73,11 @@ export function EnquiryThread({
 }) {
   const qc = useQueryClient();
   const [viewing, setViewing] = useState<ThreadMember | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(t);
+  }, []);
   const [busy, setBusy] = useState<string | null>(null);
   const q = useQuery({
     queryKey: ["thread", item.id, item.threadId ?? ""],
@@ -95,6 +101,28 @@ export function EnquiryThread({
       await refresh();
     } catch (e) {
       toast(e instanceof Error ? e.message : "Could not unlink. Try again.", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+  /** Keeps this reply for the desk: the Carriers step of the Air or Sea desk opens with it ready to read into rates. Held in this tab only. */
+  async function sendToDesk(m: ThreadMember) {
+    setBusy(m.id);
+    try {
+      const bytes = await fetchInboxEml(m.id, "card");
+      const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+      const mail = await parseEmailFile("mail.eml", ab);
+      let list: PendingRateEmail[] = [];
+      try {
+        list = JSON.parse(window.sessionStorage.getItem(RATE_EMAILS_KEY) || "[]") as PendingRateEmail[];
+      } catch {
+        list = [];
+      }
+      if (!list.some((x) => x.id === m.id)) list.push({ id: m.id, fromName: mail.fromName, fromEmail: mail.fromEmail, subject: mail.subject, text: mail.bodyText });
+      window.sessionStorage.setItem(RATE_EMAILS_KEY, JSON.stringify(list));
+      toast(`Kept for the desk (${list.length}). Open the ${item.mode === "sea" ? "Sea" : "Air"} desk, step 2 Carriers: it is ready to read into rates.`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "The email could not be opened. Try again.", "error");
     } finally {
       setBusy(null);
     }
@@ -146,8 +174,8 @@ export function EnquiryThread({
       {thread.vendors.length ? (
         <div className="flex flex-wrap gap-1.5 border-b border-[var(--color-border)] px-4 py-2" data-testid="thread-vendors">
           {thread.vendors.map((v) => (
-            <span key={v.email} className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold", v.replied ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")} title={v.email}>
-              {v.name} · {v.replied ? "replied" : "waiting"}
+            <span key={v.email} className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold", v.replied ? "bg-emerald-50 text-emerald-800" : isOverdueVendor(v, now) ? "bg-red-50 text-red-800" : "bg-amber-50 text-amber-800")} title={v.replied ? v.email : `${v.email}${isOverdueVendor(v, now) ? ". A day without an answer: time to call." : ""}`}>
+              {v.name} · {v.replied ? "replied" : waitingText(v.askedAt, now)}
             </span>
           ))}
         </div>
@@ -208,6 +236,11 @@ export function EnquiryThread({
                   {!you ? (
                     <button type="button" className="text-xs font-semibold text-sky-700 hover:underline" onClick={() => (inList ? onOpenCard(m.id) : setViewing(m))}>
                       {inList ? "Show in the list" : "Open"}
+                    </button>
+                  ) : null}
+                  {m.role === "reply" ? (
+                    <button type="button" className="text-xs font-semibold text-sky-700 hover:underline disabled:opacity-50" disabled={busy === m.id} onClick={() => void sendToDesk(m)} data-testid="thread-use-rates">
+                      Use these rates in the desk
                     </button>
                   ) : null}
                   {m.role !== "enquiry" && m.check && thread.rootId ? (

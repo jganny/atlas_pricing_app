@@ -42,6 +42,9 @@ export function ClientCopyOptions({
   agentRate,
   agentName,
   onAgent,
+  exclude,
+  onExclude,
+  quoted,
 }: {
   id: string;
   /** "airline", "liner" or "coloader" */
@@ -54,6 +57,11 @@ export function ClientCopyOptions({
   agentRate: boolean;
   agentName: string;
   onAgent: (agentRate: boolean, agentName: string) => void;
+  /** Left out of the quote the customer receives. */
+  exclude?: boolean;
+  onExclude?: (exclude: boolean) => void;
+  /** This is the quoted offer: it is always sent, so it cannot be left out. */
+  quoted?: boolean;
 }) {
   const label = `${carrierWord.charAt(0).toUpperCase()}${carrierWord.slice(1)} option ${position}`;
   const recent = showAgent && agentRate ? recentAgents() : [];
@@ -80,6 +88,25 @@ export function ClientCopyOptions({
           </span>
         </span>
       </label>
+
+      {onExclude ? (
+        <label className="grid cursor-pointer grid-cols-[20px_1fr] items-start gap-x-2.5">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+            checked={!exclude}
+            disabled={quoted}
+            onChange={(e) => onExclude(!e.target.checked)}
+            data-testid={`send-option-${id}`}
+          />
+          <span>
+            <span className="block text-sm font-semibold">Send this option to the customer</span>
+            <span className="block text-xs text-[var(--color-text-muted)]">
+              {quoted ? "This is the quoted offer, so it is always sent." : exclude ? "Left out: the customer will not see this option. You still see it here." : "Untick to leave this option out of the comparison the customer receives."}
+            </span>
+          </span>
+        </label>
+      ) : null}
 
       {showAgent ? (
         <>

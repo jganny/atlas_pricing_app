@@ -24,6 +24,9 @@ export interface ThreadVendor {
   email: string;
   name: string;
   replied: boolean;
+  /** When the desk asked them, and when they answered (ms; 0 = not yet). */
+  askedAt?: number;
+  repliedAt?: number;
 }
 
 export interface ThreadView {
@@ -67,3 +70,16 @@ export function linkLabel(by: string): string {
   if (by === "manual") return "Linked by hand";
   return "Linked automatically";
 }
+
+/** "waiting 5 h", "waiting 2 days": how long a vendor has had the request without answering. */
+export function waitingText(askedAt: number | undefined, now: number): string {
+  if (!askedAt || askedAt > now) return "waiting";
+  const hours = Math.floor((now - askedAt) / 3_600_000);
+  if (hours < 1) return "waiting, asked just now";
+  if (hours < 24) return `waiting ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `waiting ${days} day${days === 1 ? "" : "s"}`;
+}
+
+/** A vendor who has not answered in a day is worth a call. */
+export const isOverdueVendor = (v: ThreadVendor, now: number): boolean => !v.replied && !!v.askedAt && now - v.askedAt >= 24 * 3_600_000;

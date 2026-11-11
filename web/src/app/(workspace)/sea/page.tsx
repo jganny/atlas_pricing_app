@@ -40,6 +40,7 @@ import { deleteDraft } from "@/lib/firebase/drafts";
 import { buildSeaDraftQuote } from "@/lib/quotes/drafts";
 import { CarrierSuggestions } from "@/components/CarrierSuggestions";
 import { TariffCurrencyNotice } from "@/components/desks/TariffCurrencyNotice";
+import { RateEmailPanel } from "@/components/desks/RateEmailPanel";
 import { currencyClashes, sameCurrency } from "@/lib/pricing/tariff-currency";
 import { ExwLocalCharges } from "@/components/desks/ExwLocalCharges";
 import { placeCode } from "@/lib/quotes/carrier-suggestions";
@@ -653,6 +654,21 @@ function SeaDeskInner() {
       router.replace("/sea/");
     }
     toast("Sea desk cleared", "success");
+  }
+
+  /** Rates read from vendors' or agents' emails: each becomes a liner option (the empty starter card is replaced), the first one added is quoted. */
+  function addEmailRates(opts: LinerOption[], cur: string) {
+    setLiners((prev) => {
+      const isBlank = (l: LinerOption) => !l.name.trim() && l.containers.every((c) => (c.sellRate || 0) === 0 && (c.buyRate || 0) === 0) && !l.lclSell && !l.lclBuy;
+      const laneId = opts[0]?.laneId ?? "";
+      const keep = prev.filter((l) => !(isBlank(l) && (l.laneId ?? "") === laneId));
+      const hasQuoted = keep.some((l) => l.selected && (l.laneId ?? "") === laneId);
+      return [...keep, ...opts.map((o, i) => ({ ...o, selected: !hasQuoted && i === 0 }))];
+    });
+    if (cur && cur !== currency) {
+      setCurrency(cur);
+      toast(`The desk now quotes in ${cur}, to match the rates added.`, "success");
+    }
   }
 
   function updateLiner(id: string, patch: Partial<LinerOption>) {
@@ -1648,6 +1664,14 @@ function SeaDeskInner() {
 
           {step === "carrier" ? (
             <div className="space-y-4">
+              <RateEmailPanel
+                mode="sea"
+                module={module}
+                origin={origin}
+                destination={destination}
+                laneId={lanes.length > 1 ? activeLane?.id : undefined}
+                onAdd={(opts, cur) => addEmailRates(opts as LinerOption[], cur)}
+              />
               {!isRelaxedImportQuote(module, incoterm) ? (
                 <>
                   <TariffCurrencyNotice clashes={clashes} quoteCurrency={currency} onSwitch={setCurrency} />
@@ -1819,6 +1843,9 @@ function SeaDeskInner() {
                           agentRate={Boolean(opt.agentRate)}
                           agentName={opt.agentName ?? ""}
                           onAgent={(agentRate, agentName) => updateLiner(opt.id, { agentRate, agentName })}
+                          exclude={Boolean(opt.exclude)}
+                          onExclude={(exclude) => updateLiner(opt.id, { exclude })}
+                          quoted={opt.selected}
                         />
                       </div>
                       <div>

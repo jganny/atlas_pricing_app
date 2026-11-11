@@ -511,7 +511,7 @@ async function indexSentMail(db, mailbox, parsed, uid) {
 
 /** Cards that arrived before conversations existed have no marks: work them out from the subject and short preview. Run before the Sent folder is read. */
 async function backfillMarks(db, mailbox) {
-  const snap = await db.collection("inbox_enquiries").where("timestamp", ">", Date.now() - 4 * TH.DAY).limit(400).get();
+  const snap = await db.collection("inbox_enquiries").where("timestamp", ">", Date.now() - 15 * TH.DAY).limit(800).get();
   for (const d of snap.docs) {
     const c = d.data();
     if (c.mailbox !== mailbox.key || c.subjectKey !== undefined) continue;
@@ -522,7 +522,7 @@ async function backfillMarks(db, mailbox) {
 
 /** Replies that arrived before the mail they answer was indexed (the Sent folder is read after the Inbox): look again for the last two days. */
 async function relinkRecent(db, mailbox) {
-  const snap = await db.collection("inbox_enquiries").where("timestamp", ">", Date.now() - 4 * TH.DAY).limit(400).get();
+  const snap = await db.collection("inbox_enquiries").where("timestamp", ">", Date.now() - 15 * TH.DAY).limit(800).get();
   let linked = 0;
   for (const d of snap.docs) {
     const c = d.data();

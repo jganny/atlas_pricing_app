@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Bell, Clock, FileClock, Inbox, PlaneTakeoff, Ship, Sparkles } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { PerformanceReportPanel } from "@/components/PerformanceReportPanel";
+import { NeedsAttentionCard, TeamBoard } from "@/components/TeamBoard";
+import { useInbox } from "@/hooks/use-atlas-data";
 import { Badge, Button, Card } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { useEnquiries } from "@/hooks/use-atlas-data";
@@ -40,6 +42,8 @@ export default function DashboardPage() {
   const drafts = useMyDrafts();
   const focus = deskFocusLabel(user?.username);
   const admin = isAdminUser(user?.username, user?.role);
+  const { data: inboxRows = [] } = useInbox();
+  const [boardOpen, setBoardOpen] = useState(false);
   const username = (user?.username || "").toLowerCase();
 
   const [amendments, setAmendments] = useState<AmendmentRequest[]>([]);
@@ -152,6 +156,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
+      {admin ? <NeedsAttentionCard rows={inboxRows} onOpenBoard={() => setBoardOpen(true)} /> : null}
+      {boardOpen ? <TeamBoard rows={inboxRows} onClose={() => setBoardOpen(false)} /> : null}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
