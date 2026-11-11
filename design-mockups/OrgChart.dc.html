@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Org chart</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:#151c24;background:#f2f5f8;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",monospace}
+.btn{border:1px solid #d5dde5;background:#fff;border-radius:9px;padding:8px 13px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.btn.dark{border:0;background:#2b313b;color:#fff;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 10px}
+.lbl{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#6b7785;font-weight:600}
+</style>
+</helmet>
+<div style="min-height:1240px;background:#f2f5f8;padding:26px 28px;box-sizing:border-box">
+  <div style="display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;margin-bottom:16px">
+    <h1 style="margin:0;font-size:20px;font-weight:600">How the pricing and sales work is organised, as I understand it</h1>
+    <span style="font-size:13px;color:#6b7785">Please correct anything that is wrong. Alerts, reminders and the work queue will be built on this.</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start">
+  <div style="flex:999 1 820px;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:0">
+
+    <!-- top -->
+    <div style="display:flex;justify-content:center"><div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;width:320px;border-color:#2b313b;border-width:2px;text-align:center"><div class="lbl">Owner and Admin</div><b style="font-weight:600;font-size:15px">Ganny</b><div style="font-size:12.5px;color:#4b5866;margin-top:2px">Often travelling. Sees the whole company from the Home page and the phone. Admin screens are for settings only.</div></div></div>
+    <div style="display:flex;justify-content:center"><div style="width:2px;height:22px;background:#9aa8b5"></div></div>
+    <div style="display:flex;justify-content:center"><div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;width:320px;text-align:center"><div class="lbl">Manager</div><b style="font-weight:600;font-size:15px">Manager login</b><div style="font-size:12.5px;color:#4b5866;margin-top:2px">Told when an enquiry is still not opened after 60 minutes. Approvals and reports.</div></div></div>
+    <div style="display:flex;justify-content:center"><div style="width:2px;height:22px;background:#9aa8b5"></div></div>
+    <div style="height:2px;background:#9aa8b5;margin:0 12.5%"></div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:0">
+      <!-- pricing@ -->
+      <div style="flex:1 1 380px;min-width:0;border:2px solid #9ec0d9;border-radius:14px;background:#f1f7fb;padding:14px 16px;margin-top:20px;position:relative">
+        <div style="position:absolute;top:-12px;left:16px;background:#2f6a99;color:#fff;border-radius:99px;padding:2px 12px;font-size:12px;font-weight:600">Mailbox pricing@ (shared, no assignment)</div>
+        <div style="font-size:12.5px;color:#2a4558;margin:4px 0 10px">Enquiries from overseas agents and customers by Air or Sea. Both people see the same queue and take whatever is next.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;flex:1 1 150px"><div class="lbl">Seat: Air Nom</div><b style="font-weight:600">Shashank</b><div style="font-size:12px;color:#4b5866;margin-top:2px">Air nomination. Quotes on the Air desk.</div></div>
+          <div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;flex:1 1 150px"><div class="lbl">Seat: Sea Nom</div><b style="font-weight:600">Shaheer</b><div style="font-size:12px;color:#4b5866;margin-top:2px">Sea nomination. Quotes on the Sea desk.</div></div>
+        </div>
+      </div>
+      <!-- pricingsales@ -->
+      <div style="flex:1 1 380px;min-width:0;border:2px solid #d9c49e;border-radius:14px;background:#fbf7ee;padding:14px 16px;margin-top:20px;position:relative">
+        <div style="position:absolute;top:-12px;left:16px;background:#8a6a1f;color:#fff;border-radius:99px;padding:2px 12px;font-size:12px;font-weight:600">Mailbox pricingsales@ (shared, no assignment)</div>
+        <div style="font-size:12.5px;color:#5a4614;margin:4px 0 10px">Enquiries for the sales team's customers and nominated or routing business. Both people see the same queue.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;flex:1 1 150px"><div class="lbl">Seat: Free Hand</div><b style="font-weight:600">Cathrina</b><div style="font-size:12px;color:#4b5866;margin-top:2px">Free-hand air and sea for the sales team's customers.</div></div>
+          <div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;flex:1 1 150px"><div class="lbl">Seat: NRS</div><b style="font-weight:600">Jabeena</b><div style="font-size:12px;color:#4b5866;margin-top:2px">Nomination and routing orders.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- sales -->
+    <div style="margin-top:22px;border:2px dashed #b8c3ce;border-radius:14px;padding:14px 16px;background:#fff">
+      <div class="lbl" style="margin-bottom:6px">Sales team: each owns their own customers, each has their own login</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="chip" style="background:#eef2f6;color:#3b4552">Sunil Kumar</span><span class="chip" style="background:#eef2f6;color:#3b4552">M Ramesh</span><span class="chip" style="background:#eef2f6;color:#3b4552">Goutham</span><span class="chip" style="background:#eef2f6;color:#3b4552">Spoorthi N S</span><span class="chip" style="background:#eef2f6;color:#3b4552">Linson Ittyera</span><span class="chip" style="background:#eef2f6;color:#3b4552">Ganny (also owns customers)</span></div>
+      <div style="font-size:12.5px;color:#4b5866;margin-top:8px">They bring the customers. Their enquiries are quoted by the Free Hand desk (and NRS where it is nominated or routing business). They should see the status of their own customers' quotes without asking.</div>
+    </div>
+
+    <!-- outside -->
+    <div style="margin-top:18px;display:flex;flex-wrap:wrap;gap:14px">
+      <div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;flex:1 1 260px;background:#f7f9fb"><div class="lbl">Outside: who sends us enquiries</div><div style="font-size:13px;line-height:1.5;margin-top:4px">Overseas agents (for example Airmar, Mexico), importers, exporters, traders. Their email arrives in pricing@ or pricingsales@.</div></div>
+      <div style="background:#fff;border:1px solid #d5dde5;border-radius:11px;padding:12px 14px;box-sizing:border-box;flex:1 1 260px;background:#f7f9fb"><div class="lbl">Outside: who gives us rates</div><div style="font-size:13px;line-height:1.5;margin-top:4px"><b style="font-weight:600">GSAs and CSAs</b> (sales agents holding several airlines, for example Air Logistics Group for All Nippon), <b style="font-weight:600">airlines selling direct</b> (Emirates, Qatar), liners, NVOCCs, coloaders, transporters, warehousers.</div></div>
+    </div>
+  </div>
+
+  <!-- right: the work flow and alerts -->
+  <aside style="flex:1 1 340px;max-width:420px;display:flex;flex-direction:column;gap:14px">
+    <div style="background:#fff;border:1px solid #e2e8ee;border-radius:14px;padding:16px 18px;font-size:13px;line-height:1.55">
+      <h2 style="margin:0 0 8px;font-size:15px;font-weight:600">The daily flow, step by step</h2>
+      <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px">
+        <li>An enquiry arrives in a shared mailbox.</li>
+        <li>The two people on that mailbox are told. Whoever opens it first is shown as quoting.</li>
+        <li>The desk forwards it to vendors from Outlook (GSAs, airlines, liners).</li>
+        <li>Vendors reply into the same mailbox.</li>
+        <li>The desk builds the quote from the rates received.</li>
+        <li>The quote goes back to the agent or customer. The sent copy shows the enquiry is answered.</li>
+        <li>Later the quote is marked won or lost in the Enquiry DB.</li>
+      </ol>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8ee;border-radius:14px;padding:16px 18px;font-size:13px;line-height:1.55">
+      <h2 style="margin:0 0 8px;font-size:15px;font-weight:600">Who is told at each step</h2>
+      <div><b style="font-weight:600">0 min:</b> both people on that mailbox.</div>
+      <div><b style="font-weight:600">20 min, not opened:</b> both again, louder.</div>
+      <div><b style="font-weight:600">60 min, not opened:</b> the Manager, and the Owner's phone.</div>
+      <div><b style="font-weight:600">Problem on a shipment:</b> the mailbox team and anyone copied.</div>
+    </div>
+    <div style="background:#fff8e8;border:1px solid #f0d49a;border-radius:14px;padding:16px 18px;font-size:13px;line-height:1.55">
+      <h2 style="margin:0 0 8px;font-size:15px;font-weight:600;color:#6a3d06">Please check these</h2>
+      <div>1. The app's built-in default still lists Cathrina as NRS and Kavya as Free Hand. You told me Jabeena is NRS and Cathrina is Free Hand. Admin can reassign seats, so I drew it your way. Is that right?</div>
+      <div style="margin-top:6px">2. Does the Manager login belong to a real person who is at work every day?</div>
+      <div style="margin-top:6px">3. Do the sales team members need to see their customers' enquiries and quote status, or only the desks?</div>
+      <div style="margin-top:6px">4. Is there anyone else (a team lead, a second manager, an accounts person) who should be told about late enquiries?</div>
+    </div>
+  </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

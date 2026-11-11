@@ -89,6 +89,22 @@
       "h": 1180,
       "title": "10. Alerts and reminders for everyone, not only Admin",
       "expand": "fill"
+    },
+    "OrgChart.dc.html": {
+      "x": 15200,
+      "y": 0,
+      "w": 1440,
+      "h": 1240,
+      "title": "11. Org chart: who does what (please correct)",
+      "expand": "fill"
+    },
+    "WorkBar.dc.html": {
+      "x": 16720,
+      "y": 0,
+      "w": 1440,
+      "h": 1260,
+      "title": "12. Alerts people cannot ignore: work bar and team board",
+      "expand": "fill"
     }
   },
   "order": [
@@ -101,15 +117,17 @@
     "Thread.dc.html",
     "AirDeskEmail.dc.html",
     "SearchInbox.dc.html",
-    "Alerts.dc.html"
+    "Alerts.dc.html",
+    "OrgChart.dc.html",
+    "WorkBar.dc.html"
   ],
   "notes": {
     "t1": {
       "x": 0,
       "y": -260,
-      "text": "Atlas Pricing: screens 1 to 6 (built) and 7 to 10 (proposed: threads, rates by email, search, alerts for everyone)",
+      "text": "Atlas Pricing: screens 1 to 6 (built) and 7 to 12 (proposed: threads, rates by email, search, alerts, org chart, work bar)",
       "kind": "title1",
-      "maxW": 15200
+      "maxW": 17000
     },
     "n1": {
       "x": 0,
