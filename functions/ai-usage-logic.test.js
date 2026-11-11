@@ -185,4 +185,25 @@ assert.equal(L.isRequestRefusal(429, "slow down"), false);
 assert.equal(L.isRequestRefusal(529, "busy"), false);
 assert.equal(L.isRequestRefusal(200, ""), false);
 
+
+// The switches: missing means on; a feature in a switched-off group or the master switch refuses, others go on.
+{
+  assert.deepEqual(L.switchVerdict(null, "extractShipmentFromDocuments"), { allowed: true });
+  assert.deepEqual(L.switchVerdict({}, "vertexChat"), { allowed: true });
+  assert.equal(L.switchVerdict({ master: false }, "vertexChat").allowed, false);
+  assert.equal(L.switchVerdict({ master: false }, "vertexChat").all, true);
+  const off = L.switchVerdict({ groups: { circulars: false } }, "readCarrierCircular");
+  assert.deepEqual([off.allowed, off.group, off.all], [false, "circulars", false]);
+  assert.equal(L.switchVerdict({ groups: { circulars: false } }, "autoReadReplacedCircular").allowed, false, "every circular function is in the one group");
+  assert.equal(L.switchVerdict({ groups: { circulars: false } }, "vertexChat").allowed, true, "other groups are unaffected");
+  assert.equal(L.switchVerdict({ master: false }, "someUnknownFunction").allowed, false, "the master switch stops everything");
+  assert.equal(L.switchVerdict({ groups: { circulars: false } }, "someUnknownFunction").allowed, true, "a function in no group is never switched off by a group");
+  // Every function that has a label belongs to a group, so nothing that uses AI can be missed by the switches.
+  for (const f of Object.keys(L.FEATURE_LABELS)) assert.ok(L.groupOf(f), `${f} is in no switch group`);
+  assert.match(L.budgetMessage(off), /switched off by your admin/);
+  assert.match(L.budgetMessage(L.switchVerdict({ master: false }, "vertexChat")), /AI is switched off/);
+  assert.deepEqual(L.parseSwitchesInput({ master: false, groups: { quoteHub: false, nonsense: false, askVertex: "no" } }), { master: false, groups: { quoteHub: false } });
+  assert.deepEqual(L.parseSwitchesInput(null), { master: true, groups: {} });
+}
+
 console.log("ai-usage-logic tests passed");

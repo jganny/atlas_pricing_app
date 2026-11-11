@@ -7,6 +7,7 @@ import type { SavedQuote } from "@/lib/types";
 import { toast } from "@/components/Toast";
 import { GuideNote } from "@/components/GuideNote";
 import { buildClientQuoteDocument } from "@/lib/quotes/quote-document";
+import { DOC_LANGS, isDocLang, languageForEmail, quoteDocLang, type DocLang } from "@/lib/quotes/quote-language";
 import { agentsUsed, clientCopyPlan } from "@/lib/quotes/client-copy";
 import {
   downloadBlob,
@@ -151,9 +152,12 @@ export function QuotePreviewModal({
     () => relevantHolidaysForUserBranch(String(d.creatorBranch ?? ""), customsHolidays),
     [d.creatorBranch, customsHolidays],
   );
+  // The language of the document the customer gets: the desk's choice, else what the customer's address suggests (English where unclear).
+  const [docLang, setDocLang] = useState<DocLang>(() => quoteDocLang(quote));
+  const suggestedLang = languageForEmail(quote.inboxRef?.fromEmail);
   const clientDoc = useMemo(
-    () => buildClientQuoteDocument(quote, customsHolidays),
-    [quote, customsHolidays],
+    () => buildClientQuoteDocument(quote, customsHolidays, { language: docLang }),
+    [quote, customsHolidays, docLang],
   );
   const [shareBusy, setShareBusy] = useState<string | null>(null);
   const teamChat = useTeamChatOptional();
@@ -317,7 +321,23 @@ export function QuotePreviewModal({
         </div>
 
         <div className="p-6 print:p-8">
-          <div className="mb-4 flex flex-wrap gap-2 print:hidden" data-testid="quote-share-bar">
+          <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden" data-testid="quote-share-bar">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-600" title="The customer's document shows English with this language beside it. Terms and conditions stay in English.">
+              Document language
+              <select
+                id="quote-doc-language"
+                data-testid="quote-language"
+                value={docLang}
+                onChange={(e) => (isDocLang(e.target.value) ? setDocLang(e.target.value) : undefined)}
+                className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs font-medium"
+              >
+                {DOC_LANGS.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}{l.id !== "en" ? ` (${l.native})` : ""}{l.id === suggestedLang && l.id !== "en" ? " — suggested" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
             <Button type="button" variant="secondary" className="text-xs" data-testid="quote-download-btn" onClick={() => void handleDownload()} disabled={Boolean(shareBusy)}>
               <Download className="mr-1 h-4 w-4" />
               Download quote

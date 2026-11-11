@@ -16,6 +16,7 @@ import {
   type OptionBreakdown,
 } from "./option-breakdown";
 import { compareHeading } from "./vendor-preview";
+import { bi, biPlain, translate, type DocLang } from "./quote-language";
 import { holidayAdvisoryText, relevantHolidaysForUserBranch, type CustomsHoliday } from "./customs-holidays";
 
 function esc(value: unknown): string {
@@ -27,12 +28,16 @@ function esc(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-function optionFlags(option: OptionBreakdown): string {
+function optionFlagWords(option: OptionBreakdown): string[] {
   const bits: string[] = [];
   if (option.selected) bits.push("quoted offer");
   if (option.cheapest) bits.push("lowest");
   if (option.highest) bits.push("highest");
-  return bits.join(" · ");
+  return bits;
+}
+
+function optionFlags(option: OptionBreakdown): string {
+  return optionFlagWords(option).join(" · ");
 }
 
 /**
@@ -107,10 +112,19 @@ export interface ClientQuoteDocument {
   optionCount: number;
 }
 
+export interface ClientDocumentOptions {
+  /** The customer's language, shown beside English. English only when left out. */
+  language?: DocLang;
+}
+
 export function buildClientQuoteDocument(
   staffQuote: SavedQuote,
   holidays: CustomsHoliday[] = [],
+  opts: ClientDocumentOptions = {},
 ): ClientQuoteDocument {
+  const lang: DocLang = opts.language ?? "en";
+  /** A fixed phrase in English, with the customer's language beside it. Anything not in the word list stays English. */
+  const b = (english: string) => bi(lang, english, esc);
   // Everything below is what the client receives, so carrier names that are switched off and agent names are removed first.
   const quote = quoteForClient(staffQuote);
   const ref = getQuoteRefId(quote);
@@ -132,9 +146,13 @@ export function buildClientQuoteDocument(
   const shareSubject = `Freight quotation ${ref} — ${quote.customer || ""}`.trim();
 
   const list = optionListPlain(options, heading, cur);
+  const closingMany = "The attached PDF matches this quotation. It lists every option from lowest to highest price, with the full charge breakup for each one.";
+  const closingOne = "The attached PDF matches this quotation, including the charge breakup.";
+  const closingEn = options.length > 1 ? closingMany : closingOne;
+  const closingLocal = translate(lang, closingEn);
   const emailCover = [
     "ATLAS LOGISTICS",
-    "Official Freight Quotation",
+    biPlain(lang, "Official Freight Quotation"),
     "",
     `Ref: ${ref}`,
     `Customer: ${quote.customer || "—"}`,
@@ -145,9 +163,8 @@ export function buildClientQuoteDocument(
     "",
     ...(holidayNotices.length ? [...holidayNotices, ""] : []),
     ...(list.length ? [...list, ""] : []),
-    options.length > 1
-      ? "The attached PDF matches this quotation. It lists every option from lowest to highest price, with the full charge breakup for each one."
-      : "The attached PDF matches this quotation, including the charge breakup.",
+    closingEn,
+    ...(closingLocal ? ["", closingLocal] : []),
   ].join("\n");
 
   const shareText = [
@@ -170,10 +187,10 @@ export function buildClientQuoteDocument(
 
   const compareRows = options
     .map((option) => {
-      const flags = [optionFlags(option), multiLanePack ? option.laneLabel : ""].filter(Boolean).join(" · ");
+      const flags = [...optionFlagWords(option).map(b), multiLanePack && option.laneLabel ? esc(option.laneLabel) : ""].filter(Boolean).join(" · ");
       return `<tr>
         <td><strong>${esc(option.name)}</strong></td>
-        <td>${esc(flags || option.kindLabel)}</td>
+        <td>${flags || esc(option.kindLabel)}</td>
         <td class="num">${esc(formatCurrency(option.total, cur))}</td>
       </tr>`;
     })
@@ -184,7 +201,7 @@ export function buildClientQuoteDocument(
     const dl = lines
       .map((line, i) => {
         const last = i === lines.length - 1;
-        return `<div class="row${last ? " total" : ""}"><span>${esc(line.label)}</span><strong>${esc(line.value)}</strong></div>`;
+        return `<div class="row${last ? " total" : ""}"><span>${b(line.label)}</span><strong>${esc(line.value)}</strong></div>`;
       })
       .join("");
     const routing = formatRoutingPreview(option.routing || "") || "—";
@@ -192,12 +209,12 @@ export function buildClientQuoteDocument(
     const role = option.selected ? "quoted offer" : "alternative";
     const laneTag = multiLanePack && option.laneLabel ? ` <span class="lane-tag">${esc(option.laneLabel)}</span>` : "";
     return `<section class="panel${option.selected ? " quoted" : ""}">
-        <p class="panel-kicker">${index + 1} of ${laneCount} · ${esc(role)}${laneTag}</p>
-        <h3>${esc(option.name)}${option.cheapest ? " ★ lowest" : ""}${option.highest ? " ▲ highest" : ""}</h3>
+        <p class="panel-kicker">${index + 1} of ${laneCount} · ${b(role)}${laneTag}</p>
+        <h3>${esc(option.name)}${option.cheapest ? ` ★ ${b("lowest")}` : ""}${option.highest ? ` ▲ ${b("highest")}` : ""}</h3>
         ${dl}
-        <div class="row muted"><span>Routing</span><span>${esc(routing)}</span></div>
-        <div class="row muted"><span>Transit time</span><span>${esc(tt)}</span></div>
-        <div class="row muted"><span>Validity</span><span>${esc(formatValidity(option.validity) || "—")}</span></div>
+        <div class="row muted"><span>${b("Routing")}</span><span>${esc(routing)}</span></div>
+        <div class="row muted"><span>${b("Transit time")}</span><span>${esc(tt)}</span></div>
+        <div class="row muted"><span>${b("Validity")}</span><span>${esc(formatValidity(option.validity) || "—")}</span></div>
       </section>`;
   }
 
@@ -210,13 +227,16 @@ export function buildClientQuoteDocument(
         .join("")
     : laneGroups[0]?.options.map((option, i) => renderPanel(option, i, options.length)).join("") || "";
 
+  const HINT_EN = "Options are listed from the lowest price to the highest. Lowest: the cheapest option. Highest: the most expensive option. Quoted offer: the option we recommend.";
   const packHint =
     options.length > 1
-      ? `<p class="hint">Options are listed from the lowest price to the highest${multiLanePack ? " within each lane" : ""}. <strong>★ Lowest</strong> — the cheapest option. <strong>▲ Highest</strong> — the most expensive option. <strong>Quoted offer</strong> — the option we're recommending to you.</p>`
+      ? `<p class="hint">Options are listed from the lowest price to the highest${multiLanePack ? " within each lane" : ""}. <strong>★ Lowest</strong> — the cheapest option. <strong>▲ Highest</strong> — the most expensive option. <strong>Quoted offer</strong> — the option we're recommending to you.</p>${
+          translate(lang, HINT_EN) ? `<p class="hint" lang="${lang}"${lang === "ar" ? ' dir="rtl"' : ""}>${esc(translate(lang, HINT_EN) ?? "")}</p>` : ""
+        }`
       : "";
 
   const identityRowsHtml = identityRows(quote)
-    .map(([label, value]) => `<tr><td class="id-label">${esc(label)}</td><td>${esc(value)}</td></tr>`)
+    .map(([label, value]) => `<tr><td class="id-label">${b(label)}</td><td>${label === "Status" ? b(value) : esc(value)}</td></tr>`)
     .join("");
 
   const terms = String(quote.details?.termsAndConditions ?? "").trim();
@@ -272,8 +292,8 @@ export function buildClientQuoteDocument(
       <img src="/app/atlas-logo.png" width="56" height="56" alt="Atlas Logistics" />
       <div>
         <div class="brand">Atlas Logistics</div>
-        <h1>Official Freight Quotation</h1>
-        <p class="meta">Ref #${esc(ref)} · ${esc(quote.date || "—")} · Prepared by ${esc(prepared)}</p>
+        <h1>${b("Official Freight Quotation")}</h1>
+        <p class="meta">Ref #${esc(ref)} · ${esc(quote.date || "—")} · ${b("Prepared by")} ${esc(prepared)}</p>
         <p class="meta">${esc(quote.customer || "—")} · ${esc(quote.route || "—")} · ${(quote.type || "").toUpperCase()}</p>
       </div>
     </div>
@@ -281,23 +301,23 @@ export function buildClientQuoteDocument(
   <table class="id-table"><tbody>${identityRowsHtml}</tbody></table>
   ${
     holidayNotices.length
-      ? `<div class="holiday-notice"><strong>Customs/branch holiday advisory</strong>${holidayNotices.map((n) => `<div>${esc(n)}</div>`).join("")}</div>`
+      ? `<div class="holiday-notice"><strong>${b("Customs/branch holiday advisory")}</strong>${holidayNotices.map((n) => `<div>${esc(n)}</div>`).join("")}</div>`
       : ""
   }
   ${packHint}
   ${
     options.length
       ? `<table>
-    <thead><tr><th>${esc(heading)}</th><th>Notes</th><th class="num">Sell total</th></tr></thead>
+    <thead><tr><th>${b(heading)}</th><th>${b("Notes")}</th><th class="num">${b("Sell total")}</th></tr></thead>
     <tbody>${compareRows}</tbody>
   </table>
   ${panels}`
-      : `<p>No carrier options on this quotation.</p>`
+      : `<p>${b("No carrier options on this quotation.")}</p>`
   }
   ${
     multiLanePack
       ? `<div class="total-box">
-    <div class="meta">Quoted offer total per lane (client may choose another option per lane above)</div>
+    <div class="meta">${b("Quoted offer total per lane (client may choose another option per lane above)")}</div>
     ${laneGroups
       .map((group) => {
         const laneQuoted = group.options.find((o) => o.selected) ?? group.options[0];
@@ -306,13 +326,13 @@ export function buildClientQuoteDocument(
       .join("")}
   </div>`
       : `<div class="total-box">
-    <div class="meta">${options.length > 1 ? "Quoted offer total (client may choose another option above)" : "Quoted total"}</div>
+    <div class="meta">${b(options.length > 1 ? "Quoted offer total (client may choose another option above)" : "Quoted total")}</div>
     <strong>${esc(formatCurrency(Number(quote.amount ?? quoted?.total ?? 0), cur))}</strong>
   </div>`
   }
   ${
     terms
-      ? `<h2>Terms &amp; conditions</h2><pre>${esc(terms)}</pre>`
+      ? `<h2>${b("Terms & conditions")}</h2>${lang === "en" ? "" : `<p class="meta">${b("(in English)")}</p>`}<pre>${esc(terms)}</pre>`
       : ""
   }
 </main>

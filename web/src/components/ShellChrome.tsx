@@ -14,6 +14,8 @@ import { Button, Input, Label } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { queryKeys } from "@/hooks/query-keys";
 import { cn } from "@/lib/utils";
+import { aiStatusText } from "@/lib/ai/ai-switches";
+import { useAiSwitches } from "@/lib/firebase/ai-switches";
 
 type FxPair = "USD" | "EUR" | "GBP";
 
@@ -59,6 +61,25 @@ export function OfflineBadge({ compact = false }: { compact?: boolean }) {
   ) : (
     <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
       <WifiOff className="h-3 w-3" /> Offline
+    </span>
+  );
+}
+
+/** Tells every user whether AI is on, and which features it is off for (the admin sets it). No AI credit is used. */
+export function AiStatusPill() {
+  const status = aiStatusText(useAiSwitches());
+  return (
+    <span
+      data-testid="ai-status-pill"
+      title={status.detail}
+      className={cn(
+        "inline-flex h-8 items-center rounded-full px-2.5 text-[10px] font-bold uppercase tracking-wide",
+        status.tone === "on" && "text-slate-600",
+        status.tone === "partial" && "text-amber-800",
+        status.tone === "off" && "text-red-700",
+      )}
+    >
+      {status.label}
     </span>
   );
 }

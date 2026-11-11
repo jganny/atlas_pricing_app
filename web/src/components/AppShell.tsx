@@ -49,7 +49,7 @@ import { isAdminUser } from "@/lib/quotes/team-roles";
 import { demoLabel } from "@/lib/demo-mode";
 import { MockBanner } from "./MockBanner";
 import { RouteGuard } from "./RouteGuard";
-import { FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
+import { AiStatusPill, FxConverter, GlobalRefreshButton, OfflineBadge } from "./ShellChrome";
 import { GlobalSearch } from "./GlobalSearch";
 import { WhatsNewLink } from "./WhatsNew";
 import { MODE_COLORS, type ModeKey } from "@/lib/ui/colors";
@@ -454,6 +454,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/70 bg-white/75 p-1 shadow-[0_8px_28px_rgba(15,35,58,0.06)] backdrop-blur-xl"
             >
               <OfflineBadge compact />
+              <AiStatusPill />
               <GlobalRefreshButton compact />
               <FxConverter compact />
               {showInbox ? (

@@ -50,7 +50,11 @@ assert.match(chatScreen, /const \[web, setWeb\] = useState\(false\)/);
 // Only the main administrator can read or change it, and chat-only logins are refused.
 assert.match(usage, /ganny@atlaspricing\.com|L\.ADMIN_EMAIL/);
 assert.match(usage, /chatOnly === true/);
-assert.equal((usage.match(/^\s+requireAdmin\(request\);/gm) ?? []).length, 3, "every admin function (summary, balance, budgets) checks the admin");
+assert.equal((usage.match(/^\s+requireAdmin\(request\);/gm) ?? []).length, 4, "every admin function (summary, balance, budgets, switches) checks the admin");
+// Anyone signed in may READ the switches (so screens can show them); only the admin may change them; the guard checks them before any AI call.
+assert.match(usage, /exports\.aiSwitchesGet[\s\S]*?unauthenticated/);
+assert.match(usage, /exports\.aiSwitchesSave[\s\S]*?requireAdmin\(request\)/);
+assert.match(usage, /switchVerdict\(/);
 
 // The counting never gets a rule that lets a browser read or write it: no client rules for these collections.
 const rules = fs.readFileSync(path.join(web, "..", "firestore.rules"), "utf8");

@@ -22,6 +22,8 @@ aiUsage.install();
 exports.aiUsageSummary = aiUsage.aiUsageSummary;
 exports.aiBillingSave = aiUsage.aiBillingSave;
 exports.aiBudgetsSave = aiUsage.aiBudgetsSave;
+exports.aiSwitchesGet = aiUsage.aiSwitchesGet;
+exports.aiSwitchesSave = aiUsage.aiSwitchesSave;
 
 // Bound only to the global-location lookup function below. It is never sent to
 // the browser or stored in quote data.

@@ -215,6 +215,54 @@ const FEATURE_LABELS = {
 };
 const featureLabel = (k) => FEATURE_LABELS[k] || String(k || "this feature");
 
+/**
+ * The places AI is used, as the admin and the users know them. Each group is one switch. A function name (the key AI usage is counted
+ * under) belongs to exactly one group; a function that is in no group is never switched off.
+ */
+const AI_GROUPS = {
+  quoteHub: ["extractShipmentFromDocuments"],
+  mailbox: ["pollPricingInboxes"],
+  circulars: ["readLibraryCircular", "readCarrierCircular", "autoReadCarrierCircular", "autoReadReplacedCircular", "extractAirTariffFromCircular", "extractSeaTariffFromCircular", "extractCourierTariffFromCircular"],
+  askVertex: ["vertexChat"],
+  help: ["atlasCopilot", "atlasCopilotStream"],
+  replyDrafts: ["draftEnquiryReply"],
+  instruction: ["parseQuoteInstruction"],
+  vendorRate: ["extractVendorRateFromDocument"],
+  agencyList: ["weeklyAgencyListEmail", "triggerAgencyListNow"],
+};
+const AI_GROUP_LABELS = {
+  quoteHub: "Quote Hub reading",
+  mailbox: "Mailbox sorting and confirmation reading",
+  circulars: "Circular reading",
+  askVertex: "Ask Vertex",
+  help: "App help assistant",
+  replyDrafts: "Enquiry reply drafts",
+  instruction: "Quote by instruction",
+  vendorRate: "Vendor rate from a document",
+  agencyList: "Agency list check",
+};
+const groupOf = (feature) => Object.keys(AI_GROUPS).find((g) => AI_GROUPS[g].includes(feature)) || null;
+
+/**
+ * The admin's switches: { master: boolean (default on), groups: { quoteHub: false, ... } }. Missing means on, so a fault or an empty document
+ * never switches anything off. Returns { allowed: true } or a refusal with the group that is off.
+ */
+function switchVerdict(switches, feature) {
+  const sw = switches || {};
+  if (sw.master === false) return { allowed: false, scope: "switch", all: true, feature, group: groupOf(feature) };
+  const g = groupOf(feature);
+  if (g && sw.groups && sw.groups[g] === false) return { allowed: false, scope: "switch", all: false, feature, group: g };
+  return { allowed: true };
+}
+
+/** Clean admin input for the switches. */
+function parseSwitchesInput(data) {
+  const d = data || {};
+  const groups = {};
+  for (const g of Object.keys(AI_GROUPS)) if (d.groups && typeof d.groups[g] === "boolean") groups[g] = d.groups[g];
+  return { master: d.master === false ? false : true, groups };
+}
+
 const BUDGET_NAME = /^[A-Za-z0-9_]{1,60}$/;
 const budgetNumber = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
 
@@ -257,6 +305,11 @@ function budgetVerdict(budgets, feature, spend) {
 
 /** The reason in plain words, for a log line, a phone alert or the message a caller receives. */
 function budgetMessage(v) {
+  if (v && v.scope === "switch") {
+    return v.all
+      ? "AI is switched off by your admin, so this needs to be done by hand. Nothing is lost."
+      : `AI reading for ${AI_GROUP_LABELS[v.group] || featureLabel(v.feature)} is switched off by your admin, so this needs to be done by hand. Nothing is lost.`;
+  }
   const money = (n) => `$${num(n).toFixed(2)}`;
   return v.scope === "total"
     ? `The overall AI budget for this month (${money(v.limitUsd)}) has been reached, so AI features are paused until next month or until the budget is raised in Admin.`
@@ -347,6 +400,11 @@ module.exports = {
   summarizeMonth,
   FEATURE_LABELS,
   featureLabel,
+  AI_GROUPS,
+  AI_GROUP_LABELS,
+  groupOf,
+  switchVerdict,
+  parseSwitchesInput,
   parseBudgetsInput,
   monthSpend,
   budgetVerdict,

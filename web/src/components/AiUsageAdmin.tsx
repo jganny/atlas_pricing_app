@@ -1,6 +1,7 @@
 "use client";
 
 import { CheaperReadSwitch } from "@/components/CheaperReadSwitch";
+import { AiSwitchesPanel } from "@/components/AiSwitchesPanel";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, CircleHelp, RefreshCw, XCircle } from "lucide-react";
@@ -363,6 +364,7 @@ export function AiUsageAdmin() {
           </p>
         </>
       )}
+      <AiSwitchesPanel />
       <CheaperReadSwitch />
     </Card>
   );

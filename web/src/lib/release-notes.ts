@@ -11,6 +11,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.159",
+    date: "2026-11-11",
+    items: [
+      "AI on/off switch. Admin > AI credit and cost now has a master switch and a switch for each of the nine places the app uses AI, each listed with where you meet it, what it costs and who uses it. When one is off, the button says so in plain words and the work is done by hand; nothing is lost. A small label in the top bar tells everyone whether AI is on, and for which features it is off. The switch uses no AI credit.",
+      "Enquiry DB: click In view, Sell, GP or Tonnage to see what the number is made of. Group it by mode, desk, customer, carrier, lane, status or month, with each group's share, win rate and GP split into won, open and lost. Compare the last 1, 3, 6 or 12 months with the same number before. Click a row to show only those quotes in the table. CSV export included. Staff only; no AI credit.",
+      "Multilingual quotations. In the quotation preview, pick a Document language: the customer's copy shows English with Arabic, Spanish, French, German, Portuguese or Italian beside it. The app suggests one from the customer's email address (for example .ae gives Arabic, .es gives Spanish). Carrier names, charge names you typed and the terms and conditions stay in English, and the document says so. Please have a native speaker read one sample of each language before first use. No AI credit.",
+    ],
+  },
+  {
     version: "0.3.158",
     date: "2026-11-11",
     items: [

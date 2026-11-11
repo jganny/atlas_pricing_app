@@ -26,6 +26,8 @@ import { VIEW_LABELS, listView, senderDisplay, viewCounts, type ViewKey } from "
 import { labelsOf, LABEL_NAMES } from "@/lib/mail/inbox-labels";
 import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import type { InboxEnquiry } from "@/lib/types";
+import { aiAllowed, aiOffMessage } from "@/lib/ai/ai-switches";
+import { useAiSwitches } from "@/lib/firebase/ai-switches";
 
 type ReadMode = "text" | "ai";
 
@@ -141,7 +143,9 @@ export default function EnquiryInboxPage() {
 
   /** Emails with attachments are worth the AI read; a plain text enquiry is filled free from its words. The person can always choose. */
   const hasFiles = (full.mail?.attachments.length ?? 0) > 0;
-  const readMode: ReadMode = readChoice ?? (hasFiles ? "ai" : "text");
+  const aiSwitches = useAiSwitches();
+  const aiOn = aiAllowed(aiSwitches, "quoteHub");
+  const readMode: ReadMode = !aiOn ? "text" : readChoice ?? (hasFiles ? "ai" : "text");
 
   const deskParsed = useMemo(() => {
     if (!selected) return null;
@@ -415,8 +419,8 @@ export default function EnquiryInboxPage() {
                   <button type="button" onClick={() => setReadChoice("text")} className={`px-3 py-2 ${readMode === "text" ? "bg-sky-100 font-semibold text-sky-900" : "text-slate-700 hover:bg-slate-50"}`}>
                     Text only, free
                   </button>
-                  <button type="button" onClick={() => setReadChoice("ai")} disabled={!useLiveData} className={`border-l border-[var(--color-border)] px-3 py-2 ${readMode === "ai" ? "bg-sky-100 font-semibold text-sky-900" : "text-slate-700 hover:bg-slate-50"}`}>
-                    <span className="font-bold text-sky-700">AI</span> text and attachments, about ₹1
+                  <button type="button" onClick={() => setReadChoice("ai")} disabled={!useLiveData || !aiOn} title={aiOn ? undefined : aiOffMessage(aiSwitches, "quoteHub")} className={`border-l border-[var(--color-border)] px-3 py-2 ${readMode === "ai" ? "bg-sky-100 font-semibold text-sky-900" : "text-slate-700 hover:bg-slate-50"}`}>
+                    <span className="font-bold text-sky-700">AI</span> {aiOn ? "text and attachments, about ₹1" : "is switched off by your admin"}
                   </button>
                 </div>}
                 {selected.tag === "escalation" ? null : <div className="inline-flex overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-xs font-semibold shadow-sm" role="group" aria-label="Which desk">

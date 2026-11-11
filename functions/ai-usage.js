@@ -156,12 +156,13 @@ async function noteWorked() {
 async function guardSnapshot(now = Date.now()) {
   const { month } = L.istParts(now);
   if (guardCache.month === month && now - guardCache.at < GUARD_TTL_MS) return guardCache;
-  const [monthSnap, budgetSnap] = await Promise.all([db().doc(`aiUsage/${month}`).get(), db().doc("aiBilling/budgets").get()]);
+  const [monthSnap, budgetSnap, switchSnap] = await Promise.all([db().doc(`aiUsage/${month}`).get(), db().doc("aiBilling/budgets").get(), db().doc("aiBilling/switches").get()]);
   const b = budgetSnap.exists ? budgetSnap.data() : null;
   guardCache = {
     at: now,
     month,
     doc: monthSnap.exists ? monthSnap.data() : null,
+    switches: switchSnap.exists ? switchSnap.data() : null,
     budgets: b ? { totalUsd: Number.isFinite(Number(b.totalUsd)) && b.totalUsd !== null ? Number(b.totalUsd) : null, perFeature: b.perFeature || {} } : null,
     pending: { total: 0, byFeature: {} },
   };
@@ -178,6 +179,9 @@ function bumpPending(feature, cost) {
 async function budgetGuard(feature) {
   try {
     const c = await guardSnapshot();
+    // The admin's switches come first: a feature that is switched off never calls the AI, whatever the budgets say.
+    const off = L.switchVerdict(c.switches, feature);
+    if (!off.allowed) return off;
     if (!c.budgets) return { allowed: true };
     const base = L.monthSpend(c.doc);
     const spend = { total: base.total + c.pending.total, byFeature: { ...base.byFeature, [feature]: (base.byFeature[feature] || 0) + (c.pending.byFeature[feature] || 0) } };
@@ -268,6 +272,7 @@ function install() {
     if (isAi) {
       const verdict = await budgetGuard(feature);
       if (!verdict.allowed) {
+        if (verdict.scope === "switch") return budgetResponse(verdict);
         await Promise.race([noteBudgetHit(verdict).catch((e) => logger.warn("ai-usage: could not note a budget", { error: String(e) })), timeout(WRITE_WAIT_MS)]);
         return budgetResponse(verdict);
       }
@@ -393,6 +398,25 @@ exports.aiBudgetsSave = onCall({ invoker: "public", timeoutSeconds: 60 }, async 
   guardCache = { at: 0, month: "", doc: null, budgets: null, pending: { total: 0, byFeature: {} } };
   // A raised budget can be reached again later: let the "reached" alerts fire afresh.
   await db().doc("aiStatus/budgetAlerts").set({ month: "", hit: {} });
+  return { ok: true };
+});
+
+/** The switches, for everyone who is signed in: the app greys out the AI choice and says why when something is off. */
+exports.aiSwitchesGet = onCall({ invoker: "public", timeoutSeconds: 30 }, async (request) => {
+  if (!request.auth || request.auth.token.chatOnly === true) throw new HttpsError("unauthenticated", "Sign in is required.");
+  const snap = await db().doc("aiBilling/switches").get();
+  const d = snap.exists ? snap.data() : {};
+  const groups = {};
+  for (const g of Object.keys(L.AI_GROUPS)) groups[g] = !(d.groups && d.groups[g] === false);
+  return { master: d.master !== false, groups };
+});
+
+/** Admin: switch AI on or off for everyone, or for one place it is used. Takes effect within a minute. */
+exports.aiSwitchesSave = onCall({ invoker: "public", timeoutSeconds: 60 }, async (request) => {
+  requireAdmin(request);
+  const parsed = L.parseSwitchesInput(request.data);
+  await db().doc("aiBilling/switches").set({ master: parsed.master, groups: parsed.groups, updatedAt: Date.now(), savedBy: String(request.auth.token.email || "") });
+  guardCache = { at: 0, month: "", doc: null, budgets: null, switches: null, pending: { total: 0, byFeature: {} } };
   return { ok: true };
 });
 

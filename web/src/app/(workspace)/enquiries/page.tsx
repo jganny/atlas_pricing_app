@@ -55,6 +55,8 @@ import {
   matchesDeskFilter,
 } from "@/lib/quotes/team-roles";
 import { formatCurrency } from "@/lib/utils";
+import { EnquiryDrillDown } from "@/components/EnquiryDrillDown";
+import type { DrillMetric } from "@/lib/quotes/edb-drill";
 
 const PIPELINE_CHIPS: Array<{ key: string; label: string; match: (e: EnquiryRecord) => boolean }> = [
   { key: "all", label: "All", match: () => true },
@@ -259,6 +261,7 @@ function EnquiryDatabaseInner() {
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [drillMetric, setDrillMetric] = useState<DrillMetric | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("select") ?? null);
   const [metricModes, setMetricModes] = useState<EdbMetricModes>(DEFAULT_EDB_METRIC_MODES);
   const [archiveHit, setArchiveHit] = useState<EnquiryRecord | null>(null);
@@ -650,8 +653,10 @@ function EnquiryDatabaseInner() {
         data-testid="edb-kpi-strip"
       >
         <div>
-          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">In view</div>
-          <div className="text-lg font-extrabold tabular-nums">{stats.total}</div>
+          <button type="button" className="text-left hover:opacity-80" onClick={() => setDrillMetric("quotes")} title="See what this number is made of" data-testid="drill-open-quotes">
+            <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">In view ▾</div>
+            <div className="text-lg font-extrabold tabular-nums">{stats.total}</div>
+          </button>
         </div>
         <div>
           <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Open</div>
@@ -662,11 +667,13 @@ function EnquiryDatabaseInner() {
           <div className="text-lg font-extrabold tabular-nums text-red-600">{stats.overdue}</div>
         </div>
         <div>
-          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Sell (INR)</div>
-          <div className="text-sm font-extrabold tabular-nums">{formatCurrency(stats.revenue, "INR")}</div>
+          <button type="button" className="text-left hover:opacity-80" onClick={() => setDrillMetric("sell")} title="See what this number is made of" data-testid="drill-open-sell">
+            <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Sell (INR) ▾</div>
+            <div className="text-sm font-extrabold tabular-nums">{formatCurrency(stats.revenue, "INR")}</div>
+          </button>
         </div>
         <div>
-          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">GP (INR)</div>
+          <button type="button" className="block text-left text-[10px] font-bold uppercase text-[var(--color-text-muted)] hover:opacity-80" onClick={() => setDrillMetric("gp")} title="See what this number is made of" data-testid="drill-open-gp">GP (INR) ▾</button>
           <div className="flex flex-wrap gap-x-3 text-sm font-extrabold tabular-nums" data-testid="edb-gp-split">
             <span className={GP_TONE_CLASS.won} title={GP_TONE_MEANING.won}>{formatCurrency(stats.gpBy.won, "INR")}</span>
             <span className={GP_TONE_CLASS.open} title={GP_TONE_MEANING.open}>{formatCurrency(stats.gpBy.open, "INR")}</span>
@@ -677,12 +684,35 @@ function EnquiryDatabaseInner() {
           </div>
         </div>
         <div title="Total billing weight of the quotes in view. Kilograms are shown in tonnes; a sea revenue tonne (RT) counts as one tonne.">
-          <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Tonnage</div>
-          <div className="text-sm font-extrabold tabular-nums text-sky-700" data-testid="edb-tonnage">
-            {formatTonnage(stats.tonnes)}
-          </div>
+          <button type="button" className="text-left hover:opacity-80" onClick={() => setDrillMetric("tonnes")} data-testid="drill-open-tonnes">
+            <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Tonnage ▾</div>
+            <div className="text-sm font-extrabold tabular-nums text-sky-700" data-testid="edb-tonnage">
+              {formatTonnage(stats.tonnes)}
+            </div>
+          </button>
         </div>
       </div>
+
+      {drillMetric ? (
+        <EnquiryDrillDown
+          rows={filtered}
+          metric={drillMetric}
+          onMetric={setDrillMetric}
+          onClose={() => setDrillMetric(null)}
+          onApply={(f, label) => {
+            if (f.kind === "mode") setModeFilter(f.value);
+            else if (f.kind === "desk") setDeskFilter(f.value);
+            else if (f.kind === "customer") setCustomerFilter(f.value);
+            else if (f.kind === "carrier") setCarrierFilter(f.value);
+            else if (f.kind === "month") {
+              setDateFrom(f.from);
+              setDateTo(f.to);
+            } else return;
+            setShowMoreFilters(true);
+            toast(`Showing only ${label}. Use Reset to clear.`, "success");
+          }}
+        />
+      ) : null}
 
       {showReports ? (
         <div className="grid gap-2 sm:grid-cols-5">
