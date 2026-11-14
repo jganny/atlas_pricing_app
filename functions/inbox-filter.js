@@ -95,6 +95,9 @@ function prefilter({ headers, from = "", subject = "", body = "", attachments = 
   const ask = ASK.test(text);
   const cargo = CARGO.test(text);
   const route = ROUTE.test(text);
+  if (isQuoteDelivered(subj, body) || (isOwnFrom(from) && !askedForQuote(subj, body))) {
+    return { verdict: "maybe", reason: "A quote being sent, or internal Atlas mail" };
+  }
   if (ask && cargo && route) return { verdict: "sure", reason: "Asks for a rate with cargo and a route" };
   // Some mails ask for rates in a line and put the details in an attachment (a packing list, an enquiry sheet, a photo).
   const files = realAttachments(attachments);
@@ -138,6 +141,12 @@ function isOwnFrom(from) {
   if (host && OWN_HOST.test(host)) return true;
   const name = String(from || "").replace(/<[^>]*>/g, "").replace(/["']/g, "").trim();
   return /\batlas\s*logistics\b/i.test(name);
+}
+
+/** "Dear Awwab" / "Hi Linson," — who the mail is written to. */
+function greetingName(text) {
+  const m = String(text || "").match(/^\s*(?:dear|hi|hello|good\s+(?:morning|afternoon|evening)|attn(?:ention)?\.?:?)\s+([A-Za-z][A-Za-z.'-]{1,40})/im);
+  return m ? m[1].replace(/[.,;:]+$/, "") : "";
 }
 
 function isQuoteDelivered(subject, body) {
@@ -193,6 +202,7 @@ module.exports = {
   isVendorRateOffer,
   isQuoteDelivered,
   isOwnFrom,
+  greetingName,
   isPendingEnquiry,
   ASK,
   ASK_SHORT,

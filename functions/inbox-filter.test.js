@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { prefilter, headerFlags, isPendingEnquiry, isQuoteDelivered, isOwnFrom } = require("./inbox-filter");
+const { prefilter, headerFlags, isPendingEnquiry, isQuoteDelivered, isOwnFrom, greetingName } = require("./inbox-filter");
 
 const v = (o) => prefilter({ from: "buyer@acme.com", subject: "", body: "", ...o }).verdict;
 
@@ -84,7 +84,13 @@ console.log("inbox filter ok");
   };
   assert.equal(isQuoteDelivered(awwab.subject, awwab.bodyPreview), true);
   assert.equal(isOwnFrom(awwab.from), true);
+  assert.equal(greetingName(awwab.bodyPreview), "Awwab");
   assert.equal(isPendingEnquiry(awwab), false, "internal quote-share is not pending");
+  assert.equal(
+    prefilter({ from: awwab.from, subject: awwab.subject, body: awwab.bodyPreview }).verdict,
+    "maybe",
+    "an internal quote-share is kept so it can join the original enquiry's thread",
+  );
   assert.equal(
     isPendingEnquiry({
       tag: "new_enquiry",
