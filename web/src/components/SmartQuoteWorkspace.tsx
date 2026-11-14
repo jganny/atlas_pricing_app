@@ -140,7 +140,6 @@ export function SmartQuoteWorkspace({ mode }: { mode: "air" | "sea" }) {
       return;
     }
     storeSmartQuotePrefill(draftToPrefill(mode, d));
-    toast("Opening desk with parsed fields…", "info");
     router.push(mode === "air" ? "/air/?smart=1" : "/sea/?smart=1");
   }
 

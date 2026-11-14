@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart3,
   BellRing,
@@ -32,8 +32,7 @@ import { cn } from "@/lib/utils";
 import { appVersion } from "@/lib/env";
 import { useAuthStore } from "@/store/auth";
 import { useScopedWonFollowUps } from "@/hooks/use-scoped-won-followups";
-import { escalationTier, missingWonFields } from "@/lib/quotes/won-followups";
-import { toast } from "@/components/Toast";
+import { missingWonFields } from "@/lib/quotes/won-followups";
 import { useNrsLiveAlerts } from "@/hooks/use-nrs-live-alerts";
 import { CustomerSuggestions } from "@/components/CustomerSuggestions";
 import {
@@ -204,30 +203,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const pendingWonCount = pendingRows.length;
   // NRS seat only: live pop-up when a nomination desk confirms a quote, plus the sidebar count.
   const pendingNrsCount = useNrsLiveAlerts(isNrsUser(user?.username));
-  // Once per browser session, not once per page: a single quiet summary,
-  // never repeated while the user is actively working.
-  useEffect(() => {
-    if (pendingWonCount === 0) return;
-    let already = false;
-    try {
-      already = sessionStorage.getItem("atlas_won_followup_nudge_shown") === "1";
-    } catch {
-      /* private mode — just skip the nudge this session */
-      return;
-    }
-    if (already) return;
-    try {
-      sessionStorage.setItem("atlas_won_followup_nudge_shown", "1");
-    } catch {
-      return;
-    }
-    const overdueCount = pendingRows.filter((r) => escalationTier(r.wonAt) === "red").length;
-    toast(
-      `${pendingWonCount} Won quote${pendingWonCount > 1 ? "s are" : " is"} still missing details` +
-        (overdueCount ? ` — ${overdueCount} overdue` : ""),
-      "info",
-    );
-  }, [pendingWonCount, pendingRows]);
+  // Won follow-ups stay on the sidebar count. A pop-up here stopped people mid-quote.
 
   const visibleDesks = useMemo(
     () => filterNav(desksNav, user?.username, user?.role),

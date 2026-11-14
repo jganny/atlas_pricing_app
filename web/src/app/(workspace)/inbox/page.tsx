@@ -207,7 +207,6 @@ export default function EnquiryInboxPage() {
     if (useLiveData && how === "ai") {
       setBusy(true);
       try {
-        toast("Reading the whole email and its attachments…", "info");
         const bytes = await fetchInboxEml(item.id);
         const job = await readEmailBytes(`${(item.subject || "enquiry").replace(/[\\/:*?"<>|]+/g, " ").slice(0, 80)}.eml`, bytes);
         if (job) {
@@ -218,7 +217,6 @@ export default function EnquiryInboxPage() {
             /* rules */
           }
           void setHubJobStatus(job.id, "opened").catch(() => undefined);
-          toast(`Opening ${desk === "sea" ? "Sea" : "Air"} desk`, "success");
           const href = openJobHref(forDesk);
           stampInboxRef(item);
           router.push(href);
@@ -242,7 +240,6 @@ export default function EnquiryInboxPage() {
       confidence: Math.max(item.parsed?.confidence || 0, fromText.confidence || 0),
       source: "email-imap",
     };
-    if (!parsed.origin || !parsed.destination) toast("Lane incomplete — open the desk and fill POL/POD manually", "error");
     storeSmartQuotePrefill({
       mode: desk,
       parsed,
@@ -258,7 +255,6 @@ export default function EnquiryInboxPage() {
         /* mock / rules */
       }
     }
-    toast(`Opening ${desk === "sea" ? "Sea" : "Air"} desk`, "success");
     router.push(desk === "sea" ? "/sea/?smart=1" : "/air/?smart=1");
   }
 

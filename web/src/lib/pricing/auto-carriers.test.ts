@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { autoAirlines, autoLiners, MAX_AUTO_CARRIERS } from "./auto-carriers";
+import { autoAirlines, autoLiners, hasNamedCarrier, isPlaceholderCarrierName, MAX_AUTO_CARRIERS } from "./auto-carriers";
 import type { AirTariff, SeaTariff } from "@/lib/types";
 
 const air = (o: Partial<AirTariff>): AirTariff => ({
@@ -36,6 +36,12 @@ assert.equal(mixed.options.length, 1);
 const many = Array.from({ length: 10 }, (_, i) => air({ id: `m${i}`, carrier: `Carrier ${i}` }));
 assert.equal(autoAirlines(many, "BOM", "BEY").options.length, MAX_AUTO_CARRIERS);
 assert.equal(autoAirlines(t, "", "BEY").options.length, 0);
+
+assert.equal(isPlaceholderCarrierName(""), true);
+assert.equal(isPlaceholderCarrierName("From enquiry intake"), true);
+assert.equal(isPlaceholderCarrierName("Emirates"), false);
+assert.equal(hasNamedCarrier(["From enquiry intake", ""]), false);
+assert.equal(hasNamedCarrier(["From enquiry intake", "Emirates"]), true);
 
 // Sea: same rules, by mode, with the shipment's containers on every liner.
 const sea = (o: Partial<SeaTariff>): SeaTariff => ({

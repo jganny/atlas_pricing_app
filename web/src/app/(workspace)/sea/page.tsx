@@ -35,7 +35,7 @@ import { useLiveData } from "@/lib/api";
 import { saveSeaQuote } from "@/lib/firebase/save-quote";
 import { linkQuoteToLead } from "@/lib/firebase/sales";
 import { lookupSeaTariffForCarrier, type CarrierTariffMatch } from "@/lib/firebase/tariffs";
-import { autoLiners } from "@/lib/pricing/auto-carriers";
+import { autoLiners, hasNamedCarrier, isPlaceholderCarrierName } from "@/lib/pricing/auto-carriers";
 import { RateRequestPanel } from "@/components/RateRequestPanel";
 import { LaneCarriers } from "@/components/LaneCarriers";
 import { DraftsMenu, SaveDraftButton } from "@/components/DraftControls";
@@ -74,7 +74,7 @@ import {
 import { loadSeaDeskFromQuote } from "@/lib/quotes/desk-loader";
 import { removeInboxItem } from "@/lib/firebase/inbox";
 import type { InboxRef } from "@/lib/types";
-import { clearSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
+import { clearSmartQuotePrefill, readyForPricedComparison } from "@/lib/pricing/smart-quote-prefill";
 import { hasInstruction, mergeInstruction, parseInstruction, shouldAskAI, type Instruction } from "@/lib/hub/instruction";
 import { planSeaInstruction, type SeaChoice } from "@/lib/hub/instruction-sea";
 import { marginLabel } from "@/lib/hub/instruction-quote";
@@ -445,16 +445,20 @@ function SeaDeskInner() {
     if (autoCarriersKey.current === key) return;
     autoCarriersKey.current = key;
     const onLane = liners.filter((l) => !l.laneId || l.laneId === laneId);
-    if (onLane.some((l) => l.name.trim())) return; // already working on carriers — leave them alone
-    const res = autoLiners(tariffs, originCode, destCode, mode, { laneId, containers: onLane[0]?.containers });
+    const named = onLane.map((l) => l.name);
+    const res = autoLiners(tariffs, originCode, destCode, mode, {
+      laneId,
+      containers: onLane[0]?.containers,
+      alreadyNamed: named.filter((n) => !isPlaceholderCarrierName(n)),
+    });
     if (!res.options.length) return;
-    setLiners((prev) => [...prev.filter((l) => !((!l.laneId || l.laneId === laneId) && !l.name.trim())), ...res.options]);
+    setLiners((prev) => {
+      const keep = hasNamedCarrier(named)
+        ? prev.filter((l) => !l.laneId || l.laneId !== laneId || !isPlaceholderCarrierName(l.name))
+        : prev.filter((l) => !((!l.laneId || l.laneId === laneId) && isPlaceholderCarrierName(l.name)));
+      return [...keep, ...res.options];
+    });
     if (res.currency) setCurrency(res.currency);
-    toast(
-      `Added ${res.options.length} carrier${res.options.length > 1 ? "s" : ""} with rates on file for ${originCode} → ${destCode}. Remove any you don't want.` +
-        (res.skipped.length ? ` Not added (different currency): ${res.skipped.join(", ")}.` : ""),
-      "success",
-    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, origin, destination, tariffs, mode, module, incoterm]);
 
@@ -611,10 +615,11 @@ function SeaDeskInner() {
           buyRate: st?.fclRates?.[c.type]?.buy ?? 0,
         }))
       : [{ type: "20'GP", qty: 1, sellRate: 0, buyRate: 0 }];
+    const realName = [p.linerLabel, draft.carrierLabel, st?.carrier].find((n) => n && !isPlaceholderCarrierName(n)) || "";
     setLiners([
       createLinerOption(
         {
-          name: p.linerLabel || draft.carrierLabel || "",
+          name: realName,
           routing: p.origin && p.destination ? `${p.origin}-${p.destination}` : "",
           tt: "TBA",
           validity: "",
@@ -625,7 +630,7 @@ function SeaDeskInner() {
         true,
       ),
     ]);
-    setStep("shipment");
+    setStep(readyForPricedComparison(p, "sea") ? "carrier" : "shipment");
   }
 
   function applyReset() {

@@ -111,3 +111,12 @@ export function fieldConfidence(parsed: ParsedEnquiry, mode: "air" | "sea") {
     },
   ] as const;
 }
+
+/** Lane and cargo are known, so the desk can open on the priced comparison instead of the empty form. */
+export function readyForPricedComparison(parsed: ParsedEnquiry, mode: "air" | "sea"): boolean {
+  if (!parsed.origin?.trim() || !parsed.destination?.trim()) return false;
+  if (mode === "sea") {
+    return parsed.packages.length > 0 || parsed.containers.length > 0 || Boolean(parsed.grossWeight || parsed.volume);
+  }
+  return parsed.packages.length > 0;
+}

@@ -24,17 +24,7 @@ export function useNrsLiveAlerts(active: boolean): number {
     // What's already here when the page opens is summarised once per browser session,
     // not announced one by one.
     seen.current = new Set(unseenAlerts().map((a) => a.id));
-    const waiting = seen.current.size;
-    let showedSummary = false;
-    try {
-      showedSummary = sessionStorage.getItem("atlas_nrs_summary_shown") === "1";
-      if (waiting > 0 && !showedSummary) {
-        sessionStorage.setItem("atlas_nrs_summary_shown", "1");
-        toast(`${waiting} confirmation${waiting > 1 ? "s" : ""} waiting for the NRS desk`, "info");
-      }
-    } catch {
-      /* private mode — skip the summary */
-    }
+    // What was already waiting is the sidebar count. Only a new confirmation pops up.
 
     const refresh = () => {
       setPending(listPendingNrsFollowUps().length);

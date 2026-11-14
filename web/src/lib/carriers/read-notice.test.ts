@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { noticeFor, statusLine, type ReadLike } from "./read-notice";
+import { noticeFor, noticeInterruptsWork, statusLine, type ReadLike } from "./read-notice";
 
 const base: ReadLike = { status: "read", kind: "rates", title: "EK_BLR rev", reason: "", applied: 132, held: 9, points: 0, charges: 0 };
 
@@ -19,6 +19,11 @@ assert.equal(wait.tone, "info");
 assert.match(wait.text, /not read yet: The limit would be passed\./);
 assert.match(noticeFor({ ...base, kind: "digest" }).text, /What it says/);
 assert.match(noticeFor({ ...base, title: "" }).text, /^Rates from Your circular/);
+
+assert.equal(noticeInterruptsWork(noticeFor({ ...base, status: "reading" })), false);
+assert.equal(noticeInterruptsWork(noticeFor(base)), false);
+assert.equal(noticeInterruptsWork(noticeFor({ ...base, status: "skipped", reason: "limit" })), false);
+assert.equal(noticeInterruptsWork(noticeFor({ ...base, status: "failed", reason: "bad file" })), true);
 
 assert.equal(statusLine(undefined), null);
 assert.equal(statusLine({ ...base, status: "reading" })?.text, "Reading\u2026 a few minutes");
