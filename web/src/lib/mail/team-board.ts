@@ -6,6 +6,7 @@ import type { InboxEnquiry } from "@/lib/types";
 import { replyBy, urgencyOf } from "./reply-by";
 import { isOpenItem, senderDisplay } from "./inbox-views";
 import { isWaiting } from "./work-bar";
+import { isRateEnquiryToQuote } from "./rate-enquiry";
 
 export interface BoardLine {
   id: string;
@@ -42,7 +43,7 @@ export function teamBoard(rows: InboxEnquiry[], now: number = Date.now()): Board
           subject: String(r.subject || "(no subject)").slice(0, 70),
           waitedMin: Math.max(0, Math.floor((now - arrived) / 60_000)),
           quoting: r.workingBy?.name,
-          late: !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "past",
+          late: isRateEnquiryToQuote(r) && !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "past",
         };
       })
       // Late first, then the longest waiting.

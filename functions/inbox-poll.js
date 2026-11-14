@@ -182,6 +182,19 @@ function copiedAddressesOf(parsedMail, ownAddress) {
   return out.slice(0, 20);
 }
 
+/** To: as the mail arrived, including our own mailbox, so the reading pane can say who it was sent to. */
+function toAddressesOf(parsedMail, envelope) {
+  const out = [];
+  const add = (addr) => {
+    const a = String(addr || "").toLowerCase().trim();
+    if (a && a.includes("@") && !out.includes(a)) out.push(a);
+  };
+  for (const a of envelope?.to || []) add(a && a.address);
+  const parsed = parsedMail && parsedMail.to && Array.isArray(parsedMail.to.value) ? parsedMail.to.value : [];
+  for (const a of parsed) add(a && a.address);
+  return out.slice(0, 12);
+}
+
 /** Writes the slim Inbox card (never the whole mail) and remembers who sent it in the directory. */
 /** The message IDs a parsed mail answers (In-Reply-To, then References), and Outlook's conversation mark. */
 function threadMarksOf(parsedMail) {
@@ -224,6 +237,8 @@ async function keepInboxItem(db, o) {
     body: "", // intentionally empty: storage-safe; the mail stays on IMAP
     attachmentCount: Array.isArray(attachments) ? attachments.length : 0,
     copiedAddresses: copiedAddressesOf(parsedMail, mailbox.user),
+    toAddresses: toAddressesOf(parsedMail, msg.envelope),
+    addressedTo: F.greetingName(bodyWork) || "",
     mode: classified.mode,
     confidence: classified.parsed.confidence,
     assignedUsers: assignment.assignedUsers,
@@ -1019,6 +1034,14 @@ async function pollOne(mailbox, password, apiKey) {
         }
         if (askAi) aiUsed += 1;
         const classified = await classifyAndExtract(askAi ? apiKey : "", subject, bodyWork);
+        // Atlas quote-shares and other own-domain mail that is not asking for rates are follow-ups, not pending RFQs.
+        if (F.isQuoteDelivered(subject, bodyWork) || (F.isOwnFrom(from) && !F.askedForQuote(subject, bodyWork))) {
+          classified.tag = "follow_up";
+          classified.actionRequired = false;
+          classified.reason = F.isQuoteDelivered(subject, bodyWork)
+            ? "A quote being sent, not a customer asking for rates"
+            : "Internal Atlas mail, not a customer RFQ";
+        }
         if (replyOnKept && !ACTIONABLE.has(classified.tag)) {
           classified.tag = "follow_up";
           classified.actionRequired = /\b(urgent|pending|awaiting|still waiting|follow.?up|any update)\b/i.test(`${subject} ${bodyWork}`);

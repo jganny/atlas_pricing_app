@@ -9,6 +9,8 @@ import { fetchThread, linkToEnquiry, unlinkFromThread } from "@/lib/firebase/thr
 import { parseEmailFile, type ParsedEmail } from "@/lib/hub/email-file";
 import { RATE_EMAILS_KEY, rateSummary, type PendingRateEmail } from "@/lib/rates/rate-email";
 import { EMPTY_THREAD, isOverdueVendor, linkLabel, linkedCount, memberTitle, vendorSummary, waitingText, whenText, type ThreadMember } from "@/lib/mail/thread-view";
+import { salespersonOf } from "@/lib/mail/enquiry-identity";
+import { senderDisplay } from "@/lib/mail/inbox-views";
 import type { InboxEnquiry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -89,6 +91,8 @@ export function EnquiryThread({
   const thread = q.data ?? EMPTY_THREAD;
   const others = linkedCount(thread);
   const isReplyWithoutThread = item.tag === "follow_up" && !item.threadId;
+  const origin = thread.origin || null;
+  const originSales = origin ? salespersonOf(origin) : null;
 
   async function refresh() {
     await qc.invalidateQueries({ queryKey: ["thread"] });
@@ -153,14 +157,29 @@ export function EnquiryThread({
     }
   }
 
+  const originBanner = origin && origin.id && origin.id !== item.id ? (
+    <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-2.5 text-[13px] leading-5 text-sky-950" data-testid="thread-origin">
+      <p className="font-semibold">Original enquiry from {origin.fromName || senderDisplay(origin.from) || origin.fromEmail || "the customer"}{origin.fromEmail ? ` · ${origin.fromEmail}` : ""}</p>
+      <p className="mt-0.5 text-sky-900">
+        to {origin.toAddresses?.length ? origin.toAddresses.join(", ") : origin.mailboxEmail || origin.mailbox}
+        {originSales ? ` · Relates to ${originSales.name}'s enquiry` : ""}
+        {origin.repliedAt ? " · Replied" : " · Not yet replied"}
+      </p>
+      {origin.subject ? <p className="mt-0.5 truncate text-sky-800">{origin.subject}</p> : null}
+    </div>
+  ) : null;
+
   // Nothing to show yet: say so in one quiet line, never an empty box.
-  if (q.isLoading) return null;
+  if (q.isLoading) return originBanner;
   if (!others && !isReplyWithoutThread) {
     return (
-      <p className="rounded-lg border border-dashed border-[var(--color-border)] px-4 py-2.5 text-xs text-slate-500" data-testid="thread-empty">
-        <Link2 className="mr-1.5 inline h-3.5 w-3.5" />
-        Conversation: nothing linked yet. When you send this on to vendors from Outlook, what you sent and what they reply appear here by themselves.
-      </p>
+      <div className="space-y-2">
+        {originBanner}
+        <p className="rounded-lg border border-dashed border-[var(--color-border)] px-4 py-2.5 text-xs text-slate-500" data-testid="thread-empty">
+          <Link2 className="mr-1.5 inline h-3.5 w-3.5" />
+          Conversation: nothing linked yet. When you send this on to vendors from Outlook, what you sent and what they reply appear here by themselves.
+        </p>
+      </div>
     );
   }
 
@@ -171,6 +190,8 @@ export function EnquiryThread({
         {others ? <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-900">{others} linked</span> : null}
         {thread.vendors.length ? <span className="text-xs text-slate-600" data-testid="thread-vendor-summary">{vendorSummary(thread.vendors)}</span> : null}
       </div>
+
+      {originBanner ? <div className="border-b border-[var(--color-border)] px-4 py-3">{originBanner}</div> : null}
 
       {thread.vendors.length ? (
         <div className="flex flex-wrap gap-1.5 border-b border-[var(--color-border)] px-4 py-2" data-testid="thread-vendors">

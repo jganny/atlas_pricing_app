@@ -18,6 +18,25 @@ const addrOf = (from) => ((/<([^>]+)>/.exec(String(from || "")) || [])[1] || Str
 const nameOf = (from) => String(from || "").replace(/<[^>]*>/g, "").replace(/["]/g, "").trim() || addrOf(from);
 const hostOf = (email) => String(email).split("@")[1] || "";
 
+function originOf(id, d) {
+  if (!d) return null;
+  const email = addrOf(d.from);
+  return {
+    id,
+    from: String(d.from || ""),
+    fromName: nameOf(d.from),
+    fromEmail: email.includes("@") ? email : "",
+    mailbox: String(d.mailbox || ""),
+    mailboxEmail: String(d.mailboxEmail || ""),
+    receivedAt: String(d.receivedAt || ""),
+    repliedAt: typeof d.repliedAt === "number" ? d.repliedAt : 0,
+    assignedUsers: Array.isArray(d.assignedUsers) ? d.assignedUsers : [],
+    addressedTo: String(d.addressedTo || ""),
+    toAddresses: Array.isArray(d.toAddresses) ? d.toAddresses : [],
+    subject: String(d.subject || ""),
+  };
+}
+
 /** Pure: the answer for one conversation. cards and sents are plain objects with an id. */
 function buildThread(rootId, cards, sents) {
   const members = [
@@ -61,7 +80,8 @@ function buildThread(rootId, cards, sents) {
     const reply = repliers.find((r) => r.email === email || (!SHARED_HOSTS.has(hostOf(email)) && hostOf(r.email) === hostOf(email)));
     return { email, name: v.name, replied: !!reply, askedAt: v.at, repliedAt: reply ? reply.at : 0 };
   });
-  return { rootId, members, vendors };
+  const rootCard = cards.find((c) => c.id === rootId) || cards[0] || null;
+  return { rootId, members, vendors, origin: originOf(rootId, rootCard) };
 }
 
 exports.threadGet = functions.runWith({ timeoutSeconds: 60, memory: "256MB" }).https.onCall(async (data, context) => {
@@ -70,14 +90,19 @@ exports.threadGet = functions.runWith({ timeoutSeconds: 60, memory: "256MB" }).h
   if (!id) throw new functions.https.HttpsError("invalid-argument", "Which email?");
   const db = admin.firestore();
   const snap = await db.collection("inbox_enquiries").doc(id).get();
-  if (!snap.exists) return { rootId: null, members: [], vendors: [], gone: true };
-  const rootId = snap.data().threadId || null;
-  if (!rootId) return { rootId: null, members: [], vendors: [], root: false };
-  const [cards, sents] = await Promise.all([
+  if (!snap.exists) return { rootId: null, members: [], vendors: [], origin: null, gone: true };
+  const self = { id: snap.id, ...snap.data() };
+  const rootId = self.threadId || null;
+  if (!rootId) return { rootId: null, members: [], vendors: [], origin: originOf(snap.id, self), root: false };
+  const [cards, sents, rootSnap] = await Promise.all([
     db.collection("inbox_enquiries").where("threadId", "==", rootId).limit(60).get(),
     db.collection("inbox_sent").where("threadId", "==", rootId).limit(60).get(),
+    rootId === snap.id ? Promise.resolve(snap) : db.collection("inbox_enquiries").doc(rootId).get(),
   ]);
-  const out = buildThread(rootId, cards.docs.map((d) => ({ id: d.id, ...d.data() })), sents.docs.map((d) => ({ id: d.id, ...d.data() })));
+  const cardRows = cards.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (rootSnap.exists && !cardRows.some((c) => c.id === rootId)) cardRows.unshift({ id: rootSnap.id, ...rootSnap.data() });
+  const out = buildThread(rootId, cardRows, sents.docs.map((d) => ({ id: d.id, ...d.data() })));
+  if (!out.origin) out.origin = originOf(rootSnap.exists ? rootSnap.id : snap.id, rootSnap.exists ? rootSnap.data() : self);
   return { ...out, mailbox: snap.data().mailbox };
 });
 

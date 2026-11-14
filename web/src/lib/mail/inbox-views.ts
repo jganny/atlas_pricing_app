@@ -6,6 +6,7 @@ import type { InboxEnquiry } from "@/lib/types";
 import { replyBy, urgencyOf } from "./reply-by";
 import { workState } from "./inbox-working";
 import { labelsOf, LABEL_NAMES, type LabelKey } from "./inbox-labels";
+import { isRateEnquiryToQuote } from "./rate-enquiry";
 
 export type ViewKey =
   | "all" | "mine" | "others" | "due" | "past" | "followup" | "escalation"
@@ -54,9 +55,9 @@ export function inView(r: InboxEnquiry, view: ViewKey, me: string | undefined | 
       return k === "other" || k === "asked" || k === "can-take";
     }
     case "due":
-      return !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "soon";
+      return isRateEnquiryToQuote(r) && !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "soon";
     case "past":
-      return !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "past";
+      return isRateEnquiryToQuote(r) && !r.repliedAt && urgencyOf(replyBy(r, now).at, now) === "past";
     case "followup":
       return r.tag === "follow_up";
     case "air":

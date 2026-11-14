@@ -108,6 +108,30 @@ const db0 = { inbox_enquiries: { [ORIG]: enquiry, [T.cardId("pricing", "<other@x
   // 9. A different mailbox never ties.
   assert.equal(await T.findThread(fakeDb(db0), "pricingsales", "sent", bare, NOW), null);
 
+  // 10. "BLR to Qatar // 560 Kgs" is the same lane as Bangalore–Doha 560 kg, so a colleague's quote-share ties to that enquiry.
+  assert.deepEqual(T.extractCodes("Air Freight // BLR to Qatar // 560 Kgs"), ["BLR", "DOH"]);
+  assert.deepEqual(T.extractWeights("Air Freight // BLR to Qatar // 560 Kgs"), [560]);
+  const LINSON = T.cardId("pricingsales", "<linson-enq@doha>");
+  const linsonEnq = {
+    mailbox: "pricingsales",
+    tag: "new_enquiry",
+    receivedAt: hours(6),
+    timestamp: NOW - 6 * 3_600_000,
+    from: "Fatima <fatima@doha-trade.example>",
+    assignedUsers: ["linson"],
+    ...T.signalsOf({ subject: "Air Freight BLR to Doha 560 kgs", text: "Please quote 560 kgs from Bangalore to Doha.", refs: [] }),
+  };
+  const dbLane = { inbox_enquiries: { [LINSON]: linsonEnq }, inbox_sent: {} };
+  const quoteShare = {
+    ...T.signalsOf({ subject: "Air Freight // BLR to Qatar // 560 Kgs", text: "Dear Awwab Pls find below quote for said shipment", refs: [] }),
+    at: NOW - 5 * 3_600_000,
+    tag: "follow_up",
+    quoted: "Dear Awwab Pls find below quote for said shipment",
+  };
+  const r10 = await T.findThread(fakeDb(dbLane), "pricingsales", "card", quoteShare, NOW);
+  assert.equal(r10 && r10.root, LINSON, "Qatar + 560 kg ties to Linson's BLR–DOH enquiry");
+  assert.equal(r10.by, "lane");
+
   console.log("inbox-thread tests passed");
 })().catch((e) => {
   console.error(e);

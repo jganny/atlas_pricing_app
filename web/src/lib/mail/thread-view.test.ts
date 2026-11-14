@@ -3,7 +3,8 @@ import { isOverdueVendor, linkLabel, linkedCount, memberTitle, vendorSummary, wa
 
 const m = (over: Partial<ThreadMember>): ThreadMember => ({ kind: "card", id: "x", role: "reply", at: 0, who: "Prashant", email: "p@x.in", subject: "RE: x", attachments: 0, by: "headers", check: false, reason: "", ...over });
 
-assert.equal(memberTitle(m({ role: "enquiry" })), "Enquiry received");
+assert.equal(memberTitle(m({ role: "enquiry" })), "Enquiry received from Prashant");
+assert.equal(memberTitle(m({ role: "enquiry", who: "", email: "" })), "Enquiry received from the customer");
 assert.equal(memberTitle(m({ role: "reply" })), "Reply from Prashant");
 assert.equal(memberTitle(m({ role: "sent", to: [{ email: "a@x.in", name: "Air Logistics" }] })), "Sent to Air Logistics");
 assert.equal(memberTitle(m({ role: "sent", to: [{ email: "a@x.in", name: "" }, { email: "b@x.in", name: "" }, { email: "c@x.in", name: "" }] })), "Sent to a@x.in and 2 more");

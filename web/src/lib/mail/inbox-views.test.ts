@@ -5,17 +5,17 @@ import { listView, senderDisplay, viewCounts } from "./inbox-views";
 const NOW = Date.UTC(2026, 11 - 1, 11, 8, 35); // 14:05 India
 const iso = (ms: number) => new Date(ms).toISOString();
 const mk = (id: string, over: Partial<InboxEnquiry>): InboxEnquiry =>
-  ({ id, mailbox: "pricing", mailboxEmail: "pricing@x", from: "A <a@example.com>", subject: "Rates", receivedAt: iso(NOW - 60_000), bodyPreview: "", body: "", mode: "air", confidence: 90, assignedUsers: [], status: "new", ...over }) as InboxEnquiry;
+  ({ id, mailbox: "pricing", mailboxEmail: "pricing@x", from: "A <a@example.com>", subject: "Please quote rates", receivedAt: iso(NOW - 60_000), bodyPreview: "Please quote 200 kg BLR to LHR", body: "", mode: "air", confidence: 90, assignedUsers: [], status: "new", tag: "new_enquiry", ...over }) as InboxEnquiry;
 
 const tokyo = mk("tokyo", { from: "T <t@example.co.jp>", mode: "air" }); // closes 09:00 UTC, 25 min left
-const dubai = mk("dubai", { from: "O <o@example.ae>", subject: "By 3 pm IST please", mode: "sea" }); // 09:30 UTC
+const dubai = mk("dubai", { from: "O <o@example.ae>", subject: "By 3 pm IST please", bodyPreview: "Please quote sea rates by 3 pm IST", mode: "sea" }); // 09:30 UTC
 const delhi = mk("delhi", { from: "C <c@example.in>", mode: "air" }); // 12:30 UTC
-const late = mk("late", { from: "L <l@example.in>", receivedAt: iso(NOW - 6 * 3_600_000), subject: "Quote by 12 pm IST", mode: "sea" }); // 06:30 UTC: past
+const late = mk("late", { from: "L <l@example.in>", receivedAt: iso(NOW - 6 * 3_600_000), subject: "Quote by 12 pm IST", bodyPreview: "Please quote 1x40HC by 12 pm IST", mode: "sea" }); // 06:30 UTC: past
 const sales = mk("sales", { mailbox: "pricingsales", from: "S <s@example.in>" });
 const done = mk("done", { status: "applied" });
 const followUp = mk("fu", { tag: "follow_up", from: "F <f@example.in>" });
 const problem = mk("problem", { tag: "escalation", subject: "RE: MAWB 176-12345678 damaged cartons", from: "P <p@example.in>" });
-const dg = mk("dg", { subject: "DGR lithium batteries BOM to FRA", from: "D <d@example.in>" });
+const dg = mk("dg", { subject: "DGR lithium batteries BOM to FRA", bodyPreview: "Please quote DG lithium batteries BOM to FRA", from: "D <d@example.in>" });
 const rows = [delhi, dubai, tokyo, late, sales, done, followUp, problem, dg];
 
 // Everything open, soonest reply-by first: the late one, Tokyo, then Dubai's client deadline, then the rest.
@@ -26,6 +26,16 @@ assert.ok(!all.includes("done"), "a quoted enquiry has left the list");
 
 // Folders are filters.
 assert.deepEqual(listView(rows, "past", "shashank", NOW).map((r) => r.id), ["late"]);
+assert.deepEqual(
+  listView(
+    [mk("atlas-quote", { from: "Atlaslogistics <pricing@atlaslogistics.co.in>", receivedAt: iso(NOW - 6 * 3_600_000), subject: "Air Freight // BLR to Qatar // 560 Kgs", bodyPreview: "Dear Awwab Pls find below quote for said shipment" })],
+    "past",
+    "shashank",
+    NOW,
+  ).map((r) => r.id),
+  [],
+  "an internal Atlas quote-share does not sit in Past its time",
+);
 assert.deepEqual(listView(rows, "due", "shashank", NOW).map((r) => r.id), ["tokyo", "dubai"], "within the hour: Tokyo (25 min) and Dubai (55 min)");
 assert.deepEqual(listView(rows, "sea", "shashank", NOW).map((r) => r.id), ["late", "dubai"]);
 assert.deepEqual(listView(rows, "mb:pricingsales", "shashank", NOW).map((r) => r.id), ["sales"]);

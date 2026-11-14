@@ -95,6 +95,9 @@ function prefilter({ headers, from = "", subject = "", body = "", attachments = 
   const ask = ASK.test(text);
   const cargo = CARGO.test(text);
   const route = ROUTE.test(text);
+  if (isQuoteDelivered(subj, body) || (isOwnFrom(from) && !askedForQuote(subj, body))) {
+    return { verdict: "maybe", reason: "A quote being sent, or internal Atlas mail" };
+  }
   if (ask && cargo && route) return { verdict: "sure", reason: "Asks for a rate with cargo and a route" };
   // Some mails ask for rates in a line and put the details in an attachment (a packing list, an enquiry sheet, a photo).
   const files = realAttachments(attachments);
@@ -106,4 +109,103 @@ function prefilter({ headers, from = "", subject = "", body = "", attachments = 
   return { verdict: "noise", reason: "No enquiry in it" };
 }
 
-module.exports = { prefilter, headerFlags, realAttachments, latestText, ASK, ASK_SHORT, CARGO, ROUTE };
+const REPLY_PREFIX = /^(re|fw|fwd)\s*:/i;
+const QUOTE_DELIVERED =
+  /\b(?:(?:please|pls|plz|kindly)\s+find(?:\s+\w+){0,8}?\s+(?:the\s+)?(?:below\s+)?(?:our\s+)?(?:quote|quotation|rates?)|find below (?:the )?(?:quote|quotation|rates?)|quoted as follows|please find attached (?:the )?(?:quote|quotation)|pls find below quote)\b/i;
+const STRONG_ASK =
+  /\b(please quote|kindly quote|pls quote|rate request|rfq|need rates?|new inquir(?:y|ies)|kindly revert with your best offer)\b/i;
+const VENDOR_OFFER =
+  /\b(?:(?:please|pls|plz|kindly) find(?:\s+below)?(?:\s+\w+){0,3}\s+our (?:revised |best |latest )?(?:freight )?rates?|(?:please find below|pls find) our|our (?:revised |best |latest )?(?:freight )?rates?(?:\s+for)?|rate offer(?: with)?|we can offer|pleased to offer|revised rates? for|our freight rates|please find attached our (?:rate|offer|quotation)|as follows(?:\s+our)?\s+(?:rates?|freight))\b/i;
+const CUSTOMER_ASK =
+  /\b(please quote|kindly quote|pls quote|quote (?:me|us|for|the)|kindly offer|offer best rate|share (?:the )?rates?|need rates?|rate request|rfq|new inquir(?:y|ies)|kindly revert with your best offer|please give us)\b/i;
+const OPS_FOLLOWUP =
+  /\b(booking confirm|confirmed booking|we confirm|pls proceed|please proceed|kindly proceed|pre-?alert|shipping instruction|\bsi attached\b|\bhbl\b|\bmbl\b|house bl|awb (?:no|number|issued|stock)|shipper details|consignee details|please (?:share|send|advise) (?:the )?(?:shipper|consignee|hbl|mbl|si|bl)|cargo received|stuffed|sailed|gate[- ]?in|\bvgm\b|nomination (?:received|confirmed)|shipping address|origin charges|egm(?:\s+(?:number|no|details|filed))?|still not moved|has not moved|paid all origin|vessel and schedule changed)\b/i;
+const OWN_HOST = /(^|\.)atlaslogistics\.co\.in$|(^|\.)atlaspricing\.com$/i;
+
+function isReplySubject(subject) {
+  return REPLY_PREFIX.test(String(subject || "").trim());
+}
+
+function workingText(subject, body) {
+  const latest = latestText(subject, body);
+  return isReplySubject(subject) ? latest : `${subject}\n${latest}`;
+}
+
+function fromEmail(from) {
+  return ((/<([^>]+)>/.exec(String(from || "")) || [])[1] || String(from || "")).trim().toLowerCase();
+}
+
+function isOwnFrom(from) {
+  const email = fromEmail(from);
+  const host = email.split("@")[1] || "";
+  if (host && OWN_HOST.test(host)) return true;
+  const name = String(from || "").replace(/<[^>]*>/g, "").replace(/["']/g, "").trim();
+  return /\batlas\s*logistics\b/i.test(name);
+}
+
+/** "Dear Awwab" / "Hi Linson," — who the mail is written to. */
+function greetingName(text) {
+  const m = String(text || "").match(/^\s*(?:dear|hi|hello|good\s+(?:morning|afternoon|evening)|attn(?:ention)?\.?:?)\s+([A-Za-z][A-Za-z.'-]{1,40})/im);
+  return m ? m[1].replace(/[.,;:]+$/, "") : "";
+}
+
+function isQuoteDelivered(subject, body) {
+  const text = workingText(subject, body);
+  if (!QUOTE_DELIVERED.test(text)) return false;
+  if (STRONG_ASK.test(text)) return false;
+  return true;
+}
+
+function askedForQuote(subject, body) {
+  const latest = latestText(subject, body);
+  if (isQuoteDelivered(subject, body)) return false;
+  if (isReplySubject(subject)) return ASK.test(latest) || ASK_SHORT.test(latest);
+  const text = `${subject}\n${latest}`;
+  return ASK.test(text) || ASK_SHORT.test(text);
+}
+
+function isOpsFollowUp(subject, body) {
+  return OPS_FOLLOWUP.test(workingText(subject, body));
+}
+
+function isVendorRateOffer(subject, body) {
+  const text = workingText(subject, body);
+  if (!VENDOR_OFFER.test(text)) return false;
+  if (CUSTOMER_ASK.test(text)) return false;
+  return true;
+}
+
+/** Pending / late clock: a real customer or overseas-agent RFQ that nobody has answered. */
+function isPendingEnquiry(row) {
+  if (!row) return false;
+  if (row.tag === "follow_up" || row.tag === "noise" || row.tag === "needs_human") return false;
+  if (row.tag === "escalation") return true;
+  if (row.repliedAt || row.actionRequired === false) return false;
+  const subject = row.subject || "";
+  const body = `${row.bodyPreview || ""} ${row.body || ""} ${row.summary || ""}`;
+  if (isOwnFrom(row.from) || isQuoteDelivered(subject, body)) return false;
+  if (isVendorRateOffer(subject, body)) return false;
+  if (isReplySubject(subject) && isOpsFollowUp(subject, body)) return false;
+  if (askedForQuote(subject, body)) return true;
+  if (isReplySubject(subject) && !askedForQuote(subject, body)) return false;
+  return row.tag === "new_enquiry";
+}
+
+module.exports = {
+  prefilter,
+  headerFlags,
+  realAttachments,
+  latestText,
+  isReplySubject,
+  askedForQuote,
+  isOpsFollowUp,
+  isVendorRateOffer,
+  isQuoteDelivered,
+  isOwnFrom,
+  greetingName,
+  isPendingEnquiry,
+  ASK,
+  ASK_SHORT,
+  CARGO,
+  ROUTE,
+};

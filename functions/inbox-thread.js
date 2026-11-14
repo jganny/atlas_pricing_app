@@ -57,7 +57,25 @@ function extractTokens(text) {
   return [...out].slice(0, 8);
 }
 
-/** Airport codes in route-looking places: "AMD - LRD", "BOM to NRT", "(DXB)", "AOD: LRD". In order, at most 8. */
+/** City / country names that desks write instead of the IATA code. "BLR to Qatar" is BLR–DOH. */
+const PLACE_CODES = {
+  qatar: "DOH", doha: "DOH", hamad: "DOH",
+  bangalore: "BLR", bengaluru: "BLR",
+  mumbai: "BOM", bombay: "BOM",
+  delhi: "DEL",
+  chennai: "MAA", madras: "MAA",
+  hyderabad: "HYD",
+  kolkata: "CCU", calcutta: "CCU",
+  ahmedabad: "AMD",
+  cochin: "COK", kochi: "COK",
+  dubai: "DXB", sharjah: "SHJ",
+  "abu dhabi": "AUH",
+  jeddah: "JED", riyadh: "RUH", dammam: "DMM",
+  singapore: "SIN", frankfurt: "FRA", london: "LHR",
+  rotterdam: "RTM", hamburg: "HAM",
+};
+
+/** Airport codes in route-looking places: "AMD - LRD", "BOM to NRT", "(DXB)", "AOD: LRD", "BLR to Qatar". In order, at most 8. */
 function extractCodes(text) {
   const t = String(text || "").slice(0, 20000);
   const out = [];
@@ -70,8 +88,19 @@ function extractCodes(text) {
       add(m[2]);
     }
   }
+  // "BLR to Qatar" — a code paired with a place name, not another code.
+  for (const m of t.matchAll(/\b([A-Z]{3})\s*(?:[-–—\/>→]+|\bto\b|\bTO\b|\bTo\b)\s+([A-Za-z][A-Za-z .]{2,40}?)(?=\s*(?:\/\/|$|[,;]|\d))/g)) {
+    add(m[1]);
+    const dest = PLACE_CODES[String(m[2] || "").toLowerCase().trim()];
+    if (dest) add(dest);
+  }
   for (const m of t.matchAll(/\(([A-Z]{3})\)/g)) add(m[1]);
   for (const m of t.matchAll(/\b(?:AOD|AOL|POL|POD|ORIGIN|DESTINATION|DEST|FROM|TO)\s*[:=]\s*([A-Z]{3})\b/g)) add(m[1]);
+  const places = Object.keys(PLACE_CODES).sort((a, b) => b.length - a.length);
+  for (const place of places) {
+    const re = new RegExp(`(?:\\b(?:to|from|via|and|for)\\s+${place}\\b|\\b${place}\\s+(?:to|from|via)|[-–—\\/]\\s*${place}\\b|\\b${place}\\s*[-–—\\/])`, "i");
+    if (re.test(t)) add(PLACE_CODES[place]);
+  }
   return out.slice(0, 8);
 }
 
@@ -218,8 +247,9 @@ async function findThread(db, mailboxKey, kind, mail, now = Date.now()) {
       if (!from || to.includes(from)) return { root: d.threadId, by: "subject" };
     }
   }
-  // 4. By content: for what we sent, and for replies that no header ties. New enquiries start their own conversation instead.
-  if (kind === "sent" || mail.tag === "follow_up") {
+  // 4. By content: for what we sent, and for replies / quote-shares that no header ties. A real new enquiry starts its own conversation instead.
+  const continuation = kind === "sent" || mail.tag === "follow_up";
+  if (continuation) {
     const since = now - 15 * DAY;
     const snap = await db.collection("inbox_enquiries").where("timestamp", ">", since).limit(800).get();
     const candidates = snap.docs

@@ -1,3 +1,5 @@
+import { greetingName, isOwnFrom, isQuoteDelivered } from "./rate-enquiry";
+
 /** Clock time if the mail arrived today, otherwise a short date — Outlook list style. */
 export function inboxListWhen(iso: string | undefined | null, now: number = Date.now()): string {
   const t = Date.parse(iso || "");
@@ -11,17 +13,24 @@ export function inboxListWhen(iso: string | undefined | null, now: number = Date
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: zone });
 }
 
+
 /** One quiet preview line: lane, mode, then the email's own words. No chips. */
 export function inboxListPreview(row: {
   parsed?: { origin?: string | null; destination?: string | null } | null;
   bodyPreview?: string | null;
   body?: string | null;
   mode?: string | null;
+  from?: string | null;
+  addressedTo?: string | null;
+  subject?: string | null;
 }): string {
   const origin = row.parsed?.origin?.trim();
   const dest = row.parsed?.destination?.trim();
   const lane = origin && dest ? `${origin} → ${dest}` : "";
   const mode = row.mode === "sea" ? "Sea" : row.mode === "air" ? "Air" : "";
+  const written = (row.addressedTo || "").trim() || greetingName(row.bodyPreview || row.body || "");
+  const kind = isOwnFrom(row.from) ? (isQuoteDelivered(row.subject || "", `${row.bodyPreview || ""} ${row.body || ""}`) ? "Internal quote" : "Internal") : "";
+  const forWhom = written ? `for ${written}` : "";
   const text = (row.bodyPreview || row.body || "").replace(/\s+/g, " ").trim();
-  return [lane, mode, text].filter(Boolean).join(" · ");
+  return [kind, forWhom, lane, mode, text].filter(Boolean).join(" · ");
 }
