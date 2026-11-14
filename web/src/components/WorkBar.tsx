@@ -91,7 +91,9 @@ export function WorkBar() {
     return () => window.clearTimeout(id);
   }, []);
 
-  if (!state || pathname.replace(/\/$/, "").endsWith("/inbox")) return null;
+  const path = pathname.replace(/\/$/, "") || "/";
+  // Home has its own next-enquiry line; Inbox is the mail window. The bar stays on every other screen.
+  if (!state || path === "/inbox" || path === "/") return null;
 
   function open() {
     try {
@@ -118,19 +120,19 @@ export function WorkBar() {
       data-testid="work-bar"
       data-tone={state.tone}
       className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-2 md:px-6",
-        state.tone === "red" ? "border-red-200 bg-red-50 text-red-900" : "border-amber-200 bg-amber-50 text-amber-900",
+        "flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#edebe9] bg-white px-4 py-2 md:px-6",
+        state.tone === "red" ? "border-l-4 border-l-[#a4262c] text-[#201f1e]" : "border-l-4 border-l-[#ca5010] text-[#201f1e]",
       )}
     >
-      <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", state.tone === "red" ? "bg-red-600" : "bg-amber-500")} />
-      <b className="min-w-0 text-sm font-semibold">{state.headline}</b>
-      <span className="text-xs sm:text-[13px]" data-testid="work-bar-detail">{state.detail}</span>
+      <span className={cn("h-2 w-2 shrink-0 rounded-full", state.tone === "red" ? "bg-[#a4262c]" : "bg-[#ca5010]")} />
+      <b className="min-w-0 text-[13px] font-semibold">{state.headline}</b>
+      <span className="text-[12px] text-[#605e5c] sm:text-[13px]" data-testid="work-bar-detail">{state.detail}</span>
       <span className="flex-1" />
-      <button type="button" onClick={toggleMute} aria-label={muted ? "Turn the chime on" : "Turn the chime off"} title={muted ? "Chime is off" : "Chime is on"} className="rounded-md p-1 opacity-70 hover:opacity-100">
+      <button type="button" onClick={toggleMute} aria-label={muted ? "Turn the chime on" : "Turn the chime off"} title={muted ? "Chime is off" : "Chime is on"} className="rounded-md p-1 text-[#605e5c] hover:bg-[#f3f2f1]">
         {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
       </button>
-      <button type="button" onClick={open} className="rounded-lg bg-[#2b313b] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#1f242c]" data-testid="work-bar-open">
-        Open it now
+      <button type="button" onClick={open} className="rounded-[2px] bg-[#0078d4] px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-[#106ebe]" data-testid="work-bar-open">
+        Open
       </button>
     </div>
   );

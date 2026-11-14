@@ -31,9 +31,9 @@ assert.match(gs, /\?smart=1/);
 // Settings are only searched for administrators.
 assert.match(gs, /isAdmin \? visibleSections/);
 
-// Home: no start box; the Air desk, Sea desk and Inbox shortcuts are for phones only (a computer has them in the left menu).
+// Home: no start box and no extra Air/Sea/Inbox chips — the left menu and the phone tab bar already have them.
 assert.doesNotMatch(home, /HomeStartBox/);
-assert.match(home, /className="flex flex-wrap gap-2 md:hidden" data-testid="home-phone-shortcuts"/);
+assert.doesNotMatch(home, /home-phone-shortcuts/);
 
 // The help button still has its own Ask Vertex bar, so nothing else that used it broke.
 assert.match(read("components/HelpFab.tsx"), /VertexAskBar/);

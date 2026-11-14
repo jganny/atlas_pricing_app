@@ -55,25 +55,26 @@ export function TeamBoard({ rows, onClose }: { rows: InboxEnquiry[]; onClose: ()
   );
 }
 
-/** The Manager's card on Home: what is late or waiting, without opening Admin or the Inbox. Hidden when nothing needs anyone. */
+/** Manager Home: one quiet count. The list lives on the team board, not stacked on Home. Hidden when nothing needs anyone. */
 export function NeedsAttentionCard({ rows, onOpenBoard }: { rows: InboxEnquiry[]; onOpenBoard: () => void }) {
   const now = useNow(60_000);
   const boxes = useMemo(() => teamBoard(rows, now), [rows, now]);
   const late = boxes.reduce((n, b) => n + b.late, 0);
   const waiting = boxes.reduce((n, b) => n + b.waiting, 0);
-  const lines = boxes.flatMap((b) => b.lines.filter((l) => l.late || !l.quoting).map((l) => ({ ...l, box: b.label }))).slice(0, 5);
   if (!late && !waiting) return null;
   return (
-    <section className={cn("rounded-xl border px-4 py-3", late ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50")} data-testid="needs-attention">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <b className={cn("text-sm font-semibold", late ? "text-red-900" : "text-amber-900")}>Needs attention: {late ? `${late} late` : ""}{late && waiting ? ", " : ""}{waiting ? `${waiting} not opened yet` : ""}</b>
-        <button type="button" onClick={onOpenBoard} className="ml-auto text-xs font-semibold text-slate-700 underline">Open the team board</button>
-      </div>
-      <ul className="m-0 mt-1.5 list-none space-y-0.5 p-0 text-sm text-slate-800">
-        {lines.map((l) => (
-          <li key={l.id}><b className="font-semibold">{l.who}</b> <span className="text-slate-600">{l.subject}</span> <span className="text-xs text-slate-500">· {l.box} · {l.late ? "late" : `not opened ${waitedText(l.waitedMin)}`}</span></li>
-        ))}
-      </ul>
-    </section>
+    <span className="inline-flex items-center gap-2" data-testid="needs-attention">
+      <span className="text-[#c8c6c4]" aria-hidden>
+        ·
+      </span>
+      <span>
+        {late ? `${late} late` : ""}
+        {late && waiting ? " · " : ""}
+        {waiting ? `${waiting} not opened` : ""}
+      </span>
+      <button type="button" onClick={onOpenBoard} className="text-[#0078d4] hover:underline">
+        Team board
+      </button>
+    </span>
   );
 }

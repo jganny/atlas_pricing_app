@@ -493,12 +493,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <main
             className={cn(
               "flex-1",
-              normalized === "/quote" || normalized === "/inbox"
+              normalized === "/quote" || normalized === "/inbox" || normalized === "/"
                 ? "relative flex min-h-0 flex-col p-0"
                 : "p-3 md:p-5",
             )}
           >
-            {normalized === "/quote" || normalized === "/inbox" ? (
+            {normalized === "/quote" || normalized === "/inbox" || normalized === "/" ? (
               <RouteGuard>{children}</RouteGuard>
             ) : (
               <div className="atlas-page-card min-h-[70vh] p-4 md:p-6">
