@@ -21,4 +21,13 @@ assert.equal(
   "Sea · two 40HC",
 );
 
+assert.equal(
+  inboxListPreview({
+    from: "Atlaslogistics <pricing@atlaslogistics.co.in>",
+    subject: "Air Freight // BLR to Qatar // 560 Kgs",
+    bodyPreview: "Dear Awwab Pls find below quote for said shipment",
+  }),
+  "Internal quote · for Awwab · Dear Awwab Pls find below quote for said shipment",
+);
+
 console.log("inbox-list-row tests passed");

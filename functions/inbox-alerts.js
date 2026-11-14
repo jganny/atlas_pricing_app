@@ -10,6 +10,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const NT = require("./notifications");
+const F = require("./inbox-filter");
 
 const DEFAULTS = {
   remindAfterMin: 20,
@@ -32,6 +33,7 @@ function planAlerts(items, settings = DEFAULTS, now = Date.now()) {
     if (!it || it.status !== "new" || it.actionRequired === false) continue;
     if (it.tag && it.tag !== "new_enquiry" && it.tag !== "needs_human" && it.tag !== "escalation") continue;
     if (it.workingBy || it.repliedAt) continue;
+    if (it.tag !== "escalation" && !F.isPendingEnquiry(it)) continue;
     const team = it.mailbox === "pricing" && it.mode === "sea" ? [...new Set([...(cfg.teams[it.mailbox] || []), ...(cfg.seaCover || [])])] : cfg.teams[it.mailbox] || [];
     if (!team.length) continue;
     const arrived = Date.parse(it.receivedAt || "") || Number(it.timestamp) || now;
@@ -107,7 +109,7 @@ exports.inboxAlerts = functions
  * "Waiting" = new, nobody has a desk open on it, nobody has replied. Pure: no Firebase.
  */
 function daySummary(items, received, now = Date.now(), answered = 0) {
-  const waiting = items.filter((it) => it && it.status === "new" && !it.workingBy && !it.repliedAt && it.actionRequired !== false && (!it.tag || ["new_enquiry", "needs_human", "escalation"].includes(it.tag)) && now - (Date.parse(it.receivedAt || "") || Number(it.timestamp) || now) < 24 * 60 * MIN);
+  const waiting = items.filter((it) => it && it.status === "new" && !it.workingBy && !it.repliedAt && it.actionRequired !== false && (it.tag === "escalation" || F.isPendingEnquiry(it)) && now - (Date.parse(it.receivedAt || "") || Number(it.timestamp) || now) < 24 * 60 * MIN);
   const who = (it) => String(it.from || "").replace(/<[^>]*>/g, "").replace(/["]/g, "").trim() || "A customer";
   const names = [...new Set(waiting.map(who))].slice(0, 4);
   const body = waiting.length

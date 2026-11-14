@@ -37,6 +37,23 @@ assert.strictEqual(p[0].recipients.join(), "cathrina,jabeena");
 p = planAlerts([item("g", { receivedAt: ago(11), notifiedAt: 1 })], { remindAfterMin: 10, teams: { pricing: ["x"] } }, NOW);
 assert.deepStrictEqual([p[0].kind, p[0].recipients.join()], ["remind", "x"]);
 
+// Internal Atlas quote-share must not alert as a pending enquiry.
+assert.deepStrictEqual(
+  planAlerts(
+    [
+      item("atlas", {
+        from: "Atlaslogistics <pricing@atlaslogistics.co.in>",
+        subject: "Air Freight // BLR to Qatar // 560 Kgs",
+        bodyPreview: "Dear Awwab Pls find below quote for said shipment",
+      }),
+    ],
+    DEFAULTS,
+    NOW,
+  ),
+  [],
+  "internal quote-share is not pending",
+);
+
 console.log("inbox-alerts tests passed");
 
 // While the Sea Nom seat is vacant, a sea enquiry on pricing@ also alerts NRS and Free Hand; an air one does not.

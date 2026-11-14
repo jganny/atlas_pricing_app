@@ -16,7 +16,7 @@ import type { InboxEnquiry, InboxTag } from "@/lib/types";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getFirebaseApp, getFirebaseDb } from "./client";
 
-const TAGS = new Set(["new_enquiry", "follow_up", "needs_human"]);
+const TAGS = new Set(["new_enquiry", "follow_up", "needs_human", "escalation"]);
 
 function mapInbox(id: string, data: Record<string, unknown>): InboxEnquiry {
   const tagRaw = data.tag ? String(data.tag) : "";
@@ -28,6 +28,8 @@ function mapInbox(id: string, data: Record<string, unknown>): InboxEnquiry {
     mailboxEmail: String(data.mailboxEmail ?? ""),
     messageId: data.messageId ? String(data.messageId) : undefined,
     from: String(data.from ?? ""),
+    addressedTo: data.addressedTo ? String(data.addressedTo) : undefined,
+    toAddresses: Array.isArray(data.toAddresses) ? data.toAddresses.map(String) : undefined,
     subject: String(data.subject ?? "(no subject)"),
     receivedAt: String(data.receivedAt ?? data.date ?? ""),
     bodyPreview: String(data.bodyPreview ?? "").slice(0, 280),
@@ -43,6 +45,14 @@ function mapInbox(id: string, data: Record<string, unknown>): InboxEnquiry {
     reason: data.reason ? String(data.reason) : undefined,
     summary: data.summary ? String(data.summary) : undefined,
     classifier: data.classifier ? String(data.classifier) : undefined,
+    workingBy: (data.workingBy as InboxEnquiry["workingBy"]) || null,
+    takeoverRequest: (data.takeoverRequest as InboxEnquiry["takeoverRequest"]) || null,
+    senderTzMin: typeof data.senderTzMin === "number" ? data.senderTzMin : null,
+    attachmentCount: typeof data.attachmentCount === "number" ? data.attachmentCount : undefined,
+    copiedAddresses: Array.isArray(data.copiedAddresses) ? data.copiedAddresses.map(String) : [],
+    repliedAt: typeof data.repliedAt === "number" ? data.repliedAt : undefined,
+    threadId: data.threadId == null ? null : String(data.threadId),
+    linkedBy: data.linkedBy ? String(data.linkedBy) : undefined,
     parsed: (data.parsed as InboxEnquiry["parsed"]) || {
       customer: "",
       origin: "",

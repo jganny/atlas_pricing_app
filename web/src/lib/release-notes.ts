@@ -11,6 +11,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.3.176",
+    date: "2026-11-14",
+    items: [
+      "Inbox now names who sent an enquiry to whom, who it is written to, and whose salesperson enquiry a continuation belongs to. The late banner, Due, Past its time, Next enquiry and phone alerts run only when a customer or overseas agent asked for rates and nobody has replied. Internal Atlas quote-shares and vendor rate sheets stay on the thread without the pending clock.",
+    ],
+  },
+  {
     version: "0.3.166",
     date: "2026-11-12",
     items: [

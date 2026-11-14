@@ -24,6 +24,8 @@ import { askRequest, agoText, handOverPatch, markWorking, TAKEOVER_WAIT_MINUTES,
 import { replyBy, timeLeftText, urgencyOf, type Urgency } from "@/lib/mail/reply-by";
 import { VIEW_LABELS, listView, senderDisplay, viewCounts, type ViewKey } from "@/lib/mail/inbox-views";
 import { inboxListPreview, inboxListWhen } from "@/lib/mail/inbox-list-row";
+import { identityLines, mailIdentity } from "@/lib/mail/enquiry-identity";
+import { isRateEnquiryToQuote } from "@/lib/mail/rate-enquiry";
 import { labelsOf, LABEL_NAMES } from "@/lib/mail/inbox-labels";
 import { peekSmartQuotePrefill, storeSmartQuotePrefill } from "@/lib/pricing/smart-quote-prefill";
 import type { InboxEnquiry } from "@/lib/types";
@@ -298,7 +300,8 @@ export default function EnquiryInboxPage() {
 
 
   const quoteBlocked = state.kind === "other" || state.kind === "asked";
-  const rb = selected ? replyBy(selected, now) : null;
+  const rb = selected && isRateEnquiryToQuote(selected) ? replyBy(selected, now) : null;
+  const ident = selected ? mailIdentity(selected) : null;
   const receivedText = selected?.receivedAt ? new Date(selected.receivedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
   const unread = (row: InboxEnquiry) => row.status === "new" && !row.workingBy;
 
@@ -516,22 +519,30 @@ export default function EnquiryInboxPage() {
 
                 <div className="mt-7 mb-8 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#486991] text-sm font-semibold text-white">
-                    {senderDisplay(selected.from).split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                    {(ident?.fromName || senderDisplay(selected.from)).split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0 text-[14px] leading-5">
                     <div className="font-semibold">
-                      {senderDisplay(selected.from)}
-                      <span className="ml-2 font-normal text-[#605e5c]">{/<([^>]+)>/.exec(selected.from || "")?.[1] ?? ""}</span>
+                      {ident?.fromName || senderDisplay(selected.from)}
+                      {ident?.fromEmail ? <span className="ml-2 font-normal text-[#605e5c]">{ident.fromEmail}</span> : null}
                       {savedContact ? (
                         <span className="ml-2 text-[12px] font-normal text-[#605e5c]" data-testid="inbox-contact-saved" title="This address is in the contact directory">
                           Contact saved{savedContact.type && savedContact.type !== "unknown" ? `: ${CONTACT_TYPE_LABELS[savedContact.type as ContactType] ?? savedContact.type}` : ""}
                         </span>
                       ) : null}
                     </div>
-                    <div className="mt-0.5 text-[13px] text-[#605e5c]">
-                      to {selected.mailboxEmail || selected.mailbox}
+                    <div className="mt-0.5 text-[13px] text-[#605e5c]" data-testid="inbox-identity-to">
+                      to {ident?.toLine || selected.mailboxEmail || selected.mailbox}
                       {selected.suggestedUser ? ` · usual desk ${deskDisplayName(selected.suggestedUser)}` : ""}
                     </div>
+                    <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border border-[#edebe9] bg-[#faf9f8] px-3 py-2.5 text-[13px] leading-5" data-testid="inbox-identity">
+                      {identityLines(selected).map((line) => (
+                        <div key={`${line.label}-${line.value}`} className="contents">
+                          <dt className="font-semibold text-[#605e5c]">{line.label}</dt>
+                          <dd className="min-w-0 text-[#201f1e]">{line.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
                   </div>
                   <div className="text-right text-[13px] text-[#605e5c]">{receivedText}</div>
                 </div>

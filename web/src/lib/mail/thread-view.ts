@@ -34,18 +34,35 @@ export interface ThreadVendor {
   repliedAt?: number;
 }
 
+/** The original customer / agent RFQ this conversation started from. */
+export interface ThreadOrigin {
+  id: string;
+  from: string;
+  fromName: string;
+  fromEmail: string;
+  mailbox: string;
+  mailboxEmail: string;
+  receivedAt: string;
+  repliedAt?: number;
+  assignedUsers: string[];
+  addressedTo: string;
+  toAddresses: string[];
+  subject: string;
+}
+
 export interface ThreadView {
   rootId: string | null;
   members: ThreadMember[];
   vendors: ThreadVendor[];
+  origin?: ThreadOrigin | null;
   gone?: boolean;
 }
 
-export const EMPTY_THREAD: ThreadView = { rootId: null, members: [], vendors: [] };
+export const EMPTY_THREAD: ThreadView = { rootId: null, members: [], vendors: [], origin: null };
 
 /** One line for a member: who it is from or who it went to. */
 export function memberTitle(m: ThreadMember): string {
-  if (m.role === "enquiry") return "Enquiry received";
+  if (m.role === "enquiry") return `Enquiry received from ${m.who || m.email || "the customer"}`;
   if (m.role === "reply") return `Reply from ${m.who || m.email || "someone"}`;
   const names = (m.to ?? []).map((t) => t.name || t.email).filter(Boolean);
   if (!names.length) return "Sent on from Outlook";

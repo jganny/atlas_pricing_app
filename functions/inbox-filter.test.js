@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { prefilter, headerFlags } = require("./inbox-filter");
+const { prefilter, headerFlags, isPendingEnquiry, isQuoteDelivered, isOwnFrom } = require("./inbox-filter");
 
 const v = (o) => prefilter({ from: "buyer@acme.com", subject: "", body: "", ...o }).verdict;
 
@@ -73,4 +73,37 @@ console.log("inbox filter ok");
   assert.equal(prefilter({ from: "a@b.com", subject: "Re: Rates", body: reply }).verdict, "noise", "an old quote underneath does not make a thank-you an enquiry");
   assert.match(latestText("Fwd: Rates", reply), /Please quote 500 kg/, "a forward keeps the forwarded enquiry");
   assert.equal(latestText("Re: x", "line\n> quoted\nmore").trim(), "line\nmore");
+}
+
+{
+  const awwab = {
+    tag: "new_enquiry",
+    from: "Atlaslogistics <pricing@atlaslogistics.co.in>",
+    subject: "Air Freight // BLR to Qatar // 560 Kgs",
+    bodyPreview: "Dear Awwab Pls find below quote for said shipment",
+  };
+  assert.equal(isQuoteDelivered(awwab.subject, awwab.bodyPreview), true);
+  assert.equal(isOwnFrom(awwab.from), true);
+  assert.equal(isPendingEnquiry(awwab), false, "internal quote-share is not pending");
+  assert.equal(
+    isPendingEnquiry({
+      tag: "new_enquiry",
+      from: "Fatima <fatima@doha-trade.qa>",
+      subject: "Air Freight // BLR to Qatar // 560 Kgs",
+      bodyPreview: "Dear Team, please quote 560 kgs from Bangalore to Doha.",
+    }),
+    true,
+    "customer RFQ stays pending until replied",
+  );
+  assert.equal(
+    isPendingEnquiry({
+      tag: "new_enquiry",
+      from: "Fatima <fatima@doha-trade.qa>",
+      subject: "Please quote BLR-DOH",
+      bodyPreview: "560 kg",
+      repliedAt: 1,
+    }),
+    false,
+  );
+  console.log("pending enquiry filter ok");
 }

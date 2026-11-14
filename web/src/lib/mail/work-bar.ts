@@ -6,6 +6,7 @@
 import type { InboxEnquiry } from "@/lib/types";
 import { replyBy, urgencyOf } from "./reply-by";
 import { senderDisplay } from "./inbox-views";
+import { isRateEnquiryToQuote } from "./rate-enquiry";
 
 export const RED_AFTER_MIN = 20;
 /** Older than this and an enquiry is not "news" any more (it is in the list, not on the bar). */
@@ -21,10 +22,14 @@ export interface WorkBarState {
   detail: string;
 }
 
-/** Waiting = new, nobody has a desk open on it, nobody has replied, and someone needs to act. */
+/** Waiting = a real unanswered RFQ (or escalation), nobody has a desk open on it. */
 export function isWaiting(r: InboxEnquiry, now: number): boolean {
   if (r.status !== "new" || r.workingBy || r.repliedAt || r.actionRequired === false) return false;
-  if (r.tag && r.tag !== "new_enquiry" && r.tag !== "needs_human" && r.tag !== "escalation") return false;
+  if (r.tag === "escalation") {
+    const arrived = Date.parse(r.receivedAt || "") || now;
+    return (now - arrived) / 60_000 <= STALE_MIN;
+  }
+  if (!isRateEnquiryToQuote(r)) return false;
   const arrived = Date.parse(r.receivedAt || "") || now;
   return (now - arrived) / 60_000 <= STALE_MIN;
 }

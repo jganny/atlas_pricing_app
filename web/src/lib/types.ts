@@ -382,6 +382,10 @@ export interface InboxEnquiry {
   mailboxEmail: string
   messageId?: string
   from: string
+  /** Who the mail is written to ("Dear Awwab"). */
+  addressedTo?: string
+  /** To: addresses as they arrived (lowercased). */
+  toAddresses?: string[]
   subject: string
   receivedAt: string
   /** Short preview only — full mail stays on IMAP. */
